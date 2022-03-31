@@ -162,11 +162,13 @@ describe("Quiver", () => {
       })
 
       it("throws an exception if row index is out of range", () => {
-        expect(() => q.getCell(5, 0)).toThrow("Row index is out of range.")
+        expect(() => q.getCell(5, 0)).toThrow("Row index is out of range: 5")
       })
 
       it("throws an exception if column index is out of range", () => {
-        expect(() => q.getCell(0, 5)).toThrow("Column index is out of range.")
+        expect(() => q.getCell(0, 5)).toThrow(
+          "Column index is out of range: 5"
+        )
       })
     })
 

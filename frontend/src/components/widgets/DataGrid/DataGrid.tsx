@@ -180,9 +180,42 @@ function DataGrid({
     onColumnResized,
   } = useDataLoader(element)
 
-  const [tableWidth, setTableWidth] = useState(propWidth)
+  const [width, setWidth] = useState(propWidth)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
+
+  useLayoutEffect(() => {
+    // Without this timeout,the width calculation might fail in a few cases. The timeout ensures
+    // that the execution of this function is placed after the component render in the event loop.
+    setTimeout(() => {
+      // TODO(lukasmasuch): Support use_container_width parameter
+
+      let adjustedTableWidth = Math.min(
+        columns.length * MIN_COLUMN_WIDTH,
+        MIN_COLUMN_WIDTH
+      )
+
+      if (numRows) {
+        const firstCell = dataEditorRef.current?.getBounds(0, 0)
+        const lastCell = dataEditorRef.current?.getBounds(
+          columns.length - 1,
+          numRows - 1
+        )
+
+        if (firstCell && lastCell) {
+          // Calculate the table width, the +2 corresponds to the table borders
+          const fullTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
+
+          // TODO(lukasmasuch): Also adjust the table height?
+          // const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
+
+          adjustedTableWidth = Math.min(fullTableWidth, propWidth)
+        }
+      }
+
+      setWidth(adjustedTableWidth)
+    }, 0)
+  })
 
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
@@ -192,7 +225,7 @@ function DataGrid({
 
   return (
     <ThemedDataGridContainer
-      width={tableWidth}
+      width={width}
       height={height}
       minHeight={minHeight}
     >
