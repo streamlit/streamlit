@@ -56,16 +56,16 @@ test("extractCssProperty should extract the correct property value", () => {
     extractCssProperty("#T_7e5cc_row6_col0", "background-color", cssStyle2)
   ).toBe("#f8fcc9")
   expect(extractCssProperty("#T_7e5cc_row9_col0", "color", cssStyle2)).toBe(
-    "#f0f9b8"
+    "#000000"
   )
 
   expect(
     extractCssProperty("#T_f116e_row10_col0", "background-color", cssStyle3)
   ).toBe("#f8fcc9")
-  expect(extractCssProperty("#T_7e5cc_row8_col0", "color", cssStyle3)).toBe(
-    "#f1f1f1"
-  )
   expect(
     extractCssProperty("#T_7e5cc_row8_col0", "background-color", cssStyle3)
   ).toBe("#289cc1")
+  expect(extractCssProperty("#T_7e5cc_row8_col0", "color", cssStyle3)).toBe(
+    "#f1f1f1"
+  )
 })
