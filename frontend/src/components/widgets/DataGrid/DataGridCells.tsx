@@ -38,19 +38,21 @@ function getDisplayContent(quiverCell: DataFrameCell): string {
 /**
  * Extracts a CSS property value from a given CSS style string by using a regex.
  *
- * @param cssId: The css ID of the element to extract the property for.
+ * @param htmlElementId: The ID of the HTML element to extract the property for.
  * @param cssStyle: The css style string.
  * @param property: The css property to extract the value for.
  *
  * @return the CSS property value or undefined if the property is not found.
  */
 function extractCssProperty(
-  cssId: string,
+  htmlElementId: string,
   cssStyle: string,
   property: string
 ): string | undefined {
+  // This regex is supposed to extract the value of a CSS property
+  // for a specified HTML element ID from a CSS style string:
   const regex = new RegExp(
-    `${cssId}[^{]+{[^}]*\\s${property}:\\s*([^;\\s]+)[;]?.*}`,
+    `${htmlElementId}[^{]+{[^}]*\\s${property}:\\s*([^;\\s]+)[;]?.*}`,
     "gm"
   )
 
