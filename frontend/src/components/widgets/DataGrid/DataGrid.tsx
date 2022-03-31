@@ -185,7 +185,8 @@ function DataGrid({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
   useLayoutEffect(() => {
-    // Without this timeout, the canvas does not reflect the actual size sometimes
+    // Without this timeout,the width calculation might fail in a few cases. The timeout ensures
+    // that the execution of this function is placed after the component render in the event loop.
     setTimeout(() => {
       // TODO(lukasmasuch): Support use_container_width parameter
 
@@ -208,12 +209,7 @@ function DataGrid({
           // TODO(lukasmasuch): Also adjust the table height?
           // const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
 
-          if (fullTableWidth < propWidth) {
-            adjustedTableWidth = fullTableWidth
-          } else {
-            // Use the max container width
-            adjustedTableWidth = propWidth
-          }
+          adjustedTableWidth = Math.min(fullTableWidth, propWidth)
         }
       }
 
