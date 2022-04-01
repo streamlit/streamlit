@@ -29,7 +29,8 @@ function DataGridOverlay(): React.ReactElement {
         position: "fixed",
         top: 0,
         left: 0,
-        zIndex: 9999,
+        // Requires very hight z-index to be an overlay on the fullscreen functionality:
+        zIndex: 99999999,
         lineHeight: "100%",
       }}
     />
