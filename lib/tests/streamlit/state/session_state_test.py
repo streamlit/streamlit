@@ -426,6 +426,14 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         check_roundtrip("time_datetime", time_datetime)
 
 
+
+def compact_copy(state: SessionState) -> SessionState:
+    """Return a compacted copy of the given SessionState."""
+    state_copy = state.copy()
+    state_copy.compact_state()
+    return state_copy
+
+
 class SessionStateMethodTests(unittest.TestCase):
     def setUp(self):
         old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
@@ -591,17 +599,17 @@ class SessionStateMethodTests(unittest.TestCase):
 
 @given(state=stst.session_state())
 def test_compact_idempotent(state):
-    assert state._compact() == state._compact()._compact()
+    assert compact_copy(state) == compact_copy(compact_copy(state))
 
 
 @given(state=stst.session_state())
 def test_compact_len(state):
-    assert len(state) >= len(state._compact())
+    assert len(state) >= len(compact_copy(state))
 
 
 @given(state=stst.session_state())
 def test_compact_presence(state):
-    assert state.items() == state._compact().items()
+    assert state.items() == compact_copy(state).items()
 
 
 @given(m=stst.session_state())

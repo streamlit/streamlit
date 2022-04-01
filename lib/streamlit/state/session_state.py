@@ -323,12 +323,6 @@ class SessionState(MutableMapping[str, Any]):
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
-    def _compact(self) -> "SessionState":
-        """Return a compacted copy of self without mutating self."""
-        state: SessionState = self.copy()
-        state.compact_state()
-        return state
-
     def clear_state(self) -> None:
         """Reset self completely, clearing all current and old values."""
         self._old_state.clear()
