@@ -245,8 +245,10 @@ function DataGrid({
           // const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
         }
       }
-
-      setWidth(Math.min(adjustedTableWidth, propWidth))
+      const newWidth = Math.min(adjustedTableWidth, propWidth)
+      if (newWidth !== width) {
+        setWidth(newWidth)
+      }
     }, 0)
   })
 
