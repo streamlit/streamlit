@@ -50,15 +50,12 @@ type GridColumnWithCellTemplate = GridColumn & {
 export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
   const columns: GridColumnWithCellTemplate[] = []
 
-  const numIndices = element.types?.index?.length ?? 0
-  const numColumns = element.columns?.[0]?.length ?? 0
-
-  if (!numIndices && !numColumns) {
+  if (element.isEmpty()) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
     // As a workaround, we are adding an empty index column in this case.
     columns.push({
       id: `empty-index`,
-      title: "empty",
+      title: "",
       hasMenu: false,
       getTemplate: () => {
         return getCellTemplate(GridCellKind.RowID, true)
@@ -66,6 +63,9 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
     } as GridColumnWithCellTemplate)
     return columns
   }
+
+  const numIndices = element.types?.index?.length ?? 0
+  const numColumns = element.columns?.[0]?.length ?? 0
 
   for (let i = 0; i < numIndices; i++) {
     columns.push({
@@ -225,9 +225,9 @@ function DataGrid({
     setTimeout(() => {
       // TODO(lukasmasuch): Support use_container_width parameter
 
-      let adjustedTableWidth = Math.min(
-        columns.length * MIN_COLUMN_WIDTH,
-        MIN_COLUMN_WIDTH
+      let adjustedTableWidth = Math.max(
+        columns.length * MIN_COLUMN_WIDTH + 3,
+        MIN_COLUMN_WIDTH + 3
       )
 
       if (numRows) {
@@ -239,16 +239,14 @@ function DataGrid({
 
         if (firstCell && lastCell) {
           // Calculate the table width, the +2 corresponds to the table borders
-          const fullTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
+          adjustedTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
 
           // TODO(lukasmasuch): Also adjust the table height?
           // const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
-
-          adjustedTableWidth = Math.min(fullTableWidth, propWidth)
         }
       }
 
-      setWidth(adjustedTableWidth)
+      setWidth(Math.min(adjustedTableWidth, propWidth))
     }, 0)
   })
 
