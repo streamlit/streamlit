@@ -104,7 +104,11 @@ describe("DataGrid widget", () => {
       )
     }
 
-    expect(sortedData).toBe(sortedData.sort().reverse())
+    expect(Array.from(sortedData)).toEqual(
+      Array.from(sortedData)
+        .sort()
+        .reverse()
+    )
   })
 
   it("should correctly sort the table ascending order", () => {
@@ -127,6 +131,6 @@ describe("DataGrid widget", () => {
       )
     }
 
-    expect(sortedData).toBe(sortedData.sort())
+    expect(Array.from(sortedData)).toEqual(Array.from(sortedData).sort())
   })
 })
