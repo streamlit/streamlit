@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useRef, useCallback } from "react"
+import React, { ReactElement, useCallback, useRef, useState } from "react"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { AppPage } from "src/autogen/proto"
+import AppContext from "src/components/core/AppContext"
 import Icon from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 
@@ -39,7 +40,6 @@ export interface Props {
 }
 
 // TODO(vdonato): indicate the current page and make it unclickable
-// TODO(vdonato): set links correctly (requires baseUrlPath handling to be done)
 const SidebarNav = ({
   appPages,
   hasSidebarElements,
@@ -54,6 +54,9 @@ const SidebarNav = ({
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef(null)
   const isOverflowing = useIsOverflowing(navItemsRef)
+  // We use React.useContext here instead of destructuring it in the imports
+  // above so that we can mock it in tests.
+  const { getBaseUriParts } = React.useContext(AppContext)
 
   const onMouseOver = useCallback(() => {
     if (isOverflowing) {
@@ -81,22 +84,36 @@ const SidebarNav = ({
         onMouseOut={onMouseOut}
       >
         {/* XXX Need some way to tell what the icon is */}
-        {appPages.map(({ pageName }: AppPage, pageIndex: number) => (
-          <li key={pageName}>
-            <StyledSidebarNavLinkContainer>
-              <StyledSidebarNavLink
-                href={"http://example.com"}
-                onClick={e => {
-                  e.preventDefault()
-                  const navigateTo = pageIndex === 0 ? "" : pageName
-                  onPageChange(navigateTo)
-                }}
-              >
-                {pageName.replace(/_/g, " ")}
-              </StyledSidebarNavLink>
-            </StyledSidebarNavLinkContainer>
-          </li>
-        ))}
+        {appPages.map(({ pageName }: AppPage, pageIndex: number) => {
+          // NOTE: We use window.location to get the port instead of
+          // getBaseUriParts() because the port may differ in dev mode (since
+          // the frontend is served by the react dev server and not the
+          // streamlit server).
+          const { port, protocol } = window.location
+          const { basePath, host } = getBaseUriParts()
+
+          const portSection = port ? `:${port}` : ""
+          const basePathSection = basePath ? `${basePath}/` : ""
+
+          const navigateTo = pageIndex === 0 ? "" : pageName
+          const pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
+
+          return (
+            <li key={pageName}>
+              <StyledSidebarNavLinkContainer>
+                <StyledSidebarNavLink
+                  href={pageUrl}
+                  onClick={e => {
+                    e.preventDefault()
+                    onPageChange(navigateTo)
+                  }}
+                >
+                  {pageName.replace(/_/g, " ")}
+                </StyledSidebarNavLink>
+              </StyledSidebarNavLinkContainer>
+            </li>
+          )
+        })}
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (

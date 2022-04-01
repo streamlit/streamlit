@@ -19,7 +19,7 @@ import React from "react"
 
 import { PageConfig } from "src/autogen/proto"
 import { baseTheme, ThemeConfig } from "src/theme"
-import { BaseUriParts } from "src/lib/UriUtil"
+import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 
 export interface Props {
   wideMode: boolean
@@ -52,5 +52,5 @@ export default React.createContext<Props>({
   availableThemes: [],
   addThemes: (themes: ThemeConfig[]) => {},
   sidebarChevronDownshift: 0,
-  getBaseUriParts: () => undefined,
+  getBaseUriParts: getWindowBaseUriParts,
 })

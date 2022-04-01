@@ -23,6 +23,7 @@ import { act } from "react-dom/test-utils"
 import Icon from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 import { mount, shallow } from "src/lib/test_util"
+import { BaseUriParts } from "src/lib/UriUtil"
 
 import SidebarNav, { Props } from "./SidebarNav"
 import {
@@ -76,6 +77,86 @@ describe("SidebarNav", () => {
 
     expect(links.at(0).text()).toBe("streamlit app")
     expect(links.at(1).text()).toBe("my other page")
+  })
+
+  describe("page links", () => {
+    const { location: originalLocation } = window
+
+    beforeEach(() => {
+      // Replace window.location with a mutable object that otherwise has
+      // the same contents so that we can change port below.
+      delete window.location
+      window.location = { ...originalLocation }
+    })
+
+    afterEach(() => {
+      window.location = originalLocation
+    })
+
+    it("are added to each link", () => {
+      const wrapper = shallow(<SidebarNav {...getProps()} />)
+
+      expect(
+        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
+      ).toEqual(["http://localhost/", "http://localhost/my_other_page"])
+    })
+
+    it("work with non-default port", () => {
+      window.location.port = "3000"
+      const wrapper = shallow(<SidebarNav {...getProps()} />)
+
+      expect(
+        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
+      ).toEqual([
+        "http://localhost:3000/",
+        "http://localhost:3000/my_other_page",
+      ])
+    })
+
+    it("work with non-default baseUrlPaths", () => {
+      const getBaseUriParts = (): Partial<BaseUriParts> => ({
+        basePath: "foo/bar",
+        host: "example.com",
+      })
+
+      const mockUseContext = jest
+        .spyOn(React, "useContext")
+        .mockImplementation(() => ({ getBaseUriParts }))
+
+      const wrapper = shallow(<SidebarNav {...getProps()} />)
+
+      expect(
+        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
+      ).toEqual([
+        "http://example.com/foo/bar/",
+        "http://example.com/foo/bar/my_other_page",
+      ])
+
+      mockUseContext.mockRestore()
+    })
+
+    it("work with non-default port and non-default baseUrlPaths", () => {
+      window.location.port = "3000"
+      const getBaseUriParts = (): Partial<BaseUriParts> => ({
+        basePath: "foo/bar",
+        host: "localhost",
+      })
+
+      const mockUseContext = jest
+        .spyOn(React, "useContext")
+        .mockImplementation(() => ({ getBaseUriParts }))
+
+      const wrapper = shallow(<SidebarNav {...getProps()} />)
+
+      expect(
+        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
+      ).toEqual([
+        "http://localhost:3000/foo/bar/",
+        "http://localhost:3000/foo/bar/my_other_page",
+      ])
+
+      mockUseContext.mockRestore()
+    })
   })
 
   it("does not add separator below if there are no sidebar elements", () => {
