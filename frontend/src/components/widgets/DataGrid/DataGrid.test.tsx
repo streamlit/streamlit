@@ -19,6 +19,7 @@ import React from "react"
 import {
   DataEditor as GlideDataEditor,
   SizedGridColumn,
+  NumberCell,
 } from "@glideapps/glide-data-grid"
 import { renderHook, act } from "@testing-library/react-hooks"
 
@@ -26,7 +27,7 @@ import { TEN_BY_TEN } from "src/lib/mocks/arrow"
 import { mount } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
 
-import DataGrid, { DataGridProps, useDataLoader } from "./DataGrid"
+import DataGrid, { DataGridProps, useDataLoader, getColumns } from "./DataGrid"
 import { ResizableContainer } from "./DataGridContainer"
 
 const getProps = (data: Quiver): DataGridProps => ({
@@ -82,6 +83,54 @@ describe("DataGrid widget", () => {
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
   })
 
-  // TODO(lukasmasuch): Unit tests for a few methods, such as fillCellTemplate, getColumn, useDataLoader, getCellTemplate, etc.
-  //                    will be added in a later PR once support for different data types is added.
+  it("should correctly sort the table descending order", () => {
+    // TODO(lukasmasuch): Add additional sort tests for other example quiver tables
+    const tableColumns = getColumns(new Quiver({ data: TEN_BY_TEN }))
+
+    // Add descending sort for first column
+    const { result } = renderHook(() =>
+      useDataLoader(new Quiver({ data: TEN_BY_TEN }), {
+        column: tableColumns[0],
+        mode: "smart",
+        direction: "desc",
+      })
+    )
+
+    const sortedData = []
+
+    for (let i = 0; i < result.current.numRows; i++) {
+      sortedData.push(
+        (result.current.getCellContent([0, i]) as NumberCell).data
+      )
+    }
+
+    expect(Array.from(sortedData)).toEqual(
+      Array.from(sortedData)
+        .sort()
+        .reverse()
+    )
+  })
+
+  it("should correctly sort the table ascending order", () => {
+    const tableColumns = getColumns(new Quiver({ data: TEN_BY_TEN }))
+
+    // Add descending sort for first column
+    const { result } = renderHook(() =>
+      useDataLoader(new Quiver({ data: TEN_BY_TEN }), {
+        column: tableColumns[0],
+        mode: "smart",
+        direction: "asc",
+      })
+    )
+
+    const sortedData = []
+
+    for (let i = 0; i < result.current.numRows; i++) {
+      sortedData.push(
+        (result.current.getCellContent([0, i]) as NumberCell).data
+      )
+    }
+
+    expect(Array.from(sortedData)).toEqual(Array.from(sortedData).sort())
+  })
 })
