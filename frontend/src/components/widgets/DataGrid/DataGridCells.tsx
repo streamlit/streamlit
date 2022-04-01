@@ -205,7 +205,10 @@ export function fillCellTemplate(
 
     return {
       ...cellTemplate,
-      data: cellData as number,
+      data:
+        cellData !== undefined && cellData !== null
+          ? Number(cellData)
+          : undefined,
       displayData: formattedContents,
     } as NumberCell
   }
