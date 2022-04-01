@@ -283,9 +283,6 @@ class SessionState(MutableMapping[str, Any]):
     """SessionState allows users to store values that persist between app
     reruns.
 
-    SessionState objects are created lazily when a script accesses
-    st.session_state.
-
     Example
     -------
     >>> if "num_script_runs" not in st.session_state:
