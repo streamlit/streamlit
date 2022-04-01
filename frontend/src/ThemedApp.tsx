@@ -30,6 +30,7 @@ function DataGridOverlay(): React.ReactElement {
         top: 0,
         left: 0,
         zIndex: 9999,
+        lineHeight: "100%",
       }}
     />
   )
