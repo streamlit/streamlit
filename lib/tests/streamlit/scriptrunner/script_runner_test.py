@@ -748,7 +748,7 @@ class ScriptRunnerTest(AsyncTestCase):
     )
     def test_page_name_to_script_path(self):
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.enqueue_rerun(page_name="page2")
+        scriptrunner.request_rerun(RerunData(page_name="page2"))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -779,7 +779,7 @@ class ScriptRunnerTest(AsyncTestCase):
     )
     def test_page_name_to_script_path_404(self):
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.enqueue_rerun(page_name="page3")
+        scriptrunner.request_rerun(RerunData(page_name="page3"))
         scriptrunner.start()
         scriptrunner.join()
 
