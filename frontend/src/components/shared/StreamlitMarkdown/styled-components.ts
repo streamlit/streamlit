@@ -38,7 +38,7 @@ export const StyledStreamlitMarkdown = styled.div<
   li: {
     margin: "0.2em 0 0.2em 1.2em",
     padding: "0 0 0 0.6em",
-    fontSize: theme.fontSizes.md,
+    fontSize: theme.fontSizes.sm,
   },
 
   tr: {
