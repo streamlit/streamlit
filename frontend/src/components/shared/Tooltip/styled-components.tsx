@@ -49,6 +49,8 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
     background: transparentize(theme.colors.darkenedBgMix60, 0.8),
   },
   "*": {
-    fontSize: theme.fontSizes.sm,
+    // Regular markdown is medium font-size.
+    // Special markdown styles (like for the li element) would overwrite this, if it wasn't set to !important
+    fontSize: `${theme.fontSizes.sm} !important`,
   },
 }))
