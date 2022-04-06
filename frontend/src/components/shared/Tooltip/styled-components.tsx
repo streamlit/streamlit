@@ -51,4 +51,8 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   "*": {
     fontSize: theme.fontSizes.sm,
   },
+  // Specifically overriding the size for li items, since the * selector above isn't specific enough to override it
+  "ul li": {
+    fontSize: theme.fontSizes.sm,
+  },
 }))
