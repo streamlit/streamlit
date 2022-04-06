@@ -32,6 +32,7 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     right: theme.spacing.none,
     height: "3.375rem",
     background: theme.colors.bgColor,
+    outline: "none",
     zIndex: theme.zIndices.header,
     display: isEmbedded ? "none" : "block",
     "@media print": {
