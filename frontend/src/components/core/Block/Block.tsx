@@ -160,7 +160,11 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         const propsWithNewWidth = { ...props, ...{ width } }
 
         return (
-          <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
+          <StyledVerticalBlock
+            width={width}
+            data-testid="stVerticalBlock"
+            className={props.node.deltaBlock.cssClasses.join(" ")}
+          >
             <ChildRenderer {...propsWithNewWidth} />
           </StyledVerticalBlock>
         )

@@ -26,6 +26,7 @@ message Block {
   }
 
   bool allow_empty = 6;
+  repeated string css_classes = 7;
 
   message Vertical {
   }
@@ -47,5 +48,5 @@ message Block {
     bool clear_on_submit = 2;
   }
 
-  // Next ID: 7
+  // Next ID: 8
 }
