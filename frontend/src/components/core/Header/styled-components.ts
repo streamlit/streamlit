@@ -38,19 +38,6 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     "@media print": {
       display: "none",
     },
-    ...(isWideMode
-      ? {
-          backgroundImage: `linear-gradient(180deg, ${
-            theme.colors.bgColor
-          } 25%, ${transparentize(theme.colors.bgColor, 0.5)} 75%, ${
-            theme.colors.transparent
-          })`,
-          [`@media (max-width: ${theme.breakpoints.md})`]: {
-            position: "absolute",
-            background: "unset",
-          },
-        }
-      : {}),
   })
 )
 
