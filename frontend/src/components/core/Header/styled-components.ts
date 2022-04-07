@@ -30,7 +30,7 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     top: theme.spacing.none,
     left: theme.spacing.none,
     right: theme.spacing.none,
-    height: "3.375rem",
+    height: theme.sizes.headerHeight,
     background: theme.colors.bgColor,
     outline: "none",
     zIndex: theme.zIndices.header,
