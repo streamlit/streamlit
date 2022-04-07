@@ -219,6 +219,8 @@ function DataGrid({
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
+  const minWidth = MIN_COLUMN_WIDTH + 3
+
   useLayoutEffect(() => {
     // Without this timeout,the width calculation might fail in a few cases. The timeout ensures
     // that the execution of this function is placed after the component render in the event loop.
@@ -227,7 +229,7 @@ function DataGrid({
 
       let adjustedTableWidth = Math.max(
         columns.length * MIN_COLUMN_WIDTH + 3,
-        MIN_COLUMN_WIDTH + 3
+        minWidth
       )
 
       if (numRows) {
@@ -276,17 +278,27 @@ function DataGrid({
     [sort, columns]
   )
 
-  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
-  const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
-
   // Calculate min height for the resizable container. header + one column, and +3 pixels for borders
   const minHeight = 2 * ROW_HEIGHT + 3
+
+  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
+  let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, minHeight)
+  let height = Math.min(maxHeight, 400)
+
+  if (propHeight) {
+    // User has explicitly configured a height
+    height = Math.max(propHeight, minHeight)
+    maxHeight = Math.max(propHeight, maxHeight)
+  }
 
   return (
     <ThemedDataGridContainer
       width={width}
       height={height}
       minHeight={minHeight}
+      maxHeight={maxHeight}
+      minWidth={width}
+      maxWidth={propWidth}
     >
       <GlideDataEditor
         ref={dataEditorRef}
