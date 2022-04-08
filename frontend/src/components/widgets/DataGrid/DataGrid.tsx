@@ -42,6 +42,7 @@ const MAX_COLUMN_WIDTH = 500
  */
 type GridColumnWithCellTemplate = GridColumn & {
   getTemplate(): GridCell
+  columnType: string
 }
 
 /**
@@ -60,6 +61,7 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
       getTemplate: () => {
         return getCellTemplate(GridCellKind.RowID, true)
       },
+      columnType: GridCellKind.RowID,
     } as GridColumnWithCellTemplate)
     return columns
   }
@@ -76,6 +78,7 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
       getTemplate: () => {
         return getCellTemplate(GridCellKind.RowID, true)
       },
+      columnType: GridCellKind.RowID,
     } as GridColumnWithCellTemplate)
   }
 
@@ -105,6 +108,7 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
       getTemplate: () => {
         return getCellTemplate(cellKind, true)
       },
+      columnType: cellKind,
     } as GridColumnWithCellTemplate)
   }
   return columns
@@ -140,6 +144,29 @@ export function useDataLoader(
   // The columns with the corresponding empty template for every type:
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [columns, setColumns] = useState(() => getColumns(element))
+
+  useLayoutEffect(() => {
+    const updatedColumns = getColumns(element)
+    // Only update columns if
+    if (updatedColumns.length !== columns.length) {
+      setColumns(updatedColumns)
+    } else {
+      for (let i = 0; i < updatedColumns.length; i++) {
+        const updatedColumn = updatedColumns[i]
+        const currentColumn = columns[i]
+
+        if (updatedColumn.title !== currentColumn.title) {
+          setColumns(updatedColumns)
+          break
+        }
+
+        if (updatedColumn.columnType !== currentColumn.columnType) {
+          setColumns(updatedColumns)
+          break
+        }
+      }
+    }
+  }, [element])
 
   // Number of rows of the table minus 1 for the header row:
   const numRows = element.dimensions.rows - 1
