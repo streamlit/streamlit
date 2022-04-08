@@ -32,10 +32,12 @@ import { DataFrameCell, Quiver } from "src/lib/Quiver"
  * Returns either the formatted content or display value for a Quiver cell.
  */
 function getDisplayContent(quiverCell: DataFrameCell): string {
-  return (
+  let displayContent =
     quiverCell.displayContent ||
     Quiver.format(quiverCell.content, quiverCell.contentType)
-  )
+
+  // Remove all line breaks
+  return displayContent.replace(/(\r\n|\n|\r)/gm, " ")
 }
 
 /**
