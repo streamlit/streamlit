@@ -30,7 +30,11 @@ import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
 
-import { getCellTemplate, fillCellTemplate } from "./DataGridCells"
+import {
+  getCellTemplate,
+  fillCellTemplate,
+  getColumnSortMode,
+} from "./DataGridCells"
 import ThemedDataGridContainer from "./DataGridContainer"
 
 const ROW_HEIGHT = 35
@@ -156,11 +160,13 @@ export function useDataLoader(
         const currentColumn = columns[i]
 
         if (updatedColumn.title !== currentColumn.title) {
+          console.log("Updating column because of title change")
           setColumns(updatedColumns)
           break
         }
 
         if (updatedColumn.columnType !== currentColumn.columnType) {
+          console.log("Updating column because of type change")
           setColumns(updatedColumns)
           break
         }
@@ -283,6 +289,7 @@ function DataGrid({
 
   const onHeaderClick = React.useCallback(
     (index: number) => {
+      console.log("Header clicked", index)
       let sortDirection = "asc"
       const clickedColumn = columns[index]
 
@@ -298,8 +305,9 @@ function DataGrid({
       setSort({
         column: clickedColumn,
         direction: sortDirection,
-        // Smart mode also detects numbers and sorts those correctly:
-        mode: "smart",
+        mode: getColumnSortMode(
+          (clickedColumn as GridColumnWithCellTemplate).columnType
+        ),
       } as ColumnSortConfig)
     },
     [sort, columns]

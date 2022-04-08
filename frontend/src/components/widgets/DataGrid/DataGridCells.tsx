@@ -132,6 +132,18 @@ export function getCellTemplate(kind: string, readonly: boolean): GridCell {
 }
 
 /**
+ * Returns the sort mode based on the given column type.
+ */
+export function getColumnSortMode(columnType: string) {
+  if (columnType === GridCellKind.Number) {
+    // Smart mode also works correctly for numbers
+    return "smart"
+  }
+
+  return "default"
+}
+
+/**
  * Returns a glide-data-grid compatible cell object based on the
  * cell data from the quiver object. Different types of data will
  * result in different cell types.
