@@ -14,9 +14,10 @@ import {
   setCachedTheme,
   ThemeConfig,
 } from "src/theme"
+import { zIndices } from "src/theme/primitives"
+
 import AppWithScreencast from "./App"
 
-// TODO(lukasmasuch): Eventually move this into the DataGrid component and import it from there.
 function DataGridOverlay(): React.ReactElement {
   // The glide-data-grid requires one root level portal element for rendering the cell overlays:
   // https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#htmlcss-prerequisites
@@ -29,7 +30,8 @@ function DataGridOverlay(): React.ReactElement {
         position: "fixed",
         top: 0,
         left: 0,
-        zIndex: 9999,
+        zIndex: zIndices.tablePortal,
+        lineHeight: "100%",
       }}
     />
   )
