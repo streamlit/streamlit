@@ -102,7 +102,7 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
     }
 
     columns.push({
-      id: `column-${i}`,
+      id: `column-${columnTitle}-${i}`,
       title: columnTitle,
       hasMenu: false,
       getTemplate: () => {
