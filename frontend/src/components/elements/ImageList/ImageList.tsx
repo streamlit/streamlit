@@ -15,15 +15,18 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { useContext, ReactElement } from "react"
 import ReactHtmlParser from "react-html-parser"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { buildMediaUri, xssSanitizeSvg } from "src/lib/UriUtil"
+
 import {
   IImage,
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "src/autogen/proto"
+import AppContext from "src/components/core/AppContext"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import { buildMediaUri, xssSanitizeSvg } from "src/lib/UriUtil"
+
 import {
   StyledCaption,
   StyledImageContainer,
@@ -52,6 +55,8 @@ export function ImageList({
   element,
   height,
 }: ImageListProps): ReactElement {
+  const { getBaseUriParts } = useContext(AppContext)
+
   // The width field in the proto sets the image width, but has special
   // cases for -1, -2, and -3.
   let containerWidth: number | undefined
@@ -100,7 +105,7 @@ export function ImageList({
               ) : (
                 <img
                   style={imgStyle}
-                  src={buildMediaUri(image.url)}
+                  src={buildMediaUri(image.url, getBaseUriParts())}
                   alt={idx.toString()}
                 />
               )}
