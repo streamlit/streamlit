@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
+import React, { ReactElement, useContext, useEffect, useRef } from "react"
 import { Audio as AudioProto } from "src/autogen/proto"
+import AppContext from "src/components/core/AppContext"
 import { buildMediaUri } from "src/lib/UriUtil"
 
 export interface AudioProps {
@@ -26,6 +27,7 @@ export interface AudioProps {
 
 export default function Audio({ element, width }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const { getBaseUriParts } = useContext(AppContext)
 
   useEffect(() => {
     if (audioRef.current) {
@@ -33,7 +35,7 @@ export default function Audio({ element, width }: AudioProps): ReactElement {
     }
   }, [element.startTime])
 
-  const uri = buildMediaUri(element.url)
+  const uri = buildMediaUri(element.url, getBaseUriParts())
   return (
     <audio
       id="audio"
