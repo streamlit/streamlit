@@ -59,6 +59,8 @@ export interface AppViewProps {
   appPages: AppPage[]
 
   onPageChange: (pageName: string) => void
+
+  currentPageName: string
 }
 
 /**
@@ -76,6 +78,7 @@ function AppView(props: AppViewProps): ReactElement {
     formsData,
     appPages,
     onPageChange,
+    currentPageName,
   } = props
 
   React.useEffect(() => {
@@ -127,6 +130,7 @@ function AppView(props: AppViewProps): ReactElement {
           appPages={appPages}
           hasElements={hasSidebarElements}
           onPageChange={onPageChange}
+          currentPageName={currentPageName}
         >
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>

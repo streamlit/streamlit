@@ -50,6 +50,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     formsData,
     appPages: [{ pageName: "streamlit_app", scriptPath: "streamlit_app.py" }],
     onPageChange: jest.fn(),
+    currentPageName: "streamlit_app",
     ...props,
   }
 }
@@ -91,6 +92,9 @@ describe("AppView element", () => {
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("appPages")).toHaveLength(1)
+    expect(wrapper.find("ThemedSidebar").prop("currentPageName")).toBe(
+      "streamlit_app"
+    )
     expect(typeof wrapper.find("ThemedSidebar").prop("onPageChange")).toBe(
       "function"
     )
