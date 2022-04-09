@@ -813,6 +813,8 @@ describe("App.sendRerunBackMsg", () => {
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "", queryString: "" },
     })
+
+    expect(wrapper.find("AppView").prop("currentPageName")).toEqual("")
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 2: non-main page)", () => {
@@ -829,6 +831,7 @@ describe("App.sendRerunBackMsg", () => {
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
+    expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one and a baseUrlPath is set", () => {
@@ -863,6 +866,7 @@ describe("App.sendRerunBackMsg", () => {
       rerunScript: { pageName: "page1", queryString: "" },
     })
     expect(instance.clearAppState).toHaveBeenCalled()
+    expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
   })
 
   it("also switches pages correctly when a baseUrlPath is set", () => {
