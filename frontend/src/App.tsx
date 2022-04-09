@@ -51,6 +51,7 @@ import {
   notUndefined,
   getElementWidgetID,
 } from "src/lib/utils"
+import { BaseUriParts } from "src/lib/UriUtil"
 import {
   BackMsg,
   CustomThemeConfig,
@@ -140,6 +141,7 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   appPages: AppPage[]
+  currentPageName: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -212,6 +214,7 @@ export class App extends PureComponent<Props, State> {
       // false.
       hideTopBar: true,
       appPages: [],
+      currentPageName: "",
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -223,11 +226,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.uploadClient = new FileUploadClient({
-      getServerUri: () => {
-        return this.connectionManager
-          ? this.connectionManager.getBaseUriParts()
-          : undefined
-      },
+      getServerUri: this.getBaseUriParts,
       // A form cannot be submitted if it contains a FileUploader widget
       // that's currently uploading. We write that state here, in response
       // to a FileUploadClient callback. The FormSubmitButton element
@@ -237,11 +236,7 @@ export class App extends PureComponent<Props, State> {
       csrfEnabled: true,
     })
 
-    this.componentRegistry = new ComponentRegistry(() => {
-      return this.connectionManager
-        ? this.connectionManager.getBaseUriParts()
-        : undefined
-    })
+    this.componentRegistry = new ComponentRegistry(this.getBaseUriParts)
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
@@ -446,7 +441,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
-      handleFavicon(favicon)
+      handleFavicon(favicon, this.getBaseUriParts())
     }
 
     // Only change layout/sidebar when the page config has changed.
@@ -488,28 +483,13 @@ export class App extends PureComponent<Props, State> {
       `A page with the name ${pageName} does not exist. Redirecting to the app's main page.`
     )
 
-    // TODO(vdonato): Much of this code is duplicated from sendRerunBackMsg,
-    // but we leave both functions like this for now instead of creating a new
-    // abstraction around them since it's likely that we'll change the way the
-    // baseUrlPath is sent from server -> client. Once we're sure about what
-    // we're doing for baseUrlPath handling, we'll factor this code out into
-    // helper functions.
-    const { queryParams } = this.props.s4aCommunication.currentState
+    this.setState({ currentPageName: "" })
 
-    let queryString =
-      queryParams && queryParams.length > 0
-        ? queryParams
-        : document.location.search
-
-    if (queryString.startsWith("?")) {
-      queryString = queryString.substring(1)
-    }
-
-    const baseUriParts =
-      this.connectionManager && this.connectionManager.getBaseUriParts()
-
+    const baseUriParts = this.getBaseUriParts()
     if (baseUriParts) {
       const { basePath } = baseUriParts
+      const queryString = this.getQueryString()
+
       const qs = queryString ? `?${queryString}` : ""
 
       const pageUrl = `/${basePath}${qs}`
@@ -652,7 +632,10 @@ export class App extends PureComponent<Props, State> {
 
     // Set the title and favicon to their default values
     document.title = `${scriptName} · Streamlit`
-    handleFavicon(`${process.env.PUBLIC_URL}/favicon.png`)
+    handleFavicon(
+      `${process.env.PUBLIC_URL}/favicon.png`,
+      this.getBaseUriParts()
+    )
 
     MetricsManager.current.setMetadata(
       this.props.s4aCommunication.currentState.streamlitShareMetadata
@@ -947,8 +930,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageName: string): void => {
-    // TODO(vdonato): Verify that sending an empty widgetStates object back
-    // when switching pages is correct (I'm fairly certain it is).
     this.sendRerunBackMsg(undefined, pageName)
   }
 
@@ -956,29 +937,18 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     pageName?: string
   ): void => {
-    const { queryParams } = this.props.s4aCommunication.currentState
-
-    let queryString =
-      queryParams && queryParams.length > 0
-        ? queryParams
-        : document.location.search
-
-    if (queryString.startsWith("?")) {
-      queryString = queryString.substring(1)
-    }
-
-    // If we don't have a connectionManager or if it doesn't have an active
-    // websocket connection to the server (in which case
-    // connectionManager.getBaseUriParts() returns undefined), we can't send a
-    // rerun backMessage so just return early.
-    const baseUriParts =
-      this.connectionManager && this.connectionManager.getBaseUriParts()
+    const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
+      // If we don't have a connectionManager or if it doesn't have an active
+      // websocket connection to the server (in which case
+      // connectionManager.getBaseUriParts() returns undefined), we can't send a
+      // rerun backMessage so just return early.
       logError("Cannot send rerun backMessage when disconnected from server.")
       return
     }
 
     const { basePath } = baseUriParts
+    const queryString = this.getQueryString()
 
     // NOTE: We specifically check for `null` or `undefined` instead of making
     //       a falsy check below because navigating to "" can be used to
@@ -1012,6 +982,8 @@ export class App extends PureComponent<Props, State> {
       const pageUrl = `${basePathPrefix}/${pageName}${qs}`
       window.history.pushState({}, "", pageUrl)
     }
+
+    this.setState({ currentPageName: pageName })
 
     this.sendBackMsg(
       new BackMsg({
@@ -1165,6 +1137,22 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
+  getBaseUriParts = (): BaseUriParts | undefined =>
+    this.connectionManager
+      ? this.connectionManager.getBaseUriParts()
+      : undefined
+
+  getQueryString = (): string => {
+    const { queryParams } = this.props.s4aCommunication.currentState
+
+    const queryString =
+      queryParams && queryParams.length > 0
+        ? queryParams
+        : document.location.search
+
+    return queryString.startsWith("?") ? queryString.substring(1) : queryString
+  }
+
   render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -1180,6 +1168,7 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       gitInfo,
       hideTopBar,
+      currentPageName,
     } = this.state
 
     const outerDivClass = classNames("stApp", {
@@ -1215,6 +1204,7 @@ export class App extends PureComponent<Props, State> {
           addThemes: this.props.theme.addThemes,
           sidebarChevronDownshift: this.props.s4aCommunication.currentState
             .sidebarChevronDownshift,
+          getBaseUriParts: this.getBaseUriParts,
         }}
       >
         <HotKeys
@@ -1280,6 +1270,7 @@ export class App extends PureComponent<Props, State> {
               formsData={this.state.formsData}
               appPages={this.state.appPages}
               onPageChange={this.onPageChange}
+              currentPageName={currentPageName}
             />
             {renderedDialog}
           </StyledApp>

@@ -16,7 +16,7 @@
  */
 
 import { BackMsg, ForwardMsg } from "src/autogen/proto"
-import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
+import { BaseUriParts, getPossibleBaseUris } from "src/lib/UriUtil"
 import { ReactNode } from "react"
 
 import { ConnectionState } from "./ConnectionState"
@@ -139,10 +139,10 @@ export class ConnectionManager {
   }
 
   private connectToRunningServer(): WebsocketConnection {
-    const baseUriParts = getWindowBaseUriParts()
+    const baseUriPartsList = getPossibleBaseUris()
 
     return new WebsocketConnection({
-      baseUriPartsList: [baseUriParts],
+      baseUriPartsList,
       onMessage: this.props.onMessage,
       onConnectionStateChange: this.setConnectionState,
       onRetry: this.showRetryError,
