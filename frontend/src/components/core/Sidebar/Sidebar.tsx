@@ -42,6 +42,7 @@ export interface SidebarProps {
   hasElements?: boolean
   appPages: AppPage[]
   onPageChange: (pageName: string) => void
+  currentPageName: string
 }
 
 interface State {
@@ -167,6 +168,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       children,
       hasElements,
       onPageChange,
+      currentPageName,
     } = this.props
 
     // The tabindex is required to support scrolling by arrow keys.
@@ -190,6 +192,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             hasSidebarElements={hasElements}
             onPageChange={onPageChange}
             hideParentScrollbar={this.hideScrollbar}
+            currentPageName={currentPageName}
           />
           <StyledSidebarUserContent hasPageNavAbove={appPages.length > 1}>
             {children}

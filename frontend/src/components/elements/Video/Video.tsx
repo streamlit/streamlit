@@ -15,7 +15,8 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
+import React, { ReactElement, useContext, useEffect, useRef } from "react"
+import AppContext from "src/components/core/AppContext"
 import { Video as VideoProto } from "src/autogen/proto"
 import { buildMediaUri } from "src/lib/UriUtil"
 
@@ -26,6 +27,7 @@ export interface VideoProps {
 
 export default function Video({ element, width }: VideoProps): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const { getBaseUriParts } = useContext(AppContext)
 
   /* Element may contain "url" or "data" property. */
 
@@ -82,7 +84,7 @@ export default function Video({ element, width }: VideoProps): ReactElement {
     <video
       ref={videoRef}
       controls
-      src={buildMediaUri(url)}
+      src={buildMediaUri(url, getBaseUriParts())}
       className="stVideo"
       style={{ width }}
     />
