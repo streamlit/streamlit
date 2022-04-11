@@ -30,7 +30,7 @@ try:
         from pipenv.utils import convert_deps_to_pip
 except:
     exit_msg = (
-        "pipenv is required to package Streamlit. Please install pipenv and try again"
+        "pipenv is required to package Streamlit. Please install pipenv and try again."
     )
     sys.exit(exit_msg)
 
