@@ -16,7 +16,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 export interface StyledHeaderProps {
   isEmbedded: boolean
