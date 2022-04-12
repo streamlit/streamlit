@@ -668,3 +668,4 @@ def _populate_app_pages(msg: NewSession, main_script_path: str) -> None:
         page_proto = msg.app_pages.add()
         page_proto.script_path = page["script_path"]
         page_proto.page_name = page["page_name"]
+        page_proto.icon = page["icon"]
