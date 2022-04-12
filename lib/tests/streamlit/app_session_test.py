@@ -306,8 +306,8 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         "streamlit.app_session.source_util.get_pages",
         MagicMock(
             return_value=[
-                {"page_name": "page1", "script_path": "script1"},
-                {"page_name": "page2", "script_path": "script2"},
+                {"page_name": "page1", "icon": "", "script_path": "script1"},
+                {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
             ]
         ),
     )
@@ -367,8 +367,8 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         self.assertEqual(
             list(new_session_msg.app_pages),
             [
-                AppPage(page_name="page1", script_path="script1"),
-                AppPage(page_name="page2", script_path="script2"),
+                AppPage(page_name="page1", icon="", script_path="script1"),
+                AppPage(page_name="page2", icon="🎉", script_path="script2"),
             ],
         )
 
