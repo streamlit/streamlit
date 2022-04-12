@@ -142,4 +142,5 @@ message EnvironmentInfo {
 message AppPage {
   string page_name = 1;
   string script_path = 2;
+  string icon = 3;
 }

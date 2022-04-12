@@ -48,36 +48,46 @@ class PageHelperFunctionTests(unittest.TestCase):
     @parameterized.expand(
         [
             # Test that the page number is removed as expected.
-            ("/foo/01_bar.py", "bar"),
-            ("/foo/02-bar.py", "bar"),
-            ("/foo/03 bar.py", "bar"),
-            ("/foo/04 bar baz.py", "bar_baz"),
-            ("/foo/05 -_- bar.py", "bar"),
+            ("/foo/01_bar.py", ("bar", "")),
+            ("/foo/02-bar.py", ("bar", "")),
+            ("/foo/03 bar.py", ("bar", "")),
+            ("/foo/04 bar baz.py", ("bar_baz", "")),
+            ("/foo/05 -_- bar.py", ("bar", "")),
+            ("/foo/06 -_- 🎉bar.py", ("bar", "🎉")),
+            ("/foo/07 -_- 🎉-_bar.py", ("bar", "🎉")),
+            ("/foo/08 -_- 🎉 _ bar.py", ("bar", "🎉")),
             # Test cases with no page number.
-            ("/foo/bar.py", "bar"),
-            ("/foo/bar baz.py", "bar_baz"),
+            ("/foo/bar.py", ("bar", "")),
+            ("/foo/bar baz.py", ("bar_baz", "")),
+            ("/foo/😐bar baz.py", ("bar_baz", "😐")),
+            ("/foo/😐_bar baz.py", ("bar_baz", "😐")),
             # Test that separator characters in the page name are removed as
             # as expected.
-            ("/foo/1 - first page.py", "first_page"),
-            ("/foo/123_hairy_koala.py", "hairy_koala"),
+            ("/foo/1 - first page.py", ("first_page", "")),
+            ("/foo/123_hairy_koala.py", ("hairy_koala", "")),
             (
                 "/foo/123 wow_this_has a _lot_ _of  _ ___ separators.py",
-                "wow_this_has_a_lot_of_separators",
+                ("wow_this_has_a_lot_of_separators", ""),
             ),
             (
                 "/foo/1-dashes in page-name stay.py",
-                "dashes_in_page-name_stay",
+                ("dashes_in_page-name_stay", ""),
             ),
+            ("/foo/2 - 🙃second page.py", ("second_page", "🙃")),
             # Test other weirdness that might happen with numbers.
-            ("12 monkeys.py", "monkeys"),
-            ("_12 monkeys.py", "12_monkeys"),
-            ("123.py", "123"),
+            ("12 monkeys.py", ("monkeys", "")),
+            ("12 😰monkeys.py", ("monkeys", "😰")),
+            ("_12 monkeys.py", ("12_monkeys", "")),
+            ("_12 😰monkeys.py", ("12_😰monkeys", "")),
+            ("_😰12 monkeys.py", ("12_monkeys", "😰")),
+            ("123.py", ("123", "")),
+            ("😰123.py", ("123", "😰")),
             # Test the default case for non-Python files.
-            ("not_a_python_script.rs", ""),
+            ("not_a_python_script.rs", ("", "")),
         ]
     )
-    def test_page_name(self, path_str, expected):
-        assert source_util.page_name(Path(path_str)) == expected
+    def test_page_name_and_icon(self, path_str, expected):
+        assert source_util.page_name_and_icon(Path(path_str)) == expected
 
 
 # NOTE: We write this test function using pytest conventions (as opposed to
@@ -109,17 +119,21 @@ def test_get_pages(tmpdir):
         {
             "page_name": "streamlit_app",
             "script_path": main_script_path,
+            "icon": "",
         },
         {
             "page_name": "page",
             "script_path": str(pages_dir / "01-page.py"),
+            "icon": "",
         },
         {
             "page_name": "other_page",
             "script_path": str(pages_dir / "03_other_page.py"),
+            "icon": "",
         },
         {
             "page_name": "last_page",
             "script_path": str(pages_dir / "last page.py"),
+            "icon": "",
         },
     ]
