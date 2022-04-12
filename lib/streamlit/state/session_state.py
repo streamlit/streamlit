@@ -580,7 +580,7 @@ class SessionState(MutableMapping[str, Any]):
         """
         return self._key_id_mapping.get(k, k)
 
-    def set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
+    def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapping[user_key] = widget_id
 
     def copy(self) -> "SessionState":
@@ -601,7 +601,7 @@ class SessionState(MutableMapping[str, Any]):
         self._set_widget_metadata(metadata)
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping
-            self.set_key_widget_mapping(widget_id, user_key)
+            self._set_key_widget_mapping(widget_id, user_key)
 
         if widget_id not in self and (user_key is None or user_key not in self):
             # This is the first time the widget is registered, so we save its

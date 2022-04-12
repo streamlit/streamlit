@@ -426,7 +426,6 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         check_roundtrip("time_datetime", time_datetime)
 
 
-
 def compact_copy(state: SessionState) -> SessionState:
     """Return a compacted copy of the given SessionState."""
     state_copy = state.copy()
