@@ -477,21 +477,10 @@ export class App extends PureComponent<Props, State> {
     const { pageName } = pageNotFound
     this.showError(
       "Page not found",
-      `A page with the name ${pageName} does not exist. Redirecting to the app's main page.`
+      `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory.`
     )
 
     this.setState({ currentPageName: "" })
-
-    const baseUriParts = this.getBaseUriParts()
-    if (baseUriParts) {
-      const { basePath } = baseUriParts
-      const queryString = this.getQueryString()
-
-      const qs = queryString ? `?${queryString}` : ""
-
-      const pageUrl = `/${basePath}${qs}`
-      window.history.pushState({}, "", pageUrl)
-    }
   }
 
   /**
