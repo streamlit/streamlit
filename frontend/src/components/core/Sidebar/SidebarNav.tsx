@@ -83,8 +83,7 @@ const SidebarNav = ({
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
       >
-        {/* XXX Need some way to tell what the icon is */}
-        {appPages.map(({ pageName }: AppPage, pageIndex: number) => {
+        {appPages.map(({ pageIcon, pageName }: AppPage, pageIndex: number) => {
           // NOTE: We use window.location to get the port instead of
           // getBaseUriParts() because the port may differ in dev mode (since
           // the frontend is served by the react dev server and not the
