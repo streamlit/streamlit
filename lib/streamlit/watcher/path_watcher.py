@@ -20,7 +20,7 @@ import streamlit.watcher
 from streamlit import config
 from streamlit import env_util
 from streamlit.logger import get_logger
-from streamlit.watcher.polling_file_watcher import PollingFileWatcher
+from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 
 LOGGER = get_logger(__name__)
 
@@ -60,7 +60,7 @@ class NoOpPathWatcher:
 # so we can't reference it directly in this type.
 PathWatcherType = Union[
     Type["streamlit.watcher.event_based_file_watcher.EventBasedFileWatcher"],
-    Type[PollingFileWatcher],
+    Type[PollingPathWatcher],
     Type[NoOpPathWatcher],
 ]
 
@@ -136,10 +136,10 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
         if watchdog_available:
             return EventBasedFileWatcher
         else:
-            return PollingFileWatcher
+            return PollingPathWatcher
     elif watcher_type == "watchdog" and watchdog_available:
         return EventBasedFileWatcher
     elif watcher_type == "poll":
-        return PollingFileWatcher
+        return PollingPathWatcher
     else:
         return NoOpPathWatcher

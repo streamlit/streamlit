@@ -76,7 +76,7 @@ class FileWatcherTest(unittest.TestCase):
         ]
         mock_echo.assert_has_calls(calls)
 
-    @patch("streamlit.watcher.path_watcher.PollingFileWatcher")
+    @patch("streamlit.watcher.path_watcher.PollingPathWatcher")
     @patch("streamlit.watcher.path_watcher.EventBasedFileWatcher")
     def test_watch_file(self, mock_event_watcher, mock_polling_watcher):
         """Test all possible outcomes of both `get_default_path_watcher_class` and

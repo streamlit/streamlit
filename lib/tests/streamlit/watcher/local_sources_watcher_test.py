@@ -238,7 +238,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         config.set_option("server.fileWatcherType", "poll")
         self.assertEqual(
             local_sources_watcher.get_default_path_watcher_class().__name__,
-            "PollingFileWatcher",
+            "PollingPathWatcher",
         )
 
         config.set_option("server.fileWatcherType", "watchdog")
@@ -258,7 +258,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         else:
             self.assertEqual(
                 local_sources_watcher.get_default_path_watcher_class().__name__,
-                "PollingFileWatcher",
+                "PollingPathWatcher",
             )
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher", new=NoOpPathWatcher)
