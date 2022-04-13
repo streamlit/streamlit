@@ -49,11 +49,6 @@ class NoOpPathWatcher:
     def __init__(self, _path_str, _on_changed):
         pass
 
-    # FIXME(vdonato): Change this to watch_path at the same time as it's changed
-    # for the other watchers.
-    def watch_file(self, _path_str, _callback):
-        pass
-
 
 # EventBasedPathWatcher will be a stub and have no functional
 # implementation if its import failed (due to missing watchdog module),
