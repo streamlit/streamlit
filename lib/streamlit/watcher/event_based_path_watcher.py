@@ -36,7 +36,7 @@ How these classes work together
 
 import os
 import threading
-from typing import Callable, Dict
+from typing import Callable, cast, Dict, Optional
 
 from blinker import Signal, ANY
 
@@ -92,7 +92,7 @@ class EventBasedPathWatcher:
 class _MultiPathWatcher(object):
     """Watches multiple paths."""
 
-    _singleton = None
+    _singleton: Optional["_MultiPathWatcher"] = None
 
     @classmethod
     def get_singleton(cls) -> "_MultiPathWatcher":
@@ -104,7 +104,7 @@ class _MultiPathWatcher(object):
             LOGGER.debug("No singleton. Registering one.")
             _MultiPathWatcher()
 
-        return _MultiPathWatcher._singleton
+        return cast("_MultiPathWatcher", _MultiPathWatcher._singleton)
 
     # Don't allow constructor to be called more than once.
     def __new__(cls) -> "_MultiPathWatcher":
@@ -118,7 +118,7 @@ class _MultiPathWatcher(object):
         _MultiPathWatcher._singleton = self
 
         # Map of folder_to_watch -> _FolderEventHandler.
-        self._folder_handlers = {}
+        self._folder_handlers: Dict[str, _FolderEventHandler] = {}
 
         # Used for mutation of _folder_handlers dict
         self._lock = threading.Lock()
