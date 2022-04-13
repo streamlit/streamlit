@@ -12,31 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Declares the EventBasedFileWatcher class, that watches the file system.
+"""Declares the EventBasedPathWatcher class, which watches given paths in the file system.
 
 How these classes work together
 -------------------------------
 
-- EventBasedFileWatcher : each instance of this is able to watch a single
-  files so long as there's a browser interested in it. This uses
-  _MultiFileWatcher to watch files.
+- EventBasedPathWatcher : each instance of this is able to watch a single
+  file or directory at a given path so long as there's a browser interested in
+  it. This uses _MultiPathWatcher to watch files.
 
-- _MultiFileWatcher : singleton that watches multiple files. It does this by
+- _MultiPathWatcher : singleton that watches multiple paths. It does this by
   holding a watchdog.observer.Observer object, and manages several
   _FolderEventHandler instances. This creates _FolderEventHandlers as needed,
   if the required folder is not already being watched. And it also tells
-  existing _FolderEventHandlers which files it should be watching for.
+  existing _FolderEventHandlers which paths it should be watching for.
 
-- _FolderEventHandler : event handler from when a folder is modified. You can
-  register files in that folder that you're interested in. Then this object
-  listens to folder events, sees if registered files changed, and fires
+- _FolderEventHandler : event handler for when a folder is modified. You can
+  register paths in that folder that you're interested in. Then this object
+  listens to folder events, sees if registered paths changed, and fires
   callbacks if so.
 
 """
 
 import os
 import threading
-from typing import Callable
+from typing import Callable, Dict
 
 from blinker import Signal, ANY
 
@@ -50,73 +50,72 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-class EventBasedFileWatcher(object):
-    """Watches a single file on disk using watchdog"""
+class EventBasedPathWatcher:
+    """Watches a single path on disk using watchdog"""
 
     @staticmethod
     def close_all() -> None:
-        """Close the EventBasedFileWatcher singleton."""
-        file_watcher = _MultiFileWatcher.get_singleton()
-        file_watcher.close()
+        """Close the _MultiPathWatcher singleton."""
+        path_watcher = _MultiPathWatcher.get_singleton()
+        path_watcher.close()
         LOGGER.debug("Watcher closed")
 
-    def __init__(self, file_path: str, on_file_changed: Callable[[str], None]):
+    def __init__(self, path: str, on_changed: Callable[[str], None]) -> None:
         """Constructor.
 
         Arguments
         ---------
-        file_path
-            Absolute path of the file to watch.
+        path
+            Absolute path to watch.
 
-        on_file_changed
-            Function to call when the file changes. This function should
-            take the changed file's path as a parameter.
+        on_changed
+            Function to call when the given path changes. This function should
+            take the changed path as a parameter.
 
         """
-        file_path = os.path.abspath(file_path)
-        self._file_path = file_path
-        self._on_file_changed = on_file_changed
+        self._path = os.path.abspath(path)
+        self._on_changed = on_changed
 
-        file_watcher = _MultiFileWatcher.get_singleton()
-        file_watcher.watch_file(file_path, on_file_changed)
-        LOGGER.debug("Watcher created for %s", file_path)
+        path_watcher = _MultiPathWatcher.get_singleton()
+        path_watcher.watch_path(self._path, on_changed)
+        LOGGER.debug("Watcher created for %s", self._path)
 
     def __repr__(self) -> str:
         return repr_(self)
 
     def close(self) -> None:
-        """Stop watching the file system."""
-        file_watcher = _MultiFileWatcher.get_singleton()
-        file_watcher.stop_watching_file(self._file_path, self._on_file_changed)
+        """Stop watching the path corresponding to this EventBasedPathWatcher."""
+        path_watcher = _MultiPathWatcher.get_singleton()
+        path_watcher.stop_watching_path(self._path, self._on_changed)
 
 
-class _MultiFileWatcher(object):
-    """Watches multiple files."""
+class _MultiPathWatcher(object):
+    """Watches multiple paths."""
 
     _singleton = None
 
     @classmethod
-    def get_singleton(cls):
-        """Return the singleton _MultiFileWatcher object.
+    def get_singleton(cls) -> "_MultiPathWatcher":
+        """Return the singleton _MultiPathWatcher object.
 
         Instantiates one if necessary.
         """
         if cls._singleton is None:
             LOGGER.debug("No singleton. Registering one.")
-            _MultiFileWatcher()
+            _MultiPathWatcher()
 
-        return _MultiFileWatcher._singleton
+        return _MultiPathWatcher._singleton
 
     # Don't allow constructor to be called more than once.
-    def __new__(cls):
+    def __new__(cls) -> "_MultiPathWatcher":
         """Constructor."""
-        if _MultiFileWatcher._singleton is not None:
+        if _MultiPathWatcher._singleton is not None:
             raise RuntimeError("Use .get_singleton() instead")
-        return super(_MultiFileWatcher, cls).__new__(cls)
+        return super(_MultiPathWatcher, cls).__new__(cls)
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Constructor."""
-        _MultiFileWatcher._singleton = self
+        _MultiPathWatcher._singleton = self
 
         # Map of folder_to_watch -> _FolderEventHandler.
         self._folder_handlers = {}
@@ -133,19 +132,9 @@ class _MultiFileWatcher(object):
     def __repr__(self) -> str:
         return repr_(self)
 
-    def watch_file(self, file_path, callback):
-        """Start watching a file.
-
-        Parameters
-        ----------
-        file_path : str
-            The full path of the file to watch.
-
-        callback : callable
-            The function to execute when the file is changed.
-
-        """
-        folder_path = os.path.abspath(os.path.dirname(file_path))
+    def watch_path(self, path: str, callback: Callable[[str], None]) -> None:
+        """Start watching a path."""
+        folder_path = os.path.abspath(os.path.dirname(path))
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
@@ -158,21 +147,11 @@ class _MultiFileWatcher(object):
                     folder_handler, folder_path, recursive=False
                 )
 
-            folder_handler.add_file_change_listener(file_path, callback)
+            folder_handler.add_path_change_listener(path, callback)
 
-    def stop_watching_file(self, file_path, callback):
-        """Stop watching a file.
-
-        Parameters
-        ----------
-        file_path : str
-            The full path of the file to stop watching.
-
-        callback : callable
-            The function to execute when the file is changed.
-
-        """
-        folder_path = os.path.abspath(os.path.dirname(file_path))
+    def stop_watching_path(self, path: str, callback: Callable[[str], None]) -> None:
+        """Stop watching a path."""
+        folder_path = os.path.abspath(os.path.dirname(path))
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
@@ -185,9 +164,9 @@ class _MultiFileWatcher(object):
                 )
                 return
 
-            folder_handler.remove_file_change_listener(file_path, callback)
+            folder_handler.remove_path_change_listener(path, callback)
 
-            if not folder_handler.is_watching_files():
+            if not folder_handler.is_watching_paths():
                 # Sometimes watchdog's FileSystemEventHandler does not have
                 # a .watch property. It's unclear why -- may be due to a
                 # race condition.
@@ -195,9 +174,9 @@ class _MultiFileWatcher(object):
                     self._observer.unschedule(folder_handler.watch)
                 del self._folder_handlers[folder_path]
 
-    def close(self):
+    def close(self) -> None:
         with self._lock:
-            """Close this _MultiFileWatcher object forever."""
+            """Close this _MultiPathWatcher object forever."""
             if len(self._folder_handlers) != 0:
                 self._folder_handlers = {}
                 LOGGER.debug(
@@ -211,82 +190,72 @@ class _MultiFileWatcher(object):
             self._observer.join(timeout=5)
 
 
-class WatchedFile(object):
-    """Emits notifications when a single file is modified."""
+class WatchedPath(object):
+    """Emits notifications when a single path is modified."""
 
     def __init__(self, md5, modification_time):
         self.md5 = md5
         self.modification_time = modification_time
-        self.on_file_changed = Signal()
+        self.on_changed = Signal()
 
     def __repr__(self) -> str:
         return repr_(self)
 
 
 class _FolderEventHandler(events.FileSystemEventHandler):
-    """Listen to folder events, see if certain files changed, fire callback.
+    """Listen to folder events. If certain paths change, fire a callback.
 
     The super class, FileSystemEventHandler, listens to changes to *folders*,
-    but we need to listen to changes to *files*. I believe this is a limitation
-    of the Mac FSEvents system API, and the watchdog library takes the lower
-    common denominator.
+    but we need to listen to changes to *both* folders and files. I believe
+    this is a limitation of the Mac FSEvents system API, and the watchdog
+    library takes the lower common denominator.
 
     So in this class we watch for folder events and then filter them based
-    on whether or not we care for the file the event is about.
+    on whether or not we care for the path the event is about.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Constructor."""
         super(_FolderEventHandler, self).__init__()
-        self._watched_files = {}
-        self._lock = threading.Lock()  # for watched_files mutations
+        self._watched_paths: Dict[str, WatchedPath] = {}
+        self._lock = threading.Lock()  # for watched_paths mutations
 
     def __repr__(self) -> str:
         return repr_(self)
 
-    def add_file_change_listener(self, file_path, callback):
-        """Add a file to this object's event filter.
-
-        Parameters
-        ----------
-        file_path : str
-        callback : callable
-
-        """
+    def add_path_change_listener(
+        self, path: str, callback: Callable[[str], None]
+    ) -> None:
+        """Add a path to this object's event filter."""
         with self._lock:
-            watched_file = self._watched_files.get(file_path, None)
-            if watched_file is None:
-                md5 = util.calc_md5_with_blocking_retries(file_path)
-                modification_time = os.stat(file_path).st_mtime
-                watched_file = WatchedFile(md5=md5, modification_time=modification_time)
-                self._watched_files[file_path] = watched_file
+            watched_path = self._watched_paths.get(path, None)
+            if watched_path is None:
+                md5 = util.calc_md5_with_blocking_retries(path)
+                modification_time = os.stat(path).st_mtime
+                watched_path = WatchedPath(md5=md5, modification_time=modification_time)
+                self._watched_paths[path] = watched_path
 
-            watched_file.on_file_changed.connect(callback, weak=False)
+            watched_path.on_changed.connect(callback, weak=False)
 
-    def remove_file_change_listener(self, file_path, callback):
-        """Remove a file from this object's event filter.
-
-        Parameters
-        ----------
-        file_path : str
-        callback : callable
-
-        """
+    def remove_path_change_listener(
+        self, path: str, callback: Callable[[str], None]
+    ) -> None:
+        """Remove a path from this object's event filter."""
         with self._lock:
-            watched_file = self._watched_files.get(file_path, None)
-            if watched_file is None:
+            watched_path = self._watched_paths.get(path, None)
+            if watched_path is None:
                 return
 
-            watched_file.on_file_changed.disconnect(callback)
-            if not watched_file.on_file_changed.has_receivers_for(ANY):
-                del self._watched_files[file_path]
+            watched_path.on_changed.disconnect(callback)
+            if not watched_path.on_changed.has_receivers_for(ANY):
+                del self._watched_paths[path]
 
-    def is_watching_files(self):
-        """Return true if this object has 1+ files in its event filter."""
-        return len(self._watched_files) > 0
+    def is_watching_paths(self) -> bool:
+        """Return true if this object has 1+ paths in its event filter."""
+        return len(self._watched_paths) > 0
 
-    def handle_file_change_event(self, event):
-        """Handle when file is changed.
+    def handle_path_change_event(self, event):
+        """Handle when a path is changed.
 
         The events that can call this are modification, creation or moved
         events.
@@ -300,28 +269,30 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         if event.is_directory:
             return
 
+        # NOTE: At this point, we know that the changed path must be a file.
+
         # Check for both modified and moved files, because many programs write
         # to a backup file then rename (i.e. move) it.
         if event.event_type == events.EVENT_TYPE_MODIFIED:
             file_path = event.src_path
+        elif event.event_type == events.EVENT_TYPE_MOVED:
+            LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
+            file_path = event.dest_path
         # On OSX with VI, on save, the file is deleted, the swap file is
         # modified and then the original file is created hence why we
         # capture EVENT_TYPE_CREATED
         elif event.event_type == events.EVENT_TYPE_CREATED:
             file_path = event.src_path
-        elif event.event_type == events.EVENT_TYPE_MOVED:
-            LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
-            file_path = event.dest_path
         else:
             LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
         file_path = os.path.abspath(file_path)
 
-        file_info = self._watched_files.get(file_path, None)
+        file_info = self._watched_paths.get(file_path, None)
         if file_info is None:
             LOGGER.debug(
-                "Ignoring file %s.\nWatched_files: %s", file_path, self._watched_files
+                "Ignoring file %s.\nWatched_paths: %s", file_path, self._watched_paths
             )
             return
 
@@ -339,19 +310,19 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         LOGGER.debug("File MD5 changed: %s", file_path)
         file_info.md5 = new_md5
-        file_info.on_file_changed.send(file_path)
+        file_info.on_changed.send(file_path)
 
     def on_created(self, event):
         if event.is_directory:
             return
-        self.handle_file_change_event(event)
+        self.handle_path_change_event(event)
 
     def on_modified(self, event):
         if event.is_directory:
             return
-        self.handle_file_change_event(event)
+        self.handle_path_change_event(event)
 
     def on_moved(self, event):
         if event.is_directory:
             return
-        self.handle_file_change_event(event)
+        self.handle_path_change_event(event)

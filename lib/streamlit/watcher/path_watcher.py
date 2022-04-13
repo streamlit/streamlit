@@ -26,14 +26,14 @@ LOGGER = get_logger(__name__)
 
 try:
     # Check if the watchdog module is installed.
-    from streamlit.watcher.event_based_file_watcher import EventBasedFileWatcher
+    from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
 
     watchdog_available = True
 except ImportError:
     watchdog_available = False
-    # Stub the EventBasedFileWatcher so it can be mocked by tests
+    # Stub the EventBasedPathWatcher so it can be mocked by tests
 
-    class EventBasedFileWatcher:  # type: ignore
+    class EventBasedPathWatcher:  # type: ignore
         pass
 
 
@@ -55,11 +55,11 @@ class NoOpPathWatcher:
         pass
 
 
-# EventBasedFileWatcher will be a stub and have no functional
+# EventBasedPathWatcher will be a stub and have no functional
 # implementation if its import failed (due to missing watchdog module),
 # so we can't reference it directly in this type.
 PathWatcherType = Union[
-    Type["streamlit.watcher.event_based_file_watcher.EventBasedFileWatcher"],
+    Type["streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher"],
     Type[PollingPathWatcher],
     Type[NoOpPathWatcher],
 ]
@@ -134,11 +134,11 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
     """
     if watcher_type == "auto":
         if watchdog_available:
-            return EventBasedFileWatcher
+            return EventBasedPathWatcher
         else:
             return PollingPathWatcher
     elif watcher_type == "watchdog" and watchdog_available:
-        return EventBasedFileWatcher
+        return EventBasedPathWatcher
     elif watcher_type == "poll":
         return PollingPathWatcher
     else:

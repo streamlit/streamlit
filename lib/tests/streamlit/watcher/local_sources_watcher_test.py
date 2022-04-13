@@ -244,16 +244,16 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         config.set_option("server.fileWatcherType", "watchdog")
         self.assertEqual(
             local_sources_watcher.get_default_path_watcher_class().__name__,
-            "EventBasedFileWatcher" if watchdog_available else "NoOpPathWatcher",
+            "EventBasedPathWatcher" if watchdog_available else "NoOpPathWatcher",
         )
 
         config.set_option("server.fileWatcherType", "auto")
         self.assertIsNotNone(local_sources_watcher.get_default_path_watcher_class())
 
-        if sys.modules["streamlit.watcher.event_based_file_watcher"] is not None:
+        if sys.modules["streamlit.watcher.event_based_path_watcher"] is not None:
             self.assertEqual(
                 local_sources_watcher.get_default_path_watcher_class().__name__,
-                "EventBasedFileWatcher",
+                "EventBasedPathWatcher",
             )
         else:
             self.assertEqual(

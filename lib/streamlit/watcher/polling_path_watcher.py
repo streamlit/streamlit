@@ -45,22 +45,12 @@ class PollingPathWatcher:
         """
         LOGGER.debug("Watcher closed")
 
-    def __init__(self, path: str, on_changed: Callable[[str], None]):
+    def __init__(self, path: str, on_changed: Callable[[str], None]) -> None:
         """Constructor.
 
         You do not need to retain a reference to a PollingPathWatcher to
         prevent it from being garbage collected. (The global _executor object
         retains references to all active instances.)
-
-        Arguments
-        ---------
-        path
-            The absolute path to watch.
-
-        on_changed
-            Function to call when the path changes. This function should
-            take the changed path as a parameter.
-
         """
         # TODO(vdonato): Modernize this by switching to pathlib.
         self._path = path
