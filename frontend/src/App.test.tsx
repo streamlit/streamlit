@@ -921,20 +921,7 @@ describe("App.sendRerunBackMsg", () => {
 })
 
 describe("App.handlePageNotFound", () => {
-  beforeEach(() => {
-    window.history.pushState({}, "", "/")
-    jest.spyOn(
-      window.history,
-      // @ts-ignore
-      "pushState"
-    )
-  })
-
-  afterEach(() => {
-    window.history.pushState({}, "", "/")
-  })
-
-  it("displays an error modal and navigates to the app main page", () => {
+  it("displays an error modal", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
@@ -945,39 +932,8 @@ describe("App.handlePageNotFound", () => {
     expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
     expect(instance.showError).toHaveBeenCalledWith(
       "Page not found",
-      "A page with the name nonexistentPage does not exist. Redirecting to the app's main page."
+      `You have requested page /nonexistentPage, but no corresponding file was found in the app's pages/ directory.`
     )
-  })
-
-  it("retains the query string if there is one", () => {
-    const wrapper = shallow(
-      <App
-        {...getProps({
-          s4aCommunication: {
-            connect: jest.fn(),
-            sendMessage: jest.fn(),
-            currentState: {
-              queryParams: "?foo=bar",
-            },
-          },
-        })}
-      />
-    )
-    const instance = wrapper.instance() as App
-    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
-
-    instance.handlePageNotFound({ pageName: "nonexistentPage" })
-
-    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/?foo=bar")
-  })
-
-  it("works with a non-default baseUrlPath", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    const instance = wrapper.instance() as App
-    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("baz/qux")
-
-    instance.handlePageNotFound({ pageName: "nonexistentPage" })
-    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/baz/qux")
   })
 })
 
