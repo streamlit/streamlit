@@ -25,8 +25,8 @@ from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
 from streamlit.session_data import SessionData
 from streamlit.watcher.path_watcher import (
-    get_default_file_watcher_class,
-    NoOpFileWatcher,
+    get_default_path_watcher_class,
+    NoOpPathWatcher,
 )
 
 LOGGER = get_logger(__name__)
@@ -92,9 +92,9 @@ class LocalSourcesWatcher:
     def _register_watcher(self, filepath, module_name):
         global FileWatcher
         if FileWatcher is None:
-            FileWatcher = get_default_file_watcher_class()
+            FileWatcher = get_default_path_watcher_class()
 
-        if FileWatcher is NoOpFileWatcher:
+        if FileWatcher is NoOpPathWatcher:
             return
 
         try:

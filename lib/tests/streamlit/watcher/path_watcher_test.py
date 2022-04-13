@@ -20,8 +20,8 @@ from unittest.mock import call, Mock, patch
 
 import streamlit.watcher.path_watcher
 from streamlit.watcher.path_watcher import (
-    get_default_file_watcher_class,
-    NoOpFileWatcher,
+    get_default_path_watcher_class,
+    NoOpPathWatcher,
     watch_file,
 )
 from tests.testutil import patch_config_options
@@ -79,21 +79,21 @@ class FileWatcherTest(unittest.TestCase):
     @patch("streamlit.watcher.path_watcher.PollingFileWatcher")
     @patch("streamlit.watcher.path_watcher.EventBasedFileWatcher")
     def test_watch_file(self, mock_event_watcher, mock_polling_watcher):
-        """Test all possible outcomes of both `get_default_file_watcher_class` and
+        """Test all possible outcomes of both `get_default_path_watcher_class` and
         `watch_file`, based on config.fileWatcherType and whether
         `watchdog_available` is true.
         """
         subtest_params = [
-            (None, False, NoOpFileWatcher),
-            (None, True, NoOpFileWatcher),
+            (None, False, NoOpPathWatcher),
+            (None, True, NoOpPathWatcher),
             ("poll", False, mock_polling_watcher),
             ("poll", True, mock_polling_watcher),
-            ("watchdog", False, NoOpFileWatcher),
+            ("watchdog", False, NoOpPathWatcher),
             ("watchdog", True, mock_event_watcher),
             ("auto", False, mock_polling_watcher),
             ("auto", True, mock_event_watcher),
         ]
-        for watcher_config, watchdog_available, file_watcher_class in subtest_params:
+        for watcher_config, watchdog_available, path_watcher_class in subtest_params:
             test_name = f"config.fileWatcherType={watcher_config}, watcher_available={watchdog_available}"
             with self.subTest(test_name):
                 with patch_config_options(
@@ -102,19 +102,19 @@ class FileWatcherTest(unittest.TestCase):
                     "streamlit.watcher.path_watcher.watchdog_available",
                     watchdog_available,
                 ):
-                    # Test get_default_file_watcher_class() result
+                    # Test get_default_path_watcher_class() result
                     self.assertEqual(
-                        file_watcher_class, get_default_file_watcher_class()
+                        path_watcher_class, get_default_path_watcher_class()
                     )
 
-                    # Test watch_file(). If file_watcher_class is
-                    # NoOpFileWatcher, nothing should happen. Otherwise,
-                    # file_watcher_class should be called with the watch_file
+                    # Test watch_file(). If path_watcher_class is
+                    # NoOpPathWatcher, nothing should happen. Otherwise,
+                    # path_watcher_class should be called with the watch_file
                     # params.
                     on_file_changed = Mock()
                     watching_file = watch_file("some/file/path", on_file_changed)
-                    if file_watcher_class is not NoOpFileWatcher:
-                        file_watcher_class.assert_called_with(
+                    if path_watcher_class is not NoOpPathWatcher:
+                        path_watcher_class.assert_called_with(
                             "some/file/path", on_file_changed
                         )
                         self.assertTrue(watching_file)
