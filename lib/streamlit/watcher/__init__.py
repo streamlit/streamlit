@@ -13,3 +13,4 @@
 # limitations under the License.
 
 from .local_sources_watcher import LocalSourcesWatcher
+from .path_watcher import report_watchdog_availability, watch_file

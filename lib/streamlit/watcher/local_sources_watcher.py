@@ -24,7 +24,7 @@ from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
 from streamlit.session_data import SessionData
-from streamlit.watcher.file_watcher import (
+from streamlit.watcher.path_watcher import (
     get_default_file_watcher_class,
     NoOpFileWatcher,
 )

@@ -22,7 +22,7 @@ import unittest
 from streamlit import config
 from streamlit.session_data import SessionData
 from streamlit.watcher import local_sources_watcher
-from streamlit.watcher.file_watcher import NoOpFileWatcher, watchdog_available
+from streamlit.watcher.path_watcher import NoOpFileWatcher, watchdog_available
 
 import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
 import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2

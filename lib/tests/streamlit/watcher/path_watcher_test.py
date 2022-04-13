@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests the public utility funtions in file_watcher.py"""
+"""Tests the public utility funtions in path_watcher.py"""
 
 import unittest
 from unittest.mock import call, Mock, patch
 
 
-import streamlit.watcher.file_watcher
-from streamlit.watcher.file_watcher import (
+import streamlit.watcher.path_watcher
+from streamlit.watcher.path_watcher import (
     get_default_file_watcher_class,
     NoOpFileWatcher,
     watch_file,
@@ -30,11 +30,11 @@ from tests.testutil import patch_config_options
 class FileWatcherTest(unittest.TestCase):
     def test_report_watchdog_availability_mac(self):
         with patch(
-            "streamlit.watcher.file_watcher.watchdog_available", new=False
+            "streamlit.watcher.path_watcher.watchdog_available", new=False
         ), patch("streamlit.env_util.IS_DARWIN", new=True), patch(
             "click.secho"
         ) as mock_echo:
-            streamlit.watcher.file_watcher.report_watchdog_availability()
+            streamlit.watcher.path_watcher.report_watchdog_availability()
 
         msg = "\n  $ xcode-select --install"
         calls = [
@@ -54,11 +54,11 @@ class FileWatcherTest(unittest.TestCase):
 
     def test_report_watchdog_availability_nonmac(self):
         with patch(
-            "streamlit.watcher.file_watcher.watchdog_available", new=False
+            "streamlit.watcher.path_watcher.watchdog_available", new=False
         ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
             "click.secho"
         ) as mock_echo:
-            streamlit.watcher.file_watcher.report_watchdog_availability()
+            streamlit.watcher.path_watcher.report_watchdog_availability()
 
         msg = ""
         calls = [
@@ -76,8 +76,8 @@ class FileWatcherTest(unittest.TestCase):
         ]
         mock_echo.assert_has_calls(calls)
 
-    @patch("streamlit.watcher.file_watcher.PollingFileWatcher")
-    @patch("streamlit.watcher.file_watcher.EventBasedFileWatcher")
+    @patch("streamlit.watcher.path_watcher.PollingFileWatcher")
+    @patch("streamlit.watcher.path_watcher.EventBasedFileWatcher")
     def test_watch_file(self, mock_event_watcher, mock_polling_watcher):
         """Test all possible outcomes of both `get_default_file_watcher_class` and
         `watch_file`, based on config.fileWatcherType and whether
@@ -99,7 +99,7 @@ class FileWatcherTest(unittest.TestCase):
                 with patch_config_options(
                     {"server.fileWatcherType": watcher_config}
                 ), patch(
-                    "streamlit.watcher.file_watcher.watchdog_available",
+                    "streamlit.watcher.path_watcher.watchdog_available",
                     watchdog_available,
                 ):
                     # Test get_default_file_watcher_class() result
