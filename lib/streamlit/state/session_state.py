@@ -612,7 +612,7 @@ class SessionState(MutableMapping[str, Any]):
         return deepcopy(self)
 
     def register_widget(
-        self, metadata: WidgetMetadata, widget_id: str, user_key: Optional[str]
+        self, metadata: WidgetMetadata, user_key: Optional[str]
     ) -> Tuple[Any, bool]:
         """Register a widget with the SessionState.
 
@@ -622,6 +622,8 @@ class SessionState(MutableMapping[str, Any]):
             The widget's current value, and a bool that will be True if the
             frontend needs to be updated with the current value.
         """
+        widget_id = metadata.id
+
         self._set_widget_metadata(metadata)
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping

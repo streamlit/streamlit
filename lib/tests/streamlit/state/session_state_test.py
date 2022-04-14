@@ -603,7 +603,6 @@ class SessionStateMethodTests(unittest.TestCase):
         )
         _, widget_value_changed = self.session_state.register_widget(
             metadata=metadata,
-            widget_id=f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1",
             user_key="widget_id_1",
         )
         assert not widget_value_changed
@@ -674,18 +673,10 @@ def test_map_set_del_3837_regression():
     )
     m = SessionState()
     m["0"] = 0
-    m.register_widget(
-        metadata=meta1,
-        widget_id="$$GENERATED_WIDGET_KEY-e3e70682-c209-4cac-629f-6fbed82c07cd-None",
-        user_key=None,
-    )
+    m.register_widget(metadata=meta1, user_key=None)
     m._compact_state()
 
-    m.register_widget(
-        metadata=meta2,
-        widget_id="$$GENERATED_WIDGET_KEY-f728b4fa-4248-5e3a-0a5d-2f346baa9455-0",
-        user_key="0",
-    )
+    m.register_widget(metadata=meta2, user_key="0")
     key = "0"
     value1 = 0
 
