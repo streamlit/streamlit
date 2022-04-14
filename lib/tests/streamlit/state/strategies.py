@@ -84,7 +84,7 @@ def _session_state(draw) -> SessionState:
 def session_state(draw) -> SessionState:
     state = draw(_session_state())
 
-    state.compact_state()
+    state._compact_state()
     # round 2
 
     state2 = draw(_session_state())

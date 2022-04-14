@@ -160,10 +160,7 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("int", states).int_value = 321
         _create_widget("string", states).string_value = "!ydwoh"
 
-        session_state.compact_state()
-        session_state.set_widgets_from_proto(states)
-
-        session_state.call_callbacks()
+        session_state.on_script_will_rerun(states)
 
         mock_callback.assert_has_calls([call(), call(1), call(x=2), call(1, x=2)])
 
@@ -199,7 +196,7 @@ class WidgetManagerTests(unittest.TestCase):
         self.assertTrue(session_state.get("trigger"))
         self.assertEqual(123, session_state.get("int"))
 
-        session_state.reset_triggers()
+        session_state._reset_triggers()
 
         self.assertFalse(session_state.get("trigger"))
         self.assertEqual(123, session_state.get("int"))

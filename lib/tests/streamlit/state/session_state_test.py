@@ -25,6 +25,7 @@ from hypothesis import given, strategies as hst
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
+from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.state.auto_session_state import get_session_state
 from streamlit.state.session_state import (
@@ -251,17 +252,30 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
 
     @patch("streamlit.warning")
     def test_callbacks_with_experimental_rerun(self, patched_warning):
-        def on_change():
-            st.experimental_rerun()
+        """Calling 'experimental_rerun' from within a widget callback
+        is disallowed and results in a warning.
+        """
 
-        st.checkbox("the checkbox", on_change=on_change)
+        # A mock on_changed handler for our checkbox. It will call
+        # `st.experimental_rerun`, which should result in a warning
+        # being printed to the user's app.
+        mock_on_checkbox_changed = MagicMock(side_effect=st.experimental_rerun)
+
+        st.checkbox("the checkbox", on_change=mock_on_checkbox_changed)
 
         session_state = get_session_state()
-        widget_ids = list(session_state._new_widget_state.keys())
-        wid = widget_ids[0]
-        session_state._new_widget_state.set_from_value(wid, True)
 
-        session_state.call_callbacks()
+        # Pretend that the checkbox has a new state value
+        checkbox_state = WidgetStateProto()
+        checkbox_state.id = list(session_state._new_widget_state.keys())[0]
+        checkbox_state.bool_value = True
+        widget_states = WidgetStatesProto()
+        widget_states.widgets.append(checkbox_state)
+
+        # Tell session_state to call our callbacks.
+        session_state.on_script_will_rerun(widget_states)
+
+        mock_on_checkbox_changed.assert_called_once()
         patched_warning.assert_called_once()
 
 
@@ -429,7 +443,7 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
 def compact_copy(state: SessionState) -> SessionState:
     """Return a compacted copy of the given SessionState."""
     state_copy = state.copy()
-    state_copy.compact_state()
+    state_copy._compact_state()
     return state_copy
 
 
@@ -448,7 +462,7 @@ class SessionStateMethodTests(unittest.TestCase):
         )
 
     def test_compact(self):
-        self.session_state.compact_state()
+        self.session_state._compact_state()
         assert self.session_state._old_state == {
             "foo": "bar2",
             "baz": "qux2",
@@ -567,7 +581,7 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates = WStates()
         self.session_state._new_widget_state = wstates
 
-        self.session_state.cull_nonexistent({"existing_widget"})
+        self.session_state._cull_nonexistent({"existing_widget"})
 
         assert self.session_state["existing_widget"] == True
         assert generated_widget_key not in self.session_state
@@ -665,7 +679,7 @@ def test_map_set_del_3837_regression():
         widget_id="$$GENERATED_WIDGET_KEY-e3e70682-c209-4cac-629f-6fbed82c07cd-None",
         user_key=None,
     )
-    m.compact_state()
+    m._compact_state()
 
     m.register_widget(
         metadata=meta2,
@@ -708,6 +722,6 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         assert new_size_3 > new_size_2
         assert new_size_3 - new_size_2 < 1500
 
-        state.compact_state()
+        state._compact_state()
         new_size_4 = state.get_stats()[0].byte_length
         assert new_size_4 <= new_size_3
