@@ -195,8 +195,10 @@ from streamlit.commands.page_config import set_page_config
 # Session State
 
 from streamlit.state import AutoSessionState
+from streamlit.user_info import LazyUserInfo
 
 session_state = AutoSessionState()
+user = LazyUserInfo()
 
 
 # Beta APIs
