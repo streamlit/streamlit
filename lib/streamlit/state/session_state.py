@@ -374,9 +374,13 @@ class SessionState:
         return user_key in self._new_session_state
 
     def __iter__(self) -> Iterator[Any]:
+        """Return an iterator over the keys of the SessionState.
+        This is a shortcut for `iter(self.keys())`
+        """
         return iter(self.keys())
 
     def __len__(self) -> int:
+        """Return the number of items in SessionState."""
         return len(self.keys())
 
     def __getitem__(self, key: str) -> Any:
@@ -437,7 +441,7 @@ class SessionState:
         """Set the value of the session_state entry with the given user_key.
 
         If the key corresponds to a widget or form that's been instantiated
-        during the current script run, raise an Exception instead.
+        during the current script run, raise a StreamlitAPIException instead.
         """
         from streamlit.scriptrunner import get_script_run_ctx
 
