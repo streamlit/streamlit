@@ -53,7 +53,7 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 from importlib_metadata import version as _version
 
-__version__ = _version("streamlit")
+__version__ = _version("streamlit-nightly")
 
 from typing import NoReturn
 import contextlib as _contextlib
