@@ -331,7 +331,7 @@ class SessionState(MutableMapping[str, Any]):
     def filtered_state(self) -> Dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
 
-        wid_key_map = self.reverse_key_wid_map
+        wid_key_map = self._reverse_key_wid_map
 
         state: Dict[str, Any] = {}
 
@@ -354,7 +354,7 @@ class SessionState(MutableMapping[str, Any]):
         return state
 
     @property
-    def reverse_key_wid_map(self) -> Dict[str, str]:
+    def _reverse_key_wid_map(self) -> Dict[str, str]:
         """Return a mapping of widget_id : widget_key."""
         wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         return wid_key_map
@@ -380,7 +380,7 @@ class SessionState(MutableMapping[str, Any]):
         return len(self.keys())
 
     def __getitem__(self, key: str) -> Any:
-        wid_key_map = self.reverse_key_wid_map
+        wid_key_map = self._reverse_key_wid_map
         widget_id = self._get_widget_id(key)
 
         if widget_id in wid_key_map and widget_id == key:
