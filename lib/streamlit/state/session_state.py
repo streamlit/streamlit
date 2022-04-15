@@ -359,7 +359,7 @@ class SessionState:
         wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         return wid_key_map
 
-    def keys(self) -> Set[str]:  # type: ignore
+    def keys(self) -> Set[str]:
         """All keys active in Session State, with widget keys converted
         to widget ids when one is known."""
         old_keys = {self._get_widget_id(k) for k in self._old_state.keys()}
