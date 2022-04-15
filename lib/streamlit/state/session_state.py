@@ -327,23 +327,6 @@ class SessionState(MutableMapping[str, Any]):
         self._new_widget_state.clear()
         self._key_id_mapping.clear()
 
-    def _safe_widget_state(self) -> Dict[str, Any]:
-        """Return widget states for all widgets with deserializers registered.
-
-        On a browser tab reconnect, it's possible for widgets in
-        self._new_widget_state to not have deserializers registered, which will
-        result in trying to access them raising a KeyError. This results in
-        things exploding if we try to naively use the splat operator on
-        self._new_widget_state in _merged_state below.
-        """
-        wstate = {}
-        for k in self._new_widget_state.keys():
-            try:
-                wstate[k] = self._new_widget_state[k]
-            except KeyError:
-                pass
-        return wstate
-
     @property
     def _merged_state(self) -> Dict[str, Any]:
         return {k: self[k] for k in self}
