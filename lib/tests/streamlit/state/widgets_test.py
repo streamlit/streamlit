@@ -15,9 +15,12 @@
 """Tests widget-related functionality"""
 
 import unittest
-from unittest.mock import call, MagicMock
 import pytest
+from parameterized import parameterized
+from unittest.mock import call, MagicMock
 
+import streamlit as st
+from streamlit import errors
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state.session_state import GENERATED_WIDGET_KEY_PREFIX
@@ -26,6 +29,8 @@ from streamlit.state.widgets import (
     coalesce_widget_states,
 )
 from streamlit.state.session_state import SessionState, WidgetMetadata
+
+from tests import testutil
 
 
 def _create_widget(id, states):
@@ -261,3 +266,49 @@ class WidgetHelperTests(unittest.TestCase):
                 GENERATED_WIDGET_KEY_PREFIX
             )
         )
+
+
+class WidgetIdDisabledTests(testutil.DeltaGeneratorTestCase):
+    @parameterized.expand(
+        [
+            (st.button,),
+            (st.camera_input,),
+            (st.checkbox,),
+            (st.color_picker,),
+            (st.file_uploader,),
+            (st.number_input,),
+            (st.slider,),
+            (st.text_area,),
+            (st.text_input,),
+            (st.date_input,),
+            (st.time_input,),
+        ]
+    )
+    def test_disabled_parameter_id(self, widget_func):
+        widget_func("my_widget")
+
+        # The `disabled` argument shouldn't affect a widget's ID, so we
+        # expect a DuplicateWidgetID error.
+        with self.assertRaises(errors.DuplicateWidgetID):
+            widget_func("my_widget", disabled=True)
+
+    def test_disabled_parameter_id_download_button(self):
+        st.download_button("my_widget", data="")
+
+        with self.assertRaises(errors.DuplicateWidgetID):
+            st.download_button("my_widget", data="", disabled=True)
+
+    @parameterized.expand(
+        [
+            (st.multiselect,),
+            (st.radio,),
+            (st.select_slider,),
+            (st.selectbox,),
+        ]
+    )
+    def test_disabled_parameter_id_options_widgets(self, widget_func):
+        options = ["a", "b", "c"]
+        widget_func("my_widget", options)
+
+        with self.assertRaises(errors.DuplicateWidgetID):
+            widget_func("my_widget", options, disabled=True)

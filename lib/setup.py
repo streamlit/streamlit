@@ -18,16 +18,23 @@ import sys
 
 from setuptools.command.install import install
 
+# Import Pipenv. We support multiple versions.
 try:
     from pipenv.project import Project
-    from pipenv.utils import convert_deps_to_pip
+
+    try:
+        # Pipenv 2022.4.8
+        from pipenv.utils.dependencies import convert_deps_to_pip
+    except:
+        # Older Pipenv
+        from pipenv.utils import convert_deps_to_pip
 except:
     exit_msg = (
-        "pipenv is required to package Streamlit. Please install pipenv and try again"
+        "pipenv is required to package Streamlit. Please install pipenv and try again."
     )
     sys.exit(exit_msg)
 
-VERSION = "1.8.0"  # PEP-440
+VERSION = "1.8.1"  # PEP-440
 
 NAME = "streamlit"
 

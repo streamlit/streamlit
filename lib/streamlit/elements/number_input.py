@@ -258,7 +258,6 @@ class NumberInputMixin:
         number_input_proto.label = label
         number_input_proto.default = value
         number_input_proto.form_id = current_form_id(self.dg)
-        number_input_proto.disabled = disabled
         if help is not None:
             number_input_proto.help = dedent(help)
 
@@ -291,6 +290,9 @@ class NumberInputMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        number_input_proto.disabled = disabled
         if set_frontend_value:
             number_input_proto.value = current_value
             number_input_proto.set_value = True

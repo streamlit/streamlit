@@ -708,9 +708,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 class _BrowserWebSocketHandler(WebSocketHandler):
     """Handles a WebSocket connection from the browser"""
 
-    def initialize(self, server):
+    def initialize(self, server: Server) -> None:
         self._server = server
-        self._session = None
+        self._session: Optional[AppSession] = None
         # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
         # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
         # cookie as a side effect.
