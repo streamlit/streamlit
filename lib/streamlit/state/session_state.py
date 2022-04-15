@@ -328,10 +328,6 @@ class SessionState(MutableMapping[str, Any]):
         self._key_id_mapping.clear()
 
     @property
-    def _merged_state(self) -> Dict[str, Any]:
-        return {k: self[k] for k in self}
-
-    @property
     def filtered_state(self) -> Dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
 
@@ -382,9 +378,6 @@ class SessionState(MutableMapping[str, Any]):
 
     def __len__(self) -> int:
         return len(self.keys())
-
-    def __str__(self) -> str:
-        return str(self._merged_state)
 
     def __getitem__(self, key: str) -> Any:
         wid_key_map = self.reverse_key_wid_map

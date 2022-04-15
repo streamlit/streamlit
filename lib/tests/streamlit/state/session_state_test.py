@@ -473,16 +473,15 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state._new_widget_state == WStates()
 
     def test_clear_state(self):
-        self.session_state.clear_state()
-        assert self.session_state._merged_state == {}
+        # Sanity test
+        keys = {"foo", "baz", "corge", f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None"}
+        self.assertEqual(keys, self.session_state.keys())
 
-    def test_merged_state(self):
-        assert self.session_state._merged_state == {
-            "foo": "bar2",
-            "baz": "qux2",
-            "corge": "grault",
-            f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None": "bar",
-        }
+        # Clear state
+        self.session_state.clear_state()
+
+        # Keys should be empty
+        self.assertEqual(set(), self.session_state.keys())
 
     def test_filtered_state(self):
         assert self.session_state.filtered_state == {
@@ -495,7 +494,7 @@ class SessionStateMethodTests(unittest.TestCase):
         old_state = {"foo": "bar", "corge": "grault"}
         new_session_state = {}
         new_widget_state = WStates(
-            {f"{GENERATED_WIDGET_KEY_PREFIX}-baz": Serialized(None)},
+            {f"{GENERATED_WIDGET_KEY_PREFIX}-baz": Serialized(WidgetStateProto())},
         )
         self.session_state = SessionState(
             old_state, new_session_state, new_widget_state
