@@ -275,8 +275,11 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    @patch("streamlit.state.session_state.SessionState.call_callbacks")
+    @patch("streamlit.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks(self, patched_call_callbacks):
+        """Before a script is rerun, we call callbacks for any widgets
+        whose value has changed.
+        """
         scriptrunner = TestScriptRunner("widgets_script.py")
         scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
@@ -307,23 +310,26 @@ class ScriptRunnerTest(AsyncTestCase):
         # it will see stale deltas from the last run.)
         scriptrunner.clear_forward_msgs()
         scriptrunner.request_rerun(RerunData(widget_states=states))
-
         require_widgets_deltas([scriptrunner])
+
+        patched_call_callbacks.assert_called_once()
         self._assert_text_deltas(
             scriptrunner, ["True", "matey!", "2", "True", "loop_forever"]
         )
-
-        patched_call_callbacks.assert_called_once()
 
         scriptrunner.request_stop()
         scriptrunner.join()
 
     @patch("streamlit.exception")
-    @patch("streamlit.state.session_state.SessionState.call_callbacks")
+    @patch("streamlit.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_error(
         self, patched_call_callbacks, patched_st_exception
     ):
+        """If an exception is raised from a callback function,
+        it should result in a call to `streamlit.exception`.
+        """
         patched_call_callbacks.side_effect = RuntimeError("Random Error")
+
         scriptrunner = TestScriptRunner("widgets_script.py")
         scriptrunner.request_rerun(RerunData())
         scriptrunner.start()

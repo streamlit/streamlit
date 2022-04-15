@@ -160,7 +160,7 @@ def register_widget(
         callback_args=args,
         callback_kwargs=kwargs,
     )
-    return ctx.session_state.register_widget(metadata, widget_id, user_key)
+    return ctx.session_state.register_widget(metadata, user_key)
 
 
 # NOTE: We use this table to start with a best-effort guess for the value_type

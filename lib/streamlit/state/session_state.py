@@ -283,9 +283,6 @@ class SessionState(MutableMapping[str, Any]):
     """SessionState allows users to store values that persist between app
     reruns.
 
-    SessionState objects are created lazily when a script accesses
-    st.session_state.
-
     Example
     -------
     >>> if "num_script_runs" not in st.session_state:
@@ -313,7 +310,7 @@ class SessionState(MutableMapping[str, Any]):
     _key_id_mapping: Dict[str, str] = attr.Factory(dict)
 
     # is it possible for a value to get through this without being deserialized?
-    def compact_state(self) -> None:
+    def _compact_state(self) -> None:
         """Copy all current session_state and widget_state values into our
         _old_state dict, and then clear our current session_state and
         widget_state.
@@ -322,12 +319,6 @@ class SessionState(MutableMapping[str, Any]):
             self._old_state[key_or_wid] = self[key_or_wid]
         self._new_session_state.clear()
         self._new_widget_state.clear()
-
-    def _compact(self) -> "SessionState":
-        """Return a compacted copy of self without mutating self."""
-        state: SessionState = self.copy()
-        state.compact_state()
-        return state
 
     def clear_state(self) -> None:
         """Reset self completely, clearing all current and old values."""
@@ -521,12 +512,21 @@ class SessionState(MutableMapping[str, Any]):
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
-    def call_callbacks(self) -> None:
+    def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
+        """Called by ScriptRunner before its script re-runs.
+
+        Update widget data and call callbacks on widgets whose value changed
+        between the previous and current script runs.
+        """
+        # Update ourselves with the new widget_states. The old widget states,
+        # used to skip callbacks if values haven't changed, are also preserved.
+        self._compact_state()
+        self.set_widgets_from_proto(latest_widget_states)
+        self._call_callbacks()
+
+    def _call_callbacks(self) -> None:
         """Call any callback associated with each widget whose value
         changed between the previous and current script runs.
-
-        This is called by ScriptRunner when it starts a new script run,
-        right before re-executing the script.
         """
         from streamlit.scriptrunner import RerunException
 
@@ -550,7 +550,21 @@ class SessionState(MutableMapping[str, Any]):
         changed: bool = new_value != old_value
         return changed
 
-    def reset_triggers(self) -> None:
+    def on_script_finished(self, widget_ids_this_run: Set[str]) -> None:
+        """Called by ScriptRunner after its script finishes running.
+         Updates widgets to prepare for the next script run.
+
+        Parameters
+        ----------
+        widget_ids_this_run: Set[str]
+            The IDs of the widgets that were accessed during the script
+            run. Any widget whose ID does *not* appear in this set will
+            be culled.
+        """
+        self._reset_triggers()
+        self._cull_nonexistent(widget_ids_this_run)
+
+    def _reset_triggers(self) -> None:
         """Set all trigger values in our state dictionary to False."""
         for state_id in self._new_widget_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
@@ -564,7 +578,7 @@ class SessionState(MutableMapping[str, Any]):
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
 
-    def cull_nonexistent(self, widget_ids: Set[str]) -> None:
+    def _cull_nonexistent(self, widget_ids: Set[str]) -> None:
         self._new_widget_state.cull_nonexistent(widget_ids)
 
         # Remove entries from _old_state corresponding to
@@ -581,6 +595,7 @@ class SessionState(MutableMapping[str, Any]):
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
     def as_widget_states(self) -> List[WidgetStateProto]:
+        """Return a list of serialized widget values for each widget with a value."""
         return self._new_widget_state.as_widget_states()
 
     def _get_widget_id(self, k: str) -> str:
@@ -589,7 +604,7 @@ class SessionState(MutableMapping[str, Any]):
         """
         return self._key_id_mapping.get(k, k)
 
-    def set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
+    def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapping[user_key] = widget_id
 
     def copy(self) -> "SessionState":
@@ -597,7 +612,7 @@ class SessionState(MutableMapping[str, Any]):
         return deepcopy(self)
 
     def register_widget(
-        self, metadata: WidgetMetadata, widget_id: str, user_key: Optional[str]
+        self, metadata: WidgetMetadata, user_key: Optional[str]
     ) -> Tuple[Any, bool]:
         """Register a widget with the SessionState.
 
@@ -607,10 +622,12 @@ class SessionState(MutableMapping[str, Any]):
             The widget's current value, and a bool that will be True if the
             frontend needs to be updated with the current value.
         """
+        widget_id = metadata.id
+
         self._set_widget_metadata(metadata)
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping
-            self.set_key_widget_mapping(widget_id, user_key)
+            self._set_key_widget_mapping(widget_id, user_key)
 
         if widget_id not in self and (user_key is None or user_key not in self):
             # This is the first time the widget is registered, so we save its

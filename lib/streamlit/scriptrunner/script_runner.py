@@ -122,7 +122,7 @@ class ScriptRunner:
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state
-        self._session_state: SessionState = session_state
+        self._session_state = session_state
         self._session_state.set_widgets_from_proto(client_state.widget_states)
 
         self._requests = ScriptRequests()
@@ -453,14 +453,7 @@ class ScriptRunner:
             with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
                 if rerun_data.widget_states is not None:
-                    # Update the WidgetManager with the new widget_states.
-                    # The old states, used to skip callbacks if values
-                    # haven't changed, are also preserved in the
-                    # WidgetManager.
-                    self._session_state.compact_state()
-                    self._session_state.set_widgets_from_proto(rerun_data.widget_states)
-
-                    self._session_state.call_callbacks()
+                    self._session_state.on_script_will_rerun(rerun_data.widget_states)
 
                 ctx.on_script_start()
                 exec(code, module.__dict__)
@@ -489,8 +482,9 @@ class ScriptRunner:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
-        self._session_state.reset_triggers()
-        self._session_state.cull_nonexistent(ctx.widget_ids_this_run)
+        # Tell session_state to update itself in response
+        self._session_state.on_script_finished(ctx.widget_ids_this_run)
+
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)

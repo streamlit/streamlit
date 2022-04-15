@@ -54,7 +54,7 @@ def _session_state(draw) -> SessionState:
         hst.dictionaries(keys=UNKEYED_WIDGET_IDS, values=hst.integers())
     )
     for wid, v in unkeyed_widgets.items():
-        state.register_widget(mock_metadata(wid, v), wid, user_key=None)
+        state.register_widget(mock_metadata(wid, v), user_key=None)
 
     widget_key_val_triple = draw(
         hst.lists(hst.tuples(hst.uuids(), USER_KEY, hst.integers()))
@@ -64,7 +64,7 @@ def _session_state(draw) -> SessionState:
         for wid, key, val in widget_key_val_triple
     }
     for key, (wid, val) in k_wids.items():
-        state.register_widget(mock_metadata(wid, val), wid, user_key=key)
+        state.register_widget(mock_metadata(wid, val), user_key=key)
 
     if k_wids:
         session_state_widget_entries = draw(
@@ -84,7 +84,7 @@ def _session_state(draw) -> SessionState:
 def session_state(draw) -> SessionState:
     state = draw(_session_state())
 
-    state.compact_state()
+    state._compact_state()
     # round 2
 
     state2 = draw(_session_state())
