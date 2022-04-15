@@ -48,8 +48,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that when a file is modified, the callback is called."""
         cb = mock.Mock()
 
-        self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+        self.os.stat = lambda _: FakeStat(101)
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -60,8 +60,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.os.stat = lambda x: FakeStat(102)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
+        self.os.stat = lambda _: FakeStat(102)
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -75,8 +75,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that when a directory is modified, the callback is called."""
         cb = mock.Mock()
 
-        self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+        self.os.stat = lambda _: FakeStat(101)
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
 
@@ -87,8 +87,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.os.stat = lambda x: FakeStat(102)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
+        self.os.stat = lambda _: FakeStat(102)
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/dir")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -99,12 +99,48 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
+    def test_kwargs_plumbed_to_calc_md5(self):
+        cb = mock.Mock()
+
+        self.os.stat = lambda _: FakeStat(101)
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(
+            "/this/is/my/dir",
+            cb,
+            glob_pattern="*.py",
+            allow_nonexistent=True,
+        )
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        fo._observer.schedule.assert_called_once()
+
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        _, kwargs = self.mock_util.calc_md5_with_blocking_retries.call_args
+        assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
+        cb.assert_not_called()
+
+        self.os.stat = lambda _: FakeStat(102)
+        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="3")
+
+        ev = events.FileSystemEvent("/this/is/my/dir")
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        ev.is_directory = True
+        folder_handler.on_modified(ev)
+
+        _, kwargs = self.mock_util.calc_md5_with_blocking_retries.call_args
+        assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
+        cb.assert_called_once()
+
+        ro.close()
+
     def test_callback_not_called_if_same_mtime(self):
         """Test that we ignore files with same mtime."""
         cb = mock.Mock()
 
-        self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+        self.os.stat = lambda _: FakeStat(101)
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -115,8 +151,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        # self.os.stat = lambda x: FakeStat(102)  # Same mtime!
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
+        # Same mtime!
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -131,8 +167,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that we ignore files with same md5."""
         cb = mock.Mock()
 
-        self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+        self.os.stat = lambda _: FakeStat(101)
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -143,9 +179,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.os.stat = lambda x: FakeStat(102)
-        # Same MD5:
-        # self.mock_util.calc_md5_with_blocking_retries = lambda x: '2'
+        self.os.stat = lambda _: FakeStat(102)
+        # Same MD5!
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -160,8 +195,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that we ignore created files."""
         cb = mock.Mock()
 
-        self.os.stat = lambda x: FakeStat(101)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+        self.os.stat = lambda _: FakeStat(101)
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -172,8 +207,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.os.stat = lambda x: FakeStat(102)
-        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
+        self.os.stat = lambda _: FakeStat(102)
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_DELETED  # Wrong type
@@ -192,9 +227,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         mod_count = [0]
 
         def modify_mock_file():
-            self.os.stat = lambda x: FakeStat(mod_count[0])
+            self.os.stat = lambda _: FakeStat(mod_count[0])
             self.mock_util.calc_md5_with_blocking_retries = (
-                lambda x: "%d" % mod_count[0]
+                lambda _, **kwargs: "%d" % mod_count[0]
             )
 
             ev = events.FileSystemEvent(filename)

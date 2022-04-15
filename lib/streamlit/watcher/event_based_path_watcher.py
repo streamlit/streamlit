@@ -60,12 +60,24 @@ class EventBasedPathWatcher:
         path_watcher.close()
         LOGGER.debug("Watcher closed")
 
-    def __init__(self, path: str, on_changed: Callable[[str], None]) -> None:
+    def __init__(
+        self,
+        path: str,
+        on_changed: Callable[[str], None],
+        *,  # keyword-only arguments:
+        glob_pattern: Optional[str] = None,
+        allow_nonexistent: bool = False,
+    ) -> None:
         self._path = os.path.abspath(path)
         self._on_changed = on_changed
 
         path_watcher = _MultiPathWatcher.get_singleton()
-        path_watcher.watch_path(self._path, on_changed)
+        path_watcher.watch_path(
+            self._path,
+            on_changed,
+            glob_pattern=glob_pattern,
+            allow_nonexistent=allow_nonexistent,
+        )
         LOGGER.debug("Watcher created for %s", self._path)
 
     def __repr__(self) -> str:
@@ -120,7 +132,14 @@ class _MultiPathWatcher(object):
     def __repr__(self) -> str:
         return repr_(self)
 
-    def watch_path(self, path: str, callback: Callable[[str], None]) -> None:
+    def watch_path(
+        self,
+        path: str,
+        callback: Callable[[str], None],
+        *,  # keyword-only arguments:
+        glob_pattern: Optional[str] = None,
+        allow_nonexistent: bool = False,
+    ) -> None:
         """Start watching a path."""
         folder_path = os.path.abspath(os.path.dirname(path))
 
@@ -135,7 +154,12 @@ class _MultiPathWatcher(object):
                     folder_handler, folder_path, recursive=True
                 )
 
-            folder_handler.add_path_change_listener(path, callback)
+            folder_handler.add_path_change_listener(
+                path,
+                callback,
+                glob_pattern=glob_pattern,
+                allow_nonexistent=allow_nonexistent,
+            )
 
     def stop_watching_path(self, path: str, callback: Callable[[str], None]) -> None:
         """Stop watching a path."""
@@ -181,9 +205,20 @@ class _MultiPathWatcher(object):
 class WatchedPath(object):
     """Emits notifications when a single path is modified."""
 
-    def __init__(self, md5, modification_time):
+    def __init__(
+        self,
+        md5,
+        modification_time,
+        *,  # keyword-only arguments:
+        glob_pattern: Optional[str] = None,
+        allow_nonexistent: bool = False,
+    ):
         self.md5 = md5
         self.modification_time = modification_time
+
+        self.glob_pattern = glob_pattern
+        self.allow_nonexistent = allow_nonexistent
+
         self.on_changed = Signal()
 
     def __repr__(self) -> str:
@@ -211,15 +246,29 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         return repr_(self)
 
     def add_path_change_listener(
-        self, path: str, callback: Callable[[str], None]
+        self,
+        path: str,
+        callback: Callable[[str], None],
+        *,  # keyword-only arguments:
+        glob_pattern: Optional[str] = None,
+        allow_nonexistent: bool = False,
     ) -> None:
         """Add a path to this object's event filter."""
         with self._lock:
             watched_path = self._watched_paths.get(path, None)
             if watched_path is None:
-                md5 = util.calc_md5_with_blocking_retries(path)
+                md5 = util.calc_md5_with_blocking_retries(
+                    path,
+                    glob_pattern=glob_pattern,
+                    allow_nonexistent=allow_nonexistent,
+                )
                 modification_time = os.stat(path).st_mtime
-                watched_path = WatchedPath(md5=md5, modification_time=modification_time)
+                watched_path = WatchedPath(
+                    md5=md5,
+                    modification_time=modification_time,
+                    glob_pattern=glob_pattern,
+                    allow_nonexistent=allow_nonexistent,
+                )
                 self._watched_paths[path] = watched_path
 
             watched_path.on_changed.connect(callback, weak=False)
@@ -282,7 +331,11 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         changed_path_info.modification_time = modification_time
 
-        new_md5 = util.calc_md5_with_blocking_retries(changed_path)
+        new_md5 = util.calc_md5_with_blocking_retries(
+            changed_path,
+            glob_pattern=changed_path_info.glob_pattern,
+            allow_nonexistent=changed_path_info.allow_nonexistent,
+        )
         if new_md5 == changed_path_info.md5:
             LOGGER.debug("File/dir MD5 did not change: %s", changed_path)
             return

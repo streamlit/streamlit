@@ -17,7 +17,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
-from typing import Callable
+from typing import Callable, Optional
 
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -45,7 +45,14 @@ class PollingPathWatcher:
         """
         LOGGER.debug("Watcher closed")
 
-    def __init__(self, path: str, on_changed: Callable[[str], None]) -> None:
+    def __init__(
+        self,
+        path: str,
+        on_changed: Callable[[str], None],
+        *,  # keyword-only arguments:
+        glob_pattern: Optional[str] = None,
+        allow_nonexistent: bool = False,
+    ) -> None:
         """Constructor.
 
         You do not need to retain a reference to a PollingPathWatcher to
@@ -56,9 +63,16 @@ class PollingPathWatcher:
         self._path = path
         self._on_changed = on_changed
 
+        self._glob_pattern = glob_pattern
+        self._allow_nonexistent = allow_nonexistent
+
         self._active = True
         self._modification_time = os.stat(self._path).st_mtime
-        self._md5 = util.calc_md5_with_blocking_retries(self._path)
+        self._md5 = util.calc_md5_with_blocking_retries(
+            self._path,
+            glob_pattern=self._glob_pattern,
+            allow_nonexistent=self._allow_nonexistent,
+        )
         self._schedule()
 
     def __repr__(self) -> str:
@@ -83,7 +97,11 @@ class PollingPathWatcher:
 
         self._modification_time = modification_time
 
-        md5 = util.calc_md5_with_blocking_retries(self._path)
+        md5 = util.calc_md5_with_blocking_retries(
+            self._path,
+            glob_pattern=self._glob_pattern,
+            allow_nonexistent=self._allow_nonexistent,
+        )
         if md5 == self._md5:
             self._schedule()
             return
