@@ -22,6 +22,7 @@ import hashlib
 import time
 import os
 from pathlib import Path
+from typing import Optional
 
 
 # How many times to try to grab the MD5 hash.
@@ -31,7 +32,12 @@ _MAX_RETRIES = 5
 _RETRY_WAIT_SECS = 0.1
 
 
-def calc_md5_with_blocking_retries(path: str) -> str:
+def calc_md5_with_blocking_retries(
+    path: str,
+    *,  # keyword-only arguments:
+    glob_pattern: Optional[str] = None,
+    allow_nonexistent: bool = False,
+) -> str:
     """Calculate the MD5 checksum of a given path.
 
     For a file, this means calculating the md5 of the file's contents. For a
@@ -42,8 +48,11 @@ def calc_md5_with_blocking_retries(path: str) -> str:
     should only use this outside the main thread.
     """
 
-    if os.path.isdir(path):
-        content = _stable_dir_identifier(path).encode("UTF-8")
+    if allow_nonexistent and not os.path.exists(path):
+        content = path.encode("UTF-8")
+    elif os.path.isdir(path):
+        glob_pattern = glob_pattern or "*"
+        content = _stable_dir_identifier(path, glob_pattern).encode("UTF-8")
     else:
         content = _get_file_content_with_blocking_retries(path)
 
@@ -79,7 +88,7 @@ def _dirfiles(dir_path: str, glob_pattern: str) -> str:
     return "+".join(filenames)
 
 
-def _stable_dir_identifier(dir_path: str, glob_pattern: str = "*") -> str:
+def _stable_dir_identifier(dir_path: str, glob_pattern: str) -> str:
     """Wait for the files in a directory to look stable-ish before returning an id.
 
     We do this to deal with problems that would otherwise arise from many tools
