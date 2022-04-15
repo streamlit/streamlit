@@ -79,6 +79,14 @@ def _session_state(draw) -> SessionState:
     return state
 
 
+def _merge_states(a: SessionState, b: SessionState) -> None:
+    """Merge 'b' into 'a'."""
+    a._new_session_state.update(b._new_session_state)
+    a._new_widget_state.update(b._new_widget_state)
+    a._old_state.update(b._old_state)
+    a._key_id_mapping.update(b._key_id_mapping)
+
+
 # TODO: don't generate states where there is a k-wid mapping where the key exists but the widget doesn't
 @hst.composite
 def session_state(draw) -> SessionState:
@@ -89,6 +97,6 @@ def session_state(draw) -> SessionState:
 
     state2 = draw(_session_state())
 
-    state.update(state2)
+    _merge_states(state, state2)
 
     return state

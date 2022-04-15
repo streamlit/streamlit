@@ -14,7 +14,7 @@
 
 """Session state unit tests."""
 
-from typing import Any
+from typing import Any, List, Tuple
 import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta, date
@@ -440,11 +440,18 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         check_roundtrip("time_datetime", time_datetime)
 
 
-def compact_copy(state: SessionState) -> SessionState:
+def _compact_copy(state: SessionState) -> SessionState:
     """Return a compacted copy of the given SessionState."""
     state_copy = state.copy()
     state_copy._compact_state()
     return state_copy
+
+
+def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
+    """Return all key-value pairs in the SessionState.
+    The returned list is sorted by key for easier comparison.
+    """
+    return [(key, state[key]) for key in sorted(state.keys())]
 
 
 class SessionStateMethodTests(unittest.TestCase):
@@ -600,24 +607,17 @@ class SessionStateMethodTests(unittest.TestCase):
 
 @given(state=stst.session_state())
 def test_compact_idempotent(state):
-    assert compact_copy(state) == compact_copy(compact_copy(state))
+    assert _compact_copy(state) == _compact_copy(_compact_copy(state))
 
 
 @given(state=stst.session_state())
 def test_compact_len(state):
-    assert len(state) >= len(compact_copy(state))
+    assert len(state) >= len(_compact_copy(state))
 
 
 @given(state=stst.session_state())
 def test_compact_presence(state):
-    assert state.items() == compact_copy(state).items()
-
-
-@given(m=stst.session_state())
-def test_mapping_laws(m):
-    assert len(m) == len(m.keys()) == len(m.values()) == len(m.items())
-    assert [value for value in m.values()] == [m[key] for key in m.keys()]
-    assert [item for item in m.items()] == [(key, m[key]) for key in m.keys()]
+    assert _sorted_items(state) == _sorted_items(_compact_copy(state))
 
 
 @given(

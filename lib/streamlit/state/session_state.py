@@ -279,7 +279,7 @@ def _missing_key_error_message(key: str) -> str:
 
 
 @attr.s(auto_attribs=True, slots=True)
-class SessionState(MutableMapping[str, Any]):
+class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
 
@@ -476,12 +476,6 @@ class SessionState(MutableMapping[str, Any]):
 
         if widget_id in self._old_state:
             del self._old_state[widget_id]
-
-    def update(self, other: "SessionState") -> None:  # type: ignore
-        self._new_session_state.update(other._new_session_state)
-        self._new_widget_state.update(other._new_widget_state)
-        self._old_state.update(other._old_state)
-        self._key_id_mapping.update(other._key_id_mapping)
 
     def set_widgets_from_proto(self, widget_states: WidgetStatesProto) -> None:
         """Set the value of all widgets represented in the given WidgetStatesProto."""
