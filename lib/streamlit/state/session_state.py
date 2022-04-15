@@ -581,10 +581,6 @@ class SessionState:
     def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapping[user_key] = widget_id
 
-    def copy(self) -> "SessionState":
-        """Return a deep copy of self."""
-        return deepcopy(self)
-
     def register_widget(
         self, metadata: WidgetMetadata, user_key: Optional[str]
     ) -> Tuple[Any, bool]:

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Session state unit tests."""
-
+from copy import deepcopy
 from typing import Any, List, Tuple
 import unittest
 from unittest.mock import patch, MagicMock
@@ -442,7 +442,7 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
 
 def _compact_copy(state: SessionState) -> SessionState:
     """Return a compacted copy of the given SessionState."""
-    state_copy = state.copy()
+    state_copy = deepcopy(state)
     state_copy._compact_state()
     return state_copy
 
