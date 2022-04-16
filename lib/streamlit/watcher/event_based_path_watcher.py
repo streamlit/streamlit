@@ -262,7 +262,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                     glob_pattern=glob_pattern,
                     allow_nonexistent=allow_nonexistent,
                 )
-                modification_time = os.stat(path).st_mtime
+                modification_time = util.path_modification_time(path, allow_nonexistent)
                 watched_path = WatchedPath(
                     md5=md5,
                     modification_time=modification_time,
@@ -324,7 +324,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             )
             return
 
-        modification_time = os.stat(changed_path).st_mtime
+        modification_time = util.path_modification_time(
+            changed_path, changed_path_info.allow_nonexistent
+        )
         if modification_time == changed_path_info.modification_time:
             LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
             return

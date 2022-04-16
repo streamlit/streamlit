@@ -67,7 +67,10 @@ class PollingPathWatcher:
         self._allow_nonexistent = allow_nonexistent
 
         self._active = True
-        self._modification_time = os.stat(self._path).st_mtime
+
+        self._modification_time = util.path_modification_time(
+            self._path, self._allow_nonexistent
+        )
         self._md5 = util.calc_md5_with_blocking_retries(
             self._path,
             glob_pattern=self._glob_pattern,
@@ -90,7 +93,9 @@ class PollingPathWatcher:
             # Don't call self._schedule()
             return
 
-        modification_time = os.stat(self._path).st_mtime
+        modification_time = util.path_modification_time(
+            self._path, self._allow_nonexistent
+        )
         if modification_time <= self._modification_time:
             self._schedule()
             return

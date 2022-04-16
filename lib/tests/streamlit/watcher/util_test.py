@@ -56,6 +56,29 @@ class UtilTest(unittest.TestCase):
             m.assert_called_once_with("foo", "rb")
 
 
+class FakeStat(object):
+    """Emulates the output of os.stat()."""
+
+    def __init__(self, mtime):
+        self.st_mtime = mtime
+
+
+class PathModificationTimeTests(unittest.TestCase):
+    @patch("streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101)))
+    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    def test_st_mtime_if_file_exists(self):
+        assert util.path_modification_time("foo") == 101
+
+    @patch("streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101)))
+    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    def test_st_mtime_if_file_exists_and_allow_nonexistent(self):
+        assert util.path_modification_time("foo", allow_nonexistent=True) == 101
+
+    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=False))
+    def test_zero_if_file_nonexistent_and_allow_nonexistent(self):
+        assert util.path_modification_time("foo", allow_nonexistent=True) == 0.0
+
+
 class DirHelperTests(unittest.TestCase):
     def setUp(self) -> None:
         self._test_dir = tempfile.TemporaryDirectory()

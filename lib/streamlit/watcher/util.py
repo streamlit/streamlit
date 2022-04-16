@@ -63,6 +63,12 @@ def calc_md5_with_blocking_retries(
     return md5.hexdigest()
 
 
+def path_modification_time(path: str, allow_nonexistent: bool = False) -> float:
+    if allow_nonexistent and not os.path.exists(path):
+        return 0.0
+    return os.stat(path).st_mtime
+
+
 def _get_file_content_with_blocking_retries(file_path: str) -> bytes:
     content = b""
     # There's a race condition where sometimes file_path no longer exists when
