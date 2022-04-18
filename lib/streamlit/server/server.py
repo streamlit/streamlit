@@ -664,9 +664,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
-        user_info = {
-            "email": "example@example.com"
-        }
+        user_info = {"email": "example@example.com"}
 
         session = AppSession(
             ioloop=self._ioloop,
