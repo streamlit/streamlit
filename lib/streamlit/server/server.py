@@ -663,12 +663,18 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
+
+        user_info = {
+            "email": "example@example.com"
+        }
+
         session = AppSession(
             ioloop=self._ioloop,
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=local_sources_watcher,
+            user_info=user_info,
         )
 
         LOGGER.debug(

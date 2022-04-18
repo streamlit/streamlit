@@ -55,6 +55,9 @@ def _create_test_session(ioloop: Optional[IOLoop] = None) -> AppSession:
         uploaded_file_manager=MagicMock(),
         message_enqueued_callback=None,
         local_sources_watcher=MagicMock(),
+        user_info={
+            "email": "test@test.com"
+        }
     )
 
 

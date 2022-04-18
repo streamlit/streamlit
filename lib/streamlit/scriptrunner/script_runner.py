@@ -18,7 +18,7 @@ import threading
 import types
 from contextlib import contextmanager
 from enum import Enum
-from typing import Optional, Callable
+from typing import Dict, Optional, Callable
 
 from blinker import Signal
 
@@ -97,6 +97,7 @@ class ScriptRunner:
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         initial_rerun_data: RerunData,
+        user_info: Dict,
     ):
         """Initialize the ScriptRunner.
 
@@ -116,10 +117,20 @@ class ScriptRunner:
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
 
+        user_info: Dict
+            Dict that contains information about current user.
+            For now it is just an email.
+            {
+                "email": "example@example.com"
+            }
+            (Information about current user optionally provided by cloud via
+            HTTP Header)
+
         """
         self._session_id = session_id
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._user_info = user_info
 
         self._client_state = client_state
         self._session_state = session_state
@@ -250,6 +261,7 @@ class ScriptRunner:
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            user_info=self._user_info,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
