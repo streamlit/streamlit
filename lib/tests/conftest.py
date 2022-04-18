@@ -41,8 +41,9 @@ with patch(
     # miss config options set via flag or environment variable.
     import streamlit as st
 
-    from streamlit import file_util
     from streamlit import config
+    from streamlit import file_util
+    from streamlit import source_util
 
     assert (
         not config._config_options
@@ -54,3 +55,10 @@ with patch(
     # Force a reparse of our config options with CONFIG_FILE_CONTENTS so the
     # result gets cached.
     config.get_config_options(force_reparse=True)
+
+    # Set source_util._cached_pages to the empty dict below so that
+    # source_util.get_pages behavior is deterministic and doesn't depend on the
+    # filesystem of the machine tests are being run on. Tests that need
+    # source_util.get_pages to depend on the filesystem can patch this value
+    # back to None.
+    source_util._cached_pages = {}

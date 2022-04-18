@@ -13,8 +13,15 @@
 # limitations under the License.
 
 import re
+import threading
 from pathlib import Path
-from typing import Any, cast, Dict, Tuple
+from typing import Any, Callable, cast, Dict, List, Tuple
+
+from blinker import Signal
+
+from streamlit.logger import get_logger
+
+LOGGER = get_logger(__name__)
 
 
 def open_python_file(filename):
@@ -102,35 +109,73 @@ def page_name_and_icon(script_path: Path) -> Tuple[str, str]:
     return str(name), icon
 
 
-# TODO(vdonato): Eventually, have this function cache its return value and
-# avoid re-scanning the file system unless a page has been added/removed.
+_pages_cache_lock = threading.RLock()
+_cached_pages = None
+_on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
+
+
+def invalidate_pages_cache():
+    global _cached_pages
+
+    LOGGER.debug("Pages directory changed")
+    with _pages_cache_lock:
+        _cached_pages = None
+
+    _on_pages_changed.send()
+
+
 def get_pages(main_script_path: str) -> Dict[str, Dict[str, str]]:
-    main_script_path = Path(main_script_path)
-    main_page_name, main_page_icon = page_name_and_icon(main_script_path)
+    global _cached_pages
 
-    used_page_names = {main_page_name}
-    pages = {
-        main_page_name: {
-            "icon": main_page_icon,
-            "script_path": str(main_script_path),
-        }
-    }
+    # Avoid taking the lock if the pages cache hasn't been invalidated.
+    pages = _cached_pages
+    if pages is not None:
+        return pages
 
-    pages_dir = main_script_path.parent / "pages"
-    page_scripts = sorted(
-        [f for f in pages_dir.glob("*.py") if not f.name.startswith(".")],
-        key=page_sort_key,
-    )
+    with _pages_cache_lock:
+        # The cache may have been repopulated while we were waiting to grab
+        # the lock.
+        if _cached_pages is not None:
+            return _cached_pages
 
-    for script_path in page_scripts:
-        pn, pi = page_name_and_icon(script_path)
-        if pn in used_page_names:
-            continue
+        main_script_path = Path(main_script_path)
+        main_page_name, main_page_icon = page_name_and_icon(main_script_path)
 
-        used_page_names.add(pn)
-        pages[pn] = {
-            "icon": pi,
-            "script_path": str(script_path),
+        used_page_names = {main_page_name}
+        pages = {
+            main_page_name: {
+                "icon": main_page_icon,
+                "script_path": str(main_script_path),
+            }
         }
 
-    return pages
+        pages_dir = main_script_path.parent / "pages"
+        page_scripts = sorted(
+            [f for f in pages_dir.glob("*.py") if not f.name.startswith(".")],
+            key=page_sort_key,
+        )
+
+        for script_path in page_scripts:
+            pn, pi = page_name_and_icon(script_path)
+            if pn in used_page_names:
+                continue
+
+            used_page_names.add(pn)
+            pages[pn] = {"icon": pi, "script_path": str(script_path)}
+
+        _cached_pages = pages
+
+        return pages
+
+
+def register_pages_changed_callback(
+    callback: Callable[[], None],
+):
+    def disconnect():
+        _on_pages_changed.disconnect(callback)
+
+    # weak=False so that we have control of when the pages changed
+    # callback is deregistered.
+    _on_pages_changed.connect(callback, weak=False)
+
+    return disconnect
