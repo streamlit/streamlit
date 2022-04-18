@@ -45,7 +45,7 @@ from streamlit.scriptrunner import (
     RerunException,
     StopException,
 )
-from streamlit.state.session_state import SessionState
+from streamlit.state.session_state import SessionState, WidgetMetadata
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
@@ -497,6 +497,34 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, ["loop_forever"])
+
+    def test_disconnected_sessionstate_after_stop(self):
+        """After ScriptRunner.request_stop is called, any operations on its
+        SessionState instance are no-ops.
+        """
+        # Create a TestRunner and stick some initial session_state into it.
+        scriptrunner = TestScriptRunner("infinite_loop.py")
+        scriptrunner._session_state["foo"] = "bar"
+        self.assertEqual("bar", scriptrunner._session_state["foo"])
+        scriptrunner.start()
+
+        # Stop the TestRunner
+        scriptrunner.request_stop()
+
+        # We can neither get nor set SessionState values after request_stop.
+        self.assertRaises(KeyError, lambda: scriptrunner._session_state["foo"])
+        scriptrunner._session_state["new_foo"] = 3
+        self.assertRaises(KeyError, lambda: scriptrunner._session_state["new_foo"])
+
+        # Widget registration is a no-op
+        _, widget_value_changed = scriptrunner._session_state.register_widget(
+            MagicMock(spec=WidgetMetadata),
+            user_key="mock_user_key",
+        )
+        self.assertEqual(False, widget_value_changed)
+
+        # Ensure the ScriptRunner thread shuts down.
+        scriptrunner.join()
 
     def test_widgets(self):
         """Tests that widget values behave as expected."""
