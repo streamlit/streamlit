@@ -22,7 +22,8 @@ from typing import (
 import streamlit as st
 from streamlit import logger as _logger
 from streamlit.type_util import Key
-from .session_state import SessionState, validate_key
+from .safe_session_state import SafeSessionState
+from .session_state import SessionState
 
 logger = _logger.get_logger(__name__)
 
@@ -30,7 +31,7 @@ logger = _logger.get_logger(__name__)
 _state_use_warning_already_displayed = False
 
 
-def get_session_state() -> SessionState:
+def get_session_state() -> SafeSessionState:
     """Get the SessionState object for the current session.
 
     Note that in streamlit scripts, this function should not be called
@@ -51,7 +52,7 @@ def get_session_state() -> SessionState:
                 logger.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )
-        return SessionState()
+        return SafeSessionState(SessionState())
     return ctx.session_state
 
 
@@ -68,56 +69,41 @@ class AutoSessionState(MutableMapping[str, Any]):
     """
 
     def __iter__(self) -> Iterator[Any]:
-        state = get_session_state()
-        return iter(state.filtered_state)
+        return iter(get_session_state())
 
     def __len__(self) -> int:
-        state = get_session_state()
-        return len(state.filtered_state)
+        return len(get_session_state())
 
     def __str__(self) -> str:
-        state = get_session_state()
-        return str(state.filtered_state)
+        return str(get_session_state())
 
     def __getitem__(self, key: Key) -> Any:
-        key = str(key)
-        validate_key(key)
-        state = get_session_state()
-        return state[key]
+        return get_session_state()[key]
 
     def __setitem__(self, key: Key, value: Any) -> None:
-        key = str(key)
-        validate_key(key)
-        state = get_session_state()
-        state[key] = value
+        get_session_state()[key] = value
 
     def __delitem__(self, key: Key) -> None:
-        key = str(key)
-        validate_key(key)
-        state = get_session_state()
-        del state[key]
+        del get_session_state()[key]
 
     def __getattr__(self, key: str) -> Any:
-        validate_key(key)
         try:
             return self[key]
         except KeyError:
             raise AttributeError(_missing_attr_error_message(key))
 
     def __setattr__(self, key: str, value: Any) -> None:
-        validate_key(key)
         self[key] = value
 
     def __delattr__(self, key: str) -> None:
-        validate_key(key)
         try:
             del self[key]
         except KeyError:
             raise AttributeError(_missing_attr_error_message(key))
 
     def to_dict(self) -> Dict[str, Any]:
-        state = get_session_state()
-        return state.filtered_state
+        """Return a dict containing all session_state and keyed widget values."""
+        return get_session_state().filtered_state
 
 
 def _missing_attr_error_message(attr_name: str) -> str:

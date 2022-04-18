@@ -35,6 +35,7 @@ from streamlit.session_data import SessionData
 from streamlit.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    SafeSessionState,
 )
 from streamlit.uploaded_file_manager import UploadedFileManager
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
@@ -121,9 +122,11 @@ class ScriptRunner:
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_mgr
 
+        # Initialize SessionState with the latest widget states
+        session_state.set_widgets_from_proto(client_state.widget_states)
+
         self._client_state = client_state
-        self._session_state = session_state
-        self._session_state.set_widgets_from_proto(client_state.widget_states)
+        self._session_state = SafeSessionState(session_state)
 
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)

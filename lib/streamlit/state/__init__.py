@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Explicitly re-export public symbols
+# Explicitly re-export public symbols from our modules.
+from .auto_session_state import (
+    AutoSessionState as AutoSessionState,
+    get_session_state as get_session_state,
+)
+
+from .safe_session_state import SafeSessionState as SafeSessionState
+
 from .session_state import (
     SessionState as SessionState,
     WidgetCallback as WidgetCallback,
@@ -20,11 +27,6 @@ from .session_state import (
     WidgetKwargs as WidgetKwargs,
     SessionStateStatProvider as SessionStateStatProvider,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY as SCRIPT_RUN_WITHOUT_ERRORS_KEY,
-)
-
-from .auto_session_state import (
-    AutoSessionState as AutoSessionState,
-    get_session_state as get_session_state,
 )
 
 from .widgets import (

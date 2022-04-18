@@ -15,11 +15,13 @@
 """AutoSessionState unit tests."""
 
 import unittest
-from unittest.mock import patch, MagicMock
+from typing import Dict, Any
+from unittest.mock import patch
 
 import pytest
 
 from streamlit.errors import StreamlitAPIException
+from streamlit.state import SafeSessionState
 from streamlit.state.auto_session_state import AutoSessionState
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
@@ -28,9 +30,21 @@ from streamlit.state.session_state import (
 )
 
 
+def _create_mock_session_state(
+    initial_state_values: Dict[str, Any]
+) -> SafeSessionState:
+    """Return a new SafeSessionState instance populated with the
+    given state values.
+    """
+    session_state = SessionState()
+    for key, value in initial_state_values.items():
+        session_state[key] = value
+    return SafeSessionState(session_state)
+
+
 @patch(
     "streamlit.state.auto_session_state.get_session_state",
-    return_value=MagicMock(filtered_state={"foo": "bar"}),
+    return_value=_create_mock_session_state({"foo": "bar"}),
 )
 class AutoSessionStateTests(unittest.TestCase):
     reserved_key = f"{GENERATED_WIDGET_KEY_PREFIX}-some_key"
@@ -59,7 +73,7 @@ class AutoSessionStateTests(unittest.TestCase):
     # since the others are tested in another test class.
     def test_getitem_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
-            self.auto_session_state[self.reserved_key]
+            _ = self.auto_session_state[self.reserved_key]
 
     def test_setitem_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
