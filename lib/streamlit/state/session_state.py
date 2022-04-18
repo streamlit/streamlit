@@ -279,7 +279,7 @@ def _missing_key_error_message(key: str) -> str:
 
 
 @attr.s(auto_attribs=True, slots=True)
-class SessionState(MutableMapping[str, Any]):
+class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
 
@@ -327,32 +327,11 @@ class SessionState(MutableMapping[str, Any]):
         self._new_widget_state.clear()
         self._key_id_mapping.clear()
 
-    def _safe_widget_state(self) -> Dict[str, Any]:
-        """Return widget states for all widgets with deserializers registered.
-
-        On a browser tab reconnect, it's possible for widgets in
-        self._new_widget_state to not have deserializers registered, which will
-        result in trying to access them raising a KeyError. This results in
-        things exploding if we try to naively use the splat operator on
-        self._new_widget_state in _merged_state below.
-        """
-        wstate = {}
-        for k in self._new_widget_state.keys():
-            try:
-                wstate[k] = self._new_widget_state[k]
-            except KeyError:
-                pass
-        return wstate
-
-    @property
-    def _merged_state(self) -> Dict[str, Any]:
-        return {k: self[k] for k in self}
-
     @property
     def filtered_state(self) -> Dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
 
-        wid_key_map = self.reverse_key_wid_map
+        wid_key_map = self._reverse_key_wid_map
 
         state: Dict[str, Any] = {}
 
@@ -375,12 +354,12 @@ class SessionState(MutableMapping[str, Any]):
         return state
 
     @property
-    def reverse_key_wid_map(self) -> Dict[str, str]:
+    def _reverse_key_wid_map(self) -> Dict[str, str]:
         """Return a mapping of widget_id : widget_key."""
         wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         return wid_key_map
 
-    def keys(self) -> Set[str]:  # type: ignore
+    def keys(self) -> Set[str]:
         """All keys active in Session State, with widget keys converted
         to widget ids when one is known."""
         old_keys = {self._get_widget_id(k) for k in self._old_state.keys()}
@@ -395,16 +374,17 @@ class SessionState(MutableMapping[str, Any]):
         return user_key in self._new_session_state
 
     def __iter__(self) -> Iterator[Any]:
+        """Return an iterator over the keys of the SessionState.
+        This is a shortcut for `iter(self.keys())`
+        """
         return iter(self.keys())
 
     def __len__(self) -> int:
+        """Return the number of items in SessionState."""
         return len(self.keys())
 
-    def __str__(self) -> str:
-        return str(self._merged_state)
-
     def __getitem__(self, key: str) -> Any:
-        wid_key_map = self.reverse_key_wid_map
+        wid_key_map = self._reverse_key_wid_map
         widget_id = self._get_widget_id(key)
 
         if widget_id in wid_key_map and widget_id == key:
@@ -461,7 +441,7 @@ class SessionState(MutableMapping[str, Any]):
         """Set the value of the session_state entry with the given user_key.
 
         If the key corresponds to a widget or form that's been instantiated
-        during the current script run, raise an Exception instead.
+        during the current script run, raise a StreamlitAPIException instead.
         """
         from streamlit.scriptrunner import get_script_run_ctx
 
@@ -500,12 +480,6 @@ class SessionState(MutableMapping[str, Any]):
 
         if widget_id in self._old_state:
             del self._old_state[widget_id]
-
-    def update(self, other: "SessionState") -> None:  # type: ignore
-        self._new_session_state.update(other._new_session_state)
-        self._new_widget_state.update(other._new_widget_state)
-        self._old_state.update(other._old_state)
-        self._key_id_mapping.update(other._key_id_mapping)
 
     def set_widgets_from_proto(self, widget_states: WidgetStatesProto) -> None:
         """Set the value of all widgets represented in the given WidgetStatesProto."""
@@ -606,10 +580,6 @@ class SessionState(MutableMapping[str, Any]):
 
     def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapping[user_key] = widget_id
-
-    def copy(self) -> "SessionState":
-        """Return a deep copy of self."""
-        return deepcopy(self)
 
     def register_widget(
         self, metadata: WidgetMetadata, user_key: Optional[str]
