@@ -327,7 +327,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             ]
         ),
     )
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_watches_all_page_scripts(self, fob, _):
         lsw = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lsw.register_file_change_callback(NOOP_CALLBACK)
@@ -338,7 +338,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         assert args1[0] == "streamlit_app.py"
         assert args2[0] == "streamlit_app2.py"
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_passes_filepath_to_callback(self, fob, _):
         saved_filepath = None
 
