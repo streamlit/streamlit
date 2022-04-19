@@ -25,6 +25,7 @@ test("class Duration constructor", () => {
 
 test("class toFormattedString function with exponential notation", () => {
   expect(format.toFormattedString(4.2e-9)).toBe("0.0000")
+  // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
   expect(format.toFormattedString(4.2657457627118644e-9)).toBe("0.0000")
 })
 
