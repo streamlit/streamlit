@@ -55,16 +55,9 @@ def get_session_state() -> SessionState:
     return ctx.session_state
 
 
-class AutoSessionState(MutableMapping[str, Any]):
-    """A SessionState interface that acts as a wrapper around the
-    current script thread's SessionState instance.
-
-    When a user script uses `st.session_state`, it's interacting with
-    the singleton AutoSessionState instance, which delegates to the
-    SessionState for the active AppSession.
-
-    (This will only be used within an app script, when an AppSession is
-    guaranteed to exist.)
+class SessionStateProxy(MutableMapping[str, Any]):
+    """A stateless singleton that proxies `st.session_state` interactions
+    to the current script thread's SessionState instance.
     """
 
     def __iter__(self) -> Iterator[Any]:
