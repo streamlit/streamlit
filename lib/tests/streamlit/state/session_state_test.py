@@ -492,7 +492,7 @@ class SessionStateMethodTests(unittest.TestCase):
         self.assertEqual(keys, self.session_state._keys())
 
         # Clear state
-        self.session_state.clear_state()
+        self.session_state.clear()
 
         # Keys should be empty
         self.assertEqual(set(), self.session_state._keys())

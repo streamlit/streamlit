@@ -561,7 +561,7 @@ class AppSession:
         legacy_caching.clear_cache()
         caching.memo.clear()
         caching.singleton.clear()
-        self._session_state.clear_state()
+        self._session_state.clear()
 
     def handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.

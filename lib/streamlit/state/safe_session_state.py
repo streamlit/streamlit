@@ -73,12 +73,13 @@ class SafeSessionState:
 
             self._state.on_script_finished(widget_ids_this_run)
 
-    def as_widget_states(self) -> List[WidgetStateProto]:
+    def get_widget_states(self) -> List[WidgetStateProto]:
+        """Return a list of serialized widget values for each widget with a value."""
         with self._lock:
             if self._disconnected:
                 return []
 
-            return self._state.as_widget_states()
+            return self._state.get_widget_states()
 
     def is_new_state_value(self, user_key: str) -> bool:
         with self._lock:

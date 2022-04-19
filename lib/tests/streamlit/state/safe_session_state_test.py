@@ -108,15 +108,15 @@ class SafeSessionStateTests(unittest.TestCase):
         for disconnected in (False, True):
             with self.subTest(f"disconnected={disconnected}"):
                 safe_state, mock_state = _create_state_spy({}, disconnected)
-                mock_state.as_widget_states = MagicMock(return_value=[1, 2, 3])
+                mock_state.get_widget_states = MagicMock(return_value=[1, 2, 3])
 
-                result = safe_state.as_widget_states()
+                result = safe_state.get_widget_states()
 
                 if disconnected:
-                    mock_state.as_widget_states.assert_not_called()
+                    mock_state.get_widget_states.assert_not_called()
                     self.assertEqual([], result)
                 else:
-                    mock_state.as_widget_states.assert_called_once_with()
+                    mock_state.get_widget_states.assert_called_once_with()
                     self.assertEqual([1, 2, 3], result)
 
     def test_is_new_state_value(self):

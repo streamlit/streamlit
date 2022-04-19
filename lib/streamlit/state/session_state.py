@@ -320,7 +320,7 @@ class SessionState:
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
-    def clear_state(self) -> None:
+    def clear(self) -> None:
         """Reset self completely, clearing all current and old values."""
         self._old_state.clear()
         self._new_session_state.clear()
@@ -571,7 +571,7 @@ class SessionState:
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def as_widget_states(self) -> List[WidgetStateProto]:
+    def get_widget_states(self) -> List[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
         return self._new_widget_state.as_widget_states()
 

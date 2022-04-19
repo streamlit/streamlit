@@ -286,7 +286,7 @@ class ScriptRunner:
         # created.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
-        widget_states = self._session_state.as_widget_states()
+        widget_states = self._session_state.get_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
