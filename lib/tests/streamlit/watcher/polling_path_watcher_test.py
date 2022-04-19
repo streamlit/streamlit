@@ -15,39 +15,39 @@
 from unittest import mock
 import unittest
 
-from streamlit.watcher import polling_file_watcher
+from streamlit.watcher import polling_path_watcher
 
 
-class PollingFileWatcherTest(unittest.TestCase):
-    """Test PollingFileWatcher."""
+class PollingPathWatcherTest(unittest.TestCase):
+    """Test PollingPathWatcher."""
 
     def setUp(self):
-        super(PollingFileWatcherTest, self).setUp()
-        self.util_patch = mock.patch("streamlit.watcher.polling_file_watcher.util")
+        super(PollingPathWatcherTest, self).setUp()
+        self.util_patch = mock.patch("streamlit.watcher.polling_path_watcher.util")
         self.util_mock = self.util_patch.start()
 
-        self.os_patch = mock.patch("streamlit.watcher.polling_file_watcher.os")
+        self.os_patch = mock.patch("streamlit.watcher.polling_path_watcher.os")
         self.os_mock = self.os_patch.start()
 
-        # Patch PollingFileWatcher's thread pool executor. We want to do
+        # Patch PollingPathWatcher's thread pool executor. We want to do
         # all of our test polling on the test thread, so we accumulate
         # tasks here and run them manually via `_run_executor_tasks`.
         self._executor_tasks = []
         self.executor_patch = mock.patch(
-            "streamlit.watcher.polling_file_watcher.PollingFileWatcher._executor",
+            "streamlit.watcher.polling_path_watcher.PollingPathWatcher._executor",
         )
         executor_mock = self.executor_patch.start()
         executor_mock.submit = self._submit_executor_task
 
-        # Patch PollingFileWatcher's `time.sleep` to no-op, so that the tasks
+        # Patch PollingPathWatcher's `time.sleep` to no-op, so that the tasks
         # submitted to our mock executor don't block.
         self.sleep_patch = mock.patch(
-            "streamlit.watcher.polling_file_watcher.time.sleep"
+            "streamlit.watcher.polling_path_watcher.time.sleep"
         )
         self.sleep_patch.start()
 
     def tearDown(self):
-        super(PollingFileWatcherTest, self).tearDown()
+        super(PollingPathWatcherTest, self).tearDown()
         self.util_patch.stop()
         self.os_patch.stop()
         self.executor_patch.stop()
@@ -71,7 +71,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         self.os_mock.stat = lambda x: FakeStat(101)
         self.util_mock.calc_md5_with_blocking_retries = lambda x: "1"
 
-        watcher = polling_file_watcher.PollingFileWatcher(
+        watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
         )
 
@@ -93,7 +93,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         self.os_mock.stat = lambda x: FakeStat(101)
         self.util_mock.calc_md5_with_blocking_retries = lambda x: "1"
 
-        watcher = polling_file_watcher.PollingFileWatcher(
+        watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
         )
 
@@ -116,7 +116,7 @@ class PollingFileWatcherTest(unittest.TestCase):
         self.os_mock.stat = lambda x: FakeStat(101)
         self.util_mock.calc_md5_with_blocking_retries = lambda x: "1"
 
-        watcher = polling_file_watcher.PollingFileWatcher(
+        watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
         )
 
@@ -152,8 +152,8 @@ class PollingFileWatcherTest(unittest.TestCase):
         callback1 = mock.Mock()
         callback2 = mock.Mock()
 
-        watcher1 = polling_file_watcher.PollingFileWatcher(filename, callback1)
-        watcher2 = polling_file_watcher.PollingFileWatcher(filename, callback2)
+        watcher1 = polling_path_watcher.PollingPathWatcher(filename, callback1)
+        watcher2 = polling_path_watcher.PollingPathWatcher(filename, callback2)
 
         self._run_executor_tasks()
 
