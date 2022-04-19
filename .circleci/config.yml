@@ -574,27 +574,21 @@ jobs:
       - update-submodules
       - pre-cache
 
-      - restore_cache: &restore_nvm
-          name: Restore nvm and node_modules from cache
-          keys:
-            - v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+      - restore_cache:
+          <<: *restore_nvm
 
-      - restore_cache: &restore_make
-          name: Restore make from cache
-          keys:
-            - v13_make.bin-{{ checksum "~/make.md5" }}
+      - restore_cache:
+          <<: *restore_make
 
-      - restore_cache: &restore_dot
-          name: Restore dot from cache
-          keys:
-            - v13_dot.bin-{{ checksum "~/dot.md5" }}
+      - restore_cache:
+          <<: *restore_dot
 
       - pre-make
 
       - run:
           <<: *install_nodejs
 
-      - run: &activate_virtualenv
+      - run:
           name: Create virtualenv
           command: |
             python -m venv venv
