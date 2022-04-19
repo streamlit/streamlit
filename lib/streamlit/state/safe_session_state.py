@@ -46,14 +46,6 @@ class SafeSessionState:
         with self._lock:
             self._disconnected = True
 
-    def clear_state(self):
-        """Clear all values from SessionState."""
-        with self._lock:
-            if self._disconnected:
-                return
-
-            self._state.clear_state()
-
     def register_widget(
         self, metadata: WidgetMetadata, user_key: Optional[str]
     ) -> Tuple[Any, bool]:

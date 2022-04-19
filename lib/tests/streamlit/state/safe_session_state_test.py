@@ -55,19 +55,6 @@ def _create_state_spy(
 
 
 class SafeSessionStateTests(unittest.TestCase):
-    def test_clear_state(self):
-        """`clear_state` calls thru to SessionState, unless disconnected."""
-        for disconnected in (False, True):
-            with self.subTest(f"disconnected={disconnected}"):
-                safe_state, mock_state = _create_state_spy({}, disconnected)
-
-                safe_state.clear_state()
-
-                if disconnected:
-                    mock_state.clear_state.assert_not_called()
-                else:
-                    mock_state.clear_state.assert_called_once_with()
-
     def test_register_widget(self):
         """`register_widget` calls thru to SessionState, unless disconnected."""
         for disconnected in (False, True):
