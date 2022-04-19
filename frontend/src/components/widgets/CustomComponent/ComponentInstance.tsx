@@ -25,6 +25,7 @@ import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
 import ErrorElement from "src/components/shared/ErrorElement"
 import { withTheme } from "@emotion/react"
+import { ensureError } from "src/lib/ErrorHandling"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -415,9 +416,10 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
             )
         }
       })
-    } catch (err) {
-      this.setState({ componentError: err })
-      return this.renderError(err)
+    } catch (e) {
+      const error = ensureError(e)
+      this.setState({ componentError: error })
+      return this.renderError(error)
     }
 
     // We always store the most recent render arguments in order to respond

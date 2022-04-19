@@ -103,6 +103,7 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
+import { ensureError } from "./lib/ErrorHandling"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -410,7 +411,8 @@ export class App extends PureComponent<Props, State> {
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleScriptFinished(status),
       })
-    } catch (err) {
+    } catch (e) {
+      const err = ensureError(e)
       logError(err)
       this.showError("Bad message format", err.message)
     }

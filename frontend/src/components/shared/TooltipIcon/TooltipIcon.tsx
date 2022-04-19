@@ -13,7 +13,7 @@ export interface TooltipIconProps {
   iconSize?: string
   content: string
   children?: ReactNode
-  markdownProps?: StreamlitMarkdownProps
+  markdownProps?: Partial<StreamlitMarkdownProps>
 }
 
 function TooltipIcon({

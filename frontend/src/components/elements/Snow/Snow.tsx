@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, memo } from "react"
+import React, { FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -40,7 +40,11 @@ export interface Props {
   scriptRunId: string
 }
 
-function Snow({ scriptRunId }: Props): ReactElement {
+const Flake: FC<ParticleProps> = ({ particleType }) => (
+  <StyledFlake src={FLAKE_IMAGES[particleType]} />
+)
+
+const Snow: FC<Props> = function Snow({ scriptRunId }) {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (
@@ -52,10 +56,6 @@ function Snow({ scriptRunId }: Props): ReactElement {
       ParticleComponent={Flake}
     />
   )
-}
-
-function Flake({ particleType }: ParticleProps): ReactElement {
-  return <StyledFlake src={FLAKE_IMAGES[particleType]} />
 }
 
 export default memo(Snow)
