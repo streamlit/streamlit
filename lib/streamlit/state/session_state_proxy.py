@@ -97,7 +97,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         ------
         StreamlitAPIException
             If the key is not a valid SessionState user key.
-            """
+        """
         key = str(key)
         require_is_valid_user_key(key)
         get_session_state()[key] = value
@@ -109,7 +109,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         ------
         StreamlitAPIException
             If the key is not a valid SessionState user key.
-            """
+        """
         key = str(key)
         require_is_valid_user_key(key)
         del get_session_state()[key]

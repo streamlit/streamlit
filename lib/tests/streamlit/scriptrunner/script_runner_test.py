@@ -325,9 +325,9 @@ class ScriptRunnerTest(AsyncTestCase):
         self, patched_call_callbacks
     ):
         """A new ScriptRunner instance will call widget callbacks
-        if widget values have changed. (This differs from
-        `test_calls_widget_callbacks`, which tests that an already-running
-        ScriptRunner calls its callbacks on rerun.
+        if widget values have changed. (This differs slightly from
+        `test_calls_widget_callbacks`, which tests that an *already-running*
+        ScriptRunner calls its callbacks on rerun).
         """
         # Create a ScriptRunner and run it once so we can grab its widgets.
         scriptrunner = TestScriptRunner("widgets_script.py")
@@ -551,7 +551,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner._session_state["new_foo"] = 3
         self.assertRaises(KeyError, lambda: scriptrunner._session_state["new_foo"])
 
-        # Widget registration is a no-op
+        # Assert that Widget registration is a no-op
         _, widget_value_changed = scriptrunner._session_state.register_widget(
             MagicMock(spec=WidgetMetadata),
             user_key="mock_user_key",
