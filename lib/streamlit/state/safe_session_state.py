@@ -17,8 +17,7 @@ from typing import Any, Dict, Tuple, Optional, List, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.type_util import Key
-from .session_state import SessionState, validate_key, WidgetMetadata
+from .session_state import SessionState, WidgetMetadata
 
 
 class SafeSessionState:
@@ -105,27 +104,21 @@ class SafeSessionState:
 
             return self._state.filtered_state
 
-    def __getitem__(self, key: Key) -> Any:
-        key = str(key)
-        validate_key(key)
+    def __getitem__(self, key: str) -> Any:
         with self._lock:
             if self._disconnected:
                 raise KeyError(key)
 
             return self._state[key]
 
-    def __setitem__(self, key: Key, value: Any) -> None:
-        key = str(key)
-        validate_key(key)
+    def __setitem__(self, key: str, value: Any) -> None:
         with self._lock:
             if self._disconnected:
                 return
 
             self._state[key] = value
 
-    def __delitem__(self, key: Key) -> None:
-        key = str(key)
-        validate_key(key)
+    def __delitem__(self, key: str) -> None:
         with self._lock:
             if self._disconnected:
                 raise KeyError(key)

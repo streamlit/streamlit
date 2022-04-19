@@ -641,8 +641,8 @@ def _is_internal_key(key: str) -> bool:
     return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
 
 
-def validate_key(key: str) -> None:
-    """Raise an Exception if the given value key is invalid."""
+def require_is_valid_user_key(key: str) -> None:
+    """Raise an Exception if the given user_key is invalid."""
     if _is_widget_id(key):
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_WIDGET_KEY_PREFIX} are reserved."
