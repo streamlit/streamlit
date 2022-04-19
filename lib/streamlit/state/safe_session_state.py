@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Iterator, Dict, Tuple, Optional, List, Set
+from typing import Any, Dict, Tuple, Optional, List, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -104,22 +104,6 @@ class SafeSessionState:
                 return {}
 
             return self._state.filtered_state
-
-    def __iter__(self) -> Iterator[Any]:
-        # TODO: we should remove this function - it's not safe to iterate
-        #  SessionState in our multi-threaded world.
-        with self._lock:
-            if self._disconnected:
-                return iter([])
-
-            return iter(self._state)
-
-    def __len__(self) -> int:
-        with self._lock:
-            if self._disconnected:
-                return 0
-
-            return len(self._state)
 
     def __getitem__(self, key: Key) -> Any:
         key = str(key)

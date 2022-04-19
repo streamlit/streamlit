@@ -167,36 +167,6 @@ class SafeSessionStateTests(unittest.TestCase):
                     filtered_state_mock.assert_called_once()
                     self.assertEqual({"foo": 10, "bar": 20}, result)
 
-    def test_iter(self):
-        """`iter` calls thru to SessionState, unless disconnected."""
-        for disconnected in (False, True):
-            with self.subTest(f"disconnected={disconnected}"):
-                safe_state, mock_state = _create_state_spy(
-                    {"foo": 10, "bar": 20}, disconnected
-                )
-
-                # set() will iterate the contents of safe_state.
-                result = set(safe_state)
-
-                if disconnected:
-                    self.assertEqual(set(), result)
-                else:
-                    self.assertEqual({"foo", "bar"}, result)
-
-    def test_len(self):
-        """`len` calls thru to SessionState, unless disconnected."""
-        for disconnected in (False, True):
-            with self.subTest(f"disconnected={disconnected}"):
-                safe_state, mock_state = _create_state_spy(
-                    {"foo": 10, "bar": 20}, disconnected
-                )
-                result = len(safe_state)
-
-                if disconnected:
-                    self.assertEqual(0, result)
-                else:
-                    self.assertEqual(2, result)
-
     def test_get_item(self):
         """`__getitem__` calls through to SessionState.
         If disconnected, it always raises a KeyError.
