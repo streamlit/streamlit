@@ -45,7 +45,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that when a file is modified, the callback is called."""
         cb = mock.Mock()
 
-        self.mock_util.path_modification_time = lambda _, __: 101
+        self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
@@ -57,7 +57,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.mock_util.path_modification_time = lambda _, __: 102
+        self.mock_util.path_modification_time = lambda *args: 102.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
@@ -72,7 +72,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that when a directory is modified, the callback is called."""
         cb = mock.Mock()
 
-        self.mock_util.path_modification_time = lambda _, __: 101
+        self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
@@ -84,7 +84,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.mock_util.path_modification_time = lambda _, __: 102
+        self.mock_util.path_modification_time = lambda *args: 102.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/dir")
@@ -97,9 +97,18 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         ro.close()
 
     def test_kwargs_plumbed_to_calc_md5(self):
+        """Test that we pass the glob_pattern and allow_nonexistent kwargs to
+        calc_md5_with_blocking_retries.
+
+        `EventBasedPathWatcher`s can be created with optional kwargs allowing
+        the caller to specify what types of files to watch (when watching a
+        directory) and whether to allow watchers on paths with no files/dirs.
+        This test ensures that these optional parameters make it to our hash
+        calculation helpers across different on_changed events.
+        """
         cb = mock.Mock()
 
-        self.mock_util.path_modification_time = lambda _, __: 101
+        self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
 
         ro = event_based_path_watcher.EventBasedPathWatcher(
@@ -118,7 +127,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
         cb.assert_not_called()
 
-        self.mock_util.path_modification_time = lambda _, __: 102
+        self.mock_util.path_modification_time = lambda *args: 102.0
         self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="3")
 
         ev = events.FileSystemEvent("/this/is/my/dir")
@@ -136,7 +145,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that we ignore files with same mtime."""
         cb = mock.Mock()
 
-        self.mock_util.path_modification_time = lambda _, __: 101
+        self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
@@ -164,7 +173,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that we ignore files with same md5."""
         cb = mock.Mock()
 
-        self.mock_util.path_modification_time = lambda _, __: 101
+        self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
@@ -176,7 +185,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.mock_util.path_modification_time = lambda _, __: 102
+        self.mock_util.path_modification_time = lambda *args: 102.0
         # Same MD5!
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
@@ -192,7 +201,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         """Test that we ignore created files."""
         cb = mock.Mock()
 
-        self.mock_util.path_modification_time = lambda _, __: 101
+        self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
@@ -204,7 +213,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.mock_util.path_modification_time = lambda _, __: 102
+        self.mock_util.path_modification_time = lambda *args: 102.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
@@ -221,10 +230,10 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         filename = "/this/is/my/file.py"
 
-        mod_count = [0]
+        mod_count = [0.0]
 
         def modify_mock_file():
-            self.mock_util.path_modification_time = lambda _, __: mod_count[0]
+            self.mock_util.path_modification_time = lambda *args: mod_count[0]
             self.mock_util.calc_md5_with_blocking_retries = (
                 lambda _, **kwargs: "%d" % mod_count[0]
             )
@@ -233,7 +242,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
             ev.event_type = events.EVENT_TYPE_MODIFIED
             folder_handler.on_modified(ev)
 
-            mod_count[0] += 1
+            mod_count[0] += 1.0
 
         cb1 = mock.Mock()
         cb2 = mock.Mock()

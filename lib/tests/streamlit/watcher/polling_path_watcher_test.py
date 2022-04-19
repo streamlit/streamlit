@@ -64,7 +64,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         """Test that when a file is modified, the callback is called."""
         callback = mock.Mock()
 
-        self.util_mock.path_modification_time = lambda _, __: 101
+        self.util_mock.path_modification_time = lambda *args: 101.0
         self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
@@ -74,7 +74,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         self._run_executor_tasks()
         callback.assert_not_called()
 
-        self.util_mock.path_modification_time = lambda _, __: 102
+        self.util_mock.path_modification_time = lambda *args: 102.0
         self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
 
         self._run_executor_tasks()
@@ -86,7 +86,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         """Test that we ignore files with same mtime."""
         callback = mock.Mock()
 
-        self.util_mock.path_modification_time = lambda _, __: 101
+        self.util_mock.path_modification_time = lambda *args: 101.0
         self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
@@ -109,7 +109,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         """Test that we ignore files with same md5."""
         callback = mock.Mock()
 
-        self.util_mock.path_modification_time = lambda _, __: 101
+        self.util_mock.path_modification_time = lambda *args: 101.0
         self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
@@ -119,7 +119,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         self._run_executor_tasks()
         callback.assert_not_called()
 
-        self.util_mock.path_modification_time = lambda _, __: 102
+        self.util_mock.path_modification_time = lambda *args: 102.0
         # Same MD5
 
         # This is the test:
@@ -129,9 +129,18 @@ class PollingPathWatcherTest(unittest.TestCase):
         watcher.close()
 
     def test_kwargs_plumbed_to_calc_md5(self):
+        """Test that we pass the glob_pattern and allow_nonexistent kwargs to
+        calc_md5_with_blocking_retries.
+
+        `PollingPathWatcher`s can be created with optional kwargs allowing
+        the caller to specify what types of files to watch (when watching a
+        directory) and whether to allow watchers on paths with no files/dirs.
+        This test ensures that these optional parameters make it to our hash
+        calculation helpers across different on_changed events.
+        """
         callback = mock.Mock()
 
-        self.util_mock.path_modification_time = lambda _, __: 101
+        self.util_mock.path_modification_time = lambda *args: 101.0
         self.util_mock.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
 
         watcher = polling_path_watcher.PollingPathWatcher(
@@ -146,7 +155,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         _, kwargs = self.util_mock.calc_md5_with_blocking_retries.call_args
         assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
 
-        self.util_mock.path_modification_time = lambda _, __: 102
+        self.util_mock.path_modification_time = lambda *args: 102.0
         self.util_mock.calc_md5_with_blocking_retries = mock.Mock(return_value="2")
 
         self._run_executor_tasks()
@@ -160,15 +169,15 @@ class PollingPathWatcherTest(unittest.TestCase):
         """Test that we can have multiple watchers of the same file."""
         filename = "/this/is/my/file.py"
 
-        mod_count = [0]
+        mod_count = [0.0]
 
         def modify_mock_file():
-            self.util_mock.path_modification_time = lambda _, __: mod_count[0]
+            self.util_mock.path_modification_time = lambda *args: mod_count[0]
             self.util_mock.calc_md5_with_blocking_retries = (
                 lambda _, **kwargs: "%d" % mod_count[0]
             )
 
-            mod_count[0] += 1
+            mod_count[0] += 1.0
 
         modify_mock_file()
 
