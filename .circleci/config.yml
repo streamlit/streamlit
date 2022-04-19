@@ -592,22 +592,7 @@ jobs:
       - pre-make
 
       - run:
-          name: Install NVM, Node.js, and Yarn
-          command: |
-            if [ ! -d ~/.nvm ] ; then
-              # install nodejs via nvm
-              curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.2/install.sh | bash
-              source "$HOME/.nvm/nvm.sh"
-              nvm install --lts=fermium
-              # install yarn
-              npm install -g yarn
-            fi
-            if [ ! -d frontend/node_modules ] ; then
-              source "$HOME/.nvm/nvm.sh"
-              make react-init
-            fi
-            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
-            echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+          <<: *install_nodejs
 
       - run: &activate_virtualenv
           name: Create virtualenv
@@ -622,19 +607,9 @@ jobs:
             # for the remainder of the job ($BASH_ENV is evaluated at each step).
             echo 'source venv/bin/activate' >> $BASH_ENV
 
-      - run: &generate_protobufs
-          name: Generate protobufs
-          command: |
-            # install protobuf v3
-            ${SUDO} apt update
-            ${SUDO} apt-get install -y gnupg
-            echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
-            ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-            ${SUDO} apt update
-            ${SUDO} apt-get install -y protobuf-compiler
+      - run:
+          <<: *generate_protobufs
 
-            # Generate protobufs
-            make protobuf
       - run:
           name: Run make develop
           command: |
