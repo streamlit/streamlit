@@ -533,7 +533,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, ["loop_forever"])
 
-    def test_disconnected_sessionstate_after_stop(self):
+    def test_sessionstate_is_disconnected_after_stop(self):
         """After ScriptRunner.request_stop is called, any operations on its
         SessionState instance are no-ops.
         """
