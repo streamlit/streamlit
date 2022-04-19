@@ -615,7 +615,7 @@ jobs:
             python -m venv venv
             source venv/bin/activate
             pip install --upgrade pip
-            pip install pip-tools pipenv mypy mypy-protobuf
+            pip install pipenv mypy mypy-protobuf
             deactivate
 
             # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
