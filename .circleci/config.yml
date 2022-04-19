@@ -491,8 +491,9 @@ jobs:
           when: always
 
       - run:
-          name: Run mypy
+          name: Run type checkers
           command: |
+            make tstypecheck
             scripts/mypy --report
 
       - store_test_results:
