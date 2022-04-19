@@ -20,7 +20,7 @@ import toml
 from blinker import Signal
 
 import streamlit as st
-import streamlit.watcher.file_watcher
+import streamlit.watcher.path_watcher
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -184,7 +184,7 @@ class Secrets(Mapping[str, Any]):
             # We force our watcher_type to 'poll' because Streamlit Cloud
             # stores `secrets.toml` in a virtual filesystem that is
             # incompatible with watchdog.
-            streamlit.watcher.file_watcher.watch_file(
+            streamlit.watcher.path_watcher.watch_file(
                 self._file_path,
                 self._on_secrets_file_changed,
                 watcher_type="poll",

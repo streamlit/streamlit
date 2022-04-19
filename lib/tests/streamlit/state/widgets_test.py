@@ -65,15 +65,15 @@ class WidgetManagerTests(unittest.TestCase):
         session_state._set_widget_metadata(create_metadata("int", "int_value"))
         session_state._set_widget_metadata(create_metadata("string", "string_value"))
 
-        self.assertEqual(True, session_state.get("trigger"))
-        self.assertEqual(True, session_state.get("bool"))
-        self.assertAlmostEqual(0.5, session_state.get("float"))
-        self.assertEqual(123, session_state.get("int"))
-        self.assertEqual("howdy!", session_state.get("string"))
+        self.assertEqual(True, session_state["trigger"])
+        self.assertEqual(True, session_state["bool"])
+        self.assertAlmostEqual(0.5, session_state["float"])
+        self.assertEqual(123, session_state["int"])
+        self.assertEqual("howdy!", session_state["string"])
 
     def test_get_nonexistent(self):
         session_state = SessionState()
-        self.assertIsNone(session_state.get("fake_widget_id"))
+        self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])
 
     @pytest.mark.skip
     def test_get_keyed_widget_values(self):
@@ -93,7 +93,7 @@ class WidgetManagerTests(unittest.TestCase):
 
     def test_get_prev_widget_value_nonexistent(self):
         session_state = SessionState()
-        self.assertIsNone(session_state.get("fake_widget_id"))
+        self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])
 
     def test_set_widget_attrs_nonexistent(self):
         session_state = SessionState()
@@ -160,10 +160,7 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("int", states).int_value = 321
         _create_widget("string", states).string_value = "!ydwoh"
 
-        session_state.compact_state()
-        session_state.set_widgets_from_proto(states)
-
-        session_state.call_callbacks()
+        session_state.on_script_will_rerun(states)
 
         mock_callback.assert_has_calls([call(), call(1), call(x=2), call(1, x=2)])
 
@@ -196,13 +193,13 @@ class WidgetManagerTests(unittest.TestCase):
             WidgetMetadata("int", lambda x, s: x, None, "int_value")
         )
 
-        self.assertTrue(session_state.get("trigger"))
-        self.assertEqual(123, session_state.get("int"))
+        self.assertTrue(session_state["trigger"])
+        self.assertEqual(123, session_state["int"])
 
-        session_state.reset_triggers()
+        session_state._reset_triggers()
 
-        self.assertFalse(session_state.get("trigger"))
-        self.assertEqual(123, session_state.get("int"))
+        self.assertFalse(session_state["trigger"])
+        self.assertEqual(123, session_state["int"])
 
     def test_coalesce_widget_states(self):
         session_state = SessionState()
@@ -245,16 +242,16 @@ class WidgetManagerTests(unittest.TestCase):
             coalesce_widget_states(old_states, new_states)
         )
 
-        self.assertIsNone(session_state.get("old_unset_trigger"))
-        self.assertIsNone(session_state.get("missing_in_new"))
+        self.assertRaises(KeyError, lambda: session_state["old_unset_trigger"])
+        self.assertRaises(KeyError, lambda: session_state["missing_in_new"])
 
-        self.assertEqual(True, session_state.get("old_set_trigger"))
-        self.assertEqual(True, session_state.get("new_set_trigger"))
-        self.assertEqual(456, session_state.get("added_in_new"))
+        self.assertEqual(True, session_state["old_set_trigger"])
+        self.assertEqual(True, session_state["new_set_trigger"])
+        self.assertEqual(456, session_state["added_in_new"])
 
         # Widgets that were triggers before, but no longer are, will *not*
         # be coalesced
-        self.assertEqual(3, session_state.get("shape_changing_trigger"))
+        self.assertEqual(3, session_state["shape_changing_trigger"])
 
 
 class WidgetHelperTests(unittest.TestCase):
