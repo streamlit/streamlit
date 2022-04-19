@@ -194,9 +194,9 @@ from streamlit.commands.page_config import set_page_config
 
 # Session State
 
-from streamlit.state import AutoSessionState
+from streamlit.state import SessionStateProxy
 
-session_state = AutoSessionState()
+session_state = SessionStateProxy()
 
 
 # Beta APIs
