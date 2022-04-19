@@ -616,6 +616,7 @@ jobs:
             source venv/bin/activate
             pip install --upgrade pip
             make setup
+            pip install mypy
             deactivate
 
             # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
