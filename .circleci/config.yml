@@ -564,7 +564,7 @@ jobs:
 
   python-prod-deps-smoke-test:
     docker:
-      - image: circleci/python:3.9.12
+      - image: circleci/python:3.9.7
 
     working_directory: ~/repo
 
