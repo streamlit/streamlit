@@ -1,4 +1,5 @@
 {
+  "__TODO": "Remove this once we start typechecking test files. eslint lints more files than the typechecker checks, ...",
   "compilerOptions": {
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
