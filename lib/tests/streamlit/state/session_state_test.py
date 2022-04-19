@@ -458,7 +458,7 @@ def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
     """Return all key-value pairs in the SessionState.
     The returned list is sorted by key for easier comparison.
     """
-    return [(key, state[key]) for key in sorted(state.keys())]
+    return [(key, state[key]) for key in sorted(state._keys())]
 
 
 class SessionStateMethodTests(unittest.TestCase):
@@ -489,13 +489,13 @@ class SessionStateMethodTests(unittest.TestCase):
     def test_clear_state(self):
         # Sanity test
         keys = {"foo", "baz", "corge", f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None"}
-        self.assertEqual(keys, self.session_state.keys())
+        self.assertEqual(keys, self.session_state._keys())
 
         # Clear state
         self.session_state.clear_state()
 
         # Keys should be empty
-        self.assertEqual(set(), self.session_state.keys())
+        self.assertEqual(set(), self.session_state._keys())
 
     def test_filtered_state(self):
         assert self.session_state.filtered_state == {
