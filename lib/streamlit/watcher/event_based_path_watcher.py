@@ -19,7 +19,7 @@ How these classes work together
 
 - EventBasedPathWatcher : each instance of this is able to watch a single
   file or directory at a given path so long as there's a browser interested in
-  it. This uses _MultiPathWatcher to watch files.
+  it. This uses _MultiPathWatcher to watch paths.
 
 - _MultiPathWatcher : singleton that watches multiple paths. It does this by
   holding a watchdog.observer.Observer object, and manages several
