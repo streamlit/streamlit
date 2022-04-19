@@ -445,7 +445,7 @@ class ScriptRunner:
 
         # This will be set to a RerunData instance if our execution
         # is interrupted by a RerunException.
-        rerun_with_data = None
+        rerun_exception_data: Optional[RerunData] = None
 
         try:
             # Create fake module. This gives us a name global namespace to
@@ -475,7 +475,7 @@ class ScriptRunner:
                 exec(code, module.__dict__)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
-            rerun_with_data = e.rerun_data
+            rerun_exception_data = e.rerun_data
 
         except StopException:
             pass
@@ -491,8 +491,8 @@ class ScriptRunner:
         # script without meaning to.
         _log_if_error(_clean_problem_modules)
 
-        if rerun_with_data is not None:
-            self._run_script(rerun_with_data)
+        if rerun_exception_data is not None:
+            self._run_script(rerun_exception_data)
 
     def _on_script_finished(self, ctx: ScriptRunContext) -> None:
         """Called when our script finishes executing, even if it finished
