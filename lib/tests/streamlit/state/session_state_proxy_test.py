@@ -26,7 +26,7 @@ from streamlit.state.session_state_proxy import SessionStateProxy
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     SessionState,
-    require_is_valid_user_key,
+    require_valid_user_key,
 )
 
 
@@ -63,7 +63,7 @@ class SessionStateProxyTests(unittest.TestCase):
 
     def test_validate_key(self, _):
         with pytest.raises(StreamlitAPIException) as e:
-            require_is_valid_user_key(self.reserved_key)
+            require_valid_user_key(self.reserved_key)
         assert "are reserved" in str(e.value)
 
     def test_to_dict(self, _):

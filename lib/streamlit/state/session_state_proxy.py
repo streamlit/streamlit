@@ -23,7 +23,7 @@ import streamlit as st
 from streamlit import logger as _logger
 from streamlit.type_util import Key
 from .safe_session_state import SafeSessionState
-from .session_state import SessionState, require_is_valid_user_key
+from .session_state import SessionState, require_valid_user_key
 
 logger = _logger.get_logger(__name__)
 
@@ -87,7 +87,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
             If the key is not a valid SessionState user key.
         """
         key = str(key)
-        require_is_valid_user_key(key)
+        require_valid_user_key(key)
         return get_session_state()[key]
 
     def __setitem__(self, key: Key, value: Any) -> None:
@@ -99,7 +99,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
             If the key is not a valid SessionState user key.
         """
         key = str(key)
-        require_is_valid_user_key(key)
+        require_valid_user_key(key)
         get_session_state()[key] = value
 
     def __delitem__(self, key: Key) -> None:
@@ -111,7 +111,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
             If the key is not a valid SessionState user key.
         """
         key = str(key)
-        require_is_valid_user_key(key)
+        require_valid_user_key(key)
         del get_session_state()[key]
 
     def __getattr__(self, key: str) -> Any:
