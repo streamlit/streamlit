@@ -35,6 +35,7 @@ from streamlit.session_data import SessionData
 from streamlit.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    SafeSessionState,
 )
 from streamlit.uploaded_file_manager import UploadedFileManager
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
@@ -121,9 +122,11 @@ class ScriptRunner:
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_mgr
 
+        # Initialize SessionState with the latest widget states
+        session_state.set_widgets_from_proto(client_state.widget_states)
+
         self._client_state = client_state
-        self._session_state = session_state
-        self._session_state.set_widgets_from_proto(client_state.widget_states)
+        self._session_state = SafeSessionState(session_state)
 
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
@@ -174,6 +177,19 @@ class ScriptRunner:
         Safe to call from any thread.
         """
         self._requests.request_stop()
+
+        # "Disconnect" our SafeSessionState wrapper from its underlying
+        # SessionState instance. This will cause all further session_state
+        # operations in this ScriptRunner to no-op.
+        #
+        # After `request_stop` is called, our script will continue executing
+        # until it reaches a yield point. AppSession may also *immediately*
+        # spin up a new ScriptRunner after this call, which means we'll
+        # potentially have two active ScriptRunners for a brief period while
+        # this one is shutting down. Disconnecting our SessionState ensures
+        # that this ScriptRunner's thread won't introduce SessionState-
+        # related race conditions during this script overlap.
+        self._session_state.disconnect()
 
     def request_rerun(self, rerun_data: RerunData) -> bool:
         """Request that the ScriptRunner interrupt its currently-running
@@ -270,7 +286,7 @@ class ScriptRunner:
         # created.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
-        widget_states = self._session_state.as_widget_states()
+        widget_states = self._session_state.get_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
@@ -429,7 +445,7 @@ class ScriptRunner:
 
         # This will be set to a RerunData instance if our execution
         # is interrupted by a RerunException.
-        rerun_with_data = None
+        rerun_exception_data: Optional[RerunData] = None
 
         try:
             # Create fake module. This gives us a name global namespace to
@@ -459,7 +475,7 @@ class ScriptRunner:
                 exec(code, module.__dict__)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
-            rerun_with_data = e.rerun_data
+            rerun_exception_data = e.rerun_data
 
         except StopException:
             pass
@@ -475,8 +491,8 @@ class ScriptRunner:
         # script without meaning to.
         _log_if_error(_clean_problem_modules)
 
-        if rerun_with_data is not None:
-            self._run_script(rerun_with_data)
+        if rerun_exception_data is not None:
+            self._run_script(rerun_exception_data)
 
     def _on_script_finished(self, ctx: ScriptRunContext) -> None:
         """Called when our script finishes executing, even if it finished

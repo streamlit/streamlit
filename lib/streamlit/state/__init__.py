@@ -13,6 +13,8 @@
 # limitations under the License.
 
 # Explicitly re-export public symbols
+from .safe_session_state import SafeSessionState as SafeSessionState
+
 from .session_state import (
     SessionState as SessionState,
     WidgetCallback as WidgetCallback,
