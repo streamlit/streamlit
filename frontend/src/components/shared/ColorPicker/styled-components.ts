@@ -24,6 +24,14 @@ export const StyledColorPicker = styled.div(({ theme }) => ({
   alignItems: "flex-start",
 }))
 
+// We need this to override the default font-family: 'Menlo' rule,
+// Which causes the font to change to a serif one in Windows
+export const StyledChromePicker = styled.div(() => ({
+  div: {
+    fontFamily: '"Source Sans Pro", sans-serif !important',
+  },
+}))
+
 export const StyledColorPreview = styled.div(({ theme }) => ({
   height: "1.8rem",
   borderRadius: theme.radii.md,

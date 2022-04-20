@@ -71,6 +71,34 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
+    def test_works_with_directories(self):
+        """Test that when a directory is modified, the callback is called."""
+        cb = mock.Mock()
+
+        self.os.stat = lambda x: FakeStat(101)
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "1"
+
+        ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        fo._observer.schedule.assert_called_once()
+
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        self.os.stat = lambda x: FakeStat(102)
+        self.mock_util.calc_md5_with_blocking_retries = lambda x: "2"
+
+        ev = events.FileSystemEvent("/this/is/my/dir")
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        ev.is_directory = True
+        folder_handler.on_modified(ev)
+
+        cb.assert_called_once()
+
+        ro.close()
+
     def test_callback_not_called_if_same_mtime(self):
         """Test that we ignore files with same mtime."""
         cb = mock.Mock()
