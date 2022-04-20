@@ -23,11 +23,10 @@ from tornado.ioloop import IOLoop
 
 import streamlit.app_session as app_session
 from streamlit import config
+from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import AppPage
 from streamlit.app_session import AppSession, AppSessionState
 from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -269,6 +268,46 @@ class AppSessionTest(unittest.TestCase):
         session._on_source_file_changed("/fake/script_path.py")
 
         self.assertEqual(session.request_rerun.called, False)
+
+    @patch(
+        "streamlit.app_session.source_util.get_pages",
+        MagicMock(
+            return_value=[
+                {"page_name": "page1", "icon": "", "script_path": "script1"},
+                {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
+            ]
+        ),
+    )
+    @patch("streamlit.app_session.AppSession._enqueue_forward_msg")
+    def test_on_pages_changed(self, mock_enqueue: MagicMock):
+        session = _create_test_session()
+        session._on_pages_changed("/foo/pages")
+
+        expected_msg = ForwardMsg()
+        expected_msg.pages_changed.app_pages.extend(
+            [
+                AppPage(page_name="page1", icon="", script_path="script1"),
+                AppPage(page_name="page2", icon="🎉", script_path="script2"),
+            ]
+        )
+
+        mock_enqueue.assert_called_once_with(expected_msg)
+
+    @patch(
+        "streamlit.app_session.source_util.register_pages_changed_callback",
+    )
+    def test_installs_pages_watcher_on_init(self, patched_register_callback):
+        session = _create_test_session()
+        patched_register_callback.assert_called_once_with(session._on_pages_changed)
+
+    @patch("streamlit.app_session.source_util._on_pages_changed")
+    def test_deregisters_pages_watcher_on_shutdown(self, patched_on_pages_changed):
+        session = _create_test_session()
+        session.shutdown()
+
+        patched_on_pages_changed.disconnect.assert_called_once_with(
+            session._on_pages_changed
+        )
 
 
 def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:

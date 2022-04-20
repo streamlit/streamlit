@@ -27,6 +27,7 @@ import {
   PageConfig,
   PageInfo,
   PageNotFound,
+  PagesChanged,
 } from "src/autogen/proto"
 import { S4ACommunicationHOC } from "src/hocs/withS4ACommunication/withS4ACommunication"
 import {
@@ -360,6 +361,22 @@ describe("App", () => {
 
     expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(true)
     expect(wrapper.find("ToolbarActions").exists()).toBe(true)
+  })
+
+  it("updates state.appPages when it receives a PagesChanged msg", () => {
+    const appPages = [
+      { icon: "", pageName: "bob", scriptPath: "bob.py" },
+      { icon: "", pageName: "carl", scriptPath: "carl.py" },
+    ]
+
+    const msg = new ForwardMsg()
+    msg.pagesChanged = { appPages }
+
+    const wrapper = shallow(<App {...getProps()} />)
+    expect(wrapper.find("AppView").prop("appPages")).toEqual([])
+
+    wrapper.instance().handleMessage(msg)
+    expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
   })
 })
 
