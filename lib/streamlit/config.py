@@ -457,7 +457,7 @@ _create_option(
         lead to race conditions in apps that mutate session_state data outside
         of explicit session_state assignment statements.
     """,
-    default_val=True,
+    default_val=False,
     type_=bool,
 )
 
