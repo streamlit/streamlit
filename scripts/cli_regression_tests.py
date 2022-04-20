@@ -128,8 +128,8 @@ class TestCLIRegressions:
             preexec_fn=os.setpgrp,
         )
 
-        # Quick sleep to ensure that proc_one gets started first
-        time.sleep(0.1)
+        # Getting the output from process one ensures the process started first
+        output_one = self.read_process_output(proc_one, num_lines_to_read)
 
         proc_two = subprocess.Popen(
             command_two,
@@ -139,7 +139,6 @@ class TestCLIRegressions:
             preexec_fn=os.setpgrp,
         )
 
-        output_one = self.read_process_output(proc_one, num_lines_to_read)
         output_two = self.read_process_output(proc_two, num_lines_to_read)
 
         try:

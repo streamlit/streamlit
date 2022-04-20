@@ -84,7 +84,7 @@ from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.server.server_util import get_max_message_size_bytes
-from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from streamlit.watcher import LocalSourcesWatcher
 
 
 LOGGER = get_logger(__name__)

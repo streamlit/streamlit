@@ -39,7 +39,7 @@ from streamlit.scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
 )
-from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from streamlit.watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:

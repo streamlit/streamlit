@@ -194,10 +194,10 @@ from streamlit.commands.page_config import set_page_config
 
 # Session State
 
-from streamlit.state import AutoSessionState
+from streamlit.state import SessionStateProxy
 from streamlit.user_info import LazyUserInfo
 
-session_state = AutoSessionState()
+session_state = SessionStateProxy()
 user = LazyUserInfo()
 
 

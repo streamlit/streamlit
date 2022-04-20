@@ -22,6 +22,7 @@ import { ReactNode } from "react"
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
 import { WebsocketConnection } from "./WebsocketConnection"
+import { ensureError } from "./ErrorHandling"
 
 /**
  * When the websocket connection retries this many times, we show a dialog
@@ -104,7 +105,8 @@ export class ConnectionManager {
   private async connect(): Promise<void> {
     try {
       this.connection = await this.connectToRunningServer()
-    } catch (err) {
+    } catch (e) {
+      const err = ensureError(e)
       logError(err.message)
       this.setConnectionState(
         ConnectionState.DISCONNECTED_FOREVER,

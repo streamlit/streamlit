@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { keyframes } from "@emotion/react"
+import { keyframes, Keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 
 const IMAGE_HEIGHT = 150
@@ -27,7 +27,7 @@ const DELAY_MAX_MS = 4000
 const rand = (max: number, min = 0): number =>
   Math.random() * (max - min) + min
 
-const moveDown = (): void => keyframes`
+const moveDown = (): Keyframes => keyframes`
   from {
     transform:
       translateY(0)

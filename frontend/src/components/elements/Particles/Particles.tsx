@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, memo } from "react"
+import React, { FC, memo } from "react"
 import range from "lodash/range"
 import classNames from "classnames"
 
@@ -28,29 +28,25 @@ export interface Props {
   scriptRunId: string
   numParticles: number
   numParticleTypes: number
-  ParticleComponent: ReactElement<ParticleProps>
+  ParticleComponent: FC<ParticleProps>
 }
 
-function Particles({
+const Particles: FC<Props> = ({
   className,
   scriptRunId,
   numParticles,
   numParticleTypes,
   ParticleComponent,
-}: Props): ReactElement {
+}: Props) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  return (
-    <div className={classNames(className, "stHidden")}>
-      {range(numParticles).map(i => {
-        const randNum = Math.floor(Math.random() * numParticleTypes)
+  <div className={classNames(className, "stHidden")}>
+    {range(numParticles).map(i => {
+      const randNum = Math.floor(Math.random() * numParticleTypes)
 
-        return (
-          <ParticleComponent key={scriptRunId + i} particleType={randNum} />
-        )
-      })}
-    </div>
-  )
-}
+      return <ParticleComponent key={scriptRunId + i} particleType={randNum} />
+    })}
+  </div>
+)
 
 export default memo(Particles)

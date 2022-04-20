@@ -66,7 +66,7 @@
     "katex": "^0.13.24",
     "lodash": "^4.17.21",
     "mapbox-gl": "^1.11.1",
-    "moment": "^2.27.0",
+    "moment": "^2.29.3",
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.33",
     "node-emoji": "^1.10.0",
@@ -148,8 +148,8 @@
     "@types/styletron-react": "^5.0.2",
     "@types/styletron-standard": "^2.0.1",
     "@types/xxhashjs": "^0.2.2",
-    "@typescript-eslint/eslint-plugin": "^4.0.1",
-    "@typescript-eslint/parser": "^4.0.1",
+    "@typescript-eslint/eslint-plugin": "^5.20.0",
+    "@typescript-eslint/parser": "^5.20.0",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.4.1",
     "axios-mock-adapter": "^1.18.2",
     "babel-plugin-emotion": "^11.0.0",
@@ -162,7 +162,7 @@
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-prettier": "^3.1.4",
-    "eslint-plugin-react": "^7.20.6",
+    "eslint-plugin-react": "^7.29.4",
     "fetch-mock": "^9.11.0",
     "hard-source-webpack-plugin": "^0.13.1",
     "husky": "^3.0.5",
@@ -176,7 +176,7 @@
     "source-map-explorer": "^2.4.2",
     "start-server-and-test": "^1.11.2",
     "timezone-mock": "^1.1.1",
-    "typescript": "^3.9.5"
+    "typescript": "^4.6.3"
   },
   "resolutions": {
     "axios": "^0.21.1",
