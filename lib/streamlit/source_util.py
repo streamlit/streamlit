@@ -15,7 +15,7 @@
 import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, cast, Dict, List, Tuple
+from typing import Any, Callable, cast, Dict, List, Optional, Tuple
 
 from blinker import Signal
 
@@ -110,7 +110,7 @@ def page_name_and_icon(script_path: Path) -> Tuple[str, str]:
 
 
 _pages_cache_lock = threading.RLock()
-_cached_pages = None
+_cached_pages: Optional[List[Dict[str, str]]] = None
 _on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
 
 
@@ -124,7 +124,7 @@ def invalidate_pages_cache():
     _on_pages_changed.send()
 
 
-def get_pages(main_script_path: str) -> Dict[str, Dict[str, str]]:
+def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
     global _cached_pages
 
     # Avoid taking the lock if the pages cache hasn't been invalidated.
@@ -138,7 +138,7 @@ def get_pages(main_script_path: str) -> Dict[str, Dict[str, str]]:
         if _cached_pages is not None:
             return _cached_pages
 
-        main_script_path = Path(main_script_path)
+        main_script_path = Path(main_script_path_str)
         main_page_name, main_page_icon = page_name_and_icon(main_script_path)
 
         used_page_names = {main_page_name}
@@ -169,7 +169,7 @@ def get_pages(main_script_path: str) -> Dict[str, Dict[str, str]]:
 
 
 def register_pages_changed_callback(
-    callback: Callable[[], None],
+    callback: Callable[[str], None],
 ):
     def disconnect():
         _on_pages_changed.disconnect(callback)

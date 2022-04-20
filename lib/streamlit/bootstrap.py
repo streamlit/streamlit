@@ -328,11 +328,11 @@ def _install_config_watchers(flag_options: Dict[str, Any]) -> None:
             watch_file(filename, on_config_changed)
 
 
-def _install_pages_watcher(main_script_path: str) -> None:
+def _install_pages_watcher(main_script_path_str: str) -> None:
     def _on_pages_changed(_path: str) -> None:
         invalidate_pages_cache()
 
-    main_script_path = Path(main_script_path)
+    main_script_path = Path(main_script_path_str)
     pages_dir = main_script_path.parent / "pages"
 
     watch_dir(
