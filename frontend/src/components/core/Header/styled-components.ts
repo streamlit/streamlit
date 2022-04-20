@@ -52,10 +52,9 @@ export const StyledHeaderDecoration = styled.div(({ theme }) => ({
 
 export const StyledHeaderToolbar = styled.div(({ theme }) => ({
   position: "absolute",
-  // If these spacings or the icon size changes, please update theme.sizes.headerSpace in the
-  // theme file since other parts of Streamlit may depend on knowing the header size.
-  top: theme.spacing.sm,
-  right: theme.spacing.sm,
+  top: theme.spacing.none,
+  right: theme.spacing.lg,
+  height: theme.sizes.headerHeight,
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
