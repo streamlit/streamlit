@@ -103,8 +103,8 @@ class SafeSessionStateTests(unittest.TestCase):
                         widget_ids_this_run
                     )
 
-    def test_as_widget_states(self):
-        """`as_widget_states` calls thru to SessionState, unless disconnected."""
+    def test_get_widget_states(self):
+        """`get_widget_states` calls thru to SessionState, unless disconnected."""
         for disconnected in (False, True):
             with self.subTest(f"disconnected={disconnected}"):
                 safe_state, mock_state = _create_state_spy({}, disconnected)
@@ -168,7 +168,7 @@ class SafeSessionStateTests(unittest.TestCase):
         self.assertRaises(KeyError, lambda: safe_state["foo"])
 
     def test_set_item(self):
-        """`__getitem__` calls through to SessionState.
+        """`__setitem__` calls through to SessionState.
         If disconnected, it's a no-op.
         """
         # Not disconnected: update wrapped State
