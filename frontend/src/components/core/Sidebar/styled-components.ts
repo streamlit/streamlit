@@ -51,7 +51,7 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
       listStyle: "none",
       overflow: ["auto", "overlay"],
       margin: 0,
-      paddingTop: theme.sizes.headerSpace,
+      paddingTop: theme.sizes.headerHeight,
       paddingBottom: theme.spacing.lg,
 
       "&::before": {
