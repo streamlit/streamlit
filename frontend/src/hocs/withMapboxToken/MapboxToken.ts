@@ -28,9 +28,9 @@ export class MapboxTokenFetchingError extends Error {}
 export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
 
 export class MapboxToken {
-  private static token?: string
+  static token?: string
 
-  private static commandLine?: string
+  static commandLine?: string
 
   private static isRunningLocal = (): boolean => {
     const { hostname } = window.location
