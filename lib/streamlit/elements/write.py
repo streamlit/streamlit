@@ -23,7 +23,7 @@ import streamlit
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.state import SessionStateProxy
-from streamlit.user_info import LazyUserInfo
+from streamlit.user_info import UserInfoProxy
 
 # Special methods:
 
@@ -212,7 +212,7 @@ class WriteMixin:
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
-            elif isinstance(arg, (dict, list, SessionStateProxy, LazyUserInfo)):
+            elif isinstance(arg, (dict, list, SessionStateProxy, UserInfoProxy)):
                 flush_buffer()
                 self.dg.json(arg)
             elif type_util.is_namedtuple(arg):

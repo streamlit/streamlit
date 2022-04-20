@@ -2,7 +2,7 @@ from streamlit.scriptrunner import get_script_run_ctx as _get_script_run_ctx
 from typing import Mapping, Dict, Optional, Iterator
 
 
-class LazyUserInfo(Mapping[str, Optional[str]]):
+class UserInfoProxy(Mapping[str, Optional[str]]):
     def __getitem__(self, key):
         ctx = _get_script_run_ctx()
         user_info = ctx.user_info
