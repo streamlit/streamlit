@@ -61,18 +61,6 @@ class EventBasedPathWatcher:
         LOGGER.debug("Watcher closed")
 
     def __init__(self, path: str, on_changed: Callable[[str], None]) -> None:
-        """Constructor.
-
-        Arguments
-        ---------
-        path
-            Absolute path to watch.
-
-        on_changed
-            Function to call when the given path changes. This function should
-            take the changed path as a parameter.
-
-        """
         self._path = os.path.abspath(path)
         self._on_changed = on_changed
 
@@ -144,7 +132,7 @@ class _MultiPathWatcher(object):
                 self._folder_handlers[folder_path] = folder_handler
 
                 folder_handler.watch = self._observer.schedule(
-                    folder_handler, folder_path, recursive=False
+                    folder_handler, folder_path, recursive=True
                 )
 
             folder_handler.add_path_change_listener(path, callback)
@@ -215,7 +203,6 @@ class _FolderEventHandler(events.FileSystemEventHandler):
     """
 
     def __init__(self) -> None:
-        """Constructor."""
         super(_FolderEventHandler, self).__init__()
         self._watched_paths: Dict[str, WatchedPath] = {}
         self._lock = threading.Lock()  # for watched_paths mutations
@@ -254,75 +241,61 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         """Return true if this object has 1+ paths in its event filter."""
         return len(self._watched_paths) > 0
 
-    def handle_path_change_event(self, event):
-        """Handle when a path is changed.
+    def handle_path_change_event(self, event: events.FileSystemEvent) -> None:
+        """Handle when a path (corresponding to a file or dir) is changed.
 
         The events that can call this are modification, creation or moved
         events.
-
-        Parameters
-        ----------
-        event : FileSystemEvent
-            The event object representing the file system event.
-
         """
-        if event.is_directory:
-            return
-
-        # NOTE: At this point, we know that the changed path must be a file.
 
         # Check for both modified and moved files, because many programs write
         # to a backup file then rename (i.e. move) it.
         if event.event_type == events.EVENT_TYPE_MODIFIED:
-            file_path = event.src_path
+            changed_path = event.src_path
         elif event.event_type == events.EVENT_TYPE_MOVED:
             LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
-            file_path = event.dest_path
+            changed_path = event.dest_path
         # On OSX with VI, on save, the file is deleted, the swap file is
         # modified and then the original file is created hence why we
         # capture EVENT_TYPE_CREATED
         elif event.event_type == events.EVENT_TYPE_CREATED:
-            file_path = event.src_path
+            changed_path = event.src_path
         else:
             LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        file_path = os.path.abspath(file_path)
+        changed_path = os.path.abspath(changed_path)
 
-        file_info = self._watched_paths.get(file_path, None)
-        if file_info is None:
+        changed_path_info = self._watched_paths.get(changed_path, None)
+        if changed_path_info is None:
             LOGGER.debug(
-                "Ignoring file %s.\nWatched_paths: %s", file_path, self._watched_paths
+                "Ignoring changed path %s.\nWatched_paths: %s",
+                changed_path,
+                self._watched_paths,
             )
             return
 
-        modification_time = os.stat(file_path).st_mtime
-        if modification_time == file_info.modification_time:
-            LOGGER.debug("File timestamp did not change: %s", file_path)
+        modification_time = os.stat(changed_path).st_mtime
+        if modification_time == changed_path_info.modification_time:
+            LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
             return
 
-        file_info.modification_time = modification_time
+        changed_path_info.modification_time = modification_time
 
-        new_md5 = util.calc_md5_with_blocking_retries(file_path)
-        if new_md5 == file_info.md5:
-            LOGGER.debug("File MD5 did not change: %s", file_path)
+        new_md5 = util.calc_md5_with_blocking_retries(changed_path)
+        if new_md5 == changed_path_info.md5:
+            LOGGER.debug("File/dir MD5 did not change: %s", changed_path)
             return
 
-        LOGGER.debug("File MD5 changed: %s", file_path)
-        file_info.md5 = new_md5
-        file_info.on_changed.send(file_path)
+        LOGGER.debug("File/dir MD5 changed: %s", changed_path)
+        changed_path_info.md5 = new_md5
+        changed_path_info.on_changed.send(changed_path)
 
-    def on_created(self, event):
-        if event.is_directory:
-            return
+    def on_created(self, event: events.FileSystemEvent) -> None:
         self.handle_path_change_event(event)
 
-    def on_modified(self, event):
-        if event.is_directory:
-            return
+    def on_modified(self, event: events.FileSystemEvent) -> None:
         self.handle_path_change_event(event)
 
-    def on_moved(self, event):
-        if event.is_directory:
-            return
+    def on_moved(self, event: events.FileSystemEvent) -> None:
         self.handle_path_change_event(event)
