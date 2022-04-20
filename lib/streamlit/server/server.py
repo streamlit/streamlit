@@ -456,7 +456,7 @@ class Server:
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=local_sources_watcher,
-            user_info={"email": "test@test.com"}
+            user_info={"email": "test@test.com"},
         )
 
         try:
