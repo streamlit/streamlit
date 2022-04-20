@@ -46,7 +46,7 @@ export interface Props {
   width: number
 }
 
-interface State {
+export interface State {
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */

@@ -19,6 +19,7 @@ import React from "react"
 import { shallow } from "enzyme"
 
 import OverflowTooltip from "./OverflowTooltip"
+import { Placement } from "./Tooltip"
 
 describe("Tooltip component", () => {
   afterEach(() => {
@@ -37,7 +38,13 @@ describe("Tooltip component", () => {
     jest.spyOn(React, "useEffect").mockImplementation(f => f())
 
     const wrapper = shallow(
-      <OverflowTooltip content="the content">the child</OverflowTooltip>
+      <OverflowTooltip
+        content="the content"
+        placement={Placement.AUTO}
+        style={{}}
+      >
+        the child
+      </OverflowTooltip>
     )
 
     expect(wrapper.props().content).toBe("")
@@ -58,7 +65,13 @@ describe("Tooltip component", () => {
     jest.spyOn(React, "useEffect").mockImplementation(f => f())
 
     const wrapper = shallow(
-      <OverflowTooltip content="the content">the child</OverflowTooltip>
+      <OverflowTooltip
+        content="the content"
+        placement={Placement.AUTO}
+        style={{}}
+      >
+        the child
+      </OverflowTooltip>
     )
 
     expect(wrapper.props().content).toBe("the content")

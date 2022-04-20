@@ -44,10 +44,13 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
 /** Return the ColorPicker's popover (where the color picking happens). */
 function getPopoverWrapper(wrapper: ReactWrapper<ColorPicker>): any {
   // @ts-ignore
-  return wrapper
-    .find(UIPopover)
-    .renderProp("content")()
-    .find(StyledChromePicker)
+  return (
+    wrapper
+      .find(UIPopover)
+      // @ts-ignore
+      .renderProp("content")()
+      .find(StyledChromePicker)
+  )
 }
 
 /** Return the ColorPicker's currently-selected color as a hex string. */
