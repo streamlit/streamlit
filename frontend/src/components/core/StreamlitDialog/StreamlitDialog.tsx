@@ -306,7 +306,7 @@ function scriptCompileErrorDialog(
   props: ScriptCompileErrorProps
 ): ReactElement {
   return (
-    <Modal isOpen onClose={props.onClose}>
+    <Modal isOpen onClose={props.onClose} size="auto">
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
         <div>
