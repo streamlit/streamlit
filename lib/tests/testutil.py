@@ -90,6 +90,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             query_string="",
             session_state=SessionState(),
             uploaded_file_mgr=UploadedFileManager(),
+            user_info={"email": "test@test.com"},
         )
 
         if self.override_root:

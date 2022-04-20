@@ -32,6 +32,7 @@ class ScriptRunContextTest(unittest.TestCase):
             "",
             SessionState(),
             UploadedFileManager(),
+            {"email": "test@test.com"},
         )
 
         msg = ForwardMsg()
@@ -52,6 +53,7 @@ class ScriptRunContextTest(unittest.TestCase):
             "",
             SessionState(),
             UploadedFileManager(),
+            {"email": "test@test.com"},
         )
 
         ctx.on_script_start()
@@ -76,6 +78,7 @@ class ScriptRunContextTest(unittest.TestCase):
             "",
             SessionState(),
             UploadedFileManager(),
+            {"email": "test@test.com"},
         )
 
         ctx.on_script_start()
@@ -99,6 +102,7 @@ class ScriptRunContextTest(unittest.TestCase):
             "",
             SessionState(),
             UploadedFileManager(),
+            {"email": "test@test.com"},
         )
 
         ctx.on_script_start()

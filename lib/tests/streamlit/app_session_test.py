@@ -187,6 +187,7 @@ class AppSessionTest(unittest.TestCase):
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
             initial_rerun_data=RerunData(),
+            user_info={"email": "test@test.com"},
         )
 
         self.assertIsNotNone(session._scriptrunner)
@@ -272,6 +273,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
+            user_info={"email": "test@test.com"},
         )
         add_script_run_ctx(ctx=ctx)
 
