@@ -29,12 +29,16 @@ import SidebarNav from "./SidebarNav"
 expect.extend(matchers)
 
 function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
-  props = {
-    appPages: [],
-    onPageChange: jest.fn(),
-    ...props,
-  }
-  return mount(<Sidebar chevronDownshift={0} theme={lightTheme} {...props} />)
+  return mount(
+    <Sidebar
+      chevronDownshift={0}
+      theme={lightTheme}
+      appPages={props.appPages || []}
+      onPageChange={props.onPageChange || jest.fn()}
+      currentPageName={props.currentPageName || ""}
+      {...props}
+    />
+  )
 }
 
 describe("Sidebar Component", () => {
@@ -96,7 +100,7 @@ describe("Sidebar Component", () => {
       "overlay"
     )
 
-    wrapper.find("SidebarNav").prop("hideParentScrollbar")(true)
+    wrapper.find(SidebarNav).prop("hideParentScrollbar")(true)
     wrapper.update()
 
     expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
