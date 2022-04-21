@@ -44,7 +44,6 @@ class LocalSourcesWatcher:
         self._on_file_changed: List[Callable[[], None]] = []
         self._is_closed = False
         self._cached_sys_modules: Set[str] = set()
-        self._cached_modules_paths: Dict[str, Set[str]] = {}
 
         # Blacklist for folders that should not be watched
         self._folder_black_list = FolderBlackList(
@@ -142,7 +141,6 @@ class LocalSourcesWatcher:
                 for name, module in dict(sys.modules).items()
             }
             self._cached_sys_modules = set(sys.modules)
-            self._cached_modules_paths = modules_paths
             self._register_necessary_watchers(modules_paths)
 
     def _register_necessary_watchers(self, module_paths: Dict[str, Set[str]]) -> None:
