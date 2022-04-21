@@ -61,7 +61,8 @@ export type PerformanceEvent = RequestedRerunEvent | HandleMessageEvent
 
 /** Simple utility for capturing time samples. */
 export class PerformanceEvents {
-  public static enabled = true
+  /** Set this to true to capture PerformanceEvents. */
+  public static enabled = false
 
   private static events: PerformanceEvent[] = []
 
