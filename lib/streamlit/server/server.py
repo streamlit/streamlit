@@ -665,7 +665,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
-        user_info = {"email": "anonymous@streamlit.io"}
+        try:
+            email = ws.request.headers["X-Streamlit-User"]
+        except KeyError:
+            email = "anonymous@streamlit.io"
+
+        user_info = {"email": email}
 
         session = AppSession(
             ioloop=self._ioloop,
