@@ -290,7 +290,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_module_caching(self, _fob, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lso.register_file_change_callback(NOOP_CALLBACK)
