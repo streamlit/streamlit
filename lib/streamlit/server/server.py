@@ -294,9 +294,6 @@ class Server:
     def main_script_path(self) -> str:
         return self._main_script_path
 
-    def get_page_names(self) -> Set[str]:
-        return {p["page_name"] for p in source_util.get_pages(self.main_script_path)}
-
     def get_session_by_id(self, session_id: str) -> Optional[AppSession]:
         """Return the AppSession corresponding to the given id, or None if
         no such session exists."""
@@ -422,7 +419,9 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "get_page_names": self.get_page_names,
+                            "get_pages": lambda: source_util.get_pages(
+                                self.main_script_path
+                            ),
                         },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),

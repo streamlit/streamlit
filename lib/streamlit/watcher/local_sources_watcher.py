@@ -53,7 +53,7 @@ class LocalSourcesWatcher:
 
         self._watched_modules: Dict[str, WatchedModule] = {}
 
-        for page_info in get_pages(self._session_data.main_script_path):
+        for page_info in get_pages(self._session_data.main_script_path).values():
             self._register_watcher(
                 page_info["script_path"],
                 module_name=None,  # Only root scripts have their modules set to None
