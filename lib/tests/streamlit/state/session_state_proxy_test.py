@@ -15,22 +15,36 @@
 """SessionStateProxy unit tests."""
 
 import unittest
-from unittest.mock import patch, MagicMock
+from typing import Dict, Any
+from unittest.mock import patch
 
 import pytest
 
 from streamlit.errors import StreamlitAPIException
+from streamlit.state import SafeSessionState
 from streamlit.state.session_state_proxy import SessionStateProxy
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     SessionState,
-    validate_key,
+    require_valid_user_key,
 )
+
+
+def _create_mock_session_state(
+    initial_state_values: Dict[str, Any]
+) -> SafeSessionState:
+    """Return a new SafeSessionState instance populated with the
+    given state values.
+    """
+    session_state = SessionState()
+    for key, value in initial_state_values.items():
+        session_state[key] = value
+    return SafeSessionState(session_state)
 
 
 @patch(
     "streamlit.state.session_state_proxy.get_session_state",
-    return_value=MagicMock(filtered_state={"foo": "bar"}),
+    return_value=_create_mock_session_state({"foo": "bar"}),
 )
 class SessionStateProxyTests(unittest.TestCase):
     reserved_key = f"{GENERATED_WIDGET_KEY_PREFIX}-some_key"
@@ -49,7 +63,7 @@ class SessionStateProxyTests(unittest.TestCase):
 
     def test_validate_key(self, _):
         with pytest.raises(StreamlitAPIException) as e:
-            validate_key(self.reserved_key)
+            require_valid_user_key(self.reserved_key)
         assert "are reserved" in str(e.value)
 
     def test_to_dict(self, _):
@@ -59,7 +73,7 @@ class SessionStateProxyTests(unittest.TestCase):
     # since the others are tested in another test class.
     def test_getitem_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
-            self.session_state_proxy[self.reserved_key]
+            _ = self.session_state_proxy[self.reserved_key]
 
     def test_setitem_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):

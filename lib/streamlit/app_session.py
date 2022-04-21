@@ -244,13 +244,25 @@ class AppSession:
         else:
             rerun_data = RerunData()
 
-        if self._scriptrunner is None or not self._scriptrunner.request_rerun(
-            rerun_data
-        ):
-            # If we are here, then either we have no ScriptRunner, or our
-            # current ScriptRunner is shutting down and cannot handle a rerun
-            # request - so we'll create and start a new ScriptRunner.
-            self._create_scriptrunner(rerun_data)
+        if self._scriptrunner is not None:
+            if bool(config.get_option("runner.fastReruns")):
+                # If fastReruns is enabled, we don't send rerun requests to our
+                # existing ScriptRunner. Instead, we tell it to shut down. We'll
+                # then spin up a new ScriptRunner, below, to handle the rerun
+                # immediately.
+                self._scriptrunner.request_stop()
+                self._scriptrunner = None
+            else:
+                # fastReruns is not enabled. Send our ScriptRunner a rerun
+                # request. If the request is accepted, we're done.
+                success = self._scriptrunner.request_rerun(rerun_data)
+                if success:
+                    return
+
+        # If we are here, then either we have no ScriptRunner, or our
+        # current ScriptRunner is shutting down and cannot handle a rerun
+        # request - so we'll create and start a new ScriptRunner.
+        self._create_scriptrunner(rerun_data)
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
@@ -549,7 +561,7 @@ class AppSession:
         legacy_caching.clear_cache()
         caching.memo.clear()
         caching.singleton.clear()
-        self._session_state.clear_state()
+        self._session_state.clear()
 
     def handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.

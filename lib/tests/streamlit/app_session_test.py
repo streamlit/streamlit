@@ -37,6 +37,8 @@ from streamlit.scriptrunner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from tests.testutil import patch_config_options
 
 
 @pytest.fixture
@@ -58,7 +60,7 @@ def _create_test_session(ioloop: Optional[IOLoop] = None) -> AppSession:
     )
 
 
-@patch("streamlit.app_session.LocalSourcesWatcher", MagicMock())
+@patch("streamlit.app_session.LocalSourcesWatcher", MagicMock(spec=LocalSourcesWatcher))
 class AppSessionTest(unittest.TestCase):
     @patch("streamlit.app_session.secrets._file_change_listener.disconnect")
     def test_shutdown(self, patched_disconnect):
@@ -127,6 +129,7 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         patched_connect.assert_called_once_with(session._on_secrets_file_changed)
 
+    @patch_config_options({"runner.fastReruns": False})
     @patch("streamlit.app_session.AppSession._create_scriptrunner")
     def test_rerun_with_no_scriptrunner(self, mock_create_scriptrunner: MagicMock):
         """If we don't have a ScriptRunner, a rerun request will result in
@@ -135,6 +138,7 @@ class AppSessionTest(unittest.TestCase):
         session.request_rerun(None)
         mock_create_scriptrunner.assert_called_once_with(RerunData())
 
+    @patch_config_options({"runner.fastReruns": False})
     @patch("streamlit.app_session.AppSession._create_scriptrunner")
     def test_rerun_with_active_scriptrunner(self, mock_create_scriptrunner: MagicMock):
         """If we have an active ScriptRunner, it receives rerun requests."""
@@ -152,6 +156,7 @@ class AppSessionTest(unittest.TestCase):
         # So _create_scriptrunner should not be called.
         mock_create_scriptrunner.assert_not_called()
 
+    @patch_config_options({"runner.fastReruns": False})
     @patch("streamlit.app_session.AppSession._create_scriptrunner")
     def test_rerun_with_stopped_scriptrunner(self, mock_create_scriptrunner: MagicMock):
         """If have a ScriptRunner but it's shutting down and cannot handle
@@ -169,6 +174,26 @@ class AppSessionTest(unittest.TestCase):
 
         # So we'll create a new ScriptRunner.
         mock_create_scriptrunner.assert_called_once_with(RerunData())
+
+    @patch_config_options({"runner.fastReruns": True})
+    @patch("streamlit.app_session.AppSession._create_scriptrunner")
+    def test_fast_rerun(self, mock_create_scriptrunner: MagicMock):
+        """If runner.fastReruns is enabled, a rerun request will stop the
+        existing ScriptRunner and immediately create a new one.
+        """
+        session = _create_test_session()
+
+        mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_active_scriptrunner
+
+        session.request_rerun(None)
+
+        # The active ScriptRunner should be shut down.
+        mock_active_scriptrunner.request_rerun.assert_not_called()
+        mock_active_scriptrunner.request_stop.assert_called_once()
+
+        # And a new ScriptRunner should be created.
+        mock_create_scriptrunner.assert_called_once()
 
     @patch("streamlit.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):

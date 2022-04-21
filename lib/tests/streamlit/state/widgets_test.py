@@ -174,7 +174,7 @@ class WidgetManagerTests(unittest.TestCase):
             WidgetMetadata("other_widget", lambda x, s: x, None, "trigger_value", True)
         )
 
-        widgets = session_state.as_widget_states()
+        widgets = session_state.get_widget_states()
 
         self.assertEqual(len(widgets), 1)
         self.assertEqual(widgets[0].id, "trigger")
