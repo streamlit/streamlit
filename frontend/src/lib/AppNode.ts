@@ -35,6 +35,7 @@ import {
 } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "src/lib/Quiver"
 import { addRows } from "./dataFrameProto"
+import { ensureError } from "./ErrorHandling"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"
 import {
@@ -555,7 +556,9 @@ export class AppRoot {
             scriptRunId
           )
         } catch (error) {
-          const errorElement = makeElementWithErrorText(error.message)
+          const errorElement = makeElementWithErrorText(
+            ensureError(error).message
+          )
           return this.addElement(
             deltaPath,
             scriptRunId,

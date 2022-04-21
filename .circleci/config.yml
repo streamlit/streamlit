@@ -229,6 +229,10 @@ workflows:
           filters:
             tags:
               only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
+      - python-prod-deps-smoke-test: # Make sure Streamlit runs without dev dependencies
+          filters:
+            tags:
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
       - cypress: # Non flaky Cypress tests
           filters:
             tags:
@@ -248,6 +252,7 @@ workflows:
             - python-min-version
             - python-max-version
             - cypress
+            - python-prod-deps-smoke-test
           filters:
             tags:
               only: /^(([0-9]+\.){3}dev[0-9]+)/
@@ -258,6 +263,7 @@ workflows:
             - python-min-version
             - python-max-version
             - cypress
+            - python-prod-deps-smoke-test
           filters:
             branches:
               only: /^release\/([0-9]+\.){2}([0-9]+)/
@@ -266,6 +272,7 @@ workflows:
             - python-min-version
             - python-max-version
             - cypress
+            - python-prod-deps-smoke-test
           filters:
             tags:
               only: /^([0-9]+\.){2}([0-9]+)/
@@ -491,8 +498,9 @@ jobs:
           when: always
 
       - run:
-          name: Run mypy
+          name: Run type checkers
           command: |
+            make tstypecheck
             scripts/mypy --report
 
       - store_test_results:
@@ -554,6 +562,58 @@ jobs:
     <<: *job-template
     docker:
       - image: circleci/python:3.7.12
+
+  python-prod-deps-smoke-test:
+    docker:
+      - image: circleci/python:3.9.7
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+      - update-submodules
+      - pre-cache
+
+      - restore_cache:
+          <<: *restore_nvm
+
+      - restore_cache:
+          <<: *restore_make
+
+      - restore_cache:
+          <<: *restore_dot
+
+      - pre-make
+
+      - run:
+          <<: *install_nodejs
+
+      - run:
+          name: Create virtualenv
+          command: |
+            python -m venv venv
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install pipenv mypy mypy-protobuf
+            deactivate
+
+            # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
+            # for the remainder of the job ($BASH_ENV is evaluated at each step).
+            echo 'source venv/bin/activate' >> $BASH_ENV
+
+      - run:
+          <<: *generate_protobufs
+
+      - run:
+          name: Run make develop
+          command: |
+            make develop
+
+      - run:
+          name: CLI smoke tests
+          command: |
+            make cli-smoke-tests
 
   create-tag:
     docker:

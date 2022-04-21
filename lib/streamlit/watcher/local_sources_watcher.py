@@ -24,9 +24,9 @@ from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
 from streamlit.session_data import SessionData
-from streamlit.watcher.file_watcher import (
-    get_default_file_watcher_class,
-    NoOpFileWatcher,
+from streamlit.watcher.path_watcher import (
+    get_default_path_watcher_class,
+    NoOpPathWatcher,
 )
 
 LOGGER = get_logger(__name__)
@@ -35,7 +35,7 @@ WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name
 
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.
-FileWatcher = None
+PathWatcher = None
 
 
 class LocalSourcesWatcher:
@@ -92,16 +92,16 @@ class LocalSourcesWatcher:
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):
-        global FileWatcher
-        if FileWatcher is None:
-            FileWatcher = get_default_file_watcher_class()
+        global PathWatcher
+        if PathWatcher is None:
+            PathWatcher = get_default_path_watcher_class()
 
-        if FileWatcher is NoOpFileWatcher:
+        if PathWatcher is NoOpPathWatcher:
             return
 
         try:
             wm = WatchedModule(
-                watcher=FileWatcher(filepath, self.on_file_changed),
+                watcher=PathWatcher(filepath, self.on_file_changed),
                 module_name=module_name,
             )
         except PermissionError:

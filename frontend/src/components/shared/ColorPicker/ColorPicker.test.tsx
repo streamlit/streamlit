@@ -35,7 +35,10 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 describe("ColorPicker widget", () => {
   const props = getProps()
   const wrapper = shallow(<ColorPicker {...props} />)
-  const colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
+  const colorPickerWrapper = wrapper
+    .find(UIPopover)
+    .renderProp("content")()
+    .find(ChromePicker)
   it("renders without crashing", () => {
     expect(wrapper.find(UIPopover).length).toBe(1)
     expect(colorPickerWrapper.find(ChromePicker).length).toBe(1)
@@ -57,7 +60,10 @@ describe("ColorPicker widget", () => {
 
   it("should render a default color in the preview and the color picker", () => {
     wrapper.find(UIPopover).simulate("click")
-    const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
+    const chromePickerWrapper = wrapper
+      .find(UIPopover)
+      .renderProp("content")()
+      .find(ChromePicker)
 
     expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
       backgroundColor: "#000000",
@@ -78,6 +84,7 @@ describe("ColorPicker widget", () => {
       wrapper
         .find(UIPopover)
         .renderProp("content")()
+        .find(ChromePicker)
         .prop("color")
     ).toEqual("#333")
   })
@@ -94,6 +101,7 @@ describe("ColorPicker widget", () => {
       wrapper
         .find(UIPopover)
         .renderProp("content")()
+        .find(ChromePicker)
         .prop("color")
     ).toEqual(newColor)
   })

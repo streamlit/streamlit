@@ -34,15 +34,6 @@ declare module "@loaders.gl/csv"
 
 declare module "@loaders.gl/gltf"
 
-declare module "@emotion/styled" {
-  import { CreateStyled } from "@emotion/styled/types/index"
-  import { Theme } from "src/theme"
-
-  export * from "@emotion/styled/types/index"
-  const customStyled: CreateStyled<Theme>
-  export default customStyled
-}
-
 declare module "fzy.js" {
   export function score(pattern: string, subject: string): number
   export function positions(pattern: string, subject: string): Array<number>

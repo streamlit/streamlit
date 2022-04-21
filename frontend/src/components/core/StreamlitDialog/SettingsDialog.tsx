@@ -24,9 +24,9 @@ import React, {
 import { ThemeConfig } from "src/theme"
 import Button, { Kind } from "src/components/shared/Button"
 import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
-import PageLayoutContext, {
-  Props as PageLayoutContextProps,
-} from "src/components/core/PageLayoutContext"
+import AppContext, {
+  Props as AppContextProps,
+} from "src/components/core/AppContext"
 import UISelectbox from "src/components/shared/Dropdown"
 import { MetricsManager } from "src/lib/MetricsManager"
 
@@ -58,7 +58,7 @@ export interface Props {
 export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private activeSettings: UserSettings
 
-  static contextType = PageLayoutContext
+  static contextType = AppContext
 
   constructor(props: Props) {
     super(props)
@@ -176,7 +176,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     const {
       activeTheme: oldTheme,
       availableThemes,
-    }: PageLayoutContextProps = this.context
+    }: AppContextProps = this.context
     const newTheme = availableThemes[index]
 
     MetricsManager.current.enqueue("themeChanged", {

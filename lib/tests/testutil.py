@@ -119,7 +119,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         ]
 
     def clear_queue(self) -> None:
-        self.forward_msg_queue._clear()
+        self.forward_msg_queue.clear()
 
 
 def normalize_md(txt: str) -> str:

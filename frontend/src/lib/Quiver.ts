@@ -41,7 +41,12 @@ export type DataType =
 /**
  * A row-major grid of DataFrame index header values.
  */
-type Index = (Vector | number[])[]
+type IndexValue = Vector | number[]
+
+/**
+ * A row-major grid of DataFrame index header values.
+ */
+type Index = IndexValue[]
 
 /**
  * A row-major grid of DataFrame column header values.
@@ -356,7 +361,9 @@ export class Quiver {
         }
         return column
       })
-      .filter(column => column !== null)
+      .filter(
+        (column: IndexValue | null): column is IndexValue => column !== null
+      )
   }
 
   /** Parse DataFrame's column header values. */
@@ -522,7 +529,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     // Concatenate each index with its counterpart in the other table
-    return zip(this._index, otherIndex).map(a => a[0].concat(a[1]))
+    const zipped = zip(this._index, otherIndex)
+    // @ts-ignore We know the two indexes are of the same size
+    return zipped.map(a => a[0].concat(a[1]))
   }
 
   /** True if both arrays contain the same index types in the same order. */

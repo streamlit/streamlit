@@ -18,6 +18,7 @@
 import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
 import { MapboxToken } from "src/hocs/withMapboxToken/MapboxToken"
+import { ensureError } from "src/lib/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent } from "react"
 import MapboxTokenError from "./MapboxTokenError"
@@ -70,7 +71,9 @@ const withMapboxToken = (deltaType: string) => (
           mapboxToken,
           isFetching: false,
         })
-      } catch (error) {
+      } catch (e) {
+        const error = ensureError(e)
+
         this.setState({
           mapboxTokenError: error,
           isFetching: false,

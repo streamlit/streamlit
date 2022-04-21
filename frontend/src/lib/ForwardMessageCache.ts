@@ -18,6 +18,7 @@
 import { ForwardMsg, ForwardMsgMetadata } from "src/autogen/proto"
 import { logMessage } from "src/lib/log"
 import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
+import { ensureError } from "./ErrorHandling"
 
 class CacheEntry {
   public readonly msg: ForwardMsg
@@ -146,7 +147,7 @@ export class ForwardMsgCache {
       return ForwardMsg.decode(arrayBuffer)
     } catch (e) {
       throw new Error(
-        `Failed to decode ForwardMsg (hash=${hash}): ${e.message}`
+        `Failed to decode ForwardMsg (hash=${hash}): ${ensureError(e).message}`
       )
     }
   }

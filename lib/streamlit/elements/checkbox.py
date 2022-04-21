@@ -121,7 +121,6 @@ class CheckboxMixin:
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
         checkbox_proto.form_id = current_form_id(self.dg)
-        checkbox_proto.disabled = disabled
         if help is not None:
             checkbox_proto.help = dedent(help)
 
@@ -140,6 +139,9 @@ class CheckboxMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        checkbox_proto.disabled = disabled
         if set_frontend_value:
             checkbox_proto.value = current_value
             checkbox_proto.set_value = True

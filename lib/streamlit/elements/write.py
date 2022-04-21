@@ -22,7 +22,7 @@ import numpy as np
 import streamlit
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.state import AutoSessionState
+from streamlit.state import SessionStateProxy
 
 # Special methods:
 
@@ -211,7 +211,7 @@ class WriteMixin:
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
-            elif isinstance(arg, (dict, list, AutoSessionState)):
+            elif isinstance(arg, (dict, list, SessionStateProxy)):
                 flush_buffer()
                 self.dg.json(arg)
             elif type_util.is_namedtuple(arg):

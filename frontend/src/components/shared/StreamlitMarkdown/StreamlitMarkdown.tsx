@@ -35,7 +35,7 @@ import rehypeKatex from "rehype-katex"
 import { Link as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
-import PageLayoutContext from "src/components/core/PageLayoutContext"
+import AppContext from "src/components/core/AppContext"
 import CodeBlock, { CodeTag } from "src/components/elements/CodeBlock/"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import {
@@ -107,7 +107,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   const {
     addScriptFinishedHandler,
     removeScriptFinishedHandler,
-  } = React.useContext(PageLayoutContext)
+  } = React.useContext(AppContext)
 
   if (isSidebar) {
     return React.createElement(tag, tagProps, children)

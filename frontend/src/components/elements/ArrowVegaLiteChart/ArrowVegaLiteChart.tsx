@@ -20,6 +20,7 @@ import { withTheme } from "@emotion/react"
 import { logMessage } from "src/lib/log"
 import { get, merge } from "lodash"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import { ensureError } from "src/lib/ErrorHandling"
 import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import { Theme } from "src/theme"
 import embed from "vega-embed"
@@ -132,7 +133,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   public async componentDidMount(): Promise<void> {
     try {
       await this.createView()
-    } catch (error) {
+    } catch (e) {
+      const error = ensureError(e)
       this.setState({ error })
     }
   }
@@ -170,7 +172,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       logMessage("Vega spec changed.")
       try {
         await this.createView()
-      } catch (error) {
+      } catch (e) {
+        const error = ensureError(e)
+
         this.setState({ error })
       }
       return

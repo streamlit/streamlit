@@ -23,7 +23,7 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
-import PageLayoutContext from "src/components/core/PageLayoutContext"
+import AppContext from "src/components/core/AppContext"
 import AppView from "src/components/core/AppView"
 import StatusWidget from "src/components/core/StatusWidget"
 import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
@@ -103,6 +103,7 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
+import { ensureError } from "./lib/ErrorHandling"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -170,7 +171,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly componentRegistry: ComponentRegistry
 
-  static contextType = PageLayoutContext
+  static contextType = AppContext
 
   constructor(props: Props) {
     super(props)
@@ -410,7 +411,8 @@ export class App extends PureComponent<Props, State> {
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleScriptFinished(status),
       })
-    } catch (err) {
+    } catch (e) {
+      const err = ensureError(e)
       logError(err)
       this.showError("Bad message format", err.message)
     }
@@ -1093,7 +1095,7 @@ export class App extends PureComponent<Props, State> {
     // attach: DOM element the keyboard listeners should attach to
     // focused: A way to force focus behaviour
     return (
-      <PageLayoutContext.Provider
+      <AppContext.Provider
         value={{
           initialSidebarState,
           layout,
@@ -1176,7 +1178,7 @@ export class App extends PureComponent<Props, State> {
             {renderedDialog}
           </StyledApp>
         </HotKeys>
-      </PageLayoutContext.Provider>
+      </AppContext.Provider>
     )
   }
 }
