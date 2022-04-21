@@ -136,17 +136,14 @@ class LocalSourcesWatcher:
         if self._is_closed:
             return
 
-        if set(sys.modules) == self._cached_sys_modules:
-            modules_paths = self._cached_modules_paths
-        else:
+        if set(sys.modules) != self._cached_sys_modules:
             modules_paths = {
                 name: self._exclude_blacklisted_paths(get_module_paths(module))
                 for name, module in dict(sys.modules).items()
             }
             self._cached_sys_modules = set(sys.modules)
             self._cached_modules_paths = modules_paths
-
-        self._register_necessary_watchers(modules_paths)
+            self._register_necessary_watchers(modules_paths)
 
     def _register_necessary_watchers(self, module_paths: Dict[str, Set[str]]) -> None:
         for name, paths in module_paths.items():

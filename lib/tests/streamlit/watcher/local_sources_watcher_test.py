@@ -290,6 +290,34 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
 
+    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    def test_module_caching(self, _fob, _):
+        lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
+        lso.register_file_change_callback(NOOP_CALLBACK)
+
+        register = MagicMock()
+        lso._register_necessary_watchers = register
+
+        # Updates modules on first run
+        lso.update_watched_modules()
+        register.assert_called_once()
+
+        # Skips update when module list hasn't changed
+        register.reset_mock()
+        lso.update_watched_modules()
+        register.assert_not_called()
+
+        # Invalidates cache when a new module is imported
+        register.reset_mock()
+        sys.modules["DUMMY_MODULE_2"] = DUMMY_MODULE_2
+        lso.update_watched_modules()
+        register.assert_called_once()
+
+        # Skips update when new module is part of cache
+        register.reset_mock()
+        lso.update_watched_modules()
+        register.assert_not_called()
+
 
 def test_get_module_paths_outputs_abs_paths():
     mock_module = MagicMock()
