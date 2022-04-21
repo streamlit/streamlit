@@ -20,13 +20,19 @@ on a single thread.
 
 (Please don't release this into production :))
 """
-
+import threading
 from typing import NamedTuple
 
+import tornado
+import tornado.ioloop
+
 import streamlit
-from streamlit import bootstrap
+from streamlit.bootstrap import _fix_sys_path, _fix_matplotlib_crash, \
+    _fix_tornado_crash, _fix_sys_argv, _fix_pydeck_mapbox_api_warning, \
+    _install_config_watchers, _set_up_signal_handler, _on_server_start
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.server.server import Server
 
 
 class SnowflakeConfig(NamedTuple):
@@ -67,29 +73,57 @@ def start(config: SnowflakeConfig) -> None:
     # Set a global flag indicating that we're "within" streamlit.
     streamlit._is_running_with_streamlit = True
 
-    # check_credentials()
+    # Create an event. The Streamlit thread will set this event
+    # when the server is initialized, and we'll return from this function
+    # once that happens.
+    streamlit_ready_event = threading.Event()
 
-    bootstrap.run(
-        main_script_path=config.script_path,
-        command_line=command_line,
-        args=[],
-        flag_options={},
+    def on_streamlit_started(server: Server) -> None:
+        _on_server_start(server)
+        streamlit_ready_event.set()
+
+    def run_streamlit() -> None:
+        _fix_sys_path(main_script_path)
+        _fix_matplotlib_crash()
+        _fix_tornado_crash()
+        _fix_sys_argv(main_script_path, args)
+        _fix_pydeck_mapbox_api_warning()
+        _install_config_watchers(flag_options)
+
+        # Install a signal handler that will shut down the ioloop
+        # and close all our threads
+        _set_up_signal_handler()
+
+        ioloop = tornado.ioloop.IOLoop.current()
+
+        # Create and start the server.
+        server = Server(ioloop, main_script_path, command_line)
+        server.start(_on_server_start)
+
+        # Start the ioloop. This function will not return until the
+        # server is shut down.
+        ioloop.start()
+
+    # Start the Streamlit thread
+    streamlit_thread = threading.Thread(
+        target=run_streamlit,
+        name="StreamlitMain"
     )
+    streamlit_thread.start()
+
+    # Wait until Streamlit has been started before returning.
+    streamlit_ready_event.wait()
 
 
 def session_created(ctx: SnowflakeSessionCtx) -> None:
     """Called when a new session starts. Streamlit will create
     its own session machinery internally.
-
-    Must be called on the same thread as `start()`.
     """
     pass
 
 
 def handle_backmsg(ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
     """Called when a BackMsg arrives for a given session.
-
-    Must be called on the same thread as `start()`.
     """
     pass
 
