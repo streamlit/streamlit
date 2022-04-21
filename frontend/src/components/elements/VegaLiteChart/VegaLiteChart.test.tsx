@@ -49,7 +49,7 @@ describe("VegaLiteChart Element", () => {
   it("pulls default config values from theme", () => {
     const props = getProps(undefined, { theme: darkTheme.emotion })
 
-    const wrapper = mount(<VegaLiteChart {...props} />)
+    const wrapper = mount<VegaLiteChart>(<VegaLiteChart {...props} />)
     const generatedSpec = wrapper.instance().generateSpec()
 
     expect(generatedSpec.config.background).toBe(
@@ -71,7 +71,7 @@ describe("VegaLiteChart Element", () => {
       spec: JSON.stringify(spec),
     })
 
-    const wrapper = mount(<VegaLiteChart {...props} />)
+    const wrapper = mount<VegaLiteChart>(<VegaLiteChart {...props} />)
     const generatedSpec = wrapper.instance().generateSpec()
 
     expect(generatedSpec.config.background).toBe("purple")

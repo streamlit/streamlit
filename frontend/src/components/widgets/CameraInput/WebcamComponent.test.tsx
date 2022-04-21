@@ -3,6 +3,7 @@ import { act } from "react-dom/test-utils"
 
 import { mount } from "src/lib/test_util"
 import { StyledBox } from "./styled-components"
+import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { Props } from "./WebcamComponent"
 
 jest.mock("react-webcam")
@@ -12,6 +13,9 @@ const getProps = (props: Partial<Props> = {}): Props => {
     width: 500,
     disabled: false,
     setClearPhotoInProgress: jest.fn(),
+    clearPhotoInProgress: false,
+    facingMode: FacingMode.USER,
+    setFacingMode: jest.fn(),
     ...props,
   }
 }
@@ -55,6 +59,7 @@ describe("Test Webcam Component", () => {
       wrapper
         .find("Webcam")
         .props()
+        // @ts-ignore
         .onUserMediaError(null)
     })
     wrapper.update()
@@ -86,6 +91,7 @@ describe("Test Webcam Component", () => {
       wrapper
         .find("Webcam")
         .props()
+        // @ts-ignore
         .onUserMedia(null)
     })
     wrapper.update()

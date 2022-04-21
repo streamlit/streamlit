@@ -24,7 +24,6 @@ import withPagination, { Props as HocProps } from "./withPagination"
 const TestComponent: React.ComponentType = () => <div>test</div>
 
 const getProps = (props: Partial<HocProps> = {}): HocProps => ({
-  className: "",
   items: [{}, {}, {}, {}],
   pageSize: 2,
   resetOnAdd: true,
@@ -34,6 +33,7 @@ const getProps = (props: Partial<HocProps> = {}): HocProps => ({
 describe("withPagination HOC", () => {
   const setState = jest.fn()
   const useStateSpy = jest.spyOn(React, "useState")
+  // @ts-ignore
   useStateSpy.mockImplementation(init => [init, setState])
 
   it("renders without crashing", () => {

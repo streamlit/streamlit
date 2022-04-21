@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { ReactWrapper, ShallowWrapper } from "enzyme"
+import { ReactWrapper } from "enzyme"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "src/lib/storageUtils"
 import { shallow, mount } from "src/lib/test_util"
@@ -27,7 +27,12 @@ import {
   PageConfig,
   PageInfo,
 } from "src/autogen/proto"
-import { IMenuItem, IToolbarItem } from "src/hocs/withS4ACommunication/types"
+import { S4ACommunicationHOC } from "src/hocs/withS4ACommunication/withS4ACommunication"
+import {
+  IMenuItem,
+  IToolbarItem,
+  S4ACommunicationState,
+} from "src/hocs/withS4ACommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
@@ -47,6 +52,29 @@ import ToolbarActions from "./components/core/ToolbarActions"
 
 jest.mock("src/lib/ConnectionManager")
 
+const getS4ACommunicationState = (
+  extend?: Partial<S4ACommunicationState>
+): S4ACommunicationState => ({
+  queryParams: "",
+  menuItems: [],
+  toolbarItems: [],
+  forcedModalClose: false,
+  isOwner: true,
+  sidebarChevronDownshift: 0,
+  streamlitShareMetadata: {},
+  ...extend,
+})
+
+const getS4ACommunicationProp = (
+  extend?: Partial<S4ACommunicationHOC>
+): S4ACommunicationHOC => ({
+  connect: jest.fn(),
+  sendMessage: jest.fn(),
+  onModalReset: jest.fn(),
+  currentState: getS4ACommunicationState({}),
+  ...extend,
+})
+
 const getProps = (extend?: Partial<Props>): Props => ({
   screenCast: {
     currentState: "OFF",
@@ -54,18 +82,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     startRecording: jest.fn(),
     stopRecording: jest.fn(),
   },
-  s4aCommunication: {
-    connect: jest.fn(),
-    sendMessage: jest.fn(),
-    onModalReset: jest.fn(),
-    currentState: {
-      queryParams: "",
-      menuItems: [],
-      toolbarItems: [],
-      forcedModalClose: false,
-      isOwner: true,
-    },
-  },
+  s4aCommunication: getS4ACommunicationProp({}),
   theme: {
     activeTheme: lightTheme,
     availableThemes: [],
@@ -184,18 +201,21 @@ describe("App", () => {
 
   it("shows s4aMenuItems", () => {
     const props = getProps({
-      s4aCommunication: {
+      s4aCommunication: getS4ACommunicationProp({
         connect: jest.fn(),
         sendMessage: jest.fn(),
-        currentState: {
+        currentState: getS4ACommunicationState({
           queryParams: "",
           menuItems: [
             {
               type: "separator",
             },
           ] as IMenuItem[],
-        },
-      },
+          toolbarItems: [],
+          forcedModalClose: false,
+          isOwner: true,
+        }),
+      }),
     })
     const wrapper = shallow(<App {...props} />)
 
@@ -206,10 +226,10 @@ describe("App", () => {
 
   it("shows s4aToolbarItems", () => {
     const props = getProps({
-      s4aCommunication: {
+      s4aCommunication: getS4ACommunicationProp({
         connect: jest.fn(),
         sendMessage: jest.fn(),
-        currentState: {
+        currentState: getS4ACommunicationState({
           queryParams: "",
           toolbarItems: [
             {
@@ -217,8 +237,8 @@ describe("App", () => {
               icon: "star.svg",
             },
           ] as IToolbarItem[],
-        },
-      },
+        }),
+      }),
     })
     const wrapper = shallow(<App {...props} />)
     wrapper.setState({ hideTopBar: false })
@@ -235,16 +255,19 @@ describe("App", () => {
 
   it("closes modals when the modal closure message has been received", () => {
     const wrapper = shallow(<App {...getProps()} />)
-    const dialog = StreamlitDialog({ type: DialogType.ABOUT })
+    const dialog = StreamlitDialog({
+      type: DialogType.ABOUT,
+      onClose: () => {},
+    })
     wrapper.setState({ dialog })
     expect(wrapper.find(Modal)).toHaveLength(1)
     const onModalReset = jest.fn()
     wrapper.setProps(
       getProps({
-        s4aCommunication: {
-          currentState: { forcedModalClose: true },
+        s4aCommunication: getS4ACommunicationProp({
+          currentState: getS4ACommunicationState({ forcedModalClose: true }),
           onModalReset,
-        },
+        }),
       })
     )
     expect(wrapper.find(Modal)).toHaveLength(0)
@@ -256,36 +279,39 @@ describe("App", () => {
     const wrapper = shallow(
       <App
         {...getProps({
-          s4aCommunication: {
-            currentState: {
+          s4aCommunication: getS4ACommunicationProp({
+            currentState: getS4ACommunicationState({
               menuItems: [],
               queryParams: "",
               forcedModalClose: false,
-            },
+            }),
             onModalReset,
             sendMessage: jest.fn(),
-          },
+          }),
         })}
       />
     )
     wrapper.setProps(
       getProps({
-        s4aCommunication: {
-          currentState: { forcedModalClose: true },
+        s4aCommunication: getS4ACommunicationProp({
+          currentState: getS4ACommunicationState({ forcedModalClose: true }),
           onModalReset,
-        },
+        }),
       })
     )
     expect(onModalReset).toBeCalled()
     wrapper.setProps(
       getProps({
-        s4aCommunication: {
-          currentState: { forcedModalClose: false },
+        s4aCommunication: getS4ACommunicationProp({
+          currentState: getS4ACommunicationState({ forcedModalClose: false }),
           onModalReset,
-        },
+        }),
       })
     )
-    const dialog = StreamlitDialog({ type: DialogType.ABOUT })
+    const dialog = StreamlitDialog({
+      type: DialogType.ABOUT,
+      onClose: () => {},
+    })
     wrapper.setState({ dialog })
     expect(wrapper.find(Modal)).toHaveLength(1)
   })
@@ -650,7 +676,7 @@ describe("App.handlePageConfigChanged", () => {
 describe("App.handlePageInfoChanged", () => {
   // These are used in the context of each of the test cases below.
   // Their values are set in beforeEach().
-  let wrapper: ShallowWrapper<App>
+  let wrapper
   let app: App
   let pushStateSpy: any
 
@@ -659,7 +685,7 @@ describe("App.handlePageInfoChanged", () => {
     window.history.pushState({}, "", "/")
 
     // Setup wrapper and app and spy on window.history.pushState.
-    wrapper = shallow(<App {...getProps()} />)
+    wrapper = shallow<App>(<App {...getProps()} />)
     app = wrapper.instance()
     pushStateSpy = jest.spyOn(
       window.history,
@@ -736,7 +762,9 @@ describe("App.handlePageInfoChanged", () => {
 
 describe("Test Main Menu shortcut functionality", () => {
   beforeEach(() => {
+    // @ts-ignore
     delete window.location
+    // @ts-ignore
     window.location = {
       assign: jest.fn(),
       host: "testing.com",
@@ -746,14 +774,14 @@ describe("Test Main Menu shortcut functionality", () => {
 
   it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
     const props = getProps({
-      s4aCommunication: {
-        currentState: {
+      s4aCommunication: getS4ACommunicationProp({
+        currentState: getS4ACommunicationState({
           isOwner: false,
-        },
+        }),
         sendMessage: jest.fn(),
-      },
+      }),
     })
-    const wrapper = shallow(<App {...props} />)
+    const wrapper = shallow<App>(<App {...props} />)
     wrapper.instance().openClearCacheDialog = jest.fn()
 
     // @ts-ignore
@@ -764,7 +792,7 @@ describe("Test Main Menu shortcut functionality", () => {
 
   it("Tests dev menu shortcuts can be accessed as a developer", () => {
     const props = getProps()
-    const wrapper = shallow(<App {...props} />)
+    const wrapper = shallow<App>(<App {...props} />)
     wrapper.instance().openClearCacheDialog = jest.fn()
 
     // @ts-ignore

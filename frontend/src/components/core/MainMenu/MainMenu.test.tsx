@@ -52,6 +52,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   canDeploy: true,
   menuItems: {},
   s4aIsOwner: false,
+  gitInfo: null,
   ...extend,
 })
 
@@ -235,10 +236,11 @@ describe("App", () => {
 
       // @ts-ignore
       const dialog = dialogComponent(props.gitInfo.module)
-
+      // @ts-ignore
       expect(props.showDeployError.mock.calls[0][0]).toStrictEqual(
         dialog.title
       )
+      // @ts-ignore
       expect(props.showDeployError.mock.calls[0][1]).toStrictEqual(dialog.body)
     }
 
@@ -281,7 +283,7 @@ describe("App", () => {
           repository: "repo",
           branch: "branch",
           module: "module.py",
-          isHeadDetached: false,
+          state: GitStates.DEFAULT,
           untrackedFiles: ["module.py"],
         },
         ModuleIsNotAdded
@@ -294,7 +296,7 @@ describe("App", () => {
           repository: "repo",
           branch: "branch",
           module: "module.py",
-          isHeadDetached: false,
+          state: GitStates.DEFAULT,
           uncommittedFiles: ["module.py"],
           untrackedFiles: [],
         },
@@ -320,7 +322,7 @@ describe("App", () => {
           repository: "repo",
           branch: "branch",
           module: "module.py",
-          isHeadDetached: false,
+          state: GitStates.DEFAULT,
           untrackedFiles: ["another-file.py"],
         },
         UntrackedFiles
@@ -387,8 +389,10 @@ describe("App", () => {
   it("should not render dev menu when s4aIsOwner is false and not on localhost", () => {
     // set isLocalhost to false by deleting window.location.
     // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
+    // @ts-ignore
     delete window.location
 
+    // @ts-ignore
     window.location = {
       assign: jest.fn(),
     }
