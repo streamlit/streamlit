@@ -370,12 +370,13 @@ describe("App", () => {
     ]
 
     const msg = new ForwardMsg()
-    msg.pagesChanged = { appPages }
+    msg.pagesChanged = new PagesChanged({ appPages })
 
     const wrapper = shallow(<App {...getProps()} />)
     expect(wrapper.find("AppView").prop("appPages")).toEqual([])
 
-    wrapper.instance().handleMessage(msg)
+    const instance = wrapper.instance() as App
+    instance.handleMessage(msg)
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
   })
 })

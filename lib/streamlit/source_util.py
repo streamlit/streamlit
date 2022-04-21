@@ -110,7 +110,7 @@ def page_name_and_icon(script_path: Path) -> Tuple[str, str]:
 
 
 _pages_cache_lock = threading.RLock()
-_cached_pages: Optional[List[Dict[str, str]]] = None
+_cached_pages: Optional[Dict[str, Dict[str, str]]] = None
 _on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
 
 

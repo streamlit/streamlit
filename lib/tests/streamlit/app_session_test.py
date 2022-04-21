@@ -272,10 +272,10 @@ class AppSessionTest(unittest.TestCase):
     @patch(
         "streamlit.app_session.source_util.get_pages",
         MagicMock(
-            return_value=[
-                {"page_name": "page1", "icon": "", "script_path": "script1"},
-                {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
-            ]
+            return_value={
+                "page1": {"icon": "", "script_path": "script1"},
+                "page2": {"icon": "🎉", "script_path": "script2"},
+            }
         ),
     )
     @patch("streamlit.app_session.AppSession._enqueue_forward_msg")
