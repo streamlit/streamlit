@@ -27,9 +27,16 @@ import tornado
 import tornado.ioloop
 
 import streamlit
-from streamlit.bootstrap import _fix_sys_path, _fix_matplotlib_crash, \
-    _fix_tornado_crash, _fix_sys_argv, _fix_pydeck_mapbox_api_warning, \
-    _install_config_watchers, _set_up_signal_handler, _on_server_start
+from streamlit.bootstrap import (
+    _fix_sys_path,
+    _fix_matplotlib_crash,
+    _fix_tornado_crash,
+    _fix_sys_argv,
+    _fix_pydeck_mapbox_api_warning,
+    _install_config_watchers,
+    _set_up_signal_handler,
+    _on_server_start,
+)
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import Server
@@ -105,10 +112,7 @@ def start(config: SnowflakeConfig) -> None:
         ioloop.start()
 
     # Start the Streamlit thread
-    streamlit_thread = threading.Thread(
-        target=run_streamlit,
-        name="StreamlitMain"
-    )
+    streamlit_thread = threading.Thread(target=run_streamlit, name="StreamlitMain")
     streamlit_thread.start()
 
     # Wait until Streamlit has been started before returning.
@@ -123,8 +127,7 @@ def session_created(ctx: SnowflakeSessionCtx) -> None:
 
 
 def handle_backmsg(ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
-    """Called when a BackMsg arrives for a given session.
-    """
+    """Called when a BackMsg arrives for a given session."""
     pass
 
 
