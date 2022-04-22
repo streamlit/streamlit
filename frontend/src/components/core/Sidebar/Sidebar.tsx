@@ -21,7 +21,7 @@ import { withTheme } from "@emotion/react"
 
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
-import { AppPage, PageConfig } from "src/autogen/proto"
+import { IAppPage, PageConfig } from "src/autogen/proto"
 import { Theme } from "src/theme"
 
 import {
@@ -39,8 +39,8 @@ export interface SidebarProps {
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
   theme: Theme
-  hasElements?: boolean
-  appPages: AppPage[]
+  hasElements: boolean
+  appPages: IAppPage[]
   onPageChange: (pageName: string) => void
   currentPageName: string
 }
