@@ -430,7 +430,7 @@ class Server:
         )
 
     def _set_state(self, new_state: State) -> None:
-        LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
+        LOGGER.debug("Server state: %s -> %s", self._state, new_state)
         self._state = new_state
 
     @property
@@ -596,13 +596,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             ):
                 # This session has probably cached this message. Send
                 # a reference instead.
-                LOGGER.debug("Sending cached message ref (hash=%s)" % msg.hash)
+                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
                 msg_to_send = create_reference_msg(msg)
 
             # Cache the message so it can be referenced in the future.
             # If the message is already cached, this will reset its
             # age.
-            LOGGER.debug("Caching message (hash=%s)" % msg.hash)
+            LOGGER.debug("Caching message (hash=%s)", msg.hash)
             self._message_cache.add_message(
                 msg, session_info.session, session_info.script_run_count
             )
