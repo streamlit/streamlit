@@ -78,7 +78,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
       </div>
     )
 
-  public render = (): ReactNode => {
+  public render(): ReactNode {
     const themeIndex = this.context.availableThemes.findIndex(
       (theme: ThemeConfig) => theme.name === this.context.activeTheme.name
     )

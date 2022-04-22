@@ -65,7 +65,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
     onClose()
   }
 
-  public render = (): ReactNode => {
+  public render(): ReactNode {
     const { recordAudio } = this.state
     const { onClose } = this.props
 

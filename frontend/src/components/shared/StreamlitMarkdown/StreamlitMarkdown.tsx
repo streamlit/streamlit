@@ -192,7 +192,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
     })
   }
 
-  public render = (): ReactNode => {
+  public render(): ReactNode {
     const { source, allowHTML, style, isCaption } = this.props
     const isInSidebar = this.context
 

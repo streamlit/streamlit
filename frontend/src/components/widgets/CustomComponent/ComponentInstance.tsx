@@ -335,7 +335,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     )
   }
 
-  public render = (): ReactNode => {
+  public render(): ReactNode {
     // If we have an error, display it and bail.
     if (this.state.componentError != null) {
       return this.renderError(this.state.componentError)
