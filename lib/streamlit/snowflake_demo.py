@@ -40,6 +40,7 @@ LOGGER = get_logger(__name__)
 class SnowflakeConfig(NamedTuple):
     """Passed to `start()`. Contains config options."""
 
+    # The path of the Streamlit script to run.
     script_path: str
 
 
@@ -55,8 +56,8 @@ class SnowflakeSessionMessageQueue:
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Add a new ForwardMsg to the queue.
-        Note that this will be called on the Streamlit server thread,
-        not the main thread!
+        (Note that this will be called on the Streamlit server thread,
+        not the main thread!)
         """
         raise NotImplementedError
 
@@ -66,6 +67,9 @@ class SnowflakeSessionCtx(NamedTuple):
     each session.
     """
 
+    # A concrete SnowflakeSessionMessageQueue instance.
+    # The Streamlit server will send all ForwardMsgs for the session
+    # to this object.
     queue: SnowflakeSessionMessageQueue
 
 
