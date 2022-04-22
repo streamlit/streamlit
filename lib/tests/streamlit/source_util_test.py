@@ -108,6 +108,8 @@ def test_get_pages(tmpdir):
         # The next two pages have duplicate names so shouldn't appear.
         "page.py",
         "streamlit_app.py",
+        # This file shouldn't appear as a page because it's hidden.
+        ".hidden_file.py",
         # This shouldn't appear because it's not a Python file.
         "not_a_page.rs",
     ]
