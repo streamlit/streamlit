@@ -14,7 +14,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, cast, Dict, List, Tuple
+from typing import Any, cast, Dict, Tuple
 
 
 def open_python_file(filename):
@@ -104,18 +104,17 @@ def page_name_and_icon(script_path: Path) -> Tuple[str, str]:
 
 # TODO(vdonato): Eventually, have this function cache its return value and
 # avoid re-scanning the file system unless a page has been added/removed.
-def get_pages(main_script_path: str) -> List[Dict[str, str]]:
+def get_pages(main_script_path: str) -> Dict[str, Dict[str, str]]:
     main_script_path = Path(main_script_path)
     main_page_name, main_page_icon = page_name_and_icon(main_script_path)
 
     used_page_names = {main_page_name}
-    pages = [
-        {
-            "page_name": main_page_name,
+    pages = {
+        main_page_name: {
             "icon": main_page_icon,
             "script_path": str(main_script_path),
         }
-    ]
+    }
 
     pages_dir = main_script_path.parent / "pages"
     page_scripts = sorted(
@@ -129,6 +128,9 @@ def get_pages(main_script_path: str) -> List[Dict[str, str]]:
             continue
 
         used_page_names.add(pn)
-        pages.append({"page_name": pn, "icon": pi, "script_path": str(script_path)})
+        pages[pn] = {
+            "icon": pi,
+            "script_path": str(script_path),
+        }
 
     return pages
