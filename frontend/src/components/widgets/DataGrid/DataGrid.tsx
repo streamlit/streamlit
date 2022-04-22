@@ -132,7 +132,7 @@ type ColumnSortConfig = {
  */
 type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
   DataEditorProps,
-  "columns" | "getCellContent" | "onColumnResized"
+  "columns" | "getCellContent" | "onColumnResize"
 >
 
 /**
@@ -178,7 +178,7 @@ export function useDataLoader(
   const numRows = element.dimensions.rows - 1
   const numIndices = element.types?.index?.length ?? 0
 
-  const onColumnResized = React.useCallback(
+  const onColumnResize = React.useCallback(
     (column: GridColumn, newSize: number) => {
       setColumns(prevColumns => {
         const index = prevColumns.findIndex(ci => ci.id === column.id)
@@ -225,7 +225,7 @@ export function useDataLoader(
     numIndices,
     columns,
     getCellContent: getCellContentSorted,
-    onColumnResized,
+    onColumnResize,
   }
 }
 export interface DataGridProps {
@@ -247,7 +247,7 @@ function DataGrid({
     numIndices,
     columns,
     getCellContent,
-    onColumnResized,
+    onColumnResize,
   } = useDataLoader(element, sort)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
@@ -344,7 +344,7 @@ function DataGrid({
         rowHeight={ROW_HEIGHT}
         headerHeight={ROW_HEIGHT}
         getCellContent={getCellContent}
-        onColumnResized={onColumnResized}
+        onColumnResize={onColumnResize}
         // Freeze all index columns:
         freezeColumns={numIndices}
         smoothScrollX={true}
