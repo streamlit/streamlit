@@ -118,7 +118,10 @@ def get_pages(main_script_path: str) -> List[Dict[str, str]]:
     ]
 
     pages_dir = main_script_path.parent / "pages"
-    page_scripts = sorted(pages_dir.glob("*.py"), key=page_sort_key)
+    page_scripts = sorted(
+        [f for f in pages_dir.glob("*.py") if not f.name.startswith(".")],
+        key=page_sort_key,
+    )
 
     for script_path in page_scripts:
         pn, pi = page_name_and_icon(script_path)
