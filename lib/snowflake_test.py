@@ -12,7 +12,7 @@ class ExampleMessageQueue(SnowflakeSessionMessageQueue):
     """Example MessageQueue implementation. The Snowflake implementation
     should write each ForwardMsg to the session's websocket.
     """
-    def push_forward_msg(self, msg: ForwardMsg) -> None:
+    def write_forward_msg(self, msg: ForwardMsg) -> None:
         print(msg)
 
 

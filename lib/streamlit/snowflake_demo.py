@@ -25,6 +25,7 @@ import tornado.ioloop
 
 import streamlit
 import streamlit.bootstrap as bootstrap
+from streamlit.app_session import AppSession
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import Server
@@ -46,7 +47,7 @@ class SnowflakeSessionMessageQueue:
     implementation and pass it to Streamlit within SessionCtx.)
     """
 
-    def push_forward_msg(self, msg: ForwardMsg) -> None:
+    def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Add a new ForwardMsg to the queue.
         Note that this will be called on the Streamlit server thread,
         not the main thread!
@@ -83,6 +84,8 @@ class SnowflakeDemo:
         self._started = False
         self._config = config
         self._ioloop: Optional[tornado.ioloop.IOLoop] = None
+        self._server: Optional[Server] = None
+        self._sessions: Dict[SnowflakeSessionCtx, AppSession] = {}
 
     def start(self) -> None:
         """Start the Streamlit server. Must be called once, before
@@ -112,8 +115,10 @@ class SnowflakeDemo:
 
     def stop(self) -> None:
         """Stop the Streamlit server."""
-        assert self._ioloop is not None, "null ioloop!"
-        Server.get_current().stop(from_signal=False)
+        assert self._server is not None, "null Server!"
+        self._server.stop(from_signal=False)
+        self._server = None
+        self._ioloop = None
 
     def _run_streamlit_thread(self, on_started: threading.Event) -> None:
         """The Streamlit thread entry point. This function won't exit
@@ -148,8 +153,8 @@ class SnowflakeDemo:
             on_started.set()
 
         # Create and start the server.
-        server = Server(self._ioloop, main_script_path, command_line)
-        server.start(on_server_started)
+        self._server = Server(self._ioloop, main_script_path, command_line)
+        self._server.start(on_server_started)
 
         # Start the ioloop. This function will not return until the
         # server is shut down.
@@ -160,16 +165,37 @@ class SnowflakeDemo:
         its own session machinery internally.
         """
         assert self._ioloop is not None, "null ioloop!"
-        self._ioloop.spawn_callback(lambda: print("session_created"))
+
+        def session_created_handler() -> None:
+            assert self._server is not None
+            assert ctx not in self._sessions, "Session already registered!"
+            session = self._server.create_demo_app_session(ctx.queue.write_forward_msg)
+            self._sessions[ctx] = session
+
+        self._ioloop.spawn_callback(session_created_handler)
 
     def handle_backmsg(self, ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
         """Called when a BackMsg arrives for a given session."""
         assert self._ioloop is not None, "null ioloop!"
-        self._ioloop.spawn_callback(lambda: print("handle_backmsg"))
+
+        def backmsg_handler() -> None:
+            assert ctx in self._sessions, "Session not registered!"
+            self._sessions[ctx].handle_backmsg(msg)
+
+        self._ioloop.spawn_callback(backmsg_handler)
 
     def session_closed(self, ctx: SnowflakeSessionCtx) -> None:
         """Called when a session has closed.
         Streamlit will dispose of internal session-related resources here.
         """
         assert self._ioloop is not None, "null ioloop!"
-        self._ioloop.spawn_callback(lambda: print("session_closed"))
+
+        def session_closed_handler() -> None:
+            assert self._server is not None
+            assert ctx in self._sessions, "Session not registered!"
+
+            session = self._sessions[ctx]
+            del self._sessions[ctx]
+            self._server._close_app_session(session.id)
+
+        self._ioloop.spawn_callback(session_closed_handler)
