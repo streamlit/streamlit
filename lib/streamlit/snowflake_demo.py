@@ -47,6 +47,10 @@ class SnowflakeSessionMessageQueue:
     """
 
     def push_forward_msg(self, msg: ForwardMsg) -> None:
+        """Add a new ForwardMsg to the queue.
+        Note that this will be called on the Streamlit server thread,
+        not the main thread!
+        """
         raise NotImplementedError
 
 
