@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { useRef, useEffect, useState } from "react"
+import { MutableRefObject, useRef, useEffect, useState } from "react"
 
 export const usePrevious = (value: any): any => {
   const ref = useRef()
@@ -27,7 +27,9 @@ export const usePrevious = (value: any): any => {
   return ref.current
 }
 
-export const useIsOverflowing = (ref): boolean => {
+export const useIsOverflowing = (
+  ref: MutableRefObject<HTMLElement | null>
+): boolean => {
   const { current } = ref
   const [isOverflowing, setIsOverflowing] = useState(false)
 

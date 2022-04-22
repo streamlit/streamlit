@@ -69,7 +69,7 @@ import {
   Config,
   IGitInfo,
   GitInfo,
-  AppPage,
+  IAppPage,
 } from "src/autogen/proto"
 import { without, concat } from "lodash"
 
@@ -140,7 +140,7 @@ interface State {
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
-  appPages: AppPage[]
+  appPages: IAppPage[]
   currentPageName: string
 }
 
@@ -963,7 +963,7 @@ export class App extends PureComponent<Props, State> {
         .replace(new RegExp("^/?"), "")
     } else {
       const { appHash, scriptRunId, scriptName } = this.state
-      this.clearAppState(appHash, scriptRunId, scriptName)
+      this.clearAppState(appHash as string, scriptRunId, scriptName)
 
       const qs = queryString ? `?${queryString}` : ""
       const basePathPrefix = basePath ? `/${basePath}` : ""

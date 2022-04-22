@@ -18,7 +18,7 @@
 import React, { ReactElement, useCallback, useRef, useState } from "react"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
-import { AppPage } from "src/autogen/proto"
+import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
 import Icon from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
@@ -32,7 +32,7 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  pages: AppPage[]
+  appPages: IAppPage[]
   hasSidebarElements: boolean
   onPageChange: (pageName: string) => void
   hideParentScrollbar: (newValue: boolean) => void
@@ -52,7 +52,7 @@ const SidebarNav = ({
   }
 
   const [expanded, setExpanded] = useState(false)
-  const navItemsRef = useRef(null)
+  const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef)
   // We use React.useContext here instead of destructuring it in the imports
   // above so that we can mock it in tests.
@@ -62,9 +62,11 @@ const SidebarNav = ({
     if (isOverflowing) {
       hideParentScrollbar(true)
     }
-  })
+  }, [isOverflowing, hideParentScrollbar])
 
-  const onMouseOut = useCallback(() => hideParentScrollbar(false))
+  const onMouseOut = useCallback(() => hideParentScrollbar(false), [
+    hideParentScrollbar,
+  ])
 
   const toggleExpanded = useCallback(() => {
     if (!expanded && isOverflowing) {
@@ -83,36 +85,44 @@ const SidebarNav = ({
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
       >
-        {appPages.map(({ pageIcon, pageName }: AppPage, pageIndex: number) => {
-          // NOTE: We use window.location to get the port instead of
-          // getBaseUriParts() because the port may differ in dev mode (since
-          // the frontend is served by the react dev server and not the
-          // streamlit server).
-          const { port, protocol } = window.location
-          const { basePath, host } = getBaseUriParts()
+        {appPages.map(
+          ({ icon: pageIcon, pageName }: IAppPage, pageIndex: number) => {
+            pageName = pageName as string
+            // NOTE: We use window.location to get the port instead of
+            // getBaseUriParts() because the port may differ in dev mode (since
+            // the frontend is served by the react dev server and not the
+            // streamlit server).
+            const { port, protocol } = window.location
+            const baseUriParts = getBaseUriParts()
 
-          const portSection = port ? `:${port}` : ""
-          const basePathSection = basePath ? `${basePath}/` : ""
+            const navigateTo = pageIndex === 0 ? "" : pageName
+            let pageUrl = ""
 
-          const navigateTo = pageIndex === 0 ? "" : pageName
-          const pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
+            if (baseUriParts) {
+              const { basePath, host } = baseUriParts
+              const portSection = port ? `:${port}` : ""
+              const basePathSection = basePath ? `${basePath}/` : ""
 
-          return (
-            <li key={pageName}>
-              <StyledSidebarNavLinkContainer>
-                <StyledSidebarNavLink
-                  href={pageUrl}
-                  onClick={e => {
-                    e.preventDefault()
-                    onPageChange(navigateTo)
-                  }}
-                >
-                  {pageName.replace(/_/g, " ")}
-                </StyledSidebarNavLink>
-              </StyledSidebarNavLinkContainer>
-            </li>
-          )
-        })}
+              pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
+            }
+
+            return (
+              <li key={pageName}>
+                <StyledSidebarNavLinkContainer>
+                  <StyledSidebarNavLink
+                    href={pageUrl}
+                    onClick={e => {
+                      e.preventDefault()
+                      onPageChange(navigateTo)
+                    }}
+                  >
+                    {pageName.replace(/_/g, " ")}
+                  </StyledSidebarNavLink>
+                </StyledSidebarNavLinkContainer>
+              </li>
+            )
+          }
+        )}
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (

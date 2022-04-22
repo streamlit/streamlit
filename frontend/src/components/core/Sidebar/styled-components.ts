@@ -44,7 +44,7 @@ export interface StyledSidebarNavItemsProps {
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
   ({ expanded, hasSidebarElements, theme }) => {
     const expandedMaxHeight = expanded ? "75vh" : "33vh"
-    const maxHeight = hasSidebarElements ? expandedMaxHeight : null
+    const maxHeight = hasSidebarElements ? expandedMaxHeight : "100vh"
 
     return {
       maxHeight,
@@ -98,7 +98,7 @@ const bounceAnimation = keyframes`
 export const StyledSidebarNavSeparatorContainer = styled.div<
   StyledSidebarNavSeparatorContainerProps
 >(({ expanded, isOverflowing, theme }) => ({
-  cursor: expanded || isOverflowing ? "pointer" : null,
+  cursor: expanded || isOverflowing ? "pointer" : "default",
   position: "absolute",
   height: theme.spacing.threeXL,
   left: 0,
@@ -131,31 +131,27 @@ export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
   //   (dependent on some other work to be finished first)
 }))
 
-export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
-  ({ theme }) => {
-    const defaultPageLinkStyles = {
-      textDecoration: "none",
-      color: theme.colors.bodyText,
-    }
-
-    return {
-      ...defaultPageLinkStyles,
-      paddingLeft: theme.spacing.lg,
-      paddingRight: theme.spacing.lg,
-      paddingLeft: theme.spacing.lg,
-      paddingRight: theme.spacing.lg,
-      lineHeight: theme.lineHeights.menuItem,
-
-      "&:hover": {
-        backgroundColor: theme.colors.transparentDarkenedBgMix60,
-      },
-
-      "&:active,&:visited,&:hover": {
-        ...defaultPageLinkStyles,
-      },
-    }
+export const StyledSidebarNavLink = styled.a(({ theme }) => {
+  const defaultPageLinkStyles = {
+    textDecoration: "none",
+    color: theme.colors.bodyText,
   }
-)
+
+  return {
+    ...defaultPageLinkStyles,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+    lineHeight: theme.lineHeights.menuItem,
+
+    "&:hover": {
+      backgroundColor: theme.colors.transparentDarkenedBgMix60,
+    },
+
+    "&:active,&:visited,&:hover": {
+      ...defaultPageLinkStyles,
+    },
+  }
+})
 
 export interface StyledSidebarContentProps {
   isCollapsed: boolean
