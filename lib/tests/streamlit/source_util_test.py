@@ -117,25 +117,21 @@ def test_get_pages(tmpdir):
         pages_dir.join(p).write("")
 
     main_script_path = str(tmpdir / "streamlit_app.py")
-    assert source_util.get_pages(main_script_path) == [
-        {
-            "page_name": "streamlit_app",
+    assert source_util.get_pages(main_script_path) == {
+        "streamlit_app": {
             "script_path": main_script_path,
             "icon": "",
         },
-        {
-            "page_name": "page",
+        "page": {
             "script_path": str(pages_dir / "01-page.py"),
             "icon": "",
         },
-        {
-            "page_name": "other_page",
+        "other_page": {
             "script_path": str(pages_dir / "03_other_page.py"),
             "icon": "",
         },
-        {
-            "page_name": "last_page",
+        "last_page": {
             "script_path": str(pages_dir / "last page.py"),
             "icon": "",
         },
-    ]
+    }

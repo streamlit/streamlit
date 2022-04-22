@@ -413,16 +413,12 @@ class ScriptRunner:
             # serve a request to run a non-main page before we've had a chance
             # to send page info to the frontend.
             if rerun_data.page_name:
-                current_page = next(
-                    filter(
-                        lambda p: p["page_name"] == rerun_data.page_name,
-                        source_util.get_pages(self._session_data.main_script_path),
-                    ),
-                    None,
-                )
+                page_info = source_util.get_pages(
+                    self._session_data.main_script_path
+                ).get(rerun_data.page_name, None)
 
-                if current_page:
-                    script_path = current_page["script_path"]
+                if page_info:
+                    script_path = page_info["script_path"]
                 else:
                     msg = ForwardMsg()
                     msg.page_not_found.page_name = rerun_data.page_name
