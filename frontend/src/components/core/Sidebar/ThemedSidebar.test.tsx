@@ -21,12 +21,14 @@ import lightTheme from "src/theme/lightTheme"
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
 
-function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
+function getProps(
+  props: Partial<SidebarProps> = {}
+): Omit<SidebarProps, "chevronDownshift" | "theme"> {
   return {
-    chevronDownshift: 0,
     appPages: [],
     onPageChange: jest.fn(),
     currentPageName: "streamlit_app",
+    hasElements: true,
     ...props,
   }
 }
