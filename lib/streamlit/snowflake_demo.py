@@ -20,7 +20,7 @@ Snowflake/Streamlit hacky demo interface.
 
 import threading
 from enum import Enum
-from typing import NamedTuple, List, Any, Dict, Optional
+from typing import NamedTuple, List, Any, Dict
 
 import tornado
 import tornado.ioloop
@@ -83,9 +83,11 @@ class SnowflakeDemo:
     def __init__(self, config: SnowflakeConfig):
         self._state = _SnowflakeDemoState.NOT_STARTED
         self._config = config
-        self._ioloop: Optional[tornado.ioloop.IOLoop] = None
-        self._server: Optional[Server] = None
         self._sessions: Dict[SnowflakeSessionCtx, AppSession] = {}
+
+        # Create, but don't start, our server and ioloop
+        self._ioloop = tornado.ioloop.IOLoop(make_current=False)
+        self._server = Server(self._ioloop, self._main_script_path, self._command_line)
 
     def start(self) -> None:
         """Start the Streamlit server. Must be called once, before
@@ -130,10 +132,8 @@ class SnowflakeDemo:
             return
 
         def stop_handler() -> None:
-            assert self._server is not None
             self._server.stop(from_signal=False)
 
-        assert self._ioloop is not None
         self._ioloop.add_callback(stop_handler)
         self._state = _SnowflakeDemoState.STOPPED
 
@@ -146,15 +146,13 @@ class SnowflakeDemo:
 
         # This function is basically a copy-paste of bootstrap.run
 
-        command_line = f"streamlit run {self._config.script_path}"
         args: List[Any] = []
         flag_options: Dict[str, Any] = {}
-        main_script_path = self._config.script_path
 
-        bootstrap._fix_sys_path(main_script_path)
+        bootstrap._fix_sys_path(self._main_script_path)
         bootstrap._fix_matplotlib_crash()
         bootstrap._fix_tornado_crash()
-        bootstrap._fix_sys_argv(main_script_path, args)
+        bootstrap._fix_sys_argv(self._main_script_path, args)
         bootstrap._fix_pydeck_mapbox_api_warning()
         bootstrap._install_config_watchers(flag_options)
 
@@ -162,15 +160,12 @@ class SnowflakeDemo:
         # install our signal handlers. Streamlit must be stopped explicitly.
         # bootstrap._set_up_signal_handler()
 
-        # Create our ioloop, and make it the ioloop for this thread.
-        self._ioloop = tornado.ioloop.IOLoop(make_current=True)
-
         def on_server_started(server: Server) -> None:
             bootstrap._on_server_start(server)
             on_started.set()
 
-        # Create and start the server.
-        self._server = Server(self._ioloop, main_script_path, command_line)
+        # Start the server.
+        self._ioloop.make_current()
         self._server.start(on_server_started)
 
         # Start the ioloop. This function will not return until the
@@ -197,12 +192,10 @@ class SnowflakeDemo:
                 )
                 return
 
-            assert self._server is not None
             session = self._server.create_demo_app_session(ctx.queue.write_forward_msg)
             self._sessions[ctx] = session
             LOGGER.info("SnowflakeSessionCtx registered! (%s)", id(ctx))
 
-        assert self._ioloop is not None
         self._ioloop.spawn_callback(session_created_handler)
 
     def handle_backmsg(self, ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
@@ -221,7 +214,6 @@ class SnowflakeDemo:
 
             self._sessions[ctx].handle_backmsg(msg)
 
-        assert self._ioloop is not None
         self._ioloop.spawn_callback(backmsg_handler)
 
     def session_closed(self, ctx: SnowflakeSessionCtx) -> None:
@@ -242,8 +234,14 @@ class SnowflakeDemo:
                 return
 
             del self._sessions[ctx]
-            assert self._server is not None
             self._server._close_app_session(session.id)
 
-        assert self._ioloop is not None
         self._ioloop.spawn_callback(session_closed_handler)
+
+    @property
+    def _command_line(self):
+        return f"streamlit run {self._config.script_path}"
+
+    @property
+    def _main_script_path(self):
+        return self._config.script_path
