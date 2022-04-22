@@ -17,6 +17,7 @@ Snowflake/Streamlit hacky demo interface.
 
 (Please don't release this into production :))
 """
+
 import threading
 from typing import NamedTuple, List, Any, Dict, Optional
 
@@ -26,9 +27,12 @@ import tornado.ioloop
 import streamlit
 import streamlit.bootstrap as bootstrap
 from streamlit.app_session import AppSession
+from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import Server
+
+LOGGER = get_logger(__name__)
 
 
 class SnowflakeConfig(NamedTuple):
@@ -103,6 +107,8 @@ class SnowflakeDemo:
         # once that happens.
         streamlit_ready_event = threading.Event()
 
+        LOGGER.info("Starting Streamlit server...")
+
         # Start the Streamlit thread
         streamlit_thread = threading.Thread(
             target=lambda: self._run_streamlit_thread(streamlit_ready_event),
@@ -112,6 +118,8 @@ class SnowflakeDemo:
 
         # Wait until Streamlit has been started before returning.
         streamlit_ready_event.wait()
+
+        LOGGER.info("Streamlit server started!")
 
     def stop(self) -> None:
         """Stop the Streamlit server."""
@@ -160,26 +168,45 @@ class SnowflakeDemo:
         # server is shut down.
         self._ioloop.start()
 
+        LOGGER.info("Streamlit thread exited normally")
+
     def session_created(self, ctx: SnowflakeSessionCtx) -> None:
         """Called when a new session starts. Streamlit will create
         its own session machinery internally.
         """
-        assert self._ioloop is not None, "null ioloop!"
+        if self._ioloop is None:
+            LOGGER.error("null ioloop!")
+            return
+
+        LOGGER.info("Registering SnowflakeSessionCtx (%s)...", id(ctx))
 
         def session_created_handler() -> None:
-            assert self._server is not None
-            assert ctx not in self._sessions, "Session already registered!"
+            if self._server is None:
+                LOGGER.error("No server instance!")
+                return
+
+            if ctx in self._sessions:
+                LOGGER.warning("SnowflakeSessionCtx already registered! Not re-registering (%s)", id(ctx))
+                return
+
             session = self._server.create_demo_app_session(ctx.queue.write_forward_msg)
             self._sessions[ctx] = session
+            LOGGER.info("SnowflakeSessionCtx registered! (%s)", id(ctx))
 
         self._ioloop.spawn_callback(session_created_handler)
 
     def handle_backmsg(self, ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
         """Called when a BackMsg arrives for a given session."""
-        assert self._ioloop is not None, "null ioloop!"
+        if self._ioloop is None:
+            LOGGER.error("null ioloop!")
+            return
 
         def backmsg_handler() -> None:
-            assert ctx in self._sessions, "Session not registered!"
+            session = self._sessions.get(ctx, None)
+            if session is None:
+                LOGGER.warning("SnowflakeSessionCtx not registered! Ignoring BackMsg (%s)", id(ctx))
+                return
+
             self._sessions[ctx].handle_backmsg(msg)
 
         self._ioloop.spawn_callback(backmsg_handler)
@@ -188,13 +215,22 @@ class SnowflakeDemo:
         """Called when a session has closed.
         Streamlit will dispose of internal session-related resources here.
         """
-        assert self._ioloop is not None, "null ioloop!"
+        if self._ioloop is None:
+            LOGGER.error("null ioloop!")
+            return
 
         def session_closed_handler() -> None:
-            assert self._server is not None
-            assert ctx in self._sessions, "Session not registered!"
+            if self._server is None:
+                LOGGER.error("No server instance!")
+                return
 
-            session = self._sessions[ctx]
+            session = self._sessions.get(ctx, None)
+            if session is None:
+                LOGGER.warning(
+                    "SnowflakeSessionCtx not registered! Ignoring session_closed request (%s)",
+                    id(ctx))
+                return
+
             del self._sessions[ctx]
             self._server._close_app_session(session.id)
 

@@ -13,7 +13,7 @@ class ExampleMessageQueue(SnowflakeSessionMessageQueue):
     should write each ForwardMsg to the session's websocket.
     """
     def write_forward_msg(self, msg: ForwardMsg) -> None:
-        print(msg)
+        print(f"Got ForwardMsg: {msg.WhichOneof('type')}")
 
 
 def create_rerun_msg() -> BackMsg:
@@ -36,10 +36,10 @@ demo.session_created(ctx)
 # session)
 demo.handle_backmsg(ctx, create_rerun_msg())
 
+time.sleep(10)
+
 # Close the session
 demo.session_closed(ctx)
-
-time.sleep(10)
 
 print("stopping...")
 demo.stop()
