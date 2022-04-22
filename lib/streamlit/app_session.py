@@ -291,17 +291,24 @@ class AppSession:
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
         main_script_path = self._session_data.main_script_path
 
-        page_for_file = next(
+        def has_matching_script_path(page_info):
+            # When iterating through source_util.get_pages(main_script_path).items(),
+            # we get a tuple of form (page_name, page_info).
+            _, page_info = page_info
+            return page_info["script_path"] == filepath
+
+        changed_page_name, changed_page_info = next(
             filter(
-                lambda p: p["script_path"] == filepath,
-                source_util.get_pages(main_script_path),
+                has_matching_script_path,
+                source_util.get_pages(main_script_path).items(),
             ),
-            None,
+            (None, None),
         )
 
-        if page_for_file:
-            is_main_page = page_for_file["script_path"] == main_script_path
-            changed_page_name = page_for_file["page_name"]
+        # We technically only need to check one of the if statement clauses
+        # below, but checking both helps out the type checker.
+        if changed_page_name is not None and changed_page_info is not None:
+            is_main_page = changed_page_info["script_path"] == main_script_path
             current_page_name = self._client_state.page_name
 
             return (is_main_page and current_page_name == "") or (
@@ -676,8 +683,9 @@ def _populate_user_info_msg(msg: UserInfo) -> None:
 
 
 def _populate_app_pages(msg: NewSession, main_script_path: str) -> None:
-    for page in source_util.get_pages(main_script_path):
+    for page_name, page_info in source_util.get_pages(main_script_path).items():
         page_proto = msg.app_pages.add()
-        page_proto.script_path = page["script_path"]
-        page_proto.page_name = page["page_name"]
-        page_proto.icon = page["icon"]
+
+        page_proto.page_name = page_name
+        page_proto.script_path = page_info["script_path"]
+        page_proto.icon = page_info["icon"]

@@ -321,10 +321,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     @patch(
         "streamlit.watcher.local_sources_watcher.get_pages",
         MagicMock(
-            return_value=[
-                {"page_name": "streamlit_app", "script_path": "streamlit_app.py"},
-                {"page_name": "streamlit_app2", "script_path": "streamlit_app2.py"},
-            ]
+            return_value={
+                "streamlit_app": {"script_path": "streamlit_app.py"},
+                "streamlit_app2": {"script_path": "streamlit_app2.py"},
+            }
         ),
     )
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")

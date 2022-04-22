@@ -305,10 +305,10 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
     @patch(
         "streamlit.app_session.source_util.get_pages",
         MagicMock(
-            return_value=[
-                {"page_name": "page1", "icon": "", "script_path": "script1"},
-                {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
-            ]
+            return_value={
+                "page1": {"icon": "", "script_path": "script1"},
+                "page2": {"icon": "🎉", "script_path": "script2"},
+            }
         ),
     )
     @patch(
@@ -574,10 +574,10 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 @patch(
     "streamlit.app_session.source_util.get_pages",
     MagicMock(
-        return_value=[
-            {"page_name": "script_path", "script_path": "/fake/script_path.py"},
-            {"page_name": "page2", "script_path": "/fake/pages/page2.py"},
-        ]
+        return_value={
+            "script_path": {"script_path": "/fake/script_path.py"},
+            "page2": {"script_path": "/fake/pages/page2.py"},
+        }
     ),
 )
 class ShouldRerunOnFileChangeTest(unittest.TestCase):
