@@ -33,9 +33,10 @@ function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
     <Sidebar
       chevronDownshift={0}
       theme={lightTheme}
-      appPages={props.appPages || []}
-      onPageChange={props.onPageChange || jest.fn()}
-      currentPageName={props.currentPageName || ""}
+      appPages={[]}
+      onPageChange={jest.fn()}
+      currentPageName={""}
+      hasElements
       {...props}
     />
   )

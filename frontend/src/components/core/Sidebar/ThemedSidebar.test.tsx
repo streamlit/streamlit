@@ -28,6 +28,7 @@ function getProps(
     appPages: [],
     onPageChange: jest.fn(),
     currentPageName: "streamlit_app",
+    hasElements: true,
     ...props,
   }
 }

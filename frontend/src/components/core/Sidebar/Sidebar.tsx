@@ -39,7 +39,7 @@ export interface SidebarProps {
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
   theme: Theme
-  hasElements?: boolean
+  hasElements: boolean
   appPages: IAppPage[]
   onPageChange: (pageName: string) => void
   currentPageName: string
@@ -189,7 +189,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           </StyledSidebarCloseButton>
           <SidebarNav
             appPages={appPages}
-            hasSidebarElements={!!hasElements}
+            hasSidebarElements={hasElements}
             onPageChange={onPageChange}
             hideParentScrollbar={this.hideScrollbar}
             currentPageName={currentPageName}
