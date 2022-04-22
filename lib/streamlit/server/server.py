@@ -745,7 +745,6 @@ class _BrowserWebSocketHandler(WebSocketHandler):
             return {}
         return None
 
-    @tornado.gen.coroutine
     def on_message(self, payload: bytes) -> None:
         if not self._session:
             return
