@@ -759,8 +759,8 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self._tmpdir.cleanup()
 
-    def get_page_names(self):
-        return {"page1", "page2"}
+    def get_pages(self):
+        return {"page1": "page_info1", "page2": "page_info2"}
 
     def get_app(self):
         return tornado.web.Application(
@@ -771,7 +771,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     {
                         "path": self._tmpdir.name,
                         "default_filename": self._filename,
-                        "get_page_names": self.get_page_names,
+                        "get_pages": self.get_pages,
                     },
                 )
             ]
