@@ -357,9 +357,11 @@ class AppSession:
 
         """
 
-        assert (
-            threading.main_thread() == threading.current_thread()
-        ), "This function must only be called on the main thread"
+        # TSC: commented out for SnowflakeDemo (which runs the server
+        # on another thread.)
+        # assert (
+        #     threading.main_thread() == threading.current_thread()
+        # ), "This function must only be called on the main thread"
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.

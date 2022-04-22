@@ -15,28 +15,16 @@
 """
 Snowflake/Streamlit hacky demo interface.
 
-This module is *not thread safe*. Functions here should be called only
-on a single thread.
-
 (Please don't release this into production :))
 """
 import threading
-from typing import NamedTuple
+from typing import NamedTuple, List, Any, Dict, Optional
 
 import tornado
 import tornado.ioloop
 
 import streamlit
-from streamlit.bootstrap import (
-    _fix_sys_path,
-    _fix_matplotlib_crash,
-    _fix_tornado_crash,
-    _fix_sys_argv,
-    _fix_pydeck_mapbox_api_warning,
-    _install_config_watchers,
-    _set_up_signal_handler,
-    _on_server_start,
-)
+import streamlit.bootstrap as bootstrap
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import Server
@@ -70,72 +58,114 @@ class SnowflakeSessionCtx(NamedTuple):
     queue: SnowflakeSessionMessageQueue
 
 
-def start(config: SnowflakeConfig) -> None:
-    """Start the Streamlit server. Must be called once, before
-    any other functions are called.
+class SnowflakeDemo:
+    """The interface for Snowflake to create, and communicate with,
+    a Streamlit server.
+
+    Basic usage:
+    ```
+    config = SnowflakeConfig()    # populate a config
+    demo = SnowflakeDemo(config)  # create a demo instance
+
+    # Start the demo server. (This will spin up a new thread.)
+    demo.start()
+
+    # Add a session
+    ...
+    ```
     """
 
-    command_line = f"streamlit run {config.script_path}"
+    def __init__(self, config: SnowflakeConfig):
+        self._started = False
+        self._config = config
+        self._ioloop: Optional[tornado.ioloop.IOLoop] = None
 
-    # Set a global flag indicating that we're "within" streamlit.
-    streamlit._is_running_with_streamlit = True
+    def start(self) -> None:
+        """Start the Streamlit server. Must be called once, before
+        any other functions are called.
+        """
 
-    # Create an event. The Streamlit thread will set this event
-    # when the server is initialized, and we'll return from this function
-    # once that happens.
-    streamlit_ready_event = threading.Event()
+        assert not self._started, "Start may not be called multiple times"
+        self._started = True
 
-    def on_streamlit_started(server: Server) -> None:
-        _on_server_start(server)
-        streamlit_ready_event.set()
+        # Set a global flag indicating that we're "within" streamlit.
+        streamlit._is_running_with_streamlit = True
 
-    def run_streamlit() -> None:
-        _fix_sys_path(main_script_path)
-        _fix_matplotlib_crash()
-        _fix_tornado_crash()
-        _fix_sys_argv(main_script_path, args)
-        _fix_pydeck_mapbox_api_warning()
-        _install_config_watchers(flag_options)
+        # Create an event. The Streamlit thread will set this event
+        # when the server is initialized, and we'll return from this function
+        # once that happens.
+        streamlit_ready_event = threading.Event()
 
-        # Install a signal handler that will shut down the ioloop
-        # and close all our threads
-        _set_up_signal_handler()
+        # Start the Streamlit thread
+        streamlit_thread = threading.Thread(
+            target=lambda: self._run_streamlit_thread(streamlit_ready_event),
+            name="StreamlitMain",
+        )
+        streamlit_thread.start()
 
-        ioloop = tornado.ioloop.IOLoop.current()
+        # Wait until Streamlit has been started before returning.
+        streamlit_ready_event.wait()
+
+    def stop(self) -> None:
+        """Stop the Streamlit server."""
+        assert self._ioloop is not None, "null ioloop!"
+        Server.get_current().stop(from_signal=False)
+
+    def _run_streamlit_thread(self, on_started: threading.Event) -> None:
+        """The Streamlit thread entry point. This function won't exit
+        until Streamlit is shut down.
+
+        `on_started` will be set when the Server is up and running.
+        """
+
+        # This function is basically a copy-paste of bootstrap.run
+
+        command_line = f"streamlit run {self._config.script_path}"
+        args: List[Any] = []
+        flag_options: Dict[str, Any] = {}
+        main_script_path = self._config.script_path
+
+        bootstrap._fix_sys_path(main_script_path)
+        bootstrap._fix_matplotlib_crash()
+        bootstrap._fix_tornado_crash()
+        bootstrap._fix_sys_argv(main_script_path, args)
+        bootstrap._fix_pydeck_mapbox_api_warning()
+        bootstrap._install_config_watchers(flag_options)
+
+        # Because we're running Streamlit from another thread, we don't
+        # install our signal handlers. Streamlit must be stopped explicitly.
+        # bootstrap._set_up_signal_handler()
+
+        # Create our ioloop, and make it the ioloop for this thread.
+        self._ioloop = tornado.ioloop.IOLoop(make_current=True)
+
+        def on_server_started(server: Server) -> None:
+            bootstrap._on_server_start(server)
+            on_started.set()
 
         # Create and start the server.
-        server = Server(ioloop, main_script_path, command_line)
-        server.start(_on_server_start)
+        server = Server(self._ioloop, main_script_path, command_line)
+        server.start(on_server_started)
 
         # Start the ioloop. This function will not return until the
         # server is shut down.
-        ioloop.start()
+        self._ioloop.start()
 
-    # Start the Streamlit thread
-    streamlit_thread = threading.Thread(target=run_streamlit, name="StreamlitMain")
-    streamlit_thread.start()
+    def session_created(self, ctx: SnowflakeSessionCtx) -> None:
+        """Called when a new session starts. Streamlit will create
+        its own session machinery internally.
+        """
+        assert self._ioloop is not None, "null ioloop!"
+        self._ioloop.spawn_callback(lambda: print("session_created"))
 
-    # Wait until Streamlit has been started before returning.
-    streamlit_ready_event.wait()
+    def handle_backmsg(self, ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
+        """Called when a BackMsg arrives for a given session."""
+        assert self._ioloop is not None, "null ioloop!"
+        self._ioloop.spawn_callback(lambda: print("handle_backmsg"))
 
-
-def session_created(ctx: SnowflakeSessionCtx) -> None:
-    """Called when a new session starts. Streamlit will create
-    its own session machinery internally.
-    """
-    pass
-
-
-def handle_backmsg(ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
-    """Called when a BackMsg arrives for a given session."""
-    pass
-
-
-def session_closed(ctx: SnowflakeSessionCtx) -> None:
-    """Called when a session has closed.
-
-    Streamlit will dispose of internal session-related resources here.
-
-    Must be called on the same thread as `start()`.
-    """
-    pass
+    def session_closed(self, ctx: SnowflakeSessionCtx) -> None:
+        """Called when a session has closed.
+        Streamlit will dispose of internal session-related resources here.
+        """
+        assert self._ioloop is not None, "null ioloop!"
+        self._ioloop.spawn_callback(lambda: print("session_closed"))
