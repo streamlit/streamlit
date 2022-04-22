@@ -26,6 +26,7 @@ import tornado.ioloop
 
 import streamlit
 import streamlit.bootstrap as bootstrap
+from streamlit import config
 from streamlit.app_session import AppSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -98,6 +99,10 @@ class SnowflakeDemo:
 
         assert not self._started, "Start may not be called multiple times"
         self._started = True
+
+        # Force ForwardMsg caching off (we need the cache endpoint to exist
+        # for this to work)
+        config.set_option("global.maxCachedMessageAge", -1)
 
         # Set a global flag indicating that we're "within" streamlit.
         streamlit._is_running_with_streamlit = True
@@ -186,7 +191,10 @@ class SnowflakeDemo:
                 return
 
             if ctx in self._sessions:
-                LOGGER.warning("SnowflakeSessionCtx already registered! Not re-registering (%s)", id(ctx))
+                LOGGER.warning(
+                    "SnowflakeSessionCtx already registered! Not re-registering (%s)",
+                    id(ctx),
+                )
                 return
 
             session = self._server.create_demo_app_session(ctx.queue.write_forward_msg)
@@ -204,7 +212,9 @@ class SnowflakeDemo:
         def backmsg_handler() -> None:
             session = self._sessions.get(ctx, None)
             if session is None:
-                LOGGER.warning("SnowflakeSessionCtx not registered! Ignoring BackMsg (%s)", id(ctx))
+                LOGGER.warning(
+                    "SnowflakeSessionCtx not registered! Ignoring BackMsg (%s)", id(ctx)
+                )
                 return
 
             self._sessions[ctx].handle_backmsg(msg)
@@ -221,14 +231,15 @@ class SnowflakeDemo:
 
         def session_closed_handler() -> None:
             if self._server is None:
-                LOGGER.error("No server instance!")
+                LOGGER.error("session_closed: No server instance!")
                 return
 
             session = self._sessions.get(ctx, None)
             if session is None:
                 LOGGER.warning(
                     "SnowflakeSessionCtx not registered! Ignoring session_closed request (%s)",
-                    id(ctx))
+                    id(ctx),
+                )
                 return
 
             del self._sessions[ctx]
