@@ -26,6 +26,7 @@ import {
   NewSession,
   PageConfig,
   PageInfo,
+  PageNotFound,
 } from "src/autogen/proto"
 import { S4ACommunicationHOC } from "src/hocs/withS4ACommunication/withS4ACommunication"
 import {
@@ -784,7 +785,7 @@ describe("App.handlePageInfoChanged", () => {
   })
 })
 
-const mockGetBaseUriParts = basePath => () => ({
+const mockGetBaseUriParts = (basePath?: string) => () => ({
   basePath: basePath || "",
 })
 
@@ -805,11 +806,14 @@ describe("App.sendRerunBackMsg", () => {
   it("figures out pageName when sendRerunBackMsg isn't given one (case 1: main page)", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
+    // @ts-ignore
     instance.sendBackMsg = jest.fn()
+    // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
     instance.sendRerunBackMsg()
 
+    // @ts-ignore
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "", queryString: "" },
     })
@@ -820,7 +824,9 @@ describe("App.sendRerunBackMsg", () => {
   it("figures out pageName when sendRerunBackMsg isn't given one (case 2: non-main page)", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
+    // @ts-ignore
     instance.sendBackMsg = jest.fn()
+    // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
     // Set the value of document.location.pathname to '/page1'
@@ -828,6 +834,7 @@ describe("App.sendRerunBackMsg", () => {
 
     instance.sendRerunBackMsg()
 
+    // @ts-ignore
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
@@ -837,7 +844,9 @@ describe("App.sendRerunBackMsg", () => {
   it("figures out pageName when sendRerunBackMsg isn't given one and a baseUrlPath is set", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
+    // @ts-ignore
     instance.sendBackMsg = jest.fn()
+    // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
     instance.clearAppState = jest.fn()
 
@@ -846,6 +855,7 @@ describe("App.sendRerunBackMsg", () => {
 
     instance.sendRerunBackMsg()
 
+    // @ts-ignore
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
@@ -855,13 +865,16 @@ describe("App.sendRerunBackMsg", () => {
   it("switches pages correctly when sendRerunbackMsg is given a pageName", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
+    // @ts-ignore
     instance.sendBackMsg = jest.fn()
+    // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
     instance.clearAppState = jest.fn()
 
     instance.sendRerunBackMsg(undefined, "page1")
 
     expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/page1")
+    // @ts-ignore
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
@@ -872,7 +885,9 @@ describe("App.sendRerunBackMsg", () => {
   it("also switches pages correctly when a baseUrlPath is set", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
+    // @ts-ignore
     instance.sendBackMsg = jest.fn()
+    // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
 
     instance.sendRerunBackMsg(undefined, "page1")
@@ -884,6 +899,7 @@ describe("App.sendRerunBackMsg", () => {
       "",
       "/foo/bar/page1"
     )
+    // @ts-ignore
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
@@ -893,18 +909,19 @@ describe("App.sendRerunBackMsg", () => {
     const wrapper = shallow(
       <App
         {...getProps({
-          s4aCommunication: {
-            connect: jest.fn(),
-            sendMessage: jest.fn(),
-            currentState: {
+          s4aCommunication: getS4ACommunicationProp({
+            currentState: getS4ACommunicationState({
               queryParams: "?foo=bar",
-            },
-          },
+            }),
+            sendMessage: jest.fn(),
+          }),
         })}
       />
     )
     const instance = wrapper.instance() as App
+    // @ts-ignore
     instance.sendBackMsg = jest.fn()
+    // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
     instance.sendRerunBackMsg(undefined, "page1")
@@ -914,6 +931,7 @@ describe("App.sendRerunBackMsg", () => {
       "",
       "/page1?foo=bar"
     )
+    // @ts-ignore
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "foo=bar" },
     })
@@ -924,10 +942,13 @@ describe("App.handlePageNotFound", () => {
   it("displays an error modal", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
+    // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
     instance.showError = jest.fn()
 
-    instance.handlePageNotFound({ pageName: "nonexistentPage" })
+    instance.handlePageNotFound(
+      new PageNotFound({ pageName: "nonexistentPage" })
+    )
 
     expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
     expect(instance.showError).toHaveBeenCalledWith(

@@ -245,7 +245,7 @@ describe("getPossibleBaseUris", () => {
     it(`handles ${description}`, () => {
       window.location.pathname = pathname
 
-      expect(getPossibleBaseUris(pathname).map(b => b.basePath)).toEqual(
+      expect(getPossibleBaseUris().map(b => b.basePath)).toEqual(
         expectedBasePaths
       )
     })

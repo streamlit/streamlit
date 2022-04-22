@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { AppPage } from "src/autogen/proto"
+import { IAppPage } from "src/autogen/proto"
 
 import VerticalBlock from "src/components/core/Block"
 import { ThemedSidebar } from "src/components/core/Sidebar"
@@ -56,7 +56,7 @@ export interface AppViewProps {
 
   formsData: FormsData
 
-  appPages: AppPage[]
+  appPages: IAppPage[]
 
   onPageChange: (pageName: string) => void
 
