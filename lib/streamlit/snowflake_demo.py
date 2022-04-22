@@ -19,6 +19,7 @@ Snowflake/Streamlit hacky demo interface.
 """
 
 import threading
+from enum import Enum
 from typing import NamedTuple, List, Any, Dict, Optional
 
 import tornado
@@ -68,25 +69,19 @@ class SnowflakeSessionCtx(NamedTuple):
     queue: SnowflakeSessionMessageQueue
 
 
+class _SnowflakeDemoState(Enum):
+    NOT_STARTED = "NOT_STARTED"
+    RUNNING = "RUNNING"
+    STOPPED = "STOPPED"
+
+
 class SnowflakeDemo:
     """The interface for Snowflake to create, and communicate with,
     a Streamlit server.
-
-    Basic usage:
-    ```
-    config = SnowflakeConfig()    # populate a config
-    demo = SnowflakeDemo(config)  # create a demo instance
-
-    # Start the demo server. (This will spin up a new thread.)
-    demo.start()
-
-    # Add a session
-    ...
-    ```
     """
 
     def __init__(self, config: SnowflakeConfig):
-        self._started = False
+        self._state = _SnowflakeDemoState.NOT_STARTED
         self._config = config
         self._ioloop: Optional[tornado.ioloop.IOLoop] = None
         self._server: Optional[Server] = None
@@ -97,8 +92,9 @@ class SnowflakeDemo:
         any other functions are called.
         """
 
-        assert not self._started, "Start may not be called multiple times"
-        self._started = True
+        if self._state is not _SnowflakeDemoState.NOT_STARTED:
+            LOGGER.warning("`start()` may not be called multiple times")
+            return
 
         # Force ForwardMsg caching off (we need the cache endpoint to exist
         # for this to work)
@@ -124,14 +120,22 @@ class SnowflakeDemo:
         # Wait until Streamlit has been started before returning.
         streamlit_ready_event.wait()
 
+        self._state = _SnowflakeDemoState.RUNNING
         LOGGER.info("Streamlit server started!")
 
     def stop(self) -> None:
         """Stop the Streamlit server."""
-        assert self._server is not None, "null Server!"
-        self._server.stop(from_signal=False)
-        self._server = None
-        self._ioloop = None
+        if self._state is not _SnowflakeDemoState.RUNNING:
+            LOGGER.warning("Can't stop (bad state: %s)", self._state)
+            return
+
+        def stop_handler() -> None:
+            assert self._server is not None
+            self._server.stop(from_signal=False)
+
+        assert self._ioloop is not None
+        self._ioloop.add_callback(stop_handler)
+        self._state = _SnowflakeDemoState.STOPPED
 
     def _run_streamlit_thread(self, on_started: threading.Event) -> None:
         """The Streamlit thread entry point. This function won't exit
@@ -179,17 +183,13 @@ class SnowflakeDemo:
         """Called when a new session starts. Streamlit will create
         its own session machinery internally.
         """
-        if self._ioloop is None:
-            LOGGER.error("null ioloop!")
+        if self._state is not _SnowflakeDemoState.RUNNING:
+            LOGGER.warning("Can't register session (bad state: %s)", self._state)
             return
 
         LOGGER.info("Registering SnowflakeSessionCtx (%s)...", id(ctx))
 
         def session_created_handler() -> None:
-            if self._server is None:
-                LOGGER.error("No server instance!")
-                return
-
             if ctx in self._sessions:
                 LOGGER.warning(
                     "SnowflakeSessionCtx already registered! Not re-registering (%s)",
@@ -197,16 +197,18 @@ class SnowflakeDemo:
                 )
                 return
 
+            assert self._server is not None
             session = self._server.create_demo_app_session(ctx.queue.write_forward_msg)
             self._sessions[ctx] = session
             LOGGER.info("SnowflakeSessionCtx registered! (%s)", id(ctx))
 
+        assert self._ioloop is not None
         self._ioloop.spawn_callback(session_created_handler)
 
     def handle_backmsg(self, ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
         """Called when a BackMsg arrives for a given session."""
-        if self._ioloop is None:
-            LOGGER.error("null ioloop!")
+        if self._state is not _SnowflakeDemoState.RUNNING:
+            LOGGER.warning("Can't handle BackMsg (bad state: %s)", self._state)
             return
 
         def backmsg_handler() -> None:
@@ -219,21 +221,18 @@ class SnowflakeDemo:
 
             self._sessions[ctx].handle_backmsg(msg)
 
+        assert self._ioloop is not None
         self._ioloop.spawn_callback(backmsg_handler)
 
     def session_closed(self, ctx: SnowflakeSessionCtx) -> None:
         """Called when a session has closed.
         Streamlit will dispose of internal session-related resources here.
         """
-        if self._ioloop is None:
-            LOGGER.error("null ioloop!")
+        if self._state is not _SnowflakeDemoState.RUNNING:
+            LOGGER.warning("Can't handle BackMsg (bad state: %s)", self._state)
             return
 
         def session_closed_handler() -> None:
-            if self._server is None:
-                LOGGER.error("session_closed: No server instance!")
-                return
-
             session = self._sessions.get(ctx, None)
             if session is None:
                 LOGGER.warning(
@@ -243,6 +242,8 @@ class SnowflakeDemo:
                 return
 
             del self._sessions[ctx]
+            assert self._server is not None
             self._server._close_app_session(session.id)
 
+        assert self._ioloop is not None
         self._ioloop.spawn_callback(session_closed_handler)
