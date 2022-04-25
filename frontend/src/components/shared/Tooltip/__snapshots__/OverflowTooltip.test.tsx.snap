@@ -3,9 +3,12 @@
 exports[`Tooltip component should render and match snapshots when ellipsized 1`] = `
 <Tooltip
   content="the content"
+  placement="auto"
 >
   <StyledWrapper>
-    <StyledEllipsizedDiv>
+    <StyledEllipsizedDiv
+      style={Object {}}
+    >
       the child
     </StyledEllipsizedDiv>
   </StyledWrapper>
@@ -15,9 +18,12 @@ exports[`Tooltip component should render and match snapshots when ellipsized 1`]
 exports[`Tooltip component should render and match snapshots when it fits onscreen 1`] = `
 <Tooltip
   content=""
+  placement="auto"
 >
   <StyledWrapper>
-    <StyledEllipsizedDiv>
+    <StyledEllipsizedDiv
+      style={Object {}}
+    >
       the child
     </StyledEllipsizedDiv>
   </StyledWrapper>

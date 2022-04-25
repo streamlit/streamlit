@@ -49,6 +49,6 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
     background: transparentize(theme.colors.darkenedBgMix60, 0.8),
   },
   "*": {
-    fontSize: theme.fontSizes.sm,
+    fontSize: `${theme.fontSizes.sm} !important`,
   },
 }))

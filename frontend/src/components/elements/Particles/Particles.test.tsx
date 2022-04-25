@@ -15,19 +15,22 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { FC } from "react"
 import { mount } from "src/lib/test_util"
 
-import Balloons, {
-  Props,
-  NUM_BALLOONS,
-} from "src/components/elements/Balloons"
+import Particles, { ParticleProps, Props } from "./Particles"
+
+const DummyParticle: FC<ParticleProps> = () => <span />
 
 const getProps = (): Props => ({
+  className: "stHidden",
+  numParticles: 10,
+  numParticleTypes: 5,
+  ParticleComponent: DummyParticle,
   scriptRunId: "51522269",
 })
 
-describe("Balloons element", () => {
+describe("Particles element", () => {
   jest.useFakeTimers()
 
   beforeEach(() => {
@@ -37,19 +40,15 @@ describe("Balloons element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Balloons {...props} />)
+    const wrapper = mount(<Particles {...props} />)
 
     expect(wrapper).toBeDefined()
-    expect(wrapper.find("StyledBalloon").length).toBe(NUM_BALLOONS)
-
-    wrapper.find("StyledBalloon").forEach(node => {
-      expect(node.prop("src")).toBeTruthy()
-    })
+    expect(wrapper.find(DummyParticle).length).toBe(10)
   })
 
   it("renders as hidden element", () => {
     const props = getProps()
-    const wrapper = mount(<Balloons {...props} />)
+    const wrapper = mount(<Particles {...props} />)
 
     expect(wrapper.find("div").prop("className")).toContain("stHidden")
   })

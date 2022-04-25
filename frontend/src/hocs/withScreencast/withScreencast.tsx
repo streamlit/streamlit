@@ -175,7 +175,7 @@ function withScreencast(
       })
     }
 
-    public render = (): ReactNode => {
+    public render(): ReactNode {
       const {
         outputBlob,
         fileName,

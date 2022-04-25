@@ -84,7 +84,7 @@ from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.server.server_util import get_max_message_size_bytes
-from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from streamlit.watcher import LocalSourcesWatcher
 
 
 LOGGER = get_logger(__name__)
@@ -708,9 +708,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 class _BrowserWebSocketHandler(WebSocketHandler):
     """Handles a WebSocket connection from the browser"""
 
-    def initialize(self, server):
+    def initialize(self, server: Server) -> None:
         self._server = server
-        self._session = None
+        self._session: Optional[AppSession] = None
         # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
         # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
         # cookie as a side effect.

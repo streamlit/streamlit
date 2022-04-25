@@ -161,7 +161,7 @@ class TextInput extends React.PureComponent<Props, State> {
       : "text"
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { dirty, value } = this.state
     const { element, width, disabled, widgetMgr } = this.props
     const { placeholder } = element

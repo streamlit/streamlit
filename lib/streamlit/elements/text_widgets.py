@@ -146,7 +146,6 @@ class TextWidgetsMixin:
         text_input_proto.label = label
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
-        text_input_proto.disabled = disabled
 
         if help is not None:
             text_input_proto.help = dedent(help)
@@ -188,6 +187,9 @@ class TextWidgetsMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        text_input_proto.disabled = disabled
         if set_frontend_value:
             text_input_proto.value = current_value
             text_input_proto.set_value = True
@@ -301,7 +303,6 @@ class TextWidgetsMixin:
         text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
-        text_area_proto.disabled = disabled
 
         if help is not None:
             text_area_proto.help = dedent(help)
@@ -330,6 +331,9 @@ class TextWidgetsMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        text_area_proto.disabled = disabled
         if set_frontend_value:
             text_area_proto.value = current_value
             text_area_proto.set_value = True

@@ -47,7 +47,7 @@ from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.watcher import event_based_file_watcher
+from streamlit.watcher import event_based_path_watcher
 from tests.server_test_case import ServerTestCase
 
 from streamlit.logger import get_logger
@@ -648,9 +648,9 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         self._server.stop()
         Server._singleton = None
 
-        if event_based_file_watcher._MultiFileWatcher._singleton is not None:
-            event_based_file_watcher._MultiFileWatcher.get_singleton().close()
-            event_based_file_watcher._MultiFileWatcher._singleton = None
+        if event_based_path_watcher._MultiPathWatcher._singleton is not None:
+            event_based_path_watcher._MultiPathWatcher.get_singleton().close()
+            event_based_path_watcher._MultiPathWatcher._singleton = None
 
         os.environ["HOME"] = self._old_home
         os.remove(self._path)
@@ -690,8 +690,8 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
             tmp.write(script)
 
         ok, msg = await self._server.does_script_run_without_error()
-        event_based_file_watcher._MultiFileWatcher.get_singleton().close()
-        event_based_file_watcher._MultiFileWatcher._singleton = None
+        event_based_path_watcher._MultiPathWatcher.get_singleton().close()
+        event_based_path_watcher._MultiPathWatcher._singleton = None
         self.assertEqual(expected_loads, ok)
         self.assertEqual(expected_msg, msg)
 

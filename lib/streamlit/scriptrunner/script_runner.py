@@ -35,10 +35,15 @@ from streamlit.session_data import SessionData
 from streamlit.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    SafeSessionState,
 )
 from streamlit.uploaded_file_manager import UploadedFileManager
-from .script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
+from .script_requests import (
+    ScriptRequests,
+    RerunData,
+    ScriptRequestType,
+)
 
 LOGGER = get_logger(__name__)
 
@@ -90,9 +95,9 @@ class ScriptRunner:
         session_id: str,
         session_data: SessionData,
         client_state: ClientState,
-        request_queue: ScriptRequestQueue,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
+        initial_rerun_data: RerunData,
     ):
         """Initialize the ScriptRunner.
 
@@ -109,23 +114,22 @@ class ScriptRunner:
         client_state : ClientState
             The current state from the client (widgets and query params).
 
-        request_queue : ScriptRequestQueue
-            The queue that the AppSession is publishing ScriptRequests to.
-            ScriptRunner will continue running until the queue is empty,
-            and then shut down.
-
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
 
         """
         self._session_id = session_id
         self._session_data = session_data
-        self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
 
+        # Initialize SessionState with the latest widget states
+        session_state.set_widgets_from_proto(client_state.widget_states)
+
         self._client_state = client_state
-        self._session_state: SessionState = session_state
-        self._session_state.set_widgets_from_proto(client_state.widget_states)
+        self._session_state = SafeSessionState(session_state)
+
+        self._requests = ScriptRequests()
+        self._requests.request_rerun(initial_rerun_data)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -155,9 +159,6 @@ class ScriptRunner:
             """
         )
 
-        # Set to true when we process a SHUTDOWN request
-        self._shutdown_requested = False
-
         # Set to true while we're executing. Used by
         # _maybe_handle_execution_control_request.
         self._execing = False
@@ -167,6 +168,42 @@ class ScriptRunner:
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+    def request_stop(self) -> None:
+        """Request that the ScriptRunner stop running its script and
+        shut down. The ScriptRunner will handle this request when it reaches
+        an interrupt point.
+
+        Safe to call from any thread.
+        """
+        self._requests.request_stop()
+
+        # "Disconnect" our SafeSessionState wrapper from its underlying
+        # SessionState instance. This will cause all further session_state
+        # operations in this ScriptRunner to no-op.
+        #
+        # After `request_stop` is called, our script will continue executing
+        # until it reaches a yield point. AppSession may also *immediately*
+        # spin up a new ScriptRunner after this call, which means we'll
+        # potentially have two active ScriptRunners for a brief period while
+        # this one is shutting down. Disconnecting our SessionState ensures
+        # that this ScriptRunner's thread won't introduce SessionState-
+        # related race conditions during this script overlap.
+        self._session_state.disconnect()
+
+    def request_rerun(self, rerun_data: RerunData) -> bool:
+        """Request that the ScriptRunner interrupt its currently-running
+        script and restart it.
+
+        If the ScriptRunner has been stopped, this request can't be honored:
+        return False.
+
+        Otherwise, record the request and return True. The ScriptRunner will
+        handle the rerun request as soon as it reaches an interrupt point.
+
+        Safe to call from any thread.
+        """
+        return self._requests.request_rerun(rerun_data)
 
     def start(self) -> None:
         """Start a new thread to process the ScriptEventQueue.
@@ -232,17 +269,16 @@ class ScriptRunner:
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
-        while not self._shutdown_requested and self._request_queue.has_request:
-            request, data = self._request_queue.dequeue()
-            if request == ScriptRequest.STOP:
-                LOGGER.debug("Ignoring STOP request while not running")
-            elif request == ScriptRequest.SHUTDOWN:
-                LOGGER.debug("Shutting down")
-                self._shutdown_requested = True
-            elif request == ScriptRequest.RERUN:
-                self._run_script(data)
-            else:
-                raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
+        request = self._requests.on_scriptrunner_ready()
+        while request.type == ScriptRequestType.RERUN:
+            # When the script thread starts, we'll have a pending rerun
+            # request that we'll handle immediately. When the script finishes,
+            # it's possible that another request has come in that we need to
+            # handle, which is why we call _run_script in a loop.
+            self._run_script(request.rerun_data)
+            request = self._requests.on_scriptrunner_ready()
+
+        assert request.type == ScriptRequestType.STOP
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
@@ -250,7 +286,7 @@ class ScriptRunner:
         # created.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
-        widget_states = self._session_state.as_widget_states()
+        widget_states = self._session_state.get_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
@@ -282,6 +318,14 @@ class ScriptRunner:
         )
 
     def _maybe_handle_execution_control_request(self) -> None:
+        """Check our current ScriptRequestState to see if we have a
+        pending STOP or RERUN request.
+
+        This function is called every time the app script enqueues a
+        ForwardMsg, which means that most `st.foo` commands - which generally
+        involve sending a ForwardMsg to the frontend - act as implicit
+        yield points in the script's execution.
+        """
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
             # script execution thread. However, it's possible for deltas to
@@ -296,21 +340,16 @@ class ScriptRunner:
             # enqueues a new ForwardEvent
             return
 
-        # Pop the next request from our queue.
-        request, data = self._request_queue.dequeue()
+        request = self._requests.on_scriptrunner_yield()
         if request is None:
+            # No RERUN or STOP request.
             return
 
-        LOGGER.debug("Received ScriptRequest: %s", request)
-        if request == ScriptRequest.STOP:
-            raise StopException()
-        elif request == ScriptRequest.SHUTDOWN:
-            self._shutdown_requested = True
-            raise StopException()
-        elif request == ScriptRequest.RERUN:
-            raise RerunException(data)
-        else:
-            raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
+        if request.type == ScriptRequestType.RERUN:
+            raise RerunException(request.rerun_data)
+
+        assert request.type == ScriptRequestType.STOP
+        raise StopException()
 
     def _install_tracer(self) -> None:
         """Install function that runs before each line of the script."""
@@ -406,7 +445,7 @@ class ScriptRunner:
 
         # This will be set to a RerunData instance if our execution
         # is interrupted by a RerunException.
-        rerun_with_data = None
+        rerun_exception_data: Optional[RerunData] = None
 
         try:
             # Create fake module. This gives us a name global namespace to
@@ -430,20 +469,13 @@ class ScriptRunner:
             with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
                 if rerun_data.widget_states is not None:
-                    # Update the WidgetManager with the new widget_states.
-                    # The old states, used to skip callbacks if values
-                    # haven't changed, are also preserved in the
-                    # WidgetManager.
-                    self._session_state.compact_state()
-                    self._session_state.set_widgets_from_proto(rerun_data.widget_states)
-
-                    self._session_state.call_callbacks()
+                    self._session_state.on_script_will_rerun(rerun_data.widget_states)
 
                 ctx.on_script_start()
                 exec(code, module.__dict__)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
-            rerun_with_data = e.rerun_data
+            rerun_exception_data = e.rerun_data
 
         except StopException:
             pass
@@ -459,15 +491,16 @@ class ScriptRunner:
         # script without meaning to.
         _log_if_error(_clean_problem_modules)
 
-        if rerun_with_data is not None:
-            self._run_script(rerun_with_data)
+        if rerun_exception_data is not None:
+            self._run_script(rerun_exception_data)
 
     def _on_script_finished(self, ctx: ScriptRunContext) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
-        self._session_state.reset_triggers()
-        self._session_state.cull_nonexistent(ctx.widget_ids_this_run)
+        # Tell session_state to update itself in response
+        self._session_state.on_script_finished(ctx.widget_ids_this_run)
+
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
