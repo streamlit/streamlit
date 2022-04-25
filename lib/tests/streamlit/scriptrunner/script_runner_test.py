@@ -74,6 +74,7 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
+@patch("streamlit.source_util._cached_pages", new=None)
 class ScriptRunnerTest(AsyncTestCase):
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
