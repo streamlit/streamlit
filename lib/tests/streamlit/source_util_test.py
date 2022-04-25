@@ -31,6 +31,8 @@ class PageHelperFunctionTests(unittest.TestCase):
             ("/foo/03 bar.py", (3.0, "bar")),
             ("/foo/04 bar baz.py", (4.0, "bar baz")),
             ("/foo/05 -_- bar.py", (5.0, "bar")),
+            # Test that sorting is not case-sensitive.
+            ("/foo/06_BAR.py", (6.0, "bar")),
             # Test that the first sort key is float("inf") if there is no page
             # number.
             ("/foo/bar.py", (float("inf"), "bar")),
