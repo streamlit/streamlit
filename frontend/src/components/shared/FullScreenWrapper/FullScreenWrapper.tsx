@@ -19,7 +19,7 @@ import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import Icon from "src/components/shared/Icon"
-import PageLayoutContext from "src/components/core/PageLayoutContext"
+import AppContext from "src/components/core/AppContext"
 import { Theme } from "src/theme"
 import {
   StyledFullScreenFrame,
@@ -56,7 +56,7 @@ interface State {
  * to fixed and cover all screen, updating wrapped element height and width
  */
 class FullScreenWrapper extends PureComponent<Props, State> {
-  static contextType = PageLayoutContext
+  static contextType = AppContext
 
   static isFullScreen = false
 

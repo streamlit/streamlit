@@ -16,6 +16,7 @@
  */
 
 import axios from "axios"
+import { ensureError } from "src/lib/ErrorHandling"
 import { SessionInfo } from "src/lib/SessionInfo"
 
 export class MapboxTokenNotProvidedError extends Error {}
@@ -27,9 +28,9 @@ export class MapboxTokenFetchingError extends Error {}
 export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
 
 export class MapboxToken {
-  private static token?: string
+  static token?: string
 
-  private static commandLine?: string
+  static commandLine?: string
 
   private static isRunningLocal = (): boolean => {
     const { hostname } = window.location
@@ -84,7 +85,8 @@ export class MapboxToken {
 
       return token
     } catch (e) {
-      throw new MapboxTokenFetchingError(`${e.message} (${url})`)
+      const error = ensureError(e)
+      throw new MapboxTokenFetchingError(`${error.message} (${url})`)
     }
   }
 }

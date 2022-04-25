@@ -29,7 +29,7 @@ interface StyledIconProps {
 }
 
 export const StyledIcon = styled("span", {
-  shouldForwardProp: prop =>
+  shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size", "as"].includes(prop),
 })<StyledIconProps>(({ color, size, margin, padding, theme }) => {
   return {

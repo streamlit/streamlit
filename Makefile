@@ -264,6 +264,11 @@ else
 			./src
 endif #CIRCLECI
 
+.PHONY: tstypecheck
+# Type check the JS/TS code
+tstypecheck:
+	yarn --cwd "frontend" typecheck
+
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
 jsformat:

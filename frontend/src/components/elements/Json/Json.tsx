@@ -24,6 +24,7 @@ import ErrorElement from "src/components/shared/ErrorElement"
 
 import { Json as JsonProto } from "src/autogen/proto"
 import { Theme } from "src/theme"
+import { ensureError } from "src/lib/ErrorHandling"
 
 export interface JsonProps {
   width: number
@@ -41,14 +42,15 @@ export default function Json({ width, element }: JsonProps): ReactElement {
   try {
     bodyObject = JSON.parse(element.body)
   } catch (e) {
+    const error = ensureError(e)
     try {
       bodyObject = JSON5.parse(element.body)
     } catch (json5Error) {
       // If content fails to parse as Json, rebuild the error message
       // to show where the problem occurred.
-      const pos = parseInt(e.message.replace(/[^0-9]/g, ""), 10)
-      e.message += `\n${element.body.substr(0, pos + 1)} ← here`
-      return <ErrorElement name={"Json Parse Error"} message={e.message} />
+      const pos = parseInt(error.message.replace(/[^0-9]/g, ""), 10)
+      error.message += `\n${element.body.substr(0, pos + 1)} ← here`
+      return <ErrorElement name={"Json Parse Error"} message={error.message} />
     }
   }
 
@@ -61,6 +63,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
     <div data-testid="stJson" style={styleProp}>
       <ReactJson
         src={bodyObject}
+        collapsed={!element.expanded}
         displayDataTypes={false}
         displayObjectSize={false}
         name={false}

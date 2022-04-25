@@ -16,7 +16,7 @@ import sys
 import threading
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List, Any
+from typing import TYPE_CHECKING, Callable, Optional, List
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -36,12 +36,10 @@ from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.session_data import SessionData
 from streamlit.scriptrunner import (
     RerunData,
-    ScriptRequest,
-    ScriptRequestQueue,
     ScriptRunner,
     ScriptRunnerEvent,
 )
-from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from streamlit.watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
@@ -126,10 +124,6 @@ class AppSession:
 
         self._run_on_save = config.get_option("server.runOnSave")
 
-        # The ScriptRequestQueue is the means by which we communicate
-        # with the active ScriptRunner.
-        self._script_request_queue = ScriptRequestQueue()
-
         self._scriptrunner: Optional[ScriptRunner] = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
@@ -172,7 +166,7 @@ class AppSession:
             # self._state must not be set to SHUTDOWN_REQUESTED until
             # after this is called.
             if self._scriptrunner is not None:
-                self._enqueue_script_request(ScriptRequest.SHUTDOWN)
+                self._scriptrunner.request_stop()
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
@@ -206,9 +200,16 @@ class AppSession:
         # 2) Marks the current app as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
-        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
-        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STARTED)
-        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+
+        self._on_scriptrunner_event(
+            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+        )
+        self._on_scriptrunner_event(
+            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STARTED
+        )
+        self._on_scriptrunner_event(
+            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+        )
 
         # Send an Exception message to the frontend.
         # Because _on_scriptrunner_event does its work in an ioloop callback,
@@ -232,6 +233,10 @@ class AppSession:
             to use previous client state.
 
         """
+        if self._state == AppSessionState.SHUTDOWN_REQUESTED:
+            LOGGER.warning("Discarding rerun request after shutdown")
+            return
+
         if client_state:
             rerun_data = RerunData(
                 client_state.query_string, client_state.widget_states
@@ -239,7 +244,38 @@ class AppSession:
         else:
             rerun_data = RerunData()
 
-        self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
+        if self._scriptrunner is not None:
+            if bool(config.get_option("runner.fastReruns")):
+                # If fastReruns is enabled, we don't send rerun requests to our
+                # existing ScriptRunner. Instead, we tell it to shut down. We'll
+                # then spin up a new ScriptRunner, below, to handle the rerun
+                # immediately.
+                self._scriptrunner.request_stop()
+                self._scriptrunner = None
+            else:
+                # fastReruns is not enabled. Send our ScriptRunner a rerun
+                # request. If the request is accepted, we're done.
+                success = self._scriptrunner.request_rerun(rerun_data)
+                if success:
+                    return
+
+        # If we are here, then either we have no ScriptRunner, or our
+        # current ScriptRunner is shutting down and cannot handle a rerun
+        # request - so we'll create and start a new ScriptRunner.
+        self._create_scriptrunner(rerun_data)
+
+    def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
+        """Create and run a new ScriptRunner with the given RerunData."""
+        self._scriptrunner = ScriptRunner(
+            session_id=self.id,
+            session_data=self._session_data,
+            client_state=self._client_state,
+            session_state=self._session_state,
+            uploaded_file_mgr=self._uploaded_file_mgr,
+            initial_rerun_data=initial_rerun_data,
+        )
+        self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
+        self._scriptrunner.start()
 
     @property
     def session_state(self) -> "SessionState":
@@ -300,8 +336,9 @@ class AppSession:
         Parameters
         ----------
         sender : ScriptRunner | None
-            The ScriptRunner that emitted the event. This will be set to
-            None when called from `handle_backmsg_exception`.
+            The ScriptRunner that emitted the event. (This may be set to
+            None when called from `handle_backmsg_exception`, if no
+            ScriptRunner was active when the backmsg exception was raised.)
 
         event : ScriptRunnerEvent
             The event type.
@@ -323,6 +360,15 @@ class AppSession:
         assert (
             threading.main_thread() == threading.current_thread()
         ), "This function must only be called on the main thread"
+
+        if sender is not self._scriptrunner:
+            # This event was sent by a non-current ScriptRunner; ignore it.
+            # This can happen after sppinng up a new ScriptRunner (to handle a
+            # rerun request, for example) while another ScriptRunner is still
+            # shutting down. The shutting-down ScriptRunner may still
+            # emit events.
+            LOGGER.debug("Ignoring event from non-current ScriptRunner: %s", event)
+            return
 
         prev_state = self._state
 
@@ -368,9 +414,6 @@ class AppSession:
                 self._enqueue_forward_msg(msg)
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            # When ScriptRunner shuts down, update our local reference to it,
-            # and check to see if we need to spawn a new one.
-
             assert (
                 client_state is not None
             ), "client_state must be set for the SHUTDOWN event"
@@ -382,12 +425,6 @@ class AppSession:
 
             self._client_state = client_state
             self._scriptrunner = None
-
-            # Because a new ScriptEvent could have been enqueued while the
-            # scriptrunner was shutting down, we check to see if we should
-            # create a new one. (Otherwise, a newly-enqueued ScriptEvent
-            # won't be processed until another event is enqueued.)
-            self._maybe_create_scriptrunner()
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
             assert (
@@ -512,7 +549,8 @@ class AppSession:
 
     def handle_stop_script_request(self) -> None:
         """Tell the ScriptRunner to stop running its script."""
-        self._enqueue_script_request(ScriptRequest.STOP)
+        if self._scriptrunner is not None:
+            self._scriptrunner.request_stop()
 
     def handle_clear_cache_request(self) -> None:
         """Clear this app's cache.
@@ -523,7 +561,7 @@ class AppSession:
         legacy_caching.clear_cache()
         caching.memo.clear()
         caching.singleton.clear()
-        self._session_state.clear_state()
+        self._session_state.clear()
 
     def handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
@@ -538,57 +576,6 @@ class AppSession:
         """
         self._run_on_save = new_value
         self._enqueue_forward_msg(self._create_session_state_changed_message())
-
-    def _enqueue_script_request(self, request: ScriptRequest, data: Any = None) -> None:
-        """Enqueue a ScriptEvent into our ScriptEventQueue.
-
-        If a script thread is not already running, one will be created
-        to handle the event.
-
-        Parameters
-        ----------
-        request : ScriptRequest
-            The type of request.
-
-        data : Any
-            Data associated with the request, if any.
-
-        """
-        if self._state == AppSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.warning("Discarding %s request after shutdown" % request)
-            return
-
-        self._script_request_queue.enqueue(request, data)
-        self._maybe_create_scriptrunner()
-
-    def _maybe_create_scriptrunner(self) -> None:
-        """Create a new ScriptRunner if we have unprocessed script requests.
-
-        This is called every time a ScriptRequest is enqueued, and also
-        after a ScriptRunner shuts down, in case new requests were enqueued
-        during its termination.
-
-        This function should only be called on the main thread.
-
-        """
-        if (
-            self._state == AppSessionState.SHUTDOWN_REQUESTED
-            or self._scriptrunner is not None
-            or not self._script_request_queue.has_request
-        ):
-            return
-
-        # Create the ScriptRunner, attach event handlers, and start it
-        self._scriptrunner = ScriptRunner(
-            session_id=self.id,
-            session_data=self._session_data,
-            client_state=self._client_state,
-            request_queue=self._script_request_queue,
-            session_state=self._session_state,
-            uploaded_file_mgr=self._uploaded_file_mgr,
-        )
-        self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
-        self._scriptrunner.start()
 
 
 def _populate_config_msg(msg: Config) -> None:

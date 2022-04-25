@@ -22,7 +22,7 @@ import { enableFetchMocks } from "jest-fetch-mock"
 import { mount, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { CameraInput as CameraInputProto } from "src/autogen/proto"
-import CameraInput, { Props } from "./CameraInput"
+import CameraInput, { Props, State } from "./CameraInput"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent from "./WebcamComponent"
 import { StyledBox } from "./styled-components"
@@ -45,7 +45,7 @@ const getProps = (elementProps: Partial<Props> = {}): Props => {
       id: "id",
       label: "test_label",
       help: "help",
-      formId: jest.fn(),
+      formId: "",
       ...elementProps,
     }),
     width: 0,
@@ -110,6 +110,7 @@ describe("CameraInput widget", () => {
       wrapper
         .find("Webcam")
         .props()
+        // @ts-ignore
         .onUserMedia(null)
     })
 
@@ -120,12 +121,15 @@ describe("CameraInput widget", () => {
 
   it("changes `facingMode` when SwitchFacingMode button clicked", () => {
     const props = getProps()
-    const wrapper = mount(<CameraInput {...props} />)
+    const wrapper = mount<CameraInput, Props, State>(
+      <CameraInput {...props} />
+    )
 
     act(() => {
       wrapper
         .find("Webcam")
         .props()
+        // @ts-ignore
         .onUserMedia(null)
     })
 
@@ -144,7 +148,9 @@ describe("CameraInput widget", () => {
 
   it("test handle capture function", async () => {
     const props = getProps()
-    const wrapper = shallow(<CameraInput {...props} />)
+    const wrapper = shallow<CameraInput, Props, State>(
+      <CameraInput {...props} />
+    )
     // @ts-ignore
     await wrapper.instance().handleCapture("test img")
 
@@ -159,7 +165,10 @@ describe("CameraInput widget", () => {
 
   it("test remove capture", async () => {
     const props = getProps()
-    const wrapper = shallow(<CameraInput {...props} />)
+    const wrapper = shallow<CameraInput, Props, State>(
+      <CameraInput {...props} />
+    )
+    // @ts-ignore
     await wrapper.instance().handleCapture("test img")
 
     // @ts-ignore

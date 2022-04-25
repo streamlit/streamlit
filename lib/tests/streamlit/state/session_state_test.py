@@ -13,8 +13,8 @@
 # limitations under the License.
 
 """Session state unit tests."""
-
-from typing import Any
+from copy import deepcopy
+from typing import Any, List, Tuple
 import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta, date
@@ -25,8 +25,9 @@ from hypothesis import given, strategies as hst
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
+from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.scriptrunner import get_script_run_ctx
-from streamlit.state.auto_session_state import get_session_state
+from streamlit.state.session_state_proxy import get_session_state
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     SessionState,
@@ -41,6 +42,13 @@ import tests.streamlit.state.strategies as stst
 
 
 identity = lambda x: x
+
+
+def _raw_session_state() -> SessionState:
+    """Return the SessionState instance within the current ScriptRunContext's
+    SafeSessionState wrapper.
+    """
+    return get_session_state()._state
 
 
 class WStateTests(unittest.TestCase):
@@ -251,22 +259,35 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
 
     @patch("streamlit.warning")
     def test_callbacks_with_experimental_rerun(self, patched_warning):
-        def on_change():
-            st.experimental_rerun()
+        """Calling 'experimental_rerun' from within a widget callback
+        is disallowed and results in a warning.
+        """
 
-        st.checkbox("the checkbox", on_change=on_change)
+        # A mock on_changed handler for our checkbox. It will call
+        # `st.experimental_rerun`, which should result in a warning
+        # being printed to the user's app.
+        mock_on_checkbox_changed = MagicMock(side_effect=st.experimental_rerun)
 
-        session_state = get_session_state()
-        widget_ids = list(session_state._new_widget_state.keys())
-        wid = widget_ids[0]
-        session_state._new_widget_state.set_from_value(wid, True)
+        st.checkbox("the checkbox", on_change=mock_on_checkbox_changed)
 
-        session_state.call_callbacks()
+        session_state = _raw_session_state()
+
+        # Pretend that the checkbox has a new state value
+        checkbox_state = WidgetStateProto()
+        checkbox_state.id = list(session_state._new_widget_state.keys())[0]
+        checkbox_state.bool_value = True
+        widget_states = WidgetStatesProto()
+        widget_states.widgets.append(checkbox_state)
+
+        # Tell session_state to call our callbacks.
+        session_state.on_script_will_rerun(widget_states)
+
+        mock_on_checkbox_changed.assert_called_once()
         patched_warning.assert_called_once()
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
-    session_state = get_session_state()
+    session_state = _raw_session_state()
     wid = session_state._get_widget_id(widget_id)
     metadata = session_state._new_widget_state.widget_metadata[wid]
     serializer = metadata.serializer
@@ -426,6 +447,20 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         check_roundtrip("time_datetime", time_datetime)
 
 
+def _compact_copy(state: SessionState) -> SessionState:
+    """Return a compacted copy of the given SessionState."""
+    state_copy = deepcopy(state)
+    state_copy._compact_state()
+    return state_copy
+
+
+def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
+    """Return all key-value pairs in the SessionState.
+    The returned list is sorted by key for easier comparison.
+    """
+    return [(key, state[key]) for key in sorted(state._keys())]
+
+
 class SessionStateMethodTests(unittest.TestCase):
     def setUp(self):
         old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
@@ -441,7 +476,7 @@ class SessionStateMethodTests(unittest.TestCase):
         )
 
     def test_compact(self):
-        self.session_state.compact_state()
+        self.session_state._compact_state()
         assert self.session_state._old_state == {
             "foo": "bar2",
             "baz": "qux2",
@@ -452,26 +487,15 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state._new_widget_state == WStates()
 
     def test_clear_state(self):
-        self.session_state.clear_state()
-        assert self.session_state._merged_state == {}
+        # Sanity test
+        keys = {"foo", "baz", "corge", f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None"}
+        self.assertEqual(keys, self.session_state._keys())
 
-    def test_safe_widget_state(self):
-        new_session_state = MagicMock()
+        # Clear state
+        self.session_state.clear()
 
-        wstate = {"foo": "bar"}
-        new_session_state.__getitem__.side_effect = wstate.__getitem__
-        new_session_state.keys = lambda: {"foo", "baz"}
-        self.session_state = SessionState({}, {}, new_session_state)
-
-        assert self.session_state._safe_widget_state() == wstate
-
-    def test_merged_state(self):
-        assert self.session_state._merged_state == {
-            "foo": "bar2",
-            "baz": "qux2",
-            "corge": "grault",
-            f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None": "bar",
-        }
+        # Keys should be empty
+        self.assertEqual(set(), self.session_state._keys())
 
     def test_filtered_state(self):
         assert self.session_state.filtered_state == {
@@ -484,7 +508,7 @@ class SessionStateMethodTests(unittest.TestCase):
         old_state = {"foo": "bar", "corge": "grault"}
         new_session_state = {}
         new_widget_state = WStates(
-            {f"{GENERATED_WIDGET_KEY_PREFIX}-baz": Serialized(None)},
+            {f"{GENERATED_WIDGET_KEY_PREFIX}-baz": Serialized(WidgetStateProto())},
         )
         self.session_state = SessionState(
             old_state, new_session_state, new_widget_state
@@ -560,7 +584,7 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates = WStates()
         self.session_state._new_widget_state = wstates
 
-        self.session_state.cull_nonexistent({"existing_widget"})
+        self.session_state._cull_nonexistent({"existing_widget"})
 
         assert self.session_state["existing_widget"] == True
         assert generated_widget_key not in self.session_state
@@ -582,7 +606,6 @@ class SessionStateMethodTests(unittest.TestCase):
         )
         _, widget_value_changed = self.session_state.register_widget(
             metadata=metadata,
-            widget_id=f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1",
             user_key="widget_id_1",
         )
         assert not widget_value_changed
@@ -591,24 +614,17 @@ class SessionStateMethodTests(unittest.TestCase):
 
 @given(state=stst.session_state())
 def test_compact_idempotent(state):
-    assert state._compact() == state._compact()._compact()
+    assert _compact_copy(state) == _compact_copy(_compact_copy(state))
 
 
 @given(state=stst.session_state())
 def test_compact_len(state):
-    assert len(state) >= len(state._compact())
+    assert len(state) >= len(_compact_copy(state))
 
 
 @given(state=stst.session_state())
 def test_compact_presence(state):
-    assert state.items() == state._compact().items()
-
-
-@given(m=stst.session_state())
-def test_mapping_laws(m):
-    assert len(m) == len(m.keys()) == len(m.values()) == len(m.items())
-    assert [value for value in m.values()] == [m[key] for key in m.keys()]
-    assert [item for item in m.items()] == [(key, m[key]) for key in m.keys()]
+    assert _sorted_items(state) == _sorted_items(_compact_copy(state))
 
 
 @given(
@@ -653,18 +669,10 @@ def test_map_set_del_3837_regression():
     )
     m = SessionState()
     m["0"] = 0
-    m.register_widget(
-        metadata=meta1,
-        widget_id="$$GENERATED_WIDGET_KEY-e3e70682-c209-4cac-629f-6fbed82c07cd-None",
-        user_key=None,
-    )
-    m.compact_state()
+    m.register_widget(metadata=meta1, user_key=None)
+    m._compact_state()
 
-    m.register_widget(
-        metadata=meta2,
-        widget_id="$$GENERATED_WIDGET_KEY-f728b4fa-4248-5e3a-0a5d-2f346baa9455-0",
-        user_key="0",
-    )
+    m.register_widget(metadata=meta2, user_key="0")
     key = "0"
     value1 = 0
 
@@ -680,7 +688,7 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         # TODO: document the values used here. They're somewhat arbitrary -
         #  we don't care about actual byte values, but rather that our
         #  SessionState isn't getting unexpectedly massive.
-        state = get_session_state()
+        state = _raw_session_state()
         stat = state.get_stats()[0]
         assert stat.category_name == "st_session_state"
 
@@ -701,6 +709,6 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         assert new_size_3 > new_size_2
         assert new_size_3 - new_size_2 < 1500
 
-        state.compact_state()
+        state._compact_state()
         new_size_4 = state.get_stats()[0].byte_length
         assert new_size_4 <= new_size_3

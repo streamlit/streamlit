@@ -56,6 +56,7 @@ describe("ComponentRegistry", () => {
 
   test("Dispatches messages to listeners", () => {
     const registry = new ComponentRegistry(() => MOCK_SERVER_URI)
+    // @ts-ignore
     const { onMessageEvent } = registry
 
     // Create some mocks

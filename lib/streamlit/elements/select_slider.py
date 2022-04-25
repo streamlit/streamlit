@@ -189,7 +189,6 @@ class SelectSliderMixin:
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
-        slider_proto.disabled = disabled
         if help is not None:
             slider_proto.help = dedent(help)
 
@@ -219,6 +218,9 @@ class SelectSliderMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        slider_proto.disabled = disabled
         if set_frontend_value:
             slider_proto.value[:] = serialize_select_slider(current_value)
             slider_proto.set_value = True

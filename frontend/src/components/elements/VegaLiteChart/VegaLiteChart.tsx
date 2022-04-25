@@ -26,6 +26,7 @@ import {
   indexGet,
   tableGet,
 } from "src/lib/dataFrameProto"
+import { ensureError } from "src/lib/ErrorHandling"
 import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
@@ -101,7 +102,8 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
   public async componentDidMount(): Promise<void> {
     try {
       await this.createView()
-    } catch (error) {
+    } catch (e) {
+      const error = ensureError(e)
       this.setState({ error })
     }
   }
@@ -139,7 +141,9 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
       logMessage("Vega spec changed.")
       try {
         await this.createView()
-      } catch (error) {
+      } catch (e) {
+        const error = ensureError(e)
+
         this.setState({ error })
       }
       return

@@ -194,9 +194,9 @@ from streamlit.commands.page_config import set_page_config
 
 # Session State
 
-from streamlit.state import AutoSessionState
+from streamlit.state import SessionStateProxy
 
-session_state = AutoSessionState()
+session_state = SessionStateProxy()
 
 
 # Beta APIs
@@ -261,7 +261,7 @@ def experimental_show(*args):
     >>> dataframe = pd.DataFrame({
     ...     'first column': [1, 2, 3, 4],
     ...     'second column': [10, 20, 30, 40],
-    ... }))
+    ... })
     >>> st.experimental_show(dataframe)
 
     Notes

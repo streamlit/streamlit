@@ -83,6 +83,7 @@ describe("Selectbox widget", () => {
   it("renders options", () => {
     const options = wrapper.find(UISelect).prop("options") || []
 
+    // @ts-ignore
     options.forEach(option => {
       expect(option).toHaveProperty("label")
       expect(option).toHaveProperty("value")
@@ -131,6 +132,7 @@ describe("Selectbox widget", () => {
     if (filterOptionsFn === undefined || options === undefined) {
       fail("Unexepcted undefined value")
     }
+    // @ts-ignore
     const filteredOptions = filterOptionsFn(options, "1")
     expect(filteredOptions).toEqual([])
   })
@@ -141,13 +143,14 @@ describe("Selectbox widget", () => {
     if (filterOptionsFn === undefined || options === undefined) {
       fail("Unexepcted undefined value")
     }
+    // @ts-ignore
     expect(filterOptionsFn(options, "b")).toEqual([
       {
         label: "b",
         value: "1",
       },
     ])
-
+    // @ts-ignore
     expect(filterOptionsFn(options, "B")).toEqual([
       {
         label: "b",

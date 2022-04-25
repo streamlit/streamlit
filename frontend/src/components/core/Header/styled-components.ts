@@ -16,7 +16,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 export interface StyledHeaderProps {
   isEmbedded: boolean
@@ -30,30 +29,14 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     top: theme.spacing.none,
     left: theme.spacing.none,
     right: theme.spacing.none,
-    height: "3.375rem",
-    background: `linear-gradient(0deg, ${transparentize(
-      theme.colors.bgColor,
-      0.5
-    )}, ${theme.colors.bgColor})`,
-    backdropFilter: "blur(3px)",
+    height: theme.sizes.headerHeight,
+    background: theme.colors.bgColor,
+    outline: "none",
     zIndex: theme.zIndices.header,
     display: isEmbedded ? "none" : "block",
     "@media print": {
       display: "none",
     },
-    ...(isWideMode
-      ? {
-          backgroundImage: `linear-gradient(180deg, ${
-            theme.colors.bgColor
-          } 25%, ${transparentize(theme.colors.bgColor, 0.5)} 75%, ${
-            theme.colors.transparent
-          })`,
-          [`@media (max-width: ${theme.breakpoints.md})`]: {
-            position: "absolute",
-            background: "unset",
-          },
-        }
-      : {}),
   })
 )
 

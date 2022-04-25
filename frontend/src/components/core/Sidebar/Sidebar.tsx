@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactElement } from "react"
+import React, { PureComponent, ReactElement, ReactNode } from "react"
 import { ChevronRight, X } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
 
@@ -146,7 +146,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
-  public render = (): ReactElement => {
+  public render(): ReactNode {
     const { collapsedSidebar } = this.state
     const { chevronDownshift, children } = this.props
 

@@ -20,7 +20,7 @@ import attr
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.state import SessionState
+from streamlit.state import SafeSessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
@@ -42,7 +42,7 @@ class ScriptRunContext:
     session_id: str
     _enqueue: Callable[[ForwardMsg], None]
     query_string: str
-    session_state: SessionState
+    session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
 
     _set_page_config_allowed: bool = True

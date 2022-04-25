@@ -13,6 +13,8 @@
 # limitations under the License.
 
 # Explicitly re-export public symbols
+from .safe_session_state import SafeSessionState as SafeSessionState
+
 from .session_state import (
     SessionState as SessionState,
     WidgetCallback as WidgetCallback,
@@ -22,8 +24,8 @@ from .session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY as SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
 
-from .auto_session_state import (
-    AutoSessionState as AutoSessionState,
+from .session_state_proxy import (
+    SessionStateProxy as SessionStateProxy,
     get_session_state as get_session_state,
 )
 

@@ -5,7 +5,7 @@ import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
 
 import { CustomThemeConfig } from "src/autogen/proto"
-import PageLayoutContext from "src/components/core/PageLayoutContext"
+import AppContext from "src/components/core/AppContext"
 import Button, { Kind } from "src/components/shared/Button"
 import ColorPicker from "src/components/shared/ColorPicker"
 import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
@@ -173,9 +173,7 @@ export interface Props {
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
   const [copied, updateCopied] = React.useState(false)
-  const { activeTheme, addThemes, setTheme } = React.useContext(
-    PageLayoutContext
-  )
+  const { activeTheme, addThemes, setTheme } = React.useContext(AppContext)
 
   const themeInput = toThemeInput(activeTheme.emotion)
 
