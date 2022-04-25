@@ -124,7 +124,9 @@ class SessionInfo:
     the ForwardMsgCache.
     """
 
-    def __init__(self, write_forward_msg: Callable[[ForwardMsg], None], session: AppSession):
+    def __init__(
+        self, write_forward_msg: Callable[[ForwardMsg], None], session: AppSession
+    ):
         """Initialize a SessionInfo instance.
 
         Parameters
@@ -229,7 +231,6 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
             f"Cannot start Streamlit server. Port {port} is already in use, and "
             f"Streamlit was unable to find a free port after {MAX_PORT_SEARCH_RETRIES} attempts.",
         )
-
 
 
 class Server:
@@ -649,7 +650,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         self._ioloop.stop()
 
-    def create_demo_app_session(self, write_forward_msg: Callable[[ForwardMsg], None]) -> AppSession:
+    def create_demo_app_session(
+        self, write_forward_msg: Callable[[ForwardMsg], None]
+    ) -> AppSession:
         return self._create_app_session(write_forward_msg)
 
     def _create_websocket_app_session(self, ws: WebSocketHandler) -> AppSession:
@@ -678,7 +681,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         return session
 
-    def _create_app_session(self, write_forward_msg: Callable[[ForwardMsg], None]) -> AppSession:
+    def _create_app_session(
+        self, write_forward_msg: Callable[[ForwardMsg], None]
+    ) -> AppSession:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
