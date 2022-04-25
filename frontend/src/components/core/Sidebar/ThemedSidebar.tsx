@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
-import PageLayoutContext from "src/components/core/PageLayoutContext"
+import AppContext from "src/components/core/AppContext"
 import ThemeProvider from "src/components/core/ThemeProvider"
 import { createTheme, ThemeConfig } from "src/theme"
 import Sidebar, { SidebarProps } from "./Sidebar"
@@ -41,7 +41,7 @@ const ThemedSidebar = ({
   const {
     activeTheme,
     sidebarChevronDownshift: chevronDownshift,
-  } = React.useContext(PageLayoutContext)
+  } = React.useContext(AppContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (

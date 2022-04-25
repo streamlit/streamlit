@@ -19,7 +19,7 @@
  * A promise wrapper that makes resolve/reject functions public.
  */
 export default class Resolver<T> {
-  public resolve: (arg?: T) => void | Promise<any>
+  public resolve: (value: T | PromiseLike<T>) => void
 
   public reject: (reason?: any) => void | Promise<any>
 

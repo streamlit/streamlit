@@ -119,18 +119,19 @@ describe("PlotlyChart Element", () => {
         .first()
         .props()
       expect(layout.paper_bgcolor).toBe(darkTheme.emotion.colors.bgColor)
-      expect(layout.font.color).toBe(darkTheme.emotion.colors.bodyText)
+      expect(layout.font?.color).toBe(darkTheme.emotion.colors.bodyText)
     })
 
     it("has user specified config take priority", () => {
       const props = getProps()
 
-      const spec = JSON.parse(props.element.figure.spec)
+      const spec = JSON.parse(props.element.figure?.spec || "") || {}
       spec.layout = {
-        ...spec.layout,
+        ...spec?.layout,
         paper_bgcolor: "orange",
       }
 
+      props.element.figure = props.element.figure || {}
       props.element.figure.spec = JSON.stringify(spec)
 
       const wrapper = mount(
@@ -149,7 +150,7 @@ describe("PlotlyChart Element", () => {
       expect(layout.paper_bgcolor).toBe("orange")
       // Verify that things not overwritten by the user still fall back to the
       // theme default.
-      expect(layout.font.color).toBe(darkTheme.emotion.colors.bodyText)
+      expect(layout.font?.color).toBe(darkTheme.emotion.colors.bodyText)
     })
   })
 })

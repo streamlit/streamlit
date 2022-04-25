@@ -123,10 +123,13 @@ describe("Multiselect widget", () => {
     const props = getProps()
     const wrapper = mount(<Multiselect {...props} />)
 
-    const options = wrapper.find(UISelect).prop("options")
-    const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
+    const options = wrapper.find(UISelect).prop("options") || []
+    const filterOptionsFn =
+      wrapper.find(UISelect).prop("filterOptions") || ((opts, val) => [])
 
+    // @ts-ignore filterOptionsFn expects readonly options
     expect(filterOptionsFn(options, "1").length).toEqual(0)
+    // @ts-ignore filterOptionsFn expects readonly options
     expect(filterOptionsFn(options, "b").length).toEqual(1)
   })
 

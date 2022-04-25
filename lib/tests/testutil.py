@@ -20,8 +20,8 @@ from typing import Any, Dict, List
 from unittest.mock import patch
 
 from streamlit import config
-from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.app_session import AppSession
+from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import (
@@ -29,7 +29,7 @@ from streamlit.scriptrunner import (
     get_script_run_ctx,
     ScriptRunContext,
 )
-from streamlit.state.session_state import SessionState
+from streamlit.state import SafeSessionState, SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 
@@ -88,7 +88,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             session_id="test session id",
             enqueue=self.forward_msg_queue.enqueue,
             query_string="",
-            session_state=SessionState(),
+            session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
         )
 
@@ -119,7 +119,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         ]
 
     def clear_queue(self) -> None:
-        self.forward_msg_queue._clear()
+        self.forward_msg_queue.clear()
 
 
 def normalize_md(txt: str) -> str:

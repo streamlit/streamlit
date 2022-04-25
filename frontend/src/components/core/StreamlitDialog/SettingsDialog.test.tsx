@@ -19,7 +19,7 @@ import React from "react"
 import PropTypes from "prop-types"
 import { createPresetThemes, lightTheme, darkTheme } from "src/theme"
 import { shallow } from "src/lib/test_util"
-import { Props as ContextProps } from "src/components/core/PageLayoutContext"
+import { Props as ContextProps } from "src/components/core/AppContext"
 import UISelectbox from "src/components/shared/Dropdown"
 
 import { SettingsDialog, Props } from "./SettingsDialog"

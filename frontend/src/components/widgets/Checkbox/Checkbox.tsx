@@ -119,7 +119,7 @@ class Checkbox extends React.PureComponent<Props, State> {
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { theme, width, element, disabled, widgetMgr } = this.props
     const { colors, spacing, radii } = theme
     const style = { width }

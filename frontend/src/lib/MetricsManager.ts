@@ -119,7 +119,7 @@ export class MetricsManager {
     logAlways("Gather usage stats: ", this.actuallySendMetrics)
   }
 
-  public enqueue(evName: string, evData: Record<string, unknown> = {}): void {
+  public enqueue(evName: string, evData: Record<string, any> = {}): void {
     if (!this.initialized || !SessionInfo.isSet()) {
       this.pendingEvents.push([evName, evData])
       return

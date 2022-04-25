@@ -22,12 +22,13 @@ import { ReactWrapper } from "enzyme"
 import { PageConfig } from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
 import { spacing } from "src/theme/primitives/spacing"
+import lightTheme from "src/theme/lightTheme"
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 expect.extend(matchers)
 
 function renderSideBar(props: Partial<SidebarProps>): ReactWrapper {
-  return mount(<Sidebar {...props} />)
+  return mount(<Sidebar chevronDownshift={0} theme={lightTheme} {...props} />)
 }
 
 describe("Sidebar Component", () => {

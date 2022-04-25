@@ -22,6 +22,7 @@ import axios from "axios"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "src/lib/log"
+import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
 import Resolver from "src/lib/Resolver"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { BaseUriParts, buildHttpUri, buildWsUri } from "src/lib/UriUtil"
@@ -453,6 +454,7 @@ export class WebsocketConnection {
     if (!this.websocket) {
       return
     }
+
     const msg = BackMsg.create(obj)
     const buffer = BackMsg.encode(msg).finish()
     this.websocket.send(buffer)
@@ -471,10 +473,22 @@ export class WebsocketConnection {
     const messageIndex = this.nextMessageIndex
     this.nextMessageIndex += 1
 
+    PerformanceEvents.record({ name: "BeginHandleMessage", messageIndex })
+
     const msg = ForwardMsg.decode(new Uint8Array(data))
+
+    PerformanceEvents.record({
+      name: "DecodedMessage",
+      messageIndex,
+      messageType: msg.type,
+      len: data.byteLength,
+    })
+
     this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
       msg
     )
+
+    PerformanceEvents.record({ name: "GotCachedPayload", messageIndex })
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other
@@ -483,6 +497,11 @@ export class WebsocketConnection {
     while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
       this.args.onMessage(this.messageQueue[dispatchMessageIndex])
+      PerformanceEvents.record({
+        name: "DispatchedMessage",
+        messageIndex: dispatchMessageIndex,
+        messageType: this.messageQueue[dispatchMessageIndex].type,
+      })
       delete this.messageQueue[dispatchMessageIndex]
       this.lastDispatchedMessageIndex = dispatchMessageIndex
     }

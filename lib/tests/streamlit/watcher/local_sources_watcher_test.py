@@ -22,7 +22,7 @@ import unittest
 from streamlit import config
 from streamlit.session_data import SessionData
 from streamlit.watcher import local_sources_watcher
-from streamlit.watcher.file_watcher import NoOpFileWatcher, watchdog_available
+from streamlit.watcher.path_watcher import NoOpPathWatcher, watchdog_available
 
 import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
 import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
@@ -67,7 +67,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             except:
                 pass
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_just_script(self, fob, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lso.register_file_change_callback(NOOP_CALLBACK)
@@ -86,13 +86,13 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 1)  # __init__.py
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_permission_error(self, fob, _):
         fob.side_effect = PermissionError("This error should be caught!")
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lso.register_file_change_callback(NOOP_CALLBACK)
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_script_and_2_modules_at_once(self, fob, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lso.register_file_change_callback(NOOP_CALLBACK)
@@ -125,7 +125,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         self.assertEqual(fob.call_count, 0)
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_script_and_2_modules_in_series(self, fob, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lso.register_file_change_callback(NOOP_CALLBACK)
@@ -161,7 +161,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.assert_called_once()
 
     @patch("streamlit.watcher.local_sources_watcher.LOGGER")
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_misbehaved_module(self, fob, patched_logger, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lso.register_file_change_callback(NOOP_CALLBACK)
@@ -178,7 +178,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             "Examining the path of MisbehavedModule raised: Oh noes!"
         )
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_nested_module_parent_unloaded(self, fob, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lso.register_file_change_callback(NOOP_CALLBACK)
@@ -202,7 +202,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             self.assertNotIn("NESTED_MODULE_CHILD", sys.modules)
             self.assertNotIn("NESTED_MODULE_PARENT", sys.modules)
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_config_blacklist(self, fob, _):
         """Test server.folderWatchBlacklist"""
         prev_blacklist = config.get_option("server.folderWatchBlacklist")
@@ -231,44 +231,44 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         config.set_option("server.fileWatcherType", "none")
         self.assertEqual(
-            local_sources_watcher.get_default_file_watcher_class().__name__,
-            "NoOpFileWatcher",
+            local_sources_watcher.get_default_path_watcher_class().__name__,
+            "NoOpPathWatcher",
         )
 
         config.set_option("server.fileWatcherType", "poll")
         self.assertEqual(
-            local_sources_watcher.get_default_file_watcher_class().__name__,
-            "PollingFileWatcher",
+            local_sources_watcher.get_default_path_watcher_class().__name__,
+            "PollingPathWatcher",
         )
 
         config.set_option("server.fileWatcherType", "watchdog")
         self.assertEqual(
-            local_sources_watcher.get_default_file_watcher_class().__name__,
-            "EventBasedFileWatcher" if watchdog_available else "NoOpFileWatcher",
+            local_sources_watcher.get_default_path_watcher_class().__name__,
+            "EventBasedPathWatcher" if watchdog_available else "NoOpPathWatcher",
         )
 
         config.set_option("server.fileWatcherType", "auto")
-        self.assertIsNotNone(local_sources_watcher.get_default_file_watcher_class())
+        self.assertIsNotNone(local_sources_watcher.get_default_path_watcher_class())
 
-        if sys.modules["streamlit.watcher.event_based_file_watcher"] is not None:
+        if sys.modules["streamlit.watcher.event_based_path_watcher"] is not None:
             self.assertEqual(
-                local_sources_watcher.get_default_file_watcher_class().__name__,
-                "EventBasedFileWatcher",
+                local_sources_watcher.get_default_path_watcher_class().__name__,
+                "EventBasedPathWatcher",
             )
         else:
             self.assertEqual(
-                local_sources_watcher.get_default_file_watcher_class().__name__,
-                "PollingFileWatcher",
+                local_sources_watcher.get_default_path_watcher_class().__name__,
+                "PollingPathWatcher",
             )
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher", new=NoOpFileWatcher)
-    def test_does_nothing_if_NoOpFileWatcher(self, _):
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher", new=NoOpPathWatcher)
+    def test_does_nothing_if_NoOpPathWatcher(self, _):
         lsw = local_sources_watcher.LocalSourcesWatcher(REPORT)
         lsw.register_file_change_callback(NOOP_CALLBACK)
         lsw.update_watched_modules()
         self.assertEqual(len(lsw._watched_modules), 0)
 
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_namespace_package_unloaded(self, fob, _):
         import tests.streamlit.watcher.test_data.namespace_package as pkg
 
@@ -289,6 +289,34 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             self.assertNotIn("pkg", sys.modules)
 
         del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_module_caching(self, _fob, _):
+        lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
+        lso.register_file_change_callback(NOOP_CALLBACK)
+
+        register = MagicMock()
+        lso._register_necessary_watchers = register
+
+        # Updates modules on first run
+        lso.update_watched_modules()
+        register.assert_called_once()
+
+        # Skips update when module list hasn't changed
+        register.reset_mock()
+        lso.update_watched_modules()
+        register.assert_not_called()
+
+        # Invalidates cache when a new module is imported
+        register.reset_mock()
+        sys.modules["DUMMY_MODULE_2"] = DUMMY_MODULE_2
+        lso.update_watched_modules()
+        register.assert_called_once()
+
+        # Skips update when new module is part of cache
+        register.reset_mock()
+        lso.update_watched_modules()
+        register.assert_not_called()
 
 
 def test_get_module_paths_outputs_abs_paths():

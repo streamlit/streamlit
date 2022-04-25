@@ -136,7 +136,6 @@ class TimeWidgetsMixin:
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
-        time_input_proto.disabled = disabled
         if help is not None:
             time_input_proto.help = dedent(help)
 
@@ -164,6 +163,9 @@ class TimeWidgetsMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        time_input_proto.disabled = disabled
         if set_frontend_value:
             time_input_proto.value = serialize_time_input(current_value)
             time_input_proto.set_value = True
@@ -324,7 +326,6 @@ class TimeWidgetsMixin:
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
         date_input_proto.form_id = current_form_id(self.dg)
-        date_input_proto.disabled = disabled
 
         def deserialize_date_input(ui_value, widget_id=""):
             if ui_value is not None:
@@ -353,6 +354,9 @@ class TimeWidgetsMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        date_input_proto.disabled = disabled
         if set_frontend_value:
             date_input_proto.value[:] = serialize_date_input(current_value)
             date_input_proto.set_value = True

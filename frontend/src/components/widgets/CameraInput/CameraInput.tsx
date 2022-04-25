@@ -63,7 +63,7 @@ type FileUploaderStatus =
   | "ready" // FileUploader can upload or delete files
   | "updating" // at least one file is being uploaded or deleted
 
-interface State {
+export interface State {
   /**
    * Base64-encoded image data of the current frame from the camera.
    */
@@ -347,7 +347,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     })
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { element, widgetMgr, disabled, width } = this.props
 
     // Manage our form-clear event handler.

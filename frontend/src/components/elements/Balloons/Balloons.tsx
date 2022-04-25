@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, memo } from "react"
+import React, { FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -50,22 +50,20 @@ export interface Props {
   scriptRunId: string
 }
 
-function Balloons({ scriptRunId }: Props): ReactElement {
+const Balloon: FC<ParticleProps> = ({ particleType }) => (
+  <StyledBalloon src={BALLOON_IMAGES[particleType]} />
+)
+
+const Balloons: FC<Props> = ({ scriptRunId }) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  return (
-    <Particles
-      className="balloons"
-      scriptRunId={scriptRunId}
-      numParticleTypes={NUM_BALLOON_TYPES}
-      numParticles={NUM_BALLOONS}
-      ParticleComponent={Balloon}
-    />
-  )
-}
-
-function Balloon({ particleType }: ParticleProps): ReactElement {
-  return <StyledBalloon src={BALLOON_IMAGES[particleType]} />
-}
+  <Particles
+    className="balloons"
+    scriptRunId={scriptRunId}
+    numParticleTypes={NUM_BALLOON_TYPES}
+    numParticles={NUM_BALLOONS}
+    ParticleComponent={Balloon}
+  />
+)
 
 export default memo(Balloons)

@@ -22,7 +22,7 @@ import { mount, shallow } from "src/lib/test_util"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
-import NumberInput, { Props } from "./NumberInput"
+import NumberInput, { Props, State } from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
@@ -211,7 +211,9 @@ describe("NumberInput widget", () => {
       const props = getFloatProps({ default: 10.0 })
       props.widgetMgr.getDoubleValue = jest.fn(() => 15.0)
 
-      const wrapper = shallow(<NumberInput {...props} />)
+      const wrapper = shallow<NumberInput, Props, State>(
+        <NumberInput {...props} />
+      )
       expect(wrapper.state().value).toBe(15.0)
     })
   })
@@ -280,7 +282,9 @@ describe("NumberInput widget", () => {
       const props = getIntProps({ default: 10 })
       props.widgetMgr.getIntValue = jest.fn(() => 15)
 
-      const wrapper = shallow(<NumberInput {...props} />)
+      const wrapper = shallow<NumberInput, Props, State>(
+        <NumberInput {...props} />
+      )
       expect(wrapper.state().value).toBe(15)
     })
   })
