@@ -22,6 +22,7 @@ import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
 import "streamlit/proto/PageNotFound.proto";
+import "streamlit/proto/PagesChanged.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionState.proto";
 
@@ -58,6 +59,7 @@ message ForwardMsg {
 
     // Other messages.
     PageNotFound page_not_found = 15;
+    PagesChanged pages_changed = 16;
 
     // A reference to a ForwardMsg that has already been delivered.
     // The client should substitute the message with the given hash
@@ -67,7 +69,7 @@ message ForwardMsg {
   }
 
   reserved 7, 8;
-  // Next: 16
+  // Next: 17
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

@@ -43,6 +43,7 @@ def NOOP_CALLBACK(_filepath):
     pass
 
 
+@patch("streamlit.source_util._cached_pages", new=None)
 @patch("streamlit.file_util.file_in_pythonpath", return_value=False)
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
