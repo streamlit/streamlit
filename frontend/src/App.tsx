@@ -63,6 +63,7 @@ import {
   PageConfig,
   PageInfo,
   PageNotFound,
+  PagesChanged,
   SessionEvent,
   WidgetStates,
   SessionState,
@@ -406,6 +407,8 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
+        pagesChanged: (pagesChangedMsg: PagesChanged) =>
+          this.handlePagesChanged(pagesChangedMsg),
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
@@ -484,6 +487,11 @@ export class App extends PureComponent<Props, State> {
     )
 
     this.setState({ currentPageName: "" })
+  }
+
+  handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
+    const { appPages } = pagesChangedMsg
+    this.setState({ appPages })
   }
 
   /**

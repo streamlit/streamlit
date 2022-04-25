@@ -16,7 +16,7 @@ import sys
 import threading
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List
+from typing import TYPE_CHECKING, Callable, Optional, List, Union
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -38,6 +38,7 @@ from streamlit.proto.NewSession_pb2 import (
     NewSession,
     UserInfo,
 )
+from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.session_data import SessionData
 from streamlit.scriptrunner import (
     RerunData,
@@ -123,6 +124,9 @@ class AppSession:
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
         )
+        self._stop_pages_listener = source_util.register_pages_changed_callback(
+            self._on_pages_changed
+        )
 
         # The script should rerun when the `secrets.toml` file has been changed.
         secrets._file_change_listener.connect(self._on_secrets_file_changed)
@@ -177,6 +181,8 @@ class AppSession:
             self._local_sources_watcher.close()
             if self._stop_config_listener is not None:
                 self._stop_config_listener()
+            if self._stop_pages_listener is not None:
+                self._stop_pages_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
@@ -336,6 +342,16 @@ class AppSession:
         # must have at least one argument for `sender` (in this case we don't really care about it, thus `_`),
         # and introducing an unnecessary argument to `_on_source_file_changed` just for this purpose sounded finicky.
         self._on_source_file_changed()
+
+    def _on_pages_changed(self, _) -> None:
+        # TODO: Double-check the product behavior we want on this. In the spec,
+        # it says that we should notify the client of a pages dir change only
+        # if "run on save" is true, but I feel like always sending updates is
+        # quite reasonable behavior since the pages nav updating is not
+        # potentially disruptive like a script rerunning is.
+        msg = ForwardMsg()
+        _populate_app_pages(msg.pages_changed, self._session_data.main_script_path)
+        self._enqueue_forward_msg(msg)
 
     def _clear_queue(self) -> None:
         self._session_data.clear_browser_queue()
@@ -682,7 +698,9 @@ def _populate_user_info_msg(msg: UserInfo) -> None:
         msg.email = ""
 
 
-def _populate_app_pages(msg: NewSession, main_script_path: str) -> None:
+def _populate_app_pages(
+    msg: Union[NewSession, PagesChanged], main_script_path: str
+) -> None:
     for page_name, page_info in source_util.get_pages(main_script_path).items():
         page_proto = msg.app_pages.add()
 

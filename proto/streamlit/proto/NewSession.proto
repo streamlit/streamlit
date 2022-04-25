@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionState.proto";
 
 // This is the first message that is sent when a new session starts.
@@ -135,12 +136,4 @@ message UserInfo {
 message EnvironmentInfo {
   string streamlit_version = 1;
   string python_version = 2;
-}
-
-// A page in the app. Includes both the name of the page as well as the full
-// path to the corresponding script file.
-message AppPage {
-  string page_name = 1;
-  string script_path = 2;
-  string icon = 3;
 }
