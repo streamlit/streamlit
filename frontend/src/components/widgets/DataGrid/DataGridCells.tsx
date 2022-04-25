@@ -200,7 +200,9 @@ export function fillCellTemplate(
     return {
       ...cellTemplate,
       data:
-        typeof quiverCell.content === "string"
+        typeof quiverCell.content === "string" ||
+        quiverCell.content === undefined ||
+        quiverCell.content === null
           ? quiverCell.content
           : formattedContents,
       displayData: formattedContents,

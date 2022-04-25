@@ -98,7 +98,8 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
       // Use text cell as fallback
       cellKind = GridCellKind.Text
     } else if (["bool"].includes(dataTypeName)) {
-      cellKind = GridCellKind.Boolean
+      // TODO: lukasmasuch: Use text cell for now since the boolean cell does not support empty values.
+      cellKind = GridCellKind.Text
     } else if (["int64", "float64"].includes(dataTypeName)) {
       cellKind = GridCellKind.Number
     } else if (dataTypeName.startsWith("list")) {
