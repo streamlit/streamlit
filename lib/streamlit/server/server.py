@@ -525,6 +525,12 @@ class Server:
                         msg_list = session_info.session.flush_browser_queue()
                         for msg in msg_list:
                             try:
+                                with open(r"messages.pb", "ab") as f:
+                                    f.write(
+                                        "ForwardMsg:".encode()
+                                        + msg.SerializeToString()
+                                        + "\n".encode()
+                                    )
                                 self._send_message(session_info, msg)
                             except tornado.websocket.WebSocketClosedError:
                                 self._close_app_session(session_info.session.id)
@@ -757,6 +763,8 @@ class _BrowserWebSocketHandler(WebSocketHandler):
             msg_type = msg.WhichOneof("type")
 
             LOGGER.debug("Received the following back message:\n%s", msg)
+            with open(r"messages.pb", "ab") as f:
+                f.write("BackMsg:".encode() + payload + "\n".encode())
 
             if msg_type == "rerun_script":
                 self._session.handle_rerun_script_request(msg.rerun_script)
