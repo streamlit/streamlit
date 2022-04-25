@@ -1698,6 +1698,14 @@
     react-number-format "^4.4.1"
     react-virtualized-auto-sizer "^1.0.2"
 
+"@glideapps/glide-data-grid@^4.0.0-beta1":
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-4.0.3.tgz#163372d772c3d02a8aa9e5ffaca85961539df97a"
+  integrity sha512-AZWTy793F8MJ9SoBBiEE7FYannDUKnFZQzCnoh7lu+2iSHRI6vmTH8wEyKzulByEjs7d5ssnWkeUmbDo2jNlWg==
+  dependencies:
+    react-number-format "^4.4.1"
+    react-virtualized-auto-sizer "^1.0.2"
+
 "@hapi/address@2.x.x":
   version "2.1.4"
   resolved "https://registry.yarnpkg.com/@hapi/address/-/address-2.1.4.tgz#5d67ed43f3fd41a69d4b9ff7b56e7c0d1d0a81e5"
