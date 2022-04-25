@@ -32,7 +32,7 @@ import { DataFrameCell, Quiver } from "src/lib/Quiver"
  * Returns either the formatted content or display value for a Quiver cell.
  */
 function getDisplayContent(quiverCell: DataFrameCell): string {
-  let displayContent =
+  const displayContent =
     quiverCell.displayContent ||
     Quiver.format(quiverCell.content, quiverCell.contentType)
 
@@ -134,7 +134,7 @@ export function getCellTemplate(kind: string, readonly: boolean): GridCell {
 /**
  * Returns the sort mode based on the given column type.
  */
-export function getColumnSortMode(columnType: string) {
+export function getColumnSortMode(columnType: string): string {
   if (columnType === GridCellKind.Number) {
     // Smart mode also works correctly for numbers
     return "smart"

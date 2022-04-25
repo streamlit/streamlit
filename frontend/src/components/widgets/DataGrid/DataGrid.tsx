@@ -151,7 +151,7 @@ export function useDataLoader(
 
   useLayoutEffect(() => {
     const updatedColumns = getColumns(element)
-    // Only update columns if
+    // Only update columns if something changed
     if (updatedColumns.length !== columns.length) {
       setColumns(updatedColumns)
     } else {
@@ -160,13 +160,11 @@ export function useDataLoader(
         const currentColumn = columns[i]
 
         if (updatedColumn.title !== currentColumn.title) {
-          console.log("Updating column because of title change")
           setColumns(updatedColumns)
           break
         }
 
         if (updatedColumn.columnType !== currentColumn.columnType) {
-          console.log("Updating column because of type change")
           setColumns(updatedColumns)
           break
         }
@@ -197,7 +195,7 @@ export function useDataLoader(
     ([col, row]: readonly [number, number]): GridCell => {
       const cellTemplate = columns[col].getTemplate()
       if (row > numRows - 1) {
-        // TODO(lukasmasuch): This should never happen
+        // This should never happen
         return cellTemplate
       }
       try {
@@ -220,10 +218,27 @@ export function useDataLoader(
     sort,
   })
 
+  let adaptedColumns = columns
+
+  if (sort !== undefined) {
+    adaptedColumns = columns.map(column => {
+      if (column.id === sort.column.id) {
+        return {
+          ...column,
+          title:
+            sort.direction === "asc"
+              ? `↑ ${column.title}`
+              : `↓ ${column.title}`,
+        }
+      }
+      return column
+    })
+  }
+
   return {
     numRows,
     numIndices,
-    columns,
+    columns: adaptedColumns,
     getCellContent: getCellContentSorted,
     onColumnResize,
   }
@@ -289,17 +304,19 @@ function DataGrid({
 
   const onHeaderClick = React.useCallback(
     (index: number) => {
-      console.log("Header clicked", index)
       let sortDirection = "asc"
       const clickedColumn = columns[index]
 
-      if (
-        sort &&
-        sort.column.id === clickedColumn.id &&
-        sort.direction === "asc"
-      ) {
-        // The clicked column is already sorted ascending, sort descending instead
-        sortDirection = "desc"
+      if (sort && sort.column.id === clickedColumn.id) {
+        // The clicked column is already sorted
+        if (sort.direction === "asc") {
+          // Sort column descending
+          sortDirection = "desc"
+        } else {
+          // Remove sorting of column
+          setSort(undefined)
+          return
+        }
       }
 
       setSort({
@@ -344,7 +361,7 @@ function DataGrid({
         rowHeight={ROW_HEIGHT}
         headerHeight={ROW_HEIGHT}
         getCellContent={getCellContent}
-        onColumnResize={onColumnResize}
+        onColumnResized={onColumnResize}
         // Freeze all index columns:
         freezeColumns={numIndices}
         smoothScrollX={true}
