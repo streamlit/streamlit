@@ -13,11 +13,11 @@
 # limitations under the License.
 
 import sys
-import threading
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Optional, List
 
+from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.ioloop
@@ -147,6 +147,28 @@ class AppSession:
 
         """
         return self._session_data.flush_browser_queue()
+
+    def handle_backmsg(self, msg: BackMsg) -> None:
+        try:
+            msg_type = msg.WhichOneof("type")
+
+            LOGGER.debug("Received the following back message:\n%s", msg)
+
+            if msg_type == "rerun_script":
+                self.handle_rerun_script_request(msg.rerun_script)
+            elif msg_type == "load_git_info":
+                self.handle_git_information_request()
+            elif msg_type == "clear_cache":
+                self.handle_clear_cache_request()
+            elif msg_type == "set_run_on_save":
+                self.handle_set_run_on_save_request(msg.set_run_on_save)
+            elif msg_type == "stop_script":
+                self.handle_stop_script_request()
+            else:
+                LOGGER.warning('No handler for "%s"', msg_type)
+        except BaseException as e:
+            LOGGER.error(e)
+            self.handle_backmsg_exception(e)
 
     def shutdown(self) -> None:
         """Shut down the AppSession.
@@ -357,9 +379,11 @@ class AppSession:
 
         """
 
-        assert (
-            threading.main_thread() == threading.current_thread()
-        ), "This function must only be called on the main thread"
+        # TSC: commented out for SnowflakeDemo (which runs the server
+        # on another thread.)
+        # assert (
+        #     threading.main_thread() == threading.current_thread()
+        # ), "This function must only be called on the main thread"
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.

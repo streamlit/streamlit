@@ -20,6 +20,7 @@ import sys
 import errno
 import time
 import traceback
+
 import click
 from enum import Enum
 from typing import (
@@ -123,7 +124,9 @@ class SessionInfo:
     the ForwardMsgCache.
     """
 
-    def __init__(self, ws: WebSocketHandler, session: AppSession):
+    def __init__(
+        self, write_forward_msg: Callable[[ForwardMsg], None], session: AppSession
+    ):
         """Initialize a SessionInfo instance.
 
         Parameters
@@ -134,7 +137,7 @@ class SessionInfo:
             The websocket corresponding to this session.
         """
         self.session = session
-        self.ws = ws
+        self.write_forward_msg = write_forward_msg
         self.script_run_count = 0
 
     def __repr__(self) -> str:
@@ -625,7 +628,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         # Ship it off!
-        session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
+        session_info.write_forward_msg(msg_to_send)
 
     def _enqueued_some_message(self) -> None:
         self._ioloop.add_callback(self._need_send_data.set)
@@ -647,7 +650,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         self._ioloop.stop()
 
-    def _create_app_session(self, ws: WebSocketHandler) -> AppSession:
+    def create_demo_app_session(
+        self, write_forward_msg: Callable[[ForwardMsg], None]
+    ) -> AppSession:
+        return self._create_app_session(write_forward_msg)
+
+    def _create_websocket_app_session(self, ws: WebSocketHandler) -> AppSession:
         """Register a connected browser with the server.
 
         Parameters
@@ -661,6 +669,21 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created AppSession for this browser connection.
 
         """
+
+        def write_forward_msg(msg: ForwardMsg) -> None:
+            ws.write_message(serialize_forward_msg(msg), binary=True)
+
+        session = self._create_app_session(write_forward_msg)
+
+        LOGGER.debug(
+            "Created new session for ws %s. Session ID: %s", id(ws), session.id
+        )
+
+        return session
+
+    def _create_app_session(
+        self, write_forward_msg: Callable[[ForwardMsg], None]
+    ) -> AppSession:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
@@ -671,15 +694,11 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             local_sources_watcher=local_sources_watcher,
         )
 
-        LOGGER.debug(
-            "Created new session for ws %s. Session ID: %s", id(ws), session.id
-        )
-
         assert (
             session.id not in self._session_info_by_id
         ), f"session.id '{session.id}' registered multiple times!"
 
-        self._session_info_by_id[session.id] = SessionInfo(ws, session)
+        self._session_info_by_id[session.id] = SessionInfo(write_forward_msg, session)
         self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
         self._has_connection.notify_all()
 
@@ -724,7 +743,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
-        self._session = self._server._create_app_session(self)
+        self._session = self._server._create_websocket_app_session(self)
         return None
 
     def on_close(self) -> None:
@@ -750,25 +769,12 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         if not self._session:
             return
 
-        msg = BackMsg()
-
         try:
+            msg = BackMsg()
             msg.ParseFromString(payload)
             msg_type = msg.WhichOneof("type")
 
-            LOGGER.debug("Received the following back message:\n%s", msg)
-
-            if msg_type == "rerun_script":
-                self._session.handle_rerun_script_request(msg.rerun_script)
-            elif msg_type == "load_git_info":
-                self._session.handle_git_information_request()
-            elif msg_type == "clear_cache":
-                self._session.handle_clear_cache_request()
-            elif msg_type == "set_run_on_save":
-                self._session.handle_set_run_on_save_request(msg.set_run_on_save)
-            elif msg_type == "stop_script":
-                self._session.handle_stop_script_request()
-            elif msg_type == "close_connection":
+            if msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):
                     Server.get_current().stop()
                 else:
@@ -777,8 +783,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
                         "not in development mode"
                     )
             else:
-                LOGGER.warning('No handler for "%s"', msg_type)
-
+                self._session.handle_backmsg(msg)
         except BaseException as e:
             LOGGER.error(e)
             self._session.handle_backmsg_exception(e)
