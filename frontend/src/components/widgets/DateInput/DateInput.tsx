@@ -174,7 +174,7 @@ class DateInput extends React.PureComponent<Props, State> {
       : undefined
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { width, element, disabled, theme, widgetMgr } = this.props
     const { values, isRange } = this.state
     const { colors, fontSizes } = theme

@@ -295,7 +295,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { element, width, disabled, widgetMgr } = this.props
     const { formattedValue, dirty } = this.state
 

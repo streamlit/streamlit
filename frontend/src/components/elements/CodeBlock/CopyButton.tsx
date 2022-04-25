@@ -43,19 +43,21 @@ class CopyButton extends PureComponent<Props> {
     }
   }
 
-  public render = (): ReactNode => (
-    <StyledCopyButton
-      title="Copy to clipboard"
-      ref={this.button}
-      data-clipboard-text={this.props.text}
-      style={{
-        top: 0,
-        right: 0,
-      }}
-    >
-      <CopyIcon size="16" />
-    </StyledCopyButton>
-  )
+  public render(): ReactNode {
+    return (
+      <StyledCopyButton
+        title="Copy to clipboard"
+        ref={this.button}
+        data-clipboard-text={this.props.text}
+        style={{
+          top: 0,
+          right: 0,
+        }}
+      >
+        <CopyIcon size="16" />
+      </StyledCopyButton>
+    )
+  }
 }
 
 export default CopyButton

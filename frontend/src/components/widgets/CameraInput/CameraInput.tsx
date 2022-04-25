@@ -347,7 +347,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     })
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { element, widgetMgr, disabled, width } = this.props
 
     // Manage our form-clear event handler.

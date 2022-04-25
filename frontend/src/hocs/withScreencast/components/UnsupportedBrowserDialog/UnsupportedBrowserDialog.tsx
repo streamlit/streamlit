@@ -29,7 +29,7 @@ export interface Props {
 }
 
 class UnsupportedBrowserDialog extends PureComponent<Props> {
-  public render = (): ReactNode => {
+  public render(): ReactNode {
     const { onClose } = this.props
 
     return (
