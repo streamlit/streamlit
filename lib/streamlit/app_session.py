@@ -640,6 +640,7 @@ def _populate_config_msg(msg: Config) -> None:
     msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
+    msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:

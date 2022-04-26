@@ -388,6 +388,7 @@ describe("App.handleNewSession", () => {
       maxCachedMessageAge: 0,
       mapboxToken: "mapboxToken",
       allowRunOnSave: false,
+      hideSidebarNav: false,
     },
     customTheme: {
       primaryColor: "red",
@@ -692,6 +693,17 @@ describe("App.handleNewSession", () => {
     // @ts-ignore
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+  })
+
+  it("plumbs hideSidebarNav to AppView", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+
+    instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+
+    // hideSidebarNav is initialized to true, so if it's false below, it must
+    // have been changed as expected.
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(false)
   })
 })
 
