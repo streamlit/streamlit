@@ -70,6 +70,7 @@ def page_sort_key(script_path: Path) -> Tuple[float, str]:
     assert len(matches) > 0, f"{script_path} is not a Python file"
 
     [(number, label)] = matches
+    label = label.lower()
 
     if number == "":
         return (float("inf"), label)
