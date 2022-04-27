@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast
+from typing import Optional
 from typing import TYPE_CHECKING
 
 import streamlit
@@ -131,7 +132,7 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", subheader_proto)
 
-    def code(self, body: str, language: str = "python") -> DeltaGenerator:
+    def code(self, body: str, language: Optional[str] = "python") -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -268,4 +269,4 @@ class MarkdownMixin:
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
