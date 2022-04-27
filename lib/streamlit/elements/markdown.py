@@ -17,7 +17,6 @@ from typing import Optional
 from typing import TYPE_CHECKING
 from typing import Union
 
-import streamlit
 from streamlit import type_util
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from .utils import clean_text
@@ -233,7 +232,7 @@ class MarkdownMixin:
         caption_proto.is_caption = True
         return self.dg._enqueue("markdown", caption_proto)
 
-    def latex(self, body: Union[str, sympy.Expr]) -> "DeltaGenerator":
+    def latex(self, body: Union[str, "sympy.Expr"]) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
