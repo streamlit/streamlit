@@ -98,13 +98,15 @@ class AppSession:
             The file watcher that lets the session know local files have changed.
 
         user_info: Dict
-            Dict that contains information about current user.
-            For now it is just an email.
+            A dict that contains information about the current user. For now,
+            it only contains the user's email address.
+
             {
                 "email": "example@example.com"
             }
-            (Information about current user optionally provided by cloud via
-            HTTP Header)
+
+            Information about the current user is optionally provided when a
+            websocket connection is initialized via the "X-Streamlit-User" header.
 
         """
         # Each AppSession has a unique string ID.

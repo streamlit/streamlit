@@ -118,13 +118,15 @@ class ScriptRunner:
             The File manager to store the data uploaded by the file_uploader widget.
 
         user_info: Dict
-            Dict that contains information about current user.
-            For now it is just an email.
+            A dict that contains information about the current user. For now,
+            it only contains the user's email address.
+
             {
                 "email": "example@example.com"
             }
-            (Information about current user optionally provided by cloud via
-            HTTP Header)
+
+            Information about the current user is optionally provided when a
+            websocket connection is initialized via the "X-Streamlit-User" header.
 
         """
         self._session_id = session_id

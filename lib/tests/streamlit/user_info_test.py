@@ -44,17 +44,21 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
 
         forward_msg_queue = ForwardMsgQueue()
 
-        add_script_run_ctx(
-            threading.current_thread(),
-            ScriptRunContext(
-                session_id="test session id",
-                enqueue=forward_msg_queue.enqueue,
-                query_string="",
-                session_state=SessionState(),
-                uploaded_file_mgr=None,
-                user_info={"email": "something@else.com"},
-            ),
-        )
+        try:
+            add_script_run_ctx(
+                threading.current_thread(),
+                ScriptRunContext(
+                    session_id="test session id",
+                    enqueue=forward_msg_queue.enqueue,
+                    query_string="",
+                    session_state=SessionState(),
+                    uploaded_file_mgr=None,
+                    user_info={"email": "something@else.com"},
+                ),
+            )
 
-        self.assertEqual(st.user.email, "something@else.com")
-        add_script_run_ctx(threading.current_thread(), orig_report_ctx)
+            self.assertEqual(st.user.email, "something@else.com")
+        except Exception as e:
+            raise e
+        finally:
+            add_script_run_ctx(threading.current_thread(), orig_report_ctx)
