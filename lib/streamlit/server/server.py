@@ -527,9 +527,8 @@ class Server:
                             try:
                                 with open(r"messages.pb", "ab") as f:
                                     f.write(
-                                        "ForwardMsg:".encode()
+                                        f"FORWARDMSG, [{msg.ByteSize()}]\n".encode()
                                         + msg.SerializeToString()
-                                        + "\n".encode()
                                     )
                                 self._send_message(session_info, msg)
                             except tornado.websocket.WebSocketClosedError:
@@ -764,7 +763,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
 
             LOGGER.debug("Received the following back message:\n%s", msg)
             with open(r"messages.pb", "ab") as f:
-                f.write("BackMsg:".encode() + payload + "\n".encode())
+                f.write(f"BACKMSG, [{msg.ByteSize}]\n".encode() + payload)
 
             if msg_type == "rerun_script":
                 self._session.handle_rerun_script_request(msg.rerun_script)
