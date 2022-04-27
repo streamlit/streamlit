@@ -43,6 +43,7 @@ export interface SidebarProps {
   appPages: IAppPage[]
   onPageChange: (pageName: string) => void
   currentPageName: string
+  hideSidebarNav: boolean
 }
 
 interface State {
@@ -169,7 +170,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       hasElements,
       onPageChange,
       currentPageName,
+      hideSidebarNav,
     } = this.props
+
+    const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
@@ -187,14 +191,16 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               <Icon content={Close} size="lg" />
             </Button>
           </StyledSidebarCloseButton>
-          <SidebarNav
-            appPages={appPages}
-            hasSidebarElements={hasElements}
-            onPageChange={onPageChange}
-            hideParentScrollbar={this.hideScrollbar}
-            currentPageName={currentPageName}
-          />
-          <StyledSidebarUserContent hasPageNavAbove={appPages.length > 1}>
+          {!hideSidebarNav && (
+            <SidebarNav
+              appPages={appPages}
+              hasSidebarElements={hasElements}
+              onPageChange={onPageChange}
+              hideParentScrollbar={this.hideScrollbar}
+              currentPageName={currentPageName}
+            />
+          )}
+          <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
             {children}
           </StyledSidebarUserContent>
         </StyledSidebarContent>

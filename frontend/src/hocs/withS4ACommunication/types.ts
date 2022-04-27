@@ -29,6 +29,7 @@ export type StreamlitShareMetadata = {
 
 export interface S4ACommunicationState {
   forcedModalClose: boolean
+  hideSidebarNav: boolean
   isOwner: boolean
   menuItems: IMenuItem[]
   queryParams: string
@@ -75,6 +76,10 @@ export type IHostToGuestMessage = {
   | {
       type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT"
       sidebarChevronDownshift: number
+    }
+  | {
+      type: "SET_SIDEBAR_NAV_VISIBILITY"
+      hidden: boolean
     }
   | {
       type: "SET_TOOLBAR_ITEMS"
