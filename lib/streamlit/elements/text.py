@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class TextMixin:
-    def text(self, body: str) -> DeltaGenerator:
+    def text(self, body: str) -> "DeltaGenerator":
         """Write fixed-width and preformatted text.
 
         Parameters
@@ -42,6 +42,6 @@ class TextMixin:
         return self.dg._enqueue("text", text_proto)
 
     @property
-    def dg(self) -> DeltaGenerator:
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast(DeltaGenerator, self)
