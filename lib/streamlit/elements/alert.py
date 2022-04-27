@@ -13,14 +13,17 @@
 # limitations under the License.
 
 from typing import cast
+from typing import TYPE_CHECKING
 
-import streamlit
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from .utils import clean_text
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 
 class AlertMixin:
-    def error(self, body):
+    def error(self, body: str) -> "DeltaGenerator":
         """Display error message.
 
         Parameters
@@ -36,9 +39,10 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
-        return self.dg._enqueue("alert", alert_proto)
+        dg = self.dg._enqueue("alert", alert_proto)
+        return cast("DeltaGenerator", dg)
 
-    def warning(self, body):
+    def warning(self, body: str) -> "DeltaGenerator":
         """Display warning message.
 
         Parameters
@@ -54,9 +58,10 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.WARNING
-        return self.dg._enqueue("alert", alert_proto)
+        dg = self.dg._enqueue("alert", alert_proto)
+        return cast("DeltaGenerator", dg)
 
-    def info(self, body):
+    def info(self, body: str) -> "DeltaGenerator":
         """Display an informational message.
 
         Parameters
@@ -72,9 +77,10 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.INFO
-        return self.dg._enqueue("alert", alert_proto)
+        dg = self.dg._enqueue("alert", alert_proto)
+        return cast("DeltaGenerator", dg)
 
-    def success(self, body):
+    def success(self, body: str) -> "DeltaGenerator":
         """Display a success message.
 
         Parameters
@@ -90,9 +96,10 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.SUCCESS
-        return self.dg._enqueue("alert", alert_proto)
+        dg = self.dg._enqueue("alert", alert_proto)
+        return cast("DeltaGenerator", dg)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
