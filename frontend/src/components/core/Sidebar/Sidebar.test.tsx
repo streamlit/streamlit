@@ -37,6 +37,7 @@ function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
       onPageChange={jest.fn()}
       currentPageName={""}
       hasElements
+      hideSidebarNav={false}
       {...props}
     />
   )
@@ -164,6 +165,7 @@ describe("Sidebar Component", () => {
   it("renders SidebarNav component", () => {
     const appPages = [
       { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
     ]
     const wrapper = renderSideBar({ appPages })
 
@@ -172,5 +174,21 @@ describe("Sidebar Component", () => {
     expect(typeof wrapper.find(SidebarNav).prop("onPageChange")).toBe(
       "function"
     )
+    expect(
+      wrapper.find("StyledSidebarUserContent").prop("hasPageNavAbove")
+    ).toBe(true)
+  })
+
+  it("can hide SidebarNav with the hideSidebarNav option", () => {
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+    ]
+    const wrapper = renderSideBar({ appPages, hideSidebarNav: true })
+
+    expect(wrapper.find(SidebarNav).exists()).toBe(false)
+    expect(
+      wrapper.find("StyledSidebarUserContent").prop("hasPageNavAbove")
+    ).toBe(false)
   })
 })

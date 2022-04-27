@@ -707,6 +707,14 @@ _create_option(
     visibility="hidden",
 )
 
+_create_option(
+    "ui.hideSidebarNav",
+    description="""Flag to hide the sidebar page navigation component.""",
+    default_val=False,
+    type_=bool,
+    visibility="hidden",
+)
+
 
 # Config Section: Mapbox #
 

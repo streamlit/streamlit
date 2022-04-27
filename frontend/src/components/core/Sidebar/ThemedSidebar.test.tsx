@@ -29,6 +29,7 @@ function getProps(
     onPageChange: jest.fn(),
     currentPageName: "streamlit_app",
     hasElements: true,
+    hideSidebarNav: false,
     ...props,
   }
 }

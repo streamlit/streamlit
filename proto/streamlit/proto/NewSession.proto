@@ -92,6 +92,9 @@ message Config {
   // See config option "ui.hideTopBar".
   bool hide_top_bar = 6;
 
+  // See config option "ui.hideSidebarNav".
+  bool hide_sidebar_nav = 7;
+
   reserved 1;
 }
 

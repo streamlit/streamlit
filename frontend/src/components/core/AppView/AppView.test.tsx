@@ -51,6 +51,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     appPages: [{ pageName: "streamlit_app", scriptPath: "streamlit_app.py" }],
     onPageChange: jest.fn(),
     currentPageName: "streamlit_app",
+    hideSidebarNav: false,
     ...props,
   }
 }
