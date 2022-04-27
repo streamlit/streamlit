@@ -57,13 +57,14 @@ jest.mock("src/lib/ConnectionManager")
 const getS4ACommunicationState = (
   extend?: Partial<S4ACommunicationState>
 ): S4ACommunicationState => ({
-  queryParams: "",
-  menuItems: [],
-  toolbarItems: [],
   forcedModalClose: false,
+  hideSidebarNav: false,
   isOwner: true,
+  menuItems: [],
+  queryParams: "",
   sidebarChevronDownshift: 0,
   streamlitShareMetadata: {},
+  toolbarItems: [],
   ...extend,
 })
 
@@ -695,15 +696,29 @@ describe("App.handleNewSession", () => {
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
   })
 
-  it("plumbs hideSidebarNav to AppView", () => {
+  it("sets hideSidebarNav based on the server config option and s4a setting", () => {
     const wrapper = shallow(<App {...getProps()} />)
+
+    // hideSidebarNav initializes to true.
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
+
+    // Simulate the server ui.hideSidebarNav config option being false.
     const instance = wrapper.instance() as App
-
     instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
-
-    // hideSidebarNav is initialized to true, so if it's false below, it must
-    // have been changed as expected.
     expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(false)
+
+    // Have s4a override the server config option.
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: getS4ACommunicationProp({
+          currentState: getS4ACommunicationState({
+            hideSidebarNav: true,
+          }),
+        }),
+      })
+    )
+
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
   })
 })
 

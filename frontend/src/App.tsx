@@ -1174,6 +1174,10 @@ export class App extends PureComponent<Props, State> {
       currentPageName,
     } = this.state
 
+    const {
+      hideSidebarNav: s4AHideSidebarNav,
+    } = this.props.s4aCommunication.currentState
+
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
       "streamlit-wide": userSettings.wideMode,
@@ -1274,7 +1278,7 @@ export class App extends PureComponent<Props, State> {
               appPages={this.state.appPages}
               onPageChange={this.onPageChange}
               currentPageName={currentPageName}
-              hideSidebarNav={hideSidebarNav}
+              hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
             />
             {renderedDialog}
           </StyledApp>
