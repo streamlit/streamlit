@@ -24,7 +24,7 @@ from .utils import clean_text
 
 if TYPE_CHECKING:
     import sympy
-    
+
     from streamlit.delta_generator import DeltaGenerator
 
 
