@@ -55,13 +55,14 @@ function withS4ACommunication(
   function ComponentWithS4ACommunication(props: any): ReactElement {
     // TODO(vdonato): Refactor this to use useReducer to make this less
     // unwieldy.
+    const [forcedModalClose, setForcedModalClose] = useState(false)
+    const [hideSidebarNav, setHideSidebarNav] = useState(false)
+    const [isOwner, setIsOwner] = useState(false)
     const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
-    const [forcedModalClose, setForcedModalClose] = useState(false)
-    const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
-    const [isOwner, setIsOwner] = useState(false)
-    const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
     const [sidebarChevronDownshift, setSidebarChevronDownshift] = useState(0)
+    const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
+    const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -104,6 +105,10 @@ function withS4ACommunication(
           setSidebarChevronDownshift(message.sidebarChevronDownshift)
         }
 
+        if (message.type === "SET_SIDEBAR_NAV_VISIBILITY") {
+          setHideSidebarNav(message.hidden)
+        }
+
         if (message.type === "SET_TOOLBAR_ITEMS") {
           setToolbarItems(message.items)
         }
@@ -130,6 +135,7 @@ function withS4ACommunication(
           {
             currentState: {
               forcedModalClose,
+              hideSidebarNav,
               isOwner,
               menuItems,
               queryParams,
