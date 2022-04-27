@@ -334,6 +334,7 @@ class ConfigTest(unittest.TestCase):
                 "server.maxUploadSize",
                 "server.maxMessageSize",
                 "ui.hideTopBar",
+                "ui.hideSidebarNav",
             ]
         )
         keys = sorted(config._config_options.keys())

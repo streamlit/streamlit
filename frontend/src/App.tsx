@@ -141,6 +141,7 @@ interface State {
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
+  hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageName: string
 }
@@ -209,13 +210,16 @@ export class App extends PureComponent<Props, State> {
       themeHash: null,
       gitInfo: null,
       formsData: createFormsData(),
-      // We set this to true by default because this information isn't
-      // available on page load (we get it when the script begins to run), so
-      // the user would see top bar elements for a few ms if this defaulted to
-      // false.
-      hideTopBar: true,
       appPages: [],
       currentPageName: "",
+      // We set hideTopBar to true by default because this information isn't
+      // available on page load (we get it when the script begins to run), so
+      // the user would see top bar elements for a few ms if this defaulted to
+      // false. hideSidebarNav doesn't have this issue (app pages and the value
+      // of the config option are received simultaneously), but we set it to
+      // true as well for consistency.
+      hideTopBar: true,
+      hideSidebarNav: true,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -617,6 +621,7 @@ export class App extends PureComponent<Props, State> {
     this.setState({
       allowRunOnSave: config.allowRunOnSave,
       hideTopBar: config.hideTopBar,
+      hideSidebarNav: config.hideSidebarNav,
       appPages: newSessionProto.appPages,
     })
 
@@ -1165,8 +1170,13 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       gitInfo,
       hideTopBar,
+      hideSidebarNav,
       currentPageName,
     } = this.state
+
+    const {
+      hideSidebarNav: s4AHideSidebarNav,
+    } = this.props.s4aCommunication.currentState
 
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -1268,6 +1278,7 @@ export class App extends PureComponent<Props, State> {
               appPages={this.state.appPages}
               onPageChange={this.onPageChange}
               currentPageName={currentPageName}
+              hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
             />
             {renderedDialog}
           </StyledApp>
