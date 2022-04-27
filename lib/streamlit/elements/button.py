@@ -16,7 +16,8 @@ import io
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 
 from streamlit.type_util import Key, to_key
-from typing import cast, Final, Optional, Union, BinaryIO, TextIO
+from typing import cast, Optional, Union, BinaryIO, TextIO
+from typing_extensions import Final
 from textwrap import dedent
 
 import streamlit
