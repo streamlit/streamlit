@@ -15,6 +15,7 @@
 from typing import cast
 from typing import Optional
 from typing import TYPE_CHECKING
+from typing import Union
 
 import streamlit
 from streamlit import type_util
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class MarkdownMixin:
-    def markdown(self, body: str, unsafe_allow_html: bool = False) -> DeltaGenerator:
+    def markdown(self, body: str, unsafe_allow_html: bool = False) -> "DeltaGenerator":
         """Display string formatted as Markdown.
 
         Parameters
@@ -81,7 +82,7 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
-    def header(self, body: str, anchor: Optional[str] = None) -> DeltaGenerator:
+    def header(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
         """Display text in header formatting.
 
         Parameters
@@ -106,7 +107,7 @@ class MarkdownMixin:
             header_proto.allow_html = True
         return self.dg._enqueue("markdown", header_proto)
 
-    def subheader(self, body: str, anchor: Optional[str] = None) -> DeltaGenerator:
+    def subheader(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
         """Display text in subheader formatting.
 
         Parameters
@@ -132,7 +133,7 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", subheader_proto)
 
-    def code(self, body: str, language: Optional[str] = "python") -> DeltaGenerator:
+    def code(self, body: str, language: Optional[str] = "python") -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -161,7 +162,7 @@ class MarkdownMixin:
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
-    def title(self, body: str, anchor: Optional[str] = None) -> DeltaGenerator:
+    def title(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -189,7 +190,7 @@ class MarkdownMixin:
             title_proto.allow_html = True
         return self.dg._enqueue("markdown", title_proto)
 
-    def caption(self, body: str, unsafe_allow_html: bool = False) -> DeltaGenerator:
+    def caption(self, body: str, unsafe_allow_html: bool = False) -> "DeltaGenerator":
         """Display text in small font.
 
         This should be used for captions, asides, footnotes, sidenotes, and
@@ -232,7 +233,7 @@ class MarkdownMixin:
         caption_proto.is_caption = True
         return self.dg._enqueue("markdown", caption_proto)
 
-    def latex(self, body: Union[str, sympy.Expr]) -> DeltaGenerator:
+    def latex(self, body: Union[str, sympy.Expr]) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -267,6 +268,6 @@ class MarkdownMixin:
         return self.dg._enqueue("markdown", latex_proto)
 
     @property
-    def dg(self) -> DeltaGenerator:
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
