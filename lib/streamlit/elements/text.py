@@ -13,14 +13,18 @@
 # limitations under the License.
 
 from typing import cast
+from typing import TYPE_CHECKING
 
 import streamlit
 from streamlit.proto.Text_pb2 import Text as TextProto
 from .utils import clean_text
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 
 class TextMixin:
-    def text(self, body):
+    def text(self, body: str) -> DeltaGenerator:
         """Write fixed-width and preformatted text.
 
         Parameters
@@ -38,6 +42,6 @@ class TextMixin:
         return self.dg._enqueue("text", text_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast(DeltaGenerator, self)
