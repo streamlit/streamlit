@@ -70,8 +70,11 @@ export function createDataGridTheme(theme: Theme): GlideTheme {
 
 interface ResizableContainerProps {
   width: number
+  maxWidth: number
+  minWidth: number
   height: number
   minHeight: number
+  maxHeight: number
   theme: Theme
 }
 
@@ -82,10 +85,13 @@ interface ResizableContainerProps {
  * The reason is that glide-data-grid requires a styled-component to pass down the theme.
  */
 export const ResizableContainer = styled.div<ResizableContainerProps>`
-  overflow: hidden;
+  overflow: auto;
   position: relative;
-  resize: vertical;
+  resize: both;
   min-height: ${p => p.minHeight}px;
+  max-height: ${p => p.maxHeight}px;
+  min-width: ${p => p.minWidth}px;
+  max-width: ${p => p.maxWidth}px;
   width: ${p => p.width}px;
   height: ${p => p.height}px;
   border: 1px solid ${p => p.theme.colors.fadedText05};
@@ -98,15 +104,24 @@ export const ResizableContainer = styled.div<ResizableContainerProps>`
     height: 100%;
   }
 
+  & .dvn-scroller {
+    scrollbar-width: thin;
+    overflow-x: overlay;
+    overflow-y: overlay;
+  }
+
   // Hide the resize handle in the right corner. Resizing is still be possible.
-  ::-webkit-resizer {
+  &::-webkit-resizer {
     display: none;
   }
 `
 interface DataGridContainerProps {
   width: number
+  maxWidth: number
+  minWidth: number
   height: number
   minHeight: number
+  maxHeight: number
   children: ReactElement
 }
 
@@ -115,8 +130,11 @@ interface DataGridContainerProps {
  */
 function ThemedDataGridContainer({
   width,
+  maxWidth,
+  minWidth,
   height,
   minHeight,
+  maxHeight,
   children,
 }: DataGridContainerProps): ReactElement {
   const theme: Theme = useTheme()
@@ -128,8 +146,11 @@ function ThemedDataGridContainer({
       <ResizableContainer
         className="stDataGrid"
         width={width}
+        maxWidth={maxWidth}
+        minWidth={minWidth}
         height={height}
         minHeight={minHeight}
+        maxHeight={maxHeight}
         theme={theme}
       >
         {children}

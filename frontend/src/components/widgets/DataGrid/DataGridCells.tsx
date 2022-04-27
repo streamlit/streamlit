@@ -32,10 +32,12 @@ import { DataFrameCell, Quiver } from "src/lib/Quiver"
  * Returns either the formatted content or display value for a Quiver cell.
  */
 function getDisplayContent(quiverCell: DataFrameCell): string {
-  return (
+  const displayContent =
     quiverCell.displayContent ||
     Quiver.format(quiverCell.content, quiverCell.contentType)
-  )
+
+  // Remove all line breaks
+  return displayContent.replace(/(\r\n|\n|\r)/gm, " ")
 }
 
 /**
@@ -130,6 +132,18 @@ export function getCellTemplate(kind: string, readonly: boolean): GridCell {
 }
 
 /**
+ * Returns the sort mode based on the given column type.
+ */
+export function getColumnSortMode(columnType: string): string {
+  if (columnType === GridCellKind.Number) {
+    // Smart mode also works correctly for numbers
+    return "smart"
+  }
+
+  return "default"
+}
+
+/**
  * Returns a glide-data-grid compatible cell object based on the
  * cell data from the quiver object. Different types of data will
  * result in different cell types.
@@ -186,7 +200,9 @@ export function fillCellTemplate(
     return {
       ...cellTemplate,
       data:
-        typeof quiverCell.content === "string"
+        typeof quiverCell.content === "string" ||
+        quiverCell.content === undefined ||
+        quiverCell.content === null
           ? quiverCell.content
           : formattedContents,
       displayData: formattedContents,

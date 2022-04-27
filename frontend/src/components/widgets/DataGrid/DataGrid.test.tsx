@@ -63,22 +63,22 @@ describe("DataGrid widget", () => {
 
     // Resize column 1 to size of 123:
     act(() => {
-      const { columns, onColumnResized } = result.current
-      onColumnResized?.(columns[0], 123)
+      const { columns, onColumnResize } = result.current
+      onColumnResize?.(columns[0], 123)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(123)
 
     // Resize column 1 to size of 321:
     act(() => {
-      const { columns, onColumnResized } = result.current
-      onColumnResized?.(columns[0], 321)
+      const { columns, onColumnResize } = result.current
+      onColumnResize?.(columns[0], 321)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
 
     // Column 0 should stay at previous value if other column is resized
     act(() => {
-      const { columns, onColumnResized } = result.current
-      onColumnResized?.(columns[1], 88)
+      const { columns, onColumnResize } = result.current
+      onColumnResize?.(columns[1], 88)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
   })

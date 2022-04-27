@@ -30,7 +30,11 @@ import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
 
-import { getCellTemplate, fillCellTemplate } from "./DataGridCells"
+import {
+  getCellTemplate,
+  fillCellTemplate,
+  getColumnSortMode,
+} from "./DataGridCells"
 import ThemedDataGridContainer from "./DataGridContainer"
 
 const ROW_HEIGHT = 35
@@ -42,6 +46,7 @@ const MAX_COLUMN_WIDTH = 500
  */
 type GridColumnWithCellTemplate = GridColumn & {
   getTemplate(): GridCell
+  columnType: string
 }
 
 /**
@@ -60,6 +65,7 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
       getTemplate: () => {
         return getCellTemplate(GridCellKind.RowID, true)
       },
+      columnType: GridCellKind.RowID,
     } as GridColumnWithCellTemplate)
     return columns
   }
@@ -76,6 +82,7 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
       getTemplate: () => {
         return getCellTemplate(GridCellKind.RowID, true)
       },
+      columnType: GridCellKind.RowID,
     } as GridColumnWithCellTemplate)
   }
 
@@ -91,7 +98,8 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
       // Use text cell as fallback
       cellKind = GridCellKind.Text
     } else if (["bool"].includes(dataTypeName)) {
-      cellKind = GridCellKind.Boolean
+      // TODO: lukasmasuch: Use text cell for now since the boolean cell does not support empty values.
+      cellKind = GridCellKind.Text
     } else if (["int64", "float64"].includes(dataTypeName)) {
       cellKind = GridCellKind.Number
     } else if (dataTypeName.startsWith("list")) {
@@ -99,12 +107,13 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
     }
 
     columns.push({
-      id: `column-${i}`,
+      id: `column-${columnTitle}-${i}`,
       title: columnTitle,
       hasMenu: false,
       getTemplate: () => {
         return getCellTemplate(cellKind, true)
       },
+      columnType: cellKind,
     } as GridColumnWithCellTemplate)
   }
   return columns
@@ -124,7 +133,7 @@ type ColumnSortConfig = {
  */
 type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
   DataEditorProps,
-  "columns" | "getCellContent" | "onColumnResized"
+  "columns" | "getCellContent" | "onColumnResize"
 >
 
 /**
@@ -141,11 +150,34 @@ export function useDataLoader(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [columns, setColumns] = useState(() => getColumns(element))
 
+  useLayoutEffect(() => {
+    const updatedColumns = getColumns(element)
+    // Only update columns if something changed
+    if (updatedColumns.length !== columns.length) {
+      setColumns(updatedColumns)
+    } else {
+      for (let i = 0; i < updatedColumns.length; i++) {
+        const updatedColumn = updatedColumns[i]
+        const currentColumn = columns[i]
+
+        if (updatedColumn.title !== currentColumn.title) {
+          setColumns(updatedColumns)
+          break
+        }
+
+        if (updatedColumn.columnType !== currentColumn.columnType) {
+          setColumns(updatedColumns)
+          break
+        }
+      }
+    }
+  }, [element])
+
   // Number of rows of the table minus 1 for the header row:
   const numRows = element.dimensions.rows - 1
   const numIndices = element.types?.index?.length ?? 0
 
-  const onColumnResized = React.useCallback(
+  const onColumnResize = React.useCallback(
     (column: GridColumn, newSize: number) => {
       setColumns(prevColumns => {
         const index = prevColumns.findIndex(ci => ci.id === column.id)
@@ -164,7 +196,7 @@ export function useDataLoader(
     ([col, row]: readonly [number, number]): GridCell => {
       const cellTemplate = columns[col].getTemplate()
       if (row > numRows - 1) {
-        // TODO(lukasmasuch): This should never happen
+        // This should never happen
         return cellTemplate
       }
       try {
@@ -187,12 +219,29 @@ export function useDataLoader(
     sort,
   })
 
+  let adaptedColumns = columns
+
+  if (sort !== undefined) {
+    adaptedColumns = columns.map(column => {
+      if (column.id === sort.column.id) {
+        return {
+          ...column,
+          title:
+            sort.direction === "asc"
+              ? `↑ ${column.title}`
+              : `↓ ${column.title}`,
+        }
+      }
+      return column
+    })
+  }
+
   return {
     numRows,
     numIndices,
-    columns,
+    columns: adaptedColumns,
     getCellContent: getCellContentSorted,
-    onColumnResized,
+    onColumnResize,
   }
 }
 export interface DataGridProps {
@@ -214,10 +263,12 @@ function DataGrid({
     numIndices,
     columns,
     getCellContent,
-    onColumnResized,
+    onColumnResize,
   } = useDataLoader(element, sort)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
+
+  const minWidth = MIN_COLUMN_WIDTH + 3
 
   useLayoutEffect(() => {
     // Without this timeout,the width calculation might fail in a few cases. The timeout ensures
@@ -227,7 +278,7 @@ function DataGrid({
 
       let adjustedTableWidth = Math.max(
         columns.length * MIN_COLUMN_WIDTH + 3,
-        MIN_COLUMN_WIDTH + 3
+        minWidth
       )
 
       if (numRows) {
@@ -257,36 +308,50 @@ function DataGrid({
       let sortDirection = "asc"
       const clickedColumn = columns[index]
 
-      if (
-        sort &&
-        sort.column.id === clickedColumn.id &&
-        sort.direction === "asc"
-      ) {
-        // The clicked column is already sorted ascending, sort descending instead
-        sortDirection = "desc"
+      if (sort && sort.column.id === clickedColumn.id) {
+        // The clicked column is already sorted
+        if (sort.direction === "asc") {
+          // Sort column descending
+          sortDirection = "desc"
+        } else {
+          // Remove sorting of column
+          setSort(undefined)
+          return
+        }
       }
 
       setSort({
         column: clickedColumn,
         direction: sortDirection,
-        // Smart mode also detects numbers and sorts those correctly:
-        mode: "smart",
+        mode: getColumnSortMode(
+          (clickedColumn as GridColumnWithCellTemplate).columnType
+        ),
       } as ColumnSortConfig)
     },
     [sort, columns]
   )
 
-  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
-  const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
-
   // Calculate min height for the resizable container. header + one column, and +3 pixels for borders
   const minHeight = 2 * ROW_HEIGHT + 3
+
+  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
+  let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, minHeight)
+  let height = Math.min(maxHeight, 400)
+
+  if (propHeight) {
+    // User has explicitly configured a height
+    height = Math.max(propHeight, minHeight)
+    maxHeight = Math.max(propHeight, maxHeight)
+  }
 
   return (
     <ThemedDataGridContainer
       width={width}
       height={height}
       minHeight={minHeight}
+      maxHeight={maxHeight}
+      minWidth={width}
+      maxWidth={propWidth}
     >
       <GlideDataEditor
         ref={dataEditorRef}
@@ -297,7 +362,7 @@ function DataGrid({
         rowHeight={ROW_HEIGHT}
         headerHeight={ROW_HEIGHT}
         getCellContent={getCellContent}
-        onColumnResized={onColumnResized}
+        onColumnResized={onColumnResize}
         // Freeze all index columns:
         freezeColumns={numIndices}
         smoothScrollX={true}
