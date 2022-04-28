@@ -376,9 +376,13 @@ jobs:
           name: Checkout Streamlit code
 
       - run:
+          name: Set desired version from branch name
+          command: echo 'export DESIRED_VERSION=$(echo $CIRCLE_BRANCH | tr -d "release/")' >> $BASH_ENV
+
+      - run:
           name: Checkout head of branch
           command: |
-            git pull origin <<pipeline.git.branch>> --ff-only
+            git pull origin release/${DESIRED_VERSION} --ff-only
 
   build-deploy-release:
     resource_class: large
