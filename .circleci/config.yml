@@ -394,16 +394,16 @@ jobs:
               exit 1
             fi
 
+      - run:
+          name: Checkout head of branch
+          command: |
+            git pull origin ${GH_PR_BRANCH} --ff-only
+
       - configure-build-env
 
       - run:
           name: Set release version from tag name
           command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_TAG)' >> $BASH_ENV
-
-      - run:
-          name: Checkout head of branch
-          command: |
-            git pull origin release/${DESIRED_VERSION} --ff-only
 
       - run:
           name: Update version
