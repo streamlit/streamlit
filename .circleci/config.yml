@@ -366,24 +366,6 @@ jobs:
           success_message: ":rocket: Release of RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
           failure_message: ":blobonfire: Release of RC version ${STREAMLIT_RELEASE_SEMVER} failed"
 
-  test-job:
-    resource_class: large
-    docker:
-      - image: circleci/python:3.9.7
-    working_directory: ~/repo
-    steps:
-      - checkout:
-          name: Checkout Streamlit code
-
-      - run:
-          name: Set desired version from branch name
-          command: echo 'export DESIRED_VERSION=$(echo $CIRCLE_BRANCH | tr -d "release/")' >> $BASH_ENV
-
-      - run:
-          name: Checkout head of branch
-          command: |
-            git pull origin release/${DESIRED_VERSION} --ff-only
-
   build-deploy-release:
     resource_class: large
     docker:
@@ -392,11 +374,6 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
-
-      - run:
-          name: Checkout head of branch
-          command: |
-            git pull origin
 
       - run:
           name: Install GitHub CLI tool and related dependencies
@@ -431,6 +408,11 @@ jobs:
       - run:
           name: Set release version from tag name
           command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_TAG)' >> $BASH_ENV
+
+      - run:
+          name: Checkout head of branch
+          command: |
+            git pull origin release/${DESIRED_VERSION} --ff-only
 
       - run:
           name: Update version
