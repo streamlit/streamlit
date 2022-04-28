@@ -259,11 +259,6 @@ workflows:
             branches:
               ignore: /.*/
       - build-deploy-rc:
-          requires:
-            - python-min-version
-            - python-max-version
-            - cypress
-            - python-prod-deps-smoke-test
           filters:
             branches:
               only: /^fake-release\/([0-9]+\.){2}([0-9]+)/
