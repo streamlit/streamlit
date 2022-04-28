@@ -314,6 +314,11 @@ jobs:
           command: echo 'export DESIRED_VERSION=$(echo $CIRCLE_BRANCH | tr -d "fakerelease/-")' >> $BASH_ENV
 
       - run:
+          name: Checkout head of branch
+          command: |
+            git pull origin fake-release/${DESIRED_VERSION} --ff-only
+
+      - run:
           name: Set final versions for pre-release and update version
           command: |
             export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)
