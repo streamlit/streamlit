@@ -266,7 +266,7 @@ workflows:
             - python-prod-deps-smoke-test
           filters:
             branches:
-              only: /^release\/([0-9]+\.){2}([0-9]+)/
+              only: /^fake-release\/([0-9]+\.){2}([0-9]+)/
       - build-deploy-release:
           filters:
             tags:
