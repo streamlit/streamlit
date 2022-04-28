@@ -311,7 +311,7 @@ jobs:
 
       - run:
           name: Set desired version from branch name
-          command: echo 'export DESIRED_VERSION=$(echo $CIRCLE_BRANCH | tr -d "fake-release/")' >> $BASH_ENV
+          command: echo 'export DESIRED_VERSION=$(echo $CIRCLE_BRANCH | tr -d "fakerelease/-")' >> $BASH_ENV
 
       - run:
           name: Set final versions for pre-release and update version
@@ -388,7 +388,7 @@ jobs:
       - run:
           name: Ensure that version tag matches branch version
           command: |
-            if [ "$(echo $GH_PR_BRANCH | tr -d "fake-release/")" != "$CIRCLE_TAG" ]
+            if [ "$(echo $GH_PR_BRANCH | tr -d "fakerelease/-")" != "$CIRCLE_TAG" ]
             then
               echo "ERROR: Version number from tag does not match the version number from the branch name."
               exit 1
