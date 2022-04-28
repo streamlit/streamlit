@@ -278,6 +278,10 @@ workflows:
               only: /^([0-9]+\.){2}([0-9]+)/
             branches:
               ignore: /.*/
+      - test-job:
+          filters:
+            tags:
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
 
       # Uncomment to get a button that runs flaky tests on CircleCI:
       # - cypress-flaky-approval:
@@ -362,6 +366,21 @@ jobs:
           success_message: ":rocket: Release of RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
           failure_message: ":blobonfire: Release of RC version ${STREAMLIT_RELEASE_SEMVER} failed"
 
+  test-job:
+    resource_class: large
+    docker:
+      - image: circleci/python:3.9.7
+    working_directory: ~/repo
+    steps:
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      - run:
+          name: Checkout head of branch
+          command: |
+            git pull origin
+
   build-deploy-release:
     resource_class: large
     docker:
@@ -370,6 +389,11 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
+
+      - run:
+          name: Checkout head of branch
+          command: |
+            git pull origin
 
       - run:
           name: Install GitHub CLI tool and related dependencies
