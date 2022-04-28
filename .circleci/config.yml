@@ -372,7 +372,6 @@ jobs:
       - image: circleci/python:3.9.7
     working_directory: ~/repo
     steps:
-    steps:
       - checkout:
           name: Checkout Streamlit code
 
