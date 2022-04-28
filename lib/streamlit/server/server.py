@@ -13,11 +13,14 @@
 # limitations under the License.
 
 import asyncio
+import base64
+import binascii
 import logging
 import os
 import socket
 import sys
 import errno
+import json
 import time
 import traceback
 import click
@@ -666,8 +669,11 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
         try:
-            email = ws.request.headers["X-Streamlit-User"]
-        except KeyError:
+            header_content = ws.request.headers["X-Streamlit-User"]
+            payload = base64.b64decode(header_content)
+            user_obj = json.loads(payload)
+            email = user_obj["email"]
+        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "anonymous@streamlit.io"
 
         user_info = {"email": email}
