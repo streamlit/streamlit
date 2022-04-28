@@ -378,7 +378,7 @@ jobs:
       - run:
           name: Checkout head of branch
           command: |
-            git pull origin
+            git pull origin <<pipeline.git.branch>> --ff-only
 
   build-deploy-release:
     resource_class: large
