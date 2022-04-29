@@ -20,7 +20,8 @@ describe("Data Grid with different sizes", () => {
     { width: "704px", height: "400px" },
     { width: "250px", height: "150px" },
     { width: "250px", height: "400px" },
-    { width: "704px", height: "150px" }
+    { width: "704px", height: "150px" },
+    { width: "704px", height: "5000px" }
   ];
 
   before(() => {

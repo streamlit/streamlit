@@ -21,7 +21,7 @@ describe("Data Grid canvas rendering", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDataGrid").should("have.length", 15);
+    cy.get(".stDataGrid").should("have.length", 20);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot

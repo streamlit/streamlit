@@ -16,6 +16,7 @@ import random
 import streamlit as st
 import pandas as pd
 import numpy as np
+import pyarrow as pa
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
@@ -179,3 +180,98 @@ dft = pd.DataFrame(
 dft = dft.astype({"string_string": "string"})
 
 st.experimental_data_grid(dft)
+
+st.header("Numeric dtypes in pd.DataFrame")
+int_df = pd.DataFrame(
+    {
+        "int64": pd.array([1, 2, 3, 4, 5], dtype="Int64"),
+        "int32": pd.array([1, 2, 3, 4, 5], dtype="Int32"),
+        "int16": pd.array([1, 2, 3, 4, 5], dtype="Int16"),
+        "int8": pd.array([1, 2, 3, 4, 5], dtype="Int8"),
+        "uint64": pd.array([1, 2, 3, 4, 5], dtype="UInt64"),
+        "uint32": pd.array([1, 2, 3, 4, 5], dtype="UInt32"),
+        "uint16": pd.array([1, 2, 3, 4, 5], dtype="UInt16"),
+        "uint8": pd.array([1, 2, 3, 4, 5], dtype="UInt8"),
+        "float64": np.random.rand(5),
+        "float32": pd.array(np.random.rand(5), dtype="float32"),
+        "float16": pd.array(np.random.rand(5), dtype="float16")
+    }
+)
+st.experimental_data_grid(int_df)
+
+st.header("Interval dtypes in pd.DataFrame")
+n_rows = 10
+interval_df = pd.DataFrame(
+    {
+        "int64_both": [pd.Interval(left=i, right=i+1, closed='both') for i in range(n_rows)],
+        "int64_right": [pd.Interval(left=i, right=i+1, closed='right') for i in range(n_rows)],
+        "int64_left": [pd.Interval(left=i, right=i+1, closed='left') for i in range(n_rows)],
+        "int64_neither": [pd.Interval(left=i, right=i+1, closed='neither') for i in range(n_rows)],
+        "timestamp_right_defualt": [pd.Interval(left=pd.Timestamp(2022, 3, 14, i), right=pd.Timestamp(2022, 3, 14, i+1)) for i in range(n_rows)],
+        "float64": [pd.Interval(random.random(), random.random() + 1) for _ in range(n_rows)]
+    }
+)
+st.experimental_data_grid(interval_df)
+
+st.header('Missing data')
+df = pd.DataFrame(
+    np.random.rand(5, 3),
+    index=['a', 'c', 'e', 'f', 'h'],
+    columns=['one', 'two', 'three']
+)
+df['four'] = "bar"
+df['five'] = df['one'] > 0
+df_nan = df.reindex(["a", "b", "c", "d", "e", "f", "g", "h"])
+df_nan["timestamp"] = pd.Timestamp("20220315")
+df_nan.loc[['a', 'c', 'h'], ['one', 'timestamp']] = np.nan
+st.experimental_data_grid(df_nan)
+
+st.header('Input Data: pyarrow.Table')
+df_arr1 = pd.DataFrame({
+    'int': [1, 1, 2, 3, 5],
+    'str': ['a', 'b', 'c', 'ab', 'bc'],
+    'float': [3.14, 2.71, 9.98, 6.02, 1060.02]
+})
+table1 = pa.Table.from_pandas(df_arr1)
+st.experimental_data_grid(table1)
+
+st.header('Input Data: numpy.ndarray')
+np_array = np.ndarray(shape=(5,5), buffer=np.arange(40), dtype=int, offset=8*np.int_().itemsize, order='F')
+st.experimental_data_grid(np_array)
+
+st.header('Input Data: dict')
+dict = {"brand 🚗": ["Ford", "KIA", "Toyota", "Tesla"],
+        "model 🚙": ["Mustang", "Optima", "Corolla", "Model 3"],
+        "year 📆": [1964, 2007, 2022, 2021],
+        "color 🌈": ["Black ⚫", "Red 🔴", "White ⚪", "Red 🔴"],
+        "emoji 🚀🚀": ["👨🏻‍🚀", "👩🏻‍🚀", "👩🏻‍🚒🚀", "👨🏻‍🚒"]}
+st.experimental_data_grid(dict)
+
+st.header("Input Data: List")
+st.experimental_data_grid(["apple", "banana", "cherry", "apple", "cherry"])
+
+st.header('Input Data: 1-d tuple')
+st.experimental_data_grid(("apple", "banana", "cherry", "apple", "cherry"))
+
+st.header('Input Data: 2-d tuple')
+st.experimental_data_grid((("apple", "banana", "cherry", "apple", "cherry"),
+            ("obladi", "oblada", "life", "goes", "on"),
+            ("who", "let", "the", "dogs", "out"),
+            ("Kids", "!", "Are", "you", "ready")))
+st.header('Input Data: iter(2-d tuple)')
+st.experimental_data_grid(iter((("apple", "banana", "cherry", "apple", "cherry"),
+            ("obladi", "oblada", "life", "goes", "on"),
+            ("who", "let", "the", "dogs", "out"),
+            ("Kids", "!", "Are", "you", "ready"))))
+
+st.header('Input Data: 1-d set')
+st.experimental_data_grid({"apple", "banana", "cherry", "apple", "cherry"})
+
+st.header('Input Data: 2-d list')
+list_1 = [[1,2,3,4,5],[-1,-2,-3,-4,-5],[10,20,30,40,50],[6,7,8,9,10]]
+st.experimental_data_grid(list_1)
+
+df = pd.DataFrame(
+    np.random.randn(50, 36),
+    columns = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+)
