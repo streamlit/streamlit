@@ -62,7 +62,6 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const isStale = isComponentStale(
     enable,
     node,
-    props.showStaleElementIndicator,
     props.scriptRunState,
     props.scriptRunId
   )

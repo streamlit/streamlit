@@ -21,7 +21,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import {
   Figure as FigureProto,

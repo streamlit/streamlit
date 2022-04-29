@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import io
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 
 from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union, BinaryIO, TextIO
@@ -24,12 +24,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
-from streamlit.state.session_state import (
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.state.widgets import register_widget
 from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -261,7 +261,6 @@ class ButtonMixin:
 
         download_button_proto.label = label
         download_button_proto.default = False
-        download_button_proto.disabled = disabled
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
@@ -283,6 +282,11 @@ class ButtonMixin:
             serializer=bool,
             ctx=ctx,
         )
+
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        download_button_proto.disabled = disabled
+
         self.dg._enqueue("download_button", download_button_proto)
         return cast(bool, current_value)
 
@@ -323,7 +327,6 @@ class ButtonMixin:
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
-        button_proto.disabled = disabled
         if help is not None:
             button_proto.help = dedent(help)
 
@@ -341,6 +344,11 @@ class ButtonMixin:
             serializer=bool,
             ctx=ctx,
         )
+
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        button_proto.disabled = disabled
+
         self.dg._enqueue("button", button_proto)
         return cast(bool, current_value)
 

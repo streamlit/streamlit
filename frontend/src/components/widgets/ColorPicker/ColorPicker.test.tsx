@@ -22,6 +22,7 @@ import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { ChromePicker } from "react-color"
+import { StyledChromePicker } from "src/components/shared/ColorPicker/styled-components"
 
 import ColorPicker, { Props } from "./ColorPicker"
 
@@ -43,7 +44,13 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
 /** Return the ColorPicker's popover (where the color picking happens). */
 function getPopoverWrapper(wrapper: ReactWrapper<ColorPicker>): any {
   // @ts-ignore
-  return wrapper.find(UIPopover).renderProp("content")()
+  return (
+    wrapper
+      .find(UIPopover)
+      // @ts-ignore
+      .renderProp("content")()
+      .find(StyledChromePicker)
+  )
 }
 
 /** Return the ColorPicker's currently-selected color as a hex string. */

@@ -46,7 +46,7 @@ export interface Props {
   width: number
 }
 
-interface State {
+export interface State {
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
@@ -82,7 +82,10 @@ class NumberInput extends React.PureComponent<Props, State> {
   get initialValue(): number {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf
-    const storedValue = this.props.widgetMgr.getIntValue(this.props.element)
+    const storedValue = this.isIntData()
+      ? this.props.widgetMgr.getIntValue(this.props.element)
+      : this.props.widgetMgr.getDoubleValue(this.props.element)
+
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
@@ -292,7 +295,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { element, width, disabled, widgetMgr } = this.props
     const { formattedValue, dirty } = this.state
 

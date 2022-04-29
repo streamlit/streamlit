@@ -483,7 +483,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     })
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { files } = this.state
     const { element, disabled, widgetMgr } = this.props
     const acceptedExtensions = element.type

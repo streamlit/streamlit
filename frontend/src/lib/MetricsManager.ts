@@ -76,7 +76,7 @@ export class MetricsManager {
   /**
    * App hash uniquely identifies "projects" so we can tell
    * how many projects are being created with Streamlit while still keeping
-   * possibly-sensitive info like the scriptPath outside of our metrics
+   * possibly-sensitive info like the mainScriptPath outside of our metrics
    * services.
    */
   private appHash = "Not initialized"
@@ -119,7 +119,7 @@ export class MetricsManager {
     logAlways("Gather usage stats: ", this.actuallySendMetrics)
   }
 
-  public enqueue(evName: string, evData: Record<string, unknown> = {}): void {
+  public enqueue(evName: string, evData: Record<string, any> = {}): void {
     if (!this.initialized || !SessionInfo.isSet()) {
       this.pendingEvents.push([evName, evData])
       return

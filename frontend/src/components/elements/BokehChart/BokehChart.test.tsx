@@ -28,7 +28,9 @@ const mockBokehEmbed = {
     embed_item: jest.fn(),
   },
 }
-global.Bokeh = mockBokehEmbed
+const globalAny: any = global
+
+globalAny.Bokeh = mockBokehEmbed
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { BokehChart } = require("./BokehChart")
@@ -102,6 +104,7 @@ describe("BokehChart element", () => {
       })
 
       expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
+        // @ts-ignore
         expect.toMatchBokehDimensions(400, 400),
         "bokeh-chart-1"
       )
@@ -120,6 +123,7 @@ describe("BokehChart element", () => {
       })
 
       expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
+        // @ts-ignore
         expect.toMatchBokehDimensions(400),
         "bokeh-chart-1"
       )

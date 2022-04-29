@@ -134,7 +134,7 @@ class TimeInput extends PureComponent<Props, State> {
     return `${hours}:${minutes}`
   }
 
-  public render = (): ReactNode => {
+  public render(): ReactNode {
     const { disabled, width, element, widgetMgr } = this.props
     const style = { width }
 

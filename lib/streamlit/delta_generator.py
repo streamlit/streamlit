@@ -21,7 +21,7 @@ from streamlit import legacy_caching
 from streamlit import type_util
 from streamlit import util
 from streamlit.cursor import Cursor
-from streamlit.script_run_context import get_script_run_ctx
+from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
 from streamlit.proto import Block_pb2
@@ -59,12 +59,13 @@ from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.select_slider import SelectSliderMixin
 from streamlit.elements.slider import SliderMixin
+from streamlit.elements.snow import SnowMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
 from streamlit.elements.form import FormMixin, FormData, current_form_id
-from streamlit.state.widgets import NoValue
+from streamlit.state import NoValue
 
 # DataFrame elements come in two flavors: "Legacy" and "Arrow".
 # We select between them with the DataFrameElementSelectorMixin.
@@ -124,6 +125,7 @@ class DeltaGenerator(
     SelectboxMixin,
     SelectSliderMixin,
     SliderMixin,
+    SnowMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,

@@ -67,11 +67,11 @@ export function ArrowDataFrame({
   const [sortDirection, setSortDirection] = useState(SortDirection.ASCENDING)
 
   // Calculate the dimensions of this array.
-  const nCols = element.data.length > 0 ? element.data[0].length : 0
   const {
     headerRows,
     headerColumns,
     dataRows,
+    dataColumns,
     columns,
     rows,
   } = element.dimensions
@@ -124,7 +124,7 @@ export function ArrowDataFrame({
 
       const hasData = dataRows !== 0
       const isLastRow = rowIndex === dataRows
-      const isLastCol = columnIndex === columns - headerColumns
+      const isLastCol = columnIndex === dataColumns
 
       // Merge our base styles with any additional cell-specific
       // styles returned by the cellContentsGetter
@@ -162,11 +162,6 @@ export function ArrowDataFrame({
     sortColumnIdx: number,
     sortAscending: boolean
   ): number[] => {
-    const [dataRows, dataColumns] =
-      element.data.length > 0
-        ? [element.data.length, element.data[0].length]
-        : [0, 0]
-
     if (sortColumnIdx < 0 || sortColumnIdx >= dataColumns) {
       throw new Error(
         `Bad sortColumnIdx ${sortColumnIdx} (should be >= 0, < ${dataColumns})`
@@ -182,8 +177,8 @@ export function ArrowDataFrame({
       indices[i] = i
     }
     indices.sort((aRowIdx, bRowIdx) => {
-      const aValue = element.data[aRowIdx][sortColumnIdx]
-      const bValue = element.data[bRowIdx][sortColumnIdx]
+      const aValue = element.getDataValue(aRowIdx, sortColumnIdx)
+      const bValue = element.getDataValue(bRowIdx, sortColumnIdx)
       return sortAscending
         ? compareValues(aValue, bValue, sortColumnType)
         : compareValues(bValue, aValue, sortColumnType)
@@ -228,8 +223,6 @@ export function ArrowDataFrame({
    * given its sortColumn and sortDirection.
    */
   const getDataRowIndices = (nCols: number): number[] => {
-    const { headerColumns, dataRows } = element.dimensions
-
     const sortAscending = sortDirection !== SortDirection.DESCENDING
 
     // If we're sorting a header column, our sorted row indices are just the
@@ -258,7 +251,7 @@ export function ArrowDataFrame({
     }, 0)
   }
 
-  const sortedDataRowIndices = getDataRowIndices(nCols)
+  const sortedDataRowIndices = getDataRowIndices(dataColumns)
 
   // Get the cell renderer.
   const cellContentsGetter = getCellContentsGetter({
@@ -286,12 +279,12 @@ export function ArrowDataFrame({
   recomputeSizeIfNeeded()
 
   useEffect(() => {
-    if (sortColumn - headerColumns >= nCols) {
+    if (sortColumn - headerColumns >= dataColumns) {
       setSortColumn(0)
       setSortDirection(SortDirection.ASCENDING)
       setSortedByUser(false)
     }
-  }, [sortColumn, headerColumns, nCols])
+  }, [sortColumn, headerColumns, dataColumns])
 
   const { cssId, cssStyles } = element
 

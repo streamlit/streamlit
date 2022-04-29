@@ -18,7 +18,7 @@
 import React from "react"
 import { pick } from "lodash"
 import { SharedProps, Slider as UISlider } from "baseui/slider"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
@@ -185,7 +185,10 @@ class Slider extends React.PureComponent<Props, State> {
     const { format, options } = this.props.element
     if (this.isDateTimeType()) {
       // Python datetime uses microseconds, but JS & Moment uses milliseconds
-      return moment(value / 1000).format(format)
+      // The timestamp is always set to the UTC timezone, even so, the actual timezone
+      // for this timestamp in the backend could be different.
+      // However, the frontend component does not need to know about the actual timezone.
+      return moment.utc(value / 1000).format(format)
     }
 
     if (options.length > 0) {
@@ -271,7 +274,7 @@ class Slider extends React.PureComponent<Props, State> {
     )
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { disabled, element, theme, width, widgetMgr } = this.props
     const { colors, fonts, fontSizes, spacing } = theme
     const style = { width }

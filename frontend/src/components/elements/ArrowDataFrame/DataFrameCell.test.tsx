@@ -58,9 +58,9 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = mount(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("StyledEllipsizedDiv").props().style.textAlign).toBe(
-        "right"
-      )
+      expect(
+        wrapper.find("StyledEllipsizedDiv").props().style?.textAlign
+      ).toBe("right")
     })
 
     it("should be to the left when non-numeric", () => {
@@ -69,9 +69,9 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = mount(<DataFrameCell {...props} />)
 
-      expect(wrapper.find("StyledEllipsizedDiv").props().style.textAlign).toBe(
-        undefined
-      )
+      expect(
+        wrapper.find("StyledEllipsizedDiv").props().style?.textAlign
+      ).toBe(undefined)
     })
   })
 

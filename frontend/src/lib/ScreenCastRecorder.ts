@@ -139,7 +139,7 @@ class ScreenCastRecorder {
       return undefined
     }
 
-    let resolver: () => void
+    let resolver: (value?: unknown) => void
 
     const promise = new Promise(r => {
       resolver = r

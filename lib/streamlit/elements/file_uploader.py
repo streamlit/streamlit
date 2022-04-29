@@ -27,9 +27,9 @@ import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
-from streamlit.state.widgets import register_widget
-from streamlit.state.session_state import (
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -291,7 +291,6 @@ class FileUploaderMixin:
         )
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
-        file_uploader_proto.disabled = disabled
         if help is not None:
             file_uploader_proto.help = dedent(help)
 
@@ -347,6 +346,10 @@ class FileUploaderMixin:
             serializer=serialize_file_uploader,
             ctx=ctx,
         )
+
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        file_uploader_proto.disabled = disabled
 
         file_uploader_state = serialize_file_uploader(widget_value)
         uploaded_file_info = file_uploader_state.uploaded_file_info

@@ -22,5 +22,8 @@ yarn --cwd "frontend" pretty-quick --staged
 # "--diff-filter=ACMR" only lists files that are [A]dded, [C]opied, [M]odified,
 # or [R]enamed; we don't want to try to format files that have been deleted.
 if command -v "black" > /dev/null; then
-  git diff --diff-filter=ACMR --name-only --cached | grep -E "\.pyi?$" | xargs black
+  changed_files=$(git diff --diff-filter=ACMR --name-only --cached | grep -E "\.pyi?$")
+  if [ $changed_files ]; then
+    black $changed_files
+  fi
 fi

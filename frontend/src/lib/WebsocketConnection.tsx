@@ -22,6 +22,7 @@ import axios from "axios"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "src/lib/log"
+import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
 import Resolver from "src/lib/Resolver"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { BaseUriParts, buildHttpUri, buildWsUri } from "src/lib/UriUtil"
@@ -45,7 +46,9 @@ const WEBSOCKET_STREAM_PATH = "stream"
 /**
  * Wait this long between pings, in millis.
  */
-const PING_RETRY_PERIOD_MS = 500
+const PING_MINIMUM_RETRY_PERIOD_MS = 500
+
+const PING_MAXIMUM_RETRY_PERIOD_MS = 1000 * 60
 
 /**
  * Timeout when attempting to connect to a websocket, in millis.
@@ -65,7 +68,11 @@ type OnConnectionStateChange = (
   connectionState: ConnectionState,
   errMsg?: string
 ) => void
-type OnRetry = (totalTries: number, errorNode: React.ReactNode) => void
+type OnRetry = (
+  totalTries: number,
+  retryTimeout: number,
+  errorNode: React.ReactNode
+) => void
 
 interface Args {
   /**
@@ -318,7 +325,8 @@ export class WebsocketConnection {
 
     this.uriIndex = await doHealthPing(
       uris,
-      PING_RETRY_PERIOD_MS,
+      PING_MINIMUM_RETRY_PERIOD_MS,
+      PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
       userCommandLine
     )
@@ -446,6 +454,7 @@ export class WebsocketConnection {
     if (!this.websocket) {
       return
     }
+
     const msg = BackMsg.create(obj)
     const buffer = BackMsg.encode(msg).finish()
     this.websocket.send(buffer)
@@ -464,10 +473,22 @@ export class WebsocketConnection {
     const messageIndex = this.nextMessageIndex
     this.nextMessageIndex += 1
 
+    PerformanceEvents.record({ name: "BeginHandleMessage", messageIndex })
+
     const msg = ForwardMsg.decode(new Uint8Array(data))
+
+    PerformanceEvents.record({
+      name: "DecodedMessage",
+      messageIndex,
+      messageType: msg.type,
+      len: data.byteLength,
+    })
+
     this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
       msg
     )
+
+    PerformanceEvents.record({ name: "GotCachedPayload", messageIndex })
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other
@@ -476,6 +497,11 @@ export class WebsocketConnection {
     while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
       this.args.onMessage(this.messageQueue[dispatchMessageIndex])
+      PerformanceEvents.record({
+        name: "DispatchedMessage",
+        messageIndex: dispatchMessageIndex,
+        messageType: this.messageQueue[dispatchMessageIndex].type,
+      })
       delete this.messageQueue[dispatchMessageIndex]
       this.lastDispatchedMessageIndex = dispatchMessageIndex
     }
@@ -496,14 +522,14 @@ export const StyledBashCode = styled.code({
  */
 export function doHealthPing(
   uriList: string[],
-  timeoutMs: number,
+  minimumTimeoutMs: number,
+  maximumTimeoutMs: number,
   retryCallback: OnRetry,
   userCommandLine?: string
 ): Promise<number> {
   const resolver = new Resolver<number>()
   let totalTries = 0
   let uriNumber = 0
-  let tryTimestamp = Date.now()
 
   // Hoist the connect() declaration.
   let connect = (): void => {}
@@ -517,14 +543,18 @@ export function doHealthPing(
     connect()
   }
 
-  // Make sure we don't retry faster than timeoutMs. This is required because
-  // in some cases things fail very quickly, and all our fast retries end up
-  // bogging down the browser.
   const retry = (errorNode: React.ReactNode): void => {
-    const tryDuration = (Date.now() - tryTimestamp) / 1000
-    const retryTimeout = tryDuration < timeoutMs ? timeoutMs - tryDuration : 0
+    // Adjust retry time by +- 20% to spread out load
+    const jitter = Math.random() * 0.4 - 0.2
+    // Exponential backoff to reduce load from health pings when experiencing
+    // persistent failure. Starts at minimumTimeoutMs.
+    const timeoutMs =
+      totalTries === 1
+        ? minimumTimeoutMs
+        : minimumTimeoutMs * 2 ** (totalTries - 1) * (1 + jitter)
+    const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
 
-    retryCallback(totalTries, errorNode)
+    retryCallback(totalTries, retryTimeout, errorNode)
 
     window.setTimeout(retryImmediately, retryTimeout)
   }
@@ -566,7 +596,6 @@ export function doHealthPing(
   connect = () => {
     const uri = uriList[uriNumber]
     logMessage(LOG, `Attempting to connect to ${uri}.`)
-    tryTimestamp = Date.now()
 
     if (uriNumber === 0) {
       totalTries++
@@ -574,7 +603,7 @@ export function doHealthPing(
 
     axios
       .get(uri, {
-        timeout: timeoutMs,
+        timeout: minimumTimeoutMs,
       })
       .then(() => {
         resolver.resolve(uriNumber)

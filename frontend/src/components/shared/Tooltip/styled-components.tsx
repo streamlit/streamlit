@@ -36,7 +36,7 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   fontSize: `${theme.fontSizes.sm}`,
   maxWidth: `calc(${theme.sizes.contentMaxWidth} - 4rem)`,
   maxHeight: "300px",
-  overflow: "auto",
+  overflow: ["auto", "overlay"],
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
 
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
@@ -49,6 +49,6 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
     background: transparentize(theme.colors.darkenedBgMix60, 0.8),
   },
   "*": {
-    fontSize: theme.fontSizes.sm,
+    fontSize: `${theme.fontSizes.sm} !important`,
   },
 }))

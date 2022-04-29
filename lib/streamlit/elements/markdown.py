@@ -34,7 +34,7 @@ class MarkdownMixin:
 
             * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
               For a list of all supported codes,
-              see https://raw.githubusercontent.com/omnidan/node-emoji/master/lib/emoji.json.
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
 
             * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
               must be on their own lines). Supported LaTeX functions are listed

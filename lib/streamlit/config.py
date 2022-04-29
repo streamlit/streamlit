@@ -355,7 +355,7 @@ def _logger_message_format() -> str:
     [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
     for available attributes.
 
-    Default: None
+    Default: "%(asctime)s %(message)s"
     """
     if get_option("global.developmentMode"):
         from streamlit.logger import DEFAULT_LOG_MESSAGE
@@ -445,6 +445,19 @@ _create_option(
         applications.
         """,
     default_val=True,
+    type_=bool,
+)
+
+_create_option(
+    "runner.fastReruns",
+    description="""
+        Handle script rerun requests immediately, rather than waiting for
+        script execution to reach a yield point. Enabling this will
+        make Streamlit much more responsive to user interaction, but it can
+        lead to race conditions in apps that mutate session_state data outside
+        of explicit session_state assignment statements.
+    """,
+    default_val=False,
     type_=bool,
 )
 
@@ -625,9 +638,9 @@ def _server_max_message_size() -> int:
 def _server_enable_websocket_compression() -> bool:
     """Enables support for websocket compression.
 
-    Default: true
+    Default: false
     """
-    return True
+    return False
 
 
 # Config Section: Browser #
@@ -676,6 +689,10 @@ def _browser_server_port() -> int:
 
 # Config Section: UI #
 
+# NOTE: We currently hide the ui config section in the `streamlit config show`
+# output as all of its options are hidden. If a non-hidden option is eventually
+# added, the section should be unhidden by removing it from the `SKIP_SECTIONS`
+# set in config_util.show_config.
 _create_section("ui", "Configuration of UI elements displayed in the browser.")
 
 _create_option(
@@ -687,6 +704,7 @@ _create_option(
     """,
     default_val=False,
     type_=bool,
+    visibility="hidden",
 )
 
 
@@ -862,9 +880,18 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
     assert (
         _config_options is not None
     ), "_config_options should always be populated here."
-    assert key in _config_options, f'Key "{key}" is not defined.'
+    if key not in _config_options:
+        # Import logger locally to prevent circular references
+        from streamlit.logger import get_logger
 
-    _config_options[key].set_value(value, where_defined)
+        LOGGER = get_logger(__name__)
+
+        LOGGER.warning(
+            f'"{key}" is not a valid config option. If you previously had this config option set, it may have been removed.'
+        )
+
+    else:
+        _config_options[key].set_value(value, where_defined)
 
 
 def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:

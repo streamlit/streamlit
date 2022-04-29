@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
 import {
   WidgetLabel,
@@ -67,7 +67,7 @@ class Radio extends React.PureComponent<Props, State> {
     )
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { theme, width, help, label } = this.props
     let { disabled } = this.props
     const { colors, radii } = theme

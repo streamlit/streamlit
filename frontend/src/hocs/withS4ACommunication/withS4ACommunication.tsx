@@ -26,22 +26,12 @@ import {
   IHostToGuestMessage,
   IMenuItem,
   IToolbarItem,
-  StreamlitShareMetadata,
   VersionedMessage,
+  S4ACommunicationState,
 } from "./types"
 
-interface State {
-  forcedModalClose: boolean
-  isOwner: boolean
-  menuItems: IMenuItem[]
-  queryParams: string
-  sidebarChevronDownshift: number
-  streamlitShareMetadata: StreamlitShareMetadata
-  toolbarItems: IToolbarItem[]
-}
-
 export interface S4ACommunicationHOC {
-  currentState: State
+  currentState: S4ACommunicationState
   connect: () => void
   sendMessage: (message: IGuestToHostMessage) => void
   onModalReset: () => void

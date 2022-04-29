@@ -27,6 +27,7 @@ import { Placement } from "src/components/shared/Tooltip"
 import { logWarning } from "src/lib/log"
 import {
   StyledColorPicker,
+  StyledChromePicker,
   StyledColorPreview,
   StyledColorValue,
   StyledColorBlock,
@@ -95,7 +96,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
     }
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { width, showValue, label, help, disabled } = this.props
     const { value } = this.state
     const cursor = disabled ? "not-allowed" : "default"
@@ -121,11 +122,13 @@ class ColorPicker extends React.PureComponent<Props, State> {
         <UIPopover
           onClose={this.onColorClose}
           content={() => (
-            <ChromePicker
-              color={value}
-              onChange={this.onColorChange}
-              disableAlpha={true}
-            />
+            <StyledChromePicker>
+              <ChromePicker
+                color={value}
+                onChange={this.onColorChange}
+                disableAlpha={true}
+              />
+            </StyledChromePicker>
           )}
         >
           <StyledColorPreview style={previewStyle}>
