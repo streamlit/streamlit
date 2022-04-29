@@ -490,7 +490,13 @@ export class App extends PureComponent<Props, State> {
       `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory.`
     )
 
-    this.setState({ currentPageName: "" })
+    const currentPageName = ""
+    this.setState({ currentPageName }, () => {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_CURRENT_PAGE_NAME",
+        currentPageName,
+      })
+    })
   }
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
@@ -998,7 +1004,12 @@ export class App extends PureComponent<Props, State> {
       window.history.pushState({}, "", pageUrl)
     }
 
-    this.setState({ currentPageName: pageName })
+    this.setState({ currentPageName: pageName }, () => {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_CURRENT_PAGE_NAME",
+        currentPageName: pageName as string,
+      })
+    })
 
     this.sendBackMsg(
       new BackMsg({

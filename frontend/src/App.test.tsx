@@ -860,7 +860,8 @@ describe("App.sendRerunBackMsg", () => {
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 1: main page)", () => {
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
     const instance = wrapper.instance() as App
     // @ts-ignore
     instance.sendBackMsg = jest.fn()
@@ -875,10 +876,15 @@ describe("App.sendRerunBackMsg", () => {
     })
 
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("")
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+    })
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 2: non-main page)", () => {
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
     const instance = wrapper.instance() as App
     // @ts-ignore
     instance.sendBackMsg = jest.fn()
@@ -895,6 +901,10 @@ describe("App.sendRerunBackMsg", () => {
       rerunScript: { pageName: "page1", queryString: "" },
     })
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "page1",
+    })
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one and a baseUrlPath is set", () => {
@@ -996,7 +1006,8 @@ describe("App.sendRerunBackMsg", () => {
 
 describe("App.handlePageNotFound", () => {
   it("displays an error modal", () => {
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
     const instance = wrapper.instance() as App
     // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
@@ -1011,6 +1022,10 @@ describe("App.handlePageNotFound", () => {
       "Page not found",
       `You have requested page /nonexistentPage, but no corresponding file was found in the app's pages/ directory.`
     )
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+    })
   })
 })
 

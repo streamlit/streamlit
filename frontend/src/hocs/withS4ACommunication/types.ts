@@ -113,6 +113,10 @@ export type IGuestToHostMessage =
       appPages: IAppPage[]
     }
   | {
+      type: "SET_CURRENT_PAGE_NAME"
+      currentPageName: string
+    }
+  | {
       type: "SET_PAGE_FAVICON"
       favicon: string
     }
