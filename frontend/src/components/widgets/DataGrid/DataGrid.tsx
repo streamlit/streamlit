@@ -174,7 +174,7 @@ export function useDataLoader(
   }, [element])
 
   // Number of rows of the table minus 1 for the header row:
-  const numRows = element.dimensions.rows - 1
+  const numRows = element.isEmpty() ? 1 : element.dimensions.rows - 1
   const numIndices = element.types?.index?.length ?? 0
 
   const onColumnResize = React.useCallback(
@@ -194,6 +194,13 @@ export function useDataLoader(
 
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
+      if (element.isEmpty()) {
+        return {
+          ...getCellTemplate(GridCellKind.RowID, true),
+          data: "empty",
+        } as GridCell
+      }
+
       const cellTemplate = columns[col].getTemplate()
       if (row > numRows - 1) {
         // This should never happen
@@ -291,9 +298,6 @@ function DataGrid({
         if (firstCell && lastCell) {
           // Calculate the table width, the +2 corresponds to the table borders
           adjustedTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
-
-          // TODO(lukasmasuch): Also adjust the table height?
-          // const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
         }
       }
       const newWidth = Math.min(adjustedTableWidth, propWidth)
