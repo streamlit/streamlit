@@ -495,7 +495,12 @@ export class App extends PureComponent<Props, State> {
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
     const { appPages } = pagesChangedMsg
-    this.setState({ appPages })
+    this.setState({ appPages }, () => {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_APP_PAGES",
+        appPages,
+      })
+    })
   }
 
   /**
@@ -618,12 +623,20 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.processThemeInput(themeInput)
-    this.setState({
-      allowRunOnSave: config.allowRunOnSave,
-      hideTopBar: config.hideTopBar,
-      hideSidebarNav: config.hideSidebarNav,
-      appPages: newSessionProto.appPages,
-    })
+    this.setState(
+      {
+        allowRunOnSave: config.allowRunOnSave,
+        hideTopBar: config.hideTopBar,
+        hideSidebarNav: config.hideSidebarNav,
+        appPages: newSessionProto.appPages,
+      },
+      () => {
+        this.props.s4aCommunication.sendMessage({
+          type: "SET_APP_PAGES",
+          appPages: newSessionProto.appPages,
+        })
+      }
+    )
 
     const { appHash } = this.state
     const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto

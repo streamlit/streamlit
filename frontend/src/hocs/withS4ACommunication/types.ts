@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { IAppPage } from "src/autogen/proto"
 import { ExportedTheme } from "src/theme"
 
 export type StreamlitShareMetadata = {
@@ -106,6 +107,10 @@ export type IGuestToHostMessage =
   | {
       type: "TOOLBAR_ITEM_CALLBACK"
       key: string
+    }
+  | {
+      type: "SET_APP_PAGES"
+      appPages: IAppPage[]
     }
   | {
       type: "SET_PAGE_FAVICON"

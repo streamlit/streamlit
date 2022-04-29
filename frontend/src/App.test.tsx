@@ -373,12 +373,18 @@ describe("App", () => {
     const msg = new ForwardMsg()
     msg.pagesChanged = new PagesChanged({ appPages })
 
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
     expect(wrapper.find("AppView").prop("appPages")).toEqual([])
 
     const instance = wrapper.instance() as App
     instance.handleMessage(msg)
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_APP_PAGES",
+      appPages,
+    })
   })
 })
 
@@ -672,7 +678,8 @@ describe("App.handleNewSession", () => {
   })
 
   it("plumbs appPages to the AppView component", () => {
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
 
     expect(wrapper.find("AppView").prop("appPages")).toEqual([])
 
@@ -694,6 +701,10 @@ describe("App.handleNewSession", () => {
     // @ts-ignore
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_APP_PAGES",
+      appPages,
+    })
   })
 
   it("sets hideSidebarNav based on the server config option and s4a setting", () => {
