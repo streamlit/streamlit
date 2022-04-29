@@ -30,7 +30,7 @@ describe("Data Grid with different sizes", () => {
 
   it("should show as expected", () => {
     cy.get(".stDataGrid")
-      .should("have.length", 4)
+      .should("have.length", 5)
       .each(($element, index) => {
         return cy
           .wrap($element)
