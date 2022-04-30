@@ -304,6 +304,12 @@ export class App extends PureComponent<Props, State> {
     if (this.props.s4aCommunication.currentState.forcedModalClose) {
       this.closeDialog()
     }
+
+    const { requestedPageName } = this.props.s4aCommunication.currentState
+    if (requestedPageName !== null) {
+      this.onPageChange(requestedPageName)
+      this.props.s4aCommunication.onPageChanged()
+    }
   }
 
   showError(title: string, errorNode: ReactNode): void {

@@ -34,6 +34,7 @@ export interface S4ACommunicationState {
   isOwner: boolean
   menuItems: IMenuItem[]
   queryParams: string
+  requestedPageName: string
   sidebarChevronDownshift: number
   streamlitShareMetadata: StreamlitShareMetadata
   toolbarItems: IToolbarItem[]
@@ -61,6 +62,10 @@ export type IHostToGuestMessage = {
 } & (
   | {
       type: "CLOSE_MODALS"
+    }
+  | {
+      type: "REQUEST_PAGE_CHANGE"
+      pageName: string
     }
   | {
       type: "SET_IS_OWNER"

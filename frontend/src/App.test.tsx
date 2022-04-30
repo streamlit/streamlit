@@ -62,6 +62,7 @@ const getS4ACommunicationState = (
   isOwner: true,
   menuItems: [],
   queryParams: "",
+  requestedPageName: null,
   sidebarChevronDownshift: 0,
   streamlitShareMetadata: {},
   toolbarItems: [],
@@ -74,6 +75,7 @@ const getS4ACommunicationProp = (
   connect: jest.fn(),
   sendMessage: jest.fn(),
   onModalReset: jest.fn(),
+  onPageChanged: jest.fn(),
   currentState: getS4ACommunicationState({}),
   ...extend,
 })
@@ -385,6 +387,27 @@ describe("App", () => {
       type: "SET_APP_PAGES",
       appPages,
     })
+  })
+
+  it("responds to page change requests", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const instance = wrapper.instance() as App
+    instance.onPageChange = jest.fn()
+
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: getS4ACommunicationProp({
+          currentState: getS4ACommunicationState({
+            requestedPageName: "page1",
+          }),
+        }),
+      })
+    )
+    wrapper.update()
+
+    expect(instance.onPageChange).toHaveBeenCalledWith("page1")
+    expect(props.s4aCommunication.currentState.requestedPageName).toBeNull()
   })
 })
 
