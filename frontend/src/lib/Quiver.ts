@@ -721,10 +721,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
       if (meta?.timezone) {
         if (moment.tz.zone(meta?.timezone)) {
-          // uses timzone notion
+          // uses timezone notation
           datetime = datetime.tz(meta?.timezone)
         } else {
-          // uses utc offset notion
+          // uses UTC offset notation
           datetime = datetime.utcOffset(meta?.timezone)
         }
       }
