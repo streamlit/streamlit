@@ -60,6 +60,7 @@ function withS4ACommunication(
     const [hideSidebarNav, setHideSidebarNav] = useState(false)
     const [isOwner, setIsOwner] = useState(false)
     const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
+    const [pageLinkBaseUrl, setPageLinkBaseUrl] = useState("")
     const [queryParams, setQueryParams] = useState("")
     const [requestedPageName, setRequestedPageName] = useState<string | null>(
       null
@@ -109,6 +110,10 @@ function withS4ACommunication(
           setStreamlitShareMetadata(message.metadata)
         }
 
+        if (message.type === "SET_PAGE_LINK_BASE_URL") {
+          setPageLinkBaseUrl(message.pageLinkBaseUrl)
+        }
+
         if (message.type === "SET_SIDEBAR_CHEVRON_DOWNSHIFT") {
           setSidebarChevronDownshift(message.sidebarChevronDownshift)
         }
@@ -146,6 +151,7 @@ function withS4ACommunication(
               hideSidebarNav,
               isOwner,
               menuItems,
+              pageLinkBaseUrl,
               queryParams,
               requestedPageName,
               sidebarChevronDownshift,

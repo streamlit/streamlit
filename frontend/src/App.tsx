@@ -1309,6 +1309,9 @@ export class App extends PureComponent<Props, State> {
               onPageChange={this.onPageChange}
               currentPageName={currentPageName}
               hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
+              pageLinkBaseUrl={
+                this.props.s4aCommunication.currentState.pageLinkBaseUrl
+              }
             />
             {renderedDialog}
           </StyledApp>

@@ -33,6 +33,7 @@ export interface S4ACommunicationState {
   hideSidebarNav: boolean
   isOwner: boolean
   menuItems: IMenuItem[]
+  pageLinkBaseUrl: string
   queryParams: string
   requestedPageName: string
   sidebarChevronDownshift: number
@@ -78,6 +79,10 @@ export type IHostToGuestMessage = {
   | {
       type: "SET_METADATA"
       metadata: StreamlitShareMetadata
+    }
+  | {
+      type: "SET_PAGE_LINK_BASE_URL"
+      pageLinkBaseUrl: string
     }
   | {
       type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT"
