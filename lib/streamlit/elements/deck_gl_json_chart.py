@@ -31,10 +31,6 @@ class PydeckMixin:
         - DeckGL docs: https://github.com/uber/deck.gl/tree/master/docs
         - DeckGL JSON docs: https://github.com/uber/deck.gl/tree/master/modules/json
 
-        PyDeck is not installed automatically as part of Streamlit, so to use
-        this element, you must first install it with `pip install --user pydeck`
-        or add it to your package dependency file.
-
         When using this command, we advise all users to use a personal Mapbox
         token. This ensures the map tiles used in this chart are more
         robust. You can do this with the mapbox.token config option.

@@ -26,12 +26,25 @@ class UtilTest(unittest.TestCase):
             self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
 
     @patch("os.path.isdir", MagicMock(return_value=True))
-    @patch(
-        "streamlit.watcher.util._stable_dir_identifier",
-        MagicMock(return_value="hello"),
-    )
-    def test_md5_calculation_succeeds_with_dir_input(self):
+    @patch("streamlit.watcher.util._stable_dir_identifier")
+    def test_md5_calculation_succeeds_with_dir_input(self, mock_stable_dir_identifier):
+        mock_stable_dir_identifier.return_value = "hello"
+
         md5 = util.calc_md5_with_blocking_retries("foo")
+        self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
+        mock_stable_dir_identifier.assert_called_once_with("foo", "*")
+
+    @patch("os.path.isdir", MagicMock(return_value=True))
+    @patch("streamlit.watcher.util._stable_dir_identifier")
+    def test_md5_calculation_can_pass_glob(self, mock_stable_dir_identifier):
+        mock_stable_dir_identifier.return_value = "hello"
+
+        md5 = util.calc_md5_with_blocking_retries("foo", glob_pattern="*.py")
+        mock_stable_dir_identifier.assert_called_once_with("foo", "*.py")
+
+    @patch("os.path.exists", MagicMock(return_value=False))
+    def test_md5_calculation_allow_nonexistent(self):
+        md5 = util.calc_md5_with_blocking_retries("hello", allow_nonexistent=True)
         self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
 
     def test_md5_calculation_opens_file_with_rb(self):
@@ -41,6 +54,33 @@ class UtilTest(unittest.TestCase):
         with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")) as m:
             md5 = util.calc_md5_with_blocking_retries("foo")
             m.assert_called_once_with("foo", "rb")
+
+
+class FakeStat(object):
+    """Emulates the output of os.stat()."""
+
+    def __init__(self, mtime):
+        self.st_mtime = mtime
+
+
+class PathModificationTimeTests(unittest.TestCase):
+    @patch(
+        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
+    )
+    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    def test_st_mtime_if_file_exists(self):
+        assert util.path_modification_time("foo") == 101.0
+
+    @patch(
+        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
+    )
+    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    def test_st_mtime_if_file_exists_and_allow_nonexistent(self):
+        assert util.path_modification_time("foo", allow_nonexistent=True) == 101.0
+
+    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=False))
+    def test_zero_if_file_nonexistent_and_allow_nonexistent(self):
+        assert util.path_modification_time("foo", allow_nonexistent=True) == 0.0
 
 
 class DirHelperTests(unittest.TestCase):
@@ -75,10 +115,10 @@ class DirHelperTests(unittest.TestCase):
 
     @patch("streamlit.watcher.util._dirfiles", MagicMock(side_effect=["foo", "foo"]))
     def test_stable_dir(self):
-        assert util._stable_dir_identifier("my_dir") == "my_dir+foo"
+        assert util._stable_dir_identifier("my_dir", "*") == "my_dir+foo"
 
     @patch(
         "streamlit.watcher.util._dirfiles", MagicMock(side_effect=["foo", "bar", "bar"])
     )
     def test_stable_dir_files_change(self):
-        assert util._stable_dir_identifier("my_dir") == "my_dir+bar"
+        assert util._stable_dir_identifier("my_dir", "*") == "my_dir+bar"

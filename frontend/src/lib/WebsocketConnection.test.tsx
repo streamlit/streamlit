@@ -354,6 +354,7 @@ describe("doHealthPing", () => {
     // timeouts should be monotonically increasing until they hit the cap
     expect(
       zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
+        // @ts-ignore
         timePair => timePair[0] < timePair[1] || timePair[0] === 100
       )
     )

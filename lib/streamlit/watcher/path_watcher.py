@@ -46,7 +46,14 @@ except ImportError:
 # This forces us to define this stub class since the cached value equaling
 # None corresponds to case 1 above.
 class NoOpPathWatcher:
-    def __init__(self, _path_str, _on_changed):
+    def __init__(
+        self,
+        _path_str: str,
+        _on_changed: Callable[[str], None],
+        *,  # keyword-only arguments:
+        glob_pattern: Optional[str] = None,
+        allow_nonexistent: bool = False,
+    ):
         pass
 
 
@@ -78,33 +85,40 @@ def report_watchdog_availability():
             )
 
 
-# TODO(vdonato): Add an internal `_watch_path` method, and use it to implement
-# `watch_file` and `watch_directory`.
-def watch_file(
+def _watch_path(
     path: str,
-    on_file_changed: Callable[[str], None],
+    on_path_changed: Callable[[str], None],
     watcher_type: Optional[str] = None,
+    *,  # keyword-only arguments:
+    glob_pattern: Optional[str] = None,
+    allow_nonexistent: bool = False,
 ) -> bool:
-    """Create a PathWatcher for the given file if we have a viable
+    """Create a PathWatcher for the given path if we have a viable
     PathWatcher class.
 
     Parameters
     ----------
     path
-        Path of the file to watch.
-    on_file_changed
-        Function that's called when the file changes.
+        Path to watch.
+    on_path_changed
+        Function that's called when the path changes.
     watcher_type
         Optional watcher_type string. If None, it will default to the
         'server.fileWatcherType` config option.
+    glob_pattern
+        Optional glob pattern to use when watching a directory. If set, only
+        files matching the pattern will be counted as being created/deleted
+        within the watched directory.
+    allow_nonexistent
+        If True, allow the file or directory at the given path to be
+        nonexistent.
 
     Returns
     -------
     bool
-        True if the file is being watched, or False if we have no
+        True if the path is being watched, or False if we have no
         PathWatcher class.
     """
-
     if watcher_type is None:
         watcher_type = config.get_option("server.fileWatcherType")
 
@@ -112,8 +126,38 @@ def watch_file(
     if watcher_class is NoOpPathWatcher:
         return False
 
-    watcher_class(path, on_file_changed)
+    watcher_class(
+        path,
+        on_path_changed,
+        glob_pattern=glob_pattern,
+        allow_nonexistent=allow_nonexistent,
+    )
     return True
+
+
+def watch_file(
+    path: str,
+    on_file_changed: Callable[[str], None],
+    watcher_type: Optional[str] = None,
+) -> bool:
+    return _watch_path(path, on_file_changed, watcher_type)
+
+
+def watch_dir(
+    path: str,
+    on_dir_changed: Callable[[str], None],
+    watcher_type: Optional[str] = None,
+    *,  # keyword-only arguments:
+    glob_pattern: Optional[str] = None,
+    allow_nonexistent: bool = False,
+) -> bool:
+    return _watch_path(
+        path,
+        on_dir_changed,
+        watcher_type,
+        glob_pattern=glob_pattern,
+        allow_nonexistent=allow_nonexistent,
+    )
 
 
 def get_default_path_watcher_class() -> PathWatcherType:

@@ -45,7 +45,7 @@ from streamlit.scriptrunner import (
     RerunException,
     StopException,
 )
-from streamlit.state.session_state import SessionState
+from streamlit.state.session_state import SessionState, WidgetMetadata
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
@@ -320,6 +320,41 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.request_stop()
         scriptrunner.join()
 
+    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    def test_calls_widget_callbacks_on_new_scriptrunner_instance(
+        self, patched_call_callbacks
+    ):
+        """A new ScriptRunner instance will call widget callbacks
+        if widget values have changed. (This differs slightly from
+        `test_calls_widget_callbacks`, which tests that an *already-running*
+        ScriptRunner calls its callbacks on rerun).
+        """
+        # Create a ScriptRunner and run it once so we can grab its widgets.
+        scriptrunner = TestScriptRunner("widgets_script.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        require_widgets_deltas([scriptrunner])
+        scriptrunner.request_stop()
+        scriptrunner.join()
+
+        patched_call_callbacks.assert_not_called()
+
+        # Set our checkbox's value to True
+        states = WidgetStates()
+        checkbox_id = scriptrunner.get_widget_id("checkbox", "checkbox")
+        _create_widget(checkbox_id, states).bool_value = True
+
+        # Create a *new* ScriptRunner with our new RerunData. Our callbacks
+        # should be called this time.
+        scriptrunner = TestScriptRunner("widgets_script.py")
+        scriptrunner.request_rerun(RerunData(widget_states=states))
+        scriptrunner.start()
+        require_widgets_deltas([scriptrunner])
+        scriptrunner.request_stop()
+        scriptrunner.join()
+
+        patched_call_callbacks.assert_called_once()
+
     @patch("streamlit.exception")
     @patch("streamlit.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_error(
@@ -497,6 +532,34 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, ["loop_forever"])
+
+    def test_sessionstate_is_disconnected_after_stop(self):
+        """After ScriptRunner.request_stop is called, any operations on its
+        SessionState instance are no-ops.
+        """
+        # Create a TestRunner and stick some initial session_state into it.
+        scriptrunner = TestScriptRunner("infinite_loop.py")
+        scriptrunner._session_state["foo"] = "bar"
+        self.assertEqual("bar", scriptrunner._session_state["foo"])
+        scriptrunner.start()
+
+        # Stop the TestRunner
+        scriptrunner.request_stop()
+
+        # We can neither get nor set SessionState values after request_stop.
+        self.assertRaises(KeyError, lambda: scriptrunner._session_state["foo"])
+        scriptrunner._session_state["new_foo"] = 3
+        self.assertRaises(KeyError, lambda: scriptrunner._session_state["new_foo"])
+
+        # Assert that Widget registration is a no-op
+        _, widget_value_changed = scriptrunner._session_state.register_widget(
+            MagicMock(spec=WidgetMetadata),
+            user_key="mock_user_key",
+        )
+        self.assertEqual(False, widget_value_changed)
+
+        # Ensure the ScriptRunner thread shuts down.
+        scriptrunner.join()
 
     def test_widgets(self):
         """Tests that widget values behave as expected."""

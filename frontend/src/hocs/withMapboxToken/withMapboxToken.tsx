@@ -20,7 +20,7 @@ import { Kind } from "src/components/shared/AlertContainer"
 import { MapboxToken } from "src/hocs/withMapboxToken/MapboxToken"
 import { ensureError } from "src/lib/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
-import React, { ComponentType, PureComponent } from "react"
+import React, { ComponentType, PureComponent, ReactNode } from "react"
 import MapboxTokenError from "./MapboxTokenError"
 
 interface Props {
@@ -81,7 +81,7 @@ const withMapboxToken = (deltaType: string) => (
       }
     }
 
-    public render = (): JSX.Element => {
+    public render(): ReactNode {
       const { mapboxToken, mapboxTokenError, isFetching } = this.state
       const { width } = this.props
 

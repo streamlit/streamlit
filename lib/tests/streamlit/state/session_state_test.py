@@ -44,6 +44,13 @@ import tests.streamlit.state.strategies as stst
 identity = lambda x: x
 
 
+def _raw_session_state() -> SessionState:
+    """Return the SessionState instance within the current ScriptRunContext's
+    SafeSessionState wrapper.
+    """
+    return get_session_state()._state
+
+
 class WStateTests(unittest.TestCase):
     def setUp(self):
         wstates = WStates()
@@ -263,7 +270,7 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
 
         st.checkbox("the checkbox", on_change=mock_on_checkbox_changed)
 
-        session_state = get_session_state()
+        session_state = _raw_session_state()
 
         # Pretend that the checkbox has a new state value
         checkbox_state = WidgetStateProto()
@@ -280,7 +287,7 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
-    session_state = get_session_state()
+    session_state = _raw_session_state()
     wid = session_state._get_widget_id(widget_id)
     metadata = session_state._new_widget_state.widget_metadata[wid]
     serializer = metadata.serializer
@@ -451,7 +458,7 @@ def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
     """Return all key-value pairs in the SessionState.
     The returned list is sorted by key for easier comparison.
     """
-    return [(key, state[key]) for key in sorted(state.keys())]
+    return [(key, state[key]) for key in sorted(state._keys())]
 
 
 class SessionStateMethodTests(unittest.TestCase):
@@ -482,13 +489,13 @@ class SessionStateMethodTests(unittest.TestCase):
     def test_clear_state(self):
         # Sanity test
         keys = {"foo", "baz", "corge", f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None"}
-        self.assertEqual(keys, self.session_state.keys())
+        self.assertEqual(keys, self.session_state._keys())
 
         # Clear state
-        self.session_state.clear_state()
+        self.session_state.clear()
 
         # Keys should be empty
-        self.assertEqual(set(), self.session_state.keys())
+        self.assertEqual(set(), self.session_state._keys())
 
     def test_filtered_state(self):
         assert self.session_state.filtered_state == {
@@ -681,7 +688,7 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         # TODO: document the values used here. They're somewhat arbitrary -
         #  we don't care about actual byte values, but rather that our
         #  SessionState isn't getting unexpectedly massive.
-        state = get_session_state()
+        state = _raw_session_state()
         stat = state.get_stats()[0]
         assert stat.category_name == "st_session_state"
 

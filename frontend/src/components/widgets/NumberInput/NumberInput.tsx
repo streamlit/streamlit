@@ -46,7 +46,7 @@ export interface Props {
   width: number
 }
 
-interface State {
+export interface State {
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
@@ -295,7 +295,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { element, width, disabled, widgetMgr } = this.props
     const { formattedValue, dirty } = this.state
 

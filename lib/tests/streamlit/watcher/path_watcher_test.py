@@ -22,6 +22,7 @@ import streamlit.watcher.path_watcher
 from streamlit.watcher.path_watcher import (
     get_default_path_watcher_class,
     NoOpPathWatcher,
+    watch_dir,
     watch_file,
 )
 from tests.testutil import patch_config_options
@@ -115,8 +116,35 @@ class FileWatcherTest(unittest.TestCase):
                     watching_file = watch_file("some/file/path", on_file_changed)
                     if path_watcher_class is not NoOpPathWatcher:
                         path_watcher_class.assert_called_with(
-                            "some/file/path", on_file_changed
+                            "some/file/path",
+                            on_file_changed,
+                            glob_pattern=None,
+                            allow_nonexistent=False,
                         )
                         self.assertTrue(watching_file)
                     else:
                         self.assertFalse(watching_file)
+
+    @patch("streamlit.watcher.path_watcher.watchdog_available", Mock(return_value=True))
+    @patch("streamlit.watcher.path_watcher.EventBasedPathWatcher")
+    def test_watch_dir_kwarg_plumbing(self, mock_event_watcher):
+        # NOTE: We only test kwarg plumbing for watch_dir since watcher_class
+        # selection is tested extensively in test_watch_file, and the two
+        # functions are otherwise identical.
+        on_file_changed = Mock()
+
+        watching_dir = watch_dir(
+            "some/dir/path",
+            on_file_changed,
+            watcher_type="watchdog",
+            glob_pattern="*.py",
+            allow_nonexistent=True,
+        )
+
+        self.assertTrue(watching_dir)
+        mock_event_watcher.assert_called_with(
+            "some/dir/path",
+            on_file_changed,
+            glob_pattern="*.py",
+            allow_nonexistent=True,
+        )

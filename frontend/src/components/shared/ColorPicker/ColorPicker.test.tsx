@@ -37,7 +37,7 @@ describe("ColorPicker widget", () => {
   const wrapper = shallow(<ColorPicker {...props} />)
   const colorPickerWrapper = wrapper
     .find(UIPopover)
-    .renderProp("content")()
+    .renderProp("content")({ close: () => {} })
     .find(ChromePicker)
   it("renders without crashing", () => {
     expect(wrapper.find(UIPopover).length).toBe(1)
@@ -62,7 +62,7 @@ describe("ColorPicker widget", () => {
     wrapper.find(UIPopover).simulate("click")
     const chromePickerWrapper = wrapper
       .find(UIPopover)
-      .renderProp("content")()
+      .renderProp("content")({ close: () => {} })
       .find(ChromePicker)
 
     expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
@@ -76,6 +76,7 @@ describe("ColorPicker widget", () => {
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
 
+    // @ts-ignore do not need change event added
     colorPickerWrapper.prop("onChange")({
       hex: "#333",
     })
@@ -83,7 +84,7 @@ describe("ColorPicker widget", () => {
     expect(
       wrapper
         .find(UIPopover)
-        .renderProp("content")()
+        .renderProp("content")({ close: () => {} })
         .find(ChromePicker)
         .prop("color")
     ).toEqual("#333")
@@ -93,6 +94,7 @@ describe("ColorPicker widget", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
 
+    // @ts-ignore do not need change event added
     colorPickerWrapper.prop("onChange")({
       hex: newColor,
     })
@@ -100,7 +102,7 @@ describe("ColorPicker widget", () => {
     expect(
       wrapper
         .find(UIPopover)
-        .renderProp("content")()
+        .renderProp("content")({ close: () => {} })
         .find(ChromePicker)
         .prop("color")
     ).toEqual(newColor)
@@ -146,7 +148,7 @@ describe("ColorPicker error handler", () => {
   })
 
   it("re-throws non-SecurityErrors", () => {
-    const mockError = { name: "FooError", message: "", stack: [] }
+    const mockError = new Error("")
 
     expect(() => {
       const props = getProps({})

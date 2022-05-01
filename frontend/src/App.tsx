@@ -35,6 +35,7 @@ import {
   StreamlitDialog,
 } from "src/components/core/StreamlitDialog/"
 import { ConnectionManager } from "src/lib/ConnectionManager"
+import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
 import {
   createFormsData,
   FormsData,
@@ -919,6 +920,11 @@ export class App extends PureComponent<Props, State> {
         rerunScript: { queryString, widgetStates },
       })
     )
+
+    PerformanceEvents.record({
+      name: "RequestedRerun",
+      scriptRunState: this.state.scriptRunState,
+    })
   }
 
   /** Requests that the server stop running the script */

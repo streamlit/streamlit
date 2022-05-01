@@ -274,7 +274,7 @@ class Slider extends React.PureComponent<Props, State> {
     )
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { disabled, element, theme, width, widgetMgr } = this.props
     const { colors, fonts, fontSizes, spacing } = theme
     const style = { width }

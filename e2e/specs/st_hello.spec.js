@@ -81,11 +81,35 @@ describe("hello", () => {
       });
   });
 
-  it("displays dataframe demo", () => {
+  it("displays mapping demo", () => {
     cy.get(".element-container .stSelectbox")
       .click()
       .then(() => {
         cy.get("ul li:nth-child(4)")
+          .click()
+          .then(() => {
+            cy.get(".element-container .stMarkdown h1").should(
+              "contain",
+              "Mapping Demo"
+            );
+
+            cy.get(".element-container .stDeckGlJsonChart")
+              .find("canvas")
+              .should("have.css", "height", "500px");
+
+            // Wait for Mapbox to build the canvas.
+            cy.wait(5000);
+
+            cy.get(".appview-container").matchThemedSnapshots("mapping-demo");
+          });
+      });
+  });
+
+  it("displays dataframe demo", () => {
+    cy.get(".element-container .stSelectbox")
+      .click()
+      .then(() => {
+        cy.get("ul li:nth-child(5)")
           .click()
           .then(() => {
             cy.get(".element-container .stMarkdown h1").should(

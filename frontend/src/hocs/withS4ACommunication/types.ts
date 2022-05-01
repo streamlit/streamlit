@@ -27,6 +27,16 @@ export type StreamlitShareMetadata = {
   isOwner?: boolean
 }
 
+export interface S4ACommunicationState {
+  forcedModalClose: boolean
+  isOwner: boolean
+  menuItems: IMenuItem[]
+  queryParams: string
+  sidebarChevronDownshift: number
+  streamlitShareMetadata: StreamlitShareMetadata
+  toolbarItems: IToolbarItem[]
+}
+
 export type IToolbarItem = {
   borderless?: boolean
   icon?: string
