@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
-from typing import TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from .utils import clean_text

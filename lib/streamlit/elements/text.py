@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
-from typing import cast
-from typing import TYPE_CHECKING
+from typing import Any, cast, TYPE_CHECKING
 
 from streamlit.proto.Text_pb2 import Text as TextProto
 from .utils import clean_text
