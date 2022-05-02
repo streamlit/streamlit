@@ -61,6 +61,7 @@ const getS4ACommunicationState = (
   hideSidebarNav: false,
   isOwner: true,
   menuItems: [],
+  pageLinkBaseUrl: "",
   queryParams: "",
   requestedPageName: null,
   sidebarChevronDownshift: 0,

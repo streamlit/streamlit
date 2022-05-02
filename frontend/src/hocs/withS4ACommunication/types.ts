@@ -35,7 +35,7 @@ export interface S4ACommunicationState {
   menuItems: IMenuItem[]
   pageLinkBaseUrl: string
   queryParams: string
-  requestedPageName: string
+  requestedPageName: string | null
   sidebarChevronDownshift: number
   streamlitShareMetadata: StreamlitShareMetadata
   toolbarItems: IToolbarItem[]
