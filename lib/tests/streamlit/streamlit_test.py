@@ -20,6 +20,7 @@ import json
 import os
 import io
 import re
+import sys
 import time
 import textwrap
 import unittest
@@ -419,7 +420,17 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el.doc_string.doc_string.startswith("Display text in header formatting.")
         )
         self.assertEqual(el.doc_string.type, "<class 'method'>")
-        self.assertEqual(el.doc_string.signature, "(body, anchor=None)")
+        if sys.version_info[1] == 7:
+            # Python 3.7 represents the signature slightly differently
+            self.assertEqual(
+                el.doc_string.signature,
+                "(body: str, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'",
+            )
+        else:
+            self.assertEqual(
+                el.doc_string.signature,
+                "(body: str, anchor: Optional[str] = None) -> 'DeltaGenerator'",
+            )
 
     def test_st_image_PIL_image(self):
         """Test st.image with PIL image."""
