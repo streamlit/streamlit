@@ -420,6 +420,20 @@ class Server:
                 ]
             )
 
+        if config.get_option("server.portProxy"):
+            try:
+                from jupyter_server_proxy.handlers import LocalProxyHandler
+            except ModuleNotFoundError:
+                LOGGER.error("jupyter_server_proxy is not installed. Cannot use `server.portProxy`")
+            else:
+                routes.extend(
+                    [
+                        (
+                            make_url_path_regex(base, r"proxy/(\d+)(.*)"), LocalProxyHandler
+                        )
+                    ]
+                )
+
         return tornado.web.Application(
             routes,
             cookie_secret=config.get_option("server.cookieSecret"),

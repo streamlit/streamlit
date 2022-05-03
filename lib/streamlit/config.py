@@ -564,6 +564,15 @@ def _server_port() -> int:
     return 8501
 
 
+@_create_option("server.portProxy", type_=bool)
+def _server_port_proxy() -> int:
+    """Use jupyter_server_proxy to proxy local ports.
+
+    Default: False
+    """
+    return False
+
+
 _create_option(
     "server.scriptHealthCheckEnabled",
     visibility="hidden",
