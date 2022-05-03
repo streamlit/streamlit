@@ -424,14 +424,12 @@ class Server:
             try:
                 from jupyter_server_proxy.handlers import LocalProxyHandler
             except ModuleNotFoundError:
-                LOGGER.error("jupyter_server_proxy is not installed. Cannot use `server.portProxy`")
+                LOGGER.error(
+                    "jupyter_server_proxy is not installed. Cannot use `server.portProxy`"
+                )
             else:
                 routes.extend(
-                    [
-                        (
-                            make_url_path_regex(base, r"proxy/(\d+)(.*)"), LocalProxyHandler
-                        )
-                    ]
+                    [(make_url_path_regex(base, r"proxy/(\d+)(.*)"), LocalProxyHandler)]
                 )
 
         return tornado.web.Application(
