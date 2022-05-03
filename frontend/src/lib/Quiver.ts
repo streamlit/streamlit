@@ -717,9 +717,19 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     // datetimetz
     if (isDate && typeName === "datetimetz") {
       const meta = type?.meta
-      return moment(x as Date | number)
-        .tz(meta?.timezone)
-        .format("YYYY-MM-DDTHH:mm:ssZ")
+      let datetime = moment(x as Date | number)
+
+      if (meta?.timezone) {
+        if (moment.tz.zone(meta?.timezone)) {
+          // uses timezone notation
+          datetime = datetime.tz(meta?.timezone)
+        } else {
+          // uses UTC offset notation
+          datetime = datetime.utcOffset(meta?.timezone)
+        }
+      }
+
+      return datetime.format("YYYY-MM-DDTHH:mm:ssZ")
     }
     // datetime, datetime64, datetime64[ns], etc.
     if (isDate && typeName?.startsWith("datetime")) {
@@ -978,7 +988,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       throw new Error(`
 Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
 
-If you do not need the Styler's styles, try passing the \`.data\` attribute of 
+If you do not need the Styler's styles, try passing the \`.data\` attribute of
 the Styler object instead to concatenate just the underlying dataframe.
 
 For example:

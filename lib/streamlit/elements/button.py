@@ -17,6 +17,7 @@ from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 
 from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union, BinaryIO, TextIO
+from typing_extensions import Final
 from textwrap import dedent
 
 import streamlit
@@ -34,7 +35,7 @@ from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
 
 
-FORM_DOCS_INFO = """
+FORM_DOCS_INFO: Final = """
 
 For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form).

@@ -206,7 +206,7 @@ beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
 
 
-def set_option(key, value):
+def set_option(key: str, value) -> None:
     """Set config option.
 
     Currently, only the following config options can be set within the script itself:
@@ -372,7 +372,7 @@ def experimental_set_query_params(**query_params):
 
 
 @_contextlib.contextmanager
-def spinner(text="In progress..."):
+def spinner(text: str = "In progress..."):
     """Temporarily displays a message while executing a block of code.
 
     Parameters
@@ -446,7 +446,7 @@ def _transparent_write(*args):
 _use_warning_has_been_displayed = False
 
 
-def _maybe_print_use_warning():
+def _maybe_print_use_warning() -> None:
     """Print a warning if Streamlit is imported but not being run with `streamlit run`.
     The warning is printed only once.
     """
@@ -492,7 +492,7 @@ def stop() -> NoReturn:
     raise StopException()
 
 
-def experimental_rerun():
+def experimental_rerun() -> NoReturn:
     """Rerun the script immediately.
 
     When `st.experimental_rerun()` is called, the script is halted - no
