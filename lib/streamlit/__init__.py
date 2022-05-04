@@ -306,9 +306,16 @@ def experimental_show(*args):
             markdown("**%s**" % escaped)
             write(args[idx])
 
-    except Exception:
+    except Exception as raised_exc:
         _, exc, exc_tb = _sys.exc_info()
+        if exc is None:
+            raise RuntimeError(
+                "Unexpected state: exc was None. If you see this message, "
+                "please create an issue at "
+                "https://github.com/streamlit/streamlit/issues"
+            ) from raised_exc
         exception(exc)
+
 
 
 def experimental_get_query_params():
