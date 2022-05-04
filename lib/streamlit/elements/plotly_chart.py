@@ -156,7 +156,7 @@ def marshall(
     figure_or_data: FigureOrData,
     use_container_width: bool,
     sharing: SharingMode,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
 
