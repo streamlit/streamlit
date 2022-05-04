@@ -13,8 +13,8 @@
 # limitations under the License.
 
 from typing import cast, TYPE_CHECKING, Union
+from typing_extensions import TypeAlias
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
 
@@ -22,8 +22,13 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+#Currently, equates to just float,
+# but we can't use numbers.Real due to
+# https://github.com/python/mypy/issues/3186
+Number: TypeAlias = Union[int, float]
+
 class ProgressMixin:
-    def progress(self, value: Union[int, float]) -> "DeltaGenerator":
+    def progress(self, value: Number) -> "DeltaGenerator":
         """Display a progress bar.
 
         Parameters
@@ -49,20 +54,20 @@ class ProgressMixin:
         # TODO: standardize numerical type checking across st.* functions.
         progress_proto = ProgressProto()
 
+        if isinstance(value, int):
+            if 0 <= value <= 100:
+                progress_proto.value = value
+            else:
+                raise StreamlitAPIException(
+                    "Progress Value has invalid value [0, 100]: %d" % value
+                )
+
         if isinstance(value, float):
             if 0.0 <= value <= 1.0:
                 progress_proto.value = int(value * 100)
             else:
                 raise StreamlitAPIException(
                     "Progress Value has invalid value [0.0, 1.0]: %f" % value
-                )
-
-        elif isinstance(value, int):
-            if 0 <= value <= 100:
-                progress_proto.value = value
-            else:
-                raise StreamlitAPIException(
-                    "Progress Value has invalid value [0, 100]: %d" % value
                 )
         else:
             raise StreamlitAPIException(
