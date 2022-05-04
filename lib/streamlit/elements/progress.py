@@ -63,7 +63,7 @@ class ProgressMixin:
                     "Progress Value has invalid value [0, 100]: %d" % value
                 )
 
-        if isinstance(value, float):
+        elif isinstance(value, float):
             if 0.0 <= value <= 1.0:
                 progress_proto.value = int(value * 100)
             else:
