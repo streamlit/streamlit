@@ -17,39 +17,50 @@
 import imghdr
 import io
 import mimetypes
-from typing import cast
+from typing import cast, List, Optional, TYPE_CHECKING, TypeVar, Union
+from typing_extensions import Final, Literal, TypeAlias
 from urllib.parse import urlparse
 import re
 
 import numpy as np
 from PIL import Image, ImageFile
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+LOGGER: Final = get_logger(__name__)
 
 # This constant is related to the frontend maximum content width specified
 # in App.jsx main container
 # 730 is the max width of element-container in the frontend, and 2x is for high
 # DPI.
-MAXIMUM_CONTENT_WIDTH = 2 * 730
+MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
+AnyImage = TypeVar("AnyImage", "np.typing.NDArray", io.BytesIO, str)
+# TODO: Check whether List[io.BytesIo] works or not.
+ImageOrImageList = Union[AnyImage, List[AnyImage]]
+UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
+Channels: TypeAlias = Literal["RGB", "BGR"]
+OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
 
 class ImageMixin:
     def image(
         self,
-        image,
-        caption=None,
-        width=None,
-        use_column_width=None,
-        clamp=False,
-        channels="RGB",
-        output_format="auto",
-    ):
+        image: ImageOrImageList,
+        # TODO: Narrow type of caption, dependent on type of image,
+        #  by way of overload
+        caption: Optional[Union[str, List[str]]] = None,
+        width: Optional[int] = None,
+        use_column_width: UseColumnWith = None,
+        clamp: bool = False,
+        channels: Channels = "RGB",
+        output_format: OutputFormat = "auto",
+    ) -> "DeltaGenerator":
         """Display an image or list of images.
 
         Parameters
@@ -126,12 +137,15 @@ class ImageMixin:
             channels,
             output_format,
         )
-        return self.dg._enqueue("imgs", image_list_proto)
+        return cast(
+            "DeltaGenerator",
+            self.dg._enqueue("imgs", image_list_proto)
+        )
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
 def _image_may_have_alpha_channel(image):
@@ -225,7 +239,7 @@ def _normalize_to_bytes(data, width, output_format):
     return data, mimetype
 
 
-def _clip_image(image, clamp):
+def _clip_image(image: np.ndarray, clamp: bool) -> np.ndarray:
     data = image
     if issubclass(image.dtype.type, np.floating):
         if clamp:
@@ -244,7 +258,13 @@ def _clip_image(image, clamp):
 
 
 def image_to_url(
-    image, width, clamp, channels, output_format, image_id, allow_emoji=False
+    image,
+    width,
+    clamp,
+    channels,
+    output_format,
+    image_id,
+    allow_emoji: bool = False,
 ):
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
@@ -309,11 +329,11 @@ def marshall_images(
     image,
     caption,
     width,
-    proto_imgs,
-    clamp,
-    channels="RGB",
-    output_format="auto",
-):
+    proto_imgs: ImageListProto,
+    clamp: bool,
+    channels: Channels = "RGB",
+    output_format: OutputFormat = "auto",
+) -> None:
     channels = channels.upper()
 
     # Turn single image and caption into one element list.
