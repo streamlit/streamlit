@@ -673,15 +673,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             payload = base64.b64decode(header_content)
             user_obj = json.loads(payload)
             email = user_obj["email"]
-            is_public_cloud_app = user_obj["is_public_cloud_app"]
+            is_public_cloud_app = user_obj["isPublicCloudApp"]
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@localhost.com"
             is_public_cloud_app = False
 
+        user_info: Dict[str, Optional[str]] = dict()
         if is_public_cloud_app:
-            user_info = {"email": None}
+            user_info["email"] = None
         else:
-            user_info = {"email": email}
+            user_info["email"] = email
 
         session = AppSession(
             ioloop=self._ioloop,
