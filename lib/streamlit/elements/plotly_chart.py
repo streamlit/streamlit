@@ -215,7 +215,7 @@ def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> "go.Figure":
     return ply.plot(*args, **kwargs)
 
 
-def _get_embed_url(url: AnyStr) -> AnyStr:
+def _get_embed_url(url: str) -> str:
     parsed_url = urllib.parse.urlparse(url)
 
     # Plotly's embed URL is the normal URL plus ".embed".
