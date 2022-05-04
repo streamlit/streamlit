@@ -16,6 +16,7 @@ import inspect
 import json as json
 import types
 from typing import cast, Any, List, Tuple, Type
+from typing_extensions import Final
 
 import numpy as np
 
@@ -26,17 +27,17 @@ from streamlit.state import SessionStateProxy
 
 # Special methods:
 
-HELP_TYPES = (
+HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
     types.BuiltinFunctionType,
     types.BuiltinMethodType,
     types.FunctionType,
     types.MethodType,
     types.ModuleType,
-)  # type: Tuple[Type[Any], ...]
+)
 
 
 class WriteMixin:
-    def write(self, *args, **kwargs):
+    def write(self, *args: Any, **kwargs: Any) -> None:
         """Write arguments to the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
