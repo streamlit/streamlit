@@ -22,10 +22,11 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-#Currently, equates to just float,
+# Currently, equates to just float,
 # but we can't use numbers.Real due to
 # https://github.com/python/mypy/issues/3186
 Number: TypeAlias = Union[int, float]
+
 
 class ProgressMixin:
     def progress(self, value: Number) -> "DeltaGenerator":
