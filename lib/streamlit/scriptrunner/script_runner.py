@@ -98,7 +98,7 @@ class ScriptRunner:
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         initial_rerun_data: RerunData,
-        user_info: Dict[str, str],
+        user_info: Dict[str, Optional[str]],
     ):
         """Initialize the ScriptRunner.
 

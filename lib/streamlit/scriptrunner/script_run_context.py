@@ -44,7 +44,7 @@ class ScriptRunContext:
     query_string: str
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
-    user_info: Dict[str, str]
+    user_info: Dict[str, Optional[str]]
 
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False

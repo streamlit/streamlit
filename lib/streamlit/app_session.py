@@ -76,7 +76,7 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
-        user_info: Dict[str, str],
+        user_info: Dict[str, Optional[str]],
     ):
         """Initialize the AppSession.
 
