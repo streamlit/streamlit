@@ -14,6 +14,7 @@
 
 from textwrap import dedent
 from typing import Optional, cast
+from typing_extensions import TypeAlias, Literal
 
 import attr
 import streamlit
@@ -23,6 +24,9 @@ from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
 
+DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
+
+
 @attr.s(auto_attribs=True, slots=True)
 class MetricColorAndDirection:
     color: Optional[int]
@@ -30,7 +34,7 @@ class MetricColorAndDirection:
 
 
 class MetricMixin:
-    def metric(self, label, value, delta=None, delta_color="normal"):
+    def metric(self, label, value, delta=None, delta_color: DeltaColor = "normal"):
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Tip: If you want to display a large number, it may be a good idea to

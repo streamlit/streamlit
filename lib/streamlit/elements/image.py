@@ -48,6 +48,7 @@ UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bo
 Channels: TypeAlias = Literal["RGB", "BGR"]
 OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
 
+
 class ImageMixin:
     def image(
         self,
