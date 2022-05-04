@@ -139,7 +139,7 @@ class ImageMixin:
         )
         return cast(
             "DeltaGenerator",
-            self.dg._enqueue("imgs", image_list_proto)
+            self.dg._enqueue("imgs", image_list_proto),
         )
 
     @property
@@ -325,10 +325,10 @@ def image_to_url(
 
 
 def marshall_images(
-    coordinates,
-    image,
-    caption,
-    width,
+    coordinates: str,
+    image: ImageOrImageList,
+    caption: Optional[Union[str, np.ndarray, List[str]]],
+    width: int,
     proto_imgs: ImageListProto,
     clamp: bool,
     channels: Channels = "RGB",
@@ -338,7 +338,7 @@ def marshall_images(
 
     # Turn single image and caption into one element list.
     if type(image) is list:
-        images = image
+        images: List[AnyImage] = image
     else:
         if type(image) == np.ndarray and len(image.shape) == 4:
             images = _4d_to_list_3d(image)
@@ -346,7 +346,7 @@ def marshall_images(
             images = [image]
 
     if type(caption) is list:
-        captions = caption
+        captions: List[Optional[str]] = caption
     else:
         if isinstance(caption, str):
             captions = [caption]
