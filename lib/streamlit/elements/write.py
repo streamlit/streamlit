@@ -14,9 +14,14 @@
 
 import inspect
 import json as json
+import sys
 import types
 from typing import cast, Any, List, Tuple, Type
-from typing_extensions import Final
+
+if sys.version_info >= (3, 8):
+    from typing import Final
+else:
+    from typing_extensions import Final
 
 import numpy as np
 
