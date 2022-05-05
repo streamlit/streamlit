@@ -87,7 +87,7 @@ interface Types {
 }
 
 /** Type information for single-index columns, and data columns. */
-interface Type {
+export interface Type {
   /** Type name. */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
