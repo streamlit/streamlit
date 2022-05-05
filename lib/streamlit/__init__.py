@@ -55,7 +55,7 @@ from importlib_metadata import version as _version
 
 __version__: str = _version("streamlit")
 
-from typing import Any, Dict, Iterator, List, NoReturn, Union
+from typing import Any, Dict, Iterator, List, NoReturn
 import contextlib as _contextlib
 import sys as _sys
 import threading as _threading
@@ -316,7 +316,7 @@ def experimental_show(*args: Any) -> None:
         exception(exc)
 
 
-def experimental_get_query_params() -> Union[Dict[str, List[str]], str]:
+def experimental_get_query_params() -> Dict[str, List[str]]:
     """Return the query parameters that is currently showing in the browser's URL bar.
 
     Returns
@@ -342,7 +342,7 @@ def experimental_get_query_params() -> Union[Dict[str, List[str]], str]:
     """
     ctx = _get_script_run_ctx()
     if ctx is None:
-        return ""
+        return {}
     return _parse.parse_qs(ctx.query_string)
 
 
