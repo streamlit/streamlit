@@ -169,8 +169,8 @@ class Checkbox extends React.PureComponent<Props, State> {
 
                 return {
                   outline: 0,
-                  width: "16px",
-                  height: "16px",
+                  width: "1rem",
+                  height: "1rem",
                   boxShadow:
                     $isFocusVisible && $checked
                       ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
