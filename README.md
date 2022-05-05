@@ -57,12 +57,9 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 - More [demo projects](https://github.com/streamlit/) to inspire you
 - And if you would like to contribute, see [instructions here](https://github.com/streamlit/streamlit/wiki/Contributing)
 
-## Streamlit Cloud
+## Community Cloud
 
-[Streamlit Cloud](https://streamlit.io/cloud) is our deployment solution for managing, sharing, and collaborating on your Streamlit apps.
-
-- The Teams and Enterprise plans provide secure single-click deploy, authentication, web editing, versioning, and much more for your Streamlit apps. You can sign-up [here](https://share.streamlit.io/signup).
-- The Starter plan is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it. It's completely free to use and you can sign-up [here](https://share.streamlit.io).
+With [Community Cloud](https://streamlit.io/cloud) you can deploy, manage, and share your apps with the world, directly from Streamlit — all for free. Sign-up [here](https://share.streamlit.io/signup).
 
 ## License
 

@@ -717,9 +717,19 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     // datetimetz
     if (isDate && typeName === "datetimetz") {
       const meta = type?.meta
-      return moment(x as Date | number)
-        .tz(meta?.timezone)
-        .format("YYYY-MM-DDTHH:mm:ssZ")
+      let datetime = moment(x as Date | number)
+
+      if (meta?.timezone) {
+        if (moment.tz.zone(meta?.timezone)) {
+          // uses timezone notation
+          datetime = datetime.tz(meta?.timezone)
+        } else {
+          // uses UTC offset notation
+          datetime = datetime.utcOffset(meta?.timezone)
+        }
+      }
+
+      return datetime.format("YYYY-MM-DDTHH:mm:ssZ")
     }
     // datetime, datetime64, datetime64[ns], etc.
     if (isDate && typeName?.startsWith("datetime")) {
