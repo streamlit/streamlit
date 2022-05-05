@@ -16,7 +16,11 @@ import os
 import traceback
 import typing
 from typing import cast, List, Optional, TYPE_CHECKING
-from typing_extensions import Final
+
+if sys.version_info >= (3, 8):
+    from typing import Final
+else:
+    from typing_extensions import Final
 
 import streamlit
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
