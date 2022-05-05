@@ -16,7 +16,7 @@
 
 import json
 import urllib.parse
-from typing import Any, AnyStr, cast, Dict, List, Set, TYPE_CHECKING, Union
+from typing import Any, cast, Dict, List, Set, TYPE_CHECKING, Union
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit.legacy_caching import caching
