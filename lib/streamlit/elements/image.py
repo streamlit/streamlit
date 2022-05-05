@@ -31,6 +31,8 @@ from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 if TYPE_CHECKING:
+    import numpy.typing as npt
+    from typing import Any
     from streamlit.delta_generator import DeltaGenerator
 
 LOGGER: Final = get_logger(__name__)
@@ -41,7 +43,7 @@ LOGGER: Final = get_logger(__name__)
 # DPI.
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
-AnyImage = TypeVar("AnyImage", "np.typing.NDArray", io.BytesIO, str)
+AnyImage = TypeVar("AnyImage", "npt.NDArray[Any]", io.BytesIO, str)
 # TODO: Check whether List[io.BytesIo] works or not.
 ImageOrImageList = Union[AnyImage, List[AnyImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
@@ -240,7 +242,7 @@ def _normalize_to_bytes(data, width, output_format):
     return data, mimetype
 
 
-def _clip_image(image: np.ndarray, clamp: bool) -> np.ndarray:
+def _clip_image(image: "npt.NDArray[Any]", clamp: bool) -> "npt.NDArray[Any]":
     data = image
     if issubclass(image.dtype.type, np.floating):
         if clamp:
@@ -328,7 +330,7 @@ def image_to_url(
 def marshall_images(
     coordinates: str,
     image: ImageOrImageList,
-    caption: Optional[Union[str, np.ndarray, List[str]]],
+    caption: Optional[Union[str, "npt.NDArray[Any]", List[str]]],
     width: int,
     proto_imgs: ImageListProto,
     clamp: bool,
