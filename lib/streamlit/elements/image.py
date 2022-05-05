@@ -17,10 +17,21 @@
 import imghdr
 import io
 import mimetypes
+import sys
 from typing import cast, List, Optional, TYPE_CHECKING, TypeVar, Union
-from typing_extensions import Final, Literal, TypeAlias
 from urllib.parse import urlparse
 import re
+
+if sys.version_info >= (3, 8):
+    from typing import Final, Literal
+else:
+    from typing_extensions import Final, Literal
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
+
 
 import numpy as np
 from PIL import Image, ImageFile
@@ -43,9 +54,9 @@ LOGGER: Final = get_logger(__name__)
 # DPI.
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
-AnyImage = TypeVar("AnyImage", "npt.NDArray[Any]", io.BytesIO, str)
+AtomicImage = Union["npt.NDArray[Any]", io.BytesIO, str]
 # TODO: Check whether List[io.BytesIo] works or not.
-ImageOrImageList = Union[AnyImage, List[AnyImage]]
+ImageOrImageList = Union[AtomicImage, List[str], List["npt.NDArray[Any]"]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
@@ -341,7 +352,7 @@ def marshall_images(
 
     # Turn single image and caption into one element list.
     if type(image) is list:
-        images: List[AnyImage] = image
+        images: List[AtomicImage] = image
     else:
         if type(image) == np.ndarray and len(image.shape) == 4:
             images = _4d_to_list_3d(image)
