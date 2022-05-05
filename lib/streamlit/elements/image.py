@@ -18,7 +18,7 @@ import imghdr
 import io
 import mimetypes
 import sys
-from typing import cast, List, Optional, TYPE_CHECKING, TypeVar, Union
+from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union
 from urllib.parse import urlparse
 import re
 
@@ -352,7 +352,7 @@ def marshall_images(
 
     # Turn single image and caption into one element list.
     if type(image) is list:
-        images: List[AtomicImage] = image
+        images: Sequence[AtomicImage] = image
     else:
         if type(image) == np.ndarray and len(image.shape) == 4:
             images = _4d_to_list_3d(image)
@@ -360,7 +360,7 @@ def marshall_images(
             images = [image]
 
     if type(caption) is list:
-        captions: List[Optional[str]] = caption
+        captions: Sequence[Optional[str]] = caption
     else:
         if isinstance(caption, str):
             captions = [caption]
