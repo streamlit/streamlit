@@ -40,12 +40,11 @@ LOGGER: Final = get_logger(__name__)
 # frontend when we encounter an uncaught app exception.
 _GENERIC_UNCAUGHT_EXCEPTION_TEXT: Final = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
 
-# Extract the streamlit package path
-_STREAMLIT_DIR = os.path.dirname(streamlit.__file__)
-
-# Make it absolute, resolve aliases, and ensure there's a trailing path
-# separator
-_STREAMLIT_DIR = os.path.join(os.path.realpath(_STREAMLIT_DIR), "")
+# Extract the streamlit package path. Make it absolute, resolve aliases, and
+# ensure there's a trailing path separator
+_STREAMLIT_DIR: Final = os.path.join(
+    os.path.realpath(os.path.dirname(streamlit.__file__)), ""
+)
 
 
 class ExceptionMixin:
