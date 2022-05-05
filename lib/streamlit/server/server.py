@@ -668,6 +668,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
+        is_public_cloud_app = False
+
         try:
             header_content = ws.request.headers["X-Streamlit-User"]
             payload = base64.b64decode(header_content)
