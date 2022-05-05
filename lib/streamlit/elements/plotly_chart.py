@@ -15,6 +15,7 @@
 """Streamlit support for Plotly charts."""
 
 import json
+import sys
 import urllib.parse
 from typing import Any, cast, Dict, List, Set, TYPE_CHECKING, Union
 
