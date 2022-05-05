@@ -676,7 +676,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             is_public_cloud_app = user_obj["isPublicCloudApp"]
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@localhost.com"
-            is_public_cloud_app = False
 
         user_info: Dict[str, Optional[str]] = dict()
         if is_public_cloud_app:
