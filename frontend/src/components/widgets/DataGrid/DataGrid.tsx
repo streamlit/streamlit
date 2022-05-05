@@ -357,6 +357,16 @@ function DataGrid({
       maxHeight={maxHeight}
       minWidth={width}
       maxWidth={propWidth}
+      onBlur={() => {
+        // If the container loses focus, clear the current selection
+        if (!isFocused) {
+          setGridSelection({
+            columns: CompactSelection.empty(),
+            rows: CompactSelection.empty(),
+            current: undefined,
+          } as GridSelection)
+        }
+      }}
     >
       <GlideDataEditor
         ref={dataEditorRef}
