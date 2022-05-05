@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import os
+import sys
 import traceback
-import typing
 from typing import cast, List, Optional, TYPE_CHECKING
 
 if sys.version_info >= (3, 8):
