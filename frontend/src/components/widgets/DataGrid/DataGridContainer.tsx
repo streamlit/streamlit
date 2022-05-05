@@ -123,6 +123,7 @@ interface DataGridContainerProps {
   minHeight: number
   maxHeight: number
   children: ReactElement
+  onBlur?: () => void
 }
 
 /**
@@ -136,6 +137,7 @@ function ThemedDataGridContainer({
   minHeight,
   maxHeight,
   children,
+  onBlur,
 }: DataGridContainerProps): ReactElement {
   const theme: Theme = useTheme()
 
@@ -152,6 +154,7 @@ function ThemedDataGridContainer({
         minHeight={minHeight}
         maxHeight={maxHeight}
         theme={theme}
+        onBlur={onBlur}
       >
         {children}
       </ResizableContainer>

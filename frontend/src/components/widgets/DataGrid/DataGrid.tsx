@@ -22,6 +22,9 @@ import {
   GridColumn,
   DataEditorProps,
   DataEditorRef,
+  GridSelection,
+  CompactSelection,
+  GridMouseEventArgs,
 } from "@glideapps/glide-data-grid"
 import { useColumnSort } from "@glideapps/glide-data-grid-source"
 
@@ -264,6 +267,13 @@ function DataGrid({
     onColumnResize,
   } = useDataLoader(element, sort)
 
+  const [isFocused, setIsFocused] = React.useState<boolean>(true)
+
+  const [gridSelection, setGridSelection] = React.useState<GridSelection>({
+    columns: CompactSelection.empty(),
+    rows: CompactSelection.empty(),
+  })
+
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
   const minWidth = MIN_COLUMN_WIDTH + 3
@@ -377,6 +387,18 @@ function DataGrid({
         keybindings={{ search: true }}
         // Header click is used for column sorting:
         onHeaderClicked={onHeaderClick}
+        gridSelection={gridSelection}
+        onGridSelectionChange={(newSelection: GridSelection) => {
+          setGridSelection(newSelection)
+        }}
+        onMouseMove={(args: GridMouseEventArgs) => {
+          // Determine if the dataframe is focused or not
+          if (args.kind === "out-of-bounds" && isFocused) {
+            setIsFocused(false)
+          } else if (args.kind !== "out-of-bounds" && !isFocused) {
+            setIsFocused(true)
+          }
+        }}
       />
     </ThemedDataGridContainer>
   )
