@@ -19,14 +19,44 @@ import {
   GridCell,
   GridCellKind,
   TextCell,
-  RowIDCell,
   Theme as GlideTheme,
   BooleanCell,
   NumberCell,
   BubbleCell,
 } from "@glideapps/glide-data-grid"
 
-import { DataFrameCell, Quiver } from "src/lib/Quiver"
+import { DataFrameCell, Quiver, Type as QuiverType } from "src/lib/Quiver"
+
+export enum ColumnType {
+  Text = "text",
+  Number = "number",
+  Boolean = "boolean",
+  List = "list",
+}
+
+/**
+ * Maps the data type from Quiver to a valid column type.
+ */
+export function determineColumnType(quiverType: QuiverType): ColumnType {
+  const dataTypeName = quiverType && Quiver.getTypeName(quiverType)
+
+  let columnType = ColumnType.Text
+
+  if (!dataTypeName) {
+    // Use text column as fallback
+    columnType = ColumnType.Text
+  } else if (["bool"].includes(dataTypeName)) {
+    // TODO: lukasmasuch: Use text cell for now since the boolean cell does not support empty values.
+    columnType = ColumnType.Text
+  } else if (["int64", "float64", "range"].includes(dataTypeName)) {
+    // The default index in pandas uses a range type.
+    columnType = ColumnType.Number
+  } else if (dataTypeName.startsWith("list")) {
+    columnType = ColumnType.List
+  }
+
+  return columnType
+}
 
 /**
  * Returns either the formatted content or display value for a Quiver cell.
@@ -71,64 +101,59 @@ export function extractCssProperty(
 /**
  * Returns a template object representing an empty cell for a given data type.
  *
- * @param kind: The kind of cell to get a template for.
+ * @param type: The type of the column.
  * @param readonly: If true, returns a read-only version of the cell template.
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */
-export function getCellTemplate(kind: string, readonly: boolean): GridCell {
-  if (kind === GridCellKind.Text) {
+export function getCellTemplate(
+  type: ColumnType,
+  readonly: boolean,
+  style: "normal" | "faded" = "normal"
+): GridCell {
+  if (type === ColumnType.Text) {
     return {
       kind: GridCellKind.Text,
       data: "",
       displayData: "",
       allowOverlay: true,
       readonly,
-      style: "normal",
+      style,
     } as TextCell
   }
 
-  if (kind === GridCellKind.Boolean) {
+  if (type === ColumnType.Boolean) {
     return {
       kind: GridCellKind.Boolean,
       data: false,
       showUnchecked: true,
       allowEdit: readonly,
       allowOverlay: false, // no overlay possible
-      style: "normal",
+      style,
     } as BooleanCell
   }
 
-  if (kind === GridCellKind.Number) {
+  if (type === ColumnType.Number) {
     return {
       kind: GridCellKind.Number,
       data: undefined,
       displayData: "",
       readonly,
       allowOverlay: true,
-      style: "normal",
+      style,
     } as NumberCell
   }
 
-  if (kind === GridCellKind.Bubble) {
+  if (type === ColumnType.List) {
     return {
       kind: GridCellKind.Bubble,
       data: [],
       allowOverlay: true,
-      style: "normal",
+      style,
     } as BubbleCell
   }
 
-  if (kind === GridCellKind.RowID) {
-    return {
-      kind: GridCellKind.RowID,
-      data: "",
-      style: "normal",
-      allowOverlay: true,
-    } as RowIDCell
-  }
-
-  throw new Error(`Unsupported cell kind: ${kind}`)
+  throw new Error(`Unsupported cell type: ${type}`)
 }
 
 /**
@@ -247,17 +272,6 @@ export function fillCellTemplate(
           ? JSON.parse(JSON.stringify(quiverCell.content))
           : [],
     } as BubbleCell
-  }
-
-  if (cellKind === GridCellKind.RowID) {
-    const formattedContents = getDisplayContent(quiverCell)
-    return {
-      ...cellTemplate,
-      data:
-        typeof quiverCell.content === "string"
-          ? quiverCell.content
-          : formattedContents,
-    } as RowIDCell
   }
 
   throw new Error(`Unsupported cell kind: ${cellKind}`)

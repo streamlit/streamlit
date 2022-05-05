@@ -19,7 +19,6 @@ import React, { ReactElement, useState, useLayoutEffect } from "react"
 import {
   DataEditor as GlideDataEditor,
   GridCell,
-  GridCellKind,
   GridColumn,
   DataEditorProps,
   DataEditorRef,
@@ -34,6 +33,8 @@ import {
   getCellTemplate,
   fillCellTemplate,
   getColumnSortMode,
+  determineColumnType,
+  ColumnType,
 } from "./DataGridCells"
 import ThemedDataGridContainer from "./DataGridContainer"
 
@@ -46,7 +47,7 @@ const MAX_COLUMN_WIDTH = 500
  */
 type GridColumnWithCellTemplate = GridColumn & {
   getTemplate(): GridCell
-  columnType: string
+  columnType: ColumnType
 }
 
 /**
@@ -63,9 +64,9 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
       title: "",
       hasMenu: false,
       getTemplate: () => {
-        return getCellTemplate(GridCellKind.RowID, true)
+        return getCellTemplate(ColumnType.Text, true, "faded")
       },
-      columnType: GridCellKind.RowID,
+      columnType: ColumnType.Text,
     } as GridColumnWithCellTemplate)
     return columns
   }
@@ -74,15 +75,19 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
   const numColumns = element.columns?.[0]?.length ?? 0
 
   for (let i = 0; i < numIndices; i++) {
+    const quiverType = element.types.index[i]
+    const columnType = determineColumnType(quiverType)
+    console.log(columnType)
+    console.log(quiverType)
     columns.push({
       id: `index-${i}`,
       // Indices currently have empty titles:
       title: "",
       hasMenu: false,
       getTemplate: () => {
-        return getCellTemplate(GridCellKind.RowID, true)
+        return getCellTemplate(columnType, true, "faded")
       },
-      columnType: GridCellKind.RowID,
+      columnType,
     } as GridColumnWithCellTemplate)
   }
 
@@ -90,30 +95,16 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
     const columnTitle = element.columns[0][i]
 
     const quiverType = element.types.data[i]
-    const dataTypeName = quiverType && Quiver.getTypeName(quiverType)
-
-    let cellKind = GridCellKind.Text
-
-    if (!dataTypeName) {
-      // Use text cell as fallback
-      cellKind = GridCellKind.Text
-    } else if (["bool"].includes(dataTypeName)) {
-      // TODO: lukasmasuch: Use text cell for now since the boolean cell does not support empty values.
-      cellKind = GridCellKind.Text
-    } else if (["int64", "float64"].includes(dataTypeName)) {
-      cellKind = GridCellKind.Number
-    } else if (dataTypeName.startsWith("list")) {
-      cellKind = GridCellKind.Bubble
-    }
+    const columnType = determineColumnType(quiverType)
 
     columns.push({
       id: `column-${columnTitle}-${i}`,
       title: columnTitle,
       hasMenu: false,
       getTemplate: () => {
-        return getCellTemplate(cellKind, true)
+        return getCellTemplate(columnType, true)
       },
-      columnType: cellKind,
+      columnType,
     } as GridColumnWithCellTemplate)
   }
   return columns
@@ -196,8 +187,8 @@ export function useDataLoader(
     ([col, row]: readonly [number, number]): GridCell => {
       if (element.isEmpty()) {
         return {
-          ...getCellTemplate(GridCellKind.RowID, true),
-          data: "empty",
+          ...getCellTemplate(ColumnType.Text, true, "faded"),
+          displayData: "empty",
         } as GridCell
       }
 
@@ -379,7 +370,7 @@ function DataGrid({
         // Deactivate row markers and numbers:
         rowMarkers={"none"}
         // Deactivate selections:
-        rangeSelect={"none"}
+        rangeSelect={"rect"}
         columnSelect={"none"}
         rowSelect={"none"}
         // Activate search:
