@@ -351,13 +351,13 @@ def marshall_images(
     channels = channels.upper()
 
     # Turn single image and caption into one element list.
-    if type(image) is list:
-        images: Sequence[AtomicImage] = image
+    images: Sequence[AtomicImage]
+    if isinstance(image, list):
+         images = image
+    elif type(image) == np.ndarray and len(image.shape) == 4:
+        images = _4d_to_list_3d(image)
     else:
-        if type(image) == np.ndarray and len(image.shape) == 4:
-            images = _4d_to_list_3d(image)
-        else:
-            images = [image]
+        images = [image]
 
     if type(caption) is list:
         captions: Sequence[Optional[str]] = caption
