@@ -80,8 +80,6 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
   for (let i = 0; i < numIndices; i++) {
     const quiverType = element.types.index[i]
     const columnType = determineColumnType(quiverType)
-    console.log(columnType)
-    console.log(quiverType)
     columns.push({
       id: `index-${i}`,
       // Indices currently have empty titles:
@@ -142,30 +140,21 @@ export function useDataLoader(
 ): DataLoaderReturn {
   // The columns with the corresponding empty template for every type:
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [columns, setColumns] = useState(() => getColumns(element))
+  const [columnSizes, setColumnSizes] = useState<Map<string, number>>(
+    () => new Map()
+  )
 
-  useLayoutEffect(() => {
-    const updatedColumns = getColumns(element)
-    // Only update columns if something changed
-    if (updatedColumns.length !== columns.length) {
-      setColumns(updatedColumns)
+  let columns = getColumns(element)
+  columns = columns.map(column => {
+    if (column.id && columnSizes.has(column.id)) {
+      return {
+        ...column,
+        width: columnSizes.get(column.id),
+      } as GridColumnWithCellTemplate
     } else {
-      for (let i = 0; i < updatedColumns.length; i++) {
-        const updatedColumn = updatedColumns[i]
-        const currentColumn = columns[i]
-
-        if (updatedColumn.title !== currentColumn.title) {
-          setColumns(updatedColumns)
-          break
-        }
-
-        if (updatedColumn.columnType !== currentColumn.columnType) {
-          setColumns(updatedColumns)
-          break
-        }
-      }
+      return column
     }
-  }, [element])
+  })
 
   // Number of rows of the table minus 1 for the header row:
   const numRows = element.isEmpty() ? 1 : element.dimensions.rows - 1
@@ -173,15 +162,9 @@ export function useDataLoader(
 
   const onColumnResize = React.useCallback(
     (column: GridColumn, newSize: number) => {
-      setColumns(prevColumns => {
-        const index = prevColumns.findIndex(ci => ci.id === column.id)
-        const updatedColumns = [...prevColumns]
-        updatedColumns.splice(index, 1, {
-          ...prevColumns[index],
-          width: newSize,
-        })
-        return updatedColumns
-      })
+      if (column.id) {
+        setColumnSizes(new Map(columnSizes).set(column.id, newSize))
+      }
     },
     [columns]
   )
@@ -195,13 +178,18 @@ export function useDataLoader(
         } as GridCell
       }
 
+      if (col > columns.length - 1) {
+        // This should never happen
+        return getCellTemplate(ColumnType.Text, true)
+      }
+
       const cellTemplate = columns[col].getTemplate()
       if (row > numRows - 1) {
         // This should never happen
         return cellTemplate
       }
       try {
-        // Quiver has the index in 1 column and the header in first row
+        // Quiver has the header in first row
         const quiverCell = element.getCell(row + 1, col)
         return fillCellTemplate(cellTemplate, quiverCell, element.cssStyles)
       } catch (error) {
@@ -220,10 +208,8 @@ export function useDataLoader(
     sort,
   })
 
-  let adaptedColumns = columns
-
   if (sort !== undefined) {
-    adaptedColumns = columns.map(column => {
+    columns = columns.map(column => {
       if (column.id === sort.column.id) {
         return {
           ...column,
@@ -240,7 +226,7 @@ export function useDataLoader(
   return {
     numRows,
     numIndices,
-    columns: adaptedColumns,
+    columns,
     getCellContent: getCellContentSorted,
     onColumnResize,
   }
