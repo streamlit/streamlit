@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 from typing import cast, TYPE_CHECKING, Union
-from typing_extensions import TypeAlias
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
@@ -25,11 +30,11 @@ if TYPE_CHECKING:
 # Currently, equates to just float,
 # but we can't use numbers.Real due to
 # https://github.com/python/mypy/issues/3186
-Number: TypeAlias = Union[int, float]
+FloatOrInt: TypeAlias = Union[int, float]
 
 
 class ProgressMixin:
-    def progress(self, value: Number) -> "DeltaGenerator":
+    def progress(self, value: FloatOrInt) -> "DeltaGenerator":
         """Display a progress bar.
 
         Parameters
