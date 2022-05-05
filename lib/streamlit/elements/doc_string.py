@@ -15,9 +15,13 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import inspect
-
+import sys
 from typing import Any, cast, TYPE_CHECKING
-from typing_extensions import Final
+
+if sys.version_info >= (3, 8):
+    from typing import Final
+else:
+    from typing_extensions import Final
 
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
