@@ -17,7 +17,16 @@
 import json
 import urllib.parse
 from typing import Any, cast, Dict, List, Set, TYPE_CHECKING, Union
-from typing_extensions import Final, Literal, TypeAlias
+
+if sys.version_info >= (3, 8):
+    from typing import Final, Literal
+else:
+    from typing_extensions import Final, Literal
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 from streamlit.legacy_caching import caching
 from streamlit import type_util
