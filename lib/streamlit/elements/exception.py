@@ -148,7 +148,7 @@ Traceback:
         )
 
     if is_uncaught_app_exception:
-        uae = typing.cast(UncaughtAppException, exception)
+        uae = cast(UncaughtAppException, exception)
         exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         type_str = str(type(uae.exc))
         exception_proto.type = type_str.replace("<class '", "").replace("'>", "")
