@@ -32,7 +32,9 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Data: TypeAlias = Union[str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None]
+Data: TypeAlias = Union[
+    str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
+]
 
 
 class MediaMixin:

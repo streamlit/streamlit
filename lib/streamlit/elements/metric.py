@@ -117,7 +117,7 @@ class MetricMixin:
         metric_proto.direction = color_and_direction.direction
 
         return str(self.dg._enqueue("metric", metric_proto))
-    
+
     @staticmethod
     def parse_label(label: str) -> str:
         if not isinstance(label, str):
