@@ -13,14 +13,9 @@
 # limitations under the License.
 
 import os
-import sys
 import traceback
 from typing import cast, List, Optional, TYPE_CHECKING
-
-if sys.version_info >= (3, 8):
-    from typing import Final
-else:
-    from typing_extensions import Final
+from typing_extensions import Final
 
 import streamlit
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
