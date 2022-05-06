@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import cast, Optional, TYPE_CHECKING
+from typing import cast, Optional, TYPE_CHECKING, Union
 from typing_extensions import TypeAlias, Literal
 
 import attr
@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+Value: TypeAlias = Union[float, str, None]
+Delta: TypeAlias = Union[float, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
@@ -39,8 +41,8 @@ class MetricMixin:
     def metric(
         self,
         label: str,
-        value: Optional[float, str],
-        delta: Optional[float, str] = None,
+        value: Value,
+        delta: Delta = None,
         delta_color: DeltaColor = "normal",
     ) -> str:
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
@@ -122,7 +124,7 @@ class MetricMixin:
             )
         return label
 
-    def parse_value(self, value: Optional[float, str]) -> str:
+    def parse_value(self, value: Value) -> str:
         if value is None:
             return "—"
         if isinstance(value, float) or isinstance(value, int) or isinstance(value, str):
@@ -142,7 +144,7 @@ class MetricMixin:
             " Please convert the value to an accepted type."
         )
 
-    def parse_delta(self, delta: Optional[float, str]) -> str:
+    def parse_delta(self, delta: Delta) -> str:
         if delta is None or delta == "":
             return ""
         if isinstance(delta, str):
@@ -156,7 +158,7 @@ class MetricMixin:
                 " Please convert the value to an accepted type."
             )
 
-    def determine_delta_color_and_direction(self, delta_color: DeltaColor, delta: Optional[float, str]) -> MetricColorAndDirection:
+    def determine_delta_color_and_direction(self, delta_color: DeltaColor, delta: Delta) -> MetricColorAndDirection:
         cd = MetricColorAndDirection(color=None, direction=None)
 
         if delta is None or delta == "":
@@ -188,7 +190,7 @@ class MetricMixin:
             )
         return cd
 
-    def is_negative(self, delta: Optional[float, str]) -> bool:
+    def is_negative(self, delta: Delta) -> bool:
         return dedent(str(delta)).startswith("-")
 
     @property
