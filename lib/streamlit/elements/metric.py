@@ -33,7 +33,7 @@ Delta: TypeAlias = Union[float, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class MetricColorAndDirection:
     color: MetricProto.MetricColor.ValueType
     direction: MetricProto.MetricDirection.ValueType
@@ -117,8 +117,9 @@ class MetricMixin:
         metric_proto.direction = color_and_direction.direction
 
         return str(self.dg._enqueue("metric", metric_proto))
-
-    def parse_label(self, label: str) -> str:
+    
+    @staticmethod
+    def parse_label(label: str) -> str:
         if not isinstance(label, str):
             raise TypeError(
                 f"'{str(label)}' is of type {str(type(label))}, which is not an accepted type."
@@ -126,7 +127,8 @@ class MetricMixin:
             )
         return label
 
-    def parse_value(self, value: Value) -> str:
+    @staticmethod
+    def parse_value(value: Value) -> str:
         if value is None:
             return "—"
         if isinstance(value, int) or isinstance(value, float) or isinstance(value, str):
@@ -146,7 +148,8 @@ class MetricMixin:
             " Please convert the value to an accepted type."
         )
 
-    def parse_delta(self, delta: Delta) -> str:
+    @staticmethod
+    def parse_delta(delta: Delta) -> str:
         if delta is None or delta == "":
             return ""
         if isinstance(delta, str):
@@ -199,7 +202,8 @@ class MetricMixin:
             direction=cd_direction,
         )
 
-    def is_negative(self, delta: Delta) -> bool:
+    @staticmethod
+    def is_negative(delta: Delta) -> bool:
         return dedent(str(delta)).startswith("-")
 
     @property
