@@ -37,6 +37,7 @@ export interface Props {
   onPageChange: (pageName: string) => void
   hideParentScrollbar: (newValue: boolean) => void
   currentPageName: string
+  pageLinkBaseUrl: string
 }
 
 // TODO(vdonato): indicate the current page and make it unclickable
@@ -46,6 +47,7 @@ const SidebarNav = ({
   onPageChange,
   hideParentScrollbar,
   currentPageName,
+  pageLinkBaseUrl,
 }: Props): ReactElement | null => {
   if (appPages.length < 2) {
     return null
@@ -98,7 +100,9 @@ const SidebarNav = ({
             const navigateTo = pageIndex === 0 ? "" : pageName
             let pageUrl = ""
 
-            if (baseUriParts) {
+            if (pageLinkBaseUrl) {
+              pageUrl = `${pageLinkBaseUrl}/${navigateTo}`
+            } else if (baseUriParts) {
               const { basePath, host } = baseUriParts
               const portSection = port ? `:${port}` : ""
               const basePathSection = basePath ? `${basePath}/` : ""

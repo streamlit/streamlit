@@ -184,6 +184,65 @@ describe("withS4ACommunication HOC", () => {
     expect(props.currentState.hideSidebarNav).toBe(true)
   })
 
+  it("can process a received REQUEST_PAGE_CHANGE message", () => {
+    const dispatchEvent = mockEventListeners()
+    const wrapper = mount(<TestComponent />)
+
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: S4A_COMM_VERSION,
+            type: "REQUEST_PAGE_CHANGE",
+            pageName: "page1",
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+    wrapper.update()
+
+    const innerComponent = wrapper.find(TestComponentNaked)
+    const props = innerComponent.prop("s4aCommunication")
+    expect(props.currentState.requestedPageName).toBe("page1")
+
+    act(() => {
+      innerComponent.prop("s4aCommunication").onPageChanged()
+    })
+    wrapper.update()
+
+    const innerComponent2 = wrapper.find(TestComponentNaked)
+    const props2 = innerComponent2.prop("s4aCommunication")
+    expect(props2.currentState.requestedPageName).toBe(null)
+  })
+
+  it("can process a received SET_PAGE_LINK_BASE_URL message", () => {
+    const dispatchEvent = mockEventListeners()
+    const wrapper = mount(<TestComponent />)
+
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: S4A_COMM_VERSION,
+            type: "SET_PAGE_LINK_BASE_URL",
+            pageLinkBaseUrl: "https://share.streamlit.io/vdonato/foo/bar",
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    expect(props.currentState.pageLinkBaseUrl).toBe(
+      "https://share.streamlit.io/vdonato/foo/bar"
+    )
+  })
+
   describe("Test different origins", () => {
     it("exact pattern", () => {
       const dispatchEvent = mockEventListeners()

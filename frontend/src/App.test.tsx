@@ -61,7 +61,9 @@ const getS4ACommunicationState = (
   hideSidebarNav: false,
   isOwner: true,
   menuItems: [],
+  pageLinkBaseUrl: "",
   queryParams: "",
+  requestedPageName: null,
   sidebarChevronDownshift: 0,
   streamlitShareMetadata: {},
   toolbarItems: [],
@@ -74,6 +76,7 @@ const getS4ACommunicationProp = (
   connect: jest.fn(),
   sendMessage: jest.fn(),
   onModalReset: jest.fn(),
+  onPageChanged: jest.fn(),
   currentState: getS4ACommunicationState({}),
   ...extend,
 })
@@ -373,12 +376,39 @@ describe("App", () => {
     const msg = new ForwardMsg()
     msg.pagesChanged = new PagesChanged({ appPages })
 
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
     expect(wrapper.find("AppView").prop("appPages")).toEqual([])
 
     const instance = wrapper.instance() as App
     instance.handleMessage(msg)
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_APP_PAGES",
+      appPages,
+    })
+  })
+
+  it("responds to page change requests", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const instance = wrapper.instance() as App
+    instance.onPageChange = jest.fn()
+
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: getS4ACommunicationProp({
+          currentState: getS4ACommunicationState({
+            requestedPageName: "page1",
+          }),
+        }),
+      })
+    )
+    wrapper.update()
+
+    expect(instance.onPageChange).toHaveBeenCalledWith("page1")
+    expect(props.s4aCommunication.currentState.requestedPageName).toBeNull()
   })
 })
 
@@ -672,7 +702,8 @@ describe("App.handleNewSession", () => {
   })
 
   it("plumbs appPages to the AppView component", () => {
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
 
     expect(wrapper.find("AppView").prop("appPages")).toEqual([])
 
@@ -694,6 +725,10 @@ describe("App.handleNewSession", () => {
     // @ts-ignore
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_APP_PAGES",
+      appPages,
+    })
   })
 
   it("sets hideSidebarNav based on the server config option and s4a setting", () => {
@@ -849,7 +884,8 @@ describe("App.sendRerunBackMsg", () => {
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 1: main page)", () => {
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
     const instance = wrapper.instance() as App
     // @ts-ignore
     instance.sendBackMsg = jest.fn()
@@ -864,10 +900,15 @@ describe("App.sendRerunBackMsg", () => {
     })
 
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("")
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+    })
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 2: non-main page)", () => {
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
     const instance = wrapper.instance() as App
     // @ts-ignore
     instance.sendBackMsg = jest.fn()
@@ -884,6 +925,10 @@ describe("App.sendRerunBackMsg", () => {
       rerunScript: { pageName: "page1", queryString: "" },
     })
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "page1",
+    })
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one and a baseUrlPath is set", () => {
@@ -985,7 +1030,8 @@ describe("App.sendRerunBackMsg", () => {
 
 describe("App.handlePageNotFound", () => {
   it("displays an error modal", () => {
-    const wrapper = shallow(<App {...getProps()} />)
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
     const instance = wrapper.instance() as App
     // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
@@ -1000,6 +1046,10 @@ describe("App.handlePageNotFound", () => {
       "Page not found",
       `You have requested page /nonexistentPage, but no corresponding file was found in the app's pages/ directory.`
     )
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+    })
   })
 })
 

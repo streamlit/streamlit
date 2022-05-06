@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { IAppPage } from "src/autogen/proto"
 import { ExportedTheme } from "src/theme"
 
 export type StreamlitShareMetadata = {
@@ -32,7 +33,9 @@ export interface S4ACommunicationState {
   hideSidebarNav: boolean
   isOwner: boolean
   menuItems: IMenuItem[]
+  pageLinkBaseUrl: string
   queryParams: string
+  requestedPageName: string | null
   sidebarChevronDownshift: number
   streamlitShareMetadata: StreamlitShareMetadata
   toolbarItems: IToolbarItem[]
@@ -62,6 +65,10 @@ export type IHostToGuestMessage = {
       type: "CLOSE_MODALS"
     }
   | {
+      type: "REQUEST_PAGE_CHANGE"
+      pageName: string
+    }
+  | {
       type: "SET_IS_OWNER"
       isOwner: boolean
     }
@@ -72,6 +79,10 @@ export type IHostToGuestMessage = {
   | {
       type: "SET_METADATA"
       metadata: StreamlitShareMetadata
+    }
+  | {
+      type: "SET_PAGE_LINK_BASE_URL"
+      pageLinkBaseUrl: string
     }
   | {
       type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT"
@@ -106,6 +117,14 @@ export type IGuestToHostMessage =
   | {
       type: "TOOLBAR_ITEM_CALLBACK"
       key: string
+    }
+  | {
+      type: "SET_APP_PAGES"
+      appPages: IAppPage[]
+    }
+  | {
+      type: "SET_CURRENT_PAGE_NAME"
+      currentPageName: string
     }
   | {
       type: "SET_PAGE_FAVICON"
