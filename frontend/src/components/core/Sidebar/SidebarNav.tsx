@@ -79,7 +79,7 @@ const SidebarNav = ({
   }, [expanded, isOverflowing])
 
   return (
-    <StyledSidebarNavContainer>
+    <StyledSidebarNavContainer data-testid="stSidebarNav">
       <StyledSidebarNavItems
         ref={navItemsRef}
         expanded={expanded}
