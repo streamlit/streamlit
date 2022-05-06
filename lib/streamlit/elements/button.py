@@ -13,14 +13,9 @@
 # limitations under the License.
 
 import io
-import sys
 from typing import cast, Optional, Union, BinaryIO, TextIO
 from textwrap import dedent
-
-if sys.version_info >= (3, 8):
-    from typing import Final
-else:
-    from typing_extensions import Final
+from typing_extensions import Final
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
