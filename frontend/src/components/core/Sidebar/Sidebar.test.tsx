@@ -37,6 +37,7 @@ function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
       onPageChange={jest.fn()}
       currentPageName={""}
       hasElements
+      pageLinkBaseUrl={""}
       hideSidebarNav={false}
       {...props}
     />
