@@ -314,8 +314,8 @@ def image_to_url(
                 )
 
         data = _np_array_to_bytes(
-            cast("npt.NDArray[Any]", image),
-            output_format=output_format
+            array=cast("npt.NDArray[Any]", image),
+            output_format=output_format,
         )
 
     # Strings
