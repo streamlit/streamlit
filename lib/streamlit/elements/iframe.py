@@ -19,6 +19,7 @@ from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+
 class IframeMixin:
     def _iframe(
         self,

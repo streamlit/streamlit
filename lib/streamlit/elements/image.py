@@ -47,9 +47,7 @@ AtomicImage = Union["npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList = Union[
     AtomicImage, List[str], List["npt.NDArray[Any]"], List[io.BytesIO]
 ]
-UseColumnWith: TypeAlias = Optional[
-    Union[Literal["auto", "always", "never"], bool]
-]
+UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
 
