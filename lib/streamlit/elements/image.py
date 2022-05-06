@@ -152,17 +152,25 @@ class ImageMixin:
         return cast("DeltaGenerator", self)
 
 
-def _image_may_have_alpha_channel(image) -> bool:
+def _image_may_have_alpha_channel(
+    image: Union[ImageFile.ImageFile, Image.Image],
+) -> bool:
     if image.mode in ("RGBA", "LA", "P"):
         return True
     else:
         return False
 
 
-def _format_from_image_type(image, output_format: str) -> Literal["JPEG", "PNG"]:
+def _format_from_image_type(
+    image: Union[ImageFile.ImageFile, Image.Image],
+    output_format: str,
+) -> Literal["JPEG", "PNG"]:
     output_format = output_format.upper()
     if output_format == "JPEG" or output_format == "PNG":
-        return output_format
+        return cast(
+            Literal["JPEG", "PNG"],
+            output_format,
+        )
 
     # We are forgiving on the spelling of JPEG
     if output_format == "JPG":
@@ -174,7 +182,11 @@ def _format_from_image_type(image, output_format: str) -> Literal["JPEG", "PNG"]
     return "JPEG"
 
 
-def _PIL_to_bytes(image, format: Literal["JPEG", "PNG"] = "JPEG", quality=100) -> bytes:
+def _PIL_to_bytes(
+    image: Union[ImageFile.ImageFile, Image.Image],
+    format: Literal["JPEG", "PNG"] = "JPEG",
+    quality: int = 100
+) -> bytes:
     tmp = io.BytesIO()
 
     # User must have specified JPEG, so we must convert it
@@ -186,12 +198,15 @@ def _PIL_to_bytes(image, format: Literal["JPEG", "PNG"] = "JPEG", quality=100) -
     return tmp.getvalue()
 
 
-def _BytesIO_to_bytes(data) -> bytes:
+def _BytesIO_to_bytes(data: io.BytesIO) -> bytes:
     data.seek(0)
     return data.getvalue()
 
 
-def _np_array_to_bytes(array: "npt.NDArray[Any]", output_format="JPEG") -> bytes:
+def _np_array_to_bytes(
+    array: "npt.NDArray[Any]",
+    output_format="JPEG",
+) -> bytes:
     img = Image.fromarray(array.astype(np.uint8))
     format = _format_from_image_type(img, output_format)
 
@@ -202,7 +217,7 @@ def _4d_to_list_3d(array: "npt.NDArray[Any]") -> List["npt.NDArray[Any]"]:
     return [array[i, :, :, :] for i in range(0, array.shape[0])]
 
 
-def _verify_np_shape(array) -> "npt.NDArray[Any]":
+def _verify_np_shape(array: "npt.NDArray[Any]") -> "npt.NDArray[Any]":
     if len(array.shape) not in (2, 3):
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
     if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
