@@ -25,14 +25,14 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 
 if TYPE_CHECKING:
-    from typing import Any, IO
+    from typing import Any
 
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
 
 
-Data: TypeAlias = Union[str, bytes, "IO[Any]", "npt.NDArray[Any]"]
+Data: TypeAlias = Union[str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None]
 
 
 class MediaMixin:
@@ -184,25 +184,24 @@ def _marshall_av_media(
             proto.url = this_file.url
             return
 
+    data_as_bytes: bytes
     if data is None:
         # Allow empty values so media players can be shown without media.
         return
-
-    # Assume bytes; try methods until we run out.
     elif isinstance(data, bytes):
-        pass
+        data_as_bytes = data
     elif isinstance(data, io.BytesIO):
         data.seek(0)
-        data = data.getvalue()
+        data_as_bytes = data.getvalue()
     elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
         data.seek(0)
-        data = data.read()
+        data_as_bytes = data.read()
     elif type_util.is_type(data, "numpy.ndarray"):
-        data = cast("npt.NDArray[Any]", data).tobytes()
+        data_as_bytes = cast("npt.NDArray[Any]", data).tobytes()
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = in_memory_file_manager.add(data, mimetype, coordinates)
+    this_file = in_memory_file_manager.add(data_as_bytes, mimetype, coordinates)
     proto.url = this_file.url
 
 

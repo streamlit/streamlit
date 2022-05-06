@@ -15,7 +15,7 @@
 from datetime import datetime, date, time
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
-from typing import cast, Optional, Union, Tuple
+from typing import Any, cast, Optional, Union, Tuple, TYPE_CHECKING
 from textwrap import dedent
 
 from dateutil import relativedelta
@@ -31,6 +31,9 @@ from streamlit.state import (
 )
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 class TimeWidgetsMixin:

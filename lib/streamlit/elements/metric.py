@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import cast, Optional, TYPE_CHECKING, Union
+from typing import cast, TYPE_CHECKING, Union
 from typing_extensions import TypeAlias, Literal
 
 import attr
@@ -23,18 +23,20 @@ from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from streamlit.delta_generator import DeltaGenerator
 
 
-Value: TypeAlias = Union[float, str, None]
+Value: TypeAlias = Union["np.integer", "np.floating", float, str, None]
 Delta: TypeAlias = Union[float, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
 @attr.s(auto_attribs=True, slots=True)
 class MetricColorAndDirection:
-    color: int
-    direction: int
+    color: MetricProto.MetricColor.ValueType
+    direction: MetricProto.MetricDirection.ValueType
 
 
 class MetricMixin:
