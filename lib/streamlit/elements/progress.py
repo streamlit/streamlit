@@ -12,13 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 from typing import cast, TYPE_CHECKING, Union
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
@@ -27,8 +22,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-# Currently, equates to just float,
-# but we can't use numbers.Real due to
+# Currently, equates to just float, but we can't use `numbers.Real` due to
 # https://github.com/python/mypy/issues/3186
 FloatOrInt: TypeAlias = Union[int, float]
 
