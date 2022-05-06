@@ -313,7 +313,10 @@ def image_to_url(
                     "have exactly 3 color channels"
                 )
 
-        data = _np_array_to_bytes(image, output_format=output_format)
+        data = _np_array_to_bytes(
+            cast("npt.NDArray[Any]", image),
+            output_format=output_format
+        )
 
     # Strings
     elif isinstance(image, str):

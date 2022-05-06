@@ -33,8 +33,8 @@ DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 @attr.s(auto_attribs=True, slots=True)
 class MetricColorAndDirection:
-    color: Optional[int]
-    direction: Optional[int]
+    color: int
+    direction: int
 
 
 class MetricMixin:
@@ -127,7 +127,7 @@ class MetricMixin:
     def parse_value(self, value: Value) -> str:
         if value is None:
             return "—"
-        if isinstance(value, float) or isinstance(value, int) or isinstance(value, str):
+        if isinstance(value, int) or isinstance(value, float) or isinstance(value, str):
             return str(value)
         elif hasattr(value, "item"):
             # Add support for numpy values (e.g. int16, float64, etc.)
@@ -163,36 +163,39 @@ class MetricMixin:
         delta_color: DeltaColor,
         delta: Delta,
     ) -> MetricColorAndDirection:
-        cd = MetricColorAndDirection(color=None, direction=None)
-
-        if delta is None or delta == "":
-            cd.color = MetricProto.MetricColor.GRAY
-            cd.direction = MetricProto.MetricDirection.NONE
-            return cd
-
-        if self.is_negative(delta):
-            if delta_color == "normal":
-                cd.color = MetricProto.MetricColor.RED
-            elif delta_color == "inverse":
-                cd.color = MetricProto.MetricColor.GREEN
-            elif delta_color == "off":
-                cd.color = MetricProto.MetricColor.GRAY
-            cd.direction = MetricProto.MetricDirection.DOWN
-        else:
-            if delta_color == "normal":
-                cd.color = MetricProto.MetricColor.GREEN
-            elif delta_color == "inverse":
-                cd.color = MetricProto.MetricColor.RED
-            elif delta_color == "off":
-                cd.color = MetricProto.MetricColor.GRAY
-            cd.direction = MetricProto.MetricDirection.UP
-
-        if cd.color is None or cd.direction is None:
+        if delta_color not in {"normal", "inverse", "off"}:
             raise StreamlitAPIException(
                 f"'{str(delta_color)}' is not an accepted value. delta_color only accepts: "
                 "'normal', 'inverse', or 'off'"
             )
-        return cd
+
+        if delta is None or delta == "":
+            return MetricColorAndDirection(
+                color=MetricProto.MetricColor.GRAY,
+                direction=MetricProto.MetricDirection.NONE,
+            )
+
+        if self.is_negative(delta):
+            if delta_color == "normal":
+                cd_color = MetricProto.MetricColor.RED
+            elif delta_color == "inverse":
+                cd_color = MetricProto.MetricColor.GREEN
+            else:
+                cd_color = MetricProto.MetricColor.GRAY
+            cd_direction = MetricProto.MetricDirection.DOWN
+        else:
+            if delta_color == "normal":
+                cd_color = MetricProto.MetricColor.GREEN
+            elif delta_color == "inverse":
+                cd_color = MetricProto.MetricColor.RED
+            else:
+                cd_color = MetricProto.MetricColor.GRAY
+            cd_direction = MetricProto.MetricDirection.UP
+
+        return MetricColorAndDirection(
+            color=cd_color,
+            direction=cd_direction,
+        )
 
     def is_negative(self, delta: Delta) -> bool:
         return dedent(str(delta)).startswith("-")

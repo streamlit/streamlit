@@ -20,7 +20,6 @@ from textwrap import dedent
 
 from dateutil import relativedelta
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
@@ -38,7 +37,7 @@ class TimeWidgetsMixin:
     def time_input(
         self,
         label: str,
-        value=None,
+        value: Union[time, datetime, None] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -104,7 +103,7 @@ class TimeWidgetsMixin:
     def _time_input(
         self,
         label: str,
-        value=None,
+        value: Union[time, datetime, None] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -139,14 +138,14 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = dedent(help)
 
-        def deserialize_time_input(ui_value, widget_id=""):
+        def deserialize_time_input(ui_value, widget_id: Any = ""):
             return (
                 datetime.strptime(ui_value, "%H:%M").time()
                 if ui_value is not None
                 else value
             )
 
-        def serialize_time_input(v):
+        def serialize_time_input(v) -> str:
             if isinstance(v, datetime):
                 v = v.time()
             return time.strftime(v, "%H:%M")
@@ -365,6 +364,6 @@ class TimeWidgetsMixin:
         return cast(date, current_value)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

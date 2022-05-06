@@ -25,8 +25,7 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 
 if TYPE_CHECKING:
-    from typing import Any
-    from typing_extensions import IO
+    from typing import Any, IO
 
     from numpy import typing as npt
 
@@ -139,7 +138,7 @@ YOUTUBE_RE: Final = re.compile(
 )
 
 
-def _reshape_youtube_url(url: Union[str, bytes]) -> Optional[str]:
+def _reshape_youtube_url(url: str) -> Optional[str]:
     """Return whether URL is any kind of YouTube embed or watch link.  If so,
     reshape URL into an embed link suitable for use in an iframe.
 
@@ -147,7 +146,7 @@ def _reshape_youtube_url(url: Union[str, bytes]) -> Optional[str]:
 
     Parameters
     ----------
-        url : str or bytes
+        url : str
 
     Example
     -------
@@ -190,7 +189,7 @@ def _marshall_av_media(
         return
 
     # Assume bytes; try methods until we run out.
-    if isinstance(data, bytes):
+    elif isinstance(data, bytes):
         pass
     elif isinstance(data, io.BytesIO):
         data.seek(0)
