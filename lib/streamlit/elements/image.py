@@ -185,7 +185,7 @@ def _format_from_image_type(
 def _PIL_to_bytes(
     image: Union[ImageFile.ImageFile, Image.Image],
     format: Literal["JPEG", "PNG"] = "JPEG",
-    quality: int = 100
+    quality: int = 100,
 ) -> bytes:
     tmp = io.BytesIO()
 
