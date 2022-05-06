@@ -472,6 +472,20 @@ def run_e2e_tests(
                 for name, template_dir in COMPONENT_TEMPLATE_DIRS.items():
                     run_component_template_e2e_test(ctx, template_dir, name)
 
+            elif basename(spec_path) == "multipage_apps.spec.js":
+                test_name, _ = splitext(basename(spec_path))
+                test_name, _ = splitext(test_name)
+                test_path = join(
+                    ctx.tests_dir, "scripts", "multipage_apps", "streamlit_app.py"
+                )
+                if os.path.exists(test_path):
+                    run_test(
+                        ctx,
+                        str(spec_path),
+                        ["streamlit", "run", "--ui.hideSidebarNav=false", test_path],
+                        show_output=verbose,
+                    )
+
             else:
                 test_name, _ = splitext(basename(spec_path))
                 test_name, _ = splitext(test_name)
