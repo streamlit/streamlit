@@ -311,8 +311,17 @@ def experimental_show(*args: Any) -> None:
             markdown("**%s**" % escaped)
             write(args[idx])
 
-    except Exception:
+    except Exception as raised_exc:
         _, exc, exc_tb = _sys.exc_info()
+        if exc is None:
+            # Presumably, exc should never be None, but it is typed as
+            # Optional, and I don't know the internals of sys.exc_info() well
+            # enough to just use a cast here. Hence, the runtime check.
+            raise RuntimeError(
+                "Unexpected state: exc was None. If you see this message, "
+                "please create an issue at "
+                "https://github.com/streamlit/streamlit/issues"
+            ) from raised_exc
         exception(exc)
 
 
