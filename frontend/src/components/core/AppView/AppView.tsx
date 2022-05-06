@@ -63,6 +63,8 @@ export interface AppViewProps {
   currentPageName: string
 
   hideSidebarNav: boolean
+
+  pageLinkBaseUrl: string
 }
 
 /**
@@ -82,6 +84,7 @@ function AppView(props: AppViewProps): ReactElement {
     onPageChange,
     currentPageName,
     hideSidebarNav,
+    pageLinkBaseUrl,
   } = props
 
   React.useEffect(() => {
@@ -136,6 +139,7 @@ function AppView(props: AppViewProps): ReactElement {
           onPageChange={onPageChange}
           currentPageName={currentPageName}
           hideSidebarNav={hideSidebarNav}
+          pageLinkBaseUrl={pageLinkBaseUrl}
         >
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>

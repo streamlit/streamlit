@@ -30,6 +30,7 @@ function getProps(
     currentPageName: "streamlit_app",
     hasElements: true,
     hideSidebarNav: false,
+    pageLinkBaseUrl: "",
     ...props,
   }
 }
