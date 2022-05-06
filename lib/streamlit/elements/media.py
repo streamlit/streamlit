@@ -14,8 +14,8 @@
 
 import io
 import re
-from typing import cast, TYPE_CHECKING, Union
-from typing_extensions import TypeAlias
+from typing import cast, Optional, TYPE_CHECKING, Union
+from typing_extensions import Final, TypeAlias
 
 from validators import url
 
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
 
 Data: TypeAlias = Union[str, bytes, "IO[Any]", "npt.NDArray[Any]"]
+
 
 class MediaMixin:
     def audio(
@@ -128,7 +129,7 @@ class MediaMixin:
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
 # URL (incl. shortlinks and embed links) and extracts its code.
-YOUTUBE_RE = re.compile(
+YOUTUBE_RE: Final = re.compile(
     # Protocol
     r"http(?:s?):\/\/"
     # Domain
@@ -138,7 +139,7 @@ YOUTUBE_RE = re.compile(
 )
 
 
-def _reshape_youtube_url(url):
+def _reshape_youtube_url(url: Union[str, bytes]) -> Optional[str]:
     """Return whether URL is any kind of YouTube embed or watch link.  If so,
     reshape URL into an embed link suitable for use in an iframe.
 
@@ -161,7 +162,12 @@ def _reshape_youtube_url(url):
     return None
 
 
-def _marshall_av_media(coordinates, proto, data, mimetype):
+def _marshall_av_media(
+    coordinates: str,
+    proto: Union[AudioProto, VideoProto],
+    data: Data,
+    mimetype: str,
+) -> None:
     """Fill audio or video proto based on contents of data.
 
     Given a string, check if it's a url; if so, send it out without modification.
@@ -193,7 +199,7 @@ def _marshall_av_media(coordinates, proto, data, mimetype):
         data.seek(0)
         data = data.read()
     elif type_util.is_type(data, "numpy.ndarray"):
-        data = data.tobytes()
+        data = cast("npt.NDArray[Any]", data).tobytes()
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
@@ -201,7 +207,13 @@ def _marshall_av_media(coordinates, proto, data, mimetype):
     proto.url = this_file.url
 
 
-def marshall_video(coordinates, proto, data, mimetype="video/mp4", start_time=0):
+def marshall_video(
+    coordinates: str,
+    proto: VideoProto,
+    data: Data,
+    mimetype: str = "video/mp4",
+    start_time: int = 0,
+) -> None:
     """Marshalls a video proto, using url processors as needed.
 
     Parameters
@@ -238,7 +250,13 @@ def marshall_video(coordinates, proto, data, mimetype="video/mp4", start_time=0)
         _marshall_av_media(coordinates, proto, data, mimetype)
 
 
-def marshall_audio(coordinates, proto, data, mimetype="audio/wav", start_time=0):
+def marshall_audio(
+    coordinates: str,
+    proto: AudioProto,
+    data: Data,
+    mimetype: str="audio/wav",
+    start_time: int = 0,
+) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
     Parameters
