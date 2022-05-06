@@ -14,19 +14,34 @@
 
 import io
 import re
-from typing import cast
+from typing import cast, TYPE_CHECKING, Union
+from typing_extensions import TypeAlias
 
 from validators import url
 
-import streamlit
 from streamlit import type_util
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 
+if TYPE_CHECKING:
+    from typing import Any
+    from typing_extensions import IO
+
+    from numpy import typing as npt
+
+    from streamlit.delta_generator import DeltaGenerator
+
+
+Data: TypeAlias = Union[str, bytes, "IO[Any]", "npt.NDArray[Any]"]
 
 class MediaMixin:
-    def audio(self, data, format="audio/wav", start_time=0):
+    def audio(
+        self,
+        data: Data,
+        format: str = "audio/wav",
+        start_time: int = 0,
+    ) -> "DeltaGenerator":
         """Display an audio player.
 
         Parameters
@@ -57,9 +72,14 @@ class MediaMixin:
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
         marshall_audio(coordinates, audio_proto, data, format, start_time)
-        return self.dg._enqueue("audio", audio_proto)
+        return cast("DeltaGenerator", self.dg._enqueue("audio", audio_proto))
 
-    def video(self, data, format="video/mp4", start_time=0):
+    def video(
+        self,
+        data: Data,
+        format: str = "video/mp4",
+        start_time: int = 0,
+    ) -> "DeltaGenerator":
         """Display a video player.
 
         Parameters
@@ -98,12 +118,12 @@ class MediaMixin:
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
         marshall_video(coordinates, video_proto, data, format, start_time)
-        return self.dg._enqueue("video", video_proto)
+        return cast("DeltaGenerator", self.dg._enqueue("video", video_proto))
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
 # Regular expression explained at https://regexr.com/4n2l2 Covers any youtube

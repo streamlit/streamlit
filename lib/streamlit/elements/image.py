@@ -43,10 +43,9 @@ LOGGER: Final = get_logger(__name__)
 # DPI.
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
-AtomicImage = Union["npt.NDArray[Any]", io.BytesIO, str]
-ImageOrImageList = Union[
-    AtomicImage, List[str], List["npt.NDArray[Any]"], List[io.BytesIO]
-]
+PILImage: TypeAlias = Union[ImageFile.ImageFile, Image.Image]
+AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
+ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
@@ -152,9 +151,7 @@ class ImageMixin:
         return cast("DeltaGenerator", self)
 
 
-def _image_may_have_alpha_channel(
-    image: Union[ImageFile.ImageFile, Image.Image],
-) -> bool:
+def _image_may_have_alpha_channel(image: PILImage) -> bool:
     if image.mode in ("RGBA", "LA", "P"):
         return True
     else:
@@ -162,7 +159,7 @@ def _image_may_have_alpha_channel(
 
 
 def _format_from_image_type(
-    image: Union[ImageFile.ImageFile, Image.Image],
+    image: PILImage,
     output_format: str,
 ) -> Literal["JPEG", "PNG"]:
     output_format = output_format.upper()
@@ -183,7 +180,7 @@ def _format_from_image_type(
 
 
 def _PIL_to_bytes(
-    image: Union[ImageFile.ImageFile, Image.Image],
+    image: PILImage,
     format: Literal["JPEG", "PNG"] = "JPEG",
     quality: int = 100,
 ) -> bytes:
@@ -281,7 +278,7 @@ def _clip_image(image: "npt.NDArray[Any]", clamp: bool) -> "npt.NDArray[Any]":
 
 
 def image_to_url(
-    image,
+    image: AtomicImage,
     width: int,
     clamp: bool,
     channels: Channels,
@@ -301,20 +298,22 @@ def image_to_url(
         data = _BytesIO_to_bytes(image)
 
     # Numpy Arrays (ie opencv)
-    elif type(image) is np.ndarray:
-        data = _verify_np_shape(image)
-        data = _clip_image(data, clamp)
+    elif isinstance(image, np.ndarray):
+        image = _clip_image(
+            _verify_np_shape(image),
+            clamp,
+        )
 
         if channels == "BGR":
-            if len(data.shape) == 3:
-                data = data[:, :, [2, 1, 0]]
+            if len(image.shape) == 3:
+                image = image[:, :, [2, 1, 0]]
             else:
                 raise StreamlitAPIException(
                     'When using `channels="BGR"`, the input image should '
                     "have exactly 3 color channels"
                 )
 
-        data = _np_array_to_bytes(data, output_format=output_format)
+        data = _np_array_to_bytes(image, output_format=output_format)
 
     # Strings
     elif isinstance(image, str):
@@ -357,7 +356,7 @@ def marshall_images(
     channels: Channels = "RGB",
     output_format: OutputFormat = "auto",
 ) -> None:
-    channels = channels.upper()
+    channels = cast(Channels, channels.upper())
 
     # Turn single image and caption into one element list.
     images: Sequence[AtomicImage]
