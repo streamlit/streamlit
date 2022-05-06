@@ -35,6 +35,10 @@ export const StyledStreamlitMarkdown = styled.div<
     color: theme.colors.linkText,
   },
 
+  p: {
+    wordWrap: "break-word",
+  },
+
   li: {
     margin: "0.2em 0 0.2em 1.2em",
     padding: "0 0 0 0.6em",
