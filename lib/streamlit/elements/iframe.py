@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
-from typing import cast
+from typing import cast, Optional, TYPE_CHECKING
 
-import streamlit
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 class IframeMixin:
     def _iframe(
@@ -87,9 +87,9 @@ class IframeMixin:
         return self.dg._enqueue("iframe", iframe_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
 def marshall(

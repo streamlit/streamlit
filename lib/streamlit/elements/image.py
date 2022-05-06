@@ -17,21 +17,10 @@
 import imghdr
 import io
 import mimetypes
-import sys
-from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union
+from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing_extensions import Final, Literal, TypeAlias
 from urllib.parse import urlparse
 import re
-
-if sys.version_info >= (3, 8):
-    from typing import Final, Literal
-else:
-    from typing_extensions import Final, Literal
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
-
 
 import numpy as np
 from PIL import Image, ImageFile
@@ -55,9 +44,12 @@ LOGGER: Final = get_logger(__name__)
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
 AtomicImage = Union["npt.NDArray[Any]", io.BytesIO, str]
-# TODO: Check whether List[io.BytesIo] works or not.
-ImageOrImageList = Union[AtomicImage, List[str], List["npt.NDArray[Any]"]]
-UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
+ImageOrImageList = Union[
+    AtomicImage, List[str], List["npt.NDArray[Any]"], List[io.BytesIO]
+]
+UseColumnWith: TypeAlias = Optional[
+    Union[Literal["auto", "always", "never"], bool]
+]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
 
@@ -162,14 +154,14 @@ class ImageMixin:
         return cast("DeltaGenerator", self)
 
 
-def _image_may_have_alpha_channel(image):
+def _image_may_have_alpha_channel(image) -> bool:
     if image.mode in ("RGBA", "LA", "P"):
         return True
     else:
         return False
 
 
-def _format_from_image_type(image, output_format):
+def _format_from_image_type(image, output_format: str) -> Literal["JPEG", "PNG"]:
     output_format = output_format.upper()
     if output_format == "JPEG" or output_format == "PNG":
         return output_format
@@ -184,7 +176,7 @@ def _format_from_image_type(image, output_format):
     return "JPEG"
 
 
-def _PIL_to_bytes(image, format="JPEG", quality=100):
+def _PIL_to_bytes(image, format: Literal["JPEG", "PNG"] = "JPEG", quality=100) -> bytes:
     tmp = io.BytesIO()
 
     # User must have specified JPEG, so we must convert it
@@ -196,23 +188,23 @@ def _PIL_to_bytes(image, format="JPEG", quality=100):
     return tmp.getvalue()
 
 
-def _BytesIO_to_bytes(data):
+def _BytesIO_to_bytes(data) -> bytes:
     data.seek(0)
     return data.getvalue()
 
 
-def _np_array_to_bytes(array, output_format="JPEG"):
+def _np_array_to_bytes(array: "npt.NDArray[Any]", output_format="JPEG") -> bytes:
     img = Image.fromarray(array.astype(np.uint8))
     format = _format_from_image_type(img, output_format)
 
     return _PIL_to_bytes(img, format)
 
 
-def _4d_to_list_3d(array):
+def _4d_to_list_3d(array: "npt.NDArray[Any]") -> List["npt.NDArray[Any]"]:
     return [array[i, :, :, :] for i in range(0, array.shape[0])]
 
 
-def _verify_np_shape(array):
+def _verify_np_shape(array) -> "npt.NDArray[Any]":
     if len(array.shape) not in (2, 3):
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
     if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
@@ -228,7 +220,11 @@ def _verify_np_shape(array):
     return array
 
 
-def _normalize_to_bytes(data, width, output_format):
+def _normalize_to_bytes(
+    data,
+    width: int,
+    output_format: OutputFormat,
+) -> Tuple[bytes, str]:
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
     format = _format_from_image_type(image, output_format)
@@ -273,11 +269,11 @@ def _clip_image(image: "npt.NDArray[Any]", clamp: bool) -> "npt.NDArray[Any]":
 
 def image_to_url(
     image,
-    width,
-    clamp,
-    channels,
-    output_format,
-    image_id,
+    width: int,
+    clamp: bool,
+    channels: Channels,
+    output_format: OutputFormat,
+    image_id: str,
     allow_emoji: bool = False,
 ):
     # PIL Images
