@@ -52,6 +52,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     onPageChange: jest.fn(),
     currentPageName: "streamlit_app",
     hideSidebarNav: false,
+    pageLinkBaseUrl: "",
     ...props,
   }
 }

@@ -304,6 +304,12 @@ export class App extends PureComponent<Props, State> {
     if (this.props.s4aCommunication.currentState.forcedModalClose) {
       this.closeDialog()
     }
+
+    const { requestedPageName } = this.props.s4aCommunication.currentState
+    if (requestedPageName !== null) {
+      this.onPageChange(requestedPageName)
+      this.props.s4aCommunication.onPageChanged()
+    }
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -490,12 +496,23 @@ export class App extends PureComponent<Props, State> {
       `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory.`
     )
 
-    this.setState({ currentPageName: "" })
+    const currentPageName = ""
+    this.setState({ currentPageName }, () => {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_CURRENT_PAGE_NAME",
+        currentPageName,
+      })
+    })
   }
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
     const { appPages } = pagesChangedMsg
-    this.setState({ appPages })
+    this.setState({ appPages }, () => {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_APP_PAGES",
+        appPages,
+      })
+    })
   }
 
   /**
@@ -618,12 +635,20 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.processThemeInput(themeInput)
-    this.setState({
-      allowRunOnSave: config.allowRunOnSave,
-      hideTopBar: config.hideTopBar,
-      hideSidebarNav: config.hideSidebarNav,
-      appPages: newSessionProto.appPages,
-    })
+    this.setState(
+      {
+        allowRunOnSave: config.allowRunOnSave,
+        hideTopBar: config.hideTopBar,
+        hideSidebarNav: config.hideSidebarNav,
+        appPages: newSessionProto.appPages,
+      },
+      () => {
+        this.props.s4aCommunication.sendMessage({
+          type: "SET_APP_PAGES",
+          appPages: newSessionProto.appPages,
+        })
+      }
+    )
 
     const { appHash } = this.state
     const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto
@@ -985,7 +1010,12 @@ export class App extends PureComponent<Props, State> {
       window.history.pushState({}, "", pageUrl)
     }
 
-    this.setState({ currentPageName: pageName })
+    this.setState({ currentPageName: pageName }, () => {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_CURRENT_PAGE_NAME",
+        currentPageName: pageName as string,
+      })
+    })
 
     this.sendBackMsg(
       new BackMsg({
@@ -1279,6 +1309,9 @@ export class App extends PureComponent<Props, State> {
               onPageChange={this.onPageChange}
               currentPageName={currentPageName}
               hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
+              pageLinkBaseUrl={
+                this.props.s4aCommunication.currentState.pageLinkBaseUrl
+              }
             />
             {renderedDialog}
           </StyledApp>

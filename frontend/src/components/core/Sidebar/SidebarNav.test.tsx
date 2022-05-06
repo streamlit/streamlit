@@ -46,7 +46,6 @@ const mockUseIsOverflowing = useIsOverflowing as jest.MockedFunction<
   typeof useIsOverflowing
 >
 
-// @ts-ignore
 const getProps = (props: Partial<Props> = {}): Props => ({
   appPages: [
     { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
@@ -55,6 +54,8 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   hasSidebarElements: false,
   onPageChange: jest.fn(),
   hideParentScrollbar: jest.fn(),
+  currentPageName: "",
+  pageLinkBaseUrl: "",
   ...props,
 })
 
@@ -166,6 +167,25 @@ describe("SidebarNav", () => {
       ])
 
       mockUseContext.mockRestore()
+    })
+
+    it("is built using the pageLinkBaseUrl if one is set", () => {
+      window.location.port = "3000"
+
+      const wrapper = shallow(
+        <SidebarNav
+          {...getProps({
+            pageLinkBaseUrl: "https://share.streamlit.io/vdonato/foo/bar",
+          })}
+        />
+      )
+
+      expect(
+        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
+      ).toEqual([
+        "https://share.streamlit.io/vdonato/foo/bar/",
+        "https://share.streamlit.io/vdonato/foo/bar/my_other_page",
+      ])
     })
   })
 
