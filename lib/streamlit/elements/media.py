@@ -254,7 +254,7 @@ def marshall_audio(
     coordinates: str,
     proto: AudioProto,
     data: Data,
-    mimetype: str="audio/wav",
+    mimetype: str = "audio/wav",
     start_time: int = 0,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.

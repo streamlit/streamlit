@@ -13,15 +13,17 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import Optional, cast
+from typing import cast, Optional, TYPE_CHECKING
 from typing_extensions import TypeAlias, Literal
 
 import attr
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 
 from .utils import clean_text
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
@@ -34,7 +36,13 @@ class MetricColorAndDirection:
 
 
 class MetricMixin:
-    def metric(self, label, value, delta=None, delta_color: DeltaColor = "normal"):
+    def metric(
+        self,
+        label: str,
+        value: Optional[float, str],
+        delta: Optional[float, str] = None,
+        delta_color: DeltaColor = "normal",
+    ) -> str:
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Tip: If you want to display a large number, it may be a good idea to
@@ -99,14 +107,14 @@ class MetricMixin:
         metric_proto.delta = self.parse_delta(delta)
 
         color_and_direction = self.determine_delta_color_and_direction(
-            clean_text(delta_color), delta
+            cast(DeltaColor, clean_text(delta_color)), delta
         )
         metric_proto.color = color_and_direction.color
         metric_proto.direction = color_and_direction.direction
 
         return str(self.dg._enqueue("metric", metric_proto))
 
-    def parse_label(self, label):
+    def parse_label(self, label: str) -> str:
         if not isinstance(label, str):
             raise TypeError(
                 f"'{str(label)}' is of type {str(type(label))}, which is not an accepted type."
@@ -114,7 +122,7 @@ class MetricMixin:
             )
         return label
 
-    def parse_value(self, value):
+    def parse_value(self, value: Optional[float, str]) -> str:
         if value is None:
             return "—"
         if isinstance(value, float) or isinstance(value, int) or isinstance(value, str):
@@ -134,7 +142,7 @@ class MetricMixin:
             " Please convert the value to an accepted type."
         )
 
-    def parse_delta(self, delta):
+    def parse_delta(self, delta: Optional[float, str]) -> str:
         if delta is None or delta == "":
             return ""
         if isinstance(delta, str):
@@ -148,7 +156,7 @@ class MetricMixin:
                 " Please convert the value to an accepted type."
             )
 
-    def determine_delta_color_and_direction(self, delta_color, delta):
+    def determine_delta_color_and_direction(self, delta_color: DeltaColor, delta: Optional[float, str]) -> MetricColorAndDirection:
         cd = MetricColorAndDirection(color=None, direction=None)
 
         if delta is None or delta == "":
@@ -180,9 +188,9 @@ class MetricMixin:
             )
         return cd
 
-    def is_negative(self, delta):
+    def is_negative(self, delta: Optional[float, str]) -> bool:
         return dedent(str(delta)).startswith("-")
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+    def dg(self) -> "DeltaGenerator":
+        return cast("DeltaGenerator", self)
