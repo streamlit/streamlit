@@ -158,7 +158,11 @@ class MetricMixin:
                 " Please convert the value to an accepted type."
             )
 
-    def determine_delta_color_and_direction(self, delta_color: DeltaColor, delta: Delta) -> MetricColorAndDirection:
+    def determine_delta_color_and_direction(
+        self,
+        delta_color: DeltaColor,
+        delta: Delta,
+    ) -> MetricColorAndDirection:
         cd = MetricColorAndDirection(color=None, direction=None)
 
         if delta is None or delta == "":
