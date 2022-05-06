@@ -14,24 +14,21 @@
 
 import inspect
 import json as json
-import sys
 import types
-from typing import cast, Any, List, Tuple, Type
-
-if sys.version_info >= (3, 8):
-    from typing import Final
-else:
-    from typing_extensions import Final
+from typing import cast, Any, List, Tuple, Type, TYPE_CHECKING
+from typing_extensions import Final
 
 import numpy as np
 
-import streamlit
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.state import SessionStateProxy
 
-# Special methods:
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
+
+# Special methods:
 HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
     types.BuiltinFunctionType,
     types.BuiltinMethodType,
@@ -155,7 +152,7 @@ class WriteMixin:
             height: 300px
 
         """
-        string_buffer = []  # type: List[str]
+        string_buffer: List[str] = []
         unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
@@ -240,6 +237,6 @@ class WriteMixin:
         flush_buffer()
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
