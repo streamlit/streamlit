@@ -55,7 +55,7 @@ def check_callback_rules(
         )
 
 
-_shown_default_value_warning = False
+_shown_default_value_warning: bool = False
 
 
 def check_session_state_rules(
