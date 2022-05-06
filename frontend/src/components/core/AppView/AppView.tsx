@@ -118,7 +118,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
-  const showSidebar = hasSidebarElements || appPages.length > 1
+  const showSidebar =
+    hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
