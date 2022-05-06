@@ -197,9 +197,13 @@ def _marshall_av_media(
         data_as_bytes = data.getvalue()
     elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
         data.seek(0)
-        data_as_bytes = data.read()
+        read_data = data.read()
+        if read_data is None:
+            return
+        else:
+            data_as_bytes = read_data
     elif type_util.is_type(data, "numpy.ndarray"):
-        data_as_bytes = cast("npt.NDArray[Any]", data).tobytes()
+        data_as_bytes = data.tobytes()
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
