@@ -78,7 +78,7 @@ _PANDAS_SERIES_TYPE_STR: Final = "pandas.core.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
 _NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
 
-_DATAFRAME_LIKE_TYPES: Final[Tuple[str, ...]]= (
+_DATAFRAME_LIKE_TYPES: Final[Tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
     _PANDAS_INDEX_TYPE_STR,
     _PANDAS_SERIES_TYPE_STR,
