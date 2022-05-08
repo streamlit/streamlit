@@ -19,7 +19,8 @@ from types import FunctionType
 from typing import Any, Iterable, Optional, Sequence, Tuple, TYPE_CHECKING, Union, cast
 from typing_extensions import Final, TypeAlias, TypeGuard
 
-from pandas import DataFrame, Series, Index, Styler
+from pandas import DataFrame, Series, Index
+from pandas.io.formats.style import Styler
 import numpy as np
 import pyarrow as pa
 
