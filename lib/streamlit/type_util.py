@@ -42,7 +42,7 @@ OptionSequence = Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]
 Key = Union[str, int]
 
 
-def is_type(obj: Any, fqn_type_pattern: Union[str, re.Pattern]) -> bool:
+def is_type(obj: Any, fqn_type_pattern: Union[str, "re.Pattern[str]"]) -> bool:
     """Check type without importing expensive modules.
 
     Parameters
