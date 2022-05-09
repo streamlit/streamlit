@@ -15,11 +15,8 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-from types import FunctionType
-from typing import Any, Iterable, Optional, Sequence, Tuple, TYPE_CHECKING, \
-    Union, cast
-from typing import Type
-
+from typing import Any,  cast, Iterable, Optional, Sequence, Tuple, Type, \
+    TYPE_CHECKING, Union
 from typing_extensions import Final, TypeAlias, TypeGuard
 
 from pandas import DataFrame, Series, Index
@@ -150,6 +147,7 @@ def is_sympy_expession(obj: Any) -> TypeGuard["sympy.Expr"]:
 
     try:
         import sympy
+
         return isinstance(obj, sympy.Expr)
     except ImportError:
         return False
@@ -215,8 +213,7 @@ def _is_probably_plotly_dict(obj: Any) -> bool:
     if len(obj.keys()) == 0:
         return False
 
-    if any(
-        k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
+    if any(k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
