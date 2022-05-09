@@ -16,7 +16,10 @@
 
 import re
 from types import FunctionType
-from typing import Any, Iterable, Optional, Sequence, Tuple, TYPE_CHECKING, Union, cast
+from typing import Any, Iterable, Optional, Sequence, Tuple, TYPE_CHECKING, \
+    Union, cast
+from typing import Type
+
 from typing_extensions import Final, TypeAlias, TypeGuard
 
 from pandas import DataFrame, Series, Index
@@ -147,10 +150,8 @@ def is_sympy_expession(obj: Any) -> TypeGuard["sympy.Expr"]:
 
     try:
         import sympy
-
-        if isinstance(obj, sympy.Expr):
-            return True
-    except:
+        return isinstance(obj, sympy.Expr)
+    except ImportError:
         return False
 
 
@@ -214,7 +215,8 @@ def _is_probably_plotly_dict(obj: Any) -> bool:
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
+    if any(
+        k not in ["config", "data", "frames", "layout"] for k in obj.keys()):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
@@ -226,7 +228,7 @@ def _is_probably_plotly_dict(obj: Any) -> bool:
     return False
 
 
-_FUNCTION_TYPE: Final[FunctionType] = type(lambda: 0)
+_FUNCTION_TYPE: Final[Type[Any]] = type(lambda: 0)
 
 
 def is_function(x: Any) -> bool:
@@ -320,11 +322,11 @@ def ensure_iterable(obj: Any) -> Iterable[Any]:
 
     """
     if is_dataframe(obj):
-        return obj.iloc[:, 0]
+        return cast(Iterable, obj.iloc[:, 0])
 
     try:
         iter(obj)
-        return obj
+        return cast(Iterable, obj)
     except:
         raise
 
