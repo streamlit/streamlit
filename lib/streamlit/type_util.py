@@ -96,7 +96,7 @@ _DATAFRAME_LIKE_TYPES: Final[Tuple[str, ...]] = (
     _NUMPY_ARRAY_TYPE_STR,
 )
 
-DataFrameLike: TypeAlias = Union[DataFrame, Index, Series, Styler]
+DataFrameLike: TypeAlias = Union[DataFrame, Index, Series, "Styler"]
 
 _DATAFRAME_COMPATIBLE_TYPES: Final[Tuple[type, ...]] = (
     dict,
