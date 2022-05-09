@@ -50,10 +50,10 @@ def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
     if value is None:
         # Set value default.
         parsed_dates = [datetime.now().date()]
-    elif isinstance(value, date):
-        parsed_dates = [value]
     elif isinstance(value, datetime):
         parsed_dates = [value.date()]
+    elif isinstance(value, date):
+        parsed_dates = [value]
     elif isinstance(value, (list, tuple)):
         if not len(value) in (0, 1, 2):
             raise StreamlitAPIException(
