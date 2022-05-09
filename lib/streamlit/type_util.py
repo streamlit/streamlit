@@ -26,10 +26,9 @@ from typing import (
     TYPE_CHECKING,
     Union,
 )
-from typing_extensions import Final, TypeAlias, TypeGuard
+from typing_extensions import Final, TypeAlias
 
 from pandas import DataFrame, Series, Index
-from pandas.io.formats.style import Styler
 import numpy as np
 import pyarrow as pa
 
@@ -37,6 +36,8 @@ from streamlit import errors
 
 if TYPE_CHECKING:
     import sympy
+    from pandas.io.formats.style import Styler
+    from typing_extensions import TypeGuard
 
 OptionSequence = Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]
 Key = Union[str, int]
@@ -113,20 +114,20 @@ _BYTES_LIKE_TYPES: Final[Tuple[type, ...]] = (
 BytesLike: TypeAlias = Union[bytes, bytearray]
 
 
-def is_dataframe(obj: Any) -> TypeGuard[DataFrame]:
+def is_dataframe(obj: Any) -> "TypeGuard[DataFrame]":
     return is_type(obj, _PANDAS_DF_TYPE_STR)
 
 
-def is_dataframe_like(obj: Any) -> TypeGuard[DataFrameLike]:
+def is_dataframe_like(obj: Any) -> "TypeGuard[DataFrameLike]":
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
 
-def is_dataframe_compatible(obj: Any) -> TypeGuard[DataFrameCompatible]:
+def is_dataframe_compatible(obj: Any) -> "TypeGuard[DataFrameCompatible]":
     """True if type that can be passed to convert_anything_to_df."""
     return is_dataframe_like(obj) or type(obj) in _DATAFRAME_COMPATIBLE_TYPES
 
 
-def is_bytes_like(obj: Any) -> TypeGuard[BytesLike]:
+def is_bytes_like(obj: Any) -> "TypeGuard[BytesLike]":
     """True if the type is considered bytes-like for the purposes of
     protobuf data marshalling."""
     return isinstance(obj, _BYTES_LIKE_TYPES)
@@ -149,7 +150,7 @@ def to_bytes(obj: Any) -> bytes:
 _SYMPY_RE: Final = re.compile(r"^sympy.*$")
 
 
-def is_sympy_expession(obj: Any) -> TypeGuard["sympy.Expr"]:
+def is_sympy_expession(obj: Any) -> "TypeGuard[sympy.Expr]":
     """True if input is a SymPy expression."""
     if not is_type(obj, _SYMPY_RE):
         return False
@@ -253,7 +254,7 @@ def is_namedtuple(x: Any) -> bool:
     return all(type(n).__name__ == "str" for n in f)
 
 
-def is_pandas_styler(obj: Any) -> TypeGuard[Styler]:
+def is_pandas_styler(obj: Any) -> "TypeGuard[Styler]":
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
