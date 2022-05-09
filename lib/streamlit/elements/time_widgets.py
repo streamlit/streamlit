@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
 TimeValue: TypeAlias = Union[time, datetime, None]
 _DateValue: TypeAlias = Union[date, datetime, None]
-DateValue: TypeAlias = Union[_DateValue, List[_DateValue], Tuple[_DateValue, ...]]
+DateValue: TypeAlias = Union[_DateValue, Sequence[_DateValue]]
 DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, date]]
 
 
@@ -436,9 +436,9 @@ class TimeWidgetsMixin:
 
             if not parsed_values.is_range:
                 return return_value[0]
-            return tuple(return_value)
+            return cast(DateWidgetReturn, tuple(return_value))
 
-        def serialize_date_input(v: DateValue) -> List[str]:
+        def serialize_date_input(v: DateWidgetReturn) -> List[str]:
             to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
             return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
 
