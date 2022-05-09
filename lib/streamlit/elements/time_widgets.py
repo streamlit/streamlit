@@ -129,7 +129,13 @@ class _DateInputValues:
     min: date
 
     @classmethod
-    def from_raw_values(cls, value: DateValue, min_value: _DateValue, max_value: _DateValue) -> "_DateInputValues":
+    def from_raw_values(
+        cls,
+        value: DateValue,
+        min_value: _DateValue,
+        max_value: _DateValue,
+    ) -> "_DateInputValues":
+
         parsed_value, is_range = _parse_date_value(value=value)
         return cls(
             value=parsed_value,
@@ -424,7 +430,7 @@ class TimeWidgetsMixin:
 
         def deserialize_date_input(
             ui_value: Any,
-            widget_id: str = ""
+            widget_id: str = "",
         ) -> DateWidgetReturn:
             return_value: Sequence[date]
             if ui_value is not None:
@@ -436,9 +442,8 @@ class TimeWidgetsMixin:
 
             return return_value[0] if not parsed_values.is_range else tuple(return_value)
 
-        def serialize_date_input(v: Union[date, List[date], Tuple[date, ...]]) -> List[str]:
-            range_value = isinstance(v, (list, tuple))
-            to_serialize = list(v) if range_value else [v]
+        def serialize_date_input(v: DateValue) -> List[str]:
+            to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
             return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
 
         current_value, set_frontend_value = register_widget(
