@@ -12,18 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import attr
 from datetime import datetime, date, time
-from typing import Sequence
+from textwrap import dedent
+from typing import Any, cast, List, Optional, Sequence, Tuple, TYPE_CHECKING, Union
+
+import attr
+from dateutil import relativedelta
+from typing_extensions import TypeAlias
 
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
-from typing import Any, cast, List, Optional, Union, Tuple, TYPE_CHECKING
-from typing_extensions import TypeAlias
-from textwrap import dedent
-
-from dateutil import relativedelta
-
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
