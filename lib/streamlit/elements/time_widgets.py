@@ -76,10 +76,10 @@ def _parse_min_date(
     parsed_dates: Sequence[date],
 ) -> date:
     parsed_min_date: date
-    if isinstance(min_value, date):
-        parsed_min_date = min_value
-    elif isinstance(min_value, datetime):
+    if isinstance(min_value, datetime):
         parsed_min_date = min_value.date()
+    elif isinstance(min_value, date):
+        parsed_min_date = min_value
     elif min_value is None:
         if parsed_dates:
             parsed_min_date = parsed_dates[0] - relativedelta.relativedelta(years=10)
@@ -97,10 +97,10 @@ def _parse_max_date(
     parsed_dates: Sequence[date],
 ) -> date:
     parsed_max_date: date
-    if isinstance(max_value, date):
-        parsed_max_date = max_value
-    elif isinstance(max_value, datetime):
+    if isinstance(max_value, datetime):
         parsed_max_date = max_value.date()
+    elif isinstance(max_value, date):
+        parsed_max_date = max_value
     elif max_value is None:
         if parsed_dates:
             parsed_max_date = parsed_dates[0] + relativedelta.relativedelta(years=10)
