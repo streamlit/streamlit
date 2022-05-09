@@ -15,8 +15,17 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-from typing import Any,  cast, Iterable, Optional, Sequence, Tuple, Type, \
-    TYPE_CHECKING, Union
+from typing import (
+    Any,
+    cast,
+    Iterable,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TYPE_CHECKING,
+    Union
+)
 from typing_extensions import Final, TypeAlias, TypeGuard
 
 from pandas import DataFrame, Series, Index
