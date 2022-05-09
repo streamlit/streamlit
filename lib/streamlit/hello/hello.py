@@ -12,93 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
-import textwrap
-from collections import OrderedDict
 
 import streamlit as st
 from streamlit.logger import get_logger
-from streamlit.hello import demos
+
+st.set_page_config(
+    page_title="Hello",
+    page_icon="👋",
+)
 
 LOGGER = get_logger(__name__)
 
-# Dictionary of
-# demo_name -> (demo_function, demo_description)
-DEMOS = OrderedDict(
-    [
-        ("—", (demos.intro, None)),
-        (
-            "Animation Demo",
-            (
-                demos.fractal_demo,
-                """
-This app shows how you can use Streamlit to build cool animations.
-It displays an animated fractal based on the the Julia Set. Use the slider
-to tune different parameters.
-""",
-            ),
-        ),
-        (
-            "Plotting Demo",
-            (
-                demos.plotting_demo,
-                """
-This demo illustrates a combination of plotting and animation with
-Streamlit. We're generating a bunch of random numbers in a loop for around
-5 seconds. Enjoy!
-""",
-            ),
-        ),
-        (
-            "Mapping Demo",
-            (
-                demos.mapping_demo,
-                """
-This demo shows how to use
-[`st.pydeck_chart`](https://docs.streamlit.io/library/api-reference/charts/st.pydeck_chart)
-to display geospatial data.
-""",
-            ),
-        ),
-        (
-            "DataFrame Demo",
-            (
-                demos.data_frame_demo,
-                """
-This demo shows how to use `st.write` to visualize Pandas DataFrames.
-
-(Data courtesy of the [UN Data Explorer](http://data.un.org/Explorer.aspx).)
-""",
-            ),
-        ),
-    ]
-)
-
 
 def run():
-    demo_name = st.sidebar.selectbox("Choose a demo", list(DEMOS.keys()), 0)
-    demo = DEMOS[demo_name][0]
 
-    if demo_name == "—":
-        show_code = False
-        st.write("# Welcome to Streamlit! 👋")
-    else:
-        show_code = st.sidebar.checkbox("Show code", True)
-        st.markdown("# %s" % demo_name)
-        description = DEMOS[demo_name][1]
-        if description:
-            st.write(description)
-        # Clear everything from the intro page.
-        # We only have 4 elements in the page so this is intentional overkill.
-        for i in range(10):
-            st.empty()
+    st.write("# Welcome to Streamlit! 👋")
 
-    demo()
+    st.sidebar.success("Select a demo above.")
 
-    if show_code:
-        st.markdown("## Code")
-        sourcelines, _ = inspect.getsourcelines(demo)
-        st.code(textwrap.dedent("".join(sourcelines[1:])))
+    st.markdown(
+        """
+        Streamlit is an open-source app framework built specifically for
+        Machine Learning and Data Science projects.
+
+        **👈 Select a demo from the sidebar** to see some examples
+        of what Streamlit can do!
+
+        ### Want to learn more?
+
+        - Check out [streamlit.io](https://streamlit.io)
+        - Jump into our [documentation](https://docs.streamlit.io)
+        - Ask a question in our [community
+          forums](https://discuss.streamlit.io)
+
+        ### See more complex demos
+
+        - Use a neural net to [analyze the Udacity Self-driving Car Image
+          Dataset](https://github.com/streamlit/demo-self-driving)
+        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
+    """
+    )
 
 
 if __name__ == "__main__":
