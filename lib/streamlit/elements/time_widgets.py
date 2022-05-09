@@ -61,9 +61,7 @@ def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
                 "0 - 2 date/datetime values"
             )
 
-        parsed_dates = [
-            v.date() if isinstance(v, datetime) else v for v in value
-        ]
+        parsed_dates = [v.date() if isinstance(v, datetime) else v for v in value]
         range_value = True
     else:
         raise StreamlitAPIException(
@@ -84,11 +82,9 @@ def _parse_min_date(
         parsed_min_date = min_value.date()
     elif min_value is None:
         if parsed_dates:
-            parsed_min_date = parsed_dates[0] - relativedelta.relativedelta(
-                years=10)
+            parsed_min_date = parsed_dates[0] - relativedelta.relativedelta(years=10)
         else:
-            parsed_min_date = date.today() - relativedelta.relativedelta(
-                years=10)
+            parsed_min_date = date.today() - relativedelta.relativedelta(years=10)
     else:
         raise StreamlitAPIException(
             "DateInput min should either be a date/datetime or None"
@@ -107,11 +103,9 @@ def _parse_max_date(
         parsed_max_date = max_value.date()
     elif max_value is None:
         if parsed_dates:
-            parsed_max_date = parsed_dates[0] + relativedelta.relativedelta(
-                years=10)
+            parsed_max_date = parsed_dates[0] + relativedelta.relativedelta(years=10)
         else:
-            parsed_max_date = date.today() + relativedelta.relativedelta(
-                years=10)
+            parsed_max_date = date.today() + relativedelta.relativedelta(years=10)
     else:
         raise StreamlitAPIException(
             "DateInput max should either be a date/datetime or None"
@@ -419,7 +413,9 @@ class TimeWidgetsMixin:
             date_input_proto.help = dedent(help)
 
         date_input_proto.label = label
-        date_input_proto.default[:] = [date.strftime(v, "%Y/%m/%d") for v in parsed_values.value]
+        date_input_proto.default[:] = [
+            date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
+        ]
 
         date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
         date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
@@ -438,7 +434,9 @@ class TimeWidgetsMixin:
             else:
                 return_value = parsed_values.value
 
-            return return_value[0] if not parsed_values.is_range else tuple(return_value)
+            if not parsed_values.is_range:
+                return return_value[0]
+            return tuple(return_value)
 
         def serialize_date_input(v: DateValue) -> List[str]:
             to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
