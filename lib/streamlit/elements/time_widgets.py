@@ -103,7 +103,7 @@ def _parse_max_date(
         parsed_max_date = max_value
     elif max_value is None:
         if parsed_dates:
-            parsed_max_date = parsed_dates[0] + relativedelta.relativedelta(years=10)
+            parsed_max_date = parsed_dates[-1] + relativedelta.relativedelta(years=10)
         else:
             parsed_max_date = date.today() + relativedelta.relativedelta(years=10)
     else:
