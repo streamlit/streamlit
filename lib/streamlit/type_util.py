@@ -328,12 +328,12 @@ def ensure_iterable(obj: Any) -> Iterable[Any]:
 
     """
     if is_dataframe(obj):
-        return cast(Iterable, obj.iloc[:, 0])
+        return cast(Iterable[Any], obj.iloc[:, 0])
 
     try:
         iter(obj)
-        return cast(Iterable, obj)
-    except:
+        return cast(Iterable[Any], obj)
+    except TypeError:
         raise
 
 
