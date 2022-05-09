@@ -24,7 +24,7 @@ from typing import (
     Tuple,
     Type,
     TYPE_CHECKING,
-    Union
+    Union,
 )
 from typing_extensions import Final, TypeAlias, TypeGuard
 
