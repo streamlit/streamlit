@@ -13,20 +13,23 @@
 # limitations under the License.
 
 import json
-from typing import cast
+from typing import Any, cast, TYPE_CHECKING
 
-import streamlit
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.state import SessionStateProxy
+
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 class JsonMixin:
     def json(
         self,
-        body,
+        body: Any,
         *,  # keyword-only arguments:
-        expanded=True,
-    ):
+        expanded: bool = True,
+    ) -> "DeltaGenerator":
         """Display object or string as a pretty-printed JSON string.
 
         Parameters
@@ -77,9 +80,9 @@ class JsonMixin:
         json_proto = JsonProto()
         json_proto.body = body
         json_proto.expanded = expanded
-        return self.dg._enqueue("json", json_proto)
+        return cast("DeltaGenerator", self.dg._enqueue("json", json_proto))
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

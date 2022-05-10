@@ -53,9 +53,9 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 from importlib_metadata import version as _version
 
-__version__ = _version("streamlit")
+__version__: str = _version("streamlit")
 
-from typing import NoReturn
+from typing import Any, Dict, Iterator, List, NoReturn
 import contextlib as _contextlib
 import sys as _sys
 import threading as _threading
@@ -89,10 +89,10 @@ from streamlit.caching import memo as experimental_memo
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
 # no-ops, and adapt gracefully.
-_is_running_with_streamlit = False
+_is_running_with_streamlit: bool = False
 
 
-def _update_logger():
+def _update_logger() -> None:
     _logger.set_log_level(_config.get_option("logger.level").upper())
     _logger.update_formatter()
     _logger.init_tornado_logs()
@@ -206,7 +206,7 @@ beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
 
 
-def set_option(key, value):
+def set_option(key: str, value: Any) -> None:
     """Set config option.
 
     Currently, only the following config options can be set within the script itself:
@@ -228,7 +228,12 @@ def set_option(key, value):
         The new value to assign to this config option.
 
     """
-    opt = _config._config_options_template[key]
+    try:
+        opt = _config._config_options_template[key]
+    except KeyError as ke:
+        raise StreamlitAPIException(
+            "Unrecognized config option: {key}".format(key=key)
+        ) from ke
     if opt.scriptable:
         _config.set_option(key, value)
         return
@@ -240,7 +245,7 @@ def set_option(key, value):
     )
 
 
-def experimental_show(*args):
+def experimental_show(*args: Any) -> None:
     """Write arguments and *argument names* to your app for debugging purposes.
 
     Show() has similar properties to write():
@@ -306,12 +311,21 @@ def experimental_show(*args):
             markdown("**%s**" % escaped)
             write(args[idx])
 
-    except Exception:
+    except Exception as raised_exc:
         _, exc, exc_tb = _sys.exc_info()
+        if exc is None:
+            # Presumably, exc should never be None, but it is typed as
+            # Optional, and I don't know the internals of sys.exc_info() well
+            # enough to just use a cast here. Hence, the runtime check.
+            raise RuntimeError(
+                "Unexpected state: exc was None. If you see this message, "
+                "please create an issue at "
+                "https://github.com/streamlit/streamlit/issues"
+            ) from raised_exc
         exception(exc)
 
 
-def experimental_get_query_params():
+def experimental_get_query_params() -> Dict[str, List[str]]:
     """Return the query parameters that is currently showing in the browser's URL bar.
 
     Returns
@@ -337,11 +351,11 @@ def experimental_get_query_params():
     """
     ctx = _get_script_run_ctx()
     if ctx is None:
-        return ""
+        return {}
     return _parse.parse_qs(ctx.query_string)
 
 
-def experimental_set_query_params(**query_params):
+def experimental_set_query_params(**query_params: Any) -> None:
     """Set the query parameters that are shown in the browser's URL bar.
 
     Parameters
@@ -372,7 +386,7 @@ def experimental_set_query_params(**query_params):
 
 
 @_contextlib.contextmanager
-def spinner(text="In progress..."):
+def spinner(text: str = "In progress...") -> Iterator[None]:
     """Temporarily displays a message while executing a block of code.
 
     Parameters
@@ -432,7 +446,7 @@ def spinner(text="In progress..."):
                 message.empty()
 
 
-def _transparent_write(*args):
+def _transparent_write(*args: Any) -> Any:
     """This is just st.write, but returns the arguments you passed to it."""
     write(*args)
     if len(args) == 1:
@@ -443,10 +457,10 @@ def _transparent_write(*args):
 # We want to show a warning when the user runs a Streamlit script without
 # 'streamlit run', but we need to make sure the warning appears only once no
 # matter how many times __init__ gets loaded.
-_use_warning_has_been_displayed = False
+_use_warning_has_been_displayed: bool = False
 
 
-def _maybe_print_use_warning():
+def _maybe_print_use_warning() -> None:
     """Print a warning if Streamlit is imported but not being run with `streamlit run`.
     The warning is printed only once.
     """
@@ -492,7 +506,7 @@ def stop() -> NoReturn:
     raise StopException()
 
 
-def experimental_rerun():
+def experimental_rerun() -> NoReturn:
     """Rerun the script immediately.
 
     When `st.experimental_rerun()` is called, the script is halted - no

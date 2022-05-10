@@ -34,7 +34,7 @@ exports[`Quiver Add rows Special cases throws an error if one of the DataFrames 
 "
 Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
 
-If you do not need the Styler's styles, try passing the \`.data\` attribute of 
+If you do not need the Styler's styles, try passing the \`.data\` attribute of
 the Styler object instead to concatenate just the underlying dataframe.
 
 For example:
@@ -48,7 +48,7 @@ exports[`Quiver Add rows Special cases throws an error if one of the DataFrames 
 "
 Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
 
-If you do not need the Styler's styles, try passing the \`.data\` attribute of 
+If you do not need the Styler's styles, try passing the \`.data\` attribute of
 the Styler object instead to concatenate just the underlying dataframe.
 
 For example:

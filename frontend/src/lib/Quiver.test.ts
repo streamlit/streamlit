@@ -379,6 +379,16 @@ describe("Quiver", () => {
         ).toEqual("1970-01-01T03:00:00+03:00")
       })
 
+      test("datetimetz with offset", () => {
+        expect(
+          Quiver.format(0, {
+            pandas_type: "datetimetz",
+            numpy_type: "datetime64[ns]",
+            meta: { timezone: "+01:00" },
+          })
+        ).toEqual("1970-01-01T01:00:00+01:00")
+      })
+
       test("interval datetime64[ns]", () => {
         const mockElement = { data: INTERVAL_DATETIME64 }
         const q = new Quiver(mockElement)
