@@ -46,7 +46,7 @@ class MetricMixin:
         value: Value,
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
-    ) -> str:
+    ) -> "DeltaGenerator":
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Tip: If you want to display a large number, it may be a good idea to
@@ -116,7 +116,7 @@ class MetricMixin:
         metric_proto.color = color_and_direction.color
         metric_proto.direction = color_and_direction.direction
 
-        return str(self.dg._enqueue("metric", metric_proto))
+        return cast("DeltaGenerator", self.dg._enqueue("metric", metric_proto))
 
     @staticmethod
     def parse_label(label: str) -> str:
