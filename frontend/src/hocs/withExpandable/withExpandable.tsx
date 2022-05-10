@@ -22,8 +22,7 @@ import {
   Panel,
   SharedProps,
 } from "baseui/accordion"
-import { useTheme } from "emotion-theming"
-import { Theme } from "src/theme"
+import { useTheme } from "@emotion/react"
 import { StyledExpandableContainer } from "./styled-components"
 
 export interface Props {
@@ -62,7 +61,7 @@ function withExpandable(
     }, [label, initialExpanded])
 
     const toggle = (): void => setExpanded(!expanded)
-    const { colors, radii, spacing, fontSizes } = useTheme<Theme>()
+    const { colors, radii, spacing, fontSizes } = useTheme()
 
     return (
       <StyledExpandableContainer data-testid="stExpander">

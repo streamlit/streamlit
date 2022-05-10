@@ -18,13 +18,13 @@ from typing import Any, Callable, Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
-from streamlit.state.session_state import (
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.state.widgets import register_widget
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
 from streamlit.util import index_
 from .form import current_form_id
@@ -146,7 +146,6 @@ class SelectboxMixin:
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
-        selectbox_proto.disabled = disabled
         if help is not None:
             selectbox_proto.help = dedent(help)
 
@@ -172,6 +171,9 @@ class SelectboxMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        selectbox_proto.disabled = disabled
         if set_frontend_value:
             selectbox_proto.value = serialize_select_box(current_value)
             selectbox_proto.set_value = True

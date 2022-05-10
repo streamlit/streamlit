@@ -36,6 +36,7 @@ const getProps = (elementProps: Partial<DownloadButtonProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
+  // @ts-ignore
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 

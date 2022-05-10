@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
 import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import { transparentize } from "color2k"
@@ -119,7 +119,7 @@ class Checkbox extends React.PureComponent<Props, State> {
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { theme, width, element, disabled, widgetMgr } = this.props
     const { colors, spacing, radii } = theme
     const style = { width }

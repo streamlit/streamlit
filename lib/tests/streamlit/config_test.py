@@ -317,6 +317,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.installTracer",
                 "runner.fixMatplotlib",
                 "runner.postScriptGC",
+                "runner.fastReruns",
                 "mapbox.token",
                 "server.baseUrlPath",
                 "server.enableCORS",

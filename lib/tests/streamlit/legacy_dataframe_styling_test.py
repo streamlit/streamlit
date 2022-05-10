@@ -14,7 +14,7 @@
 
 """Legacy DataFrame Styler unit tests"""
 
-from typing import List, Optional
+from typing import List, Optional, Any, Set
 
 import numpy as np
 import pandas as pd
@@ -132,23 +132,23 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
         [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
     )
     def test_add_styled_rows(self, st_element, get_proto):
-        """Add rows should preserve existing styles and append new styles"""
+        """Add rows messages should include styling data if supplied."""
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
 
-        css_values = [
-            {css_s("color", "red")},
-            {css_s("color", "red")},
-            {css_s("color", "black")},
-            {css_s("color", "black")},
-        ]
-
+        # Styled DataFrame
         x = st_element(df1.style.applymap(lambda val: "color: red"))
+        proto_df = get_proto(self.get_delta_from_queue().new_element)
+        self._assert_column_css_styles(
+            proto_df, 0, [{css_s("color", "red")}, {css_s("color", "red")}]
+        )
 
+        # Unstyled add_rows
         x._legacy_add_rows(df2.style.applymap(lambda val: "color: black"))
-
-        proto_df = get_proto(self._get_element())
-        self._assert_column_css_styles(proto_df, 0, css_values)
+        proto_df = self.get_delta_from_queue().add_rows.data
+        self._assert_column_css_styles(
+            proto_df, 0, [{css_s("color", "black")}, {css_s("color", "black")}]
+        )
 
     @parameterized.expand(
         [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
@@ -158,18 +158,17 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
 
-        css_values = [
-            set(),
-            set(),
-            {css_s("color", "black")},
-            {css_s("color", "black")},
-        ]
-
+        # Unstyled DataFrame
         x = st_element(df1)
-        x._legacy_add_rows(df2.style.applymap(lambda val: "color: black"))
+        proto_df = get_proto(self.get_delta_from_queue().new_element)
+        self._assert_column_css_styles(proto_df, 0, [set(), set()])
 
-        proto_df = get_proto(self._get_element())
-        self._assert_column_css_styles(proto_df, 0, css_values)
+        # Styled add_rows
+        x._legacy_add_rows(df2.style.applymap(lambda val: "color: black"))
+        proto_df = self.get_delta_from_queue().add_rows.data
+        self._assert_column_css_styles(
+            proto_df, 0, [{css_s("color", "black")}, {css_s("color", "black")}]
+        )
 
     @parameterized.expand(
         [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
@@ -179,19 +178,17 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
 
-        css_values = [
-            {css_s("color", "black")},
-            {css_s("color", "black")},
-            set(),
-            set(),
-        ]
-
+        # Styled DataFrame
         x = st_element(df1.style.applymap(lambda val: "color: black"))
+        proto_df = get_proto(self.get_delta_from_queue().new_element)
+        self._assert_column_css_styles(
+            proto_df, 0, [{css_s("color", "black")}, {css_s("color", "black")}]
+        )
 
+        # Unstyled add_rows
         x._legacy_add_rows(df2)
-
         proto_df = get_proto(self._get_element())
-        self._assert_column_css_styles(proto_df, 0, css_values)
+        self._assert_column_css_styles(proto_df, 0, [set(), set()])
 
     def _get_element(self) -> Element:
         """Returns the most recent element in the DeltaGenerator queue"""
@@ -212,7 +209,9 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
             else:
                 self.assertFalse(style.has_display_value)
 
-    def _assert_column_css_styles(self, proto_df, col, expected_styles):
+    def _assert_column_css_styles(
+        self, proto_df: DataFrame, col: int, expected_styles: List[Set[str]]
+    ) -> None:
         """Asserts that cells in a column have the given expected_styles
         expected_styles : List[Set[serialized_proto_str]]
         """
@@ -223,7 +222,7 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(expected_styles[row], cell_styles)
 
 
-def get_cell_style(proto_df, col, row):
+def get_cell_style(proto_df: DataFrame, col: int, row: int) -> CellStyle:
     """Returns the CellStyle for the given cell, or an empty CellStyle
     if no style for the given cell exists
     """
@@ -237,7 +236,7 @@ def get_cell_style(proto_df, col, row):
     return col_style.styles[row]
 
 
-def make_cssstyle_proto(property, value):
+def make_cssstyle_proto(property: str, value: str) -> CSSStyle:
     """Creates a CSSStyle with the given values"""
     css_style = CSSStyle()
     css_style.property = property
@@ -245,11 +244,11 @@ def make_cssstyle_proto(property, value):
     return css_style
 
 
-def proto_to_str(proto):
+def proto_to_str(proto: Any) -> str:
     """Serializes a protobuf to a string (used here for hashing purposes)"""
     return proto.SerializePartialToString()
 
 
-def css_s(property, value):
+def css_s(property: str, value: str) -> str:
     """Creates a stringified CSSString proto with the given values"""
     return proto_to_str(make_cssstyle_proto(property, value))

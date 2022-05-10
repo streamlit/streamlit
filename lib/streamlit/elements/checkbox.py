@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import cast, Optional
 
 import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
-from streamlit.state.widgets import register_widget
-from streamlit.state.session_state import (
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -121,7 +121,6 @@ class CheckboxMixin:
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
         checkbox_proto.form_id = current_form_id(self.dg)
-        checkbox_proto.disabled = disabled
         if help is not None:
             checkbox_proto.help = dedent(help)
 
@@ -140,6 +139,9 @@ class CheckboxMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        checkbox_proto.disabled = disabled
         if set_frontend_value:
             checkbox_proto.value = current_value
             checkbox_proto.set_value = True

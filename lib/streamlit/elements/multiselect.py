@@ -18,11 +18,11 @@ from typing import Any, Callable, Optional, cast, List
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
-from streamlit.state.widgets import register_widget
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, to_key
 
-from streamlit.state.session_state import (
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -176,7 +176,6 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
-        multiselect_proto.disabled = disabled
         if help is not None:
             multiselect_proto.help = dedent(help)
 
@@ -201,6 +200,9 @@ class MultiSelectMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        multiselect_proto.disabled = disabled
         if set_frontend_value:
             multiselect_proto.value[:] = _check_and_convert_to_indices(
                 opt, current_value

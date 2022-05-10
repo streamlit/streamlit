@@ -33,6 +33,9 @@ class BokehMixin:
         closely follow the ones for Bokeh's `show` function. You can find
         more about Bokeh at https://bokeh.pydata.org.
 
+        To show Bokeh charts in Streamlit, call `st.bokeh_chart`
+        wherever you would call Bokeh's `show`.
+
         Parameters
         ----------
         figure : bokeh.plotting.figure.Figure
@@ -41,9 +44,6 @@ class BokehMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Bokeh's native `width` value.
-
-        To show Bokeh charts in Streamlit, call `st.bokeh_chart`
-        wherever you would call Bokeh's `show`.
 
         Example
         -------

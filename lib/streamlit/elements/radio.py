@@ -18,9 +18,9 @@ from typing import Any, Callable, Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
-from streamlit.state.widgets import register_widget
-from streamlit.state.session_state import (
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -152,7 +152,6 @@ class RadioMixin:
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in opt]
         radio_proto.form_id = current_form_id(self.dg)
-        radio_proto.disabled = disabled
         if help is not None:
             radio_proto.help = dedent(help)
 
@@ -178,6 +177,9 @@ class RadioMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        radio_proto.disabled = disabled
         if set_frontend_value:
             radio_proto.value = serialize_radio(current_value)
             radio_proto.set_value = True

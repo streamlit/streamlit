@@ -5,7 +5,7 @@ exports[`ActionButton does not render icon if not provided 1`] = `
   className="stActionButton"
 >
   <Button
-    kind="icon"
+    kind="header"
     onClick={[MockFunction]}
   >
     <StyledActionButtonContainer>
@@ -22,7 +22,7 @@ exports[`ActionButton does not render label if not provided 1`] = `
   className="stActionButton"
 >
   <Button
-    kind="borderlessIcon"
+    kind="header"
     onClick={[MockFunction]}
   >
     <StyledActionButtonContainer>
@@ -39,7 +39,7 @@ exports[`ActionButton renders without crashing and matches snapshot 1`] = `
   className="stActionButton"
 >
   <Button
-    kind="icon"
+    kind="header"
     onClick={[MockFunction]}
   >
     <StyledActionButtonContainer>

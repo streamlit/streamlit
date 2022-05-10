@@ -17,7 +17,7 @@
 
 import React from "react"
 import moment from "moment"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 import { DateInput as DateInputProto } from "src/autogen/proto"
@@ -174,7 +174,7 @@ class DateInput extends React.PureComponent<Props, State> {
       : undefined
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { width, element, disabled, theme, widgetMgr } = this.props
     const { values, isRange } = this.state
     const { colors, fontSizes } = theme

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import Optional, cast
@@ -21,8 +21,8 @@ from typing import Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from streamlit.state.widgets import register_widget
-from streamlit.state.session_state import (
+from streamlit.state import register_widget
+from streamlit.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -147,7 +147,6 @@ class ColorPickerMixin:
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
         color_picker_proto.form_id = current_form_id(self.dg)
-        color_picker_proto.disabled = disabled
         if help is not None:
             color_picker_proto.help = dedent(help)
 
@@ -168,6 +167,9 @@ class ColorPickerMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        color_picker_proto.disabled = disabled
         if set_frontend_value:
             color_picker_proto.value = current_value
             color_picker_proto.set_value = True

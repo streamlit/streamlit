@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import date, time, datetime, timedelta, timezone
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from typing import Any, List, cast, Optional
 from textwrap import dedent
@@ -23,12 +23,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.state.session_state import (
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.state.widgets import register_widget
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -405,8 +405,11 @@ class SliderMixin:
             UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
             def _datetime_to_micros(dt):
-                # If dt is naive, Python converts from local time
-                utc_dt = dt.astimezone(timezone.utc)
+                # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
+                # Since we want to show the date/time exactly as it is in the given datetime object,
+                # we just set the tzinfo to UTC and do not do any timezone conversions.
+                # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
+                utc_dt = dt.replace(tzinfo=timezone.utc)
                 return _delta_to_micros(utc_dt - UTC_EPOCH)
 
             # Restore times/datetimes to original timezone (dates are always naive)
@@ -418,8 +421,9 @@ class SliderMixin:
 
             def _micros_to_datetime(micros):
                 utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
-                # Convert from utc back to original time (local time if naive)
-                return utc_dt.astimezone(orig_tz).replace(tzinfo=orig_tz)
+                # Add the original timezone. No conversion is required here,
+                # since in the serialization, we also just replace the timestamp with UTC.
+                return utc_dt.replace(tzinfo=orig_tz)
 
             value = list(map(_datetime_to_micros, value))
             min_value = _datetime_to_micros(min_value)
@@ -441,7 +445,6 @@ class SliderMixin:
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
         slider_proto.form_id = current_form_id(self.dg)
-        slider_proto.disabled = disabled
         if help is not None:
             slider_proto.help = dedent(help)
 
@@ -489,6 +492,9 @@ class SliderMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        slider_proto.disabled = disabled
         if set_frontend_value:
             slider_proto.value[:] = serialize_slider(current_value)
             slider_proto.set_value = True

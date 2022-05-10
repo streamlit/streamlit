@@ -35,6 +35,7 @@ function createCache(): MockCache {
   const cache = new ForwardMsgCache(() => MOCK_SERVER_URI)
 
   const getCachedMessage = (hash: string): ForwardMsg | undefined =>
+    // @ts-ignore accessing into internals for testing
     cache.getCachedMessage(hash, false)
 
   return { cache, getCachedMessage }
@@ -114,7 +115,9 @@ test("caches messages correctly", async () => {
 
   // Ref messages should never be cached
   const msg3 = createForwardMsg("Cacheable", true)
-  msg3.metadata.deltaId = 2
+  if (msg3.metadata) {
+    msg3.metadata.deltaPath = [2]
+  }
   const ref = createRefMsg(msg3)
   const unreferenced = await cache.processMessagePayload(ref)
   expect(getCachedMessage(ref.hash)).toBeUndefined()
@@ -158,6 +161,7 @@ test("removes expired messages", () => {
   const msg = createForwardMsg("Cacheable", true)
 
   // Add the message to the cache
+  // @ts-ignore accessing into internals for testing
   cache.maybeCacheMessage(msg)
   expect(getCachedMessage(msg.hash)).toEqual(msg)
 

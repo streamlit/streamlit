@@ -19,7 +19,6 @@ import collections
 import hashlib
 import mimetypes
 
-from streamlit.script_run_context import get_script_run_ctx
 from streamlit.logger import get_logger
 from streamlit import util
 from streamlit.stats import CacheStatsProvider, CacheStat
@@ -41,6 +40,8 @@ FILE_TYPE_DOWNLOADABLE = "downloadable_file"
 
 def _get_session_id() -> str:
     """Semantic wrapper to retrieve current AppSession ID."""
+    from streamlit.scriptrunner import get_script_run_ctx
+
     ctx = get_script_run_ctx()
     if ctx is None:
         # This is only None when running "python myscript.py" rather than

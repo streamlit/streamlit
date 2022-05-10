@@ -19,6 +19,7 @@ import React from "react"
 import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { random, times } from "lodash"
+import { MultiGrid } from "react-virtualized"
 
 import { mockDataFrame, mockStringDataFrame } from "./mock"
 import { DataFrame, DataFrameProps } from "./DataFrame"
@@ -73,7 +74,7 @@ describe("DataFrame Element", () => {
   const wrapper = shallow(<DataFrame {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper.find("MultiGrid").length).toBe(1)
+    expect(wrapper.find(MultiGrid).length).toBe(1)
   })
 
   it("should have correct className", () => {
@@ -83,7 +84,7 @@ describe("DataFrame Element", () => {
   })
 
   it("multigrid should be rendered correctly", () => {
-    const multiGridProps = wrapper.find("MultiGrid").props()
+    const multiGridProps = wrapper.find(MultiGrid).props()
 
     expect(multiGridProps.fixedColumnCount).toBe(1)
     expect(multiGridProps.fixedRowCount).toBe(1)
@@ -102,7 +103,7 @@ describe("DataFrame Element", () => {
       data: {},
     })
     const wrapper = shallow(<DataFrame {...props} />)
-    const multiGridProps = wrapper.find("MultiGrid").props()
+    const multiGridProps = wrapper.find(MultiGrid).props()
 
     expect(wrapper.text()).toBe("<MultiGrid />empty")
 
@@ -120,11 +121,11 @@ describe("DataFrame Element", () => {
   it("adds extra height for horizontal scrollbar when wide but not tall", () => {
     let props = getProps({ ...fakeInt64Data(1, 1) })
     let wrapper = shallow(<DataFrame {...props} />)
-    const normalHeight = wrapper.find("MultiGrid").props().height
+    const normalHeight = wrapper.find(MultiGrid).props().height
 
     props = getProps({ ...fakeInt64Data(1, 20) })
     wrapper = shallow(<DataFrame {...props} />)
-    const heightWithScrollbar = wrapper.find("MultiGrid").props().height
+    const heightWithScrollbar = wrapper.find(MultiGrid).props().height
 
     expect(heightWithScrollbar).toBe(normalHeight)
   })
@@ -134,11 +135,11 @@ describe("DataFrame Element", () => {
     // largest row number is the same for the two DataFrames.
     let props = getProps({ ...fakeInt64Data(11, 1) })
     let wrapper = shallow(<DataFrame {...props} />)
-    const normalWidth = wrapper.find("MultiGrid").props().width
+    const normalWidth = wrapper.find(MultiGrid).props().width
 
     props = getProps({ ...fakeInt64Data(99, 1) })
     wrapper = shallow(<DataFrame {...props} />)
-    const widthWithScrollbar = wrapper.find("MultiGrid").props().width
+    const widthWithScrollbar = wrapper.find(MultiGrid).props().width
 
     expect(widthWithScrollbar).toBe(normalWidth + SCROLLBAR_SIZE)
   })
@@ -147,7 +148,7 @@ describe("DataFrame Element", () => {
     const props = getProps({ ...fakeInt64Data(10, 1) })
     const wrapper = shallow(<DataFrame {...props} />)
 
-    const multiGrid = wrapper.find("MultiGrid")
+    const multiGrid = wrapper.find(MultiGrid)
     const Grids = multiGrid.dive().find("Grid")
 
     const headerRow = Grids.at(1)
@@ -169,7 +170,7 @@ describe("DataFrame Element", () => {
     const props = getProps({ ...fakeStringData(10, 1) })
     const wrapper = shallow(<DataFrame {...props} />)
 
-    const multiGrid = wrapper.find("MultiGrid")
+    const multiGrid = wrapper.find(MultiGrid)
     const Grids = multiGrid.dive().find("Grid")
 
     const headerRow = Grids.at(1)

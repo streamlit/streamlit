@@ -377,6 +377,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(json_string, element.json.body)
+        self.assertEqual(True, element.json.expanded)
 
     def test_json_string(self):
         """Test Text.JSON string."""
@@ -399,6 +400,19 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
 
         # validate a substring since repr for a module may contain an installation-specific path
         self.assertTrue(element.json.body.startswith("\"<module 'json'"))
+
+    def test_json_not_expanded_arg(self):
+        """Test st.json expanded arg."""
+        json_data = {"key": "value"}
+
+        # Testing python object
+        st.json(json_data, expanded=False)
+
+        json_string = json.dumps(json_data)
+
+        element = self.get_delta_from_queue().new_element
+        self.assertEqual(json_string, element.json.body)
+        self.assertEqual(False, element.json.expanded)
 
     def test_markdown(self):
         """Test Markdown element."""

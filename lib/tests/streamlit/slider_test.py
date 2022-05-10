@@ -55,10 +55,10 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
     AWARE_TIME = time(12, 00, tzinfo=PST)
     AWARE_TIME_END = time(21, 00, tzinfo=PST)
     # datetimes are serialized in proto as micros since epoch
-    AWARE_DT_MICROS = 1577865600000000
-    AWARE_DT_END_MICROS = 1578211200000000
-    AWARE_TIME_MICROS = 946756800000000
-    AWARE_TIME_END_MICROS = 946789200000000
+    AWARE_DT_MICROS = 1577836800000000
+    AWARE_DT_END_MICROS = 1578182400000000
+    AWARE_TIME_MICROS = 946728000000000
+    AWARE_TIME_END_MICROS = 946760400000000
 
     @parameterized.expand(
         [

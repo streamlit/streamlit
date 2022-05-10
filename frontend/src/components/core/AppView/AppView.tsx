@@ -24,7 +24,7 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunication"
 
-import PageLayoutContext from "src/components/core/PageLayoutContext"
+import AppContext from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 
 import {
@@ -42,12 +42,6 @@ export interface AppViewProps {
   scriptRunId: string
 
   scriptRunState: ScriptRunState
-
-  /**
-   * If true, "stale" elements (that is, elements that were created during a previous
-   * run of a currently-running script) will be faded out.
-   */
-  showStaleElementIndicator: boolean
 
   widgetMgr: WidgetStateManager
 
@@ -69,7 +63,6 @@ function AppView(props: AppViewProps): ReactElement {
     elements,
     scriptRunId,
     scriptRunState,
-    showStaleElementIndicator,
     widgetMgr,
     widgetsDisabled,
     uploadClient,
@@ -89,7 +82,7 @@ function AppView(props: AppViewProps): ReactElement {
   }, [])
 
   const { wideMode, initialSidebarState, embedded } = React.useContext(
-    PageLayoutContext
+    AppContext
   )
   const renderBlock = (node: BlockNode): ReactElement => (
     <StyledAppViewBlockContainer
@@ -100,7 +93,6 @@ function AppView(props: AppViewProps): ReactElement {
         node={node}
         scriptRunId={scriptRunId}
         scriptRunState={scriptRunState}
-        showStaleElementIndicator={showStaleElementIndicator}
         widgetMgr={widgetMgr}
         widgetsDisabled={widgetsDisabled}
         uploadClient={uploadClient}

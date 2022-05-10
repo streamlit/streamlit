@@ -36,6 +36,7 @@ const getProps = (elementProps: Partial<ButtonProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
+  // @ts-ignore
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 

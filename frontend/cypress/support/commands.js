@@ -145,3 +145,26 @@ Cypress.Commands.add("getIndexed", (selector, index) =>
     .should("have.length.at.least", index + 1)
     .eq(index)
 )
+
+// The header at the top of the page can sometimes interfere when we are
+// attempting to take snapshots. This command removes the problematic parts to
+// avoid this issue.
+Cypress.Commands.add("prepForElementSnapshots", () => {
+  // Make the ribbon decoration line disappear as it can occasionally get
+  // caught when a snapshot is taken.
+  cy.get("[data-testid='stDecoration']").invoke("css", "display", "none")
+
+  // Similarly, the header styling can sometimes interfere with the snapshot
+  // for elements near the top of the page.
+  cy.get(".stApp > header").invoke("css", "background", "none")
+  cy.get(".stApp > header").invoke("css", "backdropFilter", "none")
+})
+
+// Rerun the script by simulating the user pressing the 'r' key.
+Cypress.Commands.add("rerunScript", () => {
+  cy.get(".stApp [data-testid='stHeader']").trigger("keypress", {
+    keyCode: 82, // "r"
+    which: 82, // "r"
+    force: true,
+  })
+})

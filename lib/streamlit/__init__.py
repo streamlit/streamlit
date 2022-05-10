@@ -68,11 +68,13 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.script_run_context import add_script_run_ctx as _add_script_run_ctx
-from streamlit.script_run_context import get_script_run_ctx as _get_script_run_ctx
-from streamlit.script_runner import StopException
-from streamlit.script_runner import RerunException as _RerunException
-from streamlit.script_request_queue import RerunData as _RerunData
+from streamlit.scriptrunner import (
+    add_script_run_ctx as _add_script_run_ctx,
+    get_script_run_ctx as _get_script_run_ctx,
+    StopException,
+    RerunException as _RerunException,
+    RerunData as _RerunData,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
@@ -153,6 +155,7 @@ radio = _main.radio
 selectbox = _main.selectbox
 select_slider = _main.select_slider
 slider = _main.slider
+snow = _main.snow
 subheader = _main.subheader
 success = _main.success
 table = _main.table
@@ -191,9 +194,9 @@ from streamlit.commands.page_config import set_page_config
 
 # Session State
 
-from streamlit.state.session_state import LazySessionState
+from streamlit.state import SessionStateProxy
 
-session_state = LazySessionState()
+session_state = SessionStateProxy()
 
 
 # Beta APIs
@@ -258,7 +261,7 @@ def experimental_show(*args):
     >>> dataframe = pd.DataFrame({
     ...     'first column': [1, 2, 3, 4],
     ...     'second column': [10, 20, 30, 40],
-    ... }))
+    ... })
     >>> st.experimental_show(dataframe)
 
     Notes

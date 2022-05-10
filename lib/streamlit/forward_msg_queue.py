@@ -12,37 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-A queue of ForwardMsg associated with a particular session.
-Whenever possible, message deltas are combined.
-"""
-
-import copy
-import threading
-from typing import Optional, List, Dict, Any, Tuple, Iterator
-import attr
-
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from typing import Optional, List, Dict, Any, Tuple
 
 from streamlit.logger import get_logger
+from streamlit.proto.Delta_pb2 import Delta
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 LOGGER = get_logger(__name__)
 
 
-@attr.s(auto_attribs=True, slots=True)
 class ForwardMsgQueue:
-    """Thread-safe queue that smartly accumulates the session's messages."""
+    """Accumulates a session's outgoing ForwardMsgs.
 
-    _lock: threading.Lock = attr.Factory(threading.Lock)
-    _queue: List[ForwardMsg] = attr.Factory(list)
+    Each AppSession adds messages to its queue, and the Server periodically
+    flushes all session queues and delivers their messages to the appropriate
+    clients.
 
-    # A mapping of (delta_path -> _queue.indexof(msg)) for each
-    # Delta message in the queue. We use this for coalescing
-    # redundant outgoing Deltas (where a newer Delta supercedes
-    # an older Delta, with the same delta_path, that's still in the
-    # queue).
-    _delta_index_map: Dict[Tuple[int, ...], int] = attr.Factory(dict)
+    ForwardMsgQueue is not thread-safe - a queue should only be used from
+    a single thread.
+    """
+
+    def __init__(self):
+        self._queue: List[ForwardMsg] = []
+        # A mapping of (delta_path -> _queue.indexof(msg)) for each
+        # Delta message in the queue. We use this for coalescing
+        # redundant outgoing Deltas (where a newer Delta supercedes
+        # an older Delta, with the same delta_path, that's still in the
+        # queue).
+        self._delta_index_map: Dict[Tuple[int, ...], int] = dict()
 
     def get_debug(self) -> Dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
@@ -52,60 +49,61 @@ class ForwardMsgQueue:
             "ids": list(self._delta_index_map.keys()),
         }
 
-    def __iter__(self) -> Iterator[ForwardMsg]:
-        return iter(self._queue)
-
     def is_empty(self) -> bool:
         return len(self._queue) == 0
 
-    def get_initial_msg(self) -> Optional[ForwardMsg]:
-        if len(self._queue) > 0:
-            return self._queue[0]
-        return None
-
     def enqueue(self, msg: ForwardMsg) -> None:
         """Add message into queue, possibly composing it with another message."""
-        with self._lock:
-            if not msg.HasField("delta"):
-                self._queue.append(msg)
+        if not _is_composable_message(msg):
+            self._queue.append(msg)
+            return
+
+        # If there's a Delta message with the same delta_path already in
+        # the queue - meaning that it refers to the same location in
+        # the app - we attempt to combine this new Delta into the old
+        # one. This is an optimization that prevents redundant Deltas
+        # from being sent to the frontend.
+        delta_key = tuple(msg.metadata.delta_path)
+        if delta_key in self._delta_index_map:
+            index = self._delta_index_map[delta_key]
+            old_msg = self._queue[index]
+            composed_delta = _maybe_compose_deltas(old_msg.delta, msg.delta)
+            if composed_delta is not None:
+                new_msg = ForwardMsg()
+                new_msg.delta.CopyFrom(composed_delta)
+                new_msg.metadata.CopyFrom(msg.metadata)
+                self._queue[index] = new_msg
                 return
 
-            # If there's a Delta message with the same delta_path already in
-            # the queue - meaning that it refers to the same location in
-            # the app - we attempt to combine this new Delta into the old
-            # one. This is an optimization that prevents redundant Deltas
-            # from being sent to the frontend.
-            delta_key = tuple(msg.metadata.delta_path)
-            if delta_key in self._delta_index_map:
-                index = self._delta_index_map[delta_key]
-                old_msg = self._queue[index]
-                composed_delta = _maybe_compose_deltas(old_msg.delta, msg.delta)
-                if composed_delta is not None:
-                    new_msg = ForwardMsg()
-                    new_msg.delta.CopyFrom(composed_delta)
-                    new_msg.metadata.CopyFrom(msg.metadata)
-                    self._queue[index] = new_msg
-                    return
+        # No composition occured. Append this message to the queue, and
+        # store its index for potential future composition.
+        self._delta_index_map[delta_key] = len(self._queue)
+        self._queue.append(msg)
 
-            # No composition occured. Append this message to the queue, and
-            # store its index for potential future composition.
-            self._delta_index_map[delta_key] = len(self._queue)
-            self._queue.append(msg)
-
-    def _clear(self) -> None:
+    def clear(self) -> None:
+        """Clear the queue."""
         self._queue = []
         self._delta_index_map = dict()
 
-    def clear(self) -> None:
-        """Clear this queue."""
-        with self._lock:
-            self._clear()
-
     def flush(self) -> List[ForwardMsg]:
-        with self._lock:
-            queue = self._queue
-            self._clear()
+        """Clear the queue and return a list of the messages it contained
+        before being cleared."""
+        queue = self._queue
+        self.clear()
         return queue
+
+
+def _is_composable_message(msg: ForwardMsg) -> bool:
+    """True if the ForwardMsg is potentially composable with other ForwardMsgs."""
+    if not msg.HasField("delta"):
+        # Non-delta messages are never composable.
+        return False
+
+    # We never compose add_rows messages in Python, because the add_rows
+    # operation can raise errors, and we don't have a good way of handling
+    # those errors in the message queue.
+    delta_type = msg.delta.WhichOneof("type")
+    return delta_type != "add_rows" and delta_type != "arrow_add_rows"
 
 
 def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Optional[Delta]:
@@ -140,18 +138,5 @@ def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Optional[Delta]
 
     if new_delta_type == "add_block":
         return new_delta
-
-    if new_delta_type == "add_rows":
-        import streamlit.elements.legacy_data_frame as data_frame
-
-        # We should make data_frame.add_rows *not* mutate any of the
-        # inputs. In the meantime, we have to deepcopy the input that will be
-        # mutated.
-        composed_delta = copy.deepcopy(old_delta)
-        data_frame.add_rows(composed_delta, new_delta, name=new_delta.add_rows.name)
-        return composed_delta
-
-    # We deliberately don't handle the "arrow_add_rows" delta type. With Arrow,
-    # `add_rows` is a frontend-only operation.
 
     return None

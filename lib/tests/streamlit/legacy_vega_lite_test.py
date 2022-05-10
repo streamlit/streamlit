@@ -129,36 +129,6 @@ class LegacyVegaLiteTest(testutil.DeltaGeneratorTestCase):
             ),
         )
 
-    def test_legacy_add_rows(self):
-        """Test that you can call _legacy_add_rows on a _legacy_vega_lite_chart(data)."""
-        x = st._legacy_vega_lite_chart(df1, {"mark": "rect"})
-
-        c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertEqual(len(c.data.data.cols[0].strings.data), 4)
-
-        x._legacy_add_rows(df2)
-
-        c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertEqual(len(c.data.data.cols[0].strings.data), 8)
-        self.assertDictEqual(
-            json.loads(c.spec), merge_dicts(autosize_spec, {"mark": "rect"})
-        )
-
-        c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertEqual(c.HasField("data"), True)
-
-    def test_no_args_add_rows(self):
-        """Test that you can call _legacy_add_rows on a _legacy_vega_lite_chart(None)."""
-        x = st._legacy_vega_lite_chart({"mark": "rect"})
-
-        c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertEqual(c.HasField("data"), False)
-
-        x._legacy_add_rows(df1)
-
-        c = self.get_delta_from_queue().new_element.vega_lite_chart
-        self.assertEqual(len(c.data.data.cols[0].strings.data), 4)
-
     def test_use_container_width(self):
         """Test that use_container_width=True autosets to full width."""
         st._legacy_vega_lite_chart(df1, {"mark": "rect"}, use_container_width=True)

@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, memo } from "react"
-import range from "lodash/range"
+import React, { FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -28,6 +27,9 @@ import Balloon2 from "src/assets/img/balloons/balloon-2.png"
 import Balloon3 from "src/assets/img/balloons/balloon-3.png"
 import Balloon4 from "src/assets/img/balloons/balloon-4.png"
 import Balloon5 from "src/assets/img/balloons/balloon-5.png"
+
+import Particles from "../Particles"
+import { ParticleProps } from "../Particles/Particles"
 
 import { StyledBalloon } from "./styled-components"
 
@@ -42,26 +44,26 @@ const BALLOON_IMAGES: string[] = [
   Balloon5,
 ]
 
-const BALLOON_TYPES = BALLOON_IMAGES.length
+const NUM_BALLOON_TYPES = BALLOON_IMAGES.length
 
 export interface Props {
   scriptRunId: string
 }
 
-function Balloons({ scriptRunId }: Props): ReactElement {
+const Balloon: FC<ParticleProps> = ({ particleType }) => (
+  <StyledBalloon src={BALLOON_IMAGES[particleType]} />
+)
+
+const Balloons: FC<Props> = ({ scriptRunId }) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  return (
-    <div className="balloons stHidden">
-      {range(NUM_BALLOONS).map(i => {
-        const randNum = Math.floor(Math.random() * BALLOON_TYPES)
-
-        return (
-          <StyledBalloon key={scriptRunId + i} src={BALLOON_IMAGES[randNum]} />
-        )
-      })}
-    </div>
-  )
-}
+  <Particles
+    className="balloons"
+    scriptRunId={scriptRunId}
+    numParticleTypes={NUM_BALLOON_TYPES}
+    numParticles={NUM_BALLOONS}
+    ParticleComponent={Balloon}
+  />
+)
 
 export default memo(Balloons)

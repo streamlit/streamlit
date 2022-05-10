@@ -16,8 +16,8 @@ import unittest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.script_run_context import ScriptRunContext
-from streamlit.state.session_state import SessionState
+from streamlit.scriptrunner import ScriptRunContext
+from streamlit.state import SafeSessionState, SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 
@@ -30,7 +30,7 @@ class ScriptRunContextTest(unittest.TestCase):
             "TestSessionID",
             fake_enqueue,
             "",
-            SessionState(),
+            SafeSessionState(SessionState()),
             UploadedFileManager(),
         )
 
@@ -50,7 +50,7 @@ class ScriptRunContextTest(unittest.TestCase):
             "TestSessionID",
             fake_enqueue,
             "",
-            SessionState(),
+            SafeSessionState(SessionState()),
             UploadedFileManager(),
         )
 
@@ -74,7 +74,7 @@ class ScriptRunContextTest(unittest.TestCase):
             "TestSessionID",
             fake_enqueue,
             "",
-            SessionState(),
+            SafeSessionState(SessionState()),
             UploadedFileManager(),
         )
 
@@ -97,7 +97,7 @@ class ScriptRunContextTest(unittest.TestCase):
             "TestSessionID",
             fake_enqueue,
             "",
-            SessionState(),
+            SafeSessionState(SessionState()),
             UploadedFileManager(),
         )
 

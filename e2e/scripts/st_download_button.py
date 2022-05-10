@@ -21,7 +21,11 @@ st.download_button(
 )
 
 st.download_button(
-    "Download button label", data="Hello world!", file_name="hello.txt", disabled=True
+    "Download button label",
+    data="Hello world!",
+    file_name="hello.txt",
+    key="disabled_dl_button",
+    disabled=True,
 )
 
 st.download_button(

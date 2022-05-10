@@ -67,7 +67,7 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.NONE,
     })
     const wrapper = mount(<Metric {...props} />)
-    expect(wrapper.find("StyledMetricDeltaText").prop("style").color).toBe(
+    expect(wrapper.find("StyledMetricDeltaText").prop("style")?.color).toBe(
       "rgba(49, 51, 63, 0.6)"
     )
   })
@@ -78,7 +78,7 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     const wrapper = mount(<Metric {...props} />)
-    expect(wrapper.find("StyledMetricDeltaText").prop("style").color).toBe(
+    expect(wrapper.find("StyledMetricDeltaText").prop("style")?.color).toBe(
       "#09ab3b"
     )
   })
@@ -86,7 +86,7 @@ describe("Metric element", () => {
   it("renders correct red based on props", () => {
     const props = getProps()
     const wrapper = mount(<Metric {...props} />)
-    expect(wrapper.find("StyledMetricDeltaText").prop("style").color).toBe(
+    expect(wrapper.find("StyledMetricDeltaText").prop("style")?.color).toBe(
       "#ff2b2b"
     )
   })

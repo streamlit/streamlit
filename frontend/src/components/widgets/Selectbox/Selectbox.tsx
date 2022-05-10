@@ -104,7 +104,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
-  public render = (): React.ReactNode => {
+  public render(): React.ReactNode {
     const { options, help, label, formId } = this.props.element
     const { disabled, widgetMgr } = this.props
 

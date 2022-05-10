@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A class that watches the file system"""
+"""A class that watches a given path via polling."""
 
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
-from typing import Callable
+from typing import Callable, Optional
 
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -31,8 +31,8 @@ _MAX_WORKERS = 4
 _POLLING_PERIOD_SECS = 0.2
 
 
-class PollingFileWatcher:
-    """Watches a single file on disk via a polling loop"""
+class PollingPathWatcher:
+    """Watches a path on disk via a polling loop."""
 
     _executor = ThreadPoolExecutor(max_workers=_MAX_WORKERS)
 
@@ -41,33 +41,41 @@ class PollingFileWatcher:
         """Close top-level watcher object.
 
         This is a no-op, and exists for interface parity with
-        EventBasedFileWatcher.
+        EventBasedPathWatcher.
         """
         LOGGER.debug("Watcher closed")
 
-    def __init__(self, file_path: str, on_file_changed: Callable[[str], None]):
+    def __init__(
+        self,
+        path: str,
+        on_changed: Callable[[str], None],
+        *,  # keyword-only arguments:
+        glob_pattern: Optional[str] = None,
+        allow_nonexistent: bool = False,
+    ) -> None:
         """Constructor.
 
-        You do not need to retain a reference to a PollingFileWatcher to
+        You do not need to retain a reference to a PollingPathWatcher to
         prevent it from being garbage collected. (The global _executor object
         retains references to all active instances.)
-
-        Arguments
-        ---------
-        file_path
-            Absolute path of the file to watch.
-
-        on_file_changed
-            Function to call when the file changes. This function should
-            take the changed file's path as a parameter.
-
         """
-        self._file_path = file_path
-        self._on_file_changed = on_file_changed
+        # TODO(vdonato): Modernize this by switching to pathlib.
+        self._path = path
+        self._on_changed = on_changed
+
+        self._glob_pattern = glob_pattern
+        self._allow_nonexistent = allow_nonexistent
 
         self._active = True
-        self._modification_time = os.stat(self._file_path).st_mtime
-        self._md5 = util.calc_md5_with_blocking_retries(self._file_path)
+
+        self._modification_time = util.path_modification_time(
+            self._path, self._allow_nonexistent
+        )
+        self._md5 = util.calc_md5_with_blocking_retries(
+            self._path,
+            glob_pattern=self._glob_pattern,
+            allow_nonexistent=self._allow_nonexistent,
+        )
         self._schedule()
 
     def __repr__(self) -> str:
@@ -76,31 +84,37 @@ class PollingFileWatcher:
     def _schedule(self) -> None:
         def task():
             time.sleep(_POLLING_PERIOD_SECS)
-            self._check_if_file_changed()
+            self._check_if_path_changed()
 
-        PollingFileWatcher._executor.submit(task)
+        PollingPathWatcher._executor.submit(task)
 
-    def _check_if_file_changed(self) -> None:
+    def _check_if_path_changed(self) -> None:
         if not self._active:
             # Don't call self._schedule()
             return
 
-        modification_time = os.stat(self._file_path).st_mtime
+        modification_time = util.path_modification_time(
+            self._path, self._allow_nonexistent
+        )
         if modification_time <= self._modification_time:
             self._schedule()
             return
 
         self._modification_time = modification_time
 
-        md5 = util.calc_md5_with_blocking_retries(self._file_path)
+        md5 = util.calc_md5_with_blocking_retries(
+            self._path,
+            glob_pattern=self._glob_pattern,
+            allow_nonexistent=self._allow_nonexistent,
+        )
         if md5 == self._md5:
             self._schedule()
             return
 
         self._md5 = md5
 
-        LOGGER.debug("Change detected: %s", self._file_path)
-        self._on_file_changed(self._file_path)
+        LOGGER.debug("Change detected: %s", self._path)
+        self._on_changed(self._path)
 
         self._schedule()
 

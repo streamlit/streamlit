@@ -140,7 +140,7 @@ export function withStreamlitConnection(
       this.setState({ renderData: renderEvent.detail });
     };
 
-    public render = (): ReactNode => {
+    public render(): ReactNode {
       // If our wrapped component threw an error, display it.
       if (this.state.componentError != null) {
         return (
@@ -164,7 +164,7 @@ export function withStreamlitConnection(
           theme={this.state.renderData.theme}
         />
       );
-    };
+    }
   }
 
   return hoistNonReactStatics(ComponentWrapper, WrappedComponent);

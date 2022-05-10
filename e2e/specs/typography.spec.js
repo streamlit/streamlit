@@ -20,6 +20,8 @@ describe("app typography", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
 
+    cy.prepForElementSnapshots();
+
     // Wait for 'data-stale' attr to go away, so the snapshot looks right.
     cy.get(".element-container")
       .should("have.attr", "data-stale", "false")

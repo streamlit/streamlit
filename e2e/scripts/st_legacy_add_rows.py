@@ -151,8 +151,3 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
             .interactive(),
             use_container_width=True,
         )
-
-# Test that _legacy_add_rows errors out when the dataframe dimensions don't
-# match. Should show an error.
-dataframe_el = st._legacy_dataframe(df1)
-dataframe_el._legacy_add_rows(np.abs(np.random.randn(num_rows, 6)))

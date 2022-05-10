@@ -27,7 +27,7 @@ import React, {
 import { StatefulMenu } from "baseui/menu"
 import { Menu } from "@emotion-icons/open-iconic"
 
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import Button, { Kind } from "src/components/shared/Button"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
@@ -45,7 +45,7 @@ import {
   IMenuItem,
 } from "src/hocs/withS4ACommunication/types"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
-
+import { MetricsManager } from "src/lib/MetricsManager"
 import {
   BUG_URL,
   COMMUNITY_URL,
@@ -210,7 +210,12 @@ function buildMenuItemComponent(
         ($disabled
           ? {}
           : {
-              onClick,
+              onClick: (e: MouseEvent<HTMLLIElement>) => {
+                MetricsManager.current.enqueue("menuClick", {
+                  label,
+                })
+                onClick(e)
+              },
               onMouseEnter,
             })
 
@@ -566,7 +571,7 @@ function MainMenu(props: Props): ReactElement {
       }}
     >
       <span id="MainMenu">
-        <Button kind={Kind.ICON}>
+        <Button kind={Kind.HEADER_BUTTON}>
           <Icon content={Menu} />
         </Button>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}

@@ -87,6 +87,7 @@ import { StyledElementContainer } from "./styled-components"
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
+const Snow = React.lazy(() => import("src/components/elements/Snow/"))
 const ArrowDataFrame = React.lazy(() =>
   import("src/components/elements/ArrowDataFrame/")
 )
@@ -536,6 +537,9 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "snow":
+      return <Snow scriptRunId={props.scriptRunId} />
+
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
       widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
@@ -592,7 +596,6 @@ const ElementNodeRenderer = (
   const isStale = isComponentStale(
     enable,
     node,
-    props.showStaleElementIndicator,
     props.scriptRunState,
     props.scriptRunId
   )

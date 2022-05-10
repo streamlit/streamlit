@@ -57,7 +57,6 @@ describe("HttpClient", () => {
 
     client.request("url", {})
 
-    expect(client.csrfEnabled).toBe(true)
     expect(spyRequest).toHaveBeenCalledWith({
       headers: { "X-Xsrftoken": "cookie" },
       withCredentials: true,
@@ -69,7 +68,6 @@ describe("HttpClient", () => {
     const client = new HttpClient(() => MOCK_SERVER_URI, false)
 
     client.request("url", {})
-    expect(client.csrfEnabled).toBe(false)
     expect(spyRequest).toHaveBeenCalledWith({
       url: buildHttpUri(MOCK_SERVER_URI, `url`),
     })

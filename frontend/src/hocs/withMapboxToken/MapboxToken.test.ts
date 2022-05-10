@@ -50,7 +50,7 @@ describe("MapboxToken", () => {
     axiosMock.restore()
     MapboxToken.token = undefined
     MapboxToken.commandLine = undefined
-    SessionInfo.singleton = undefined
+    SessionInfo.clearSession()
   })
 
   test("Returns cached token if defined", async () => {
@@ -102,7 +102,6 @@ describe("MapboxToken", () => {
   })
 
   xit("Errors if not localhost and missing token", async () => {
-    delete window.location
     window.location = { hostname: "https://streamlit.io" } as Location
     setSessionInfo("")
 

@@ -24,25 +24,19 @@ describe("st._legacy_add_rows", () => {
 
     cy.loadApp("http://localhost:3000/");
 
-    // Rerun the script because we want to test that JS-side coalescing works.
-    cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {
-      keyCode: 82, // "r"
-      which: 82, // "r"
-      force: true
-    });
+    cy.rerunScript();
 
     // Wait for 'data-stale' attr to go away, so the snapshot looks right.
     cy.get(".element-container")
       .should("have.attr", "data-stale", "false")
       .invoke("css", "opacity", "1");
 
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
   });
 
   beforeEach(() => {
     // Check that the app is fully loaded
-    return cy.get(".element-container").should("have.length", 26);
+    return cy.get(".element-container").should("have.length", 24);
   });
 
   it("works for all elements that support it", () => {
@@ -50,17 +44,11 @@ describe("st._legacy_add_rows", () => {
       "have.length",
       3
     );
-    cy.get(".element-container .stDataFrame").should("have.length", 4);
+    cy.get(".element-container .stDataFrame").should("have.length", 3);
     cy.get(".element-container [data-testid='stVegaLiteChart']").should(
       "have.length",
       18
     );
-  });
-
-  it("raises an exception when the shapes don't match", () => {
-    cy.get(".element-container .stException")
-      .should("have.length", 1)
-      .contains("Dataframes have incompatible shapes");
   });
 
   it("correctly adds rows to tables and dataframes", () => {
@@ -70,6 +58,6 @@ describe("st._legacy_add_rows", () => {
     );
     cy.get(
       ".element-container .stDataFrame [data-testid='StyledDataFrameColHeaderCell']"
-    ).should("have.length", 7);
+    ).should("have.length", 6);
   });
 });
