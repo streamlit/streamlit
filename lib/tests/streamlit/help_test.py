@@ -62,7 +62,13 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("audio", ds.name)
         self.assertEqual("streamlit", ds.module)
         self.assertEqual("<class 'method'>", ds.type)
-        self.assertEqual("(data, format='audio/wav', start_time=0)", ds.signature)
+        self.assertEqual(
+            "(data: Union[str, bytes, _io.BytesIO, io.RawIOBase, "
+            "_io.BufferedReader, ForwardRef('npt.NDArray[Any]'), NoneType], "
+            "format: str = 'audio/wav', start_time: int = 0) -> "
+            "'DeltaGenerator'",
+            ds.signature,
+        )
         self.assertTrue(ds.doc_string.startswith("Display an audio player"))
 
     def test_unwrapped_deltagenerator_func(self):
