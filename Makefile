@@ -179,10 +179,11 @@ package: mini-devel frontend install distribution
 
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
-# This can take many minutes to complete! (Dependency solving is slow.)
 conda-distribution:
-	rm -rfv lib/conda-recipe/dist
-	cd lib/conda-recipe ; mkdir dist ; conda build . --channel conda-forge --output-folder dist
+	rm -rf lib/conda-recipe/dist
+	mkdir lib/conda-recipe/dist
+	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
+	conda build lib/conda-recipe --channel conda-forge --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-hash
 # Get the sha256 hash of the conda distribution
