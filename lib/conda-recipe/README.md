@@ -5,7 +5,7 @@
 Install `conda` and `conda-build`:
 
 ```
-$ brew install conda
+$ brew install miniconda
 $ conda install conda-build
 ```
 
