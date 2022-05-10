@@ -31,7 +31,7 @@ def clean_text(text: Any) -> str:
     return textwrap.dedent(str(text)).strip()
 
 
-def last_index_for_melted_dataframes(data):
+def last_index_for_melted_dataframes(data: Any) -> Any:
     if type_util.is_dataframe_compatible(data):
         data = type_util.convert_anything_to_df(data)
 
@@ -55,7 +55,7 @@ def check_callback_rules(
         )
 
 
-_shown_default_value_warning = False
+_shown_default_value_warning: bool = False
 
 
 def check_session_state_rules(
