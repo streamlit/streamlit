@@ -17,7 +17,7 @@ $ conda install conda-build
 
 ```
 $ cd streamlit/lib/conda-recipe  # (this directory)
-$ conda build .    # build the streamlit recipe
+$ conda build .  # build the streamlit recipe
 ```
 
 3. If this is successful, you'll get a tar.bz2 conda file in your conda build directory. Run `conda build --output .` from this directory to find out where the output file ends up.

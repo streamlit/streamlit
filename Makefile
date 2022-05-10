@@ -178,15 +178,20 @@ distribution:
 package: mini-devel frontend install distribution
 
 .PHONY: conda-distribution
+# Create conda distribution files in lib/conda-recipe/dist
 conda-distribution:
 	rm -rfv lib/conda-recipe/dist
 	cd lib/conda-recipe ; mkdir dist ; conda build . --output-folder dist
+
+.PHONY: conda-package
+# Build lib and frontend, and then run 'conda-distribution'
+conda-package: mini-devel frontend install conda-distribution
 
 
 .PHONY: clean
 # Remove all generated files.
 clean:
-	cd lib; rm -rf build dist  .eggs *.egg-info
+	cd lib/conda-recipe ; rm -rf
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
@@ -201,6 +206,7 @@ clean:
 	rm -rf frontend/public/reports
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
+	rm -rfv lib/conda-recipe/dist
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and the frontend.
