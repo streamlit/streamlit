@@ -7,6 +7,7 @@ Install `conda` and `conda-build`:
 ```
 $ brew install miniconda
 $ conda install conda-build
+$ conda config --add channels conda-forge  # Make conda-forge available to conda
 ```
 
 ## Building
