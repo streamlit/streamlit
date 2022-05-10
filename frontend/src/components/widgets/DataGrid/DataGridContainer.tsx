@@ -88,20 +88,22 @@ export const ResizableContainer = styled.div<ResizableContainerProps>`
   overflow: auto;
   position: relative;
   resize: both;
+  display: inline-block;
   min-height: ${p => p.minHeight}px;
   max-height: ${p => p.maxHeight}px;
   min-width: ${p => p.minWidth}px;
   max-width: ${p => p.maxWidth}px;
-  width: ${p => p.width}px;
+  // width: ${p => p.width}px;
   height: ${p => p.height}px;
   border: 1px solid ${p => p.theme.colors.fadedText05};
 
   > :first-child {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    // position: absolute;
+    // left: 0;
+    // top: 0;
+    // width: 100%;
     height: 100%;
+    min-width: 100%;
   }
 
   & .dvn-scroller {
