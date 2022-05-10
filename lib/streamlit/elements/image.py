@@ -376,7 +376,7 @@ def marshall_images(
         if isinstance(caption, str):
             captions = [caption]
         # You can pass in a 1-D Numpy array as captions.
-        elif isinstance(caption, np.ndnarray) and len(caption.shape) == 1:
+        elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
             captions = caption.tolist()
         # If there are no captions then make the captions list the same size
         # as the images list.
