@@ -177,6 +177,11 @@ distribution:
 # Build lib and frontend, and then run 'distribution'.
 package: mini-devel frontend install distribution
 
+.PHONY: conda-distribution
+conda-distribution:
+	rm -rfv lib/conda-recipe/dist
+	cd lib/conda-recipe ; mkdir dist ; conda build . --output-folder dist
+
 
 .PHONY: clean
 # Remove all generated files.
