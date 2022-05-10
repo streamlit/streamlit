@@ -183,6 +183,14 @@ conda-distribution:
 	rm -rfv lib/conda-recipe/dist
 	cd lib/conda-recipe ; mkdir dist ; conda build . --output-folder dist
 
+.PHONY: conda-hash
+# Get the sha256 hash of the conda distribution
+conda-hash:
+	@# `conda build --output` will tell us where the output file lives.
+	@# `sha256sum` outputs hash + filename - we just print the hash here.
+	sha256sum $$(conda build lib/conda-recipe --output --output-folder lib/conda-recipe/dist) | cut -d " " -f 1
+
+
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
 conda-package: mini-devel frontend install conda-distribution
