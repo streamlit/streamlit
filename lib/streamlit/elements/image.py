@@ -365,7 +365,7 @@ def marshall_images(
     images: Sequence[AtomicImage]
     if isinstance(image, list):
         images = image
-    elif type(image) == np.ndarray and len(image.shape) == 4:
+    elif isinstance(image, np.ndarray) and len(image.shape) == 4:
         images = _4d_to_list_3d(image)
     else:
         images = [image]
@@ -376,7 +376,7 @@ def marshall_images(
         if isinstance(caption, str):
             captions = [caption]
         # You can pass in a 1-D Numpy array as captions.
-        elif type(caption) == np.ndarray and len(caption.shape) == 1:
+        elif isinstance(caption, np.ndnarray) and len(caption.shape) == 1:
             captions = caption.tolist()
         # If there are no captions then make the captions list the same size
         # as the images list.
