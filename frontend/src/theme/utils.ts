@@ -275,6 +275,7 @@ type DerivedColors = {
   bgMix: string
   darkenedBgMix60: string
   transparentDarkenedBgMix60: string
+  darkenedBgMix15: string
   lightenedBg05: string
 }
 
@@ -299,6 +300,7 @@ const computeDerivedColors = (
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix60 = hasLightBg ? darken(bgMix, 0.3) : lighten(bgMix, 0.6) // Icons.
   const transparentDarkenedBgMix60 = transparentize(darkenedBgMix60, 0.75)
+  const darkenedBgMix15 = transparentize(darkenedBgMix60, 0.85) // Hovered menu/nav items.
 
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
@@ -312,6 +314,7 @@ const computeDerivedColors = (
     bgMix,
     darkenedBgMix60,
     transparentDarkenedBgMix60,
+    darkenedBgMix15,
     lightenedBg05,
   }
 }
