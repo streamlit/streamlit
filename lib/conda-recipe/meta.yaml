@@ -1,0 +1,66 @@
+{% set name = "streamlit" %}
+{% set version = "1.9.0" %}
+
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ..
+
+build:
+  number: 0
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv
+  entry_points:
+    - streamlit = streamlit.cli:main
+
+requirements:
+  host:
+    - pip
+    - python >=3.8
+    - pipenv
+  run:
+    - altair >=3.2.0
+    - astor
+    - attrs
+    - base58
+    - blinker
+    - boto3
+    - botocore >=1.13.44
+    - cachetools >=4.0
+    - click >=7.0, <8.1
+    - gitpython
+    - importlib-metadata >=1.4
+    - numpy
+    - packaging
+    - pandas >=0.21.0
+    - pillow >=6.2.0
+    - protobuf >=3.6.0, !=3.11
+    - pyarrow
+    - pydeck >=0.1.dev5
+    - pympler >=0.9
+    - python >=3.6
+    - python-dateutil
+    - requests
+    - semver
+    - toml
+    - tornado >=5.0
+    - tzlocal
+    - validators
+    - watchdog
+
+test:
+  imports:
+    - streamlit
+  commands:
+    - pip check
+  requires:
+    - pip
+
+about:
+  home: https://streamlit.io
+  summary: The fastest way to build data apps in Python
+  license: Apache-2.0
+  license_file: LICENSE
