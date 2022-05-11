@@ -190,7 +190,8 @@ conda-distribution:
 conda-hash:
 	@# `conda build --output` will tell us where the output file lives.
 	@# `sha256sum` outputs hash + filename - we just print the hash here.
-	sha256sum $$(conda build lib/conda-recipe --output --output-folder lib/conda-recipe/dist) | cut -d " " -f 1
+	# (NB: on Mac, do `brew install coreutils` to get the `sha256sum` command.)
+	sha256sum lib/conda-recipe/dist/noarch/streamlit*.tar.bz2 | cut -d " " -f 1
 
 
 .PHONY: conda-package
