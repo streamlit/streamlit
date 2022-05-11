@@ -50,7 +50,7 @@ def _print_rich_exception(e: BaseException):
         tab_size=8,
     )
 
-    from streamlit import script_runner
+    import streamlit.scriptrunner.script_runner as script_runner
 
     # Print exception via rich
     console.print(
