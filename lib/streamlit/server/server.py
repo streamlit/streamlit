@@ -655,6 +655,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
     ) -> AppSession:
         return self._create_app_session(write_forward_msg)
 
+    def set_demo_app_session_forward_msg_handler_terrible_hack(
+        self, session: AppSession, write_forward_msg: Callable[[ForwardMsg], None]
+    ) -> None:
+        """This is a hack for the StreamlitDemo! Will Pugh is interested in
+        having a different ForwardMsg stream for each BackMsg. StreamlitDemo
+        calls this for every BackMsg it receives.
+        """
+        # TODO: never ever ever ship this code into production :)
+        self._session_info_by_id[session.id].write_forward_msg = write_forward_msg
+
     def _create_websocket_app_session(self, ws: WebSocketHandler) -> AppSession:
         """Register a connected browser with the server.
 
