@@ -83,7 +83,7 @@ describe("SidebarNav", () => {
   it("replaces underscores with spaces in pageName", () => {
     const wrapper = shallow(<SidebarNav {...getProps()} />)
 
-    const links = wrapper.find(StyledSidebarNavLink)
+    const links = wrapper.find(StyledSidebarNavLink).find("span")
 
     expect(links.at(0).text()).toBe("streamlit app")
     expect(links.at(1).text()).toBe("my other page")
@@ -211,7 +211,12 @@ describe("SidebarNav", () => {
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
-    expect(wrapper.find(Icon).exists()).toBe(false)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(Icon)
+        .exists()
+    ).toBe(false)
   })
 
   it("renders ExpandMore icon when not expanded and overflowing", () => {
@@ -220,7 +225,12 @@ describe("SidebarNav", () => {
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
 
-    expect(wrapper.find(Icon).props()).toHaveProperty("content", ExpandMore)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(Icon)
+        .props()
+    ).toHaveProperty("content", ExpandMore)
   })
 
   it("renders ExpandLess icon when expanded and not overflowing", () => {
@@ -235,7 +245,12 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
       mockClickEvent
     )
-    expect(wrapper.find(Icon).props()).toHaveProperty("content", ExpandLess)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(Icon)
+        .props()
+    ).toHaveProperty("content", ExpandLess)
   })
 
   it("renders ExpandLess icon when expanded and overflowing", () => {
@@ -249,7 +264,12 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
       mockClickEvent
     )
-    expect(wrapper.find(Icon).props()).toHaveProperty("content", ExpandLess)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(Icon)
+        .props()
+    ).toHaveProperty("content", ExpandLess)
   })
 
   it("changes cursor to pointer above separator when overflowing", () => {
@@ -271,7 +291,7 @@ describe("SidebarNav", () => {
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(false)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
     expect(wrapper.find("StyledSidebarNavItems")).toHaveStyleRule(
       "max-height",
       "33vh"
@@ -286,7 +306,7 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
       mockClickEvent
     )
-    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(false)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
   })
 
   it("toggles to expanded and back when the separator is clicked", () => {
@@ -304,7 +324,7 @@ describe("SidebarNav", () => {
     })
     wrapper.update()
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(true)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(true)
     expect(wrapper.find(StyledSidebarNavItems)).toHaveStyleRule(
       "max-height",
       "75vh"
@@ -317,7 +337,7 @@ describe("SidebarNav", () => {
     })
     wrapper.update()
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(false)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
     expect(wrapper.find(StyledSidebarNavItems)).toHaveStyleRule(
       "max-height",
       "33vh"
