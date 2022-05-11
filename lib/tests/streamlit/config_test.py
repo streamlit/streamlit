@@ -310,6 +310,7 @@ class ConfigTest(unittest.TestCase):
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
                 "global.dataFrameSerialization",
+                "logger.enableRich",
                 "logger.level",
                 "logger.messageFormat",
                 "runner.magicEnabled",
