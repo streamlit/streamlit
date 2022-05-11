@@ -298,7 +298,9 @@ const computeDerivedColors = (
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
+  // TODO(tvst): Rename to darkenedBgMix100 (number = opacity)
   const darkenedBgMix60 = hasLightBg ? darken(bgMix, 0.3) : lighten(bgMix, 0.6) // Icons.
+  // TODO(tvst): Rename to darkenedBgMix25 (number = opacity)
   const transparentDarkenedBgMix60 = transparentize(darkenedBgMix60, 0.75)
   const darkenedBgMix15 = transparentize(darkenedBgMix60, 0.85) // Hovered menu/nav items.
 
