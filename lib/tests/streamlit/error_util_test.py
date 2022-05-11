@@ -17,7 +17,7 @@ import io
 import unittest
 from unittest.mock import patch
 
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import handle_uncaught_app_exception, _print_rich_exception
 from tests import testutil
 
 
@@ -45,6 +45,19 @@ class ErrorUtilTest(unittest.TestCase):
 
             mock_st_error.assert_not_called()
             mock_st_exception.assert_called_once()
+
+    def test_handle_print_rich_exception(self):
+        """Test if the print rich exception method is working fine."""
+
+        with io.StringIO() as buf:
+            # Capture stdout logs (rich logs to stdout)
+            with contextlib.redirect_stdout(buf):
+                _print_rich_exception(Exception("boom!"))
+            # Capture the stdout output
+            captured_output = buf.getvalue()
+
+            assert "Exception:" in captured_output
+            assert "boom!" in captured_output
 
     def test_handle_uncaught_app_exception_with_rich(self):
         """Test if the exception is logged with rich enabled and disabled."""

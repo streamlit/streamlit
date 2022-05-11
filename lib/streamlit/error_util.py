@@ -93,7 +93,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
     if config.get_option("client.showErrorDetails"):
         if not error_logged:
             # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
-            LOGGER.warning(traceback.format_exc())
+            LOGGER.warning("Uncaught app exception", exc_info=e)
         st.exception(e)
     else:
         if not error_logged:
