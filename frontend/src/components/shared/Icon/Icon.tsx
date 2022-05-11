@@ -20,7 +20,7 @@ import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { IconSize, ThemeColor } from "src/theme"
 import { StyledIcon, StyledEmojiIcon } from "./styled-components"
 
-interface getDefaultPropsArgs {
+interface GetDefaultPropsArgs {
   size?: IconSize
   margin?: string
   padding?: string
@@ -36,7 +36,7 @@ const getDefaultProps = ({
   size,
   margin,
   padding,
-}: getDefaultPropsArgs): DefaultProps => ({
+}: GetDefaultPropsArgs): DefaultProps => ({
   size: size || "md",
   margin: margin || "",
   padding: padding || "",
