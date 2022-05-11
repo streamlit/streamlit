@@ -19,8 +19,9 @@ Snowflake/Streamlit hacky demo interface.
 """
 
 import threading
+import uuid
 from enum import Enum
-from typing import NamedTuple, List, Any, Dict
+from typing import NamedTuple, List, Any, Dict, Optional, Protocol
 
 import tornado
 import tornado.ioloop
@@ -44,33 +45,30 @@ class SnowflakeConfig(NamedTuple):
     script_path: str
 
 
-class SnowflakeSessionMessageQueue:
-    """A queue of ForwardMsgs for a single session.
-
-    When Streamlit has a ForwardMsg for a session, it will push it
-    to this queue.
-
-    (This is just an interface - Snowflake should create a concrete
-    implementation and pass it to Streamlit within SessionCtx.)
+class AsyncMessageContext(Protocol):
+    """Each async message-related SnowflakeDemo function takes a
+    concrete instance of this protocol.
     """
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Add a new ForwardMsg to the queue.
-        (Note that this will be called on the Streamlit server thread,
-        not the main thread!)
+        """Called to add a new ForwardMsg to the queue.
+
+        This will be called on the Streamlit server thread,
+        NOT the main thread.
         """
-        raise NotImplementedError
 
+    def on_complete(self, *, err: Optional[BaseException] = None) -> None:
+        """Called when the async message operation is complete.
+        `err` is None on success, and holds an Exception describing
+        the failure on failure.
 
-class SnowflakeSessionCtx(NamedTuple):
-    """Contains session-specific state. Create a new instance for
-    each session.
-    """
+        Note that this function does not signal that no more ForwardMsgs
+        will be delivered! ForwardMsgs can continue to arrive on this context
+        object until the next async operation is called.
 
-    # A concrete SnowflakeSessionMessageQueue instance.
-    # The Streamlit server will send all ForwardMsgs for the session
-    # to this object.
-    queue: SnowflakeSessionMessageQueue
+        This may be called on the Streamlit server thread OR on the main
+        thread.
+        """
 
 
 class _SnowflakeDemoState(Enum):
@@ -87,7 +85,7 @@ class SnowflakeDemo:
     def __init__(self, config: SnowflakeConfig):
         self._state = _SnowflakeDemoState.NOT_STARTED
         self._config = config
-        self._sessions: Dict[SnowflakeSessionCtx, AppSession] = {}
+        self._sessions: Dict[str, AppSession] = {}
 
         # Create, but don't start, our server and ioloop
         self._ioloop = tornado.ioloop.IOLoop(make_current=False)
@@ -95,7 +93,7 @@ class SnowflakeDemo:
 
     def start(self) -> None:
         """Start the Streamlit server. Must be called once, before
-        any other functions are called.
+        any other functions are called. Synchronous.
         """
 
         if self._state is not _SnowflakeDemoState.NOT_STARTED:
@@ -130,7 +128,7 @@ class SnowflakeDemo:
         LOGGER.info("Streamlit server started!")
 
     def stop(self) -> None:
-        """Stop the Streamlit server."""
+        """Stop the Streamlit server. Synchronous."""
         if self._state is not _SnowflakeDemoState.RUNNING:
             LOGGER.warning("Can't stop (bad state: %s)", self._state)
             return
@@ -178,66 +176,105 @@ class SnowflakeDemo:
 
         LOGGER.info("Streamlit thread exited normally")
 
-    def session_created(self, ctx: SnowflakeSessionCtx) -> None:
-        """Called when a new session starts. Streamlit will create
-        its own session machinery internally.
-        """
-        if self._state is not _SnowflakeDemoState.RUNNING:
-            LOGGER.warning("Can't register session (bad state: %s)", self._state)
-            return
+    def create_session(self, ctx: AsyncMessageContext) -> str:
+        """Create a new Streamlit session. Asynchronous.
 
-        LOGGER.info("Registering SnowflakeSessionCtx (%s)...", id(ctx))
+        Parameters
+        ----------
+        ctx: AsyncMessageContext
+            Context object for this async operation.
+
+        Returns
+        -------
+        str
+            The session's unique ID.
+
+        """
+
+        if self._state is not _SnowflakeDemoState.RUNNING:
+            ctx.on_complete(
+                err=RuntimeError(f"Can't register session (bad state: {self._state})")
+            )
+            return "invalid_session_id"
+
+        session_id = self._create_session_id()
+
+        LOGGER.info("Registering Snowflake session (id=%s)...", session_id)
 
         def session_created_handler() -> None:
-            if ctx in self._sessions:
-                LOGGER.warning(
-                    "SnowflakeSessionCtx already registered! Not re-registering (%s)",
-                    id(ctx),
-                )
+            try:
+                session = self._server.create_demo_app_session(ctx.write_forward_msg)
+                self._sessions[session_id] = session
+                LOGGER.info("Snowflake session registered! (id=%s)", session_id)
+            except BaseException as e:
+                ctx.on_complete(err=e)
                 return
 
-            session = self._server.create_demo_app_session(ctx.queue.write_forward_msg)
-            self._sessions[ctx] = session
-            LOGGER.info("SnowflakeSessionCtx registered! (%s)", id(ctx))
+            ctx.on_complete()
 
         self._ioloop.spawn_callback(session_created_handler)
 
-    def handle_backmsg(self, ctx: SnowflakeSessionCtx, msg: BackMsg) -> None:
-        """Called when a BackMsg arrives for a given session."""
+        return session_id
+
+    def handle_backmsg(
+        self, session_id: str, msg: BackMsg, ctx: AsyncMessageContext
+    ) -> None:
+        """Called when a BackMsg arrives for a given session. Asynchronous.
+
+        Parameters
+        ----------
+        session_id: str
+            The session_id returned from `create_session`.
+
+        msg: BackMsg
+            The BackMsg to be processed.
+
+        ctx: AsyncMessageContext:
+            Context object for this async operation.
+        """
         if self._state is not _SnowflakeDemoState.RUNNING:
-            LOGGER.warning("Can't handle BackMsg (bad state: %s)", self._state)
+            ctx.on_complete(
+                err=RuntimeError(f"Can't handle BackMsg (bad state: {self._state})")
+            )
             return
 
         def backmsg_handler() -> None:
-            session = self._sessions.get(ctx, None)
-            if session is None:
-                LOGGER.warning(
-                    "SnowflakeSessionCtx not registered! Ignoring BackMsg (%s)", id(ctx)
+            try:
+                session = self._sessions.get(session_id, None)
+                if session is None:
+                    raise RuntimeError(
+                        f"session_id not registered! Ignoring BackMsg (session_id={session_id})"
+                    )
+
+                self._server.set_demo_app_session_forward_msg_handler_terrible_hack(
+                    session, ctx.write_forward_msg
                 )
+                session.handle_backmsg(msg)
+            except BaseException as e:
+                ctx.on_complete(err=e)
                 return
 
-            self._sessions[ctx].handle_backmsg(msg)
+            ctx.on_complete()
 
         self._ioloop.spawn_callback(backmsg_handler)
 
-    def session_closed(self, ctx: SnowflakeSessionCtx) -> None:
+    def session_closed(self, session_id: str) -> None:
         """Called when a session has closed.
         Streamlit will dispose of internal session-related resources here.
         """
         if self._state is not _SnowflakeDemoState.RUNNING:
-            LOGGER.warning("Can't handle BackMsg (bad state: %s)", self._state)
-            return
+            raise RuntimeError(f"Can't handle BackMsg (bad state: {self._state})")
 
         def session_closed_handler() -> None:
-            session = self._sessions.get(ctx, None)
+            session = self._sessions.get(session_id, None)
             if session is None:
                 LOGGER.warning(
                     "SnowflakeSessionCtx not registered! Ignoring session_closed request (%s)",
-                    id(ctx),
+                    session_id,
                 )
                 return
 
-            del self._sessions[ctx]
+            del self._sessions[session_id]
             self._server._close_app_session(session.id)
 
         self._ioloop.spawn_callback(session_closed_handler)
@@ -249,3 +286,12 @@ class SnowflakeDemo:
     @property
     def _main_script_path(self):
         return self._config.script_path
+
+    @staticmethod
+    def _create_session_id() -> str:
+        """Create a UUID for a session."""
+        # This is a bit redundant. AppSessions already have a unique ID,
+        # which would work as well. But we don't have access to AppSession
+        # from the "create_session" thread, so we're creating this second
+        # ID instead. TODO: come up with a better solution!
+        return str(uuid.uuid4())
