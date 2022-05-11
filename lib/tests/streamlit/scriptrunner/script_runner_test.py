@@ -50,6 +50,7 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
+text_utf2 = "complete2! 👨‍🎤"
 text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 
@@ -73,6 +74,7 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
+@patch("streamlit.source_util._cached_pages", new=None)
 class ScriptRunnerTest(AsyncTestCase):
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
@@ -611,9 +613,11 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
-    def test_query_string_saved(self):
+    def test_query_string_and_page_name_saved(self):
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData(query_string="foo=bar"))
+        scriptrunner.request_rerun(
+            RerunData(query_string="foo=bar", page_name="good_script")
+        )
         scriptrunner.start()
         scriptrunner.join()
 
@@ -630,6 +634,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         shutdown_data = scriptrunner.event_data[-1]
         self.assertEqual(shutdown_data["client_state"].query_string, "foo=bar")
+        self.assertEqual(shutdown_data["client_state"].page_name, "good_script")
 
     def test_coalesce_rerun(self):
         """Tests that multiple pending rerun requests get coalesced."""
@@ -796,6 +801,77 @@ class ScriptRunnerTest(AsyncTestCase):
             [
                 "cached_depending_on_not_yet_defined called",
             ],
+        )
+
+    @patch(
+        "streamlit.source_util.get_pages",
+        MagicMock(
+            return_value={
+                "page2": {
+                    "script_path": os.path.join(
+                        os.path.dirname(__file__), "test_data", "good_script2.py"
+                    ),
+                },
+            },
+        ),
+    )
+    def test_page_name_to_script_path(self):
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData(page_name="page2"))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, [text_utf2])
+        self.assertEqual(
+            os.path.join(os.path.dirname(__file__), "test_data", "good_script2.py"),
+            sys.modules["__main__"].__file__,
+            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
+        )
+
+    @patch(
+        "streamlit.source_util.get_pages",
+        MagicMock(
+            return_value={
+                "page2": {"script_path": "script2"},
+            }
+        ),
+    )
+    def test_page_name_to_script_path_404(self):
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData(page_name="page3"))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,  # page not found message
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,  # deltas
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, [text_utf])
+
+        page_not_found_msg = scriptrunner.forward_msg_queue._queue[0].page_not_found
+        self.assertEqual(page_not_found_msg.page_name, "page3")
+
+        self.assertEqual(
+            scriptrunner._session_data.main_script_path,
+            sys.modules["__main__"].__file__,
+            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
     def _assert_no_exceptions(self, scriptrunner: "TestScriptRunner") -> None:

@@ -722,6 +722,21 @@ _create_option(
     visibility="hidden",
 )
 
+_create_option(
+    "ui.hideSidebarNav",
+    description="""
+    Flag to hide the sidebar page navigation component.
+
+    We have this default to True for now so that we can "soft-launch" the
+    multipage apps feature and merge the feature branch into develop earlier.
+    Once we're ready to have multipage apps enabled by default, we'll flip the
+    default to False.
+    """,
+    default_val=True,
+    type_=bool,
+    visibility="hidden",
+)
+
 
 # Config Section: Mapbox #
 

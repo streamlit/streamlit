@@ -31,6 +31,7 @@ from typing import (
     Awaitable,
     Generator,
     List,
+    Set,
 )
 
 import tornado.concurrent
@@ -46,6 +47,7 @@ from tornado.ioloop import IOLoop
 
 from streamlit import config
 from streamlit import file_util
+from streamlit import source_util
 from streamlit import util
 from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
 from streamlit.config_option import ConfigOption
@@ -414,7 +416,13 @@ class Server:
                     (
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
-                        {"path": "%s/" % static_path, "default_filename": "index.html"},
+                        {
+                            "path": "%s/" % static_path,
+                            "default_filename": "index.html",
+                            "get_pages": lambda: source_util.get_pages(
+                                self.main_script_path
+                            ),
+                        },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
                 ]

@@ -35,6 +35,7 @@ export interface S4ACommunicationHOC {
   connect: () => void
   sendMessage: (message: IGuestToHostMessage) => void
   onModalReset: () => void
+  onPageChanged: () => void
 }
 
 export const S4A_COMM_VERSION = 1
@@ -55,13 +56,18 @@ function withS4ACommunication(
   function ComponentWithS4ACommunication(props: any): ReactElement {
     // TODO(vdonato): Refactor this to use useReducer to make this less
     // unwieldy.
-    const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
-    const [queryParams, setQueryParams] = useState("")
     const [forcedModalClose, setForcedModalClose] = useState(false)
-    const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
+    const [hideSidebarNav, setHideSidebarNav] = useState(false)
     const [isOwner, setIsOwner] = useState(false)
-    const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
+    const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
+    const [pageLinkBaseUrl, setPageLinkBaseUrl] = useState("")
+    const [queryParams, setQueryParams] = useState("")
+    const [requestedPageName, setRequestedPageName] = useState<string | null>(
+      null
+    )
     const [sidebarChevronDownshift, setSidebarChevronDownshift] = useState(0)
+    const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
+    const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -88,6 +94,10 @@ function withS4ACommunication(
           setForcedModalClose(true)
         }
 
+        if (message.type === "REQUEST_PAGE_CHANGE") {
+          setRequestedPageName(message.pageName)
+        }
+
         if (message.type === "SET_IS_OWNER") {
           setIsOwner(message.isOwner)
         }
@@ -100,8 +110,16 @@ function withS4ACommunication(
           setStreamlitShareMetadata(message.metadata)
         }
 
+        if (message.type === "SET_PAGE_LINK_BASE_URL") {
+          setPageLinkBaseUrl(message.pageLinkBaseUrl)
+        }
+
         if (message.type === "SET_SIDEBAR_CHEVRON_DOWNSHIFT") {
           setSidebarChevronDownshift(message.sidebarChevronDownshift)
+        }
+
+        if (message.type === "SET_SIDEBAR_NAV_VISIBILITY") {
+          setHideSidebarNav(message.hidden)
         }
 
         if (message.type === "SET_TOOLBAR_ITEMS") {
@@ -130,9 +148,12 @@ function withS4ACommunication(
           {
             currentState: {
               forcedModalClose,
+              hideSidebarNav,
               isOwner,
               menuItems,
+              pageLinkBaseUrl,
               queryParams,
+              requestedPageName,
               sidebarChevronDownshift,
               streamlitShareMetadata,
               toolbarItems,
@@ -144,6 +165,9 @@ function withS4ACommunication(
             },
             onModalReset: () => {
               setForcedModalClose(false)
+            },
+            onPageChanged: () => {
+              setRequestedPageName(null)
             },
             sendMessage: sendS4AMessage,
           } as S4ACommunicationHOC

@@ -518,5 +518,16 @@ def experimental_rerun() -> NoReturn:
     """
 
     ctx = _get_script_run_ctx()
-    query_string = "" if ctx is None else ctx.query_string
-    raise _RerunException(_RerunData(query_string=query_string))
+
+    query_string = ""
+    page_name = ""
+    if ctx is not None:
+        query_string = ctx.query_string
+        page_name = ctx.page_name
+
+    raise _RerunException(
+        _RerunData(
+            query_string=query_string,
+            page_name=page_name,
+        )
+    )
