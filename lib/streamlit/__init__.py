@@ -190,7 +190,7 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
 # Config
 get_option = _config.get_option
-from streamlit.commands.page_config import set_page_config
+from streamlit.commands.page_config import set_page_config as set_page_config
 
 # Session State
 
