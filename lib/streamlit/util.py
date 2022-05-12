@@ -18,7 +18,7 @@ import functools
 import os
 import subprocess
 
-from typing import Any, Dict, List, TypeVar
+from typing import Any, Dict, List, Mapping, TypeVar
 from typing_extensions import Final
 
 from streamlit import env_util
@@ -130,10 +130,11 @@ def index_(iterable, x) -> int:
     raise ValueError("{} is not in iterable".format(str(x)))
 
 
+_Key = TypeVar("_Key", bound=str)
 _Value = TypeVar("_Value")
 
 
-def lower_clean_dict_keys(dict: Dict[str, _Value]) -> Dict[str, _Value]:
+def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> Dict[str, _Value]:
     return {k.lower().strip(): v for k, v in dict.items()}
 
 
