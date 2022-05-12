@@ -41,7 +41,7 @@ class SliderMixin:
         max_value=None,
         value=None,
         step=None,
-        format=None,
+        format: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,

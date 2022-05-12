@@ -16,8 +16,10 @@
  */
 
 import React from "react"
+
 import { PageConfig } from "src/autogen/proto"
 import { baseTheme, ThemeConfig } from "src/theme"
+import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 
 export interface Props {
   wideMode: boolean
@@ -33,6 +35,7 @@ export interface Props {
   availableThemes: ThemeConfig[]
   addThemes: (themes: ThemeConfig[]) => void
   sidebarChevronDownshift: number
+  getBaseUriParts: () => BaseUriParts | undefined
 }
 
 export default React.createContext<Props>({
@@ -49,4 +52,5 @@ export default React.createContext<Props>({
   availableThemes: [],
   addThemes: (themes: ThemeConfig[]) => {},
   sidebarChevronDownshift: 0,
+  getBaseUriParts: getWindowBaseUriParts,
 })

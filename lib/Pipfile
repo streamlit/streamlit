@@ -62,5 +62,5 @@ validators = "*"
 # Without watchdog, we fallback to a polling file watcher to check for app changes.
 watchdog = {version = "*", markers = "platform_system != 'Darwin'"}
 gitpython = "!=3.1.19"
-typing-extensions = { version = "*", markers = "python_version < '3.8'" }
+typing-extensions = "*"
 semver = "*"

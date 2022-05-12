@@ -15,6 +15,7 @@
 import os
 import signal
 import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
@@ -33,7 +34,8 @@ from streamlit.config import CONFIG_FILENAMES
 from streamlit.logger import get_logger
 from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.server.server import Server, server_address_is_unix_socket
-from streamlit.watcher import report_watchdog_availability, watch_file
+from streamlit.source_util import invalidate_pages_cache
+from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 
 LOGGER = get_logger(__name__)
 
@@ -326,6 +328,21 @@ def _install_config_watchers(flag_options: Dict[str, Any]) -> None:
             watch_file(filename, on_config_changed)
 
 
+def _install_pages_watcher(main_script_path_str: str) -> None:
+    def _on_pages_changed(_path: str) -> None:
+        invalidate_pages_cache()
+
+    main_script_path = Path(main_script_path_str)
+    pages_dir = main_script_path.parent / "pages"
+
+    watch_dir(
+        str(pages_dir),
+        _on_pages_changed,
+        glob_pattern="*.py",
+        allow_nonexistent=True,
+    )
+
+
 def run(
     main_script_path: str,
     command_line: Optional[str],
@@ -342,6 +359,7 @@ def run(
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()
     _install_config_watchers(flag_options)
+    _install_pages_watcher(main_script_path)
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads

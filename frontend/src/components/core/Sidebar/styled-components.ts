@@ -16,7 +16,7 @@
  */
 
 import styled from "@emotion/styled"
-
+import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
 export const StyledSidebar = styled.section(({ theme }) => ({
@@ -30,43 +30,143 @@ export const StyledSidebar = styled.section(({ theme }) => ({
     right: 0,
     bottom: 0,
   },
-
-  // Scrollbars can look ugly, so we try to style them to look better
-  [`::-webkit-scrollbar-thumb:vertical,
-  ::-webkit-scrollbar-thumb:horizontal,
-  ::-webkit-scrollbar-thumb:vertical:active,
-  ::-webkit-scrollbar-thumb:horizontal:active`]: {
-    background: theme.colors.transparent,
-  },
-
-  "&:hover": {
-    [`::-webkit-scrollbar-thumb:vertical,
-    ::-webkit-scrollbar-thumb:horizontal`]: {
-      background: "rgba(0, 0, 0, 0.5)",
-    },
-
-    [`::-webkit-scrollbar-thumb:vertical:active,
-    ::-webkit-scrollbar-thumb:horizontal:active`]: {
-      background: "rgba(0, 0, 0, 0.61)",
-      borderRadius: "100px",
-    },
-  },
 }))
+
+export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
+  position: "relative",
+}))
+
+export interface StyledSidebarNavItemsProps {
+  expanded: boolean
+  hasSidebarElements: boolean
+}
+
+export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
+  ({ expanded, hasSidebarElements, theme }) => {
+    const expandedMaxHeight = expanded ? "75vh" : "33vh"
+    const maxHeight = hasSidebarElements ? expandedMaxHeight : "100vh"
+
+    return {
+      maxHeight,
+      listStyle: "none",
+      overflow: ["auto", "overlay"],
+      margin: 0,
+      paddingTop: theme.sizes.headerHeight,
+      paddingBottom: theme.spacing.lg,
+
+      "&::before": {
+        content: '" "',
+        backgroundImage: `linear-gradient(0deg, transparent, ${theme.colors.bgColor})`,
+        width: "100%",
+        height: "2rem",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        pointerEvents: "none",
+      },
+
+      "&::after": {
+        content: '" "',
+        backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`,
+        height: "2rem",
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        pointerEvents: "none",
+      },
+    }
+  }
+)
+
+export interface StyledSidebarNavSeparatorContainerProps {
+  expanded: boolean
+  isOverflowing: boolean
+}
+
+const bounceAnimation = keyframes`
+  from, to {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-0.25rem);
+  }
+`
+
+export const StyledSidebarNavSeparatorContainer = styled.div<
+  StyledSidebarNavSeparatorContainerProps
+>(({ expanded, isOverflowing, theme }) => ({
+  cursor: expanded || isOverflowing ? "pointer" : "default",
+  position: "absolute",
+  height: theme.spacing.threeXL,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: theme.colors.fadedText60,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  transition: "color 500ms",
+
+  ...((expanded || isOverflowing) && {
+    "&:hover": {
+      color: theme.colors.bodyText,
+      background: `linear-gradient(0deg, ${theme.colors.transparentDarkenedBgMix60}, transparent)`,
+
+      "& > *": {
+        animation: `${bounceAnimation} 0.5s ease infinite`,
+      },
+    },
+  }),
+}))
+
+export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  // TODO(vdonato): styling
+  // * adjust bgcolor/fontWeight for the currently selected page
+  //   (dependent on some other work to be finished first)
+}))
+
+export const StyledSidebarNavLink = styled.a(({ theme }) => {
+  const defaultPageLinkStyles = {
+    textDecoration: "none",
+    color: theme.colors.bodyText,
+  }
+
+  return {
+    ...defaultPageLinkStyles,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+    lineHeight: theme.lineHeights.menuItem,
+
+    "&:hover": {
+      backgroundColor: theme.colors.transparentDarkenedBgMix60,
+    },
+
+    "&:active,&:visited,&:hover": {
+      ...defaultPageLinkStyles,
+    },
+  }
+})
 
 export interface StyledSidebarContentProps {
   isCollapsed: boolean
+  hideScrollbar: boolean
 }
 
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
-  ({ isCollapsed, theme }) => ({
+  ({ isCollapsed, hideScrollbar, theme }) => ({
     backgroundColor: theme.colors.bgColor,
     backgroundAttachment: "fixed",
     flexShrink: 0,
     // Nudge the sidebar by 2px so the header decoration doesn't go below it
     height: "calc(100vh - 2px)",
     top: "2px",
-    overflow: "auto",
-    padding: `6rem ${theme.spacing.lg}`,
+    overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
     position: "relative",
     transition: "margin-left 300ms, box-shadow 300ms",
     width: theme.sizes.sidebar,
@@ -83,38 +183,50 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
       }`,
       zIndex: theme.zIndices.sidebarMobile,
     },
-
-    "& h1": {
-      fontSize: theme.fontSizes.xl,
-      fontWeight: 600,
-    },
-
-    "& h2": {
-      fontSize: theme.fontSizes.lg,
-      fontWeight: 600,
-    },
-
-    "& h3": {
-      fontSize: theme.fontSizes.mdLg,
-      fontWeight: 600,
-    },
-
-    "& h4": {
-      fontSize: theme.fontSizes.md,
-      fontWeight: 600,
-    },
-
-    "& h5": {
-      fontSize: theme.fontSizes.sm,
-      fontWeight: 600,
-    },
-
-    "& h6": {
-      fontSize: theme.fontSizes.twoSm,
-      fontWeight: 600,
-    },
   })
 )
+
+export interface StyledSidebarUserContentProps {
+  hasPageNavAbove: boolean
+}
+
+export const StyledSidebarUserContent = styled.div<
+  StyledSidebarUserContentProps
+>(({ hasPageNavAbove, theme }) => ({
+  paddingTop: hasPageNavAbove ? theme.spacing.lg : "6rem",
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
+
+  "& h1": {
+    fontSize: theme.fontSizes.xl,
+    fontWeight: 600,
+  },
+
+  "& h2": {
+    fontSize: theme.fontSizes.lg,
+    fontWeight: 600,
+  },
+
+  "& h3": {
+    fontSize: theme.fontSizes.mdLg,
+    fontWeight: 600,
+  },
+
+  "& h4": {
+    fontSize: theme.fontSizes.md,
+    fontWeight: 600,
+  },
+
+  "& h5": {
+    fontSize: theme.fontSizes.sm,
+    fontWeight: 600,
+  },
+
+  "& h6": {
+    fontSize: theme.fontSizes.twoSm,
+    fontWeight: 600,
+  },
+}))
 
 export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
   position: "absolute",
@@ -143,7 +255,7 @@ export const StyledSidebarCollapsedControl = styled.div<
   transition: "left 300ms",
   transitionDelay: "left 300ms",
 
-  color: theme.colors.fadedText40,
+  color: theme.colors.bodyText,
 
   [`@media (max-width: ${theme.breakpoints.md})`]: {
     color: theme.colors.bodyText,
