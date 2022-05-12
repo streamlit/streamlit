@@ -467,11 +467,7 @@ class SliderMixin:
                     _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
                     for v in val
                 ]
-
-            range_value = isinstance(val, (list, tuple))
-            # return val[0] if not range_value else tuple(val)
-
-            return val[0] if not range_value else tuple(val)
+            return val[0] if single_value else tuple(val)
 
         def serialize_slider(v: Any) -> List[Any]:
             range_value = isinstance(v, (list, tuple))
