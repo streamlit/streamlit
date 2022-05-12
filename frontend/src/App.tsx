@@ -999,6 +999,7 @@ export class App extends PureComponent<Props, State> {
       pageName = document.location.pathname
         .replace(`/${basePath}`, "")
         .replace(new RegExp("^/?"), "")
+        .replace(new RegExp("/$"), "")
     } else {
       const { appHash, scriptRunId, scriptName } = this.state
       this.clearAppState(appHash as string, scriptRunId, scriptName)

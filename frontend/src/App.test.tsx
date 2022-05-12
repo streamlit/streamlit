@@ -915,8 +915,9 @@ describe("App.sendRerunBackMsg", () => {
     // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
-    // Set the value of document.location.pathname to '/page1'
-    window.history.pushState({}, "", "/page1")
+    // Set the value of document.location.pathname to '/page1/' (with leading
+    // and trailing slashes to test that they get stripped)
+    window.history.pushState({}, "", "/page1/")
 
     instance.sendRerunBackMsg()
 
