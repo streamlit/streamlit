@@ -30,7 +30,7 @@ from streamlit.state import (
     WidgetKwargs,
 )
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules, get_session_state
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class SliderMixin:
@@ -188,11 +188,7 @@ class SliderMixin:
 
         # Set value default.
         if value is None:
-            session_state = get_session_state().filtered_state
-            if key is not None and key in session_state:
-                value = session_state[key]
-            else:
-                value = min_value if min_value is not None else 0
+            value = min_value if min_value is not None else 0
 
         SUPPORTED_TYPES = {
             int: SliderProto.INT,
