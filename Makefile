@@ -193,10 +193,9 @@ conda-hash:
 	# (NB: on Mac, do `brew install coreutils` to get the `sha256sum` command.)
 	sha256sum lib/conda-recipe/dist/noarch/streamlit*.tar.bz2 | cut -d " " -f 1
 
-
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: mini-devel frontend install conda-distribution
+conda-package: mini-devel frontend install conda-distribution conda-hash
 
 
 .PHONY: clean
