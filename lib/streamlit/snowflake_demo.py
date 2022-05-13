@@ -27,8 +27,8 @@ import tornado
 import tornado.ioloop
 
 import streamlit
+import streamlit.config
 import streamlit.bootstrap as bootstrap
-from streamlit import config
 from streamlit.app_session import AppSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -102,7 +102,7 @@ class SnowflakeDemo:
 
         # Force ForwardMsg caching off (we need the cache endpoint to exist
         # for this to work)
-        config.set_option("global.maxCachedMessageAge", -1)
+        streamlit.config.set_option("global.maxCachedMessageAge", -1)
 
         # Set a global flag indicating that we're "within" streamlit.
         streamlit._is_running_with_streamlit = True
