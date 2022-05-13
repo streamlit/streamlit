@@ -88,8 +88,8 @@ class SnowflakeDemo:
         self._sessions: Dict[str, AppSession] = {}
 
         # Create, but don't start, our server and ioloop
-        self._ioloop = tornado.ioloop.IOLoop(make_current=False)
-        self._server = Server(self._ioloop, self._main_script_path, self._command_line)
+        self._ioloop: Optional[tornado.ioloop.IOLoop] = None
+        self._server: Optional[Server] = None
 
     def start(self) -> None:
         """Start the Streamlit server. Must be called once, before
@@ -134,9 +134,9 @@ class SnowflakeDemo:
             return
 
         def stop_handler() -> None:
-            self._server.stop(from_signal=False)
+            self._require_server().stop(from_signal=False)
 
-        self._ioloop.add_callback(stop_handler)
+        self._require_ioloop().add_callback(stop_handler)
         self._state = _SnowflakeDemoState.STOPPED
 
     def _run_streamlit_thread(self, on_started: threading.Event) -> None:
@@ -145,6 +145,9 @@ class SnowflakeDemo:
 
         `on_started` will be set when the Server is up and running.
         """
+
+        self._ioloop = tornado.ioloop.IOLoop(make_current=True)
+        self._server = Server(self._ioloop, self._main_script_path, self._command_line)
 
         # This function is basically a copy-paste of bootstrap.run
 
@@ -203,7 +206,9 @@ class SnowflakeDemo:
 
         def session_created_handler() -> None:
             try:
-                session = self._server.create_demo_app_session(ctx.write_forward_msg)
+                session = self._require_server().create_demo_app_session(
+                    ctx.write_forward_msg
+                )
                 self._sessions[session_id] = session
                 LOGGER.info("Snowflake session registered! (id=%s)", session_id)
             except BaseException as e:
@@ -212,7 +217,7 @@ class SnowflakeDemo:
 
             ctx.on_complete()
 
-        self._ioloop.spawn_callback(session_created_handler)
+        self._require_ioloop().spawn_callback(session_created_handler)
 
         return session_id
 
@@ -246,7 +251,7 @@ class SnowflakeDemo:
                         f"session_id not registered! Ignoring BackMsg (session_id={session_id})"
                     )
 
-                self._server.set_demo_app_session_forward_msg_handler_terrible_hack(
+                self._require_server().set_demo_app_session_forward_msg_handler_terrible_hack(
                     session, ctx.write_forward_msg
                 )
                 session.handle_backmsg(msg)
@@ -256,7 +261,7 @@ class SnowflakeDemo:
 
             ctx.on_complete()
 
-        self._ioloop.spawn_callback(backmsg_handler)
+        self._require_ioloop().spawn_callback(backmsg_handler)
 
     def session_closed(self, session_id: str) -> None:
         """Called when a session has closed.
@@ -275,9 +280,9 @@ class SnowflakeDemo:
                 return
 
             del self._sessions[session_id]
-            self._server._close_app_session(session.id)
+            self._require_server()._close_app_session(session.id)
 
-        self._ioloop.spawn_callback(session_closed_handler)
+        self._require_ioloop().spawn_callback(session_closed_handler)
 
     @property
     def _command_line(self):
@@ -295,3 +300,11 @@ class SnowflakeDemo:
         # from the "create_session" thread, so we're creating this second
         # ID instead. TODO: come up with a better solution!
         return str(uuid.uuid4())
+
+    def _require_server(self) -> Server:
+        assert self._server is not None
+        return self._server
+
+    def _require_ioloop(self) -> tornado.ioloop.IOLoop:
+        assert self._ioloop is not None
+        return self._ioloop
