@@ -172,7 +172,7 @@ class CliTest(unittest.TestCase):
         mock_context = MagicMock()
         mock_context.parent.command_path = "streamlit"
         with patch("click.get_current_context", return_value=mock_context):
-            with patch("click.get_os_args", return_value=["os_arg1", "os_arg2"]):
+            with patch.object(sys, "argv", ["", "os_arg1", "os_arg2"]):
                 result = cli._get_command_line_as_string()
                 self.assertEqual("streamlit os_arg1 os_arg2", result)
 
