@@ -64,3 +64,4 @@ watchdog = {version = "*", markers = "platform_system != 'Darwin'"}
 gitpython = "!=3.1.19"
 typing-extensions = "*"
 semver = "*"
+rich = "*"
