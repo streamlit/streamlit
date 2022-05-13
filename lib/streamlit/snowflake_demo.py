@@ -57,7 +57,7 @@ class AsyncMessageContext(Protocol):
         NOT the main thread.
         """
 
-    def on_complete(self, *, err: Optional[BaseException] = None) -> None:
+    def on_complete(self, err: Optional[BaseException] = None) -> None:
         """Called when the async message operation is complete.
         `err` is None on success, and holds an Exception describing
         the failure on failure.

@@ -19,7 +19,7 @@ class ExampleMessageContext:
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         print(f"Got ForwardMsg: {msg.WhichOneof('type')} (id={self._id})")
 
-    def on_complete(self, *, err: Optional[BaseException] = None) -> None:
+    def on_complete(self, err: Optional[BaseException] = None) -> None:
         if err is None:
             print(f"Async operation complete! (id={self._id})")
         else:
