@@ -80,7 +80,7 @@ class JsonMixin:
         json_proto = JsonProto()
         json_proto.body = body
         json_proto.expanded = expanded
-        return cast("DeltaGenerator", self.dg._enqueue("json", json_proto))
+        return self.dg._enqueue("json", json_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

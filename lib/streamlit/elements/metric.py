@@ -116,7 +116,7 @@ class MetricMixin:
         metric_proto.color = color_and_direction.color
         metric_proto.direction = color_and_direction.direction
 
-        return cast("DeltaGenerator", self.dg._enqueue("metric", metric_proto))
+        return self.dg._enqueue("metric", metric_proto)
 
     @staticmethod
     def parse_label(label: str) -> str:
