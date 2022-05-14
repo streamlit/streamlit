@@ -17,7 +17,11 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { matchers } from "@emotion/jest"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import {
+  ExpandMore,
+  ExpandLess,
+  Description,
+} from "@emotion-icons/material-outlined"
 import React from "react"
 import { act } from "react-dom/test-utils"
 
@@ -394,5 +398,56 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavItems).simulate("mouseOver")
 
     expect(props.hideParentScrollbar).toHaveBeenCalledWith(true)
+  })
+
+  it("handles default and custom page icons", () => {
+    const props = getProps({
+      appPages: [
+        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+        {
+          pageName: "my_other_page",
+          scriptPath: "my_other_page.py",
+          icon: "🦈",
+        },
+      ],
+    })
+
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(0)
+        .find("Icon")
+        .prop("content")
+    ).toBe(Description)
+
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(1)
+        .find("EmojiIcon")
+        .dive()
+        .text()
+    ).toBe("🦈")
+  })
+
+  it("indicates the current page as active", () => {
+    const props = getProps({ currentPageName: "my_other_page" })
+
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(0)
+        .prop("isActive")
+    ).toBe(false)
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(1)
+        .prop("isActive")
+    ).toBe(true)
   })
 })
