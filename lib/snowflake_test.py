@@ -38,7 +38,10 @@ demo = SnowflakeDemo(config)
 demo.start()
 
 # Add a session
-session_id = demo.create_session(ExampleMessageContext(id="new_session"))
+session_id = demo.create_session(
+    ctx=ExampleMessageContext(id="new_session"),
+    snowpark_session=None,
+)
 
 # Send a BackMsg (these will arrive from the frontend - you shouldn't
 # need to construct them manually, just pass them on to the appropriate

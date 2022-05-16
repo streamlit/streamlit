@@ -22,6 +22,8 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.ioloop
 
+from snowflake.snowpark import Session as SnowparkSession  # type: ignore
+
 import streamlit.elements.exception as exception_utils
 from streamlit import __version__, caching, config, legacy_caching, secrets
 from streamlit.case_converters import to_snake_case
@@ -76,6 +78,7 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
+        snowpark_session: Optional[SnowparkSession],
     ):
         """Initialize the AppSession.
 
@@ -104,6 +107,7 @@ class AppSession:
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
+        self._snowpark_session = snowpark_session
 
         self._state = AppSessionState.APP_NOT_RUNNING
 
@@ -296,6 +300,7 @@ class AppSession:
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             initial_rerun_data=initial_rerun_data,
+            snowpark_session=self._snowpark_session,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

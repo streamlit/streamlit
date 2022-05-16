@@ -22,6 +22,8 @@ from typing import Optional, Callable
 
 from blinker import Signal
 
+from snowflake.snowpark import Session as SnowparkSession  # type: ignore
+
 from streamlit import config
 from streamlit import magic
 from streamlit import source_util
@@ -98,6 +100,7 @@ class ScriptRunner:
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         initial_rerun_data: RerunData,
+        snowpark_session: Optional[SnowparkSession],
     ):
         """Initialize the ScriptRunner.
 
@@ -121,6 +124,7 @@ class ScriptRunner:
         self._session_id = session_id
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._snowpark_session = snowpark_session
 
         # Initialize SessionState with the latest widget states
         session_state.set_widgets_from_proto(client_state.widget_states)
@@ -266,6 +270,7 @@ class ScriptRunner:
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            snowpark_session=self._snowpark_session,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 

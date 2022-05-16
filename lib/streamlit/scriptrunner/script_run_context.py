@@ -17,6 +17,8 @@ from typing import Dict, Optional, List, Callable, Set
 
 import attr
 
+from snowflake.snowpark import Session as SnowparkSession  # type: ignore
+
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -44,6 +46,7 @@ class ScriptRunContext:
     query_string: str
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
+    snowpark_session: Optional[SnowparkSession]
 
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
