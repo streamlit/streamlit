@@ -3,6 +3,10 @@ from typing import Mapping, Dict, Optional, Iterator
 
 
 class UserInfoProxy(Mapping[str, Optional[str]]):
+    """
+    A dict like proxy object for accessing information about current user.
+    """
+
     def __getitem__(self, key):
         ctx = _get_script_run_ctx()
         if ctx is not None:
