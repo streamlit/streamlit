@@ -525,7 +525,7 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
     },
     header: {
       labelColor: colors.bodyText,
-    }
+    },
   }
 
   if (!config) {
