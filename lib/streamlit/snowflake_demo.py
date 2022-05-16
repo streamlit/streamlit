@@ -18,6 +18,7 @@ Snowflake/Streamlit hacky demo interface.
 (Please don't release this into production :))
 """
 
+import json
 import threading
 import uuid
 from enum import Enum
@@ -25,16 +26,16 @@ from typing import NamedTuple, List, Any, Dict, Optional, Protocol
 
 import tornado
 import tornado.ioloop
-
 from snowflake.snowpark import Session as SnowparkSession  # type: ignore
 
 import streamlit
-import streamlit.config
 import streamlit.bootstrap as bootstrap
+import streamlit.config
 from streamlit.app_session import AppSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.server.server import Server
 
 LOGGER = get_logger(__name__)
@@ -83,6 +84,40 @@ class SnowflakeDemo:
     """The interface for Snowflake to create, and communicate with,
     a Streamlit server.
     """
+
+    @staticmethod
+    def get_snowpark_session() -> Optional[SnowparkSession]:
+        """Get the SnowparkSession associated with the active Streamlit
+        session, if it exists.
+
+        Raises an error if there's no active Streamlit session.
+        """
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            raise RuntimeError("No active Streamlit session!")
+
+        return ctx.snowpark_session
+
+    @staticmethod
+    def get_or_create_snowpark_session() -> SnowparkSession:
+        """Get the SnowparkSession associated with the active Streamlit
+        session, if it exists.
+
+        If the Streamlit session does not have a SnowparkSession,
+        create one by opening a `connection.json` file. (This file must
+        exist.)
+
+        Raises an error if there's no active Streamlit session, or if
+        there is an issue opening `connection.json` or otherwise
+        creating a new SnowparkSession.
+        """
+        snowpark_session = SnowflakeDemo.get_snowpark_session()
+        if snowpark_session is not None:
+            return snowpark_session
+
+        return SnowparkSession.builder.configs(
+            json.load(open("connection.json"))
+        ).create()
 
     def __init__(self, config: SnowflakeConfig):
         self._state = _SnowflakeDemoState.NOT_STARTED
