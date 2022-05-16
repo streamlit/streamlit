@@ -472,7 +472,7 @@ function dataIsAnAppendOfPrev(
     return false
   }
 
-  if (prevNumRows > numRows) {
+  if (prevNumRows >= numRows) {
     return false
   }
 
