@@ -43,5 +43,5 @@ export const CLOUD_COMM_WHITELIST = [
   "*.demo.streamlit.run",
   "*.head.streamlit.run",
   "*.staging.streamlit.run",
-  "*.streamlit.test",
+  "*.streamlitapp.test",
 ]
