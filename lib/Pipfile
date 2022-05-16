@@ -48,7 +48,7 @@ pandas = ">=0.21.0"
 pillow = ">=6.2.0"
 # protobuf version 3.11 is incompatible, see https://github.com/streamlit/streamlit/issues/2234
 protobuf = ">=3.6.0, !=3.11"
-pyarrow = "*"
+pyarrow = ">=6.0.0, <6.1.0"
 pydeck = ">=0.1.dev5"
 pympler = ">=0.9"
 python-dateutil = "*"
