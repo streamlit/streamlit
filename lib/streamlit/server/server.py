@@ -45,6 +45,8 @@ from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
+from snowflake.snowpark import Session as SnowparkSession  # type: ignore
+
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
@@ -459,6 +461,7 @@ class Server:
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=local_sources_watcher,
+            snowpark_session=None,
         )
 
         try:
@@ -651,9 +654,11 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         self._ioloop.stop()
 
     def create_demo_app_session(
-        self, write_forward_msg: Callable[[ForwardMsg], None]
+        self,
+        write_forward_msg: Callable[[ForwardMsg], None],
+        snowpark_session: Optional[SnowparkSession],
     ) -> AppSession:
-        return self._create_app_session(write_forward_msg)
+        return self._create_app_session(write_forward_msg, snowpark_session)
 
     def set_demo_app_session_forward_msg_handler_terrible_hack(
         self, session: AppSession, write_forward_msg: Callable[[ForwardMsg], None]
@@ -692,7 +697,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         return session
 
     def _create_app_session(
-        self, write_forward_msg: Callable[[ForwardMsg], None]
+        self,
+        write_forward_msg: Callable[[ForwardMsg], None],
+        snowpark_session: Optional[SnowparkSession] = None,
     ) -> AppSession:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
@@ -702,6 +709,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=local_sources_watcher,
+            snowpark_session=snowpark_session,
         )
 
         assert (

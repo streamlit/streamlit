@@ -26,6 +26,8 @@ from typing import NamedTuple, List, Any, Dict, Optional, Protocol
 import tornado
 import tornado.ioloop
 
+from snowflake.snowpark import Session as SnowparkSession  # type: ignore
+
 import streamlit
 import streamlit.config
 import streamlit.bootstrap as bootstrap
@@ -179,13 +181,19 @@ class SnowflakeDemo:
 
         LOGGER.info("Streamlit thread exited normally")
 
-    def create_session(self, ctx: AsyncMessageContext) -> str:
+    def create_session(
+        self, ctx: AsyncMessageContext, snowpark_session: Optional[SnowparkSession]
+    ) -> str:
         """Create a new Streamlit session. Asynchronous.
 
         Parameters
         ----------
         ctx: AsyncMessageContext
             Context object for this async operation.
+
+        snowpark_session: snowflake.snowpark.Session
+            The optional Snowpark session object associated
+            with this Streamlit session.
 
         Returns
         -------
@@ -207,7 +215,7 @@ class SnowflakeDemo:
         def session_created_handler() -> None:
             try:
                 session = self._require_server().create_demo_app_session(
-                    ctx.write_forward_msg
+                    ctx.write_forward_msg, snowpark_session
                 )
                 self._sessions[session_id] = session
                 LOGGER.info("Snowflake session registered! (id=%s)", session_id)
