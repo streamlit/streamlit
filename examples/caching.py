@@ -28,7 +28,7 @@ def check_if_cached():
 
 @st.cache
 def my_func(arg1, arg2=None, *args, **kwargs):
-    return random.randint(0, 2 ** 32)
+    return random.randint(0, 2**32)
 
 
 check_if_cached()
@@ -87,7 +87,7 @@ else:
     # config option from when it was declared.
     @st.cache
     def my_func(arg1, arg2=None, *args, **kwargs):
-        return random.randint(0, 2 ** 32)
+        return random.randint(0, 2**32)
 
     u = my_func(1, 2, dont_care=10)
     v = my_func(1, 2, dont_care=10)
