@@ -386,7 +386,7 @@ class TimeWidgetsMixin:
         label: str,
         value: DateValue = None,
         min_value: SingleDateValue = None,
-        max_value: SIngleDateValue = None,
+        max_value: SingleDateValue = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
