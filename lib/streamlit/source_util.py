@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import TextIO
 
-def open_python_file(filename):
+
+def open_python_file(filename: str) -> TextIO:
     """Open a read-only Python file taking proper care of its encoding.
 
     In Python 3, we would like all files to be opened with utf-8 encoding.

@@ -19,10 +19,11 @@ Snowflake/Streamlit hacky demo interface.
 """
 
 import json
+import os.path
 import threading
 import uuid
 from enum import Enum
-from typing import NamedTuple, List, Any, Dict, Optional, Protocol
+from typing import NamedTuple, List, Any, Dict, Optional, Protocol, cast
 
 import tornado
 import tornado.ioloop
@@ -39,6 +40,8 @@ from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.server.server import Server
 
 LOGGER = get_logger(__name__)
+
+TEMP_DIRECTORY = "/tmp"  # a directory we can write to in a storedproc.
 
 
 class SnowflakeConfig(NamedTuple):
@@ -137,8 +140,15 @@ class SnowflakeDemo:
                 "Invalid SnowflakeConfig! Either `script_path` or `script_string` must be set, but not both"
             )
 
+        if config.script_path is not None:
+            self._script_path = config.script_path
+        else:
+            self._script_path = SnowflakeDemo._write_script_string_to_tmp_file(
+                cast(str, config.script_string)
+            )
+            LOGGER.info("config.script_string written to: %s", self._script_path)
+
         self._state = _SnowflakeDemoState.NOT_STARTED
-        self._config = config
         self._sessions: Dict[str, AppSession] = {}
 
         # Create, but don't start, our server and ioloop
@@ -350,9 +360,7 @@ class SnowflakeDemo:
 
     @property
     def _main_script_path(self) -> str:
-        if self._config.script_path is not None:
-            return self._config.script_path
-        return "dummy_script_path"
+        return self._script_path
 
     @staticmethod
     def _create_session_id() -> str:
@@ -370,3 +378,14 @@ class SnowflakeDemo:
     def _require_ioloop(self) -> tornado.ioloop.IOLoop:
         assert self._ioloop is not None
         return self._ioloop
+
+    @staticmethod
+    def _write_script_string_to_tmp_file(script_string: str) -> str:
+        """Write a python string to a file in /tmp.
+        Return the file's path.
+        """
+        filename = f"streamlit_script_{uuid.uuid4()}.py"
+        filepath = os.path.join(TEMP_DIRECTORY, filename)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(script_string)
+        return filepath

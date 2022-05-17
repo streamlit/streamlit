@@ -6,6 +6,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.snowflake_demo import SnowflakeConfig, SnowflakeDemo
 
 SCRIPT_PATH = "snowflake_test_script.py"
+SCRIPT_STRING = open(SCRIPT_PATH).read()
 
 
 class ExampleMessageContext:
@@ -33,7 +34,7 @@ def create_rerun_msg() -> BackMsg:
 
 
 # Start Streamlit
-config = SnowflakeConfig(script_path=SCRIPT_PATH)
+config = SnowflakeConfig(script_string=SCRIPT_STRING)
 demo = SnowflakeDemo(config)
 demo.start()
 
