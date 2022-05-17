@@ -20,10 +20,9 @@ Snowflake/Streamlit hacky demo interface.
 
 import json
 import threading
-import tokenize
 import uuid
 from enum import Enum
-from typing import NamedTuple, List, Any, Dict, Optional, Protocol, TextIO
+from typing import NamedTuple, List, Any, Dict, Optional, Protocol
 
 import tornado
 import tornado.ioloop
@@ -32,7 +31,6 @@ from snowflake.snowpark import Session as SnowparkSession  # type: ignore
 import streamlit
 import streamlit.bootstrap as bootstrap
 import streamlit.config
-from streamlit import source_util
 from streamlit.app_session import AppSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -88,16 +86,6 @@ class SnowflakeDemo:
     """
 
     @staticmethod
-    def _open_python_file(filename: str) -> TextIO:
-        try:
-            import _snowflake
-            return _snowflake.open(filename)
-        except BaseException:
-            LOGGER.exception("Could not call _snowflake.open; falling back to default")
-            return tokenize.open(filename)
-
-
-    @staticmethod
     def get_snowpark_session() -> Optional[SnowparkSession]:
         """Get the SnowparkSession associated with the active Streamlit
         session, if it exists.
@@ -148,9 +136,6 @@ class SnowflakeDemo:
         if self._state is not _SnowflakeDemoState.NOT_STARTED:
             LOGGER.warning("`start()` may not be called multiple times")
             return
-
-        # Install our custom "open Python file" function
-        source_util.set_open_python_file_function_hack(SnowflakeDemo._open_python_file)
 
         # Force ForwardMsg caching off (we need the cache endpoint to exist
         # for this to work)
