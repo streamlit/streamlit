@@ -745,7 +745,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
     // Nested arrays and objects.
     if (typeName === "object" || typeName?.startsWith("list")) {
-      return JSON.stringify(x)
+      return JSON.stringify(x, (_key, value) =>
+        typeof value === "bigint" ? Number(value) : value
+      )
     }
 
     if (typeName === "float64" && Number.isFinite(x)) {

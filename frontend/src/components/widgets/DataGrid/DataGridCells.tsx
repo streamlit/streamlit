@@ -159,11 +159,8 @@ export function getCellTemplate(
 /**
  * Returns the sort mode based on the given column type.
  */
-export function getColumnSortMode(columnType: string): string {
-  if (
-    columnType === GridCellKind.Number ||
-    columnType === GridCellKind.RowID
-  ) {
+export function getColumnSortMode(columnType: ColumnType): string {
+  if (columnType === ColumnType.Number) {
     // Smart mode also works correctly for numbers
     return "smart"
   }
@@ -269,7 +266,11 @@ export function fillCellTemplate(
       ...cellTemplate,
       data:
         quiverCell.content !== undefined && quiverCell.content !== null
-          ? JSON.parse(JSON.stringify(quiverCell.content))
+          ? JSON.parse(
+              JSON.stringify(quiverCell.content, (_key, value) =>
+                typeof value === "bigint" ? Number(value) : value
+              )
+            )
           : [],
     } as BubbleCell
   }
