@@ -18,7 +18,7 @@
 import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import { logMessage } from "src/lib/log"
-import { get, merge } from "lodash"
+import { merge } from "lodash"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { ensureError } from "src/lib/ErrorHandling"
 import { IndexTypeName, Quiver } from "src/lib/Quiver"
@@ -480,16 +480,14 @@ function dataIsAnAppendOfPrev(
     return false
   }
 
-  const df0 = prevData.data
-  const df1 = data.data
   const c = numCols - 1
   const r = prevNumRows - 1
 
   // Check if the new dataframe looks like it's a superset of the old one.
   // (this is a very light check, and not guaranteed to be right!)
   if (
-    get(df0, [c, 0]) !== get(df1, [c, 0]) ||
-    get(df0, [c, r]) !== get(df1, [c, r])
+    prevData.getDataValue(0, c) !== data.getDataValue(0, c) ||
+    prevData.getDataValue(r, c) !== data.getDataValue(r, c)
   ) {
     return false
   }
