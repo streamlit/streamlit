@@ -142,7 +142,7 @@ const SidebarNav = ({
                       <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
                     ) : (
                       <Icon
-                        color="darkenedBgMix60"
+                        color="darkenedBgMix100"
                         content={Description}
                         size="lg"
                       />

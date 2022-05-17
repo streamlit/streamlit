@@ -273,7 +273,7 @@ type DerivedColors = {
   fadedText60: string
 
   bgMix: string
-  darkenedBgMix60: string
+  darkenedBgMix100: string
   transparentDarkenedBgMix60: string
   darkenedBgMix15: string
   lightenedBg05: string
@@ -298,11 +298,12 @@ const computeDerivedColors = (
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
-  // TODO(tvst): Rename to darkenedBgMix100 (number = opacity)
-  const darkenedBgMix60 = hasLightBg ? darken(bgMix, 0.3) : lighten(bgMix, 0.6) // Icons.
+  const darkenedBgMix100 = hasLightBg
+    ? darken(bgMix, 0.3)
+    : lighten(bgMix, 0.6) // Icons.
   // TODO(tvst): Rename to darkenedBgMix25 (number = opacity)
-  const transparentDarkenedBgMix60 = transparentize(darkenedBgMix60, 0.75)
-  const darkenedBgMix15 = transparentize(darkenedBgMix60, 0.85) // Hovered menu/nav items.
+  const transparentDarkenedBgMix60 = transparentize(darkenedBgMix100, 0.75)
+  const darkenedBgMix15 = transparentize(darkenedBgMix100, 0.85) // Hovered menu/nav items.
 
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
@@ -314,7 +315,7 @@ const computeDerivedColors = (
     fadedText60,
 
     bgMix,
-    darkenedBgMix60,
+    darkenedBgMix100,
     transparentDarkenedBgMix60,
     darkenedBgMix15,
     lightenedBg05,
