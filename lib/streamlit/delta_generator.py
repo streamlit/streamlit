@@ -802,7 +802,7 @@ DFT = TypeVar("DFT", bound="DataFrameCompatible")
 
 
 def _maybe_melt_data_for_add_rows(
-    data: "DataFrameCompatible",
+    data: DFT,
     delta_type: str,
     last_index: Any,
 ) -> Tuple[Union[DFT, "DataFrame"], Union[int, Any]]:
