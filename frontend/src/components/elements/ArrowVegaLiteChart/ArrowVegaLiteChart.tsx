@@ -523,6 +523,9 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
       subtitleColor: colors.bodyText,
       ...themeFonts,
     },
+    header: {
+      labelColor: colors.bodyText,
+    },
   }
 
   if (!config) {
