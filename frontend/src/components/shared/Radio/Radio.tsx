@@ -110,7 +110,7 @@ class Radio extends React.PureComponent<Props, State> {
                     paddingLeft: 0,
                     paddingRight: "2px",
                     backgroundColor: $isFocusVisible
-                      ? colors.transparentDarkenedBgMix60
+                      ? colors.darkenedBgMix25
                       : "",
                     borderTopLeftRadius: radii.md,
                     borderTopRightRadius: radii.md,

@@ -186,7 +186,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       backgroundPrimary: colors.bgColor,
       backgroundSecondary: colors.secondaryBg,
       backgroundTertiary: colors.bgColor,
-      borderOpaque: colors.transparentDarkenedBgMix60,
+      borderOpaque: colors.darkenedBgMix25,
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
@@ -274,7 +274,7 @@ type DerivedColors = {
 
   bgMix: string
   darkenedBgMix100: string
-  transparentDarkenedBgMix60: string
+  darkenedBgMix25: string
   darkenedBgMix15: string
   lightenedBg05: string
 }
@@ -302,7 +302,7 @@ const computeDerivedColors = (
     ? darken(bgMix, 0.3)
     : lighten(bgMix, 0.6) // Icons.
   // TODO(tvst): Rename to darkenedBgMix25 (number = opacity)
-  const transparentDarkenedBgMix60 = transparentize(darkenedBgMix100, 0.75)
+  const darkenedBgMix25 = transparentize(darkenedBgMix100, 0.75)
   const darkenedBgMix15 = transparentize(darkenedBgMix100, 0.85) // Hovered menu/nav items.
 
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
@@ -316,7 +316,7 @@ const computeDerivedColors = (
 
     bgMix,
     darkenedBgMix100,
-    transparentDarkenedBgMix60,
+    darkenedBgMix25,
     darkenedBgMix15,
     lightenedBg05,
   }

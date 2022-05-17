@@ -160,7 +160,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       "&:hover": {
         backgroundColor: isActive
-          ? theme.colors.transparentDarkenedBgMix60
+          ? theme.colors.darkenedBgMix25
           : theme.colors.darkenedBgMix15,
       },
 
