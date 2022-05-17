@@ -50,7 +50,7 @@ demo.handle_backmsg(
     session_id, create_rerun_msg(), ExampleMessageContext(id="rerun_back_msg")
 )
 
-time.sleep(10)
+time.sleep(3)
 
 # Close the session
 demo.session_closed(session_id)

@@ -42,10 +42,22 @@ LOGGER = get_logger(__name__)
 
 
 class SnowflakeConfig(NamedTuple):
-    """Passed to `start()`. Contains config options."""
+    """Passed to `start()`. Contains config options.
 
-    # The path of the Streamlit script to run.
-    script_path: str
+    Either `script_path` or `script_string` must be set, but not both.
+    """
+
+    # The path of the Streamlit script to run. Optional.
+    script_path: Optional[str] = None
+
+    # The Streamlit script to run, as a string. Optional.
+    script_string: Optional[str] = None
+
+    @property
+    def is_valid(self) -> bool:
+        return (self.script_path is not None and self.script_string is None) or (
+            self.script_path is None and self.script_string is not None
+        )
 
 
 class AsyncMessageContext(Protocol):
@@ -120,6 +132,11 @@ class SnowflakeDemo:
         ).create()
 
     def __init__(self, config: SnowflakeConfig):
+        if not config.is_valid:
+            raise RuntimeError(
+                "Invalid SnowflakeConfig! Either `script_path` or `script_string` must be set, but not both"
+            )
+
         self._state = _SnowflakeDemoState.NOT_STARTED
         self._config = config
         self._sessions: Dict[str, AppSession] = {}
@@ -328,12 +345,14 @@ class SnowflakeDemo:
         self._require_ioloop().spawn_callback(session_closed_handler)
 
     @property
-    def _command_line(self):
-        return f"streamlit run {self._config.script_path}"
+    def _command_line(self) -> str:
+        return f"streamlit run {self._main_script_path}"
 
     @property
-    def _main_script_path(self):
-        return self._config.script_path
+    def _main_script_path(self) -> str:
+        if self._config.script_path is not None:
+            return self._config.script_path
+        return "dummy_script_path"
 
     @staticmethod
     def _create_session_id() -> str:
