@@ -12,8 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable, TextIO
 
-def open_python_file(filename):
+_open_python_file_fn: Callable[[str], TextIO]
+
+
+def open_python_file(filename: str) -> TextIO:
+    return _open_python_file_fn(filename)
+
+
+def set_open_python_file_function_hack(fn: Callable[[str], TextIO]) -> None:
+    """SnowflakeDemo hack."""
+    global _open_python_file_fn
+    _open_python_file_fn = fn
+
+
+def _default_open_python_file(filename: str) -> TextIO:
     """Open a read-only Python file taking proper care of its encoding.
 
     In Python 3, we would like all files to be opened with utf-8 encoding.
@@ -29,3 +43,6 @@ def open_python_file(filename):
         return tokenize.open(filename)
     else:
         return open(filename, "r", encoding="utf-8")
+
+
+_open_python_file_fn = _default_open_python_file
