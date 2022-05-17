@@ -19,10 +19,11 @@ Snowflake/Streamlit hacky demo interface.
 """
 
 import json
+import os.path
 import threading
 import uuid
 from enum import Enum
-from typing import NamedTuple, List, Any, Dict, Optional, Protocol
+from typing import NamedTuple, List, Any, Dict, Optional, Protocol, cast
 
 import tornado
 import tornado.ioloop
@@ -40,12 +41,26 @@ from streamlit.server.server import Server
 
 LOGGER = get_logger(__name__)
 
+TEMP_DIRECTORY = "/tmp"  # a directory we can write to in a storedproc.
+
 
 class SnowflakeConfig(NamedTuple):
-    """Passed to `start()`. Contains config options."""
+    """Passed to `start()`. Contains config options.
 
-    # The path of the Streamlit script to run.
-    script_path: str
+    Either `script_path` or `script_string` must be set, but not both.
+    """
+
+    # The path of the Streamlit script to run. Optional.
+    script_path: Optional[str] = None
+
+    # The Streamlit script to run, as a string. Optional.
+    script_string: Optional[str] = None
+
+    @property
+    def is_valid(self) -> bool:
+        return (self.script_path is not None and self.script_string is None) or (
+            self.script_path is None and self.script_string is not None
+        )
 
 
 class AsyncMessageContext(Protocol):
@@ -120,8 +135,20 @@ class SnowflakeDemo:
         ).create()
 
     def __init__(self, config: SnowflakeConfig):
+        if not config.is_valid:
+            raise RuntimeError(
+                "Invalid SnowflakeConfig! Either `script_path` or `script_string` must be set, but not both"
+            )
+
+        if config.script_path is not None:
+            self._script_path = config.script_path
+        else:
+            self._script_path = SnowflakeDemo._write_script_string_to_tmp_file(
+                cast(str, config.script_string)
+            )
+            LOGGER.info("config.script_string written to: %s", self._script_path)
+
         self._state = _SnowflakeDemoState.NOT_STARTED
-        self._config = config
         self._sessions: Dict[str, AppSession] = {}
 
         # Create, but don't start, our server and ioloop
@@ -328,12 +355,12 @@ class SnowflakeDemo:
         self._require_ioloop().spawn_callback(session_closed_handler)
 
     @property
-    def _command_line(self):
-        return f"streamlit run {self._config.script_path}"
+    def _command_line(self) -> str:
+        return f"streamlit run {self._main_script_path}"
 
     @property
-    def _main_script_path(self):
-        return self._config.script_path
+    def _main_script_path(self) -> str:
+        return self._script_path
 
     @staticmethod
     def _create_session_id() -> str:
@@ -351,3 +378,14 @@ class SnowflakeDemo:
     def _require_ioloop(self) -> tornado.ioloop.IOLoop:
         assert self._ioloop is not None
         return self._ioloop
+
+    @staticmethod
+    def _write_script_string_to_tmp_file(script_string: str) -> str:
+        """Write a python string to a file in /tmp.
+        Return the file's path.
+        """
+        filename = f"streamlit_script_{uuid.uuid4()}.py"
+        filepath = os.path.join(TEMP_DIRECTORY, filename)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(script_string)
+        return filepath
