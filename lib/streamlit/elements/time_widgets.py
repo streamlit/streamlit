@@ -39,8 +39,8 @@ if TYPE_CHECKING:
 
 
 TimeValue: TypeAlias = Union[time, datetime, None]
-_DateValue: TypeAlias = Union[date, datetime, None]
-DateValue: TypeAlias = Union[_DateValue, Sequence[_DateValue]]
+SingleDateValue: TypeAlias = Union[date, datetime, None]
+DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, date]]
 
 
@@ -72,7 +72,7 @@ def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
 
 
 def _parse_min_date(
-    min_value: _DateValue,
+    min_value: SingleDateValue,
     parsed_dates: Sequence[date],
 ) -> date:
     parsed_min_date: date
@@ -93,7 +93,7 @@ def _parse_min_date(
 
 
 def _parse_max_date(
-    max_value: _DateValue,
+    max_value: SingleDateValue,
     parsed_dates: Sequence[date],
 ) -> date:
     parsed_max_date: date
@@ -124,8 +124,8 @@ class _DateInputValues:
     def from_raw_values(
         cls,
         value: DateValue,
-        min_value: _DateValue,
-        max_value: _DateValue,
+        min_value: SingleDateValue,
+        max_value: SingleDateValue,
     ) -> "_DateInputValues":
 
         parsed_value, is_range = _parse_date_value(value=value)
@@ -306,8 +306,8 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: DateValue = None,
-        min_value: _DateValue = None,
-        max_value: _DateValue = None,
+        min_value: SingleDateValue = None,
+        max_value: SingleDateValue = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -385,8 +385,8 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: DateValue = None,
-        min_value: _DateValue = None,
-        max_value: _DateValue = None,
+        min_value: SingleDateValue = None,
+        max_value: SIngleDateValue = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
