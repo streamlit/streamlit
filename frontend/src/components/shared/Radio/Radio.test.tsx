@@ -25,6 +25,7 @@ import Radio, { Props } from "./Radio"
 const getProps = (props: Partial<Props> = {}): Props => ({
   width: 0,
   disabled: false,
+  horizontal: false,
   value: 0,
   onChange: () => {},
   options: ["a", "b", "c"],
