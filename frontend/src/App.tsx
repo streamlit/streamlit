@@ -496,7 +496,7 @@ export class App extends PureComponent<Props, State> {
       `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory.`
     )
 
-    const currentPageName = ""
+    const currentPageName = this.state.appPages[0]?.pageName || ""
     this.setState({ currentPageName }, () => {
       this.props.s4aCommunication.sendMessage({
         type: "SET_CURRENT_PAGE_NAME",
@@ -634,6 +634,9 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
+    const currentPageName =
+      this.state.currentPageName || newSessionProto.appPages[0]?.pageName || ""
+
     this.processThemeInput(themeInput)
     this.setState(
       {
@@ -641,6 +644,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         hideSidebarNav: config.hideSidebarNav,
         appPages: newSessionProto.appPages,
+        currentPageName,
       },
       () => {
         this.props.s4aCommunication.sendMessage({
@@ -1011,10 +1015,15 @@ export class App extends PureComponent<Props, State> {
       window.history.pushState({}, "", pageUrl)
     }
 
-    this.setState({ currentPageName: pageName }, () => {
+    // If pageName === "", we want to run the main page of the app, but the
+    // SidebarNav component wants the page to be highlighted specified by its
+    // full name.
+    const currentPageName = pageName || this.state.appPages[0]?.pageName || ""
+
+    this.setState({ currentPageName }, () => {
       this.props.s4aCommunication.sendMessage({
         type: "SET_CURRENT_PAGE_NAME",
-        currentPageName: pageName as string,
+        currentPageName,
       })
     })
 

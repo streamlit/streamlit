@@ -709,12 +709,12 @@ describe("App.handleNewSession", () => {
 
     const appPages = [
       {
-        page_name: "page1",
-        script_path: "page1.py",
+        pageName: "page1",
+        scriptPath: "page1.py",
       },
       {
-        page_name: "page2",
-        script_path: "page2.py",
+        pageName: "page2",
+        scriptPath: "page2.py",
       },
     ]
 
@@ -725,6 +725,7 @@ describe("App.handleNewSession", () => {
     // @ts-ignore
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+    expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
     expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_APP_PAGES",
       appPages,
@@ -973,6 +974,31 @@ describe("App.sendRerunBackMsg", () => {
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
   })
 
+  it("sets currentPageName to be the name of the first page if pageName is the empty string", () => {
+    const appPages = [
+      { icon: "", pageName: "page1", scriptPath: "page1.py" },
+      { icon: "", pageName: "page2", scriptPath: "page2.py" },
+    ]
+    const wrapper = shallow(<App {...getProps()} />)
+    wrapper.setState({ appPages })
+    const instance = wrapper.instance() as App
+    // @ts-ignore
+    instance.sendBackMsg = jest.fn()
+    // @ts-ignore
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+    instance.clearAppState = jest.fn()
+
+    instance.sendRerunBackMsg(undefined, "")
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
+    // @ts-ignore
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "", queryString: "" },
+    })
+    expect(instance.clearAppState).toHaveBeenCalled()
+    expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
+  })
+
   it("also switches pages correctly when a baseUrlPath is set", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
@@ -1031,8 +1057,14 @@ describe("App.sendRerunBackMsg", () => {
 
 describe("App.handlePageNotFound", () => {
   it("displays an error modal", () => {
+    const appPages = [
+      { icon: "", pageName: "bob", scriptPath: "bob.py" },
+      { icon: "", pageName: "carl", scriptPath: "carl.py" },
+    ]
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ appPages })
+
     const instance = wrapper.instance() as App
     // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
@@ -1049,7 +1081,7 @@ describe("App.handlePageNotFound", () => {
     )
     expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_CURRENT_PAGE_NAME",
-      currentPageName: "",
+      currentPageName: "bob",
     })
   })
 })
