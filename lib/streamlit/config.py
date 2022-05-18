@@ -685,7 +685,7 @@ def _gather_usage_stats() -> bool:
 
     Default: true
     """
-    return True
+    return False
 
 
 @_create_option("browser.serverPort", type_=int)
