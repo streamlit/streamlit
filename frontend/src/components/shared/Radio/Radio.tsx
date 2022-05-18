@@ -17,7 +17,7 @@
 
 import React from "react"
 import { withTheme } from "@emotion/react"
-import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
 import {
   WidgetLabel,
   StyledWidgetLabelHelpInline,
@@ -28,6 +28,7 @@ import { Theme } from "src/theme"
 
 export interface Props {
   disabled: boolean
+  horizontal: boolean
   theme: Theme
   width?: number
   value: number
@@ -69,7 +70,7 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { theme, width, help, label } = this.props
-    let { disabled } = this.props
+    let { disabled, horizontal } = this.props
     const { colors, radii } = theme
     const style = { width }
     const options = [...this.props.options]
@@ -92,6 +93,7 @@ class Radio extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           value={this.state.value.toString()}
           disabled={disabled}
+          align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
         >
           {options.map((option: string, index: number) => (
             <UIRadio
