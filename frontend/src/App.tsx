@@ -683,9 +683,10 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.setAppHash(newSessionHash)
     MetricsManager.current.clearDeltaCounter()
 
-    // TODO(vdonato): See if we can include the number of pages / hash of page
-    // names / hash of current page name here.
-    MetricsManager.current.enqueue("updateReport")
+    MetricsManager.current.enqueue("updateReport", {
+      numPages: newSessionProto.appPages.length,
+      isMainPage: currentPageName === mainPageName,
+    })
 
     if (appHash === newSessionHash) {
       this.setState({
