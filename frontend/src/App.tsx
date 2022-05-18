@@ -662,7 +662,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Set the title and favicon to their default values
-    document.title = `${scriptName} · Streamlit`
+    document.title = `${currentPageName} · Streamlit`
     handleFavicon(
       `${process.env.PUBLIC_URL}/favicon.png`,
       this.getBaseUriParts()

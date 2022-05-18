@@ -726,6 +726,7 @@ describe("App.handleNewSession", () => {
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
+    expect(document.title).toBe("page1 · Streamlit")
     expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_APP_PAGES",
       appPages,
