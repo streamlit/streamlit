@@ -14,6 +14,7 @@
 
 import threading
 from typing import Dict, Optional, List, Callable, Set
+from typing_extensions import Final
 
 import attr
 
@@ -23,7 +24,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.state import SafeSessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
-LOGGER = get_logger(__name__)
+LOGGER: Final = get_logger(__name__)
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -88,7 +89,7 @@ class ScriptRunContext:
         self._enqueue(msg)
 
 
-SCRIPT_RUN_CONTEXT_ATTR_NAME = "streamlit_script_run_ctx"
+SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
 
 
 def add_script_run_ctx(

@@ -74,10 +74,7 @@ class ProgressMixin:
                 "Progress Value has invalid type: %s" % type(value).__name__
             )
 
-        return cast(
-            "DeltaGenerator",
-            self.dg._enqueue("progress", progress_proto),
-        )
+        return self.dg._enqueue("progress", progress_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

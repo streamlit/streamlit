@@ -140,10 +140,7 @@ class PlotlyMixin:
         marshall(
             plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
         )
-        return cast(
-            "DeltaGenerator",
-            self.dg._enqueue("plotly_chart", plotly_chart_proto),
-        )
+        return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

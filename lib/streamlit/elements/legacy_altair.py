@@ -17,9 +17,9 @@ Altair is a Python visualization library based on Vega-Lite,
 a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
-from typing import cast
+from typing import Hashable
+from typing import cast, TYPE_CHECKING
 
-import streamlit
 from streamlit import errors, type_util
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 import streamlit.elements.legacy_vega_lite as vega_lite
@@ -29,11 +29,22 @@ import pyarrow as pa
 
 from .utils import last_index_for_melted_dataframes
 
+if TYPE_CHECKING:
+    from altair.vegalite.v4.api import Chart
+
+    from streamlit.delta_generator import DeltaGenerator
+
+    from .arrow import Data
+
 
 class LegacyAltairMixin:
     def _legacy_line_chart(
-        self, data=None, width=0, height=0, use_container_width=True
-    ):
+        self,
+        data: "Data" = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "DeltaGenerator":
         """Display a line chart.
 
         This is syntax-sugar around st._legacy_altair_chart. The main difference
@@ -84,8 +95,12 @@ class LegacyAltairMixin:
         )
 
     def _legacy_area_chart(
-        self, data=None, width=0, height=0, use_container_width=True
-    ):
+        self,
+        data: "Data" = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "DeltaGenerator":
         """Display an area chart.
 
         This is just syntax-sugar around st._legacy_altair_chart. The main difference
@@ -134,7 +149,13 @@ class LegacyAltairMixin:
             "area_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def _legacy_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def _legacy_bar_chart(
+        self,
+        data: "Data" = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "DeltaGenerator":
         """Display a bar chart.
 
         This is just syntax-sugar around st._legacy_altair_chart. The main difference
@@ -183,12 +204,14 @@ class LegacyAltairMixin:
             "bar_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def _legacy_altair_chart(self, altair_chart, use_container_width=False):
+    def _legacy_altair_chart(
+        self, altair_chart: "Chart", use_container_width: bool = False
+    ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
         Parameters
         ----------
-        altair_chart : altair.vegalite.v2.api.Chart
+        altair_chart : altair.vegalite.v4.api.Chart
             The Altair chart object to display.
 
         use_container_width : bool
@@ -229,12 +252,12 @@ class LegacyAltairMixin:
         return self.dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-def _is_date_column(df, name):
+def _is_date_column(df: pd.DataFrame, name: Hashable) -> bool:
     """True if the column with the given name stores datetime.date values.
 
     This function just checks the first value in the given column, so
@@ -243,7 +266,7 @@ def _is_date_column(df, name):
     Parameters
     ----------
     df : pd.DataFrame
-    name : str
+    name : hashable
         The column name
 
     Returns
@@ -257,7 +280,7 @@ def _is_date_column(df, name):
     return isinstance(column[0], date)
 
 
-def generate_chart(chart_type, data, width=0, height=0):
+def generate_chart(chart_type, data, width: int = 0, height: int = 0):
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
         # 90 degrees. No idea why. Need to debug.
@@ -317,7 +340,12 @@ To be able to use pyarrow tables, please enable pyarrow by changing the config s
     return chart
 
 
-def marshall(vega_lite_chart, altair_chart, use_container_width=False, **kwargs):
+def marshall(
+    vega_lite_chart: VegaLiteChartProto,
+    altair_chart,
+    use_container_width: bool = False,
+    **kwargs,
+) -> None:
     import altair as alt
 
     # Normally altair_chart.to_dict() would transform the dataframe used by the

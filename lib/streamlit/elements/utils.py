@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import textwrap
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, cast, Hashable, Optional, TYPE_CHECKING, Union
 
 import streamlit
 from streamlit import type_util
@@ -21,22 +21,24 @@ from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.state import get_session_state, WidgetCallback
 
-
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.type_util import DataFrameCompatible
 
 
-def clean_text(text: Any) -> str:
+def clean_text(text: object) -> str:
     """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
 
 
-def last_index_for_melted_dataframes(data: Any) -> Any:
+def last_index_for_melted_dataframes(
+    data: Union["DataFrameCompatible", Any]
+) -> Optional[Hashable]:
     if type_util.is_dataframe_compatible(data):
         data = type_util.convert_anything_to_df(data)
 
         if data.index.size > 0:
-            return data.index[-1]
+            return cast(Hashable, data.index[-1])
 
     return None
 

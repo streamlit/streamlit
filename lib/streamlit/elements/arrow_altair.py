@@ -18,13 +18,14 @@ a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
 from enum import Enum
-from typing import cast
+from typing import Any
+from typing import Dict
+from typing import cast, TYPE_CHECKING
 
 import altair as alt
 import pandas as pd
 from altair.vegalite.v4.api import Chart
 
-import streamlit
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
@@ -33,6 +34,9 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 
 from .arrow import Data
 from .utils import last_index_for_melted_dataframes
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 class ChartType(Enum):
@@ -48,7 +52,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display a line chart.
 
         This is syntax-sugar around st._arrow_altair_chart. The main difference
@@ -92,10 +96,7 @@ class ArrowAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return cast(
-            "streamlit.delta_generator.DeltaGenerator",
-            self.dg._enqueue("arrow_line_chart", proto, last_index=last_index),
-        )
+        return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
 
     def _arrow_area_chart(
         self,
@@ -103,7 +104,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display an area chart.
 
         This is just syntax-sugar around st._arrow_altair_chart. The main difference
@@ -147,10 +148,7 @@ class ArrowAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return cast(
-            "streamlit.delta_generator.DeltaGenerator",
-            self.dg._enqueue("arrow_area_chart", proto, last_index=last_index),
-        )
+        return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
 
     def _arrow_bar_chart(
         self,
@@ -158,7 +156,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display a bar chart.
 
         This is just syntax-sugar around st._arrow_altair_chart. The main difference
@@ -202,14 +200,11 @@ class ArrowAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return cast(
-            "streamlit.delta_generator.DeltaGenerator",
-            self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index),
-        )
+        return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
 
     def _arrow_altair_chart(
         self, altair_chart: Chart, use_container_width: bool = False
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
         Parameters
@@ -252,15 +247,12 @@ class ArrowAltairMixin:
             use_container_width=use_container_width,
         )
 
-        return cast(
-            "streamlit.delta_generator.DeltaGenerator",
-            self.dg._enqueue("arrow_vega_lite_chart", proto),
-        )
+        return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
 def _is_date_column(df: pd.DataFrame, name: str) -> bool:
@@ -345,8 +337,8 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: Chart,
     use_container_width: bool = False,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> None:
     """Marshall chart's data into proto."""
     import altair as alt
 
@@ -357,7 +349,7 @@ def marshall(
 
     datasets = {}
 
-    def id_transform(data):
+    def id_transform(data) -> Dict[str, str]:
         """Altair data transformer that returns a fake named dataset with the
         object id."""
         datasets[id(data)] = data

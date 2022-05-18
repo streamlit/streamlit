@@ -140,10 +140,7 @@ class ImageMixin:
             channels,
             output_format,
         )
-        return cast(
-            "DeltaGenerator",
-            self.dg._enqueue("imgs", image_list_proto),
-        )
+        return self.dg._enqueue("imgs", image_list_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

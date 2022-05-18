@@ -33,8 +33,7 @@ class BalloonsMixin:
         """
         balloons_proto = BalloonsProto()
         balloons_proto.show = True
-        dg = self.dg._enqueue("balloons", balloons_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("balloons", balloons_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":
