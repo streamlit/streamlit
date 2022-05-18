@@ -731,6 +731,10 @@ describe("App.handleNewSession", () => {
       type: "SET_APP_PAGES",
       appPages,
     })
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "page1",
+    })
   })
 
   it("sets hideSidebarNav based on the server config option and s4a setting", () => {
@@ -902,10 +906,6 @@ describe("App.sendRerunBackMsg", () => {
     })
 
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("")
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_CURRENT_PAGE_NAME",
-      currentPageName: "",
-    })
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 2: non-main page)", () => {
@@ -928,10 +928,6 @@ describe("App.sendRerunBackMsg", () => {
       rerunScript: { pageName: "page1", queryString: "" },
     })
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_CURRENT_PAGE_NAME",
-      currentPageName: "page1",
-    })
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one and a baseUrlPath is set", () => {

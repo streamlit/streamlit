@@ -634,8 +634,12 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    const currentPageName =
-      this.state.currentPageName || newSessionProto.appPages[0]?.pageName || ""
+    // mainPageName must be a string as we're guaranteed at this point that
+    // newSessionProto.appPages is nonempty and has a truthy pageName.
+    // Otherwise, we'd either have no main script or a nameless main script,
+    // neither of which can happen.
+    const mainPageName = newSessionProto.appPages[0]?.pageName as string
+    const currentPageName = this.state.currentPageName || mainPageName
 
     this.processThemeInput(themeInput)
     this.setState(
@@ -650,6 +654,11 @@ export class App extends PureComponent<Props, State> {
         this.props.s4aCommunication.sendMessage({
           type: "SET_APP_PAGES",
           appPages: newSessionProto.appPages,
+        })
+
+        this.props.s4aCommunication.sendMessage({
+          type: "SET_CURRENT_PAGE_NAME",
+          currentPageName,
         })
       }
     )
@@ -674,6 +683,8 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.setAppHash(newSessionHash)
     MetricsManager.current.clearDeltaCounter()
 
+    // TODO(vdonato): See if we can include the number of pages / hash of page
+    // names / hash of current page name here.
     MetricsManager.current.enqueue("updateReport")
 
     if (appHash === newSessionHash) {
@@ -1019,13 +1030,7 @@ export class App extends PureComponent<Props, State> {
     // SidebarNav component wants the page to be highlighted specified by its
     // full name.
     const currentPageName = pageName || this.state.appPages[0]?.pageName || ""
-
-    this.setState({ currentPageName }, () => {
-      this.props.s4aCommunication.sendMessage({
-        type: "SET_CURRENT_PAGE_NAME",
-        currentPageName,
-      })
-    })
+    this.setState({ currentPageName })
 
     this.sendBackMsg(
       new BackMsg({
