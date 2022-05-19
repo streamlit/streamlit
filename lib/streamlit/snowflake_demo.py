@@ -23,7 +23,7 @@ import os.path
 import threading
 import uuid
 from enum import Enum
-from typing import NamedTuple, List, Any, Dict, Optional, Protocol, cast
+from typing import List, Any, Dict, Optional, Protocol, cast
 
 import tornado
 import tornado.ioloop
@@ -32,6 +32,7 @@ from snowflake.snowpark import Session as SnowparkSession  # type: ignore
 import streamlit
 import streamlit.bootstrap as bootstrap
 import streamlit.config
+from streamlit.server.server_util import serialize_forward_msg
 from streamlit.app_session import AppSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -44,17 +45,13 @@ LOGGER = get_logger(__name__)
 TEMP_DIRECTORY = "/tmp"  # a directory we can write to in a storedproc.
 
 
-class SnowflakeConfig(NamedTuple):
-    """Passed to `start()`. Contains config options.
+class SnowflakeConfig:
+    """Passed to `start()`. Contains config options."""
 
-    Either `script_path` or `script_string` must be set, but not both.
-    """
-
-    # The path of the Streamlit script to run. Optional.
-    script_path: Optional[str] = None
-
-    # The Streamlit script to run, as a string. Optional.
-    script_string: Optional[str] = None
+    def __init__(self, script_path: str, config_options: Any):
+        self.script_path = script_path
+        self.config_options = config_options  # unused?
+        self.script_string: Optional[str] = None
 
     @property
     def is_valid(self) -> bool:
@@ -68,8 +65,8 @@ class AsyncMessageContext(Protocol):
     concrete instance of this protocol.
     """
 
-    def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Called to add a new ForwardMsg to the queue.
+    def write_forward_msg(self, msg_bytes: bytes) -> None:
+        """Called to add a serialized ForwardMsg to the queue.
 
         This will be called on the Streamlit server thread,
         NOT the main thread.
@@ -87,6 +84,9 @@ class AsyncMessageContext(Protocol):
         This may be called on the Streamlit server thread OR on the main
         thread.
         """
+
+    def flush_system_logs(self, msg: Optional[str] = None) -> None:
+        """Flushes system logs, with optional message added."""
 
 
 class _SnowflakeDemoState(Enum):
@@ -263,7 +263,6 @@ class SnowflakeDemo:
             The session's unique ID.
 
         """
-
         if self._state is not _SnowflakeDemoState.RUNNING:
             ctx.on_complete(
                 err=RuntimeError(f"Can't register session (bad state: {self._state})")
@@ -272,6 +271,7 @@ class SnowflakeDemo:
 
         session_id = self._create_session_id()
 
+        ctx.flush_system_logs(f"Registering Snowflake session (id={session_id})")
         LOGGER.info("Registering Snowflake session (id=%s)...", session_id)
 
         def session_created_handler() -> None:
@@ -280,6 +280,7 @@ class SnowflakeDemo:
                     ctx.write_forward_msg, snowpark_session
                 )
                 self._sessions[session_id] = session
+                ctx.flush_system_logs(f"Registered Snowflake session (id={session_id})")
                 LOGGER.info("Snowflake session registered! (id=%s)", session_id)
             except BaseException as e:
                 ctx.on_complete(err=e)
@@ -292,7 +293,7 @@ class SnowflakeDemo:
         return session_id
 
     def handle_backmsg(
-        self, session_id: str, msg: BackMsg, ctx: AsyncMessageContext
+        self, session_id: str, msg_bytes: bytes, ctx: AsyncMessageContext
     ) -> None:
         """Called when a BackMsg arrives for a given session. Asynchronous.
 
@@ -301,8 +302,8 @@ class SnowflakeDemo:
         session_id: str
             The session_id returned from `create_session`.
 
-        msg: BackMsg
-            The BackMsg to be processed.
+        msg_bytes: bytes
+            The serialized BackMsg to be processed.
 
         ctx: AsyncMessageContext:
             Context object for this async operation.
@@ -312,6 +313,10 @@ class SnowflakeDemo:
                 err=RuntimeError(f"Can't handle BackMsg (bad state: {self._state})")
             )
             return
+        ctx.flush_system_logs(f"back message handler called (sessionid={session_id})")
+
+        msg = BackMsg()
+        msg.ParseFromString(msg_bytes)
 
         def backmsg_handler() -> None:
             try:
@@ -320,11 +325,17 @@ class SnowflakeDemo:
                     raise RuntimeError(
                         f"session_id not registered! Ignoring BackMsg (session_id={session_id})"
                     )
+                ctx.flush_system_logs("session acquired")
+
+                def fwd_msg_writer(forward_msg: ForwardMsg):
+                    ctx.write_forward_msg(serialize_forward_msg(forward_msg))
 
                 self._require_server().set_demo_app_session_forward_msg_handler_terrible_hack(
-                    session, ctx.write_forward_msg
+                    session, fwd_msg_writer
                 )
+                ctx.flush_system_logs("calling session.handle_backmsg(msg)")
                 session.handle_backmsg(msg)
+                ctx.flush_system_logs("session.handle_backmsg(msg) DONE")
             except BaseException as e:
                 ctx.on_complete(err=e)
                 return
