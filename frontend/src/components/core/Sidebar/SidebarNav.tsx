@@ -41,7 +41,6 @@ export interface Props {
   onPageChange: (pageName: string) => void
   hideParentScrollbar: (newValue: boolean) => void
 
-  // BUG(vdonato): currentPageName is "" for the root page.
   // BUG(vdonato): currentPageName is not guaranteed to be unique. This means we show 2+ pages
   // as "active" at the same time, if they have the same name.
   //
@@ -50,7 +49,6 @@ export interface Props {
   // 2. Instead of currentPageName send currentPageIndex (i.e. index of active page in the appPages
   //    array).
   //
-  // BUG(vdonato): Page title should change when you swith pages.
   // BUG(tvst): X button should have same color as hamburger.
   // BUG(tvst): X and > buttons should have same margins as hamburger.
   currentPageName: string
@@ -127,11 +125,20 @@ const SidebarNav = ({
               pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
             }
 
+            // The main page can be specified either by its full name or by
+            // having currentPageName === "". We could have alternatively made
+            // it such that currentPageName is always the full page name, but
+            // it turns out that taking that approach makes things messier
+            // overall.
+            const isActive =
+              (pageIndex === 0 && !currentPageName) ||
+              currentPageName === pageName
+
             return (
               <li key={pageName}>
                 <StyledSidebarNavLinkContainer>
                   <StyledSidebarNavLink
-                    isActive={currentPageName === pageName}
+                    isActive={isActive}
                     href={pageUrl}
                     onClick={e => {
                       e.preventDefault()
