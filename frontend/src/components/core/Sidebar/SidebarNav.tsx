@@ -125,11 +125,20 @@ const SidebarNav = ({
               pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
             }
 
+            // The main page can be specified either by its full name or by
+            // having currentPageName === "". We could have alternatively made
+            // it such that currentPageName is always the full page name, but
+            // it turns out that taking that approach makes things messier
+            // overall.
+            const isActive =
+              (pageIndex === 0 && !currentPageName) ||
+              currentPageName === pageName
+
             return (
               <li key={pageName}>
                 <StyledSidebarNavLinkContainer>
                   <StyledSidebarNavLink
-                    isActive={currentPageName === pageName}
+                    isActive={isActive}
                     href={pageUrl}
                     onClick={e => {
                       e.preventDefault()

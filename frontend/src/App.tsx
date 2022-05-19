@@ -496,7 +496,7 @@ export class App extends PureComponent<Props, State> {
       `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory.`
     )
 
-    const currentPageName = this.state.appPages[0]?.pageName || ""
+    const currentPageName = ""
     this.setState({ currentPageName }, () => {
       this.props.s4aCommunication.sendMessage({
         type: "SET_CURRENT_PAGE_NAME",
@@ -639,7 +639,7 @@ export class App extends PureComponent<Props, State> {
     // Otherwise, we'd either have no main script or a nameless main script,
     // neither of which can happen.
     const mainPageName = newSessionProto.appPages[0]?.pageName as string
-    const currentPageName = this.state.currentPageName || mainPageName
+    const { currentPageName } = this.state
 
     this.processThemeInput(themeInput)
     this.setState(
@@ -648,7 +648,6 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         hideSidebarNav: config.hideSidebarNav,
         appPages: newSessionProto.appPages,
-        currentPageName,
       },
       () => {
         this.props.s4aCommunication.sendMessage({
@@ -671,7 +670,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Set the title and favicon to their default values
-    document.title = `${currentPageName} · Streamlit`
+    document.title = `${currentPageName || mainPageName} · Streamlit`
     handleFavicon(
       `${process.env.PUBLIC_URL}/favicon.png`,
       this.getBaseUriParts()
@@ -685,7 +684,7 @@ export class App extends PureComponent<Props, State> {
 
     MetricsManager.current.enqueue("updateReport", {
       numPages: newSessionProto.appPages.length,
-      isMainPage: currentPageName === mainPageName,
+      isMainPage: currentPageName === "" || currentPageName === mainPageName,
     })
 
     if (appHash === newSessionHash) {
@@ -1027,11 +1026,7 @@ export class App extends PureComponent<Props, State> {
       window.history.pushState({}, "", pageUrl)
     }
 
-    // If pageName === "", we want to run the main page of the app, but the
-    // SidebarNav component wants the page to be highlighted specified by its
-    // full name.
-    const currentPageName = pageName || this.state.appPages[0]?.pageName || ""
-    this.setState({ currentPageName })
+    this.setState({ currentPageName: pageName })
 
     this.sendBackMsg(
       new BackMsg({

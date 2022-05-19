@@ -450,4 +450,23 @@ describe("SidebarNav", () => {
         .prop("isActive")
     ).toBe(true)
   })
+
+  it("sets the main page as active if currentPageName is the empty string", () => {
+    const props = getProps()
+
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(0)
+        .prop("isActive")
+    ).toBe(true)
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(1)
+        .prop("isActive")
+    ).toBe(false)
+  })
 })
