@@ -13,11 +13,9 @@
 # limitations under the License.
 
 import threading
-from typing import Dict, Optional, List, Callable, Set
+from typing import Dict, Optional, List, Callable, Set, Any
 
 import attr
-
-from snowflake.snowpark import Session as SnowparkSession  # type: ignore
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -26,6 +24,8 @@ from streamlit.state import SafeSessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
+
+SnowparkSession = Any
 
 
 @attr.s(auto_attribs=True, slots=True)

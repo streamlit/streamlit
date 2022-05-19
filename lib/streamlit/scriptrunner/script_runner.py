@@ -18,11 +18,9 @@ import threading
 import types
 from contextlib import contextmanager
 from enum import Enum
-from typing import Optional, Callable
+from typing import Optional, Callable, Any
 
 from blinker import Signal
-
-from snowflake.snowpark import Session as SnowparkSession  # type: ignore
 
 from streamlit import config
 from streamlit import magic
@@ -46,6 +44,8 @@ from .script_requests import (
     RerunData,
     ScriptRequestType,
 )
+
+SnowparkSession = Any
 
 LOGGER = get_logger(__name__)
 

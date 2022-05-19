@@ -27,7 +27,6 @@ from typing import List, Any, Dict, Optional, Protocol, cast
 
 import tornado
 import tornado.ioloop
-from snowflake.snowpark import Session as SnowparkSession  # type: ignore
 
 import streamlit
 import streamlit.bootstrap as bootstrap
@@ -39,6 +38,8 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.server.server import Server
+
+SnowparkSession = Any
 
 LOGGER = get_logger(__name__)
 

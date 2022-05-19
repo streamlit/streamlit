@@ -45,8 +45,6 @@ from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
-from snowflake.snowpark import Session as SnowparkSession  # type: ignore
-
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
@@ -88,6 +86,8 @@ from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.server.server_util import get_max_message_size_bytes
 from streamlit.watcher import LocalSourcesWatcher
+
+SnowparkSession = Any
 
 
 LOGGER = get_logger(__name__)

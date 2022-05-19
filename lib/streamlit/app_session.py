@@ -15,14 +15,12 @@
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List
+from typing import TYPE_CHECKING, Callable, Optional, List, Any
 
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.ioloop
-
-from snowflake.snowpark import Session as SnowparkSession  # type: ignore
 
 import streamlit.elements.exception as exception_utils
 from streamlit import __version__, caching, config, legacy_caching, secrets
@@ -46,6 +44,8 @@ from streamlit.watcher import LocalSourcesWatcher
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
     from streamlit.state import SessionState
+
+SnowparkSession = Any
 
 
 class AppSessionState(Enum):
