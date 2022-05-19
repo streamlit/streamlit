@@ -19,4 +19,4 @@ VERSION_BRANCH="release/${VERSION}"
 
 git switch --create "$VERSION_BRANCH"
 git commit --allow-empty --message="Release branch for ${VERSION}"
-git push --dry-run origin "$VERSION_BRANCH"
+git push origin "$VERSION_BRANCH"
