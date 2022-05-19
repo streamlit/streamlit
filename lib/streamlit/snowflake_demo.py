@@ -276,8 +276,12 @@ class SnowflakeDemo:
 
         def session_created_handler() -> None:
             try:
+
+                def fwd_msg_writer(forward_msg: ForwardMsg):
+                    ctx.write_forward_msg(serialize_forward_msg(forward_msg))
+
                 session = self._require_server().create_demo_app_session(
-                    ctx.write_forward_msg, snowpark_session
+                    fwd_msg_writer, snowpark_session
                 )
                 self._sessions[session_id] = session
                 ctx.flush_system_logs(f"Registered Snowflake session (id={session_id})")
