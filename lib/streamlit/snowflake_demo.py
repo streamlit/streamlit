@@ -265,7 +265,7 @@ class SnowflakeDemo:
         """
         if self._state is not _SnowflakeDemoState.RUNNING:
             ctx.on_complete(
-                err=RuntimeError(f"Can't register session (bad state: {self._state})")
+                RuntimeError(f"Can't register session (bad state: {self._state})")
             )
             return "invalid_session_id"
 
@@ -287,7 +287,7 @@ class SnowflakeDemo:
                 ctx.flush_system_logs(f"Registered Snowflake session (id={session_id})")
                 LOGGER.info("Snowflake session registered! (id=%s)", session_id)
             except BaseException as e:
-                ctx.on_complete(err=e)
+                ctx.on_complete(e)
                 return
 
             ctx.on_complete()
@@ -314,13 +314,19 @@ class SnowflakeDemo:
         """
         if self._state is not _SnowflakeDemoState.RUNNING:
             ctx.on_complete(
-                err=RuntimeError(f"Can't handle BackMsg (bad state: {self._state})")
+                RuntimeError(f"Can't handle BackMsg (bad state: {self._state})")
             )
             return
         ctx.flush_system_logs(f"back message handler called (sessionid={session_id})")
 
         msg = BackMsg()
         msg.ParseFromString(msg_bytes)
+        ctx.flush_system_logs(f"BackMsg deserialized (sessionid={session_id})")
+
+        msg_type = msg.WhichOneof("type")
+        ctx.flush_system_logs(
+            f"Will handle BackMsg (sessionid={session_id}, type={msg_type})"
+        )
 
         def backmsg_handler() -> None:
             try:
@@ -341,7 +347,7 @@ class SnowflakeDemo:
                 session.handle_backmsg(msg)
                 ctx.flush_system_logs("session.handle_backmsg(msg) DONE")
             except BaseException as e:
-                ctx.on_complete(err=e)
+                ctx.on_complete(e)
                 return
 
             ctx.on_complete()
