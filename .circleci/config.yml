@@ -564,6 +564,11 @@ jobs:
                 failure_message: ":blobonfire: Nightly job failed on unit tests"
 
   static-wheel:
+    docker:
+      - image: circleci/python:3.9.7
+
+    working_directory: ~/repo
+    
     steps:
       - run:
           name: Upload wheel for Metrics App!
