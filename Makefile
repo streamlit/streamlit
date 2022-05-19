@@ -214,7 +214,7 @@ protobuf:
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		./node_modules/protobufjs/bin/pbjs \
+		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
 			-t static-module --wrap es6 \
 	) > ./src/autogen/proto.js
@@ -223,7 +223,7 @@ protobuf:
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		./node_modules/protobufjs/bin/pbts ./src/autogen/proto.js \
+		yarn --silent pbts ./src/autogen/proto.js \
 	) > ./src/autogen/proto.d.ts
 
 .PHONY: react-init
