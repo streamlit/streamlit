@@ -18,5 +18,6 @@ VERSION=$1
 VERSION_BRANCH="release/${VERSION}"
 
 git switch --create "$VERSION_BRANCH"
-git commit --allow-empty --message="Release branch for ${VERSION}"
+python scripts/update_version.py "$VERSION"
+git commit --all --message="Up version to ${VERSION}"
 git push origin "$VERSION_BRANCH"
