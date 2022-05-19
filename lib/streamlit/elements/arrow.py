@@ -83,7 +83,7 @@ class ArrowMixin:
         return cast(
             "streamlit.delta_generator.DeltaGenerator",
             self.dg._enqueue(
-                "data_grid", proto, element_width=width, element_height=height
+                "arrow_data_frame", proto, element_width=width, element_height=height
             ),
         )
 

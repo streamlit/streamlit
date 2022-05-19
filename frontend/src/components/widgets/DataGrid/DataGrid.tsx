@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useLayoutEffect } from "react"
+import React, { ReactElement, useState } from "react"
 import {
   DataEditor as GlideDataEditor,
   GridCell,
@@ -241,7 +241,7 @@ function DataGrid({
   height: propHeight,
   width: propWidth,
 }: DataGridProps): ReactElement {
-  const [width, setWidth] = useState(propWidth)
+  const [width, _setWidth] = useState(propWidth)
   const [sort, setSort] = React.useState<ColumnSortConfig>()
 
   const {
