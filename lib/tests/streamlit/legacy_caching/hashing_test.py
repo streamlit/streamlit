@@ -82,8 +82,8 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(145757624235), get_hash(145757624235))
         self.assertNotEqual(get_hash(10), get_hash(11))
         self.assertNotEqual(get_hash(-1), get_hash(1))
-        self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 - 1))
-        self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 + 1))
+        self.assertNotEqual(get_hash(2**7), get_hash(2**7 - 1))
+        self.assertNotEqual(get_hash(2**7), get_hash(2**7 + 1))
 
     def test_mocks_do_not_result_in_infinite_recursion(self):
         try:
@@ -1059,7 +1059,7 @@ class CodeHashTest(unittest.TestCase):
 
         def f(x):
             def func(v):
-                return v ** x
+                return v**x
 
             return func
 
@@ -1071,7 +1071,7 @@ class CodeHashTest(unittest.TestCase):
 
         def h(x):
             def func(v):
-                return v ** x
+                return v**x
 
             return func
 

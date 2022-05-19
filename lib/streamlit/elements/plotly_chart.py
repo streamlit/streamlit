@@ -16,17 +16,27 @@
 
 import json
 import urllib.parse
-from typing import cast
+from typing import Any, cast, Dict, List, Set, TYPE_CHECKING, Union
+from typing_extensions import Final, Literal, TypeAlias
 
-import streamlit
 from streamlit.legacy_caching import caching
 from streamlit import type_util
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    import matplotlib
+    import plotly.graph_objs as go
+    from plotly.basedatatypes import BaseFigure
 
-SHARING_MODES = {
+    from streamlit.delta_generator import DeltaGenerator
+
+
+LOGGER: Final = get_logger(__name__)
+
+SharingMode: TypeAlias = Literal["streamlit", "private", "public", "secret"]
+
+SHARING_MODES: Set[SharingMode] = {
     # This means the plot will be sent to the Streamlit app rather than to
     # Plotly.
     "streamlit",
@@ -37,15 +47,30 @@ SHARING_MODES = {
     "secret",
 }
 
+_AtomicFigureOrData: TypeAlias = Union[
+    "go.Figure",
+    "go.Data",
+]
+FigureOrData: TypeAlias = Union[
+    _AtomicFigureOrData,
+    List[_AtomicFigureOrData],
+    # It is kind of hard to figure out exactly what kind of dict is supported
+    # here, as plotly hasn't embraced typing yet. This version is chosen to
+    # align with the docstring.
+    Dict[str, _AtomicFigureOrData],
+    "BaseFigure",
+    "matplotlib.figure.Figure",
+]
+
 
 class PlotlyMixin:
     def plotly_chart(
         self,
-        figure_or_data,
-        use_container_width=False,
-        sharing="streamlit",
-        **kwargs,
-    ):
+        figure_or_data: FigureOrData,
+        use_container_width: bool = False,
+        sharing: SharingMode = "streamlit",
+        **kwargs: Any,
+    ) -> "DeltaGenerator":
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -118,12 +143,18 @@ class PlotlyMixin:
         return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-def marshall(proto, figure_or_data, use_container_width, sharing, **kwargs):
+def marshall(
+    proto: PlotlyChartProto,
+    figure_or_data: FigureOrData,
+    use_container_width: bool,
+    sharing: SharingMode,
+    **kwargs: Any,
+) -> None:
     """Marshall a proto with a Plotly spec.
 
     See DeltaGenerator.plotly_chart for docs.
@@ -166,10 +197,10 @@ def marshall(proto, figure_or_data, use_container_width, sharing, **kwargs):
 
 
 @caching.cache
-def _plot_to_url_or_load_cached_url(*args, **kwargs):
+def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> "go.Figure":
     """Call plotly.plot wrapped in st.cache.
 
-    This is so we don't unecessarily upload data to Plotly's SASS if nothing
+    This is so we don't unnecessarily upload data to Plotly's SASS if nothing
     changed since the previous upload.
     """
     try:
@@ -181,7 +212,7 @@ def _plot_to_url_or_load_cached_url(*args, **kwargs):
     return ply.plot(*args, **kwargs)
 
 
-def _get_embed_url(url):
+def _get_embed_url(url: str) -> str:
     parsed_url = urllib.parse.urlparse(url)
 
     # Plotly's embed URL is the normal URL plus ".embed".

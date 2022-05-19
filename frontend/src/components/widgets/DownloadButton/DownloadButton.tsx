@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useContext } from "react"
 import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
+import AppContext from "src/components/core/AppContext"
 import UIButton, {
   ButtonTooltip,
   Kind,
@@ -35,15 +36,17 @@ export interface Props {
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
+  const { getBaseUriParts } = useContext(AppContext)
 
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
     widgetMgr.setTriggerValue(element, { fromUi: true })
     const link = document.createElement("a")
-    const uri = `${buildMediaUri(element.url)}?title=${encodeURIComponent(
-      document.title
-    )}`
+    const uri = `${buildMediaUri(
+      element.url,
+      getBaseUriParts()
+    )}?title=${encodeURIComponent(document.title)}`
     link.setAttribute("href", uri)
     link.setAttribute("target", "_blank")
     link.click()

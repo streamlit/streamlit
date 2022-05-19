@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import cast, TYPE_CHECKING
 
-import streamlit
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from .utils import clean_text
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 
 class AlertMixin:
-    def error(self, body):
+    def error(self, body: str) -> "DeltaGenerator":
         """Display error message.
 
         Parameters
@@ -38,7 +40,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
 
-    def warning(self, body):
+    def warning(self, body: str) -> "DeltaGenerator":
         """Display warning message.
 
         Parameters
@@ -56,7 +58,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
-    def info(self, body):
+    def info(self, body: str) -> "DeltaGenerator":
         """Display an informational message.
 
         Parameters
@@ -74,7 +76,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
-    def success(self, body):
+    def success(self, body: str) -> "DeltaGenerator":
         """Display a success message.
 
         Parameters
@@ -93,6 +95,6 @@ class AlertMixin:
         return self.dg._enqueue("alert", alert_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

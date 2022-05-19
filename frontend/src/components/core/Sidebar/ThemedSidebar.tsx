@@ -34,10 +34,9 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
   )
 
 const ThemedSidebar = ({
-  theme,
   children,
   ...sidebarProps
-}: Partial<SidebarProps>): ReactElement => {
+}: Omit<SidebarProps, "chevronDownshift" | "theme">): ReactElement => {
   const {
     activeTheme,
     sidebarChevronDownshift: chevronDownshift,

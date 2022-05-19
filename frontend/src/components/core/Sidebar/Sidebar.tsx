@@ -16,32 +16,43 @@
  */
 
 import React, { PureComponent, ReactElement, ReactNode } from "react"
-import { ChevronRight, X } from "@emotion-icons/open-iconic"
+import { ChevronRight, Close } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
-import { PageConfig } from "src/autogen/proto"
+import { IAppPage, PageConfig } from "src/autogen/proto"
 import { Theme } from "src/theme"
 
 import {
   StyledSidebar,
   StyledSidebarCloseButton,
   StyledSidebarCollapsedControl,
+  StyledSidebarUserContent,
   StyledSidebarContent,
 } from "./styled-components"
 import IsSidebarContext from "./IsSidebarContext"
+import SidebarNav from "./SidebarNav"
 
 export interface SidebarProps {
   chevronDownshift: number
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
   theme: Theme
+  hasElements: boolean
+  appPages: IAppPage[]
+  onPageChange: (pageName: string) => void
+  currentPageName: string
+  hideSidebarNav: boolean
+  pageLinkBaseUrl: string
 }
 
 interface State {
   collapsedSidebar: boolean
   lastInnerWidth: number
+
+  // When hovering the nav
+  hideScrollbar: boolean
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
@@ -62,6 +73,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       lastInnerWidth: window ? window.innerWidth : Infinity,
+      hideScrollbar: false,
     }
   }
 
@@ -146,9 +158,24 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
+  hideScrollbar = (newValue: boolean): void => {
+    this.setState({ hideScrollbar: newValue })
+  }
+
   public render(): ReactNode {
     const { collapsedSidebar } = this.state
-    const { chevronDownshift, children } = this.props
+    const {
+      appPages,
+      chevronDownshift,
+      children,
+      hasElements,
+      onPageChange,
+      currentPageName,
+      hideSidebarNav,
+      pageLinkBaseUrl,
+    } = this.props
+
+    const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
@@ -157,20 +184,35 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         aria-expanded={!collapsedSidebar}
         ref={this.sidebarRef}
       >
-        <StyledSidebarContent isCollapsed={collapsedSidebar}>
+        <StyledSidebarContent
+          isCollapsed={collapsedSidebar}
+          hideScrollbar={this.state.hideScrollbar}
+        >
           <StyledSidebarCloseButton>
             <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
-              <Icon content={X} />
+              <Icon content={Close} size="lg" />
             </Button>
           </StyledSidebarCloseButton>
-          {children}
+          {!hideSidebarNav && (
+            <SidebarNav
+              appPages={appPages}
+              hasSidebarElements={hasElements}
+              onPageChange={onPageChange}
+              hideParentScrollbar={this.hideScrollbar}
+              currentPageName={currentPageName}
+              pageLinkBaseUrl={pageLinkBaseUrl}
+            />
+          )}
+          <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
+            {children}
+          </StyledSidebarUserContent>
         </StyledSidebarContent>
         <StyledSidebarCollapsedControl
           chevronDownshift={chevronDownshift}
           isCollapsed={collapsedSidebar}
         >
           <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
-            <Icon content={ChevronRight} />
+            <Icon content={ChevronRight} size="lg" />
           </Button>
         </StyledSidebarCollapsedControl>
       </StyledSidebar>

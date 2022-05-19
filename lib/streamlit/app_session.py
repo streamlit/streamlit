@@ -16,14 +16,14 @@ import sys
 import threading
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List
+from typing import TYPE_CHECKING, Callable, Optional, List, Union
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
-from streamlit import __version__, caching, config, legacy_caching, secrets
+from streamlit import __version__, caching, config, legacy_caching, secrets, source_util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.in_memory_file_manager import in_memory_file_manager
@@ -32,7 +32,13 @@ from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
-from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
+from streamlit.proto.NewSession_pb2 import (
+    Config,
+    CustomThemeConfig,
+    NewSession,
+    UserInfo,
+)
+from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.session_data import SessionData
 from streamlit.scriptrunner import (
     RerunData,
@@ -118,6 +124,9 @@ class AppSession:
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
         )
+        self._stop_pages_listener = source_util.register_pages_changed_callback(
+            self._on_pages_changed
+        )
 
         # The script should rerun when the `secrets.toml` file has been changed.
         secrets._file_change_listener.connect(self._on_secrets_file_changed)
@@ -172,6 +181,8 @@ class AppSession:
             self._local_sources_watcher.close()
             if self._stop_config_listener is not None:
                 self._stop_config_listener()
+            if self._stop_pages_listener is not None:
+                self._stop_pages_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
@@ -239,7 +250,9 @@ class AppSession:
 
         if client_state:
             rerun_data = RerunData(
-                client_state.query_string, client_state.widget_states
+                client_state.query_string,
+                client_state.widget_states,
+                client_state.page_name,
             )
         else:
             rerun_data = RerunData()
@@ -281,8 +294,40 @@ class AppSession:
     def session_state(self) -> "SessionState":
         return self._session_state
 
-    def _on_source_file_changed(self) -> None:
+    def _should_rerun_on_file_change(self, filepath: str) -> bool:
+        main_script_path = self._session_data.main_script_path
+
+        def has_matching_script_path(page_info):
+            # When iterating through source_util.get_pages(main_script_path).items(),
+            # we get a tuple of form (page_name, page_info).
+            _, page_info = page_info
+            return page_info["script_path"] == filepath
+
+        changed_page_name, changed_page_info = next(
+            filter(
+                has_matching_script_path,
+                source_util.get_pages(main_script_path).items(),
+            ),
+            (None, None),
+        )
+
+        # We technically only need to check one of the if statement clauses
+        # below, but checking both helps out the type checker.
+        if changed_page_name is not None and changed_page_info is not None:
+            is_main_page = changed_page_info["script_path"] == main_script_path
+            current_page_name = self._client_state.page_name
+
+            return (is_main_page and current_page_name == "") or (
+                current_page_name == changed_page_name
+            )
+
+        return True
+
+    def _on_source_file_changed(self, filepath: Optional[str] = None) -> None:
         """One of our source files changed. Schedule a rerun if appropriate."""
+        if filepath is not None and not self._should_rerun_on_file_change(filepath):
+            return
+
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
@@ -297,6 +342,16 @@ class AppSession:
         # must have at least one argument for `sender` (in this case we don't really care about it, thus `_`),
         # and introducing an unnecessary argument to `_on_source_file_changed` just for this purpose sounded finicky.
         self._on_source_file_changed()
+
+    def _on_pages_changed(self, _) -> None:
+        # TODO: Double-check the product behavior we want on this. In the spec,
+        # it says that we should notify the client of a pages dir change only
+        # if "run on save" is true, but I feel like always sending updates is
+        # quite reasonable behavior since the pages nav updating is not
+        # potentially disruptive like a script rerunning is.
+        msg = ForwardMsg()
+        _populate_app_pages(msg.pages_changed, self._session_data.main_script_path)
+        self._enqueue_forward_msg(msg)
 
     def _clear_queue(self) -> None:
         self._session_data.clear_browser_queue()
@@ -461,6 +516,7 @@ class AppSession:
         msg.new_session.name = self._session_data.name
         msg.new_session.main_script_path = self._session_data.main_script_path
 
+        _populate_app_pages(msg.new_session, self._session_data.main_script_path)
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
@@ -584,6 +640,7 @@ def _populate_config_msg(msg: Config) -> None:
     msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
+    msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
@@ -640,3 +697,14 @@ def _populate_user_info_msg(msg: UserInfo) -> None:
         msg.email = Credentials.get_current().activation.email
     else:
         msg.email = ""
+
+
+def _populate_app_pages(
+    msg: Union[NewSession, PagesChanged], main_script_path: str
+) -> None:
+    for page_name, page_info in source_util.get_pages(main_script_path).items():
+        page_proto = msg.app_pages.add()
+
+        page_proto.page_name = page_name
+        page_proto.script_path = page_info["script_path"]
+        page_proto.icon = page_info["icon"]

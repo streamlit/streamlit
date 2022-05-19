@@ -24,11 +24,24 @@ import { mount } from "src/lib/test_util"
 import { spacing } from "src/theme/primitives/spacing"
 import lightTheme from "src/theme/lightTheme"
 import Sidebar, { SidebarProps } from "./Sidebar"
+import SidebarNav from "./SidebarNav"
 
 expect.extend(matchers)
 
-function renderSideBar(props: Partial<SidebarProps>): ReactWrapper {
-  return mount(<Sidebar chevronDownshift={0} theme={lightTheme} {...props} />)
+function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
+  return mount(
+    <Sidebar
+      chevronDownshift={0}
+      theme={lightTheme}
+      appPages={[]}
+      onPageChange={jest.fn()}
+      currentPageName={""}
+      hasElements
+      pageLinkBaseUrl={""}
+      hideSidebarNav={false}
+      {...props}
+    />
+  )
 }
 
 describe("Sidebar Component", () => {
@@ -82,6 +95,50 @@ describe("Sidebar Component", () => {
     )
   })
 
+  it("hides scrollbar when hideScrollbar is called", () => {
+    const wrapper = renderSideBar({})
+
+    expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
+      "overflow",
+      "overlay"
+    )
+
+    wrapper.find(SidebarNav).prop("hideParentScrollbar")(true)
+    wrapper.update()
+
+    expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
+      "overflow",
+      "hidden"
+    )
+  })
+
+  it("has extra top and bottom padding if no SidebarNav is displayed", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      ],
+    })
+
+    expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
+      "padding-top",
+      "6rem"
+    )
+  })
+
+  it("has less padding if the SidebarNav is displayed", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+        { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+      ],
+    })
+
+    expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
+      "padding-top",
+      spacing.lg
+    )
+  })
+
   it("uses the default chevron spacing if chevronDownshift is zero", () => {
     const wrapper = renderSideBar({
       chevronDownshift: 0,
@@ -104,5 +161,35 @@ describe("Sidebar Component", () => {
       "top",
       "50px"
     )
+  })
+
+  it("renders SidebarNav component", () => {
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+    ]
+    const wrapper = renderSideBar({ appPages })
+
+    expect(wrapper.find(SidebarNav).exists()).toBe(true)
+    expect(wrapper.find(SidebarNav).prop("appPages")).toEqual(appPages)
+    expect(typeof wrapper.find(SidebarNav).prop("onPageChange")).toBe(
+      "function"
+    )
+    expect(
+      wrapper.find("StyledSidebarUserContent").prop("hasPageNavAbove")
+    ).toBe(true)
+  })
+
+  it("can hide SidebarNav with the hideSidebarNav option", () => {
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+    ]
+    const wrapper = renderSideBar({ appPages, hideSidebarNav: true })
+
+    expect(wrapper.find(SidebarNav).exists()).toBe(false)
+    expect(
+      wrapper.find("StyledSidebarUserContent").prop("hasPageNavAbove")
+    ).toBe(false)
   })
 })

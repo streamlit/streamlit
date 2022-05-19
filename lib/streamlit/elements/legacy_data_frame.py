@@ -16,29 +16,40 @@
 
 import datetime
 import re
-from collections import namedtuple
-from typing import cast, Dict, Any, Optional
+from typing import Any, cast, Dict, NamedTuple, Optional, TYPE_CHECKING
+from typing_extensions import Final
 
 import pyarrow as pa
 import tzlocal
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
-import streamlit
 from streamlit import errors, type_util
+from streamlit.elements.arrow import Data
 from streamlit.logger import get_logger
 from streamlit.proto.DataFrame_pb2 import (
     DataFrame as DataFrameProto,
     TableStyle as TableStyleProto,
 )
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
-CSSStyle = namedtuple("CSSStyle", ["property", "value"])
+LOGGER: Final = get_logger(__name__)
+
+
+class CSSStyle(NamedTuple):
+    property: Any
+    value: Any
 
 
 class LegacyDataFrameMixin:
-    def _legacy_dataframe(self, data=None, width=None, height=None):
+    def _legacy_dataframe(
+        self,
+        data: Data = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+    ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -97,7 +108,7 @@ class LegacyDataFrameMixin:
             element_height=height,
         )
 
-    def _legacy_table(self, data=None):
+    def _legacy_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 
         This differs from `st._legacy_dataframe` in that the table in this case is
@@ -127,12 +138,12 @@ class LegacyDataFrameMixin:
         return self.dg._enqueue("table", table_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-def marshall_data_frame(data: Any, proto_df: DataFrameProto) -> None:
+def marshall_data_frame(data: Data, proto_df: DataFrameProto) -> None:
     """Convert a pandas.DataFrame into a proto.DataFrame.
 
     Parameters
@@ -338,7 +349,7 @@ def _get_custom_display_values(translated_style: Dict[Any, Any]) -> Dict[Any, An
     return display_values
 
 
-def _marshall_index(pandas_index, proto_index):
+def _marshall_index(pandas_index, proto_index) -> None:
     """Convert an pandas.Index into a proto.Index.
 
     pandas_index - Panda.Index or related (input)
@@ -385,7 +396,7 @@ def _marshall_index(pandas_index, proto_index):
         raise NotImplementedError("Can't handle %s yet." % type(pandas_index))
 
 
-def _marshall_table(pandas_table, proto_table):
+def _marshall_table(pandas_table, proto_table) -> None:
     """Convert a sequence of 1D arrays into proto.Table.
 
     pandas_table - Sequence of 1D arrays which are AnyArray compatible (input).
@@ -397,7 +408,7 @@ def _marshall_table(pandas_table, proto_table):
         _marshall_any_array(pandas_array, proto_table.cols.add())
 
 
-def _marshall_any_array(pandas_array, proto_array):
+def _marshall_any_array(pandas_array, proto_array) -> None:
     """Convert a 1D numpy.Array into a proto.AnyArray.
 
     pandas_array - 1D arrays which is AnyArray compatible (input).

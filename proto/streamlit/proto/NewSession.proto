@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionState.proto";
 
 // This is the first message that is sent when a new session starts.
@@ -48,6 +49,9 @@ message NewSession {
   // Theme configuration options defined in the .streamlit/config.toml file.
   // See the "theme" config section.
   CustomThemeConfig custom_theme = 7;
+
+  // A list of all of this app's pages, in order and including the main page.
+  repeated AppPage app_pages = 8;
 }
 
 // Contains the session state that existed at the time the user connected.
@@ -87,6 +91,9 @@ message Config {
 
   // See config option "ui.hideTopBar".
   bool hide_top_bar = 6;
+
+  // See config option "ui.hideSidebarNav".
+  bool hide_sidebar_nav = 7;
 
   reserved 1;
 }
