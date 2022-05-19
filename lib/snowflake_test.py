@@ -40,6 +40,8 @@ def create_rerun_msg() -> bytes:
 
 
 # Start Streamlit
+print(f"Staring StreamlitDemo (version={SnowflakeDemo.version})")
+
 config = SnowflakeConfig(SCRIPT_PATH, {})
 demo = SnowflakeDemo(config)
 demo.start()
