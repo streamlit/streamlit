@@ -43,7 +43,7 @@ import ThemedDataGridContainer from "./DataGridContainer"
 
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
-const MAX_COLUMN_WIDTH = 500
+const MAX_COLUMN_WIDTH = 600
 
 /**
  * The GridColumn type extended with a function to get a template of the given type.
@@ -285,7 +285,7 @@ function DataGrid({
 
   //       if (firstCell && lastCell) {
   //         // Calculate the table width, the +2 corresponds to the table borders
-  //         adjustedTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
+  //         adjustedTableWidth = lastCell.x - firstCell.x + lastCell.width + 1
   //       }
   //     }
   //     const newWidth = Math.min(adjustedTableWidth, propWidth)
@@ -397,6 +397,9 @@ function DataGrid({
           } else if (args.kind !== "out-of-bounds" && !isFocused) {
             setIsFocused(true)
           }
+        }}
+        experimental={{
+          scrollbarWidthOverride: 1,
         }}
       />
     </ThemedDataGridContainer>
