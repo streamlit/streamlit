@@ -17,7 +17,9 @@ class ExampleMessageContext:
     def __init__(self, id: str):
         self._id = id
 
-    def write_forward_msg(self, msg: ForwardMsg) -> None:
+    def write_forward_msg(self, msg_bytes: bytes) -> None:
+        msg = ForwardMsg()
+        msg.ParseFromString(msg_bytes)
         print(f"Got ForwardMsg: {msg.WhichOneof('type')} (id={self._id})")
 
     def on_complete(self, err: Optional[BaseException] = None) -> None:
@@ -26,15 +28,19 @@ class ExampleMessageContext:
         else:
             print(f"Async operation error: {err} (id={self._id})")
 
+    def flush_system_logs(self, msg: Optional[str] = None) -> None:
+        if msg is not None:
+            print(msg)
 
-def create_rerun_msg() -> BackMsg:
+
+def create_rerun_msg() -> bytes:
     msg = BackMsg()
     msg.rerun_script.query_string = ""
-    return msg
+    return msg.SerializeToString()
 
 
 # Start Streamlit
-config = SnowflakeConfig(script_string=SCRIPT_STRING)
+config = SnowflakeConfig(SCRIPT_PATH, {})
 demo = SnowflakeDemo(config)
 demo.start()
 
