@@ -111,6 +111,7 @@ class Radio extends React.PureComponent<Props, State> {
                     marginTop: 0,
                     // Make left and right padding look the same visually.
                     paddingLeft: 0,
+                    alignItems: "start",
                     paddingRight: "2px",
                     backgroundColor: $isFocusVisible
                       ? colors.darkenedBgMix25
@@ -125,6 +126,7 @@ class Radio extends React.PureComponent<Props, State> {
                   style: ({ $checked }: { $checked: boolean }) => ({
                     width: "1rem",
                     height: "1rem",
+                    marginTop: "0.3rem",
                     backgroundColor:
                       $checked && !disabled
                         ? colors.primary
