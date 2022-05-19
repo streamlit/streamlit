@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import gc
 import sys
 import threading
@@ -187,7 +188,8 @@ class ScriptRunner:
         self._execing = False
 
         # This is initialized in start()
-        self._script_thread: Optional[threading.Thread] = None
+        self._script_task: Optional[asyncio.Task] = None
+        # self._script_thread: Optional[threading.Thread] = None  # XXX: Stlite: threading is not supported on Pyodide
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -234,14 +236,10 @@ class ScriptRunner:
         This must be called only once.
 
         """
-        if self._script_thread is not None:
+        if self._script_task is not None:
             raise Exception("ScriptRunner was already started")
 
-        self._script_thread = threading.Thread(
-            target=self._run_script_thread,
-            name="ScriptRunner.scriptThread",
-        )
-        self._script_thread.start()
+        self._script_task = asyncio.create_task(self._run_script_thread())
 
     def _get_script_run_ctx(self) -> ScriptRunContext:
         """Get the ScriptRunContext for the current thread.
@@ -269,7 +267,7 @@ class ScriptRunner:
             )
         return ctx
 
-    def _run_script_thread(self) -> None:
+    async def _run_script_thread(self) -> None:
         """The entry point for the script thread.
 
         Processes the ScriptRequestQueue, which will at least contain the RERUN
@@ -321,7 +319,8 @@ class ScriptRunner:
 
     def _is_in_script_thread(self) -> bool:
         """True if the calling function is running in the script thread"""
-        return self._script_thread == threading.current_thread()
+        # return self._script_thread == threading.current_thread()
+        return self._script_task == asyncio.current_task()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg to our browser queue.
