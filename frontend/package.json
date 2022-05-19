@@ -49,6 +49,7 @@
     "@luma.gl/gltools": "^8.5.18",
     "@luma.gl/shadertools": "^8.5.18",
     "@luma.gl/webgl": "^8.5.18",
+    "@stlite/kernel": "*",
     "apache-arrow": "^11.0.0",
     "axios": "^0.27.2",
     "baseui": "12.2.0",
