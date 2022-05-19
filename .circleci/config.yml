@@ -241,17 +241,19 @@ workflows:
           filters:
             tags:
               only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
+            branches:
+              ignore: release/demo
+      - pr-preview-demo: #Make a preview branch for release demo
+          filters:
+            branches:
+              only:
+                - release/demo
       - cli-regression-test:
           filters:
             tags:
               only: /^(([0-9]+\.){3}dev[0-9]+)/
             branches:
               ignore: /^release\/([0-9]+\.){2}([0-9]+)/
-      - static-wheel:
-          filters:
-            branches:
-              only:
-                release/demo
       - nightly-release:
           requires:
             - python-min-version
@@ -561,25 +563,6 @@ jobs:
                 fail_only: true
                 failure_message: ":blobonfire: Nightly job failed on unit tests"
 
-  static-wheel:
-    docker:
-      - image: circleci/python:3.9.7
-
-    working_directory: ~/repo
-
-    steps:
-      - run:
-          name: Upload wheel for Metrics App!
-          command: |
-            ${SUDO} apt-get install -y awscli
-            aws configure set aws_access_key_id ${CORE_PREVIEWS_S3_KEY_ID}
-            aws configure set aws_secret_access_key ${CORE_PREVIEWS_S3_SECRET_KEY}
-            cd lib/dist
-            for a in *.whl; do mv -i "$a" streamlit-11.11.11-py2.py3-none-any.whl; done 
-            export WHEELFILE="$(ls -t *.whl | head -n 1)"
-            aws s3 cp ${WHEELFILE} s3://core-previews/${PREVIEW_BRANCH}/ --acl public-read
-            echo -e "Here is the link to download the wheel file: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
-
   # The following inherits from python-max-version. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
   python-min-version:
@@ -732,7 +715,7 @@ jobs:
           fail_only: true
           failure_message: ":blobonfire: Nightly job failed to release"
 
-  pr-preview:
+  pr-preview: &job-template-preview
     docker:
       - image: circleci/python:3.9.7
 
@@ -817,6 +800,22 @@ jobs:
           name: Ready to deploy!
           command: |
             echo -e "https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=${PREVIEW_BRANCH}&mainModule=streamlit_app.py"
+
+  pr-preview-demo: 
+    <<: *job-template-preview
+    steps:
+      - run:
+          name: Upload wheel for Metrics App!
+          command: |
+            ${SUDO} apt-get install -y awscli
+            aws configure set aws_access_key_id ${CORE_PREVIEWS_S3_KEY_ID}
+            aws configure set aws_secret_access_key ${CORE_PREVIEWS_S3_SECRET_KEY}
+            cd lib/dist
+            for a in *.whl; do mv -i "$a" streamlit-11.11.11-py2.py3-none-any.whl; done 
+            export WHEELFILE="$(ls -t *.whl | head -n 1)"
+            aws s3 cp ${WHEELFILE} s3://core-previews/${PREVIEW_BRANCH}/ --acl public-read
+            echo -e "Here is the link to download the wheel file: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
+
 
   cypress:
     docker:
