@@ -241,7 +241,6 @@ function DataGrid({
   height: propHeight,
   width: propWidth,
 }: DataGridProps): ReactElement {
-  const [width, _setWidth] = useState(propWidth)
   const [sort, setSort] = React.useState<ColumnSortConfig>()
 
   const {
@@ -262,40 +261,6 @@ function DataGrid({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
   const minWidth = MIN_COLUMN_WIDTH + 3
-
-  // TODO: Remove this:
-  // useLayoutEffect(() => {
-  //   // Without this timeout,the width calculation might fail in a few cases. The timeout ensures
-  //   // that the execution of this function is placed after the component render in the event loop.
-  //   const timerId = setTimeout(() => {
-  //     // TODO(lukasmasuch): Support use_container_width parameter
-
-  //     let adjustedTableWidth = Math.max(
-  //       columns.length * MIN_COLUMN_WIDTH + 3,
-  //       minWidth
-  //     )
-
-  //     console.log("Update size", columns.length, numRows)
-  //     if (numRows) {
-  //       const firstCell = dataEditorRef.current?.getBounds(0, 0)
-  //       const lastCell = dataEditorRef.current?.getBounds(
-  //         columns.length - 1,
-  //         numRows - 1
-  //       )
-
-  //       if (firstCell && lastCell) {
-  //         // Calculate the table width, the +2 corresponds to the table borders
-  //         adjustedTableWidth = lastCell.x - firstCell.x + lastCell.width + 1
-  //       }
-  //     }
-  //     const newWidth = Math.min(adjustedTableWidth, propWidth)
-  //     if (newWidth !== width) {
-  //       setWidth(newWidth)
-  //     }
-  //   }, 0)
-
-  //   return () => window.clearTimeout(timerId)
-  // }, [numRows, columns, dataEditorRef, getCellContent])
 
   const onHeaderClick = React.useCallback(
     (index: number) => {
@@ -340,7 +305,7 @@ function DataGrid({
 
   return (
     <ThemedDataGridContainer
-      width={width}
+      width={propWidth}
       height={height}
       minHeight={minHeight}
       maxHeight={maxHeight}
