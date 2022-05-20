@@ -140,6 +140,7 @@ export function getCellTemplate(
       displayData: "",
       readonly,
       allowOverlay: true,
+      contentAlign: "right",
       style,
     } as NumberCell
   }
