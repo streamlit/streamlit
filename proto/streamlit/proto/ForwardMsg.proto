@@ -87,6 +87,9 @@ message ForwardMsgMetadata {
   repeated uint32 delta_path = 2;
 
   ElementDimensionSpec element_dimension_spec = 3;
+
+  // The ID of the script run that this forward message was sent in.
+  string script_run_id = 4;
 }
 
 // Specifies the dimensions for the element

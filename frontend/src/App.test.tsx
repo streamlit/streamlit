@@ -937,7 +937,6 @@ describe("App.sendRerunBackMsg", () => {
     instance.sendBackMsg = jest.fn()
     // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
-    instance.clearAppState = jest.fn()
 
     // Set the value of document.location.pathname to '/foo/bar/page1'
     window.history.pushState({}, "", "/foo/bar/page1")
@@ -948,7 +947,6 @@ describe("App.sendRerunBackMsg", () => {
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
-    expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 
   it("switches pages correctly when sendRerunbackMsg is given a pageName", () => {
@@ -958,7 +956,6 @@ describe("App.sendRerunBackMsg", () => {
     instance.sendBackMsg = jest.fn()
     // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
-    instance.clearAppState = jest.fn()
 
     instance.sendRerunBackMsg(undefined, "page1")
 
@@ -967,7 +964,6 @@ describe("App.sendRerunBackMsg", () => {
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
-    expect(instance.clearAppState).toHaveBeenCalled()
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
   })
 
@@ -1024,6 +1020,29 @@ describe("App.sendRerunBackMsg", () => {
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "foo=bar" },
     })
+  })
+
+  it("calls clearAppState if the page changed", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.clearAppState = jest.fn()
+    // @ts-ignore
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    instance.sendRerunBackMsg(undefined, "page1")
+    expect(instance.clearAppState).toHaveBeenCalled()
+  })
+
+  it("doesn't call clearAppState if the page hasn't changed", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    wrapper.setState({ currentPageName: "page1" })
+    const instance = wrapper.instance() as App
+    instance.clearAppState = jest.fn()
+    // @ts-ignore
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    instance.sendRerunBackMsg(undefined, "page1")
+    expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 })
 

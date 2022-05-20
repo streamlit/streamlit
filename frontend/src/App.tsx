@@ -885,8 +885,17 @@ export class App extends PureComponent<Props, State> {
     deltaMsg: Delta,
     metadataMsg: ForwardMsgMetadata
   ): void => {
+    const { scriptRunId } = this.state
+
+    // It's possible for us to receive a stale delta message that doesn't
+    // correspond to this script run. If this happens, we can simply drop the
+    // message.
+    if (metadataMsg.scriptRunId !== scriptRunId) {
+      return
+    }
+
     this.pendingElementsBuffer = this.pendingElementsBuffer.applyDelta(
-      this.state.scriptRunId,
+      scriptRunId,
       deltaMsg,
       metadataMsg
     )
@@ -1016,9 +1025,6 @@ export class App extends PureComponent<Props, State> {
         .replace(new RegExp("^/?"), "")
         .replace(new RegExp("/$"), "")
     } else {
-      const { appHash, scriptRunId, scriptName } = this.state
-      this.clearAppState(appHash as string, scriptRunId, scriptName)
-
       const qs = queryString ? `?${queryString}` : ""
       const basePathPrefix = basePath ? `/${basePath}` : ""
 
@@ -1026,7 +1032,18 @@ export class App extends PureComponent<Props, State> {
       window.history.pushState({}, "", pageUrl)
     }
 
-    this.setState({ currentPageName: pageName })
+    const { currentPageName } = this.state
+    const pageChanged = pageName !== currentPageName
+
+    if (pageChanged) {
+      const { appHash, scriptName } = this.state
+      this.clearAppState(
+        appHash as string,
+        "<reset_script_run_id>",
+        scriptName
+      )
+      this.setState({ currentPageName: pageName })
+    }
 
     this.sendBackMsg(
       new BackMsg({

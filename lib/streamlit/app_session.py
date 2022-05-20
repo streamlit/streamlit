@@ -105,6 +105,7 @@ class AppSession:
         """
         # Each AppSession has a unique string ID.
         self.id = str(uuid.uuid4())
+        self._script_run_id = _generate_scriptrun_id()
 
         self._ioloop = ioloop
         self._session_data = session_data
@@ -200,6 +201,7 @@ class AppSession:
         if not config.get_option("client.displayEnabled"):
             return
 
+        msg.metadata.script_run_id = self._script_run_id
         self._session_data.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
@@ -512,7 +514,8 @@ class AppSession:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
-        msg.new_session.script_run_id = _generate_scriptrun_id()
+        self._script_run_id = _generate_scriptrun_id()
+        msg.new_session.script_run_id = self._script_run_id
         msg.new_session.name = self._session_data.name
         msg.new_session.main_script_path = self._session_data.main_script_path
 

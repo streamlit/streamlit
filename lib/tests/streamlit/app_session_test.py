@@ -515,6 +515,12 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
                 ]
             )
 
+        # Simulate the enqueue function adding the script_run_id to the
+        # metadata of each forward msg.
+        for msg in expected_events:
+            if hasattr(msg, "metadata"):
+                msg.metadata.script_run_id = "mock_scriptrun_id"
+
         # Assert the results!
         self.assertEqual(expected_events, forward_msg_queue_events)
 
