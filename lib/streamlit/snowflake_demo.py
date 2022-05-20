@@ -39,6 +39,18 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.server.server import Server
 
+# Monkey-patch StoredProcConnection._format_query_for_log as a no-op.
+# TODO: remove this when until we have a fixed package.
+try:
+    import snowflake.connector
+
+    def _format_query_for_log(self, query):
+        return None
+
+    snowflake.connector.StoredProcConnection._format_query_for_log = _format_query_for_log  # type: ignore
+except:
+    pass
+
 SnowparkSession = Any
 
 LOGGER = get_logger(__name__)
