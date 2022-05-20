@@ -64,7 +64,6 @@ message Element {
   // An element can be one of the following element types.
   oneof type {
     Alert alert = 30;
-    Arrow arrow_data_frame = 40;
     Arrow arrow_table = 39;
     ArrowVegaLiteChart arrow_vega_lite_chart = 41;
     Audio audio = 13;
@@ -77,7 +76,7 @@ message Element {
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
     DataFrame data_frame = 3;
-    Arrow data_grid = 47;
+    Arrow data_grid = 40;
     DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlJsonChart deck_gl_json_chart = 34;
@@ -108,7 +107,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 48
+    // Next ID: 47
   }
 
   reserved 9;
