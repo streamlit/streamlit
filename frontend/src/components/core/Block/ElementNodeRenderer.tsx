@@ -88,9 +88,6 @@ import { StyledElementContainer } from "./styled-components"
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
 const Snow = React.lazy(() => import("src/components/elements/Snow/"))
-const ArrowDataFrame = React.lazy(() =>
-  import("src/components/elements/ArrowDataFrame/")
-)
 const ArrowVegaLiteChart = React.lazy(() =>
   import("src/components/elements/ArrowVegaLiteChart/")
 )
@@ -216,15 +213,6 @@ const RawElementNodeRenderer = (
 
     case "balloons":
       return <Balloons scriptRunId={props.scriptRunId} />
-
-    case "arrowDataFrame":
-      return (
-        <ArrowDataFrame
-          element={node.quiverElement as Quiver}
-          width={width}
-          height={height}
-        />
-      )
 
     case "arrowTable":
       return <ArrowTable element={node.quiverElement as Quiver} />
