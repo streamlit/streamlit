@@ -4,13 +4,14 @@
 
 package:
   name: {{ name|lower }}
-  version: {{ version }}.{{ environ.get('GIT_HASH', None) }}
+  version: {{ version }}
 
 source:
   path: ..
 
 build:
   number: 0
+  string: {{ environ.get('GIT_HASH') }}
   noarch: python
   script: {{ PYTHON }} -m pip install . -vv
   entry_points:
