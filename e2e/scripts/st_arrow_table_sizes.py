@@ -19,10 +19,32 @@ import pandas as pd
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
 
-data = np.random.randn(100, 100)
+st.title("Tables with different sizes")
 
-df = pd.DataFrame(data)
-st._arrow_dataframe(df)
-st._arrow_dataframe(df, 250, 150)
-st._arrow_dataframe(df, width=250)
-st._arrow_dataframe(df, height=150)
+st.header("Long cells that overflow")
+
+st.write(
+    """
+    Long text should show an ellipsis. All cells should have a tooltip
+    with their entire un-ellipsized contents.
+    """
+)
+
+ROWS = 2
+
+st.header("Using st._arrow_table")
+
+for cols in [4, 5, 6, 20]:
+    df = pd.DataFrame(
+        np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
+    )
+    st._arrow_table(df)
+
+st.header("Overriding st._arrow_table")
+
+for cols in [4, 5, 6, 20]:
+    df = pd.DataFrame(
+        np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
+    )
+    df_elt = st._arrow_table(np.random.randn(200, 200))
+    df_elt._arrow_table(df)

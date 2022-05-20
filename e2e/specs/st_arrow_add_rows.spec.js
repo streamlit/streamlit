@@ -19,7 +19,7 @@ describe("st._arrow_add_rows", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
     // Increasing timeout since we're waiting for
-    // dataframes, tables, and charts to be rendered.
+    // tables, and charts to be rendered.
     Cypress.config("defaultCommandTimeout", 30000);
 
     cy.loadApp("http://localhost:3000/");
@@ -34,7 +34,7 @@ describe("st._arrow_add_rows", () => {
 
   beforeEach(() => {
     // Check that the app is fully loaded
-    return cy.get(".element-container").should("have.length", 9);
+    return cy.get(".element-container").should("have.length", 8);
   });
 
   it("checks that no new elements are created", () => {
@@ -42,7 +42,6 @@ describe("st._arrow_add_rows", () => {
       "have.length",
       1
     );
-    cy.get(".element-container .stDataFrame").should("have.length", 1);
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']").should(
       "have.length",
       6
@@ -54,15 +53,6 @@ describe("st._arrow_add_rows", () => {
       "have.length",
       4
     );
-  });
-
-  it("correctly adds rows to the dataframe", () => {
-    cy.get(
-      ".element-container .stDataFrame [data-testid='StyledDataFrameRowHeaderCell']"
-    ).should("have.length", 4);
-    cy.get(
-      ".element-container .stDataFrame [data-testid='StyledDataFrameDataCell']"
-    ).should("have.length", 12);
   });
 
   it("correctly adds rows to charts", () => {

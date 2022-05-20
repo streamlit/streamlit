@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-describe("Arrow Dataframes and Tables snapshots", () => {
+describe("Arrow Tables snapshots", () => {
   before(() => {
     // Increasing timeout since we're waiting for
-    // dataframes and tables to be rendered.
+    // tables to be rendered.
     Cypress.config("defaultCommandTimeout", 30000);
 
     cy.loadApp("http://localhost:3000/");
@@ -29,14 +29,6 @@ describe("Arrow Dataframes and Tables snapshots", () => {
     // from throwing [RangeError: The value of "offset" is out of range.]
     cy.get("[data-testid='stTable']").each($element => {
       cy.wrap($element).invoke("css", "overflow", "auto");
-    });
-  });
-
-  it("have consistent st._arrow_dataframe visuals", () => {
-    cy.get(".stDataFrame").each(($element, index) => {
-      return cy
-        .wrap($element)
-        .matchThemedSnapshots("arrow-dataframe-visuals" + index);
     });
   });
 

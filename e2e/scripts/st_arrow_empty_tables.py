@@ -14,6 +14,16 @@
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 
-df = pd.DataFrame({"test": [3.14, 3.1]})
-st._arrow_dataframe(df.style.format({"test": "{:.2f}"}))
+st.header("Empty tables")
+st._arrow_table()
+st._arrow_table([])
+st._arrow_table(np.array(0))
+st._arrow_table(pd.DataFrame([]))
+
+st.header("Empty one-column table")
+st._arrow_table(np.array([]))
+
+st.header("Empty two-column table")
+st._arrow_table(pd.DataFrame({"lat": [], "lon": []}))

@@ -70,6 +70,16 @@ st.header("Pandas Styler: Value formatting")
 df = pd.DataFrame({"test": [3.1423424, 3.1]})
 st.experimental_data_grid(df.style.format({"test": "{:.2f}"}))
 
+st.header("Pandas Styler: Background color")
+
+
+def highlight_first(value):
+    return "background-color: yellow" if value == 0 else ""
+
+
+df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
+st.experimental_data_grid(df.style.applymap(highlight_first))
+
 st.header("Pandas Styler: Background and font styling")
 
 df = pd.DataFrame(np.random.randn(20, 4), columns=["A", "B", "C", "D"])

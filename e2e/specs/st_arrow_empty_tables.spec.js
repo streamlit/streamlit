@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-describe("Arrow Dataframes", () => {
-  const DF_SELECTOR = ".stDataFrame";
+describe("Empty Arrow Tables", () => {
   const TABLE_SELECTOR = "[data-testid='stTable'] > table";
 
   before(() => {
@@ -27,47 +26,8 @@ describe("Arrow Dataframes", () => {
 
     // Wait for the site to be fully loaded
     cy.get(".element-container").should($els => {
-      expect($els).to.have.length.of.at.least(10);
+      expect($els).to.have.length.of.at.least(6);
     });
-  });
-
-  it("have consistent empty list visuals", () => {
-    cy.getIndexed(".element-container", 1).each(el => {
-      return cy.wrap(el).matchThemedSnapshots("arrow_empty_dataframes_list");
-    });
-  });
-
-  it("have consistent empty visuals", () => {
-    cy.get(DF_SELECTOR)
-      .filter(idx => idx >= 0 && idx <= 5)
-      .each((el, idx) => {
-        return cy
-          .wrap(el)
-          .matchThemedSnapshots(`arrow_empty_dataframes${idx}`);
-      });
-  });
-
-  it("have consistent empty one-column visuals", () => {
-    cy.get(DF_SELECTOR)
-      .filter(idx => idx >= 6 && idx <= 7)
-      .each((el, idx) => {
-        // Snapshot the parent instead of `.stDataFrame` so we have a larger
-        // bounding box and a lower percentage difference on the snapshot diff
-        return cy
-          .wrap(el)
-          .parent()
-          .matchThemedSnapshots(`arrow_empty_dataframes_one_col${idx}`);
-      });
-  });
-
-  it("have consistent empty two-column visuals", () => {
-    cy.get(DF_SELECTOR)
-      .filter(idx => idx >= 8 && idx <= 9)
-      .each((el, idx) => {
-        return cy
-          .wrap(el)
-          .matchThemedSnapshots(`arrow_empty_dataframes_two_col${idx}`);
-      });
   });
 
   it("have consistent empty table visuals", () => {
