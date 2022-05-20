@@ -183,7 +183,7 @@ conda-distribution:
 	rm -rf lib/conda-recipe/dist
 	mkdir lib/conda-recipe/dist
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
-	conda build lib/conda-recipe --channel conda-forge --output-folder lib/conda-recipe/dist
+	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --channel conda-forge --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-hash
 # Get the sha256 hash of the conda distribution

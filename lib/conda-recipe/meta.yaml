@@ -4,7 +4,7 @@
 
 package:
   name: {{ name|lower }}
-  version: {{ version }}
+  version: {{ version }}.{{ environ.get('GIT_HASH', None) }}
 
 source:
   path: ..
@@ -15,6 +15,8 @@ build:
   script: {{ PYTHON }} -m pip install . -vv
   entry_points:
     - streamlit = streamlit.cli:main
+  script_env:
+   - GIT_HASH
 
 requirements:
   host:
