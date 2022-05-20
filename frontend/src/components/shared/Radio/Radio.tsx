@@ -126,7 +126,7 @@ class Radio extends React.PureComponent<Props, State> {
                   style: ({ $checked }: { $checked: boolean }) => ({
                     width: "1rem",
                     height: "1rem",
-                    marginTop: "0.3rem",
+                    marginTop: "0.35rem",
                     backgroundColor:
                       $checked && !disabled
                         ? colors.primary
