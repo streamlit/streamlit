@@ -34,7 +34,7 @@ describe("st._arrow_add_rows", () => {
 
   beforeEach(() => {
     // Check that the app is fully loaded
-    return cy.get(".element-container").should("have.length", 8);
+    return cy.get(".element-container").should("have.length", 7);
   });
 
   it("checks that no new elements are created", () => {

@@ -21,10 +21,10 @@ describe("message_deduping", () => {
   });
 
   it("displays two dataframes", () => {
-    // Hack to make Cypress wait a little bit before searching for stDataFrame.
+    // Hack to make Cypress wait a little bit before searching for stTable.
     // (This waits for 2 suspense placeholders and 1 st.write() to show)
     cy.get(".element-container .stMarkdown").should("have.text", "hello!");
 
-    cy.get(".element-container .stDataFrame").should("have.length", 2);
+    cy.get(".element-container .stDataGrid").should("have.length", 2);
   });
 });

@@ -119,7 +119,7 @@ describe("hello", () => {
 
             cy.get(".stMultiSelect").should("exist");
 
-            cy.get(".stDataFrame").should("exist");
+            cy.get(".stDataGrid").should("exist");
 
             cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
               .find("canvas")
