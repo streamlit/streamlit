@@ -19,7 +19,7 @@ describe("st._arrow_add_rows", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
     // Increasing timeout since we're waiting for
-    // tables, and charts to be rendered.
+    // dataframes, and charts to be rendered.
     Cypress.config("defaultCommandTimeout", 30000);
 
     cy.loadApp("http://localhost:3000/");
@@ -34,7 +34,7 @@ describe("st._arrow_add_rows", () => {
 
   beforeEach(() => {
     // Check that the app is fully loaded
-    return cy.get(".element-container").should("have.length", 7);
+    return cy.get(".element-container").should("have.length", 9);
   });
 
   it("checks that no new elements are created", () => {
@@ -42,6 +42,7 @@ describe("st._arrow_add_rows", () => {
       "have.length",
       1
     );
+    cy.get(".element-container .stDataGrid").should("have.length", 1);
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']").should(
       "have.length",
       6
@@ -63,6 +64,12 @@ describe("st._arrow_add_rows", () => {
           .matchThemedSnapshots(`arrowstArrowVegaLiteChart-${index}`);
       }
     );
+  });
+
+  it("correctly adds rows to dataframe", () => {
+    cy.get(".element-container .stDataGrid").each((element, index) => {
+      return cy.get(element).matchThemedSnapshots(`dataGrid-${index}`);
+    });
   });
 
   it("raises an exception when the shapes don't match", () => {
