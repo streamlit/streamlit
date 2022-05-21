@@ -94,7 +94,7 @@ class ArrowMixin:
         data: Data = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display a dataframe with our new interactive table component.
 
         Parameters
