@@ -16,6 +16,8 @@
  */
 
 import React, { ReactElement } from "react"
+import { IAppPage } from "src/autogen/proto"
+
 import VerticalBlock from "src/components/core/Block"
 import { ThemedSidebar } from "src/components/core/Sidebar"
 import { ScriptRunState } from "src/lib/ScriptRunState"
@@ -53,6 +55,16 @@ export interface AppViewProps {
   componentRegistry: ComponentRegistry
 
   formsData: FormsData
+
+  appPages: IAppPage[]
+
+  onPageChange: (pageName: string) => void
+
+  currentPageName: string
+
+  hideSidebarNav: boolean
+
+  pageLinkBaseUrl: string
 }
 
 /**
@@ -68,6 +80,11 @@ function AppView(props: AppViewProps): ReactElement {
     uploadClient,
     componentRegistry,
     formsData,
+    appPages,
+    onPageChange,
+    currentPageName,
+    hideSidebarNav,
+    pageLinkBaseUrl,
   } = props
 
   React.useEffect(() => {
@@ -103,6 +120,10 @@ function AppView(props: AppViewProps): ReactElement {
   )
 
   const layout = wideMode ? "wide" : "narrow"
+  const hasSidebarElements = !elements.sidebar.isEmpty
+  const showSidebar =
+    hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
+
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <StyledAppViewContainer
@@ -110,8 +131,16 @@ function AppView(props: AppViewProps): ReactElement {
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
-      {!elements.sidebar.isEmpty && (
-        <ThemedSidebar initialSidebarState={initialSidebarState}>
+      {showSidebar && (
+        <ThemedSidebar
+          initialSidebarState={initialSidebarState}
+          appPages={appPages}
+          hasElements={hasSidebarElements}
+          onPageChange={onPageChange}
+          currentPageName={currentPageName}
+          hideSidebarNav={hideSidebarNav}
+          pageLinkBaseUrl={pageLinkBaseUrl}
+        >
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>
       )}

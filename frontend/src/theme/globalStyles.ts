@@ -150,8 +150,7 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 1.25rem 0 1rem 0;
     margin: 0;
 
-    // Set to 1.4 so it looks nice when wrapped.
-    line-height: 1.4;
+    line-height: 1.2;
   }
 
   h2 {
@@ -165,8 +164,7 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 1rem 0 1rem 0;
     margin: 0;
 
-    // Set to 1.4 so it looks nice when wrapped.
-    line-height: 1.4;
+    line-height: 1.2;
   }
 
   h3 {
@@ -180,8 +178,7 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 0.5rem 0 1rem 0;
     margin: 0;
 
-    // Set to 1.4 so it looks nice when wrapped.
-    line-height: 1.4;
+    line-height: 1.2;
   }
 
   h4 {
@@ -190,7 +187,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.headingColor};
     padding: 0.75rem 0 1rem 0;
     margin: 0;
-    line-height: 1.4;
+    line-height: 1.2;
   }
 
   h5 {
@@ -199,7 +196,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
-    line-height: 1.4;
+    line-height: 1.2;
   }
 
   h6 {
@@ -208,7 +205,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
-    line-height: 1.4;
+    line-height: 1.2;
   }
 
   // Abbreviations

@@ -13,14 +13,15 @@
 # limitations under the License.
 
 from datetime import datetime, date, time
+from textwrap import dedent
+from typing import Any, cast, List, Optional, Sequence, Tuple, TYPE_CHECKING, Union
+
+import attr
+from dateutil import relativedelta
+from typing_extensions import TypeAlias
+
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
-from typing import cast, Optional, Union, Tuple
-from textwrap import dedent
-
-from dateutil import relativedelta
-
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
@@ -33,12 +34,138 @@ from streamlit.state import (
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+
+TimeValue: TypeAlias = Union[time, datetime, None]
+SingleDateValue: TypeAlias = Union[date, datetime, None]
+DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
+DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, date]]
+
+
+def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
+    parsed_dates: List[date]
+    range_value: bool = False
+    if value is None:
+        # Set value default.
+        parsed_dates = [datetime.now().date()]
+    elif isinstance(value, datetime):
+        parsed_dates = [value.date()]
+    elif isinstance(value, date):
+        parsed_dates = [value]
+    elif isinstance(value, (list, tuple)):
+        if not len(value) in (0, 1, 2):
+            raise StreamlitAPIException(
+                "DateInput value should either be an date/datetime or a list/tuple of "
+                "0 - 2 date/datetime values"
+            )
+
+        parsed_dates = [v.date() if isinstance(v, datetime) else v for v in value]
+        range_value = True
+    else:
+        raise StreamlitAPIException(
+            "DateInput value should either be an date/datetime or a list/tuple of "
+            "0 - 2 date/datetime values"
+        )
+    return parsed_dates, range_value
+
+
+def _parse_min_date(
+    min_value: SingleDateValue,
+    parsed_dates: Sequence[date],
+) -> date:
+    parsed_min_date: date
+    if isinstance(min_value, datetime):
+        parsed_min_date = min_value.date()
+    elif isinstance(min_value, date):
+        parsed_min_date = min_value
+    elif min_value is None:
+        if parsed_dates:
+            parsed_min_date = parsed_dates[0] - relativedelta.relativedelta(years=10)
+        else:
+            parsed_min_date = date.today() - relativedelta.relativedelta(years=10)
+    else:
+        raise StreamlitAPIException(
+            "DateInput min should either be a date/datetime or None"
+        )
+    return parsed_min_date
+
+
+def _parse_max_date(
+    max_value: SingleDateValue,
+    parsed_dates: Sequence[date],
+) -> date:
+    parsed_max_date: date
+    if isinstance(max_value, datetime):
+        parsed_max_date = max_value.date()
+    elif isinstance(max_value, date):
+        parsed_max_date = max_value
+    elif max_value is None:
+        if parsed_dates:
+            parsed_max_date = parsed_dates[-1] + relativedelta.relativedelta(years=10)
+        else:
+            parsed_max_date = date.today() + relativedelta.relativedelta(years=10)
+    else:
+        raise StreamlitAPIException(
+            "DateInput max should either be a date/datetime or None"
+        )
+    return parsed_max_date
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class _DateInputValues:
+    value: Sequence[date]
+    is_range: bool
+    max: date
+    min: date
+
+    @classmethod
+    def from_raw_values(
+        cls,
+        value: DateValue,
+        min_value: SingleDateValue,
+        max_value: SingleDateValue,
+    ) -> "_DateInputValues":
+
+        parsed_value, is_range = _parse_date_value(value=value)
+        return cls(
+            value=parsed_value,
+            is_range=is_range,
+            min=_parse_min_date(
+                min_value=min_value,
+                parsed_dates=parsed_value,
+            ),
+            max=_parse_max_date(
+                max_value=max_value,
+                parsed_dates=parsed_value,
+            ),
+        )
+
+    def __attrs_post_init__(self) -> None:
+        if self.min > self.max:
+            raise StreamlitAPIException(
+                f"The `min_value`, set to {self.min}, shouldn't be larger "
+                f"than the `max_value`, set to {self.max}."
+            )
+
+        if self.value:
+            start_value = self.value[0]
+            end_value = self.value[-1]
+
+            if (start_value < self.min) or (end_value > self.max):
+                raise StreamlitAPIException(
+                    f"The default `value` of {self.value} "
+                    f"must lie between the `min_value` of {self.min} "
+                    f"and the `max_value` of {self.max}, inclusively."
+                )
+
 
 class TimeWidgetsMixin:
     def time_input(
         self,
         label: str,
-        value=None,
+        value: TimeValue = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -104,7 +231,7 @@ class TimeWidgetsMixin:
     def _time_input(
         self,
         label: str,
-        value=None,
+        value: Union[time, datetime, None] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -118,35 +245,35 @@ class TimeWidgetsMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        # Set value default.
+        parsed_time: time
         if value is None:
-            value = datetime.now().time().replace(second=0, microsecond=0)
-
-        # Ensure that the value is either datetime/time
-        if not isinstance(value, datetime) and not isinstance(value, time):
+            # Set value default.
+            parsed_time = datetime.now().time().replace(second=0, microsecond=0)
+        elif isinstance(value, datetime):
+            parsed_time = value.time().replace(second=0, microsecond=0)
+        elif isinstance(value, time):
+            parsed_time = value
+        else:
             raise StreamlitAPIException(
-                "The type of the value should be either datetime or time."
+                "The type of value should be one of datetime, time or None"
             )
-
-        # Convert datetime to time
-        if isinstance(value, datetime):
-            value = value.time().replace(second=0, microsecond=0)
+        del value
 
         time_input_proto = TimeInputProto()
         time_input_proto.label = label
-        time_input_proto.default = time.strftime(value, "%H:%M")
+        time_input_proto.default = time.strftime(parsed_time, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
             time_input_proto.help = dedent(help)
 
-        def deserialize_time_input(ui_value, widget_id=""):
+        def deserialize_time_input(ui_value: str, widget_id: Any = "") -> time:
             return (
                 datetime.strptime(ui_value, "%H:%M").time()
                 if ui_value is not None
-                else value
+                else parsed_time
             )
 
-        def serialize_time_input(v):
+        def serialize_time_input(v: Union[datetime, time]) -> str:
             if isinstance(v, datetime):
                 v = v.time()
             return time.strftime(v, "%H:%M")
@@ -167,7 +294,9 @@ class TimeWidgetsMixin:
         # the following proto fields to affect a widget's ID.
         time_input_proto.disabled = disabled
         if set_frontend_value:
-            time_input_proto.value = serialize_time_input(current_value)
+            time_input_proto.value = serialize_time_input(
+                cast(Union[datetime, time], current_value)
+            )
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
@@ -176,9 +305,9 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value=None,
-        min_value=None,
-        max_value=None,
+        value: DateValue = None,
+        min_value: SingleDateValue = None,
+        max_value: SingleDateValue = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -186,7 +315,7 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> Union[date, Tuple[date, ...]]:
+    ) -> DateWidgetReturn:
         """Display a date input widget.
 
         Parameters
@@ -255,9 +384,9 @@ class TimeWidgetsMixin:
     def _date_input(
         self,
         label: str,
-        value=None,
-        min_value=None,
-        max_value=None,
+        value: DateValue = None,
+        min_value: SingleDateValue = None,
+        max_value: SingleDateValue = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -266,80 +395,51 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Union[date, Tuple[date, ...]]:
+    ) -> DateWidgetReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        # Set value default.
-        if value is None:
-            value = datetime.now().date()
-
-        single_value = isinstance(value, (date, datetime))
-        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
-        if not single_value and not range_value:
-            raise StreamlitAPIException(
-                "DateInput value should either be an date/datetime or a list/tuple of "
-                "0 - 2 date/datetime values"
-            )
-
-        if single_value:
-            value = [value]
-        value = [v.date() if isinstance(v, datetime) else v for v in value]
-
-        if isinstance(min_value, datetime):
-            min_value = min_value.date()
-        elif min_value is None:
-            if value:
-                min_value = value[0] - relativedelta.relativedelta(years=10)
-            else:
-                min_value = date.today() - relativedelta.relativedelta(years=10)
-
-        if isinstance(max_value, datetime):
-            max_value = max_value.date()
-        elif max_value is None:
-            if value:
-                max_value = value[-1] + relativedelta.relativedelta(years=10)
-            else:
-                max_value = date.today() + relativedelta.relativedelta(years=10)
-
-        if value:
-            start_value = value[0]
-            end_value = value[-1]
-
-            if (start_value < min_value) or (end_value > max_value):
-                raise StreamlitAPIException(
-                    f"The default `value` of {value} "
-                    f"must lie between the `min_value` of {min_value} "
-                    f"and the `max_value` of {max_value}, inclusively."
-                )
+        parsed_values = _DateInputValues.from_raw_values(
+            value=value,
+            min_value=min_value,
+            max_value=max_value,
+        )
+        del value, min_value, max_value
 
         date_input_proto = DateInputProto()
-        date_input_proto.is_range = range_value
+        date_input_proto.is_range = parsed_values.is_range
         if help is not None:
             date_input_proto.help = dedent(help)
 
         date_input_proto.label = label
-        date_input_proto.default[:] = [date.strftime(v, "%Y/%m/%d") for v in value]
+        date_input_proto.default[:] = [
+            date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
+        ]
 
-        date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
-        date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
+        date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
+        date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        def deserialize_date_input(ui_value, widget_id=""):
+        def deserialize_date_input(
+            ui_value: Any,
+            widget_id: str = "",
+        ) -> DateWidgetReturn:
+            return_value: Sequence[date]
             if ui_value is not None:
-                return_value = [
+                return_value = tuple(
                     datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
-                ]
+                )
             else:
-                return_value = value
+                return_value = parsed_values.value
 
-            return return_value[0] if single_value else tuple(return_value)
+            if not parsed_values.is_range:
+                return return_value[0]
+            return cast(DateWidgetReturn, tuple(return_value))
 
-        def serialize_date_input(v):
-            range_value = isinstance(v, (list, tuple))
-            to_serialize = list(v) if range_value else [v]
+        def serialize_date_input(v: DateWidgetReturn) -> List[str]:
+            to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
             return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
 
         current_value, set_frontend_value = register_widget(
@@ -362,9 +462,9 @@ class TimeWidgetsMixin:
             date_input_proto.set_value = True
 
         self.dg._enqueue("date_input", date_input_proto)
-        return cast(date, current_value)
+        return cast(DateWidgetReturn, current_value)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

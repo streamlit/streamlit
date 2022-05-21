@@ -266,6 +266,7 @@ class ScriptRunner:
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            page_name=self._client_state.page_name,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -286,6 +287,7 @@ class ScriptRunner:
         # created.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
+        client_state.page_name = ctx.page_name
         widget_states = self._session_state.get_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(
@@ -394,7 +396,7 @@ class ScriptRunner:
         in_memory_file_manager.clear_session_files()
 
         ctx = self._get_script_run_ctx()
-        ctx.reset(query_string=rerun_data.query_string)
+        ctx.reset(query_string=rerun_data.query_string, page_name=rerun_data.page_name)
 
         self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STARTED)
 
@@ -403,18 +405,38 @@ class ScriptRunner:
         # in their previous script elements disappearing.
 
         try:
-            with source_util.open_python_file(self._session_data.main_script_path) as f:
+            script_path = None
+
+            # NOTE: It may seem weird that we're passing the page_name around
+            # as opposed to the script_path, but this is necessary to handle
+            # the case where a user navigates directly to a page and we have to
+            # serve a request to run a non-main page before we've had a chance
+            # to send page info to the frontend.
+            if rerun_data.page_name:
+                page_info = source_util.get_pages(
+                    self._session_data.main_script_path
+                ).get(rerun_data.page_name, None)
+
+                if page_info:
+                    script_path = page_info["script_path"]
+                else:
+                    msg = ForwardMsg()
+                    msg.page_not_found.page_name = rerun_data.page_name
+                    ctx.enqueue(msg)
+
+            if not script_path:
+                script_path = self._session_data.main_script_path
+
+            with source_util.open_python_file(script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(
-                    filebody, self._session_data.main_script_path
-                )
+                filebody = magic.add_magic(filebody, script_path)
 
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                self._session_data.main_script_path,
+                script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
                 mode="exec",
@@ -450,6 +472,14 @@ class ScriptRunner:
         try:
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
+            # TODO(vdonato): Double-check that we're okay with naming the
+            # module for every page `__main__`. I'm pretty sure this is
+            # necessary given that people will likely often write
+            #     ```
+            #     if __name__ == "__main__":
+            #         ...
+            #     ```
+            # in their scripts.
             module = _new_module("__main__")
 
             # Install the fake module as the __main__ module. This allows
@@ -464,7 +494,7 @@ class ScriptRunner:
             # work correctly. The CodeHasher is scoped to
             # files contained in the directory of __main__.__file__, which we
             # assume is the main script directory.
-            module.__dict__["__file__"] = self._session_data.main_script_path
+            module.__dict__["__file__"] = script_path
 
             with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.

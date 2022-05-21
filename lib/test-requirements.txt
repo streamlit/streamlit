@@ -18,3 +18,4 @@ seaborn>=0.11.2
 setuptools<50.0.0
 sqlalchemy>=1.4.25
 watchdog==2.1.5
+rich>=11.2.0

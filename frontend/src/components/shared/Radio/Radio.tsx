@@ -110,7 +110,7 @@ class Radio extends React.PureComponent<Props, State> {
                     paddingLeft: 0,
                     paddingRight: "2px",
                     backgroundColor: $isFocusVisible
-                      ? colors.transparentDarkenedBgMix60
+                      ? colors.darkenedBgMix25
                       : "",
                     borderTopLeftRadius: radii.md,
                     borderTopRightRadius: radii.md,
@@ -120,6 +120,8 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 RadioMarkOuter: {
                   style: ({ $checked }: { $checked: boolean }) => ({
+                    width: "1rem",
+                    height: "1rem",
                     backgroundColor:
                       $checked && !disabled
                         ? colors.primary
@@ -128,8 +130,8 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 RadioMarkInner: {
                   style: ({ $checked }: { $checked: boolean }) => ({
-                    height: $checked ? "6px" : "16px",
-                    width: $checked ? "6px" : "16px",
+                    height: $checked ? "6px" : ".75rem",
+                    width: $checked ? "6px" : ".75rem",
                   }),
                 },
                 Label: {

@@ -41,7 +41,7 @@ class SliderMixin:
         max_value=None,
         value=None,
         step=None,
-        format=None,
+        format: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -274,14 +274,10 @@ class SliderMixin:
             max_value = DEFAULTS[data_type]["max_value"]
         if step is None:
             step = DEFAULTS[data_type]["step"]
-            if (
-                data_type
-                in (
-                    SliderProto.DATETIME,
-                    SliderProto.DATE,
-                )
-                and max_value - min_value < timedelta(days=1)
-            ):
+            if data_type in (
+                SliderProto.DATETIME,
+                SliderProto.DATE,
+            ) and max_value - min_value < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
             format = DEFAULTS[data_type]["format"]

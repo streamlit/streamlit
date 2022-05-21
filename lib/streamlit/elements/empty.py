@@ -65,8 +65,7 @@ class EmptyMixin:
 
         """
         empty_proto = EmptyProto()
-        dg: "DeltaGenerator" = self.dg._enqueue("empty", empty_proto)
-        return dg
+        return self.dg._enqueue("empty", empty_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

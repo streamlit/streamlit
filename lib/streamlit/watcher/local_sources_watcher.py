@@ -24,6 +24,7 @@ from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
 from streamlit.session_data import SessionData
+from streamlit.source_util import get_pages
 from streamlit.watcher.path_watcher import (
     get_default_path_watcher_class,
     NoOpPathWatcher,
@@ -41,7 +42,7 @@ PathWatcher = None
 class LocalSourcesWatcher:
     def __init__(self, session_data: SessionData):
         self._session_data = session_data
-        self._on_file_changed: List[Callable[[], None]] = []
+        self._on_file_changed: List[Callable[[str], None]] = []
         self._is_closed = False
         self._cached_sys_modules: Set[str] = set()
 
@@ -52,12 +53,13 @@ class LocalSourcesWatcher:
 
         self._watched_modules: Dict[str, WatchedModule] = {}
 
-        self._register_watcher(
-            self._session_data.main_script_path,
-            module_name=None,  # Only the root script has None here.
-        )
+        for page_info in get_pages(self._session_data.main_script_path).values():
+            self._register_watcher(
+                page_info["script_path"],
+                module_name=None,  # Only root scripts have their modules set to None
+            )
 
-    def register_file_change_callback(self, cb: Callable[[], None]) -> None:
+    def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
         self._on_file_changed.append(cb)
 
     def on_file_changed(self, filepath):
@@ -82,7 +84,7 @@ class LocalSourcesWatcher:
                 del sys.modules[wm.module_name]
 
         for cb in self._on_file_changed:
-            cb()
+            cb(filepath)
 
     def close(self):
         for wm in self._watched_modules.values():
