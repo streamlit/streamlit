@@ -38,7 +38,7 @@ export function createDataGridTheme(theme: Theme): GlideTheme {
     accentFg: theme.colors.white, // TODO(lukasmasuch): Do we need a different color here?
     accentLight: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.fadedText05,
-    fontFamily: theme.fonts.sansSerif,
+    fontFamily: theme.genericFonts.bodyFont,
     bgSearchResult: transparentize(theme.colors.primary, 0.9),
     // Header styling:
     bgIconHeader: theme.colors.fadedText60,
