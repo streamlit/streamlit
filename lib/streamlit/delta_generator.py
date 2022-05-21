@@ -30,7 +30,7 @@ from typing import (
     Union,
 )
 
-from typing_extensions import Final, Literal
+from typing_extensions import Final, Literal, Protocol
 
 import streamlit as st
 from streamlit import cursor, caching
@@ -120,6 +120,82 @@ ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
 
 Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
+
+
+class DgMixinSupport(Protocol):
+    def _get_delta_path_str(self) -> str:
+        ...
+
+    @overload
+    def _enqueue(  # type: ignore[misc]
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: None,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> "DeltaGenerator":
+        ...
+
+    @overload
+    def _enqueue(  # type: ignore[misc]
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: Type[NoValue],
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> None:
+        ...
+
+    @overload
+    def _enqueue(  # type: ignore[misc]
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: Value,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> Value:
+        ...
+
+    @overload
+    def _enqueue(
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: None = None,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> "DeltaGenerator":
+        ...
+
+    @overload
+    def _enqueue(
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: Union[None, Type[NoValue], Value] = None,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> Union["DeltaGenerator", None, Value]:
+        ...
+
+    def _enqueue(
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: Union[None, Type[NoValue], Value] = None,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> Union["DeltaGenerator", None, Value]:
+        ...
 
 
 class DeltaGenerator(

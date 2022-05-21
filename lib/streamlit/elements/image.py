@@ -33,6 +33,7 @@ from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 if TYPE_CHECKING:
     import numpy.typing as npt
     from typing import Any
+    from streamlit.delta_generator import DgMixinSupport
     from streamlit.delta_generator import DeltaGenerator
 
 LOGGER: Final = get_logger(__name__)
@@ -53,7 +54,7 @@ OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
 
 class ImageMixin:
     def image(
-        self,
+        self: "DgMixinSupport",
         image: ImageOrImageList,
         # TODO: Narrow type of caption, dependent on type of image,
         #  by way of overload
@@ -131,7 +132,7 @@ class ImageMixin:
 
         image_list_proto = ImageListProto()
         marshall_images(
-            self.dg._get_delta_path_str(),
+            self._get_delta_path_str(),
             image,
             caption,
             width,
@@ -140,12 +141,7 @@ class ImageMixin:
             channels,
             output_format,
         )
-        return self.dg._enqueue("imgs", image_list_proto)
-
-    @property
-    def dg(self) -> "DeltaGenerator":
-        """Get our DeltaGenerator."""
-        return cast("DeltaGenerator", self)
+        return self._enqueue("imgs", image_list_proto)
 
 
 def _image_may_have_alpha_channel(image: PILImage) -> bool:
@@ -311,7 +307,7 @@ def image_to_url(
                 )
 
         data = _np_array_to_bytes(
-            array=cast("npt.NDArray[Any]", image),
+            array=cast("npt.NDArray[Any]", image),  # type: ignore[redundant-cast]
             output_format=output_format,
         )
 

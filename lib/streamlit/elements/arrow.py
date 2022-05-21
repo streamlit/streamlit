@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections.abc import Iterable
-from typing import Any, Dict, List, Mapping, Optional, Union, cast, TYPE_CHECKING
+from typing import Any, Dict, List, Mapping, Optional, Union, TYPE_CHECKING
 from typing import TypeVar
 
 from numpy import ndarray
@@ -25,6 +25,7 @@ from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
 if TYPE_CHECKING:
+    from streamlit.delta_generator import DgMixinSupport
     from streamlit.delta_generator import DeltaGenerator
 
 Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]], None]
@@ -32,7 +33,7 @@ Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]
 
 class ArrowMixin:
     def _arrow_dataframe(
-        self,
+        self: "DgMixinSupport",
         data: Data = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
@@ -76,19 +77,19 @@ class ArrowMixin:
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
-        delta_path = self.dg._get_delta_path_str()
+        delta_path = self._get_delta_path_str()
         default_uuid = str(hash(delta_path))
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
-        return self.dg._enqueue(
+        return self._enqueue(
             delta_type="arrow_data_frame",
             element_proto=proto,
             element_width=width,
             element_height=height,
         )
 
-    def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
+    def _arrow_table(self: "DgMixinSupport", data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 
         This differs from `st._arrow_dataframe` in that the table in this case is
@@ -111,17 +112,12 @@ class ArrowMixin:
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
-        delta_path = self.dg._get_delta_path_str()
+        delta_path = self._get_delta_path_str()
         default_uuid = str(hash(delta_path))
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
-        return self.dg._enqueue("arrow_table", proto)
-
-    @property
-    def dg(self) -> "DeltaGenerator":
-        """Get our DeltaGenerator."""
-        return cast("DeltaGenerator", self)
+        return self._enqueue("arrow_table", proto)
 
 
 def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) -> None:

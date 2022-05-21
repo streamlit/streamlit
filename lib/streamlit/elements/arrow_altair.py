@@ -18,9 +18,7 @@ a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
 from enum import Enum
-from typing import Any
-from typing import Dict
-from typing import cast, TYPE_CHECKING
+from typing import Any, Dict, TYPE_CHECKING
 
 import altair as alt
 import pandas as pd
@@ -36,6 +34,7 @@ from .arrow import Data
 from .utils import last_index_for_melted_dataframes
 
 if TYPE_CHECKING:
+    from streamlit.delta_generator import DgMixinSupport
     from streamlit.delta_generator import DeltaGenerator
 
 
@@ -47,7 +46,7 @@ class ChartType(Enum):
 
 class ArrowAltairMixin:
     def _arrow_line_chart(
-        self,
+        self: "DgMixinSupport",
         data: Data = None,
         width: int = 0,
         height: int = 0,
@@ -96,10 +95,10 @@ class ArrowAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
+        return self._enqueue("arrow_line_chart", proto, last_index=last_index)
 
     def _arrow_area_chart(
-        self,
+        self: "DgMixinSupport",
         data: Data = None,
         width: int = 0,
         height: int = 0,
@@ -148,10 +147,10 @@ class ArrowAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
+        return self._enqueue("arrow_area_chart", proto, last_index=last_index)
 
     def _arrow_bar_chart(
-        self,
+        self: "DgMixinSupport",
         data: Data = None,
         width: int = 0,
         height: int = 0,
@@ -200,10 +199,12 @@ class ArrowAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
+        return self._enqueue("arrow_bar_chart", proto, last_index=last_index)
 
     def _arrow_altair_chart(
-        self, altair_chart: Chart, use_container_width: bool = False
+        self: "DgMixinSupport",
+        altair_chart: Chart,
+        use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -247,12 +248,7 @@ class ArrowAltairMixin:
             use_container_width=use_container_width,
         )
 
-        return self.dg._enqueue("arrow_vega_lite_chart", proto)
-
-    @property
-    def dg(self) -> "DeltaGenerator":
-        """Get our DeltaGenerator."""
-        return cast("DeltaGenerator", self)
+        return self._enqueue("arrow_vega_lite_chart", proto)
 
 
 def _is_date_column(df: pd.DataFrame, name: str) -> bool:

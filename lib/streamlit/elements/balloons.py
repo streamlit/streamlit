@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from streamlit.proto.Balloons_pb2 import Balloons as BalloonsProto
 
 if TYPE_CHECKING:
+    from streamlit.delta_generator import DgMixinSupport
     from streamlit.delta_generator import DeltaGenerator
 
 
 class BalloonsMixin:
-    def balloons(self) -> "DeltaGenerator":
+    def balloons(self: "DgMixinSupport") -> "DeltaGenerator":
         """Draw celebratory balloons.
 
         Example
@@ -33,9 +34,4 @@ class BalloonsMixin:
         """
         balloons_proto = BalloonsProto()
         balloons_proto.show = True
-        return self.dg._enqueue("balloons", balloons_proto)
-
-    @property
-    def dg(self) -> "DeltaGenerator":
-        """Get our DeltaGenerator."""
-        return cast("DeltaGenerator", self)
+        return self._enqueue("balloons", balloons_proto)

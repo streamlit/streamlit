@@ -15,7 +15,7 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
-from typing import Any, Dict, Optional, cast, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 from typing_extensions import Final
 
 import streamlit.elements.lib.dicttools as dicttools
@@ -28,6 +28,7 @@ from . import arrow
 from .arrow import Data
 
 if TYPE_CHECKING:
+    from streamlit.delta_generator import DgMixinSupport
     from streamlit.delta_generator import DeltaGenerator
 
 
@@ -36,7 +37,7 @@ LOGGER: Final = get_logger(__name__)
 
 class ArrowVegaLiteMixin:
     def _arrow_vega_lite_chart(
-        self,
+        self: "DgMixinSupport",
         data: Data = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
@@ -95,12 +96,7 @@ class ArrowVegaLiteMixin:
             use_container_width=use_container_width,
             **kwargs,
         )
-        return self.dg._enqueue("arrow_vega_lite_chart", proto)
-
-    @property
-    def dg(self) -> "DeltaGenerator":
-        """Get our DeltaGenerator."""
-        return cast("DeltaGenerator", self)
+        return self._enqueue("arrow_vega_lite_chart", proto)
 
 
 def marshall(
