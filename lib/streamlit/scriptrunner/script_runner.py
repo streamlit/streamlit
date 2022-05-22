@@ -266,7 +266,7 @@ class ScriptRunner:
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
-            page_name=self._client_state.page_name,
+            page_script_hash=self._client_state.page_script_hash,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -287,7 +287,7 @@ class ScriptRunner:
         # created.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
-        client_state.page_name = ctx.page_name
+        client_state.page_script_hash = ctx.page_script_hash
         widget_states = self._session_state.get_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(
@@ -396,9 +396,16 @@ class ScriptRunner:
         in_memory_file_manager.clear_session_files()
 
         ctx = self._get_script_run_ctx()
-        ctx.reset(query_string=rerun_data.query_string, page_name=rerun_data.page_name)
+        ctx.reset(
+            query_string=rerun_data.query_string,
+            page_script_hash=rerun_data.page_script_hash,
+        )
 
-        self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STARTED)
+        self.on_event.send(
+            self,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash=rerun_data.page_script_hash,
+        )
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
@@ -407,21 +414,17 @@ class ScriptRunner:
         try:
             script_path = None
 
-            # NOTE: It may seem weird that we're passing the page_name around
-            # as opposed to the script_path, but this is necessary to handle
-            # the case where a user navigates directly to a page and we have to
-            # serve a request to run a non-main page before we've had a chance
-            # to send page info to the frontend.
-            if rerun_data.page_name:
+            if rerun_data.page_script_hash:
                 page_info = source_util.get_pages(
                     self._session_data.main_script_path
-                ).get(rerun_data.page_name, None)
+                ).get(rerun_data.page_script_hash, None)
 
                 if page_info:
                     script_path = page_info["script_path"]
                 else:
                     msg = ForwardMsg()
-                    msg.page_not_found.page_name = rerun_data.page_name
+                    # TODO(vdonato): Write an explanatory comment.
+                    msg.page_not_found.page_name = ""
                     ctx.enqueue(msg)
 
             if not script_path:

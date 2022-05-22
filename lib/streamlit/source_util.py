@@ -20,6 +20,7 @@ from typing import Any, Callable, cast, Dict, List, Optional, Tuple
 from blinker import Signal
 
 from streamlit.logger import get_logger
+from streamlit.util import calc_md5
 
 LOGGER = get_logger(__name__)
 
@@ -142,9 +143,9 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
         main_script_path = Path(main_script_path_str)
         main_page_name, main_page_icon = page_name_and_icon(main_script_path)
 
-        used_page_names = {main_page_name}
         pages = {
-            main_page_name: {
+            calc_md5(main_script_path_str): {
+                "page_name": main_page_name,
                 "icon": main_page_icon,
                 "script_path": str(main_script_path),
             }
@@ -157,12 +158,13 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
         )
 
         for script_path in page_scripts:
+            script_path_str = str(script_path)
             pn, pi = page_name_and_icon(script_path)
-            if pn in used_page_names:
-                continue
-
-            used_page_names.add(pn)
-            pages[pn] = {"icon": pi, "script_path": str(script_path)}
+            pages[calc_md5(script_path_str)] = {
+                "page_name": pn,
+                "icon": pi,
+                "script_path": script_path_str,
+            }
 
         _cached_pages = pages
 

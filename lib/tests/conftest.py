@@ -57,7 +57,7 @@ with patch(
     config.get_config_options(force_reparse=True)
 
     # Set source_util._cached_pages to the empty dict below so that
-    # source_util.get_pages behavior is deterministic and doesn't depend on the
+    # source_util.get_pages' behavior is deterministic and doesn't depend on the
     # filesystem of the machine tests are being run on. Tests that need
     # source_util.get_pages to depend on the filesystem can patch this value
     # back to None.
