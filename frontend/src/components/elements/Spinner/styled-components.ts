@@ -28,7 +28,7 @@ export const ThemedStyledSpinner = styled(StyledSpinnerNext, {
     marginRight: theme.spacing.none,
     marginLeft: theme.spacing.none,
     borderColor: theme.colors.fadedText10,
-    borderTopColor: theme.colors.blue,
+    borderTopColor: theme.colors.primary,
     flexGrow: 0,
     flexShrink: 0,
   }
