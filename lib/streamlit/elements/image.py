@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Some casts in this file are only occasionally necessary depending on the
+# user's Python version, and mypy doesn't have a good way of toggling this
+# specific config option at a per-line level.
+# mypy: no-warn-unused-ignores
+
 """Image marshalling."""
 
 import imghdr
