@@ -43,6 +43,7 @@ class RerunData:
     query_string: str = ""
     widget_states: Optional[WidgetStates] = None
     page_script_hash: str = ""
+    page_name: str = ""
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -122,6 +123,7 @@ class ScriptRequests:
                         query_string=new_data.query_string,
                         widget_states=coalesced_states,
                         page_script_hash=new_data.page_script_hash,
+                        page_name=new_data.page_name,
                     )
                     return True
 

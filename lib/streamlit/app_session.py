@@ -252,12 +252,11 @@ class AppSession:
             return
 
         if client_state:
-            # TODO(vdonato): Fall back to page_name if page_script_hash is unavailable.
-            # Also handle page not found cases.
             rerun_data = RerunData(
                 client_state.query_string,
                 client_state.widget_states,
                 client_state.page_script_hash,
+                client_state.page_name,
             )
         else:
             rerun_data = RerunData()

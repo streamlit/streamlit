@@ -142,9 +142,14 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
 
         main_script_path = Path(main_script_path_str)
         main_page_name, main_page_icon = page_name_and_icon(main_script_path)
+        main_page_script_hash = calc_md5(main_script_path_str)
 
+        # NOTE: We include the page_script_hash in the dict even though it is
+        #       already used as the key because that occasionally makes things
+        #       easier for us when we need to iterate over pages.
         pages = {
-            calc_md5(main_script_path_str): {
+            main_page_script_hash: {
+                "page_script_hash": main_page_script_hash,
                 "page_name": main_page_name,
                 "icon": main_page_icon,
                 "script_path": str(main_script_path),
@@ -160,7 +165,10 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
         for script_path in page_scripts:
             script_path_str = str(script_path)
             pn, pi = page_name_and_icon(script_path)
-            pages[calc_md5(script_path_str)] = {
+            psh = calc_md5(script_path_str)
+
+            pages[psh] = {
+                "page_script_hash": psh,
                 "page_name": pn,
                 "icon": pi,
                 "script_path": script_path_str,

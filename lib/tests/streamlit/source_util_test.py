@@ -146,26 +146,31 @@ def test_get_pages(tmpdir):
     received_pages = source_util.get_pages(main_script_path)
     assert received_pages == {
         calc_md5(main_script_path): {
+            "page_script_hash": calc_md5(main_script_path),
             "page_name": "streamlit_app",
             "script_path": main_script_path,
             "icon": "",
         },
         calc_md5(str(pages_dir / "01-page.py")): {
+            "page_script_hash": calc_md5(str(pages_dir / "01-page.py")),
             "page_name": "page",
             "script_path": str(pages_dir / "01-page.py"),
             "icon": "",
         },
         calc_md5(str(pages_dir / "03_other_page.py")): {
+            "page_script_hash": calc_md5(str(pages_dir / "03_other_page.py")),
             "page_name": "other_page",
             "script_path": str(pages_dir / "03_other_page.py"),
             "icon": "",
         },
         calc_md5(str(pages_dir / "04 last numbered page.py")): {
+            "page_script_hash": calc_md5(str(pages_dir / "04 last numbered page.py")),
             "page_name": "last_numbered_page",
             "script_path": str(pages_dir / "04 last numbered page.py"),
             "icon": "",
         },
         calc_md5(str(pages_dir / "page.py")): {
+            "page_script_hash": calc_md5(str(pages_dir / "page.py")),
             "page_name": "page",
             "script_path": str(pages_dir / "page.py"),
             "icon": "",
