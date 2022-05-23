@@ -16,6 +16,8 @@
  */
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import Icon from "src/components/shared/Icon"
 import classNames from "classnames"
 import {
   StatelessAccordion as Accordion,
@@ -134,6 +136,12 @@ function withExpandable(
               style: ({ $disabled }: SharedProps) => ({
                 color: $disabled ? colors.disabled : colors.bodyText,
               }),
+              component: () => {
+                if (expanded) {
+                  return <Icon content={ExpandLess} size="lg" />
+                }
+                return <Icon content={ExpandMore} size="lg" />
+              },
             },
             Root: {
               props: {
