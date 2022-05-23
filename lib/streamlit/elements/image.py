@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Some casts in this file are only occasionally necessary depending on the
+# user's Python version, and mypy doesn't have a good way of toggling this
+# specific config option at a per-line level.
+# mypy: no-warn-unused-ignores
+
 """Image marshalling."""
 
 import imghdr
@@ -310,8 +315,12 @@ def image_to_url(
                     "have exactly 3 color channels"
                 )
 
+        # Depending on the version of numpy that the user has installed, the
+        # typechecker may not be able to deduce that indexing into a
+        # `npt.NDArray[Any]` returns a `npt.NDArray[Any]`, so we need to
+        # ignore redundant casts below.
         data = _np_array_to_bytes(
-            array=cast("npt.NDArray[Any]", image),
+            array=cast("npt.NDArray[Any]", image),  # type: ignore[redundant-cast]
             output_format=output_format,
         )
 
