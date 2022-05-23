@@ -233,7 +233,7 @@ export const StyledHeaderButton = styled(StyledBaseButton)<
       boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
     },
     "&:hover": {
-      backgroundColor: theme.colors.transparentDarkenedBgMix60,
+      backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       backgroundColor: theme.colors.lightGray,

@@ -64,10 +64,7 @@ class HelpMixin:
         """
         doc_string_proto = DocStringProto()
         _marshall(doc_string_proto, obj)
-        return cast(
-            "DeltaGenerator",
-            self.dg._enqueue("doc_string", doc_string_proto),
-        )
+        return self.dg._enqueue("doc_string", doc_string_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

@@ -45,7 +45,7 @@ export const StyledFileDropzoneInstructions = styled.div(({ theme }) => ({
 
 export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
   ({ theme }) => ({
-    color: theme.colors.darkenedBgMix60,
+    color: theme.colors.darkenedBgMix100,
     marginRight: theme.spacing.lg,
   })
 )
@@ -109,7 +109,7 @@ export const StyledErrorMessage = styled.span(({ theme }) => ({
 export const StyledFileIcon = styled.div(({ theme }) => ({
   display: "flex",
   padding: theme.spacing.twoXS,
-  color: theme.colors.darkenedBgMix60,
+  color: theme.colors.darkenedBgMix100,
 }))
 
 export const StyledFileError = styled.small(({ theme }) => ({

@@ -76,8 +76,7 @@ class MarkdownMixin:
         markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
 
-        dg = self.dg._enqueue("markdown", markdown_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("markdown", markdown_proto)
 
     def header(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
         """Display text in header formatting.
@@ -102,8 +101,7 @@ class MarkdownMixin:
         else:
             header_proto.body = f'<h2 data-anchor="{anchor}">{clean_text(body)}</h2>'
             header_proto.allow_html = True
-        dg = self.dg._enqueue("markdown", header_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("markdown", header_proto)
 
     def subheader(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
         """Display text in subheader formatting.
@@ -129,8 +127,7 @@ class MarkdownMixin:
             subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
             subheader_proto.allow_html = True
 
-        dg = self.dg._enqueue("markdown", subheader_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("markdown", subheader_proto)
 
     def code(self, body: str, language: Optional[str] = "python") -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
@@ -159,8 +156,7 @@ class MarkdownMixin:
             "body": body,
         }
         code_proto.body = clean_text(markdown)
-        dg = self.dg._enqueue("markdown", code_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("markdown", code_proto)
 
     def title(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
         """Display text in title formatting.
@@ -188,8 +184,7 @@ class MarkdownMixin:
         else:
             title_proto.body = f'<h1 data-anchor="{anchor}">{clean_text(body)}</h1>'
             title_proto.allow_html = True
-        dg = self.dg._enqueue("markdown", title_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("markdown", title_proto)
 
     def caption(self, body: str, unsafe_allow_html: bool = False) -> "DeltaGenerator":
         """Display text in small font.
@@ -232,8 +227,7 @@ class MarkdownMixin:
         caption_proto.body = clean_text(body)
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.is_caption = True
-        dg = self.dg._enqueue("markdown", caption_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("markdown", caption_proto)
 
     def latex(self, body: Union[str, "sympy.Expr"]) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
@@ -267,8 +261,7 @@ class MarkdownMixin:
 
         latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % clean_text(body)
-        dg = self.dg._enqueue("markdown", latex_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("markdown", latex_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

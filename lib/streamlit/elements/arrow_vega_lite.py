@@ -15,9 +15,9 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional, cast, TYPE_CHECKING
+from typing_extensions import Final
 
-import streamlit
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
@@ -27,7 +27,11 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from . import arrow
 from .arrow import Data
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+
+LOGGER: Final = get_logger(__name__)
 
 
 class ArrowVegaLiteMixin:
@@ -36,8 +40,8 @@ class ArrowVegaLiteMixin:
         data: Data = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
-        **kwargs,
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+        **kwargs: Any,
+    ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -91,15 +95,12 @@ class ArrowVegaLiteMixin:
             use_container_width=use_container_width,
             **kwargs,
         )
-        return cast(
-            "streamlit.delta_generator.DeltaGenerator",
-            self.dg._enqueue("arrow_vega_lite_chart", proto),
-        )
+        return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
 def marshall(
@@ -175,33 +176,31 @@ def marshall(
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
-_CHANNELS = set(
-    [
-        "x",
-        "y",
-        "x2",
-        "y2",
-        "xError",
-        "yError2",
-        "xError",
-        "yError2",
-        "longitude",
-        "latitude",
-        "color",
-        "opacity",
-        "fillOpacity",
-        "strokeOpacity",
-        "strokeWidth",
-        "size",
-        "shape",
-        "text",
-        "tooltip",
-        "href",
-        "key",
-        "order",
-        "detail",
-        "facet",
-        "row",
-        "column",
-    ]
-)
+_CHANNELS = {
+    "x",
+    "y",
+    "x2",
+    "y2",
+    "xError",
+    "yError2",
+    "xError",
+    "yError2",
+    "longitude",
+    "latitude",
+    "color",
+    "opacity",
+    "fillOpacity",
+    "strokeOpacity",
+    "strokeWidth",
+    "size",
+    "shape",
+    "text",
+    "tooltip",
+    "href",
+    "key",
+    "order",
+    "detail",
+    "facet",
+    "row",
+    "column",
+}

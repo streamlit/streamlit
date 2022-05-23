@@ -74,7 +74,7 @@ class MediaMixin:
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
         marshall_audio(coordinates, audio_proto, data, format, start_time)
-        return cast("DeltaGenerator", self.dg._enqueue("audio", audio_proto))
+        return self.dg._enqueue("audio", audio_proto)
 
     def video(
         self,
@@ -120,7 +120,7 @@ class MediaMixin:
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
         marshall_video(coordinates, video_proto, data, format, start_time)
-        return cast("DeltaGenerator", self.dg._enqueue("video", video_proto))
+        return self.dg._enqueue("video", video_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":
