@@ -31,7 +31,6 @@ export const StyledImageContainer = styled.div(({ theme }) => ({
   alignItems: "stretch",
   width: "auto",
   flexGrow: 0,
-  margin: "auto",
 }))
 
 export const StyledCaption = styled.div(({ theme }) => ({
