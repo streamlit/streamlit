@@ -233,7 +233,6 @@ export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
   top: theme.spacing.xs,
   right: theme.spacing.twoXS,
   zIndex: 1,
-  color: theme.colors.fadedText40,
 
   "&:hover button": {
     backgroundColor: transparentize(theme.colors.fadedText60, 0.5),
