@@ -316,7 +316,8 @@ jobs:
       - run:
           name: Set final versions for pre-release and update version
           command: |
-            # Start at the latest existing RC for this version if one exists
+            # Start at the latest existing RC for this version if one exists,
+            # so the following update will increment to the right RC version
             export LATEST_MATCHING_RC=$(curl https://pypi.org/pypi/streamlit/json | jq ".releases | keys | map(select(contains(\"rc\"))) | map(select(contains(\"$DESIRED_VERSION\"))) | sort | .[-1]")
             if [ $LATEST_MATCHING_RC ]; then python scripts/update_version.py $LATEST_MATCHING_RC; fi
 
