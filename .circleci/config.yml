@@ -267,6 +267,12 @@ workflows:
           filters:
             branches:
               only: /^release\/([0-9]+\.){2}([0-9]+)/
+      - persistent-tag-build:
+          filters:
+            tags:
+              only: /^demo.*/
+            branches:
+              ignore: /.*/
       - build-deploy-release:
           filters:
             tags:
@@ -799,6 +805,70 @@ jobs:
           name: Ready to deploy!
           command: |
             echo -e "https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=${PREVIEW_BRANCH}&mainModule=streamlit_app.py"
+
+  persistent-tag-build:
+    docker:
+      - image: circleci/python:3.9.7
+
+    resource_class: large
+
+    working_directory: ~/repo
+
+    steps:
+      - add_ssh_keys:
+          name: Add the read/write Github deploy key
+          fingerprints:
+            - "98:67:1f:37:d6:4d:21:f3:46:5d:e2:c9:a3:58:52:39"
+
+      - checkout:
+          name: Checkout Streamlit code
+
+      - update-submodules
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+      - make-init
+
+      - run:
+          name: Create wheel file
+          no_output_timeout: 2h
+          command: |
+            ${SUDO} apt-get install rsync
+            BUILD_AS_FAST_AS_POSSIBLE=1 make package
+
+      - run:
+          name: Set PREVIEW_BRANCH envvar
+          command: |
+            echo "export PREVIEW_BRANCH=$(
+              if [[ -n "${CIRCLE_PR_NUMBER}" ]]
+              then
+                echo "pr-${CIRCLE_PR_NUMBER}"
+              elif [[ -n "${CIRCLE_BRANCH}" ]]
+              then
+                echo "${CIRCLE_BRANCH}-preview"
+              elif [[ -n "${CIRCLE_TAG}" ]]
+              then
+                echo "tag-${CIRCLE_TAG}"
+              else
+                echo "main-preview"
+              fi
+            )" >> $BASH_ENV
+
+      - run:
+          name: Upload wheel to S3
+          command: |
+            ${SUDO} apt-get install -y awscli
+            aws configure set aws_access_key_id ${CORE_PREVIEWS_S3_KEY_ID}
+            aws configure set aws_secret_access_key ${CORE_PREVIEWS_S3_SECRET_KEY}
+
+            cd lib/dist
+            export WHEELFILE="$(ls -t *.whl | head -n 1)"
+
+            aws s3 cp ${WHEELFILE} s3://core-previews/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl --acl public-read
+            echo -e "Here is the link to download the wheel file: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl"
+
+            cd ../..
+            echo -e "https://core-previews.s3-us-west-2.amazonaws.com/${CIRCLE_TAG}/${WHEELFILE}" >> S3_URL
 
   cypress:
     docker:
