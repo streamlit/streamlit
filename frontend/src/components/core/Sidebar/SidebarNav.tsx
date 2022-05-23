@@ -16,11 +16,15 @@
  */
 
 import React, { ReactElement, useCallback, useRef, useState } from "react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import {
+  ExpandMore,
+  ExpandLess,
+  Description,
+} from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
-import Icon from "src/components/shared/Icon"
+import Icon, { EmojiIcon } from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 
 import {
@@ -36,11 +40,21 @@ export interface Props {
   hasSidebarElements: boolean
   onPageChange: (pageName: string) => void
   hideParentScrollbar: (newValue: boolean) => void
+
+  // BUG(vdonato): currentPageName is not guaranteed to be unique. This means we show 2+ pages
+  // as "active" at the same time, if they have the same name.
+  //
+  // Potential solutions:
+  // 1. Add "isActive" boolean to items inside appPages
+  // 2. Instead of currentPageName send currentPageIndex (i.e. index of active page in the appPages
+  //    array).
+  //
+  // BUG(tvst): X button should have same color as hamburger.
+  // BUG(tvst): X and > buttons should have same margins as hamburger.
   currentPageName: string
   pageLinkBaseUrl: string
 }
 
-// TODO(vdonato): indicate the current page and make it unclickable
 const SidebarNav = ({
   appPages,
   hasSidebarElements,
@@ -82,7 +96,8 @@ const SidebarNav = ({
     <StyledSidebarNavContainer data-testid="stSidebarNav">
       <StyledSidebarNavItems
         ref={navItemsRef}
-        expanded={expanded}
+        isExpanded={expanded}
+        isOverflowing={isOverflowing}
         hasSidebarElements={hasSidebarElements}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
@@ -110,17 +125,36 @@ const SidebarNav = ({
               pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
             }
 
+            // The main page can be specified either by its full name or by
+            // having currentPageName === "". We could have alternatively made
+            // it such that currentPageName is always the full page name, but
+            // it turns out that taking that approach makes things messier
+            // overall.
+            const isActive =
+              (pageIndex === 0 && !currentPageName) ||
+              currentPageName === pageName
+
             return (
               <li key={pageName}>
                 <StyledSidebarNavLinkContainer>
                   <StyledSidebarNavLink
+                    isActive={isActive}
                     href={pageUrl}
                     onClick={e => {
                       e.preventDefault()
                       onPageChange(navigateTo)
                     }}
                   >
-                    {pageName.replace(/_/g, " ")}
+                    {pageIcon && pageIcon.length ? (
+                      <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
+                    ) : (
+                      <Icon
+                        color="darkenedBgMix100"
+                        content={Description}
+                        size="lg"
+                      />
+                    )}
+                    <span>{pageName.replace(/_/g, " ")}</span>
                   </StyledSidebarNavLink>
                 </StyledSidebarNavLinkContainer>
               </li>
@@ -131,7 +165,7 @@ const SidebarNav = ({
 
       {hasSidebarElements && (
         <StyledSidebarNavSeparatorContainer
-          expanded={expanded}
+          isExpanded={expanded}
           isOverflowing={isOverflowing}
           onClick={toggleExpanded}
         >

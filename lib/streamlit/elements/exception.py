@@ -59,8 +59,7 @@ class ExceptionMixin:
         """
         exception_proto = ExceptionProto()
         marshall(exception_proto, exception)
-        dg = self.dg._enqueue("exception", exception_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("exception", exception_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

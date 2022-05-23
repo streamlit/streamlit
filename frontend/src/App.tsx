@@ -634,6 +634,13 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
+    // mainPageName must be a string as we're guaranteed at this point that
+    // newSessionProto.appPages is nonempty and has a truthy pageName.
+    // Otherwise, we'd either have no main script or a nameless main script,
+    // neither of which can happen.
+    const mainPageName = newSessionProto.appPages[0]?.pageName as string
+    const { currentPageName } = this.state
+
     this.processThemeInput(themeInput)
     this.setState(
       {
@@ -647,6 +654,11 @@ export class App extends PureComponent<Props, State> {
           type: "SET_APP_PAGES",
           appPages: newSessionProto.appPages,
         })
+
+        this.props.s4aCommunication.sendMessage({
+          type: "SET_CURRENT_PAGE_NAME",
+          currentPageName,
+        })
       }
     )
 
@@ -658,7 +670,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Set the title and favicon to their default values
-    document.title = `${scriptName} · Streamlit`
+    document.title = `${currentPageName || mainPageName} · Streamlit`
     handleFavicon(
       `${process.env.PUBLIC_URL}/favicon.png`,
       this.getBaseUriParts()
@@ -670,7 +682,10 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.setAppHash(newSessionHash)
     MetricsManager.current.clearDeltaCounter()
 
-    MetricsManager.current.enqueue("updateReport")
+    MetricsManager.current.enqueue("updateReport", {
+      numPages: newSessionProto.appPages.length,
+      isMainPage: currentPageName === "" || currentPageName === mainPageName,
+    })
 
     if (appHash === newSessionHash) {
       this.setState({
@@ -1011,12 +1026,7 @@ export class App extends PureComponent<Props, State> {
       window.history.pushState({}, "", pageUrl)
     }
 
-    this.setState({ currentPageName: pageName }, () => {
-      this.props.s4aCommunication.sendMessage({
-        type: "SET_CURRENT_PAGE_NAME",
-        currentPageName: pageName as string,
-      })
-    })
+    this.setState({ currentPageName: pageName })
 
     this.sendBackMsg(
       new BackMsg({

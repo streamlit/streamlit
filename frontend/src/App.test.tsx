@@ -709,12 +709,12 @@ describe("App.handleNewSession", () => {
 
     const appPages = [
       {
-        page_name: "page1",
-        script_path: "page1.py",
+        pageName: "page1",
+        scriptPath: "page1.py",
       },
       {
-        page_name: "page2",
-        script_path: "page2.py",
+        pageName: "page2",
+        scriptPath: "page2.py",
       },
     ]
 
@@ -725,9 +725,15 @@ describe("App.handleNewSession", () => {
     // @ts-ignore
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+    expect(wrapper.find("AppView").prop("currentPageName")).toEqual("")
+    expect(document.title).toBe("page1 · Streamlit")
     expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_APP_PAGES",
       appPages,
+    })
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
     })
   })
 
@@ -900,10 +906,6 @@ describe("App.sendRerunBackMsg", () => {
     })
 
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("")
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_CURRENT_PAGE_NAME",
-      currentPageName: "",
-    })
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 2: non-main page)", () => {
@@ -926,10 +928,6 @@ describe("App.sendRerunBackMsg", () => {
       rerunScript: { pageName: "page1", queryString: "" },
     })
     expect(wrapper.find("AppView").prop("currentPageName")).toEqual("page1")
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_CURRENT_PAGE_NAME",
-      currentPageName: "page1",
-    })
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one and a baseUrlPath is set", () => {

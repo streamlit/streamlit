@@ -159,7 +159,7 @@ class LayoutsMixin:
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise weights_exception
 
-        def column_proto(normalized_weight):
+        def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.allow_empty = True

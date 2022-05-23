@@ -14,11 +14,16 @@
 
 """Selects between our two DataFrame serialization methods ("legacy" and
 "arrow") based on a config option"""
+from typing import Any
+from typing import Dict
+from typing import cast, Optional, TYPE_CHECKING
 
-from typing import cast
-
-import streamlit
 from streamlit import config
+
+if TYPE_CHECKING:
+    from .arrow import Data
+    from streamlit.delta_generator import DeltaGenerator
+    from altair.vegalite.v4.api import Chart
 
 
 def _use_arrow() -> bool:
@@ -29,7 +34,12 @@ def _use_arrow() -> bool:
 
 
 class DataFrameSelectorMixin:
-    def dataframe(self, data=None, width=None, height=None):
+    def dataframe(
+        self,
+        data: "Data" = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+    ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -86,7 +96,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_dataframe(data, width, height)
 
-    def table(self, data=None):
+    def table(self, data: "Data" = None) -> "DeltaGenerator":
         """Display a static table.
 
         This differs from `st.dataframe` in that the table in this case is
@@ -119,7 +129,13 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_table(data)
 
-    def line_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def line_chart(
+        self,
+        data: "Data" = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "DeltaGenerator":
         """Display a line chart.
 
         This is syntax-sugar around st.altair_chart. The main difference
@@ -167,7 +183,13 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_line_chart(data, width, height, use_container_width)
 
-    def area_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def area_chart(
+        self,
+        data: "Data" = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "DeltaGenerator":
         """Display an area chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -215,7 +237,13 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_area_chart(data, width, height, use_container_width)
 
-    def bar_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def bar_chart(
+        self,
+        data: "Data" = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "DeltaGenerator":
         """Display a bar chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -264,7 +292,11 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_bar_chart(data, width, height, use_container_width)
 
-    def altair_chart(self, altair_chart, use_container_width=False):
+    def altair_chart(
+        self,
+        altair_chart: "Chart",
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
         Parameters
@@ -308,11 +340,11 @@ class DataFrameSelectorMixin:
 
     def vega_lite_chart(
         self,
-        data=None,
-        spec=None,
-        use_container_width=False,
-        **kwargs,
-    ):
+        data: "Data" = None,
+        spec: Optional[Dict[str, Any]] = None,
+        use_container_width: bool = False,
+        **kwargs: Any,
+    ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -375,7 +407,7 @@ class DataFrameSelectorMixin:
                 data, spec, use_container_width, **kwargs
             )
 
-    def add_rows(self, data=None, **kwargs):
+    def add_rows(self, data: "Data" = None, **kwargs) -> Optional["DeltaGenerator"]:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -436,6 +468,6 @@ class DataFrameSelectorMixin:
             return self.dg._legacy_add_rows(data, **kwargs)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
