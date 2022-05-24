@@ -16,11 +16,15 @@
  */
 
 import React, { ReactElement, useCallback, useRef, useState } from "react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import {
+  ExpandMore,
+  ExpandLess,
+  Description,
+} from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
-import Icon from "src/components/shared/Icon"
+import Icon, { EmojiIcon } from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 
 import {
@@ -36,17 +40,17 @@ export interface Props {
   hasSidebarElements: boolean
   onPageChange: (pageName: string) => void
   hideParentScrollbar: (newValue: boolean) => void
-  currentPageName: string
+
+  currentPageScriptHash: string
   pageLinkBaseUrl: string
 }
 
-// TODO(vdonato): indicate the current page and make it unclickable
 const SidebarNav = ({
   appPages,
   hasSidebarElements,
   onPageChange,
   hideParentScrollbar,
-  currentPageName,
+  currentPageScriptHash,
   pageLinkBaseUrl,
 }: Props): ReactElement | null => {
   if (appPages.length < 2) {
@@ -82,13 +86,17 @@ const SidebarNav = ({
     <StyledSidebarNavContainer data-testid="stSidebarNav">
       <StyledSidebarNavItems
         ref={navItemsRef}
-        expanded={expanded}
+        isExpanded={expanded}
+        isOverflowing={isOverflowing}
         hasSidebarElements={hasSidebarElements}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
       >
         {appPages.map(
-          ({ icon: pageIcon, pageName }: IAppPage, pageIndex: number) => {
+          (
+            { icon: pageIcon, pageName, pageScriptHash }: IAppPage,
+            pageIndex: number
+          ) => {
             pageName = pageName as string
             // NOTE: We use window.location to get the port instead of
             // getBaseUriParts() because the port may differ in dev mode (since
@@ -114,13 +122,23 @@ const SidebarNav = ({
               <li key={pageName}>
                 <StyledSidebarNavLinkContainer>
                   <StyledSidebarNavLink
+                    isActive={pageScriptHash === currentPageScriptHash}
                     href={pageUrl}
                     onClick={e => {
                       e.preventDefault()
-                      onPageChange(navigateTo)
+                      onPageChange(pageScriptHash as string)
                     }}
                   >
-                    {pageName.replace(/_/g, " ")}
+                    {pageIcon && pageIcon.length ? (
+                      <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
+                    ) : (
+                      <Icon
+                        color="darkenedBgMix100"
+                        content={Description}
+                        size="lg"
+                      />
+                    )}
+                    <span>{pageName.replace(/_/g, " ")}</span>
                   </StyledSidebarNavLink>
                 </StyledSidebarNavLinkContainer>
               </li>
@@ -131,7 +149,7 @@ const SidebarNav = ({
 
       {hasSidebarElements && (
         <StyledSidebarNavSeparatorContainer
-          expanded={expanded}
+          isExpanded={expanded}
           isOverflowing={isOverflowing}
           onClick={toggleExpanded}
         >

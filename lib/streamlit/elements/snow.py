@@ -33,7 +33,7 @@ class SnowMixin:
         """
         snow_proto = SnowProto()
         snow_proto.show = True
-        return cast("DeltaGenerator", self.dg._enqueue("snow", snow_proto))
+        return self.dg._enqueue("snow", snow_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

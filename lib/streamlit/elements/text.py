@@ -37,8 +37,7 @@ class TextMixin:
         """
         text_proto = TextProto()
         text_proto.body = clean_text(body)
-        dg = self.dg._enqueue("text", text_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("text", text_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

@@ -190,7 +190,7 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
 # Config
 get_option = _config.get_option
-from streamlit.commands.page_config import set_page_config
+from streamlit.commands.page_config import set_page_config as set_page_config
 
 # Session State
 
@@ -522,14 +522,14 @@ def experimental_rerun() -> NoReturn:
     ctx = _get_script_run_ctx()
 
     query_string = ""
-    page_name = ""
+    page_script_hash = ""
     if ctx is not None:
         query_string = ctx.query_string
-        page_name = ctx.page_name
+        page_script_hash = ctx.page_script_hash
 
     raise _RerunException(
         _RerunData(
             query_string=query_string,
-            page_name=page_name,
+            page_script_hash=page_script_hash,
         )
     )

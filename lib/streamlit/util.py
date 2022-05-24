@@ -15,10 +15,11 @@
 """A bunch of useful utilities."""
 
 import functools
+import hashlib
 import os
 import subprocess
 
-from typing import Any, Dict, List, TypeVar
+from typing import Any, Dict, List, Mapping, TypeVar
 from typing_extensions import Final
 
 from streamlit import env_util
@@ -130,13 +131,21 @@ def index_(iterable, x) -> int:
     raise ValueError("{} is not in iterable".format(str(x)))
 
 
+_Key = TypeVar("_Key", bound=str)
 _Value = TypeVar("_Value")
 
 
-def lower_clean_dict_keys(dict: Dict[str, _Value]) -> Dict[str, _Value]:
+def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> Dict[str, _Value]:
     return {k.lower().strip(): v for k, v in dict.items()}
 
 
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass
+
+
+def calc_md5(s: str) -> str:
+    """Return the md5 hash of the given string."""
+    h = hashlib.new("md5")
+    h.update(s.encode("utf-8"))
+    return h.hexdigest()

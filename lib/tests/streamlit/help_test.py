@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.help unit test."""
+import sys
 
 from tests import testutil
 import streamlit as st
@@ -79,7 +80,21 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("dataframe", ds.name)
         self.assertEqual("streamlit", ds.module)
         self.assertEqual("<class 'method'>", ds.type)
-        self.assertEqual("(data=None, width=None, height=None)", ds.signature)
+        if sys.version_info[1] == 7:
+            # Python 3.7 represents the signature slightly differently
+            self.assertEqual(
+                "(data: 'Data' = None, width: Union[int, NoneType] = None, "
+                "height: Union[int, NoneType] = None) -> 'DeltaGenerator'",
+                ds.signature,
+            )
+        else:
+
+            self.assertEqual(
+                "(data: 'Data' = None, width: Optional[int] = None, "
+                "height: Optional[int] = None) -> 'DeltaGenerator'",
+                ds.signature,
+            )
+
         self.assertTrue(ds.doc_string.startswith("Display a dataframe"))
 
     def test_st_cache(self):

@@ -38,8 +38,7 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
-        dg = self.dg._enqueue("alert", alert_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("alert", alert_proto)
 
     def warning(self, body: str) -> "DeltaGenerator":
         """Display warning message.
@@ -57,8 +56,7 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.WARNING
-        dg = self.dg._enqueue("alert", alert_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("alert", alert_proto)
 
     def info(self, body: str) -> "DeltaGenerator":
         """Display an informational message.
@@ -76,8 +74,7 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.INFO
-        dg = self.dg._enqueue("alert", alert_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("alert", alert_proto)
 
     def success(self, body: str) -> "DeltaGenerator":
         """Display a success message.
@@ -95,8 +92,7 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.SUCCESS
-        dg = self.dg._enqueue("alert", alert_proto)
-        return cast("DeltaGenerator", dg)
+        return self.dg._enqueue("alert", alert_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

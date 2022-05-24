@@ -32,7 +32,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
-            page_name="",
+            page_script_hash="",
             user_info={"email": "test@test.com"},
         )
 
@@ -54,7 +54,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
-            page_name="",
+            page_script_hash="",
             user_info={"email": "test@test.com"},
         )
 
@@ -80,7 +80,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
-            page_name="",
+            page_script_hash="",
             user_info={"email": "test@test.com"},
         )
 
@@ -105,7 +105,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
-            page_name="",
+            page_script_hash="",
             user_info={"email": "test@test.com"},
         )
 

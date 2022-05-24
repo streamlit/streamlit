@@ -17,7 +17,11 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { matchers } from "@emotion/jest"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import {
+  ExpandMore,
+  ExpandLess,
+  Description,
+} from "@emotion-icons/material-outlined"
 import React from "react"
 import { act } from "react-dom/test-utils"
 
@@ -48,13 +52,13 @@ const mockUseIsOverflowing = useIsOverflowing as jest.MockedFunction<
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   appPages: [
-    { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-    { pageName: "my_other_page", scriptPath: "my_other_page.py" },
+    { pageScriptHash: "main_page_hash", pageName: "streamlit_app" },
+    { pageScriptHash: "other_page_hash", pageName: "my_other_page" },
   ],
   hasSidebarElements: false,
   onPageChange: jest.fn(),
   hideParentScrollbar: jest.fn(),
-  currentPageName: "",
+  currentPageScriptHash: "",
   pageLinkBaseUrl: "",
   ...props,
 })
@@ -83,7 +87,7 @@ describe("SidebarNav", () => {
   it("replaces underscores with spaces in pageName", () => {
     const wrapper = shallow(<SidebarNav {...getProps()} />)
 
-    const links = wrapper.find(StyledSidebarNavLink)
+    const links = wrapper.find(StyledSidebarNavLink).find("span")
 
     expect(links.at(0).text()).toBe("streamlit app")
     expect(links.at(1).text()).toBe("my other page")
@@ -211,7 +215,12 @@ describe("SidebarNav", () => {
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
-    expect(wrapper.find(Icon).exists()).toBe(false)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(Icon)
+        .exists()
+    ).toBe(false)
   })
 
   it("renders ExpandMore icon when not expanded and overflowing", () => {
@@ -220,7 +229,12 @@ describe("SidebarNav", () => {
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
 
-    expect(wrapper.find(Icon).props()).toHaveProperty("content", ExpandMore)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(Icon)
+        .props()
+    ).toHaveProperty("content", ExpandMore)
   })
 
   it("renders ExpandLess icon when expanded and not overflowing", () => {
@@ -235,7 +249,12 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
       mockClickEvent
     )
-    expect(wrapper.find(Icon).props()).toHaveProperty("content", ExpandLess)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(Icon)
+        .props()
+    ).toHaveProperty("content", ExpandLess)
   })
 
   it("renders ExpandLess icon when expanded and overflowing", () => {
@@ -249,7 +268,12 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
       mockClickEvent
     )
-    expect(wrapper.find(Icon).props()).toHaveProperty("content", ExpandLess)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(Icon)
+        .props()
+    ).toHaveProperty("content", ExpandLess)
   })
 
   it("changes cursor to pointer above separator when overflowing", () => {
@@ -271,7 +295,7 @@ describe("SidebarNav", () => {
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(false)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
     expect(wrapper.find("StyledSidebarNavItems")).toHaveStyleRule(
       "max-height",
       "33vh"
@@ -286,7 +310,7 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
       mockClickEvent
     )
-    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(false)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
   })
 
   it("toggles to expanded and back when the separator is clicked", () => {
@@ -304,7 +328,7 @@ describe("SidebarNav", () => {
     })
     wrapper.update()
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(true)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(true)
     expect(wrapper.find(StyledSidebarNavItems)).toHaveStyleRule(
       "max-height",
       "75vh"
@@ -317,26 +341,14 @@ describe("SidebarNav", () => {
     })
     wrapper.update()
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(false)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
     expect(wrapper.find(StyledSidebarNavItems)).toHaveStyleRule(
       "max-height",
       "33vh"
     )
   })
 
-  it("passes the empty string to onPageChange if the main page link is clicked", () => {
-    const props = getProps()
-    const wrapper = shallow(<SidebarNav {...props} />)
-
-    const preventDefault = jest.fn()
-    const links = wrapper.find(StyledSidebarNavLink)
-    links.at(0).simulate("click", { preventDefault })
-
-    expect(preventDefault).toHaveBeenCalled()
-    expect(props.onPageChange).toHaveBeenCalledWith("")
-  })
-
-  it("passes the page name to onPageChange if any other link is clicked", () => {
+  it("passes the pageScriptHash to onPageChange if a link is clicked", () => {
     const props = getProps()
     const wrapper = shallow(<SidebarNav {...props} />)
 
@@ -345,7 +357,7 @@ describe("SidebarNav", () => {
     links.at(1).simulate("click", { preventDefault })
 
     expect(preventDefault).toHaveBeenCalled()
-    expect(props.onPageChange).toHaveBeenCalledWith("my_other_page")
+    expect(props.onPageChange).toHaveBeenCalledWith("other_page_hash")
   })
 
   it("calls hideParentScrollbar onMouseOut", () => {
@@ -374,5 +386,52 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavItems).simulate("mouseOver")
 
     expect(props.hideParentScrollbar).toHaveBeenCalledWith(true)
+  })
+
+  it("handles default and custom page icons", () => {
+    const props = getProps({
+      appPages: [
+        { pageName: "streamlit_app" },
+        { pageName: "my_other_page", icon: "🦈" },
+      ],
+    })
+
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(0)
+        .find("Icon")
+        .prop("content")
+    ).toBe(Description)
+
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(1)
+        .find("EmojiIcon")
+        .dive()
+        .text()
+    ).toBe("🦈")
+  })
+
+  it("indicates the current page as active", () => {
+    const props = getProps({ currentPageScriptHash: "other_page_hash" })
+
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(0)
+        .prop("isActive")
+    ).toBe(false)
+    expect(
+      wrapper
+        .find(StyledSidebarNavLink)
+        .at(1)
+        .prop("isActive")
+    ).toBe(true)
   })
 })

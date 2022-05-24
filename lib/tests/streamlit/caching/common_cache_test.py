@@ -178,7 +178,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 query_string="",
                 session_state=SessionState(),
                 uploaded_file_mgr=None,
-                page_name="",
+                page_script_hash="",
                 user_info={"email": "test@test.com"},
             ),
         )

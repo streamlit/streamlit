@@ -13,7 +13,24 @@
 # limitations under the License.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
-from typing import Optional, Iterable
+from typing import (
+    Any,
+    Callable,
+    cast,
+    Dict,
+    Hashable,
+    Optional,
+    overload,
+    Iterable,
+    NoReturn,
+    Tuple,
+    Type,
+    TypeVar,
+    TYPE_CHECKING,
+    Union,
+)
+
+from typing_extensions import Final, Literal
 
 import streamlit as st
 from streamlit import cursor, caching
@@ -77,21 +94,32 @@ from streamlit.elements.legacy_altair import LegacyAltairMixin
 from streamlit.elements.legacy_vega_lite import LegacyVegaLiteMixin
 from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from numpy import typing as npt
+    from pandas import DataFrame, Series
+    from google.protobuf.message import Message
+    from streamlit.type_util import DataFrameCompatible
+    from streamlit.elements.arrow import Data
+
+
+LOGGER: Final = get_logger(__name__)
 
 # Save the type built-in for when we override the name "type".
 _type = type
 
-MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
+MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
 # List of Streamlit commands that perform a Pandas "melt" operation on
 # input dataframes.
-DELTA_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
-ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES = (
+DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = ("line_chart", "area_chart", "bar_chart")
+ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
     "arrow_line_chart",
     "arrow_area_chart",
     "arrow_bar_chart",
 )
+
+Value = TypeVar("Value")
+DG = TypeVar("DG", bound="DeltaGenerator")
 
 
 class DeltaGenerator(
@@ -176,7 +204,7 @@ class DeltaGenerator(
         cursor: Optional[Cursor] = None,
         parent: Optional["DeltaGenerator"] = None,
         block_type: Optional[str] = None,
-    ):
+    ) -> None:
         """Inserts or updates elements in Streamlit apps.
 
         As a user, you should never initialize this object by hand. Instead,
@@ -226,13 +254,18 @@ class DeltaGenerator(
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         # with block started
         ctx = get_script_run_ctx()
         if ctx:
             ctx.dg_stack.append(self)
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(
+        self,
+        type: Any,
+        value: Any,
+        traceback: Any,
+    ) -> Literal[False]:
         # with block ended
         ctx = get_script_run_ctx()
         if ctx is not None:
@@ -267,14 +300,14 @@ class DeltaGenerator(
         """
         return self._parent._main_dg if self._parent else self
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Callable[..., NoReturn]:
         import streamlit as st
 
         streamlit_methods = [
             method_name for method_name in dir(st) if callable(getattr(st, method_name))
         ]
 
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> NoReturn:
             if name in streamlit_methods:
                 if self._root_container == RootContainer.SIDEBAR:
                     message = (
@@ -336,15 +369,75 @@ class DeltaGenerator(
         dg = self._active_dg
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
+    @overload
+    def _enqueue(  # type: ignore[misc]
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: None,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> "DeltaGenerator":
+        ...
+
+    @overload
+    def _enqueue(  # type: ignore[misc]
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: Type[NoValue],
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> None:
+        ...
+
+    @overload
+    def _enqueue(  # type: ignore[misc]
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: Value,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> Value:
+        ...
+
+    @overload
     def _enqueue(
         self,
-        delta_type,
-        element_proto,
-        return_value=None,
-        last_index=None,
-        element_width=None,
-        element_height=None,
-    ):
+        delta_type: str,
+        element_proto: "Message",
+        return_value: None = None,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> "DeltaGenerator":
+        ...
+
+    @overload
+    def _enqueue(
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: Union[None, Type[NoValue], Value] = None,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> Union["DeltaGenerator", None, Value]:
+        ...
+
+    def _enqueue(
+        self,
+        delta_type: str,
+        element_proto: "Message",
+        return_value: Union[None, Type[NoValue], Value] = None,
+        last_index: Optional[Hashable] = None,
+        element_width: Optional[int] = None,
+        element_height: Optional[int] = None,
+    ) -> Union["DeltaGenerator", None, Value]:
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -432,7 +525,10 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def _block(self, block_proto=Block_pb2.Block()) -> "DeltaGenerator":
+    def _block(
+        self,
+        block_proto: Block_pb2.Block = Block_pb2.Block(),
+    ) -> "DeltaGenerator":
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
 
@@ -479,7 +575,13 @@ class DeltaGenerator(
 
         return block_dg
 
-    def _legacy_add_rows(self, data=None, **kwargs):
+    def _legacy_add_rows(
+        self: DG,
+        data: "Data" = None,
+        **kwargs: Union[
+            "DataFrame", "npt.NDArray[Any]", Iterable[Any], Dict[Hashable, Any], None
+        ],
+    ) -> Optional[DG]:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -551,8 +653,8 @@ class DeltaGenerator(
             )
 
         # When doing _legacy_add_rows on an element that does not already have data
-        # (for example, st._legacy_ine_chart() without any args), call the original
-        # st._legacy_foo() element with new data instead of doing an _legacy_add_rows().
+        # (for example, st._legacy_line_chart() without any args), call the original
+        # st._legacy_foo() element with new data instead of doing a _legacy_add_rows().
         if (
             self._cursor.props["delta_type"] in DELTA_TYPES_THAT_MELT_DATAFRAMES
             and self._cursor.props["last_index"] is None
@@ -563,7 +665,7 @@ class DeltaGenerator(
             st_method_name = "_legacy_" + self._cursor.props["delta_type"]
             st_method = getattr(self, st_method_name)
             st_method(data, **kwargs)
-            return
+            return None
 
         data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
             data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
@@ -584,7 +686,13 @@ class DeltaGenerator(
 
         return self
 
-    def _arrow_add_rows(self, data=None, **kwargs):
+    def _arrow_add_rows(
+        self: DG,
+        data: "Data" = None,
+        **kwargs: Union[
+            "DataFrame", "npt.NDArray[Any]", Iterable[Any], Dict[Hashable, Any], None
+        ],
+    ) -> Optional[DG]:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -667,7 +775,7 @@ class DeltaGenerator(
             st_method_name = "_" + self._cursor.props["delta_type"]
             st_method = getattr(self, st_method_name)
             st_method(data, **kwargs)
-            return
+            return None
 
         data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
             data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
@@ -690,26 +798,26 @@ class DeltaGenerator(
         return self
 
 
-def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
+DFT = TypeVar("DFT", bound="DataFrameCompatible")
+
+
+def _maybe_melt_data_for_add_rows(
+    data: DFT,
+    delta_type: str,
+    last_index: Any,
+) -> Tuple[Union[DFT, "DataFrame"], Union[int, Any]]:
     import pandas as pd
 
-    # For some delta types we have to reshape the data structure
-    # otherwise the input data and the actual data used
-    # by vega_lite will be different and it will throw an error.
-    if (
-        delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
-        or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
-    ):
-        if not isinstance(data, pd.DataFrame):
-            data = type_util.convert_anything_to_df(data)
-
-        if type(data.index) is pd.RangeIndex:
-            old_step = _get_pandas_index_attr(data, "step")
+    def _melt_data(
+        df: "DataFrame", last_index: Any
+    ) -> Tuple["DataFrame", Union[int, Any]]:
+        if isinstance(df.index, pd.RangeIndex):
+            old_step = _get_pandas_index_attr(df, "step")
 
             # We have to drop the predefined index
-            data = data.reset_index(drop=True)
+            df = df.reset_index(drop=True)
 
-            old_stop = _get_pandas_index_attr(data, "stop")
+            old_stop = _get_pandas_index_attr(df, "stop")
 
             if old_step is None or old_stop is None:
                 raise StreamlitAPIException(
@@ -719,23 +827,68 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
             start = last_index + old_step
             stop = last_index + old_step + old_stop
 
-            data.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
+            df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
             last_index = stop - 1
 
-        index_name = data.index.name
+        index_name = df.index.name
         if index_name is None:
             index_name = "index"
 
-        data = pd.melt(data.reset_index(), id_vars=[index_name])
+        df = pd.melt(df.reset_index(), id_vars=[index_name])
+        return df, last_index
+
+    # For some delta types we have to reshape the data structure
+    # otherwise the input data and the actual data used
+    # by vega_lite will be different, and it will throw an error.
+    if (
+        delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
+        or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
+    ):
+        if not isinstance(data, pd.DataFrame):
+            return _melt_data(
+                df=type_util.convert_anything_to_df(data),
+                last_index=last_index,
+            )
+        else:
+            return _melt_data(df=data, last_index=last_index)
 
     return data, last_index
 
 
-def _get_pandas_index_attr(data, attr):
+def _get_pandas_index_attr(
+    data: "Union[DataFrame, Series]",
+    attr: str,
+) -> Optional[Any]:
     return getattr(data.index, attr, None)
 
 
-def _value_or_dg(value, dg):
+@overload
+def _value_or_dg(value: None, dg: DG) -> DG:
+    ...
+
+
+@overload
+def _value_or_dg(value: Type[NoValue], dg: DG) -> None:  # type: ignore[misc]
+    ...
+
+
+@overload
+def _value_or_dg(value: Value, dg: DG) -> Value:
+    # This overload definition technically overlaps with the one above (Value
+    # contains Type[NoValue]), and since the return types are conflicting,
+    # mypy complains. Hence, the ignore-comment above. But, in practice, since
+    # the overload above is more specific, and is matched first, there is no
+    # actual overlap. The `Value` type here is thus narrowed to the cases
+    # where value is neither None nor NoValue.
+
+    # The ignore-comment should thus be fine.
+    ...
+
+
+def _value_or_dg(
+    value: Union[None, Type[NoValue], Value],
+    dg: DG,
+) -> Union[DG, None, Value]:
     """Return either value, or None, or dg.
 
     This is needed because Widgets have meaningful return values. This is
@@ -751,10 +904,10 @@ def _value_or_dg(value, dg):
         return None
     if value is None:
         return dg
-    return value
+    return cast(Value, value)
 
 
-def _enqueue_message(msg):
+def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
     """Enqueues a ForwardMsg proto to send to the app."""
     ctx = get_script_run_ctx()
 

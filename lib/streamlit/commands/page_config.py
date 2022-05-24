@@ -11,29 +11,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from urllib.parse import urlparse
 from textwrap import dedent
+from typing import cast, Dict, Optional, TYPE_CHECKING, Union
+
+from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit.scriptrunner import get_script_run_ctx
-from streamlit.proto import ForwardMsg_pb2
-from streamlit.proto import PageConfig_pb2
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
+from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
 from streamlit.util import lower_clean_dict_keys
 
-GET_HELP_KEY = "get help"
-REPORT_A_BUG_KEY = "report a bug"
-ABOUT_KEY = "about"
+if TYPE_CHECKING:
+    from typing_extensions import TypeGuard
+
+GET_HELP_KEY: Final = "get help"
+REPORT_A_BUG_KEY: Final = "report a bug"
+ABOUT_KEY: Final = "about"
+
+PageIcon: TypeAlias = Union[image.AtomicImage, str, None]
+Layout: TypeAlias = Literal["centered", "wide"]
+InitialSideBarState: TypeAlias = Literal["auto", "expanded", "collapsed"]
+_GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
+_ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
+_About: TypeAlias = Literal["About", "about"]
+MenuKey: TypeAlias = Literal[_GetHelp, _ReportABug, _About]
+MenuItems: TypeAlias = Dict[MenuKey, Optional[str]]
 
 
 def set_page_config(
-    page_title=None,
-    page_icon=None,
-    layout="centered",
-    initial_sidebar_state="auto",
-    menu_items=None,
-):
+    page_title: Optional[str] = None,
+    page_icon: PageIcon = None,
+    layout: Layout = "centered",
+    initial_sidebar_state: InitialSideBarState = "auto",
+    menu_items: Optional[MenuItems] = None,
+) -> None:
     """
     Configures the default settings of the page.
 
@@ -90,7 +104,7 @@ def set_page_config(
     ... )
     """
 
-    msg = ForwardMsg_pb2.ForwardMsg()
+    msg = ForwardProto()
 
     if page_title:
         msg.page_config_changed.title = page_title
@@ -109,32 +123,35 @@ def set_page_config(
             allow_emoji=True,
         )
 
+    pb_layout: "PageConfigProto.Layout.ValueType"
     if layout == "centered":
-        layout = PageConfig_pb2.PageConfig.CENTERED
+        pb_layout = PageConfigProto.CENTERED
     elif layout == "wide":
-        layout = PageConfig_pb2.PageConfig.WIDE
+        pb_layout = PageConfigProto.WIDE
     else:
         raise StreamlitAPIException(
             f'`layout` must be "centered" or "wide" (got "{layout}")'
         )
-    msg.page_config_changed.layout = layout
+    msg.page_config_changed.layout = pb_layout
 
+    pb_sidebar_state: "PageConfigProto.SidebarState.ValueType"
     if initial_sidebar_state == "auto":
-        initial_sidebar_state = PageConfig_pb2.PageConfig.AUTO
+        pb_sidebar_state = PageConfigProto.AUTO
     elif initial_sidebar_state == "expanded":
-        initial_sidebar_state = PageConfig_pb2.PageConfig.EXPANDED
+        pb_sidebar_state = PageConfigProto.EXPANDED
     elif initial_sidebar_state == "collapsed":
-        initial_sidebar_state = PageConfig_pb2.PageConfig.COLLAPSED
+        pb_sidebar_state = PageConfigProto.COLLAPSED
     else:
         raise StreamlitAPIException(
-            '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" '
-            + f'(got "{initial_sidebar_state}")'
+            "`initial_sidebar_state` must be "
+            '"auto" or "expanded" or "collapsed" '
+            f'(got "{initial_sidebar_state}")'
         )
 
-    msg.page_config_changed.initial_sidebar_state = initial_sidebar_state
+    msg.page_config_changed.initial_sidebar_state = pb_sidebar_state
 
     if menu_items is not None:
-        lowercase_menu_items = lower_clean_dict_keys(menu_items)
+        lowercase_menu_items = cast(MenuItems, lower_clean_dict_keys(menu_items))
         validate_menu_items(lowercase_menu_items)
         menu_items_proto = msg.page_config_changed.menu_items
         set_menu_items_proto(lowercase_menu_items, menu_items_proto)
@@ -145,7 +162,7 @@ def set_page_config(
     ctx.enqueue(msg)
 
 
-def get_random_emoji():
+def get_random_emoji() -> str:
     import random
 
     # Emojis recommended by https://share.streamlit.io/rensdimmendaal/emoji-recommender/main/app/streamlit.py
@@ -181,7 +198,7 @@ def get_random_emoji():
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
 
 
-def set_menu_items_proto(lowercase_menu_items, menu_items_proto):
+def set_menu_items_proto(lowercase_menu_items, menu_items_proto) -> None:
     if GET_HELP_KEY in lowercase_menu_items:
         if lowercase_menu_items[GET_HELP_KEY] is not None:
             menu_items_proto.get_help_url = lowercase_menu_items[GET_HELP_KEY]
@@ -199,23 +216,24 @@ def set_menu_items_proto(lowercase_menu_items, menu_items_proto):
             menu_items_proto.about_section_md = dedent(lowercase_menu_items[ABOUT_KEY])
 
 
-def validate_menu_items(dict):
+def validate_menu_items(dict: MenuItems) -> None:
     for k, v in dict.items():
         if not valid_menu_item_key(k):
             raise StreamlitAPIException(
                 "We only accept the keys: "
-                f'"Get help", "Report a bug", and "About" ("{k}" is not a valid key.)'
+                '"Get help", "Report a bug", and "About" '
+                f'("{k}" is not a valid key.)'
             )
         if v is not None:
             if not valid_url(v) and k != ABOUT_KEY:
                 raise StreamlitAPIException(f'"{v}" is a not a valid URL!')
 
 
-def valid_menu_item_key(key):
-    return key in [GET_HELP_KEY, REPORT_A_BUG_KEY, ABOUT_KEY]
+def valid_menu_item_key(key: str) -> "TypeGuard[MenuKey]":
+    return key in {GET_HELP_KEY, REPORT_A_BUG_KEY, ABOUT_KEY}
 
 
-def valid_url(url):
+def valid_url(url: str) -> bool:
     """
     This code is copied and pasted from:
     https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
