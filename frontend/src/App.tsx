@@ -1052,10 +1052,12 @@ export class App extends PureComponent<Props, State> {
       // below, but that doesn't work because basePath may contain unescaped
       // regex special-characters. This is why we're stuck with the
       // weird-looking triple `replace()`.
-      pageName = document.location.pathname
-        .replace(`/${basePath}`, "")
-        .replace(new RegExp("^/?"), "")
-        .replace(new RegExp("/$"), "")
+      pageName = decodeURIComponent(
+        document.location.pathname
+          .replace(`/${basePath}`, "")
+          .replace(new RegExp("^/?"), "")
+          .replace(new RegExp("/$"), "")
+      )
       pageScriptHash = ""
     }
 
