@@ -48,9 +48,9 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     widgetsDisabled: true,
     componentRegistry: new ComponentRegistry(() => undefined),
     formsData,
-    appPages: [{ pageName: "streamlit_app", scriptPath: "streamlit_app.py" }],
+    appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     onPageChange: jest.fn(),
-    currentPageName: "streamlit_app",
+    currentPageScriptHash: "main_page_script_hash",
     hideSidebarNav: false,
     pageLinkBaseUrl: "",
     ...props,
@@ -94,15 +94,15 @@ describe("AppView element", () => {
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("appPages")).toHaveLength(1)
-    expect(wrapper.find("ThemedSidebar").prop("currentPageName")).toBe(
-      "streamlit_app"
+    expect(wrapper.find("ThemedSidebar").prop("currentPageScriptHash")).toBe(
+      "main_page_script_hash"
     )
   })
 
   it("renders a sidebar when there are no elements but multiple pages", () => {
     const appPages = [
-      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const wrapper = shallow(<AppView {...getProps({ appPages })} />)
 
@@ -126,8 +126,8 @@ describe("AppView element", () => {
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const appPages = [
-      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
       elements: new AppRoot(new BlockNode([main, sidebar])),
@@ -142,8 +142,8 @@ describe("AppView element", () => {
 
   it("does not render the sidebar if there are no elements, multiple pages but hideSidebarNav is true", () => {
     const appPages = [
-      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
       appPages,

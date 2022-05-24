@@ -15,6 +15,7 @@
 """A bunch of useful utilities."""
 
 import functools
+import hashlib
 import os
 import subprocess
 
@@ -141,3 +142,10 @@ def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> Dict[str, _Value]:
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass
+
+
+def calc_md5(s: str) -> str:
+    """Return the md5 hash of the given string."""
+    h = hashlib.new("md5")
+    h.update(s.encode("utf-8"))
+    return h.hexdigest()

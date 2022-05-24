@@ -45,6 +45,7 @@ from streamlit.scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
 )
+from streamlit.util import calc_md5
 from streamlit.watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
@@ -216,7 +217,9 @@ class AppSession:
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
         )
         self._on_scriptrunner_event(
-            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STARTED
+            self._scriptrunner,
+            ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
         )
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -252,6 +255,7 @@ class AppSession:
             rerun_data = RerunData(
                 client_state.query_string,
                 client_state.widget_states,
+                client_state.page_script_hash,
                 client_state.page_name,
             )
         else:
@@ -296,30 +300,16 @@ class AppSession:
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
         main_script_path = self._session_data.main_script_path
+        pages = source_util.get_pages(main_script_path)
 
-        def has_matching_script_path(page_info):
-            # When iterating through source_util.get_pages(main_script_path).items(),
-            # we get a tuple of form (page_name, page_info).
-            _, page_info = page_info
-            return page_info["script_path"] == filepath
-
-        changed_page_name, changed_page_info = next(
-            filter(
-                has_matching_script_path,
-                source_util.get_pages(main_script_path).items(),
-            ),
-            (None, None),
+        changed_page_script_hash = next(
+            filter(lambda k: pages[k]["script_path"] == filepath, pages),
+            None,
         )
 
-        # We technically only need to check one of the if statement clauses
-        # below, but checking both helps out the type checker.
-        if changed_page_name is not None and changed_page_info is not None:
-            is_main_page = changed_page_info["script_path"] == main_script_path
-            current_page_name = self._client_state.page_name
-
-            return (is_main_page and current_page_name == "") or (
-                current_page_name == changed_page_name
-            )
+        if changed_page_script_hash is not None:
+            current_page_script_hash = self._client_state.page_script_hash
+            return changed_page_script_hash == current_page_script_hash
 
         return True
 
@@ -363,6 +353,7 @@ class AppSession:
         forward_msg: Optional[ForwardMsg] = None,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
+        page_script_hash: Optional[str] = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -372,7 +363,7 @@ class AppSession:
         """
         self._ioloop.spawn_callback(
             lambda: self._handle_scriptrunner_event_on_main_thread(
-                sender, event, forward_msg, exception, client_state
+                sender, event, forward_msg, exception, client_state, page_script_hash
             )
         )
 
@@ -383,6 +374,7 @@ class AppSession:
         forward_msg: Optional[ForwardMsg] = None,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
+        page_script_hash: Optional[str] = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -410,6 +402,9 @@ class AppSession:
             The ScriptRunner's final ClientState. Set only for the
             SHUTDOWN event.
 
+        page_script_hash : str | None
+            A hash of the script path corresponding to the page currently being
+            run. Set only for the SCRIPT_STARTED event.
         """
 
         assert (
@@ -431,8 +426,14 @@ class AppSession:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_IS_RUNNING
 
+            assert (
+                page_script_hash is not None
+            ), "page_script_hash must be set for the SCRIPT_STARTED event"
+
             self._clear_queue()
-            self._enqueue_forward_msg(self._create_new_session_message())
+            self._enqueue_forward_msg(
+                self._create_new_session_message(page_script_hash)
+            )
 
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -508,13 +509,14 @@ class AppSession:
         msg.session_event.script_changed_on_disk = True
         return msg
 
-    def _create_new_session_message(self) -> ForwardMsg:
+    def _create_new_session_message(self, page_script_hash: str) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._session_data.name
         msg.new_session.main_script_path = self._session_data.main_script_path
+        msg.new_session.page_script_hash = page_script_hash
 
         _populate_app_pages(msg.new_session, self._session_data.main_script_path)
         _populate_config_msg(msg.new_session.config)
@@ -702,9 +704,9 @@ def _populate_user_info_msg(msg: UserInfo) -> None:
 def _populate_app_pages(
     msg: Union[NewSession, PagesChanged], main_script_path: str
 ) -> None:
-    for page_name, page_info in source_util.get_pages(main_script_path).items():
+    for page_script_hash, page_info in source_util.get_pages(main_script_path).items():
         page_proto = msg.app_pages.add()
 
-        page_proto.page_name = page_name
-        page_proto.script_path = page_info["script_path"]
+        page_proto.page_script_hash = page_script_hash
+        page_proto.page_name = page_info["page_name"]
         page_proto.icon = page_info["icon"]

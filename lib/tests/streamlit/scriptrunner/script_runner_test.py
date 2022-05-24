@@ -45,6 +45,7 @@ from streamlit.scriptrunner import (
     RerunException,
     StopException,
 )
+from streamlit import source_util
 from streamlit.state.session_state import SessionState, WidgetMetadata
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
@@ -613,10 +614,23 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
-    def test_query_string_and_page_name_saved(self):
+    @patch(
+        "streamlit.source_util.get_pages",
+        MagicMock(
+            return_value={
+                "hash1": {
+                    "page_script_hash": "hash1",
+                    "script_path": os.path.join(
+                        os.path.dirname(__file__), "test_data", "good_script.py"
+                    ),
+                },
+            },
+        ),
+    )
+    def test_query_string_and_page_script_hash_saved(self):
         scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner.request_rerun(
-            RerunData(query_string="foo=bar", page_name="good_script")
+            RerunData(query_string="foo=bar", page_script_hash="hash1")
         )
         scriptrunner.start()
         scriptrunner.join()
@@ -634,7 +648,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         shutdown_data = scriptrunner.event_data[-1]
         self.assertEqual(shutdown_data["client_state"].query_string, "foo=bar")
-        self.assertEqual(shutdown_data["client_state"].page_name, "good_script")
+        self.assertEqual(shutdown_data["client_state"].page_script_hash, "hash1")
 
     def test_coalesce_rerun(self):
         """Tests that multiple pending rerun requests get coalesced."""
@@ -788,6 +802,11 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
 
+        # Set _cached_pages to None manually (instead of using
+        # source_util.invalidate_pages_cache) to avoid firing on_pages_changed
+        # events.
+        source_util._cached_pages = None
+
         # Run a slightly different script on a second runner.
         runner = TestScriptRunner("st_cache_script_changed.py")
         runner.request_rerun(RerunData())
@@ -807,7 +826,8 @@ class ScriptRunnerTest(AsyncTestCase):
         "streamlit.source_util.get_pages",
         MagicMock(
             return_value={
-                "page2": {
+                "hash2": {
+                    "page_script_hash": "hash2",
                     "script_path": os.path.join(
                         os.path.dirname(__file__), "test_data", "good_script2.py"
                     ),
@@ -815,9 +835,9 @@ class ScriptRunnerTest(AsyncTestCase):
             },
         ),
     )
-    def test_page_name_to_script_path(self):
+    def test_page_script_hash_to_script_path(self):
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData(page_name="page2"))
+        scriptrunner.request_rerun(RerunData(page_script_hash="hash2"))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -842,13 +862,53 @@ class ScriptRunnerTest(AsyncTestCase):
         "streamlit.source_util.get_pages",
         MagicMock(
             return_value={
-                "page2": {"script_path": "script2"},
+                "hash2": {
+                    "page_script_hash": "hash2",
+                    "page_name": "good_script2",
+                    "script_path": os.path.join(
+                        os.path.dirname(__file__), "test_data", "good_script2.py"
+                    ),
+                },
+            },
+        ),
+    )
+    def test_page_script_hash_to_script_path(self):
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData(page_name="good_script2"))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, [text_utf2])
+        self.assertEqual(
+            os.path.join(os.path.dirname(__file__), "test_data", "good_script2.py"),
+            sys.modules["__main__"].__file__,
+            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
+        )
+
+        shutdown_data = scriptrunner.event_data[-1]
+        self.assertEqual(shutdown_data["client_state"].page_script_hash, "hash2")
+
+    @patch(
+        "streamlit.source_util.get_pages",
+        MagicMock(
+            return_value={
+                "hash2": {"page_script_hash": "hash2", "script_path": "script2"},
             }
         ),
     )
-    def test_page_name_to_script_path_404(self):
+    def test_404_hash_not_found(self):
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData(page_name="page3"))
+        scriptrunner.request_rerun(RerunData(page_script_hash="hash3"))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -866,7 +926,47 @@ class ScriptRunnerTest(AsyncTestCase):
         self._assert_text_deltas(scriptrunner, [text_utf])
 
         page_not_found_msg = scriptrunner.forward_msg_queue._queue[0].page_not_found
-        self.assertEqual(page_not_found_msg.page_name, "page3")
+        self.assertEqual(page_not_found_msg.page_name, "")
+
+        self.assertEqual(
+            scriptrunner._session_data.main_script_path,
+            sys.modules["__main__"].__file__,
+            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
+        )
+
+    @patch(
+        "streamlit.source_util.get_pages",
+        MagicMock(
+            return_value={
+                "hash2": {
+                    "page_script_hash": "hash2",
+                    "script_path": "script2",
+                    "page_name": "page2",
+                },
+            }
+        ),
+    )
+    def test_404_page_name_not_found(self):
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData(page_name="nonexistent"))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,  # page not found message
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,  # deltas
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, [text_utf])
+
+        page_not_found_msg = scriptrunner.forward_msg_queue._queue[0].page_not_found
+        self.assertEqual(page_not_found_msg.page_name, "nonexistent")
 
         self.assertEqual(
             scriptrunner._session_data.main_script_path,

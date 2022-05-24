@@ -71,6 +71,7 @@ import {
   IGitInfo,
   GitInfo,
   IAppPage,
+  AppPage,
 } from "src/autogen/proto"
 import { without, concat } from "lodash"
 
@@ -143,7 +144,7 @@ interface State {
   hideTopBar: boolean
   hideSidebarNav: boolean
   appPages: IAppPage[]
-  currentPageName: string
+  currentPageScriptHash: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -211,7 +212,7 @@ export class App extends PureComponent<Props, State> {
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
-      currentPageName: "",
+      currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
       // the user would see top bar elements for a few ms if this defaulted to
@@ -305,9 +306,11 @@ export class App extends PureComponent<Props, State> {
       this.closeDialog()
     }
 
-    const { requestedPageName } = this.props.s4aCommunication.currentState
-    if (requestedPageName !== null) {
-      this.onPageChange(requestedPageName)
+    const {
+      requestedPageScriptHash,
+    } = this.props.s4aCommunication.currentState
+    if (requestedPageScriptHash !== null) {
+      this.onPageChange(requestedPageScriptHash)
       this.props.s4aCommunication.onPageChanged()
     }
   }
@@ -491,16 +494,17 @@ export class App extends PureComponent<Props, State> {
 
   handlePageNotFound = (pageNotFound: PageNotFound): void => {
     const { pageName } = pageNotFound
-    this.showError(
-      "Page not found",
-      `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory.`
-    )
+    const errMsg = pageName
+      ? `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory`
+      : "The page that you have requested does not seem to exist"
+    this.showError("Page not found", `${errMsg}. Running the app's main page.`)
 
-    const currentPageName = ""
-    this.setState({ currentPageName }, () => {
+    const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
+    this.setState({ currentPageScriptHash }, () => {
       this.props.s4aCommunication.sendMessage({
         type: "SET_CURRENT_PAGE_NAME",
-        currentPageName,
+        currentPageName: "",
+        currentPageScriptHash,
       })
     })
   }
@@ -618,8 +622,6 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewSession = (newSessionProto: NewSession): void => {
     const initialize = newSessionProto.initialize as Initialize
-    const config = newSessionProto.config as Config
-    const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
     if (App.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
@@ -634,12 +636,36 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    // mainPageName must be a string as we're guaranteed at this point that
+    const config = newSessionProto.config as Config
+    const themeInput = newSessionProto.customTheme as CustomThemeConfig
+    const { currentPageScriptHash } = this.state
+    const newPageScriptHash = newSessionProto.pageScriptHash
+
+    // mainPage must be a string as we're guaranteed at this point that
     // newSessionProto.appPages is nonempty and has a truthy pageName.
     // Otherwise, we'd either have no main script or a nameless main script,
     // neither of which can happen.
-    const mainPageName = newSessionProto.appPages[0]?.pageName as string
-    const { currentPageName } = this.state
+    const mainPage = newSessionProto.appPages[0] as AppPage
+    // We're similarly guaranteed that newPageName will be found / truthy
+    // here.
+    const newPageName = newSessionProto.appPages.find(
+      p => p.pageScriptHash === newPageScriptHash
+    )?.pageName as string
+    const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
+
+    const baseUriParts = this.getBaseUriParts()
+    if (baseUriParts) {
+      const { basePath } = baseUriParts
+      const queryString = this.getQueryString()
+
+      const qs = queryString ? `?${queryString}` : ""
+      const basePathPrefix = basePath ? `/${basePath}` : ""
+
+      const pagePath = viewingMainPage ? "" : newPageName
+      const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+
+      window.history.pushState({}, "", pageUrl)
+    }
 
     this.processThemeInput(themeInput)
     this.setState(
@@ -648,6 +674,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         hideSidebarNav: config.hideSidebarNav,
         appPages: newSessionProto.appPages,
+        currentPageScriptHash: newPageScriptHash,
       },
       () => {
         this.props.s4aCommunication.sendMessage({
@@ -657,7 +684,8 @@ export class App extends PureComponent<Props, State> {
 
         this.props.s4aCommunication.sendMessage({
           type: "SET_CURRENT_PAGE_NAME",
-          currentPageName,
+          currentPageName: viewingMainPage ? "" : newPageName,
+          currentPageScriptHash: newPageScriptHash,
         })
       }
     )
@@ -670,7 +698,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Set the title and favicon to their default values
-    document.title = `${currentPageName || mainPageName} · Streamlit`
+    document.title = `${newPageName} · Streamlit`
     handleFavicon(
       `${process.env.PUBLIC_URL}/favicon.png`,
       this.getBaseUriParts()
@@ -684,10 +712,13 @@ export class App extends PureComponent<Props, State> {
 
     MetricsManager.current.enqueue("updateReport", {
       numPages: newSessionProto.appPages.length,
-      isMainPage: currentPageName === "" || currentPageName === mainPageName,
+      isMainPage: viewingMainPage,
     })
 
-    if (appHash === newSessionHash) {
+    if (
+      appHash === newSessionHash &&
+      currentPageScriptHash === newPageScriptHash
+    ) {
       this.setState({
         scriptRunId,
       })
@@ -971,13 +1002,13 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageName: string): void => {
-    this.sendRerunBackMsg(undefined, pageName)
+  onPageChange = (pageScriptHash: string): void => {
+    this.sendRerunBackMsg(undefined, pageScriptHash)
   }
 
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
-    pageName?: string
+    pageScriptHash?: string
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -989,16 +1020,26 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
+    const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
     const queryString = this.getQueryString()
+    let pageName = ""
 
-    // NOTE: We specifically check for `null` or `undefined` instead of making
-    //       a falsy check below because navigating to "" can be used to
-    //       navigate to the main page of an app.
-    if (pageName === undefined) {
-      // If pageName is undefined, we're not switching pages, so we should
-      // use the current URL to determine the pageName.
-      //
+    if (pageScriptHash) {
+      // The user specified exactly which page to run. We can simply use this
+      // value in the BackMsg we send to the server.
+    } else if (currentPageScriptHash) {
+      // The user didn't specify which page to run, which happens when they
+      // click the "Rerun" button in the hamburger menu. In this case, we
+      // rerun the current page.
+      pageScriptHash = currentPageScriptHash
+    } else {
+      // We must be in the case where the user is navigating directly to a
+      // non-main page of this app. Since we haven't received the list of the
+      // app's pages from the server at this point, we fall back to requesting
+      // requesting the page to run via pageName, which we extract from
+      // document.location.pathname
+
       // Note also that we'd prefer to write something like
       //
       // ```
@@ -1010,27 +1051,19 @@ export class App extends PureComponent<Props, State> {
       //
       // below, but that doesn't work because basePath may contain unescaped
       // regex special-characters. This is why we're stuck with the
-      // weird-looking double `replace()`.
-      pageName = document.location.pathname
-        .replace(`/${basePath}`, "")
-        .replace(new RegExp("^/?"), "")
-        .replace(new RegExp("/$"), "")
-    } else {
-      const { appHash, scriptRunId, scriptName } = this.state
-      this.clearAppState(appHash as string, scriptRunId, scriptName)
-
-      const qs = queryString ? `?${queryString}` : ""
-      const basePathPrefix = basePath ? `/${basePath}` : ""
-
-      const pageUrl = `${basePathPrefix}/${pageName}${qs}`
-      window.history.pushState({}, "", pageUrl)
+      // weird-looking triple `replace()`.
+      pageName = decodeURIComponent(
+        document.location.pathname
+          .replace(`/${basePath}`, "")
+          .replace(new RegExp("^/?"), "")
+          .replace(new RegExp("/$"), "")
+      )
+      pageScriptHash = ""
     }
-
-    this.setState({ currentPageName: pageName })
 
     this.sendBackMsg(
       new BackMsg({
-        rerunScript: { queryString, widgetStates, pageName },
+        rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
       })
     )
 
@@ -1212,7 +1245,7 @@ export class App extends PureComponent<Props, State> {
       gitInfo,
       hideTopBar,
       hideSidebarNav,
-      currentPageName,
+      currentPageScriptHash,
     } = this.state
 
     const {
@@ -1318,7 +1351,7 @@ export class App extends PureComponent<Props, State> {
               formsData={this.state.formsData}
               appPages={this.state.appPages}
               onPageChange={this.onPageChange}
-              currentPageName={currentPageName}
+              currentPageScriptHash={currentPageScriptHash}
               hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
               pageLinkBaseUrl={
                 this.props.s4aCommunication.currentState.pageLinkBaseUrl

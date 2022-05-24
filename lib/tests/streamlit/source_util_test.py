@@ -20,6 +20,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit.source_util as source_util
+from streamlit.util import calc_md5
 
 
 class PageHelperFunctionTests(unittest.TestCase):
@@ -128,11 +129,10 @@ def test_get_pages(tmpdir):
         # These pages are out of order so that we can check that they're sorted
         # in the assert below.
         "03_other_page.py",
-        "last page.py",
+        "04 last numbered page.py",
         "01-page.py",
-        # The next two pages have duplicate names so shouldn't appear.
+        # This page should appear last since it doesn't have an integer prefix.
         "page.py",
-        "streamlit_app.py",
         # This file shouldn't appear as a page because it's hidden.
         ".hidden_file.py",
         # This shouldn't appear because it's not a Python file.
@@ -145,20 +145,34 @@ def test_get_pages(tmpdir):
 
     received_pages = source_util.get_pages(main_script_path)
     assert received_pages == {
-        "streamlit_app": {
+        calc_md5(main_script_path): {
+            "page_script_hash": calc_md5(main_script_path),
+            "page_name": "streamlit_app",
             "script_path": main_script_path,
             "icon": "",
         },
-        "page": {
+        calc_md5(str(pages_dir / "01-page.py")): {
+            "page_script_hash": calc_md5(str(pages_dir / "01-page.py")),
+            "page_name": "page",
             "script_path": str(pages_dir / "01-page.py"),
             "icon": "",
         },
-        "other_page": {
+        calc_md5(str(pages_dir / "03_other_page.py")): {
+            "page_script_hash": calc_md5(str(pages_dir / "03_other_page.py")),
+            "page_name": "other_page",
             "script_path": str(pages_dir / "03_other_page.py"),
             "icon": "",
         },
-        "last_page": {
-            "script_path": str(pages_dir / "last page.py"),
+        calc_md5(str(pages_dir / "04 last numbered page.py")): {
+            "page_script_hash": calc_md5(str(pages_dir / "04 last numbered page.py")),
+            "page_name": "last_numbered_page",
+            "script_path": str(pages_dir / "04 last numbered page.py"),
+            "icon": "",
+        },
+        calc_md5(str(pages_dir / "page.py")): {
+            "page_script_hash": calc_md5(str(pages_dir / "page.py")),
+            "page_name": "page",
+            "script_path": str(pages_dir / "page.py"),
             "icon": "",
         },
     }
