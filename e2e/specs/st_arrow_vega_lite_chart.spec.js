@@ -58,7 +58,7 @@ describe("st._arrow_vega_lite_chart", () => {
   });
 
   it("displays interactive charts correctly", () => {
-    cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 4).matchThemedSnapshots(`interactive_arrow_vega_lite_chart`);
+    cy.getIndexed("[data-testid='stArrowVegaLiteChart']", 4).matchThemedSnapshots(`interactive_arrow_vega_lite_chart`);
   });
 
   it("supports different ways to get the same plot", () => {
