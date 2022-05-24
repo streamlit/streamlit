@@ -1040,7 +1040,7 @@ describe("App.sendRerunBackMsg", () => {
     })
   })
 
-  it("extracts the pageName correctly if we can't get a pageScriptHash (main page)", () => {
+  it("extracts the pageName as an empty string if we can't get a pageScriptHash (main page)", () => {
     instance.sendRerunBackMsg()
 
     // @ts-ignore
@@ -1053,7 +1053,7 @@ describe("App.sendRerunBackMsg", () => {
     })
   })
 
-  it("extracts the pageName correctly if we can't get a pageScriptHash (non-main page)", () => {
+  it("extracts the pageName as the URL path if we can't get a pageScriptHash (non-main page)", () => {
     window.history.pushState({}, "", "/foo/")
     instance.sendRerunBackMsg()
 
@@ -1067,7 +1067,7 @@ describe("App.sendRerunBackMsg", () => {
     })
   })
 
-  it("extracts the pageName correctly if we can't get a pageScriptHash and we have a nonempty basePath", () => {
+  it("extracts the pageName as the last part of the URL if we can't get a pageScriptHash and we have a nonempty basePath", () => {
     // @ts-ignore
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
 
