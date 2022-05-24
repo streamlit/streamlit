@@ -109,6 +109,7 @@ class Radio extends React.PureComponent<Props, State> {
                   }) => ({
                     marginBottom: 0,
                     marginTop: 0,
+                    marginRight: "1rem",
                     // Make left and right padding look the same visually.
                     paddingLeft: 0,
                     alignItems: "start",
@@ -127,6 +128,7 @@ class Radio extends React.PureComponent<Props, State> {
                     width: "1rem",
                     height: "1rem",
                     marginTop: "0.35rem",
+                    marginRight: "0",
                     backgroundColor:
                       $checked && !disabled
                         ? colors.primary
@@ -142,6 +144,8 @@ class Radio extends React.PureComponent<Props, State> {
                 Label: {
                   style: {
                     color: disabled ? colors.fadedText40 : colors.bodyText,
+                    position: "relative",
+                    top: "1px",
                   },
                 },
               }}
