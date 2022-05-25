@@ -198,7 +198,7 @@ from streamlit.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
 
 session_state = SessionStateProxy()
-user = UserInfoProxy()
+experimental_user = UserInfoProxy()
 
 
 # Beta APIs

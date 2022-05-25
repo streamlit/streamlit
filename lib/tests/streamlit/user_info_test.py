@@ -9,7 +9,7 @@ from streamlit.scriptrunner import (
     ScriptRunContext,
 )
 
-from streamlit.state.session_state import SessionState
+from streamlit.state import SafeSessionState, SessionState
 from tests.testutil import DeltaGeneratorTestCase
 
 
@@ -18,23 +18,23 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
 
     def test_user_email_attr(self):
         """Test that `st.user.email` returns user info from ScriptRunContext"""
-        self.assertEqual(st.user.email, "test@test.com")
+        self.assertEqual(st.experimental_user.email, "test@test.com")
 
     def test_user_email_key(self):
-        self.assertEqual(st.user["email"], "test@test.com")
+        self.assertEqual(st.experimental_user["email"], "test@test.com")
 
     def test_user_non_existing_attr(self):
         """Test that an error is raised when called non existed attr."""
         with self.assertRaises(AttributeError):
-            st.write(st.user.attribute)
+            st.write(st.experimental_user.attribute)
 
     def test_user_non_existing_key(self):
         """Test that an error is raised when called non existed key."""
         with self.assertRaises(KeyError):
-            st.write(st.user["key"])
+            st.write(st.experimental_user["key"])
 
     def test_user_len(self):
-        self.assertEqual(len(st.user), 1)
+        self.assertEqual(len(st.experimental_user), 1)
 
     def test_st_user_reads_from_context_(self):
         """Test that st.user reads information from current ScriptRunContext
@@ -51,14 +51,14 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                     session_id="test session id",
                     enqueue=forward_msg_queue.enqueue,
                     query_string="",
-                    session_state=SessionState(),
+                    session_state=SafeSessionState(SessionState()),
                     uploaded_file_mgr=None,
-                    page_name="",
+                    page_script_hash="",
                     user_info={"email": "something@else.com"},
                 ),
             )
 
-            self.assertEqual(st.user.email, "something@else.com")
+            self.assertEqual(st.experimental_user.email, "something@else.com")
         except Exception as e:
             raise e
         finally:
