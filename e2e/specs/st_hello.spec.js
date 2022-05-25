@@ -160,12 +160,6 @@ describe("hello", () => {
   });
 
   it("displays animation demo", () => {
-    // cy.getIndexed('[data-testid="stSidebarNav"] a', 1).click();
-    // cy.get(".element-container .stMarkdown h1").should(
-    //   "contain",
-    //   "Animation Demo"
-    // );
-
     cy.getIndexed('[data-testid="stSidebarNav"] a', 1)
       .click()
       .then(() => {
@@ -182,22 +176,7 @@ describe("hello", () => {
       });
   });
 
-  it("supports navigating to a page directly via URL", () => {
-    cy.loadApp("http://localhost:3000/Animation_Demo");
-    cy.get(".element-container .stMarkdown h1").should(
-      "contain",
-      "Animation Demo"
-    );
-    cy.wait(12000);
-  });
-
   it("displays plotting demo", () => {
-    // cy.getIndexed('[data-testid="stSidebarNav"] a', 2).click();
-    // cy.get(".element-container .stMarkdown h1").should(
-    //   "contain",
-    //   "Plotting Demo"
-    // );
-
     cy.getIndexed('[data-testid="stSidebarNav"] a', 2)
       .click()
       .then(() => {
@@ -243,12 +222,6 @@ describe("hello", () => {
   });
 
   it("displays dataframe demo", () => {
-    // cy.getIndexed('[data-testid="stSidebarNav"] a', 4).click();
-    // cy.get(".element-container .stMarkdown h1").should(
-    //   "contain",
-    //   "DataFrame Demo"
-    // );
-
     cy.getIndexed('[data-testid="stSidebarNav"] a', 4)
       .click()
       .then(() => {
