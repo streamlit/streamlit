@@ -78,14 +78,8 @@ describe("hello", () => {
   });
 
   it("displays mapping demo", () => {
-    cy.getIndexed('[data-testid="stSidebarNav"] a', 3).click();
-    cy.get(".element-container .stMarkdown h1").should(
-      "contain",
-      "Mapping Demo"
-    );
-
     cy.getIndexed('[data-testid="stSidebarNav"] a', 3)
-      .click()
+      .click({ force: true })
       .then(() => {
         cy.get(".element-container .stMarkdown h1").should(
           "contain",
@@ -97,7 +91,7 @@ describe("hello", () => {
           .should("have.css", "height", "500px");
 
         // Wait for Mapbox to build the canvas.
-        cy.wait(12000);
+        cy.wait(7000);
 
         cy.get(".appview-container").matchThemedSnapshots("mapping-demo");
       });
