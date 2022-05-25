@@ -35,7 +35,7 @@ export interface S4ACommunicationState {
   menuItems: IMenuItem[]
   pageLinkBaseUrl: string
   queryParams: string
-  requestedPageName: string | null
+  requestedPageScriptHash: string | null
   sidebarChevronDownshift: number
   streamlitShareMetadata: StreamlitShareMetadata
   toolbarItems: IToolbarItem[]
@@ -66,7 +66,7 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "REQUEST_PAGE_CHANGE"
-      pageName: string
+      pageScriptHash: string
     }
   | {
       type: "SET_IS_OWNER"
@@ -125,6 +125,7 @@ export type IGuestToHostMessage =
   | {
       type: "SET_CURRENT_PAGE_NAME"
       currentPageName: string
+      currentPageScriptHash: string
     }
   | {
       type: "SET_PAGE_FAVICON"

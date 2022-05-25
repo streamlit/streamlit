@@ -32,7 +32,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
-            page_name="",
+            page_script_hash="",
         )
 
         msg = ForwardMsg()
@@ -53,7 +53,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
-            page_name="",
+            page_script_hash="",
         )
 
         ctx.on_script_start()
@@ -78,7 +78,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
-            page_name="",
+            page_script_hash="",
         )
 
         ctx.on_script_start()
@@ -102,7 +102,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
-            page_name="",
+            page_script_hash="",
         )
 
         ctx.on_script_start()

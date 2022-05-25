@@ -42,7 +42,7 @@ export interface SidebarProps {
   hasElements: boolean
   appPages: IAppPage[]
   onPageChange: (pageName: string) => void
-  currentPageName: string
+  currentPageScriptHash: string
   hideSidebarNav: boolean
   pageLinkBaseUrl: string
 }
@@ -162,6 +162,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ hideScrollbar: newValue })
   }
 
+  // BUG(tvst): X button should have same color as hamburger.
+  // BUG(tvst): X and > buttons should have same margins as hamburger.
   public render(): ReactNode {
     const { collapsedSidebar } = this.state
     const {
@@ -170,7 +172,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       children,
       hasElements,
       onPageChange,
-      currentPageName,
+      currentPageScriptHash,
       hideSidebarNav,
       pageLinkBaseUrl,
     } = this.props
@@ -199,7 +201,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               hasSidebarElements={hasElements}
               onPageChange={onPageChange}
               hideParentScrollbar={this.hideScrollbar}
-              currentPageName={currentPageName}
+              currentPageScriptHash={currentPageScriptHash}
               pageLinkBaseUrl={pageLinkBaseUrl}
             />
           )}

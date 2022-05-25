@@ -35,7 +35,7 @@ function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
       theme={lightTheme}
       appPages={[]}
       onPageChange={jest.fn()}
-      currentPageName={""}
+      currentPageScriptHash={""}
       hasElements
       pageLinkBaseUrl={""}
       hideSidebarNav={false}
@@ -114,9 +114,7 @@ describe("Sidebar Component", () => {
 
   it("has extra top and bottom padding if no SidebarNav is displayed", () => {
     const wrapper = renderSideBar({
-      appPages: [
-        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-      ],
+      appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     })
 
     expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
@@ -128,8 +126,8 @@ describe("Sidebar Component", () => {
   it("has less padding if the SidebarNav is displayed", () => {
     const wrapper = renderSideBar({
       appPages: [
-        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-        { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
       ],
     })
 
@@ -165,8 +163,8 @@ describe("Sidebar Component", () => {
 
   it("renders SidebarNav component", () => {
     const appPages = [
-      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const wrapper = renderSideBar({ appPages })
 
@@ -182,8 +180,8 @@ describe("Sidebar Component", () => {
 
   it("can hide SidebarNav with the hideSidebarNav option", () => {
     const appPages = [
-      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const wrapper = renderSideBar({ appPages, hideSidebarNav: true })
 

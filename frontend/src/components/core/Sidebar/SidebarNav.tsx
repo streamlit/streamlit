@@ -41,19 +41,7 @@ export interface Props {
   onPageChange: (pageName: string) => void
   hideParentScrollbar: (newValue: boolean) => void
 
-  // BUG(vdonato): currentPageName is "" for the root page.
-  // BUG(vdonato): currentPageName is not guaranteed to be unique. This means we show 2+ pages
-  // as "active" at the same time, if they have the same name.
-  //
-  // Potential solutions:
-  // 1. Add "isActive" boolean to items inside appPages
-  // 2. Instead of currentPageName send currentPageIndex (i.e. index of active page in the appPages
-  //    array).
-  //
-  // BUG(vdonato): Page title should change when you swith pages.
-  // BUG(tvst): X button should have same color as hamburger.
-  // BUG(tvst): X and > buttons should have same margins as hamburger.
-  currentPageName: string
+  currentPageScriptHash: string
   pageLinkBaseUrl: string
 }
 
@@ -62,7 +50,7 @@ const SidebarNav = ({
   hasSidebarElements,
   onPageChange,
   hideParentScrollbar,
-  currentPageName,
+  currentPageScriptHash,
   pageLinkBaseUrl,
 }: Props): ReactElement | null => {
   if (appPages.length < 2) {
@@ -105,7 +93,10 @@ const SidebarNav = ({
         onMouseOut={onMouseOut}
       >
         {appPages.map(
-          ({ icon: pageIcon, pageName }: IAppPage, pageIndex: number) => {
+          (
+            { icon: pageIcon, pageName, pageScriptHash }: IAppPage,
+            pageIndex: number
+          ) => {
             pageName = pageName as string
             // NOTE: We use window.location to get the port instead of
             // getBaseUriParts() because the port may differ in dev mode (since
@@ -131,11 +122,11 @@ const SidebarNav = ({
               <li key={pageName}>
                 <StyledSidebarNavLinkContainer>
                   <StyledSidebarNavLink
-                    isActive={currentPageName === pageName}
+                    isActive={pageScriptHash === currentPageScriptHash}
                     href={pageUrl}
                     onClick={e => {
                       e.preventDefault()
-                      onPageChange(navigateTo)
+                      onPageChange(pageScriptHash as string)
                     }}
                   >
                     {pageIcon && pageIcon.length ? (

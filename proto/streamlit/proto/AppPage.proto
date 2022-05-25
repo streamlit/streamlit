@@ -19,7 +19,7 @@ syntax = "proto3";
 // A page in the app. Includes both the name of the page as well as the full
 // path to the corresponding script file.
 message AppPage {
-  string page_name = 1;
-  string script_path = 2;
+  string page_script_hash = 1;
+  string page_name = 2;
   string icon = 3;
 }

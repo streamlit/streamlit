@@ -256,10 +256,9 @@ export const StyledSidebarUserContent = styled.div<
 
 export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
   position: "absolute",
-  top: theme.spacing.sm,
-  right: theme.spacing.sm,
+  top: theme.spacing.xs,
+  right: theme.spacing.twoXS,
   zIndex: 1,
-  color: theme.colors.fadedText40,
 
   "&:hover button": {
     backgroundColor: transparentize(theme.colors.fadedText60, 0.5),
@@ -275,7 +274,7 @@ export const StyledSidebarCollapsedControl = styled.div<
 >(({ chevronDownshift, isCollapsed, theme }) => ({
   position: "fixed",
   top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
-  left: isCollapsed ? theme.spacing.sm : `-${theme.spacing.sm}`,
+  left: isCollapsed ? theme.spacing.twoXS : `-${theme.spacing.twoXS}`,
   zIndex: theme.zIndices.header,
 
   transition: "left 300ms",
