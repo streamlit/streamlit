@@ -35,7 +35,7 @@ export function createDataGridTheme(theme: Theme): GlideTheme {
   return {
     // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
     accentColor: theme.colors.primary,
-    accentFg: theme.colors.white, // TODO(lukasmasuch): Do we need a different color here?
+    accentFg: theme.colors.white,
     accentLight: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.fadedText05,
     fontFamily: theme.genericFonts.bodyFont,
@@ -45,11 +45,11 @@ export function createDataGridTheme(theme: Theme): GlideTheme {
     fgIconHeader: theme.colors.white,
     bgHeader: theme.colors.bgMix,
     bgHeaderHasFocus: theme.colors.secondaryBg,
-    bgHeaderHovered: theme.colors.bgMix, // do not apply a hover effect
+    bgHeaderHovered: theme.colors.bgMix, // uses same color as bgHeader to deactivate the hover effect
     textHeader: theme.colors.fadedText60,
     textHeaderSelected: theme.colors.white,
     headerFontStyle: `${theme.fontSizes.sm}`,
-    // Cell styling
+    // Cell styling:
     baseFontStyle: theme.fontSizes.sm,
     editorFontSize: theme.fontSizes.sm,
     textDark: theme.colors.bodyText,
@@ -57,7 +57,7 @@ export function createDataGridTheme(theme: Theme): GlideTheme {
     textLight: theme.colors.fadedText60,
     textBubble: theme.colors.fadedText60,
     bgCell: theme.colors.bgColor,
-    bgCellMedium: theme.colors.bgColor, // TODO(lukasmasuch): Do we need a different color here?
+    bgCellMedium: theme.colors.bgColor, // uses same as bgCell to always have the same background color
     cellHorizontalPadding: 8,
     cellVerticalPadding: 3,
     // Special cells:
