@@ -148,8 +148,6 @@ describe("hello", () => {
 
     cy.get(".streamlit-dialog").should("not.exist");
 
-    cy.get(".stSelectbox").should("not.exist");
-
     cy.get(".appview-container").matchThemedSnapshots("welcome-streamlit");
   });
 
