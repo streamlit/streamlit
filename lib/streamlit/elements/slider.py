@@ -187,13 +187,14 @@ class SliderMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        # Set value from session_state if exists.
-        session_state = get_session_state().filtered_state
-        if key is not None and key in session_state:
-            value = session_state[key]
-        # Set value default.
         if value is None:
-            value = min_value if min_value is not None else 0
+            # Set value from session_state if exists.
+            session_state = get_session_state().filtered_state
+            if key is not None and key in session_state:
+                value = session_state[key]
+            else:
+                # Set value default.
+                value = min_value if min_value is not None else 0
 
         SUPPORTED_TYPES = {
             int: SliderProto.INT,
