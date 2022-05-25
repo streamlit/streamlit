@@ -15,124 +15,6 @@
  * limitations under the License.
  */
 
-// describe("hello", () => {
-//   before(() => {
-//     // Increasing timeout since we're waiting for the animation and map to load.
-//     Cypress.config("defaultCommandTimeout", 30000);
-//     cy.loadApp("http://localhost:3000/");
-//   });
-
-//   it("displays the welcome message", () => {
-//     cy.get(".element-container .stMarkdown h1").should(
-//       "contain",
-//       "Welcome to Streamlit!"
-//     );
-
-//     cy.get(".streamlit-dialog").should("not.exist");
-
-//     cy.get(".stSelectbox").should("exist");
-
-//     cy.get(".appview-container").matchThemedSnapshots("welcome-streamlit");
-//   });
-
-//   it("displays animation demo", () => {
-//     cy.get(".element-container .stSelectbox")
-//       .click()
-//       .then(() => {
-//         cy.get("ul li:nth-child(2)")
-//           .last()
-//           .click()
-//           .then(() => {
-//             cy.get(".element-container .stMarkdown h1").should(
-//               "contain",
-//               "Animation Demo"
-//             );
-
-//             // Wait for the animation to end.
-//             cy.get(".stButton button").contains("Re-run");
-
-//             cy.get(".appview-container").matchThemedSnapshots(
-//               "animation-demo"
-//             );
-//           });
-//       });
-//   });
-
-//   it("displays plotting demo", () => {
-//     cy.get(".element-container .stSelectbox")
-//       .click()
-//       .then(() => {
-//         cy.get("ul li:nth-child(3)")
-//           .last()
-//           .click()
-//           .then(() => {
-//             cy.get(".element-container .stMarkdown h1").should(
-//               "contain",
-//               "Plotting Demo"
-//             );
-
-//             // Wait for the animation to end.
-//             cy.get("[data-testid='stText']").contains("100% Complete");
-
-//             cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
-//               .find("canvas")
-//               .should("have.css", "height", "300px");
-//           });
-//       });
-//   });
-
-//   it("displays mapping demo", () => {
-//     cy.get(".element-container .stSelectbox")
-//       .click()
-//       .then(() => {
-//         cy.get("ul li:nth-child(4)")
-//           .click()
-//           .then(() => {
-//             cy.get(".element-container .stMarkdown h1").should(
-//               "contain",
-//               "Mapping Demo"
-//             );
-
-//             cy.get(".element-container .stDeckGlJsonChart")
-//               .find("canvas")
-//               .should("have.css", "height", "500px");
-
-//             // Wait for Mapbox to build the canvas.
-//             cy.wait(5000);
-
-//             cy.get(".appview-container").matchThemedSnapshots("mapping-demo");
-//           });
-//       });
-//   });
-
-//   it("displays dataframe demo", () => {
-//     cy.get(".element-container .stSelectbox")
-//       .click()
-//       .then(() => {
-//         cy.get("ul li:nth-child(5)")
-//           .click()
-//           .then(() => {
-//             cy.get(".element-container .stMarkdown h1").should(
-//               "contain",
-//               "DataFrame Demo"
-//             );
-
-//             cy.get(".stMultiSelect").should("exist");
-
-//             cy.get(".stDataFrame").should("exist");
-
-//             cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
-//               .find("canvas")
-//               .should("have.css", "height", "300px");
-
-//             cy.get(".appview-container").matchThemedSnapshots(
-//               "dataframe-demo"
-//             );
-//           });
-//       });
-//   });
-// });
-
 describe("hello", () => {
   beforeEach(() => {
     // Increasing timeout since we're waiting for the animation and map to load.
@@ -215,7 +97,7 @@ describe("hello", () => {
           .should("have.css", "height", "500px");
 
         // Wait for Mapbox to build the canvas.
-        cy.wait(5000);
+        cy.wait(12000);
 
         cy.get(".appview-container").matchThemedSnapshots("mapping-demo");
       });
