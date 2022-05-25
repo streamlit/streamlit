@@ -60,7 +60,7 @@ export interface AppViewProps {
 
   onPageChange: (pageName: string) => void
 
-  currentPageName: string
+  currentPageScriptHash: string
 
   hideSidebarNav: boolean
 
@@ -82,7 +82,7 @@ function AppView(props: AppViewProps): ReactElement {
     formsData,
     appPages,
     onPageChange,
-    currentPageName,
+    currentPageScriptHash,
     hideSidebarNav,
     pageLinkBaseUrl,
   } = props
@@ -137,7 +137,7 @@ function AppView(props: AppViewProps): ReactElement {
           appPages={appPages}
           hasElements={hasSidebarElements}
           onPageChange={onPageChange}
-          currentPageName={currentPageName}
+          currentPageScriptHash={currentPageScriptHash}
           hideSidebarNav={hideSidebarNav}
           pageLinkBaseUrl={pageLinkBaseUrl}
         >

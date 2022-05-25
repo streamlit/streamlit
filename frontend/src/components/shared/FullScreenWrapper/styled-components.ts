@@ -97,6 +97,10 @@ export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
           display: "flex", // To avoid extra spaces that lead to scrollbars.
           alignItems: "center",
           justifyContent: "center",
+
+          div: {
+            margin: "auto",
+          },
         }
       : {}),
   })

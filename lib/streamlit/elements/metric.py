@@ -35,8 +35,8 @@ DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class MetricColorAndDirection:
-    color: MetricProto.MetricColor.ValueType
-    direction: MetricProto.MetricDirection.ValueType
+    color: "MetricProto.MetricColor.ValueType"
+    direction: "MetricProto.MetricDirection.ValueType"
 
 
 class MetricMixin:
