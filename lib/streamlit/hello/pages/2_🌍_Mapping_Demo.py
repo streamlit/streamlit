@@ -24,7 +24,7 @@ from urllib.error import URLError
 
 
 def mapping_demo():
-    @st.experimental_memo
+    @st.experimental_singleton
     def from_data_file(filename):
         url = (
             "http://raw.githubusercontent.com/streamlit/"
