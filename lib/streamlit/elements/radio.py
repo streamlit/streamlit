@@ -81,7 +81,7 @@ class RadioMixin:
             True. The default is False. This argument can only be supplied by
             keyword.
         horizontal : bool
-        An optional boolean, which makes radio group horizontal
+            An optional boolean, which makes radio group horizontal
 
         Returns
         -------
