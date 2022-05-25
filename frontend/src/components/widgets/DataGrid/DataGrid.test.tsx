@@ -84,7 +84,6 @@ describe("DataGrid widget", () => {
   })
 
   it("should correctly sort the table descending order", () => {
-    // TODO(lukasmasuch): Add additional sort tests for other example quiver tables
     const tableColumns = getColumns(new Quiver({ data: TEN_BY_TEN }))
 
     // Add descending sort for first column

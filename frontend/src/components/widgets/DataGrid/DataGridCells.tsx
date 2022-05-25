@@ -46,8 +46,7 @@ export function determineColumnType(quiverType: QuiverType): ColumnType {
     // Use text column as fallback
     columnType = ColumnType.Text
   } else if (["bool"].includes(dataTypeName)) {
-    // TODO: lukasmasuch: Use text cell for now since the boolean cell does not support empty values.
-    columnType = ColumnType.Text
+    columnType = ColumnType.Boolean
   } else if (["int64", "float64", "range"].includes(dataTypeName)) {
     // The default index in pandas uses a range type.
     columnType = ColumnType.Number
@@ -126,8 +125,7 @@ export function getCellTemplate(
     return {
       kind: GridCellKind.Boolean,
       data: false,
-      showUnchecked: true,
-      allowEdit: readonly,
+      readonly,
       allowOverlay: false, // no overlay possible
       style,
     } as BooleanCell
@@ -176,6 +174,7 @@ export function getColumnSortMode(columnType: ColumnType): string {
  *
  * @param cellTemplate: the empty cell template from the column.
  * @param quiverCell: a dataframe cell object from Quiver.
+ * @param cssStyles: optional css styles to apply on the cell.
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */

@@ -64,7 +64,7 @@ export function createDataGridTheme(theme: Theme): GlideTheme {
     bgBubble: theme.colors.secondaryBg,
     bgBubbleSelected: theme.colors.secondaryBg,
     linkColor: theme.colors.linkText,
-    drilldownBorder: "rgba(0, 0, 0, 0)", // TODO(lukasmasuch): Do we need a different color here?
+    drilldownBorder: theme.colors.darkenedBgMix25,
   }
 }
 
