@@ -84,7 +84,7 @@ describe("Radio widget", () => {
     expect(wrapper.find(RadioGroup).prop("disabled")).toBe(props.disabled)
   })
 
-  it("can be horizontaly alligned", () => {
+  it("can be horizontally aligned", () => {
     const props = getProps({ horizontal: true })
     const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find(RadioGroup).prop("align")).toBe(ALIGN.horizontal)
