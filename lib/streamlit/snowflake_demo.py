@@ -18,7 +18,6 @@ Snowflake/Streamlit hacky demo interface.
 (Please don't release this into production :))
 """
 
-import json
 import os.path
 import threading
 import uuid
@@ -125,27 +124,6 @@ class SnowflakeDemo:
             raise RuntimeError("No active Streamlit session!")
 
         return ctx.snowpark_session
-
-    @staticmethod
-    def get_or_create_snowpark_session() -> SnowparkSession:
-        """Get the SnowparkSession associated with the active Streamlit
-        session, if it exists.
-
-        If the Streamlit session does not have a SnowparkSession,
-        create one by opening a `connection.json` file. (This file must
-        exist.)
-
-        Raises an error if there's no active Streamlit session, or if
-        there is an issue opening `connection.json` or otherwise
-        creating a new SnowparkSession.
-        """
-        snowpark_session = SnowflakeDemo.get_snowpark_session()
-        if snowpark_session is not None:
-            return snowpark_session
-
-        return SnowparkSession.builder.configs(
-            json.load(open("connection.json"))
-        ).create()
 
     def __init__(self, config: SnowflakeConfig):
         if not config.is_valid:
