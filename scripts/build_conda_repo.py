@@ -31,6 +31,12 @@ UDF_JSON_FILENAME = "PYTHON_UDF_X86_PRPR_TOP_LEVEL_PACKAGES_FROZEN_SOLVE_VERSION
 
 
 def main() -> None:
+    # Populate our local cache. (This unfortunately means we're having
+    # conda solve the environment twice, once to pre-warm the cache,
+    # and then immediately again to generate the package list.
+    # TODO: download_packages_to_cache() and get_package_list() be combined?)
+    download_packages_to_cache()
+
     # Build the repo
     packages = get_package_list()
     populate_repo_packages(packages, CONDA_REPO_DIR)
@@ -42,9 +48,14 @@ def main() -> None:
     with open(os.path.join(CONDA_REPO_DIR, UDF_JSON_FILENAME), "w") as f:
         f.write(udf_json_string)
 
+    print(f"\nconda repo successfully built at {CONDA_REPO_DIR}!")
+
 
 def download_packages_to_cache() -> None:
-    """Populate our local conda cache with our package dependencies."""
+    """Populate our local conda cache with our package dependencies.
+    This is not necessary, but it'll make multiple runs go faster,
+    generally.
+    """
     command = [
         "conda",
         "create",
