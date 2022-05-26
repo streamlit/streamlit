@@ -18,7 +18,7 @@ import { zIndices } from "src/theme/primitives"
 
 import AppWithScreencast from "./App"
 
-function DataGridOverlay(): React.ReactElement {
+function DataFrameOverlay(): React.ReactElement {
   // The glide-data-grid requires one root level portal element for rendering the cell overlays:
   // https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#htmlcss-prerequisites
   // This is added to the body in ThemedApp
@@ -96,7 +96,7 @@ const ThemedApp = (): JSX.Element => {
             availableThemes,
           }}
         />
-        <DataGridOverlay />
+        <DataFrameOverlay />
       </ThemeProvider>
     </BaseProvider>
   )

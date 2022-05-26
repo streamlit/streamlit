@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Arrow DataGrid tests."""
+"""Arrow DataFrame tests."""
 
 from unittest.mock import patch
 
@@ -27,9 +27,6 @@ from streamlit.type_util import (
 from tests import testutil
 
 import streamlit as st
-
-# TODO(lukasmasuch): These tests are mostly copied from the existing arrow tests.
-# Once we add support for clicks and selections, there will be a lot of changes to these tests.
 
 
 # In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
@@ -47,7 +44,7 @@ def mock_data_frame():
     )
 
 
-class ArrowDataGridDimensionsTest(testutil.DeltaGeneratorTestCase):
+class ArrowDataFrameDimensionsTest(testutil.DeltaGeneratorTestCase):
     """Test the interactive table component."""
 
     def test_no_dimensions(self):
@@ -69,7 +66,7 @@ class ArrowDataGridDimensionsTest(testutil.DeltaGeneratorTestCase):
     def _do_test(self, fn, expectedWidth, expectedHeight):
         df = pd.DataFrame({"A": [1, 2, 3, 4, 5]})
 
-        fn(st.experimental_data_grid, df)
+        fn(st._arrow_dataframe, df)
         metadata = self._get_metadata()
         self.assertEqual(metadata.element_dimension_spec.width, expectedWidth)
         self.assertEqual(metadata.element_dimension_spec.height, expectedHeight)
@@ -81,40 +78,40 @@ class ArrowDataGridDimensionsTest(testutil.DeltaGeneratorTestCase):
         return self.forward_msg_queue._queue[-1].metadata
 
 
-class ArrowDataGridProtoTest(testutil.DeltaGeneratorTestCase):
+class ArrowDataFrameProtoTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall arrow protos."""
 
     def test_dataframe_data(self):
         df = mock_data_frame()
-        st.experimental_data_grid(df)
+        st._arrow_dataframe(df)
 
-        proto = self.get_delta_from_queue().new_element.data_grid
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
 
     def test_pyarrow_table_data(self):
         df = mock_data_frame()
         table = pa.Table.from_pandas(df)
-        st.experimental_data_grid(table)
+        st._arrow_dataframe(table)
 
-        proto = self.get_delta_from_queue().new_element.data_grid
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.data, pyarrow_table_to_bytes(table))
 
     def test_uuid(self):
         df = mock_data_frame()
         styler = df.style
         styler.set_uuid("FAKE_UUID")
-        st.experimental_data_grid(styler)
+        st._arrow_dataframe(styler)
 
-        proto = self.get_delta_from_queue().new_element.data_grid
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.styler.uuid, "FAKE_UUID")
 
     def test_caption(self):
         df = mock_data_frame()
         styler = df.style
         styler.set_caption("FAKE_CAPTION")
-        st.experimental_data_grid(styler)
+        st._arrow_dataframe(styler)
 
-        proto = self.get_delta_from_queue().new_element.data_grid
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.styler.caption, "FAKE_CAPTION")
 
     def test_cell_styles(self):
@@ -123,9 +120,9 @@ class ArrowDataGridProtoTest(testutil.DeltaGeneratorTestCase):
         # NOTE: If UUID is not set - a random UUID will be generated.
         styler.set_uuid("FAKE_UUID")
         styler.highlight_max(axis=None)
-        st.experimental_data_grid(styler)
+        st._arrow_dataframe(styler)
 
-        proto = self.get_delta_from_queue().new_element.data_grid
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(
             proto.styler.styles, "#T_FAKE_UUIDrow1_col2 { background-color: yellow }"
         )
@@ -135,13 +132,13 @@ class ArrowDataGridProtoTest(testutil.DeltaGeneratorTestCase):
             [[1, 2, 3], [4, 5, 6]],
         )
         styler = df.style.format("{:.2%}")
-        st.experimental_data_grid(styler)
+        st._arrow_dataframe(styler)
 
         expected = pd.DataFrame(
             [["100.00%", "200.00%", "300.00%"], ["400.00%", "500.00%", "600.00%"]],
         )
 
-        proto = self.get_delta_from_queue().new_element.data_grid
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.styler.display_values), expected
         )
@@ -153,7 +150,7 @@ class ArrowDataGridProtoTest(testutil.DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style.set_uuid("FAKE_UUID")
 
-        st.experimental_data_grid(styler)
+        st._arrow_dataframe(styler)
         mock_styler_translate.assert_called_once_with()
 
     @patch("streamlit.type_util.is_pandas_version_less_than", return_value=False)
@@ -163,5 +160,5 @@ class ArrowDataGridProtoTest(testutil.DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style.set_uuid("FAKE_UUID")
 
-        st.experimental_data_grid(styler)
+        st._arrow_dataframe(styler)
         mock_styler_translate.assert_called_once_with(False, False)

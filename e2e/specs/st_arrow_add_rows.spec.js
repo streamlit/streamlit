@@ -68,7 +68,7 @@ describe("st._arrow_add_rows", () => {
 
   it("correctly adds rows to dataframe", () => {
     cy.get(".element-container .stDataFrame").each((element, index) => {
-      return cy.get(element).matchThemedSnapshots(`dataGrid-${index}`);
+      return cy.get(element).matchThemedSnapshots(`dataFrame-${index}`);
     });
   });
 

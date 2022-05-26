@@ -88,12 +88,11 @@ import { StyledElementContainer } from "./styled-components"
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
 const Snow = React.lazy(() => import("src/components/elements/Snow/"))
-const ArrowVegaLiteChart = React.lazy(() =>
-  import("src/components/elements/ArrowVegaLiteChart/")
-)
-
 const ArrowDataFrame = React.lazy(() =>
   import("src/components/widgets/DataFrame")
+)
+const ArrowVegaLiteChart = React.lazy(() =>
+  import("src/components/elements/ArrowVegaLiteChart/")
 )
 
 // BokehChart render function is sluggish. If the component is not debounced,
@@ -214,9 +213,6 @@ const RawElementNodeRenderer = (
     case "balloons":
       return <Balloons scriptRunId={props.scriptRunId} />
 
-    case "arrowTable":
-      return <ArrowTable element={node.quiverElement as Quiver} />
-
     case "arrowDataFrame":
       return (
         <ArrowDataFrame
@@ -225,6 +221,9 @@ const RawElementNodeRenderer = (
           height={height}
         />
       )
+
+    case "arrowTable":
+      return <ArrowTable element={node.quiverElement as Quiver} />
 
     case "arrowVegaLiteChart":
       return (

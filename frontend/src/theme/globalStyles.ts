@@ -655,7 +655,7 @@ export const globalStyles = (theme: Theme): any => css`
     display: none !important;
   }
 
-  // Make scrollbars awesome in Chrome.
+  // Make scrollbars awesome in Chrome
 
   ::-webkit-scrollbar {
     background: transparent;
