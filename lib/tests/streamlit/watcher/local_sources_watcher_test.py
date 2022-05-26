@@ -323,8 +323,14 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         "streamlit.watcher.local_sources_watcher.get_pages",
         MagicMock(
             return_value={
-                "streamlit_app": {"script_path": "streamlit_app.py"},
-                "streamlit_app2": {"script_path": "streamlit_app2.py"},
+                "someHash1": {
+                    "page_name": "streamlit_app",
+                    "script_path": "streamlit_app.py",
+                },
+                "someHash2": {
+                    "page_name": "streamlit_app2",
+                    "script_path": "streamlit_app2.py",
+                },
             }
         ),
     )

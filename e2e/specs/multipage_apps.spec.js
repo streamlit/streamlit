@@ -56,4 +56,21 @@ describe("st.map", () => {
 
     cy.get(".element-container .stMarkdown p").should("contain", "x is 1");
   });
+
+  it("can switch to the first page with a duplicate name", () => {
+    cy.getIndexed('[data-testid="stSidebarNav"] a', 3).click();
+
+    cy.get(".element-container .stMarkdown h2").should("contain", "Page 4");
+  });
+
+  it("can switch to the second page with a duplicate name", () => {
+    cy.getIndexed('[data-testid="stSidebarNav"] a', 4).click();
+
+    cy.get(".element-container .stMarkdown h2").should("contain", "Page 5");
+  });
+
+  it("runs the first page with a duplicate name if navigating via URL", () => {
+    cy.loadApp("http://localhost:3000/page_with_duplicate_name");
+    cy.get(".element-container .stMarkdown h2").should("contain", "Page 4");
+  });
 });

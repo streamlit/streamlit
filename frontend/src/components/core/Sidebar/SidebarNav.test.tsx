@@ -52,13 +52,13 @@ const mockUseIsOverflowing = useIsOverflowing as jest.MockedFunction<
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   appPages: [
-    { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-    { pageName: "my_other_page", scriptPath: "my_other_page.py" },
+    { pageScriptHash: "main_page_hash", pageName: "streamlit_app" },
+    { pageScriptHash: "other_page_hash", pageName: "my_other_page" },
   ],
   hasSidebarElements: false,
   onPageChange: jest.fn(),
   hideParentScrollbar: jest.fn(),
-  currentPageName: "",
+  currentPageScriptHash: "",
   pageLinkBaseUrl: "",
   ...props,
 })
@@ -348,19 +348,7 @@ describe("SidebarNav", () => {
     )
   })
 
-  it("passes the empty string to onPageChange if the main page link is clicked", () => {
-    const props = getProps()
-    const wrapper = shallow(<SidebarNav {...props} />)
-
-    const preventDefault = jest.fn()
-    const links = wrapper.find(StyledSidebarNavLink)
-    links.at(0).simulate("click", { preventDefault })
-
-    expect(preventDefault).toHaveBeenCalled()
-    expect(props.onPageChange).toHaveBeenCalledWith("")
-  })
-
-  it("passes the page name to onPageChange if any other link is clicked", () => {
+  it("passes the pageScriptHash to onPageChange if a link is clicked", () => {
     const props = getProps()
     const wrapper = shallow(<SidebarNav {...props} />)
 
@@ -369,7 +357,7 @@ describe("SidebarNav", () => {
     links.at(1).simulate("click", { preventDefault })
 
     expect(preventDefault).toHaveBeenCalled()
-    expect(props.onPageChange).toHaveBeenCalledWith("my_other_page")
+    expect(props.onPageChange).toHaveBeenCalledWith("other_page_hash")
   })
 
   it("calls hideParentScrollbar onMouseOut", () => {
@@ -403,12 +391,8 @@ describe("SidebarNav", () => {
   it("handles default and custom page icons", () => {
     const props = getProps({
       appPages: [
-        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-        {
-          pageName: "my_other_page",
-          scriptPath: "my_other_page.py",
-          icon: "🦈",
-        },
+        { pageName: "streamlit_app" },
+        { pageName: "my_other_page", icon: "🦈" },
       ],
     })
 
@@ -433,7 +417,7 @@ describe("SidebarNav", () => {
   })
 
   it("indicates the current page as active", () => {
-    const props = getProps({ currentPageName: "my_other_page" })
+    const props = getProps({ currentPageScriptHash: "other_page_hash" })
 
     const wrapper = shallow(<SidebarNav {...props} />)
 
@@ -449,24 +433,5 @@ describe("SidebarNav", () => {
         .at(1)
         .prop("isActive")
     ).toBe(true)
-  })
-
-  it("sets the main page as active if currentPageName is the empty string", () => {
-    const props = getProps()
-
-    const wrapper = shallow(<SidebarNav {...props} />)
-
-    expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(0)
-        .prop("isActive")
-    ).toBe(true)
-    expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(1)
-        .prop("isActive")
-    ).toBe(false)
   })
 })

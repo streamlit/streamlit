@@ -316,6 +316,11 @@ jobs:
       - run:
           name: Set final versions for pre-release and update version
           command: |
+            # Start at the latest existing RC for this version if one exists,
+            # so the following update will increment to the right RC version
+            export LATEST_MATCHING_RC=$(curl https://pypi.org/pypi/streamlit/json | jq ".releases | keys | map(select(contains(\"rc\"))) | map(select(contains(\"$DESIRED_VERSION\"))) | sort | .[-1]")
+            if [ $LATEST_MATCHING_RC ]; then python scripts/update_version.py $LATEST_MATCHING_RC; fi
+
             export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)
             echo 'export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)' >> $BASH_ENV
             echo 'export STREAMLIT_RELEASE_VERSION=$(echo $STREAMLIT_RELEASE_SEMVER | sed s/\-rc\./rc/)' >> $BASH_ENV
@@ -344,14 +349,6 @@ jobs:
           name: Upload to pypi
           command: |
             make distribute
-
-      - run:
-          name: Commit version updates
-          command: |
-            git config user.email "core+streamlitbot-github@streamlit.io"
-            git config user.name "Streamlit Bot"
-
-            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $CIRCLE_BRANCH || echo "No changes to commit"
 
       - slack/status:
           success_message: ":rocket: Release of RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
@@ -382,8 +379,8 @@ jobs:
           name: Look up the related GitHub PR number and branch name
           command: |
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-            echo "export GH_PR_NUMBER=$(gh api repos/${GH_REPO}/commits/${CIRCLE_SHA1}/pulls | jq '.[0] | .number')" >> $BASH_ENV
-            echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/commits/${CIRCLE_SHA1}/pulls | jq '.[0] | .head.ref')" >> $BASH_ENV
+            echo "export GH_PR_NUMBER=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains(\"release/\"))] | .[0] | .number')" >> $BASH_ENV
+            echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains(\"release/\"))] | .[0] | .head.ref')" >> $BASH_ENV
 
       - run:
           name: Ensure that version tag matches branch version
