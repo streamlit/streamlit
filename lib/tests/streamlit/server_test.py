@@ -634,6 +634,7 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(404, self.fetch("/message?id=non_existent").code)
 
 
+@patch("streamlit.source_util._cached_pages", new=None)
 class ScriptCheckTest(tornado.testing.AsyncTestCase):
     def setUp(self) -> None:
         super().setUp()

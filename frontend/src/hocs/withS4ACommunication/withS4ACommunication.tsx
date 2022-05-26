@@ -62,9 +62,9 @@ function withS4ACommunication(
     const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
     const [pageLinkBaseUrl, setPageLinkBaseUrl] = useState("")
     const [queryParams, setQueryParams] = useState("")
-    const [requestedPageName, setRequestedPageName] = useState<string | null>(
-      null
-    )
+    const [requestedPageScriptHash, setRequestedPageScriptHash] = useState<
+      string | null
+    >(null)
     const [sidebarChevronDownshift, setSidebarChevronDownshift] = useState(0)
     const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
     const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
@@ -95,7 +95,7 @@ function withS4ACommunication(
         }
 
         if (message.type === "REQUEST_PAGE_CHANGE") {
-          setRequestedPageName(message.pageName)
+          setRequestedPageScriptHash(message.pageScriptHash)
         }
 
         if (message.type === "SET_IS_OWNER") {
@@ -153,7 +153,7 @@ function withS4ACommunication(
               menuItems,
               pageLinkBaseUrl,
               queryParams,
-              requestedPageName,
+              requestedPageScriptHash,
               sidebarChevronDownshift,
               streamlitShareMetadata,
               toolbarItems,
@@ -167,7 +167,7 @@ function withS4ACommunication(
               setForcedModalClose(false)
             },
             onPageChanged: () => {
-              setRequestedPageName(null)
+              setRequestedPageScriptHash(null)
             },
             sendMessage: sendS4AMessage,
           } as S4ACommunicationHOC

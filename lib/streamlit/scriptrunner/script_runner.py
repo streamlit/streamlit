@@ -266,7 +266,7 @@ class ScriptRunner:
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
-            page_name=self._client_state.page_name,
+            page_script_hash=self._client_state.page_script_hash,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -287,7 +287,7 @@ class ScriptRunner:
         # created.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
-        client_state.page_name = ctx.page_name
+        client_state.page_script_hash = ctx.page_script_hash
         widget_states = self._session_state.get_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(
@@ -395,37 +395,72 @@ class ScriptRunner:
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
-        ctx = self._get_script_run_ctx()
-        ctx.reset(query_string=rerun_data.query_string, page_name=rerun_data.page_name)
+        main_script_path = self._session_data.main_script_path
+        pages = source_util.get_pages(main_script_path)
+        # Safe because pages will at least contain the app's main page.
+        main_page_info = list(pages.values())[0]
+        current_page_info = None
 
-        self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STARTED)
+        if rerun_data.page_script_hash:
+            current_page_info = pages.get(rerun_data.page_script_hash, None)
+        elif not rerun_data.page_script_hash and rerun_data.page_name:
+            # If a user navigates directly to a non-main page of an app, we get
+            # the first script run request before the list of pages has been
+            # sent to the frontend. In this case, we choose the first script
+            # with a name matching the requested page name.
+            current_page_info = next(
+                filter(
+                    # There seems to be this weird bug with mypy where it
+                    # thinks that p can be None (which is impossible given the
+                    # types of pages), so we add `p and` at the beginning of
+                    # the predicate to circumvent this.
+                    lambda p: p and (p["page_name"] == rerun_data.page_name),
+                    pages.values(),
+                ),
+                None,
+            )
+        else:
+            # If no information about what page to run is given, default to
+            # running the main page.
+            current_page_info = main_page_info
+
+        page_script_hash = (
+            current_page_info["page_script_hash"]
+            if current_page_info is not None
+            else main_page_info["page_script_hash"]
+        )
+
+        ctx = self._get_script_run_ctx()
+        ctx.reset(
+            query_string=rerun_data.query_string,
+            page_script_hash=page_script_hash,
+        )
+
+        self.on_event.send(
+            self,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash=page_script_hash,
+        )
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
         # in their previous script elements disappearing.
-
         try:
-            script_path = None
+            if current_page_info:
+                script_path = current_page_info["script_path"]
+            else:
+                script_path = main_script_path
 
-            # NOTE: It may seem weird that we're passing the page_name around
-            # as opposed to the script_path, but this is necessary to handle
-            # the case where a user navigates directly to a page and we have to
-            # serve a request to run a non-main page before we've had a chance
-            # to send page info to the frontend.
-            if rerun_data.page_name:
-                page_info = source_util.get_pages(
-                    self._session_data.main_script_path
-                ).get(rerun_data.page_name, None)
-
-                if page_info:
-                    script_path = page_info["script_path"]
-                else:
-                    msg = ForwardMsg()
-                    msg.page_not_found.page_name = rerun_data.page_name
-                    ctx.enqueue(msg)
-
-            if not script_path:
-                script_path = self._session_data.main_script_path
+                # At this point, we know that either
+                #   * the script corresponding to the hash requested no longer
+                #     exists, or
+                #   * we were not able to find a script with the requested page
+                #     name.
+                # In both of these cases, we want to send a page_not_found
+                # message to the frontend.
+                msg = ForwardMsg()
+                msg.page_not_found.page_name = rerun_data.page_name
+                ctx.enqueue(msg)
 
             with source_util.open_python_file(script_path) as f:
                 filebody = f.read()
