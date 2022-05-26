@@ -183,6 +183,11 @@ class SnowflakeDemo:
         # for this to work)
         streamlit.config.set_option("global.maxCachedMessageAge", -1)
 
+        # Other config options we want set for the demo.
+        streamlit.config.set_option("server.runOnSave", True)
+        streamlit.config.set_option("theme.base", "light")
+        streamlit.config.set_option("theme.primaryColor", "#995eff")
+
         # Set a global flag indicating that we're "within" streamlit.
         streamlit._is_running_with_streamlit = True
 
