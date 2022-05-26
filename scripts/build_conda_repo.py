@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-
+import hashlib
 import json
 import os.path
 import shutil
 import subprocess
+from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -23,6 +24,23 @@ STREAMLIT_PACKAGE_DIR = os.path.join(ROOT_DIR, "lib", "conda-recipe", "dist", "n
 
 # Directory to build the repo in.
 CONDA_REPO_DIR = os.path.join(ROOT_DIR, "conda_repo")
+
+# Filename for the 'PYTHON_UDF_X86_PRPR_TOP_LEVEL_PACKAGES_FROZEN_SOLVE_VERSIONS'
+# json string.
+UDF_JSON_FILENAME = "PYTHON_UDF_X86_PRPR_TOP_LEVEL_PACKAGES_FROZEN_SOLVE_VERSIONS.json"
+
+
+def main() -> None:
+    # Build the repo
+    packages = get_package_list()
+    populate_repo_packages(packages, CONDA_REPO_DIR)
+    index_repo(CONDA_REPO_DIR)
+
+    # Write out the "PYTHON_UDF_X86_PRPR_TOP_LEVEL_PACKAGES_FROZEN_SOLVE_VERSIONS"
+    # JSON file.
+    udf_json_string = generate_udf_packages_json(packages, CONDA_REPO_DIR)
+    with open(os.path.join(CONDA_REPO_DIR, UDF_JSON_FILENAME), "w") as f:
+        f.write(udf_json_string)
 
 
 def download_packages_to_cache() -> None:
@@ -161,6 +179,57 @@ def index_repo(repo_root: str) -> None:
     subprocess.run(["conda", "index", repo_root], check=True)
 
 
-packages = get_package_list()
-populate_repo_packages(packages, CONDA_REPO_DIR)
-index_repo(CONDA_REPO_DIR)
+def sha256sum(path: str) -> str:
+    """Return the sha256 hash of the file at the given path.
+    Raise an error if no file is at the given path.
+    """
+    block_size = 1024 * 64
+    hasher = hashlib.sha256()
+    with open(path, "rb") as f:
+        while True:
+            data = f.read(block_size)
+            if not data:
+                break
+            hasher.update(data)
+    return hasher.hexdigest()
+
+
+def generate_udf_packages_json(package_infos: List[JSONDict], repo_root: str) -> str:
+    """Create the `PYTHON_UDF_X86_PRPR_TOP_LEVEL_PACKAGES_FROZEN_SOLVE_VERSIONS`
+    session variable JSON string.
+
+    The JSON format:
+    {
+        <package_name>: {
+            "version": <version string>,
+            "location": <file path relative to repo_root>,
+            "sha256": <sha256 hash of file>
+        },
+
+        ... (repeated for all packages in the repo)
+    }
+    """
+    # We sort our package names and use OrderedDicts so that our
+    # JSON output is deterministic.
+    packages_by_name = {info["name"]: info for info in package_infos}
+    package_names = sorted(packages_by_name.keys())
+    json_dict: OrderedDict[str, Any] = OrderedDict()
+    for name in package_names:
+        pkg_info = packages_by_name[name]
+        pkg_location = get_package_repo_path(
+            repo_root=repo_root,
+            platform=pkg_info["platform"],
+            dist_name=pkg_info["dist_name"],
+        )
+
+        json_dict[name] = OrderedDict(
+            version=pkg_info["version"],
+            location=os.path.relpath(pkg_location, start=repo_root),
+            sha256=sha256sum(pkg_location),
+        )
+
+    return json.dumps(json_dict, indent=None)
+
+
+if __name__ == "__main__":
+    main()
