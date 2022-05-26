@@ -113,8 +113,6 @@ class SnowflakeDemo:
     a Streamlit server.
     """
 
-    version = "2022.05.19"
-
     @staticmethod
     def get_snowpark_session() -> Optional[SnowparkSession]:
         """Get the SnowparkSession associated with the active Streamlit
