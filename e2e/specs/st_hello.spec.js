@@ -28,8 +28,6 @@ describe("hello", () => {
       "Welcome to Streamlit!"
     );
 
-    cy.wait(5000);
-
     cy.get(".appview-container").matchThemedSnapshots("welcome-streamlit");
   });
 
@@ -51,7 +49,6 @@ describe("hello", () => {
         );
 
         // Wait for the animation to end.
-        cy.wait(12000);
         cy.get(".stButton button").contains("Re-run");
 
         cy.get(".appview-container").matchThemedSnapshots("animation-demo");
@@ -68,7 +65,6 @@ describe("hello", () => {
         );
 
         // Wait for the animation to end.
-        cy.wait(12000);
         cy.get("[data-testid='stText']").contains("100% Complete");
 
         cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
@@ -91,7 +87,7 @@ describe("hello", () => {
           .should("have.css", "height", "500px");
 
         // Wait for Mapbox to build the canvas.
-        cy.wait(7000);
+        cy.wait(5000);
 
         cy.get(".appview-container").matchThemedSnapshots("mapping-demo");
       });
@@ -114,7 +110,6 @@ describe("hello", () => {
           .find("canvas")
           .should("have.css", "height", "300px");
 
-        cy.wait(12000);
         cy.get(".appview-container").matchThemedSnapshots("dataframe-demo");
       });
   });
