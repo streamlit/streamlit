@@ -379,13 +379,13 @@ jobs:
           name: Look up the related GitHub PR number and branch name
           command: |
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-            echo "export GH_PR_NUMBER=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains(\"release/\"))] | .[0] | .number')" >> $BASH_ENV
-            echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains(\"release/\"))] | .[0] | .head.ref')" >> $BASH_ENV
+            echo "export GH_PR_NUMBER=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .number')" >> $BASH_ENV
+            echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $BASH_ENV
 
       - run:
           name: Ensure that version tag matches branch version
           command: |
-            if [ "$(echo $GH_PR_BRANCH | tr -d "release/")" != "$CIRCLE_TAG" ]
+            if [ "$(echo $GH_PR_BRANCH | tr -d 'release/')" != "$CIRCLE_TAG" ]
             then
               echo "ERROR: Version number from tag does not match the version number from the branch name."
               exit 1
