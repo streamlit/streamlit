@@ -469,6 +469,8 @@ class DeltaGenerator(
         # Warn if we're called from within @st.memo or @st.singleton
         caching.maybe_show_cached_st_function_warning(dg, delta_type)
 
+        caching.maybe_save_element_message(delta_type, element_proto)
+
         # Warn if an element is being changed but the user isn't running the streamlit server.
         st._maybe_print_use_warning()
 

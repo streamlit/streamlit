@@ -13,18 +13,34 @@
 # limitations under the License.
 
 """@st.memo: pickle-based caching"""
+import contextlib
+import functools
 import os
 import pickle
 import shutil
 import threading
 import time
 import types
-from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload
+from typing import (
+    Optional,
+    Any,
+    Dict,
+    cast,
+    List,
+    Callable,
+    TypeVar,
+    overload,
+    TYPE_CHECKING,
+    Iterator,
+    Tuple,
+)
 from typing import Union
 
 import math
 from cachetools import TTLCache
+from attrs import define
 
+import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import (
@@ -38,13 +54,18 @@ from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
     CacheType,
+    CachedStFunctionWarning,
 )
 from .cache_utils import (
     Cache,
-    create_cache_wrapper,
-    CachedFunctionCallStack,
     CachedFunction,
+    CachedFunctionCallStack,
+    _make_function_key,
+    _make_value_key,
 )
+
+if TYPE_CHECKING:
+    from google.protobuf.message import Message
 
 _LOGGER = get_logger(__name__)
 
@@ -57,8 +78,89 @@ _TTLCACHE_TIMER = time.monotonic
 # items have a different extension, so they don't overlap.)
 _CACHE_DIR_NAME = "cache"
 
+MsgPair = Tuple[str, "Message"]
 
-MEMO_CALL_STACK = CachedFunctionCallStack(CacheType.MEMO)
+
+@define
+class MemoStackframeData:
+    fn: types.FunctionType
+    messages: List[MsgPair]
+
+
+class MemoCachedFunctionCallStack(threading.local):
+    """A utility for warning users when they call `st` commands inside
+    a cached function. Internally, this is just a counter that's incremented
+    when we enter a cache function, and decremented when we exit.
+
+    Data is stored in a thread-local object, so it's safe to use an instance
+    of this class across multiple threads.
+    """
+
+    def __init__(self, cache_type: CacheType):
+        self._cached_func_stack: List[MemoStackframeData] = []
+        self._suppress_st_function_warning = 0
+        self._cache_type = cache_type
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    @contextlib.contextmanager
+    def calling_cached_function(self, func: types.FunctionType) -> Iterator[None]:
+        self._cached_func_stack.append(MemoStackframeData(func, []))
+        try:
+            yield
+        finally:
+            self._cached_func_stack.pop()
+
+    @contextlib.contextmanager
+    def suppress_cached_st_function_warning(self) -> Iterator[None]:
+        self._suppress_st_function_warning += 1
+        try:
+            yield
+        finally:
+            self._suppress_st_function_warning -= 1
+            assert self._suppress_st_function_warning >= 0
+
+    def maybe_show_cached_st_function_warning(
+        self, dg: "st.delta_generator.DeltaGenerator", st_func_name: str
+    ) -> None:
+        """If appropriate, warn about calling st.foo inside @memo.
+
+        DeltaGenerator's @_with_element and @_widget wrappers use this to warn
+        the user when they're calling st.foo() from within a function that is
+        wrapped in @st.cache.
+
+        Parameters
+        ----------
+        dg : DeltaGenerator
+            The DeltaGenerator to publish the warning to.
+
+        st_func_name : str
+            The name of the Streamlit function that was called.
+
+        """
+        if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
+            cached_func = self._cached_func_stack[-1].fn
+            self._show_cached_st_function_warning(dg, st_func_name, cached_func)
+
+    def _show_cached_st_function_warning(
+        self,
+        dg: "st.delta_generator.DeltaGenerator",
+        st_func_name: str,
+        cached_func: types.FunctionType,
+    ) -> None:
+        # Avoid infinite recursion by suppressing additional cached
+        # function warnings from within the cached function warning.
+        with self.suppress_cached_st_function_warning():
+            e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
+            dg.exception(e)
+
+    def maybe_save_element_message(self, delta_type: str, element_proto: "Message"):
+        if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
+            self._cached_func_stack[-1].messages.append((delta_type, element_proto))
+
+
+MEMO_CALL_STACK = MemoCachedFunctionCallStack(CacheType.MEMO)
 
 
 class MemoCaches(CacheStatsProvider):
@@ -370,6 +472,9 @@ class MemoCache(Cache):
         self.persist = persist
         self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
         self._mem_cache_lock = threading.Lock()
+        self._message_cache = TTLCache(
+            maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER
+        )
 
     @property
     def max_entries(self) -> float:
@@ -392,34 +497,35 @@ class MemoCache(Cache):
                 )
         return stats
 
-    def read_value(self, key: str) -> Any:
+    def read_value(self, key: str) -> Tuple[Any, List[MsgPair]]:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
         """
         try:
-            pickled_value = self._read_from_mem_cache(key)
+            pickled_value, messages = self._read_from_mem_cache(key)
 
         except CacheKeyNotFoundError as e:
             if self.persist == "disk":
                 pickled_value = self._read_from_disk_cache(key)
-                self._write_to_mem_cache(key, pickled_value)
+                messages = []
+                self._write_to_mem_cache(key, pickled_value, messages)
             else:
                 raise e
 
         try:
-            return pickle.loads(pickled_value)
+            return pickle.loads(pickled_value), messages
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
-    def write_value(self, key: str, value: Any) -> None:
+    def write_value(self, key: str, value: Any, msgs: List[MsgPair]) -> None:
         """Write a value to the cache. It must be pickleable."""
         try:
             pickled_value = pickle.dumps(value)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
-        self._write_to_mem_cache(key, pickled_value)
+        self._write_to_mem_cache(key, pickled_value, msgs)
         if self.persist == "disk":
             self._write_to_disk_cache(key, pickled_value)
 
@@ -431,13 +537,15 @@ class MemoCache(Cache):
                 self._remove_from_disk_cache(key)
 
             self._mem_cache.clear()
+            self._message_cache.clear()
 
-    def _read_from_mem_cache(self, key: str) -> bytes:
+    def _read_from_mem_cache(self, key: str) -> Tuple[bytes, List[MsgPair]]:
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = bytes(self._mem_cache[key])
+                messages = self._message_cache[key]
                 _LOGGER.debug("Memory cache HIT: %s", key)
-                return entry
+                return (entry, messages)
 
             else:
                 _LOGGER.debug("Memory cache MISS: %s", key)
@@ -456,9 +564,12 @@ class MemoCache(Cache):
             _LOGGER.error(e)
             raise CacheError("Unable to read from cache") from e
 
-    def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
+    def _write_to_mem_cache(
+        self, key: str, pickled_value: bytes, msgs: List[MsgPair]
+    ) -> None:
         with self._mem_cache_lock:
             self._mem_cache[key] = pickled_value
+            self._message_cache[key] = msgs
 
     def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
         path = self._get_file_path(key)
@@ -493,3 +604,75 @@ class MemoCache(Cache):
 
 def get_cache_path() -> str:
     return get_streamlit_file_path(_CACHE_DIR_NAME)
+
+
+def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
+    """Create a wrapper for a CachedFunction. This implements the common
+    plumbing for both st.memo and st.singleton.
+    """
+    func = cached_func.func
+    function_key = _make_function_key(cached_func.cache_type, func)
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        """This function wrapper will only call the underlying function in
+        the case of a cache miss.
+        """
+
+        # Retrieve the function's cache object. We must do this inside the
+        # wrapped function, because caches can be invalidated at any time.
+        cache = cached_func.get_function_cache(function_key)
+
+        name = func.__qualname__
+
+        if len(args) == 0 and len(kwargs) == 0:
+            message = f"Running `{name}()`."
+        else:
+            message = f"Running `{name}(...)`."
+
+        def get_or_create_cached_value():
+            # Generate the key for the cached value. This is based on the
+            # arguments passed to the function.
+            value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
+
+            try:
+                return_value, messages = cache.read_value(value_key)
+                _LOGGER.debug("Cache hit: %s", func)
+
+                dg = st._main
+                for delta_type, proto in messages:
+                    dg._enqueue(delta_type, proto)
+
+            except CacheKeyNotFoundError:
+                _LOGGER.debug("Cache miss: %s", func)
+
+                with cached_func.call_stack.calling_cached_function(func):
+                    if cached_func.suppress_st_warning:
+                        with cached_func.call_stack.suppress_cached_st_function_warning():
+                            return_value = func(*args, **kwargs)
+                    else:
+                        return_value = func(*args, **kwargs)
+
+                    messages = cached_func.call_stack._cached_func_stack[-1].messages
+
+                cache.write_value(value_key, return_value, messages)
+
+            return return_value
+
+        if cached_func.show_spinner:
+            with st.spinner(message):
+                return get_or_create_cached_value()
+        else:
+            return get_or_create_cached_value()
+
+    def clear():
+        """Clear the wrapped function's associated cache."""
+        cache = cached_func.get_function_cache(function_key)
+        cache.clear()
+
+    # Mypy doesn't support declaring attributes of function objects,
+    # so we have to suppress a warning here. We can remove this suppression
+    # when this issue is resolved: https://github.com/python/mypy/issues/2087
+    wrapper.clear = clear  # type: ignore
+
+    return wrapper

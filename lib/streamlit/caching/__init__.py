@@ -23,6 +23,10 @@ def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
     SINGLETON_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
 
 
+def maybe_save_element_message(delta_type: str, element_proto) -> None:
+    MEMO_CALL_STACK.maybe_save_element_message(delta_type, element_proto)
+
+
 @contextlib.contextmanager
 def suppress_cached_st_function_warning() -> Iterator[None]:
     with MEMO_CALL_STACK.suppress_cached_st_function_warning(), SINGLETON_CALL_STACK.suppress_cached_st_function_warning():
