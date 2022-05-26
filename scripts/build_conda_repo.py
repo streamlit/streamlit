@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, cast
 
 import requests
 
@@ -116,7 +116,7 @@ def get_package_list() -> List[JSONDict]:
 
     package_list = json_dict["actions"]["LINK"]
     print(f"conda environment solved ({len(package_list)} packages)")
-    return package_list
+    return cast(List[JSONDict], package_list)
 
 
 def download_file(url: str, path: str) -> None:
