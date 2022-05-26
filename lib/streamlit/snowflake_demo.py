@@ -18,7 +18,6 @@ Snowflake/Streamlit hacky demo interface.
 (Please don't release this into production :))
 """
 
-import json
 import os.path
 import threading
 import uuid
@@ -113,8 +112,6 @@ class SnowflakeDemo:
     a Streamlit server.
     """
 
-    version = "2022.05.19"
-
     @staticmethod
     def get_snowpark_session() -> Optional[SnowparkSession]:
         """Get the SnowparkSession associated with the active Streamlit
@@ -127,27 +124,6 @@ class SnowflakeDemo:
             raise RuntimeError("No active Streamlit session!")
 
         return ctx.snowpark_session
-
-    @staticmethod
-    def get_or_create_snowpark_session() -> SnowparkSession:
-        """Get the SnowparkSession associated with the active Streamlit
-        session, if it exists.
-
-        If the Streamlit session does not have a SnowparkSession,
-        create one by opening a `connection.json` file. (This file must
-        exist.)
-
-        Raises an error if there's no active Streamlit session, or if
-        there is an issue opening `connection.json` or otherwise
-        creating a new SnowparkSession.
-        """
-        snowpark_session = SnowflakeDemo.get_snowpark_session()
-        if snowpark_session is not None:
-            return snowpark_session
-
-        return SnowparkSession.builder.configs(
-            json.load(open("connection.json"))
-        ).create()
 
     def __init__(self, config: SnowflakeConfig):
         if not config.is_valid:
@@ -182,6 +158,11 @@ class SnowflakeDemo:
         # Force ForwardMsg caching off (we need the cache endpoint to exist
         # for this to work)
         streamlit.config.set_option("global.maxCachedMessageAge", -1)
+
+        # Other config options we want set for the demo.
+        streamlit.config.set_option("server.runOnSave", True)
+        streamlit.config.set_option("theme.base", "light")
+        streamlit.config.set_option("theme.primaryColor", "#995eff")
 
         # Set a global flag indicating that we're "within" streamlit.
         streamlit._is_running_with_streamlit = True
