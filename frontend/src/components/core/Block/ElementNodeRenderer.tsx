@@ -92,7 +92,9 @@ const ArrowVegaLiteChart = React.lazy(() =>
   import("src/components/elements/ArrowVegaLiteChart/")
 )
 
-const DataGrid = React.lazy(() => import("src/components/widgets/DataGrid/"))
+const ArrowDataFrame = React.lazy(() =>
+  import("src/components/widgets/DataFrame")
+)
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -102,9 +104,7 @@ const BokehChart = React.lazy(() =>
 )
 const DebouncedBokehChart = debounceRender(BokehChart, 100)
 
-const DataFrame = React.lazy(() =>
-  import("src/components/elements/DataFrame/")
-)
+const DataFrame = React.lazy(() => import("src/components/elements/DataFrame"))
 const DeckGlJsonChart = React.lazy(() =>
   import("src/components/elements/DeckGlJsonChart/")
 )
@@ -217,6 +217,15 @@ const RawElementNodeRenderer = (
     case "arrowTable":
       return <ArrowTable element={node.quiverElement as Quiver} />
 
+    case "arrowDataFrame":
+      return (
+        <ArrowDataFrame
+          element={node.quiverElement as Quiver}
+          width={width}
+          height={height}
+        />
+      )
+
     case "arrowVegaLiteChart":
       return (
         <ArrowVegaLiteChart
@@ -237,15 +246,6 @@ const RawElementNodeRenderer = (
       return (
         <DataFrame
           element={node.immutableElement.get("dataFrame")}
-          width={width}
-          height={height}
-        />
-      )
-
-    case "dataGrid":
-      return (
-        <DataGrid
-          element={node.quiverElement as Quiver}
           width={width}
           height={height}
         />

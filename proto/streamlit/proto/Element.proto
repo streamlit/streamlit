@@ -76,7 +76,7 @@ message Element {
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
     DataFrame data_frame = 3;
-    Arrow data_grid = 40;
+    Arrow arrow_data_frame = 40;
     DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlJsonChart deck_gl_json_chart = 34;

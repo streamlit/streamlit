@@ -102,6 +102,7 @@ export function extractCssProperty(
  *
  * @param type: The type of the column.
  * @param readonly: If true, returns a read-only version of the cell template.
+ * @param style: The style used for the column.
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */

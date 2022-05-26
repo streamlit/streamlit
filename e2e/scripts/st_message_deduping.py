@@ -14,9 +14,9 @@
 
 import streamlit as st
 
-# Create a big ol' table, and send it twice.
+# Create a big ol' dataframe, and send it twice.
 # The second one should be cached.
 df = list(range(100000))
-st.experimental_data_grid(df)
-st.experimental_data_grid(df)
+st.dataframe(df)
+st.dataframe(df)
 st.write("hello!")

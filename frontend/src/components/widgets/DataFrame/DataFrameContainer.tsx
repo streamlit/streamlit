@@ -31,7 +31,7 @@ import { Theme } from "src/theme"
  *
  * @return a glide-data-grid compatible theme.
  */
-export function createDataGridTheme(theme: Theme): GlideTheme {
+export function createDataFrameTheme(theme: Theme): GlideTheme {
   return {
     // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
     accentColor: theme.colors.primary,
@@ -112,7 +112,7 @@ export const ResizableContainer = styled.div<ResizableContainerProps>`
     display: none;
   }
 `
-interface DataGridContainerProps {
+interface DataFrameContainerProps {
   width: number
   maxWidth: number
   minWidth: number
@@ -126,7 +126,7 @@ interface DataGridContainerProps {
 /**
  * A themed and resizable container for then interactive data table.
  */
-function ThemedDataGridContainer({
+function ThemedDataFrameContainer({
   width,
   maxWidth,
   minWidth,
@@ -135,15 +135,15 @@ function ThemedDataGridContainer({
   maxHeight,
   children,
   onBlur,
-}: DataGridContainerProps): ReactElement {
+}: DataFrameContainerProps): ReactElement {
   const theme: Theme = useTheme()
 
   return (
     // This is a styled-components theme provider (not emotion!).
     // It is required by glide-data-grid to customize the theming.
-    <ThemeProvider theme={createDataGridTheme(theme)}>
+    <ThemeProvider theme={createDataFrameTheme(theme)}>
       <ResizableContainer
-        className="stDataGrid"
+        className="stDataFrame"
         width={width}
         maxWidth={maxWidth}
         minWidth={minWidth}
@@ -159,4 +159,4 @@ function ThemedDataGridContainer({
   )
 }
 
-export default ThemedDataGridContainer
+export default ThemedDataFrameContainer

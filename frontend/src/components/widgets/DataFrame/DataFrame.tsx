@@ -38,8 +38,8 @@ import {
   getColumnSortMode,
   determineColumnType,
   ColumnType,
-} from "./DataGridCells"
-import ThemedDataGridContainer from "./DataGridContainer"
+} from "./DataFrameCells"
+import ThemedDataFrameContainer from "./DataFrameContainer"
 
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
@@ -230,17 +230,17 @@ export function useDataLoader(
     onColumnResize,
   }
 }
-export interface DataGridProps {
+export interface DataFrameProps {
   element: Quiver
   height?: number
   width: number
 }
 
-function DataGrid({
+function DataFrame({
   element,
   height: propHeight,
   width: propWidth,
-}: DataGridProps): ReactElement {
+}: DataFrameProps): ReactElement {
   const [sort, setSort] = React.useState<ColumnSortConfig>()
 
   const {
@@ -304,7 +304,7 @@ function DataGrid({
   }
 
   return (
-    <ThemedDataGridContainer
+    <ThemedDataFrameContainer
       width={propWidth}
       height={height}
       minHeight={minHeight}
@@ -364,11 +364,12 @@ function DataGrid({
           }
         }}
         experimental={{
+          // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
           scrollbarWidthOverride: 1,
         }}
       />
-    </ThemedDataGridContainer>
+    </ThemedDataFrameContainer>
   )
 }
 
-export default withFullScreenWrapper(DataGrid)
+export default withFullScreenWrapper(DataFrame)

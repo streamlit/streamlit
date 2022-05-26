@@ -42,7 +42,7 @@ describe("st._arrow_add_rows", () => {
       "have.length",
       1
     );
-    cy.get(".element-container .stDataGrid").should("have.length", 1);
+    cy.get(".element-container .stDataFrame").should("have.length", 1);
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']").should(
       "have.length",
       6
@@ -67,7 +67,7 @@ describe("st._arrow_add_rows", () => {
   });
 
   it("correctly adds rows to dataframe", () => {
-    cy.get(".element-container .stDataGrid").each((element, index) => {
+    cy.get(".element-container .stDataFrame").each((element, index) => {
       return cy.get(element).matchThemedSnapshots(`dataGrid-${index}`);
     });
   });

@@ -15,20 +15,20 @@
  * limitations under the License.
  */
 
-describe("Data Grid canvas rendering", () => {
+describe("Interactive DataFrame canvas rendering", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDataGrid").should("have.length", 28);
+    cy.get(".stDataFrame").should("have.length", 28);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
     matching to test that our table examples render correctly. In addition, glide-data-grid
     itself also has more advanced canvas based tests for some of the interactive features. */
 
-    cy.get(".stDataGrid").each((el, idx) => {
+    cy.get(".stDataFrame").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("data-grid-canvas-" + idx);
     });
   });

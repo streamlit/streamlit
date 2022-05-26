@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("Data Grid with different sizes", () => {
+describe("DataFrame with different sizes", () => {
   const expected = [
     { width: "704px", height: "400px" },
     { width: "250px", height: "150px" },
@@ -29,7 +29,7 @@ describe("Data Grid with different sizes", () => {
   });
 
   it("should show as expected", () => {
-    cy.get(".stDataGrid")
+    cy.get(".stDataFrame")
       .should("have.length", 5)
       .each(($element, index) => {
         return cy

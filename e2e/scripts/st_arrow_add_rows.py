@@ -21,7 +21,7 @@ import streamlit as st
 df = pd.DataFrame({"a": [1, 2], "b": [3, 4], "c": [5, 6]})
 
 table_element = st._arrow_table(df)
-dataframe_element = st.experimental_data_grid(df)
+dataframe_element = st._arrow_dataframe(df)
 chart_element_1 = st._arrow_line_chart()
 chart_element_2 = st._arrow_line_chart(df)
 

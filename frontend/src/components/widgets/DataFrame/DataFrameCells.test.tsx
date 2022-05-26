@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { extractCssProperty } from "./DataGridCells"
+import { extractCssProperty } from "./DataFrameCells"
 
 test("extractCssProperty should extract the correct property value", () => {
   const cssStyle1 = `
