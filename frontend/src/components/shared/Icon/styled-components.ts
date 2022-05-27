@@ -36,6 +36,8 @@ export const StyledIcon = styled("span", {
     color: theme.colors[color],
     fill: "currentColor",
     display: "inline-flex",
+    alignItems: "center",
+    justifyContents: "center",
     fontSize: theme.iconSizes[size],
     width: theme.iconSizes[size],
     height: theme.iconSizes[size],
@@ -43,3 +45,24 @@ export const StyledIcon = styled("span", {
     padding: computeSpacingStyle(padding, theme),
   }
 })
+
+interface StyledEmojiIconProps {
+  size: IconSize
+  margin: string
+  padding: string
+}
+
+export const StyledEmojiIcon = styled.span<StyledEmojiIconProps>(
+  ({ size, margin, padding, theme }) => {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContents: "center",
+      fontSize: theme.iconSizes[size],
+      width: theme.iconSizes[size],
+      height: theme.iconSizes[size],
+      margin: computeSpacingStyle(margin, theme),
+      padding: computeSpacingStyle(padding, theme),
+    }
+  }
+)

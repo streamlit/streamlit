@@ -14,6 +14,7 @@
 
 """This is a script which is run when the Streamlit package is executed."""
 
+import sys
 from streamlit import config as _config
 
 import os
@@ -149,10 +150,10 @@ def main_docs():
 @configurator_options
 def main_hello(**kwargs):
     """Runs the Hello World script."""
-    from streamlit.hello import hello
+    from streamlit.hello import Hello
 
     bootstrap.load_config_options(flag_options=kwargs)
-    filename = hello.__file__
+    filename = Hello.__file__
     _main_run(filename, flag_options=kwargs)
 
 
@@ -218,7 +219,7 @@ def _get_command_line_as_string() -> Optional[str]:
         )
 
     cmd_line_as_list = [parent.command_path]
-    cmd_line_as_list.extend(click.get_os_args())
+    cmd_line_as_list.extend(sys.argv[1:])
     return subprocess.list2cmdline(cmd_line_as_list)
 
 

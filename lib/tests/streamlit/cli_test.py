@@ -172,7 +172,7 @@ class CliTest(unittest.TestCase):
         mock_context = MagicMock()
         mock_context.parent.command_path = "streamlit"
         with patch("click.get_current_context", return_value=mock_context):
-            with patch("click.get_os_args", return_value=["os_arg1", "os_arg2"]):
+            with patch.object(sys, "argv", ["", "os_arg1", "os_arg2"]):
                 result = cli._get_command_line_as_string()
                 self.assertEqual("streamlit os_arg1 os_arg2", result)
 
@@ -296,19 +296,19 @@ class CliTest(unittest.TestCase):
 
     def test_hello_command(self):
         """Tests the hello command runs the hello script in streamlit"""
-        from streamlit.hello import hello
+        from streamlit.hello import Hello
 
         with patch("streamlit.cli._main_run") as mock_main_run:
             self.runner.invoke(cli, ["hello"])
 
             mock_main_run.assert_called_once()
             positional_args = mock_main_run.call_args[0]
-            self.assertEqual(positional_args[0], hello.__file__)
+            self.assertEqual(positional_args[0], Hello.__file__)
 
     @patch("streamlit.logger.get_logger")
     def test_hello_command_with_logs(self, get_logger):
         """Tests setting log level using --log_level prints a warning."""
-        from streamlit.hello import hello
+        from streamlit.hello import Hello
 
         with patch("streamlit.cli._main_run"):
             self.runner.invoke(cli, ["--log_level", "error", "hello"])

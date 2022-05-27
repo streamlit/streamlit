@@ -12,19 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Sequence, Union
+from typing import cast, List, Sequence, TYPE_CHECKING, Union
 
 from streamlit.beta_util import function_beta_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 
-import streamlit
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
-    def container(self):
+    def container(self) -> "DeltaGenerator":
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
@@ -68,7 +69,7 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def columns(self, spec: SpecType):
+    def columns(self, spec: SpecType) -> List["DeltaGenerator"]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -158,7 +159,7 @@ class LayoutsMixin:
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise weights_exception
 
-        def column_proto(normalized_weight):
+        def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.allow_empty = True
@@ -170,7 +171,7 @@ class LayoutsMixin:
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
-    def expander(self, label: str, expanded: bool = False):
+    def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
         """Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -242,9 +243,9 @@ class LayoutsMixin:
         return self.dg._block(block_proto=block_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
     # Deprecated beta_ functions
     beta_container = function_beta_warning(container, "2021-11-02")

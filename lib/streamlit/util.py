@@ -15,15 +15,17 @@
 """A bunch of useful utilities."""
 
 import functools
+import hashlib
 import os
 import subprocess
 
-from typing import Any, List
+from typing import Any, Dict, List, Mapping, TypeVar
+from typing_extensions import Final
 
 from streamlit import env_util
 
 # URL of Streamlit's help page.
-HELP_DOC = "https://docs.streamlit.io/"
+HELP_DOC: Final = "https://docs.streamlit.io/"
 
 
 def memoize(func):
@@ -94,7 +96,7 @@ def _open_browser_with_command(command, url):
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
 
 
-def _maybe_tuple_to_list(item):
+def _maybe_tuple_to_list(item: Any) -> Any:
     """Convert a tuple to a list. Leave as is if it's not a tuple."""
     if isinstance(item, tuple):
         return list(item)
@@ -129,10 +131,21 @@ def index_(iterable, x) -> int:
     raise ValueError("{} is not in iterable".format(str(x)))
 
 
-def lower_clean_dict_keys(dict):
+_Key = TypeVar("_Key", bound=str)
+_Value = TypeVar("_Value")
+
+
+def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> Dict[str, _Value]:
     return {k.lower().strip(): v for k, v in dict.items()}
 
 
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass
+
+
+def calc_md5(s: str) -> str:
+    """Return the md5 hash of the given string."""
+    h = hashlib.new("md5")
+    h.update(s.encode("utf-8"))
+    return h.hexdigest()

@@ -108,7 +108,7 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { disabled, element, width, widgetMgr } = this.props
-    const { options, label, help } = element
+    const { horizontal, options, label, help } = element
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -124,6 +124,7 @@ class Radio extends React.PureComponent<Props, State> {
         options={options}
         width={width}
         disabled={disabled}
+        horizontal={horizontal}
         value={this.state.value}
         help={help}
       />

@@ -57,9 +57,13 @@ describe("st._legacy_vega_lite_chart", () => {
     );
   });
 
+  it("displays interactive charts correctly", () => {
+    cy.getIndexed("[data-testid='stVegaLiteChart']", 4).matchThemedSnapshots(`interactive_legacy_vega_lite_chart`);
+  });
+
   it("supports different ways to get the same plot", () => {
     cy.get("[data-testid='stVegaLiteChart']")
-      .filter(idx => idx >= 4 && idx <= 7)
+      .filter(idx => idx >= 5 && idx <= 8)
       .each((el, idx) => {
         return cy
           .wrap(el)

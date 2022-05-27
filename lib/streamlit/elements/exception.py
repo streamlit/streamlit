@@ -14,8 +14,8 @@
 
 import os
 import traceback
-import typing
-from typing import Optional, cast, List
+from typing import cast, List, Optional, TYPE_CHECKING
+from typing_extensions import Final
 
 import streamlit
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
@@ -26,22 +26,24 @@ from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+LOGGER: Final = get_logger(__name__)
 
 # When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
-_GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
+_GENERIC_UNCAUGHT_EXCEPTION_TEXT: Final = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
 
-# Extract the streamlit package path
-_STREAMLIT_DIR = os.path.dirname(streamlit.__file__)
-
-# Make it absolute, resolve aliases, and ensure there's a trailing path
-# separator
-_STREAMLIT_DIR = os.path.join(os.path.realpath(_STREAMLIT_DIR), "")
+# Extract the streamlit package path. Make it absolute, resolve aliases, and
+# ensure there's a trailing path separator
+_STREAMLIT_DIR: Final = os.path.join(
+    os.path.realpath(os.path.dirname(streamlit.__file__)), ""
+)
 
 
 class ExceptionMixin:
-    def exception(self, exception):
+    def exception(self, exception: BaseException) -> "DeltaGenerator":
         """Display an exception.
 
         Parameters
@@ -60,9 +62,9 @@ class ExceptionMixin:
         return self.dg._enqueue("exception", exception_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
 def marshall(exception_proto: ExceptionProto, exception: BaseException) -> None:
@@ -140,7 +142,7 @@ Traceback:
         )
 
     if is_uncaught_app_exception:
-        uae = typing.cast(UncaughtAppException, exception)
+        uae = cast(UncaughtAppException, exception)
         exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         type_str = str(type(uae.exc))
         exception_proto.type = type_str.replace("<class '", "").replace("'>", "")

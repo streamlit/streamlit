@@ -263,6 +263,7 @@ def _global_development_mode() -> bool:
         not env_util.is_pex()
         and "site-packages" not in __file__
         and "dist-packages" not in __file__
+        and "__pypackages__" not in __file__
     )
 
 
@@ -364,6 +365,21 @@ def _logger_message_format() -> str:
     else:
         return "%(asctime)s %(message)s"
 
+
+_create_option(
+    "logger.enableRich",
+    description="""
+        Controls whether uncaught app exceptions are logged via the rich library.
+
+        If True and if rich is installed, exception tracebacks will be logged with syntax highlighting and formatting.
+        Rich tracebacks are easier to read and show more code than standard Python tracebacks.
+
+        If set to False, the default Python traceback formatting will be used.""",
+    default_val=False,
+    visibility="hidden",
+    type_=bool,
+    scriptable=True,
+)
 
 # Config Section: Client #
 
@@ -702,6 +718,14 @@ _create_option(
 
     NOTE: This does *not* hide the hamburger menu in the top-right of an app.
     """,
+    default_val=False,
+    type_=bool,
+    visibility="hidden",
+)
+
+_create_option(
+    "ui.hideSidebarNav",
+    description="Flag to hide the sidebar page navigation component.",
     default_val=False,
     type_=bool,
     visibility="hidden",

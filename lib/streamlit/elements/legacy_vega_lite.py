@@ -15,25 +15,29 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
-from typing import cast
+from typing import Any, cast, Dict, Optional, TYPE_CHECKING
+from typing_extensions import Final
 
-import streamlit
 import streamlit.elements.legacy_data_frame as data_frame
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from .arrow import Data
+    from streamlit.delta_generator import DeltaGenerator
+
+LOGGER: Final = get_logger(__name__)
 
 
 class LegacyVegaLiteMixin:
     def _legacy_vega_lite_chart(
         self,
-        data=None,
-        spec=None,
-        use_container_width=False,
-        **kwargs,
-    ):
+        data: "Data" = None,
+        spec: Optional[Dict[str, Any]] = None,
+        use_container_width: bool = False,
+        **kwargs: Any,
+    ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -95,12 +99,18 @@ class LegacyVegaLiteMixin:
         return self.dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):
+def marshall(
+    proto: VegaLiteChartProto,
+    data: "Data" = None,
+    spec: Optional[Dict[str, Any]] = None,
+    use_container_width: bool = False,
+    **kwargs: Any,
+) -> None:
     """Construct a Vega-Lite chart object.
 
     See DeltaGenerator._legacy_vega_lite_chart for docs.
@@ -167,33 +177,31 @@ def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
-_CHANNELS = set(
-    [
-        "x",
-        "y",
-        "x2",
-        "y2",
-        "xError",
-        "yError2",
-        "xError",
-        "yError2",
-        "longitude",
-        "latitude",
-        "color",
-        "opacity",
-        "fillOpacity",
-        "strokeOpacity",
-        "strokeWidth",
-        "size",
-        "shape",
-        "text",
-        "tooltip",
-        "href",
-        "key",
-        "order",
-        "detail",
-        "facet",
-        "row",
-        "column",
-    ]
-)
+_CHANNELS: Final = {
+    "x",
+    "y",
+    "x2",
+    "y2",
+    "xError",
+    "yError2",
+    "xError",
+    "yError2",
+    "longitude",
+    "latitude",
+    "color",
+    "opacity",
+    "fillOpacity",
+    "strokeOpacity",
+    "strokeWidth",
+    "size",
+    "shape",
+    "text",
+    "tooltip",
+    "href",
+    "key",
+    "order",
+    "detail",
+    "facet",
+    "row",
+    "column",
+}

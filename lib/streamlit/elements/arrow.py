@@ -13,20 +13,21 @@
 # limitations under the License.
 
 from collections.abc import Iterable
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Mapping, Optional, Union, cast, TYPE_CHECKING
+from typing import TypeVar
 
 from numpy import ndarray
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 import pyarrow as pa
 
-import streamlit
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
-Data = Optional[
-    Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]]]
-]
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]], None]
 
 
 class ArrowMixin:
@@ -35,7 +36,7 @@ class ArrowMixin:
         data: Data = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -80,16 +81,14 @@ class ArrowMixin:
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
-        return cast(
-            "streamlit.delta_generator.DeltaGenerator",
-            self.dg._enqueue(
-                "arrow_data_frame", proto, element_width=width, element_height=height
-            ),
+        return self.dg._enqueue(
+            delta_type="arrow_data_frame",
+            element_proto=proto,
+            element_width=width,
+            element_height=height,
         )
 
-    def _arrow_table(
-        self, data: Data = None
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+    def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 
         This differs from `st._arrow_dataframe` in that the table in this case is
@@ -117,15 +116,12 @@ class ArrowMixin:
 
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
-        return cast(
-            "streamlit.delta_generator.DeltaGenerator",
-            self.dg._enqueue("arrow_table", proto),
-        )
+        return self.dg._enqueue("arrow_table", proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
 def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) -> None:
@@ -232,7 +228,9 @@ def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
         proto.styler.caption = styler.caption
 
 
-def _marshall_styles(proto: ArrowProto, styler: Styler, styles: Dict[str, Any]) -> None:
+def _marshall_styles(
+    proto: ArrowProto, styler: Styler, styles: Mapping[str, Any]
+) -> None:
     """Marshall pandas.Styler styles into an Arrow proto.
 
     Parameters
@@ -271,7 +269,10 @@ def _marshall_styles(proto: ArrowProto, styler: Styler, styles: Dict[str, Any]) 
         proto.styler.styles = "\n".join(css_rules)
 
 
-def _trim_pandas_styles(styles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+M = TypeVar("M", bound=Mapping[str, Any])
+
+
+def _trim_pandas_styles(styles: List[M]) -> List[M]:
     """Filter out empty styles.
 
     Every cell will have a class, but the list of props
@@ -288,7 +289,7 @@ def _trim_pandas_styles(styles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def _pandas_style_to_css(
     style_type: str,
-    style: Dict[str, Any],
+    style: Mapping[str, Any],
     uuid: str,
     separator: str = "",
 ) -> str:
@@ -354,7 +355,7 @@ def _pandas_style_to_css(
 
 
 def _marshall_display_values(
-    proto: ArrowProto, df: DataFrame, styles: Dict[str, Any]
+    proto: ArrowProto, df: DataFrame, styles: Mapping[str, Any]
 ) -> None:
     """Marshall pandas.Styler display values into an Arrow proto.
 
@@ -374,7 +375,7 @@ def _marshall_display_values(
     proto.styler.display_values = type_util.data_frame_to_bytes(new_df)
 
 
-def _use_display_values(df: DataFrame, styles: Dict[str, Any]) -> DataFrame:
+def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
     """Create a new pandas.DataFrame where display values are used instead of original ones.
 
     Parameters

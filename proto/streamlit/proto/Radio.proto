@@ -26,4 +26,5 @@ message Radio {
   int32 value = 7;
   bool set_value = 8;
   bool disabled = 9;
+  bool horizontal = 10;
 }
