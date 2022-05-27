@@ -17,7 +17,12 @@
 
 describe("Interactive DataFrame canvas rendering", () => {
   before(() => {
+    // Increasing timeout since we're waiting for
+    // dataframes and tables to be rendered.
+    Cypress.config("defaultCommandTimeout", 30000);
+
     cy.loadApp("http://localhost:3000/");
+    cy.prepForElementSnapshots();
   });
 
   it("shows widget correctly", () => {
