@@ -140,8 +140,8 @@ describe("ElementNode.quiverElement", () => {
     })
   })
 
-  it("returns a quiverElement (dataGrid)", () => {
-    const node = dataGrid()
+  it("returns a quiverElement (arrowDataFrame)", () => {
+    const node = arrowDataFrame()
     const q = node.quiverElement
 
     expect(q.index).toEqual([vectorFromArray(["i1", "i2"])])
@@ -179,9 +179,9 @@ describe("ElementNode.quiverElement", () => {
     expect(node.quiverElement).toStrictEqual(node.quiverElement)
   })
 
-  it("does not recompute its value (dataGrid)", () => {
+  it("does not recompute its value (arrowDataFrame)", () => {
     // accessing `quiverElement` twice should return the same instance.
-    const node = dataGrid()
+    const node = arrowDataFrame()
     expect(node.quiverElement).toStrictEqual(node.quiverElement)
   })
 
@@ -414,9 +414,9 @@ describe("ElementNode.arrowAddRows", () => {
     })
   })
 
-  describe("dataGrid", () => {
+  describe("arrowDataFrame", () => {
     test("addRows can be called with an unnamed dataset", () => {
-      const node = dataGrid()
+      const node = arrowDataFrame()
       const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SCRIPT_RUN_ID)
       const q = newNode.quiverElement
 
@@ -452,7 +452,7 @@ describe("ElementNode.arrowAddRows", () => {
     })
 
     test("addRows throws an error when called with a named dataset", () => {
-      const node = dataGrid()
+      const node = arrowDataFrame()
       expect(() =>
         node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
       ).toThrow(
@@ -981,9 +981,9 @@ function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
 }
 
-/** Create an dataGrid element node with the given properties. */
-function dataGrid(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
-  const element = makeProto(Element, { dataGrid: { data: UNICODE } })
+/** Create an arrowDataFrame element node with the given properties. */
+function arrowDataFrame(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
+  const element = makeProto(Element, { arrowDataFrame: { data: UNICODE } })
   return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
 }
 
