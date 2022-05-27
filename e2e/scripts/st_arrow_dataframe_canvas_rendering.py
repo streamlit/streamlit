@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -19,6 +21,7 @@ import pyarrow as pa
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
+random.seed(0)
 
 st.header("Test datetime handling:")
 df = pd.DataFrame({"str": ["2020-04-14 00:00:00"]})
@@ -146,7 +149,7 @@ dft = pd.DataFrame(
         "int64": np.arange(random_int, random_int + n_rows),
         "numpy bool": [np.random.choice([True, False]) for _ in range(n_rows)],
         "boolean": pd.array(
-            [np.random.choice([True, False, None]) for _ in range(n_rows)],
+            [random.choice([True, False, None]) for _ in range(n_rows)],
             dtype="boolean",
         ),
         # "timedelta64":[np.timedelta64(i+1, 'h') for i in range(n_rows)],
@@ -158,15 +161,15 @@ dft = pd.DataFrame(
             (pd.to_datetime("2022-03-11 17:41:00-05:00")) for _ in range(n_rows)
         ],
         "string_object": [
-            "".join(np.random.choice(chars) for i in range(random_int))
+            "".join(random.choice(chars) for i in range(random_int))
             for j in range(n_rows)
         ],
         "string_string": [
-            "".join(np.random.choice(chars) for i in range(random_int))
+            "".join(random.choice(chars) for i in range(random_int))
             for j in range(n_rows)
         ],
         "category": pd.Series(
-            list("".join(np.random.choice(ascii_lowercase) for i in range(n_rows)))
+            list("".join(random.choice(ascii_lowercase) for i in range(n_rows)))
         ).astype("category"),
         "period[H]": [
             (pd.Period("2022-03-14 11:52:00", freq="H") + pd.offsets.Hour(i))
@@ -178,7 +181,7 @@ dft = pd.DataFrame(
         ],
         "string_list": [
             [
-                "".join(np.random.choice(chars) for _ in range(10))
+                "".join(random.choice(chars) for _ in range(10))
                 for _ in range(np.random.randint(0, 10))
             ]
             for _ in range(n_rows)
