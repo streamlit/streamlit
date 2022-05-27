@@ -356,7 +356,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         st._arrow_dataframe(df)
 
-        proto = self.get_delta_from_queue().new_element.data_grid
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
 
     def test_st_empty(self):
