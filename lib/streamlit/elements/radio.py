@@ -45,6 +45,7 @@ class RadioMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only args:
         disabled: bool = False,
+        horizontal: bool = False,
     ) -> Any:
         """Display a radio button widget.
 
@@ -79,6 +80,10 @@ class RadioMixin:
             An optional boolean, which disables the radio button if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        horizontal : bool
+            An optional boolean, which orients the radio group horizontally.
+            The default is false (vertical buttons). This argument can only
+            be supplied by keyword.
 
         Returns
         -------
@@ -113,6 +118,7 @@ class RadioMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            horizontal=horizontal,
             ctx=ctx,
         )
 
@@ -129,6 +135,7 @@ class RadioMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only args:
         disabled: bool = False,
+        horizontal: bool = False,
         ctx: Optional[ScriptRunContext],
     ) -> Any:
         key = to_key(key)
@@ -152,6 +159,7 @@ class RadioMixin:
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in opt]
         radio_proto.form_id = current_form_id(self.dg)
+        radio_proto.horizontal = horizontal
         if help is not None:
             radio_proto.help = dedent(help)
 
