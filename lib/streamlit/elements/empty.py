@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import cast, TYPE_CHECKING
 
-import streamlit
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 class EmptyMixin:
-    def empty(self):
+    def empty(self) -> "DeltaGenerator":
         """Insert a single-element container.
 
         Inserts a container into your app that can be used to hold a single element.
@@ -66,6 +68,6 @@ class EmptyMixin:
         return self.dg._enqueue("empty", empty_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

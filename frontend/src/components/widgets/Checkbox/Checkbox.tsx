@@ -145,13 +145,13 @@ class Checkbox extends React.PureComponent<Props, State> {
                 marginBottom: 0,
                 marginTop: 0,
                 paddingRight: spacing.twoThirdsSmFont,
-                backgroundColor: $isFocusVisible
-                  ? colors.transparentDarkenedBgMix60
-                  : "",
+                backgroundColor: $isFocusVisible ? colors.darkenedBgMix25 : "",
                 borderTopLeftRadius: radii.md,
                 borderTopRightRadius: radii.md,
                 borderBottomLeftRadius: radii.md,
                 borderBottomRightRadius: radii.md,
+                display: "flex",
+                alignItems: "center",
               }),
             },
             Checkmark: {
@@ -167,6 +167,8 @@ class Checkbox extends React.PureComponent<Props, State> {
 
                 return {
                   outline: 0,
+                  width: "1rem",
+                  height: "1rem",
                   boxShadow:
                     $isFocusVisible && $checked
                       ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`

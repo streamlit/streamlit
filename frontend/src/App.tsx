@@ -51,6 +51,7 @@ import {
   notUndefined,
   getElementWidgetID,
 } from "src/lib/utils"
+import { BaseUriParts } from "src/lib/UriUtil"
 import {
   BackMsg,
   CustomThemeConfig,
@@ -61,12 +62,16 @@ import {
   NewSession,
   PageConfig,
   PageInfo,
+  PageNotFound,
+  PagesChanged,
   SessionEvent,
   WidgetStates,
   SessionState,
   Config,
   IGitInfo,
   GitInfo,
+  IAppPage,
+  AppPage,
 } from "src/autogen/proto"
 import { without, concat } from "lodash"
 
@@ -137,6 +142,9 @@ interface State {
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
+  hideSidebarNav: boolean
+  appPages: IAppPage[]
+  currentPageScriptHash: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -203,11 +211,16 @@ export class App extends PureComponent<Props, State> {
       themeHash: null,
       gitInfo: null,
       formsData: createFormsData(),
-      // We set this to true by default because this information isn't
+      appPages: [],
+      currentPageScriptHash: "",
+      // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
       // the user would see top bar elements for a few ms if this defaulted to
-      // false.
+      // false. hideSidebarNav doesn't have this issue (app pages and the value
+      // of the config option are received simultaneously), but we set it to
+      // true as well for consistency.
       hideTopBar: true,
+      hideSidebarNav: true,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -219,11 +232,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.uploadClient = new FileUploadClient({
-      getServerUri: () => {
-        return this.connectionManager
-          ? this.connectionManager.getBaseUriParts()
-          : undefined
-      },
+      getServerUri: this.getBaseUriParts,
       // A form cannot be submitted if it contains a FileUploader widget
       // that's currently uploading. We write that state here, in response
       // to a FileUploadClient callback. The FormSubmitButton element
@@ -233,11 +242,7 @@ export class App extends PureComponent<Props, State> {
       csrfEnabled: true,
     })
 
-    this.componentRegistry = new ComponentRegistry(() => {
-      return this.connectionManager
-        ? this.connectionManager.getBaseUriParts()
-        : undefined
-    })
+    this.componentRegistry = new ComponentRegistry(this.getBaseUriParts)
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
@@ -299,6 +304,14 @@ export class App extends PureComponent<Props, State> {
     }
     if (this.props.s4aCommunication.currentState.forcedModalClose) {
       this.closeDialog()
+    }
+
+    const {
+      requestedPageScriptHash,
+    } = this.props.s4aCommunication.currentState
+    if (requestedPageScriptHash !== null) {
+      this.onPageChange(requestedPageScriptHash)
+      this.props.s4aCommunication.onPageChanged()
     }
   }
 
@@ -407,6 +420,10 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
+        pagesChanged: (pagesChangedMsg: PagesChanged) =>
+          this.handlePagesChanged(pagesChangedMsg),
+        pageNotFound: (pageNotFound: PageNotFound) =>
+          this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
@@ -440,7 +457,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
-      handleFavicon(favicon)
+      handleFavicon(favicon, this.getBaseUriParts())
     }
 
     // Only change layout/sidebar when the page config has changed.
@@ -472,6 +489,33 @@ export class App extends PureComponent<Props, State> {
     this.props.s4aCommunication.sendMessage({
       type: "SET_QUERY_PARAM",
       queryParams: queryString ? `?${queryString}` : "",
+    })
+  }
+
+  handlePageNotFound = (pageNotFound: PageNotFound): void => {
+    const { pageName } = pageNotFound
+    const errMsg = pageName
+      ? `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory`
+      : "The page that you have requested does not seem to exist"
+    this.showError("Page not found", `${errMsg}. Running the app's main page.`)
+
+    const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
+    this.setState({ currentPageScriptHash }, () => {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_CURRENT_PAGE_NAME",
+        currentPageName: "",
+        currentPageScriptHash,
+      })
+    })
+  }
+
+  handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
+    const { appPages } = pagesChangedMsg
+    this.setState({ appPages }, () => {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_APP_PAGES",
+        appPages,
+      })
     })
   }
 
@@ -578,8 +622,6 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewSession = (newSessionProto: NewSession): void => {
     const initialize = newSessionProto.initialize as Initialize
-    const config = newSessionProto.config as Config
-    const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
     if (App.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
@@ -594,11 +636,59 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
+    const config = newSessionProto.config as Config
+    const themeInput = newSessionProto.customTheme as CustomThemeConfig
+    const { currentPageScriptHash } = this.state
+    const newPageScriptHash = newSessionProto.pageScriptHash
+
+    // mainPage must be a string as we're guaranteed at this point that
+    // newSessionProto.appPages is nonempty and has a truthy pageName.
+    // Otherwise, we'd either have no main script or a nameless main script,
+    // neither of which can happen.
+    const mainPage = newSessionProto.appPages[0] as AppPage
+    // We're similarly guaranteed that newPageName will be found / truthy
+    // here.
+    const newPageName = newSessionProto.appPages.find(
+      p => p.pageScriptHash === newPageScriptHash
+    )?.pageName as string
+    const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
+
+    const baseUriParts = this.getBaseUriParts()
+    if (baseUriParts) {
+      const { basePath } = baseUriParts
+      const queryString = this.getQueryString()
+
+      const qs = queryString ? `?${queryString}` : ""
+      const basePathPrefix = basePath ? `/${basePath}` : ""
+
+      const pagePath = viewingMainPage ? "" : newPageName
+      const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+
+      window.history.pushState({}, "", pageUrl)
+    }
+
     this.processThemeInput(themeInput)
-    this.setState({
-      allowRunOnSave: config.allowRunOnSave,
-      hideTopBar: config.hideTopBar,
-    })
+    this.setState(
+      {
+        allowRunOnSave: config.allowRunOnSave,
+        hideTopBar: config.hideTopBar,
+        hideSidebarNav: config.hideSidebarNav,
+        appPages: newSessionProto.appPages,
+        currentPageScriptHash: newPageScriptHash,
+      },
+      () => {
+        this.props.s4aCommunication.sendMessage({
+          type: "SET_APP_PAGES",
+          appPages: newSessionProto.appPages,
+        })
+
+        this.props.s4aCommunication.sendMessage({
+          type: "SET_CURRENT_PAGE_NAME",
+          currentPageName: viewingMainPage ? "" : newPageName,
+          currentPageScriptHash: newPageScriptHash,
+        })
+      }
+    )
 
     const { appHash } = this.state
     const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto
@@ -608,8 +698,11 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Set the title and favicon to their default values
-    document.title = `${scriptName} · Streamlit`
-    handleFavicon(`${process.env.PUBLIC_URL}/favicon.png`)
+    document.title = `${newPageName} · Streamlit`
+    handleFavicon(
+      `${process.env.PUBLIC_URL}/favicon.png`,
+      this.getBaseUriParts()
+    )
 
     MetricsManager.current.setMetadata(
       this.props.s4aCommunication.currentState.streamlitShareMetadata
@@ -617,9 +710,15 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.setAppHash(newSessionHash)
     MetricsManager.current.clearDeltaCounter()
 
-    MetricsManager.current.enqueue("updateReport")
+    MetricsManager.current.enqueue("updateReport", {
+      numPages: newSessionProto.appPages.length,
+      isMainPage: viewingMainPage,
+    })
 
-    if (appHash === newSessionHash) {
+    if (
+      appHash === newSessionHash &&
+      currentPageScriptHash === newPageScriptHash
+    ) {
       this.setState({
         scriptRunId,
       })
@@ -903,21 +1002,68 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
-    const { queryParams } = this.props.s4aCommunication.currentState
+  onPageChange = (pageScriptHash: string): void => {
+    this.sendRerunBackMsg(undefined, pageScriptHash)
+  }
 
-    let queryString =
-      queryParams && queryParams.length > 0
-        ? queryParams
-        : document.location.search
+  sendRerunBackMsg = (
+    widgetStates?: WidgetStates,
+    pageScriptHash?: string
+  ): void => {
+    const baseUriParts = this.getBaseUriParts()
+    if (!baseUriParts) {
+      // If we don't have a connectionManager or if it doesn't have an active
+      // websocket connection to the server (in which case
+      // connectionManager.getBaseUriParts() returns undefined), we can't send a
+      // rerun backMessage so just return early.
+      logError("Cannot send rerun backMessage when disconnected from server.")
+      return
+    }
 
-    if (queryString.startsWith("?")) {
-      queryString = queryString.substring(1)
+    const { currentPageScriptHash } = this.state
+    const { basePath } = baseUriParts
+    const queryString = this.getQueryString()
+    let pageName = ""
+
+    if (pageScriptHash) {
+      // The user specified exactly which page to run. We can simply use this
+      // value in the BackMsg we send to the server.
+    } else if (currentPageScriptHash) {
+      // The user didn't specify which page to run, which happens when they
+      // click the "Rerun" button in the hamburger menu. In this case, we
+      // rerun the current page.
+      pageScriptHash = currentPageScriptHash
+    } else {
+      // We must be in the case where the user is navigating directly to a
+      // non-main page of this app. Since we haven't received the list of the
+      // app's pages from the server at this point, we fall back to requesting
+      // requesting the page to run via pageName, which we extract from
+      // document.location.pathname
+
+      // Note also that we'd prefer to write something like
+      //
+      // ```
+      // replace(
+      //   new RegExp(`^/${basePath}/?`),
+      //   ""
+      // )
+      // ```
+      //
+      // below, but that doesn't work because basePath may contain unescaped
+      // regex special-characters. This is why we're stuck with the
+      // weird-looking triple `replace()`.
+      pageName = decodeURIComponent(
+        document.location.pathname
+          .replace(`/${basePath}`, "")
+          .replace(new RegExp("^/?"), "")
+          .replace(new RegExp("/$"), "")
+      )
+      pageScriptHash = ""
     }
 
     this.sendBackMsg(
       new BackMsg({
-        rerunScript: { queryString, widgetStates },
+        rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
       })
     )
 
@@ -1067,6 +1213,22 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
+  getBaseUriParts = (): BaseUriParts | undefined =>
+    this.connectionManager
+      ? this.connectionManager.getBaseUriParts()
+      : undefined
+
+  getQueryString = (): string => {
+    const { queryParams } = this.props.s4aCommunication.currentState
+
+    const queryString =
+      queryParams && queryParams.length > 0
+        ? queryParams
+        : document.location.search
+
+    return queryString.startsWith("?") ? queryString.substring(1) : queryString
+  }
+
   render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -1082,7 +1244,13 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       gitInfo,
       hideTopBar,
+      hideSidebarNav,
+      currentPageScriptHash,
     } = this.state
+
+    const {
+      hideSidebarNav: s4AHideSidebarNav,
+    } = this.props.s4aCommunication.currentState
 
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -1117,6 +1285,7 @@ export class App extends PureComponent<Props, State> {
           addThemes: this.props.theme.addThemes,
           sidebarChevronDownshift: this.props.s4aCommunication.currentState
             .sidebarChevronDownshift,
+          getBaseUriParts: this.getBaseUriParts,
         }}
       >
         <HotKeys
@@ -1180,6 +1349,13 @@ export class App extends PureComponent<Props, State> {
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
               formsData={this.state.formsData}
+              appPages={this.state.appPages}
+              onPageChange={this.onPageChange}
+              currentPageScriptHash={currentPageScriptHash}
+              hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
+              pageLinkBaseUrl={
+                this.props.s4aCommunication.currentState.pageLinkBaseUrl
+              }
             />
             {renderedDialog}
           </StyledApp>

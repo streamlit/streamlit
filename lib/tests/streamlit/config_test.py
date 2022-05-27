@@ -310,6 +310,7 @@ class ConfigTest(unittest.TestCase):
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
                 "global.dataFrameSerialization",
+                "logger.enableRich",
                 "logger.level",
                 "logger.messageFormat",
                 "runner.magicEnabled",
@@ -334,6 +335,7 @@ class ConfigTest(unittest.TestCase):
                 "server.maxUploadSize",
                 "server.maxMessageSize",
                 "ui.hideTopBar",
+                "ui.hideSidebarNav",
             ]
         )
         keys = sorted(config._config_options.keys())

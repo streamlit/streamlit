@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { take } from "lodash"
+
 import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "src/lib/baseconsts"
 import DOMPurify from "dompurify"
 
@@ -53,6 +55,45 @@ export function getWindowBaseUriParts(): BaseUriParts {
     .replace(INITIAL_SLASH_RE, "")
 
   return { host, port, basePath }
+}
+
+// NOTE: In the multipage apps world, there is some ambiguity around whether a
+// path like "foo/bar" means
+//   * the page "/" at baseUrlPath "foo/bar", or
+//   * the page "/bar" at baseUrlPath "foo".
+// To resolve this, we just try both possibilities for now, but this leads to
+// the unfortunate consequence of the initial page load when navigating directly
+// to a non-main page of an app being slower than navigating to the main page
+// (as the first attempt at connecting to the server fails the healthcheck).
+//
+// We'll want to improve this situation in the near future, but figuring out
+// the best path forward may be tricky as I wasn't able to come up with an
+// easy solution covering every deployment scenario.
+export function getPossibleBaseUris(): Array<BaseUriParts> {
+  const baseUriParts = getWindowBaseUriParts()
+  const { basePath } = baseUriParts
+
+  if (!basePath) {
+    return [baseUriParts]
+  }
+
+  const parts = basePath.split("/")
+  const possibleBaseUris: Array<BaseUriParts> = []
+
+  while (parts.length > 0) {
+    possibleBaseUris.push({
+      ...baseUriParts,
+      basePath: parts.join("/"),
+    })
+    parts.pop()
+  }
+
+  possibleBaseUris.push({
+    ...baseUriParts,
+    basePath: "",
+  })
+
+  return take(possibleBaseUris, 2)
 }
 
 /**
@@ -110,10 +151,14 @@ export function xssSanitizeSvg(uri: string): string {
  * If this is a relative URI, assume it's being served from streamlit and
  * construct it appropriately.  Otherwise leave it alone.
  */
-export function buildMediaUri(uri: string): string {
-  return uri.startsWith("/media")
-    ? buildHttpUri(getWindowBaseUriParts(), uri)
-    : uri
+export function buildMediaUri(
+  uri: string,
+  baseUriParts?: BaseUriParts
+): string {
+  if (!baseUriParts) {
+    baseUriParts = getWindowBaseUriParts()
+  }
+  return uri.startsWith("/media") ? buildHttpUri(baseUriParts, uri) : uri
 }
 
 /**

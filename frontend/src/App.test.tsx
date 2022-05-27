@@ -16,9 +16,10 @@
  */
 
 import React from "react"
-import { ReactWrapper } from "enzyme"
+import { ShallowWrapper, ReactWrapper } from "enzyme"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "src/lib/storageUtils"
+import { hashString } from "src/lib/utils"
 import { shallow, mount } from "src/lib/test_util"
 import {
   CustomThemeConfig,
@@ -26,6 +27,8 @@ import {
   NewSession,
   PageConfig,
   PageInfo,
+  PageNotFound,
+  PagesChanged,
 } from "src/autogen/proto"
 import { S4ACommunicationHOC } from "src/hocs/withS4ACommunication/withS4ACommunication"
 import {
@@ -55,13 +58,16 @@ jest.mock("src/lib/ConnectionManager")
 const getS4ACommunicationState = (
   extend?: Partial<S4ACommunicationState>
 ): S4ACommunicationState => ({
-  queryParams: "",
-  menuItems: [],
-  toolbarItems: [],
   forcedModalClose: false,
+  hideSidebarNav: false,
   isOwner: true,
+  menuItems: [],
+  pageLinkBaseUrl: "",
+  queryParams: "",
+  requestedPageScriptHash: null,
   sidebarChevronDownshift: 0,
   streamlitShareMetadata: {},
+  toolbarItems: [],
   ...extend,
 })
 
@@ -71,6 +77,7 @@ const getS4ACommunicationProp = (
   connect: jest.fn(),
   sendMessage: jest.fn(),
   onModalReset: jest.fn(),
+  onPageChanged: jest.fn(),
   currentState: getS4ACommunicationState({}),
   ...extend,
 })
@@ -360,6 +367,56 @@ describe("App", () => {
     expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(true)
     expect(wrapper.find("ToolbarActions").exists()).toBe(true)
   })
+
+  it("updates state.appPages when it receives a PagesChanged msg", () => {
+    const appPages = [
+      { icon: "", pageName: "bob", scriptPath: "bob.py" },
+      { icon: "", pageName: "carl", scriptPath: "carl.py" },
+    ]
+
+    const msg = new ForwardMsg()
+    msg.pagesChanged = new PagesChanged({ appPages })
+
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    expect(wrapper.find("AppView").prop("appPages")).toEqual([])
+
+    const instance = wrapper.instance() as App
+    instance.handleMessage(msg)
+    expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_APP_PAGES",
+      appPages,
+    })
+  })
+
+  it("responds to page change requests", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const instance = wrapper.instance() as App
+    instance.onPageChange = jest.fn()
+
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: getS4ACommunicationProp({
+          currentState: getS4ACommunicationState({
+            requestedPageScriptHash: "hash1",
+          }),
+        }),
+      })
+    )
+    wrapper.update()
+
+    expect(instance.onPageChange).toHaveBeenCalledWith("hash1")
+    expect(
+      props.s4aCommunication.currentState.requestedPageScriptHash
+    ).toBeNull()
+  })
+})
+
+const mockGetBaseUriParts = (basePath?: string) => () => ({
+  basePath: basePath || "",
 })
 
 describe("App.handleNewSession", () => {
@@ -369,6 +426,7 @@ describe("App.handleNewSession", () => {
       maxCachedMessageAge: 0,
       mapboxToken: "mapboxToken",
       allowRunOnSave: false,
+      hideSidebarNav: false,
     },
     customTheme: {
       primaryColor: "red",
@@ -390,6 +448,10 @@ describe("App.handleNewSession", () => {
       sessionId: "sessionId",
       commandLine: "commandLine",
     },
+    appPages: [
+      { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+    ],
+    pageScriptHash: "page_script_hash",
   }
   const NEW_SESSION = new NewSession(NEW_SESSION_JSON)
 
@@ -649,6 +711,181 @@ describe("App.handleNewSession", () => {
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
   })
+
+  it("plumbs appPages and currentPageScriptHash to the AppView component", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    expect(wrapper.find("AppView").prop("appPages")).toEqual([])
+
+    const appPages = [
+      { pageScriptHash: "hash1", pageName: "page1" },
+      { pageScriptHash: "hash2", pageName: "page2" },
+    ]
+
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+    // @ts-ignore
+    newSessionJson.appPages = appPages
+
+    // @ts-ignore
+    newSessionJson.pageScriptHash = "hash1"
+
+    // @ts-ignore
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
+    expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+    expect(wrapper.find("AppView").prop("currentPageScriptHash")).toEqual(
+      "hash1"
+    )
+    expect(document.title).toBe("page1 · Streamlit")
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_APP_PAGES",
+      appPages,
+    })
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+      currentPageScriptHash: "hash1",
+    })
+  })
+
+  it("calls clearAppState if currentPageScriptHash changes", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.clearAppState = jest.fn()
+
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+    // @ts-ignore
+    newSessionJson.pageScriptHash = "different_hash"
+
+    // @ts-ignore
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
+
+    expect(instance.clearAppState).toHaveBeenCalled()
+  })
+
+  it("doesn't call clearAppState if currentPageScriptHash doesn't change", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    wrapper.setState({
+      currentPageScriptHash: "page_script_hash",
+      appHash: hashString("installationId"),
+    })
+    const instance = wrapper.instance() as App
+    instance.clearAppState = jest.fn()
+
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+
+    // @ts-ignore
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
+
+    expect(instance.clearAppState).not.toHaveBeenCalled()
+  })
+
+  it("sets hideSidebarNav based on the server config option and s4a setting", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+
+    // hideSidebarNav initializes to true.
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
+
+    // Simulate the server ui.hideSidebarNav config option being false.
+    const instance = wrapper.instance() as App
+    instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(false)
+
+    // Have s4a override the server config option.
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: getS4ACommunicationProp({
+          currentState: getS4ACommunicationState({
+            hideSidebarNav: true,
+          }),
+        }),
+      })
+    )
+
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
+  })
+
+  describe("page change URL handling", () => {
+    let wrapper: ShallowWrapper
+    let instance: App
+
+    beforeEach(() => {
+      wrapper = shallow(<App {...getProps()} />)
+      instance = wrapper.instance() as App
+      // @ts-ignore
+      instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+      window.history.pushState({}, "", "/")
+      jest.spyOn(
+        window.history,
+        // @ts-ignore
+        "pushState"
+      )
+    })
+
+    afterEach(() => {
+      window.history.pushState({}, "", "/")
+    })
+
+    it("can switch to the main page", () => {
+      const instance = wrapper.instance() as App
+      instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+
+      expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
+    })
+
+    it("can switch to a non-main page", () => {
+      const instance = wrapper.instance() as App
+      const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+      newSessionJson.appPages = [
+        { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+        { pageScriptHash: "hash2", pageName: "page2" },
+      ]
+      newSessionJson.pageScriptHash = "hash2"
+
+      instance.handleNewSession(new NewSession(newSessionJson))
+
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/page2"
+      )
+    })
+
+    it("retains the query string", () => {
+      window.history.pushState({}, "", "/?foo=bar")
+
+      const instance = wrapper.instance() as App
+      instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?foo=bar"
+      )
+    })
+
+    it("works with baseUrlPaths", () => {
+      const instance = wrapper.instance() as App
+      // @ts-ignore
+      instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo")
+
+      const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+      newSessionJson.appPages = [
+        { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+        { pageScriptHash: "hash2", pageName: "page2" },
+      ]
+      newSessionJson.pageScriptHash = "hash2"
+
+      instance.handleNewSession(new NewSession(newSessionJson))
+
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/foo/page2"
+      )
+    })
+  })
 })
 
 describe("App.handlePageConfigChanged", () => {
@@ -681,7 +918,6 @@ describe("App.handlePageInfoChanged", () => {
   let pushStateSpy: any
 
   beforeEach(() => {
-    // Reset the value of document.location.pathname.
     window.history.pushState({}, "", "/")
 
     // Setup wrapper and app and spy on window.history.pushState.
@@ -694,7 +930,7 @@ describe("App.handlePageInfoChanged", () => {
     )
   })
 
-  afterAll(() => {
+  afterEach(() => {
     // Reset the value of document.location.pathname.
     window.history.pushState({}, "", "/")
   })
@@ -757,6 +993,154 @@ describe("App.handlePageInfoChanged", () => {
 
     const expectedUrl = `/?${pageInfo.queryString}`
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+  })
+})
+
+describe("App.sendRerunBackMsg", () => {
+  let wrapper: ShallowWrapper
+  let instance: App
+
+  beforeEach(() => {
+    wrapper = shallow(<App {...getProps()} />)
+    instance = wrapper.instance() as App
+    // @ts-ignore
+    instance.sendBackMsg = jest.fn()
+    // @ts-ignore
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+  })
+
+  afterEach(() => {
+    window.history.pushState({}, "", "/")
+  })
+
+  it("sends the pageScriptHash if one is given", () => {
+    instance.sendRerunBackMsg(undefined, "some_page_hash")
+
+    // @ts-ignore
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: {
+        pageScriptHash: "some_page_hash",
+        pageName: "",
+        queryString: "",
+      },
+    })
+  })
+
+  it("sends the currentPageScriptHash if no pageScriptHash is given", () => {
+    wrapper.setState({ currentPageScriptHash: "some_other_page_hash" })
+    instance.sendRerunBackMsg()
+
+    // @ts-ignore
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: {
+        pageScriptHash: "some_other_page_hash",
+        pageName: "",
+        queryString: "",
+      },
+    })
+  })
+
+  it("extracts the pageName as an empty string if we can't get a pageScriptHash (main page)", () => {
+    instance.sendRerunBackMsg()
+
+    // @ts-ignore
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: {
+        pageScriptHash: "",
+        pageName: "",
+        queryString: "",
+      },
+    })
+  })
+
+  it("extracts the pageName as the URL path if we can't get a pageScriptHash (non-main page)", () => {
+    window.history.pushState({}, "", "/foo/")
+    instance.sendRerunBackMsg()
+
+    // @ts-ignore
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: {
+        pageScriptHash: "",
+        pageName: "foo",
+        queryString: "",
+      },
+    })
+  })
+
+  it("extracts the pageName as the last part of the URL if we can't get a pageScriptHash and we have a nonempty basePath", () => {
+    // @ts-ignore
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
+
+    window.history.pushState({}, "", "/foo/bar/baz")
+    instance.sendRerunBackMsg()
+
+    // @ts-ignore
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: {
+        pageScriptHash: "",
+        pageName: "baz",
+        queryString: "",
+      },
+    })
+  })
+})
+
+//   * handlePageNotFound has branching error messages depending on pageName
+describe("App.handlePageNotFound", () => {
+  it("includes the missing page name in error modal message if available", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    wrapper.setState({
+      appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+    })
+    const instance = wrapper.instance() as App
+
+    // @ts-ignore
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+    instance.showError = jest.fn()
+
+    instance.handlePageNotFound(
+      new PageNotFound({ pageName: "nonexistentPage" })
+    )
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
+    expect(instance.showError).toHaveBeenCalledWith(
+      "Page not found",
+      expect.stringMatching("You have requested page /nonexistentPage")
+    )
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+      currentPageScriptHash: "page_hash",
+    })
+  })
+
+  it("uses a more generic error message if no page name is available", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    wrapper.setState({
+      appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+    })
+    const instance = wrapper.instance() as App
+
+    // @ts-ignore
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+    instance.showError = jest.fn()
+
+    instance.handlePageNotFound(new PageNotFound({ pageName: "" }))
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
+    expect(instance.showError).toHaveBeenCalledWith(
+      "Page not found",
+      expect.stringMatching(
+        "The page that you have requested does not seem to exist"
+      )
+    )
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+      currentPageScriptHash: "page_hash",
+    })
   })
 })
 

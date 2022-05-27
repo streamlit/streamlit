@@ -447,7 +447,7 @@ function dataIsAnAppendOfPrev(
     return false
   }
 
-  if (prevNumRows > numRows) {
+  if (prevNumRows >= numRows) {
     return false
   }
 
@@ -497,6 +497,9 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
       color: colors.bodyText,
       subtitleColor: colors.bodyText,
       ...themeFonts,
+    },
+    header: {
+      labelColor: colors.bodyText,
     },
   }
 

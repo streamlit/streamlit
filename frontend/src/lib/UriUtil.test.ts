@@ -22,6 +22,7 @@ import {
   buildMediaUri,
   xssSanitizeSvg,
   isValidURL,
+  getPossibleBaseUris,
 } from "./UriUtil"
 
 const location: Partial<Location> = {}
@@ -203,5 +204,50 @@ describe("isValidURL helper", () => {
 
   it("should return false if it doesn't match the pattern", () => {
     expect(isValidURL("*.b.com", "www.c.com")).toBeFalsy()
+  })
+})
+
+describe("getPossibleBaseUris", () => {
+  let originalPathName = ""
+
+  beforeEach(() => {
+    originalPathName = window.location.pathname
+  })
+
+  afterEach(() => {
+    window.location.pathname = originalPathName
+  })
+
+  const testCases = [
+    {
+      description: "empty pathnames",
+      pathname: "",
+      expectedBasePaths: [""],
+    },
+    {
+      description: "pathnames with a single part",
+      pathname: "foo",
+      expectedBasePaths: ["foo", ""],
+    },
+    {
+      description: "pathnames with two parts",
+      pathname: "foo/bar",
+      expectedBasePaths: ["foo/bar", "foo"],
+    },
+    {
+      description: "pathnames with more than two parts",
+      pathname: "foo/bar/baz/qux",
+      expectedBasePaths: ["foo/bar/baz/qux", "foo/bar/baz"],
+    },
+  ]
+
+  testCases.forEach(({ description, pathname, expectedBasePaths }) => {
+    it(`handles ${description}`, () => {
+      window.location.pathname = pathname
+
+      expect(getPossibleBaseUris().map(b => b.basePath)).toEqual(
+        expectedBasePaths
+      )
+    })
   })
 })

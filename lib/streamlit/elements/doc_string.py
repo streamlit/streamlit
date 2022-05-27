@@ -15,27 +15,30 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import inspect
+from typing import Any, cast, TYPE_CHECKING
+from typing_extensions import Final
 
-from typing import cast
-
-import streamlit
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
-CONFUSING_STREAMLIT_MODULES = (
+LOGGER: Final = get_logger(__name__)
+
+
+CONFUSING_STREAMLIT_MODULES: Final = (
     "streamlit.echo",
     "streamlit.delta_generator",
     "streamlit.legacy_caching.caching",
 )
 
-CONFUSING_STREAMLIT_SIG_PREFIXES = ("(element, ",)
+CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
-    def help(self, obj):
+    def help(self, obj: Any) -> "DeltaGenerator":
         """Display object's doc string, nicely formatted.
 
         Displays the doc string for this object.
@@ -64,12 +67,12 @@ class HelpMixin:
         return self.dg._enqueue("doc_string", doc_string_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-def _marshall(doc_string_proto, obj):
+def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
     """Construct a DocString object.
 
     See DeltaGenerator.help for docs.

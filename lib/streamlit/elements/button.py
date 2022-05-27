@@ -13,24 +13,24 @@
 # limitations under the License.
 
 import io
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-
-from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union, BinaryIO, TextIO
-from typing_extensions import Final
 from textwrap import dedent
+from typing_extensions import Final
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.type_util import Key, to_key
+
 from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
 

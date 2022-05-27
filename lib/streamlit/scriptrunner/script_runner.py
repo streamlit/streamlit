@@ -266,6 +266,7 @@ class ScriptRunner:
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            page_script_hash=self._client_state.page_script_hash,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -286,6 +287,7 @@ class ScriptRunner:
         # created.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
+        client_state.page_script_hash = ctx.page_script_hash
         widget_states = self._session_state.get_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(
@@ -393,28 +395,83 @@ class ScriptRunner:
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
-        ctx = self._get_script_run_ctx()
-        ctx.reset(query_string=rerun_data.query_string)
+        main_script_path = self._session_data.main_script_path
+        pages = source_util.get_pages(main_script_path)
+        # Safe because pages will at least contain the app's main page.
+        main_page_info = list(pages.values())[0]
+        current_page_info = None
 
-        self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STARTED)
+        if rerun_data.page_script_hash:
+            current_page_info = pages.get(rerun_data.page_script_hash, None)
+        elif not rerun_data.page_script_hash and rerun_data.page_name:
+            # If a user navigates directly to a non-main page of an app, we get
+            # the first script run request before the list of pages has been
+            # sent to the frontend. In this case, we choose the first script
+            # with a name matching the requested page name.
+            current_page_info = next(
+                filter(
+                    # There seems to be this weird bug with mypy where it
+                    # thinks that p can be None (which is impossible given the
+                    # types of pages), so we add `p and` at the beginning of
+                    # the predicate to circumvent this.
+                    lambda p: p and (p["page_name"] == rerun_data.page_name),
+                    pages.values(),
+                ),
+                None,
+            )
+        else:
+            # If no information about what page to run is given, default to
+            # running the main page.
+            current_page_info = main_page_info
+
+        page_script_hash = (
+            current_page_info["page_script_hash"]
+            if current_page_info is not None
+            else main_page_info["page_script_hash"]
+        )
+
+        ctx = self._get_script_run_ctx()
+        ctx.reset(
+            query_string=rerun_data.query_string,
+            page_script_hash=page_script_hash,
+        )
+
+        self.on_event.send(
+            self,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash=page_script_hash,
+        )
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
         # in their previous script elements disappearing.
-
         try:
-            with source_util.open_python_file(self._session_data.main_script_path) as f:
+            if current_page_info:
+                script_path = current_page_info["script_path"]
+            else:
+                script_path = main_script_path
+
+                # At this point, we know that either
+                #   * the script corresponding to the hash requested no longer
+                #     exists, or
+                #   * we were not able to find a script with the requested page
+                #     name.
+                # In both of these cases, we want to send a page_not_found
+                # message to the frontend.
+                msg = ForwardMsg()
+                msg.page_not_found.page_name = rerun_data.page_name
+                ctx.enqueue(msg)
+
+            with source_util.open_python_file(script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(
-                    filebody, self._session_data.main_script_path
-                )
+                filebody = magic.add_magic(filebody, script_path)
 
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                self._session_data.main_script_path,
+                script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
                 mode="exec",
@@ -450,6 +507,14 @@ class ScriptRunner:
         try:
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
+            # TODO(vdonato): Double-check that we're okay with naming the
+            # module for every page `__main__`. I'm pretty sure this is
+            # necessary given that people will likely often write
+            #     ```
+            #     if __name__ == "__main__":
+            #         ...
+            #     ```
+            # in their scripts.
             module = _new_module("__main__")
 
             # Install the fake module as the __main__ module. This allows
@@ -464,7 +529,7 @@ class ScriptRunner:
             # work correctly. The CodeHasher is scoped to
             # files contained in the directory of __main__.__file__, which we
             # assume is the main script directory.
-            module.__dict__["__file__"] = self._session_data.main_script_path
+            module.__dict__["__file__"] = script_path
 
             with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.

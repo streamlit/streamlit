@@ -16,14 +16,14 @@ import sys
 import threading
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List
+from typing import TYPE_CHECKING, Callable, Optional, List, Union
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
-from streamlit import __version__, caching, config, legacy_caching, secrets
+from streamlit import __version__, caching, config, legacy_caching, secrets, source_util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.in_memory_file_manager import in_memory_file_manager
@@ -32,13 +32,20 @@ from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
-from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
+from streamlit.proto.NewSession_pb2 import (
+    Config,
+    CustomThemeConfig,
+    NewSession,
+    UserInfo,
+)
+from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.session_data import SessionData
 from streamlit.scriptrunner import (
     RerunData,
     ScriptRunner,
     ScriptRunnerEvent,
 )
+from streamlit.util import calc_md5
 from streamlit.watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
@@ -118,6 +125,9 @@ class AppSession:
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
         )
+        self._stop_pages_listener = source_util.register_pages_changed_callback(
+            self._on_pages_changed
+        )
 
         # The script should rerun when the `secrets.toml` file has been changed.
         secrets._file_change_listener.connect(self._on_secrets_file_changed)
@@ -172,6 +182,8 @@ class AppSession:
             self._local_sources_watcher.close()
             if self._stop_config_listener is not None:
                 self._stop_config_listener()
+            if self._stop_pages_listener is not None:
+                self._stop_pages_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
@@ -205,7 +217,9 @@ class AppSession:
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
         )
         self._on_scriptrunner_event(
-            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STARTED
+            self._scriptrunner,
+            ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
         )
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -239,7 +253,10 @@ class AppSession:
 
         if client_state:
             rerun_data = RerunData(
-                client_state.query_string, client_state.widget_states
+                client_state.query_string,
+                client_state.widget_states,
+                client_state.page_script_hash,
+                client_state.page_name,
             )
         else:
             rerun_data = RerunData()
@@ -281,8 +298,26 @@ class AppSession:
     def session_state(self) -> "SessionState":
         return self._session_state
 
-    def _on_source_file_changed(self) -> None:
+    def _should_rerun_on_file_change(self, filepath: str) -> bool:
+        main_script_path = self._session_data.main_script_path
+        pages = source_util.get_pages(main_script_path)
+
+        changed_page_script_hash = next(
+            filter(lambda k: pages[k]["script_path"] == filepath, pages),
+            None,
+        )
+
+        if changed_page_script_hash is not None:
+            current_page_script_hash = self._client_state.page_script_hash
+            return changed_page_script_hash == current_page_script_hash
+
+        return True
+
+    def _on_source_file_changed(self, filepath: Optional[str] = None) -> None:
         """One of our source files changed. Schedule a rerun if appropriate."""
+        if filepath is not None and not self._should_rerun_on_file_change(filepath):
+            return
+
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
@@ -298,6 +333,16 @@ class AppSession:
         # and introducing an unnecessary argument to `_on_source_file_changed` just for this purpose sounded finicky.
         self._on_source_file_changed()
 
+    def _on_pages_changed(self, _) -> None:
+        # TODO: Double-check the product behavior we want on this. In the spec,
+        # it says that we should notify the client of a pages dir change only
+        # if "run on save" is true, but I feel like always sending updates is
+        # quite reasonable behavior since the pages nav updating is not
+        # potentially disruptive like a script rerunning is.
+        msg = ForwardMsg()
+        _populate_app_pages(msg.pages_changed, self._session_data.main_script_path)
+        self._enqueue_forward_msg(msg)
+
     def _clear_queue(self) -> None:
         self._session_data.clear_browser_queue()
 
@@ -308,6 +353,7 @@ class AppSession:
         forward_msg: Optional[ForwardMsg] = None,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
+        page_script_hash: Optional[str] = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -317,7 +363,7 @@ class AppSession:
         """
         self._ioloop.spawn_callback(
             lambda: self._handle_scriptrunner_event_on_main_thread(
-                sender, event, forward_msg, exception, client_state
+                sender, event, forward_msg, exception, client_state, page_script_hash
             )
         )
 
@@ -328,6 +374,7 @@ class AppSession:
         forward_msg: Optional[ForwardMsg] = None,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
+        page_script_hash: Optional[str] = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -355,6 +402,9 @@ class AppSession:
             The ScriptRunner's final ClientState. Set only for the
             SHUTDOWN event.
 
+        page_script_hash : str | None
+            A hash of the script path corresponding to the page currently being
+            run. Set only for the SCRIPT_STARTED event.
         """
 
         assert (
@@ -376,8 +426,14 @@ class AppSession:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_IS_RUNNING
 
+            assert (
+                page_script_hash is not None
+            ), "page_script_hash must be set for the SCRIPT_STARTED event"
+
             self._clear_queue()
-            self._enqueue_forward_msg(self._create_new_session_message())
+            self._enqueue_forward_msg(
+                self._create_new_session_message(page_script_hash)
+            )
 
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -453,14 +509,16 @@ class AppSession:
         msg.session_event.script_changed_on_disk = True
         return msg
 
-    def _create_new_session_message(self) -> ForwardMsg:
+    def _create_new_session_message(self, page_script_hash: str) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._session_data.name
         msg.new_session.main_script_path = self._session_data.main_script_path
+        msg.new_session.page_script_hash = page_script_hash
 
+        _populate_app_pages(msg.new_session, self._session_data.main_script_path)
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
@@ -584,6 +642,7 @@ def _populate_config_msg(msg: Config) -> None:
     msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
+    msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
@@ -640,3 +699,14 @@ def _populate_user_info_msg(msg: UserInfo) -> None:
         msg.email = Credentials.get_current().activation.email
     else:
         msg.email = ""
+
+
+def _populate_app_pages(
+    msg: Union[NewSession, PagesChanged], main_script_path: str
+) -> None:
+    for page_script_hash, page_info in source_util.get_pages(main_script_path).items():
+        page_proto = msg.app_pages.add()
+
+        page_proto.page_script_hash = page_script_hash
+        page_proto.page_name = page_info["page_name"]
+        page_proto.icon = page_info["icon"]
