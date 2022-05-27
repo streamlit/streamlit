@@ -497,9 +497,9 @@ class Server:
 
     @property
     def is_running_hello(self) -> bool:
-        from streamlit.hello import hello
+        from streamlit.hello import Hello
 
-        return self._main_script_path == hello.__file__
+        return self._main_script_path == Hello.__file__
 
     @tornado.gen.coroutine
     def _loop_coroutine(
