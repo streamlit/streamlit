@@ -31,6 +31,7 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
 export const StyledMetricLabelText = styled(StyledWidgetLabel)(
   ({ theme }) => ({
     marginBottom: 0,
+    minHeight: "0.5rem !important",
   })
 )
 
