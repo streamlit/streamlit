@@ -40,7 +40,7 @@ def create_rerun_msg() -> bytes:
 
 
 # Start Streamlit
-print(f"Staring StreamlitDemo (version={SnowflakeDemo.version})")
+print(f"Starting StreamlitDemo")
 
 config = SnowflakeConfig(SCRIPT_PATH, {})
 demo = SnowflakeDemo(config)
@@ -59,7 +59,7 @@ demo.handle_backmsg(
     session_id, create_rerun_msg(), ExampleMessageContext(id="rerun_back_msg")
 )
 
-time.sleep(3)
+time.sleep(60 * 3)
 
 # Close the session
 demo.session_closed(session_id)
