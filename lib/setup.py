@@ -34,7 +34,7 @@ except:
     )
     sys.exit(exit_msg)
 
-VERSION = "1.9.0"  # PEP-440
+VERSION = "1.9.2"  # PEP-440
 
 NAME = "streamlit"
 
@@ -85,7 +85,7 @@ setuptools.setup(
     python_requires=">=3.6",
     license="Apache 2",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
-    package_data={"streamlit": ["py.typed"]},
+    package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
     install_requires=requirements,
