@@ -22,7 +22,9 @@ describe("Interactive DataFrame canvas rendering", () => {
     Cypress.config("defaultCommandTimeout", 30000);
 
     cy.loadApp("http://localhost:3000/");
+    cy.wait(1000);
     cy.prepForElementSnapshots();
+    cy.wait(1000);
   });
 
   it("shows widget correctly", () => {
@@ -34,6 +36,7 @@ describe("Interactive DataFrame canvas rendering", () => {
     itself also has more advanced canvas based tests for some of the interactive features. */
 
     cy.get(".stDataFrame").each((el, idx) => {
+      cy.wait(1000);
       return cy.wrap(el).matchThemedSnapshots("data-grid-canvas-" + idx);
     });
   });
