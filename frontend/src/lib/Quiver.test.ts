@@ -355,7 +355,7 @@ describe("Quiver", () => {
 
       test("date", () => {
         expect(
-          Quiver.format(new Date(1970, 0, 1), {
+          Quiver.format(new Date(Date.UTC(1970, 0, 1)), {
             pandas_type: "date",
             numpy_type: "object",
           })
