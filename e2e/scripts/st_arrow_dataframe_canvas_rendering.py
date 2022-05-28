@@ -315,7 +315,9 @@ st._arrow_dataframe(
 )
 
 st.header("Input Data: 1-d set")
-st._arrow_dataframe({"apple", "banana", "cherry", "apple", "cherry"})
+# Set does not have a stable order accross different Python version.
+# Therefore, we are only testing this with one item.
+st._arrow_dataframe({"apple", "apple"})
 
 st.header("Input Data: 2-d list")
 list_1 = [[1, 2, 3, 4, 5], [-1, -2, -3, -4, -5], [10, 20, 30, 40, 50], [6, 7, 8, 9, 10]]
