@@ -20,9 +20,14 @@ import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
 
 export const StyledTruncateText = styled.span({
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  textOverflow: "ellipsis",
+  // We only want it to to be truncated on desktop,
+  // where we can use tooltips to show the whole content.
+  // On mobile, we'll let it wrap
+  [`@media (min-width: 768px)`]: {
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+  },
 })
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
@@ -37,6 +42,12 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     paddingTop: theme.spacing.none,
     paddingBottom: theme.spacing.none,
     background: $isHighlighted ? backgroundColor : undefined,
+    // Override the default itemSize set on the component's JSX
+    // on mobile, so we can make list items taller and scrollable
+    [`@media (max-width: 768px)`]: {
+      minHeight: "40px",
+      height: "auto !important",
+    },
     "&:hover, &:active, &:focus": {
       background: backgroundColor,
     },
