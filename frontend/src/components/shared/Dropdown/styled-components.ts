@@ -19,17 +19,6 @@ import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
 import { StyledDropdownListItem } from "baseui/select"
 
-export const StyledTruncateText = styled.span({
-  // We only want it to to be truncated on desktop,
-  // where we can use tooltips to show the whole content.
-  // On mobile, we'll let it wrap
-  [`@media (min-width: 768px)`]: {
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-    textOverflow: "ellipsis",
-  },
-})
-
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
 })(({ theme, $isHighlighted }) => {
