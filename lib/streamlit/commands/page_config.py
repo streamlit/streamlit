@@ -123,7 +123,7 @@ def set_page_config(
             allow_emoji=True,
         )
 
-    pb_layout: PageConfigProto.Layout.ValueType
+    pb_layout: "PageConfigProto.Layout.ValueType"
     if layout == "centered":
         pb_layout = PageConfigProto.CENTERED
     elif layout == "wide":
@@ -134,7 +134,7 @@ def set_page_config(
         )
     msg.page_config_changed.layout = pb_layout
 
-    pb_sidebar_state: PageConfigProto.SidebarState.ValueType
+    pb_sidebar_state: "PageConfigProto.SidebarState.ValueType"
     if initial_sidebar_state == "auto":
         pb_sidebar_state = PageConfigProto.AUTO
     elif initial_sidebar_state == "expanded":

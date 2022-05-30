@@ -273,8 +273,8 @@ class AppSessionTest(unittest.TestCase):
         "streamlit.app_session.source_util.get_pages",
         MagicMock(
             return_value={
-                "page1": {"icon": "", "script_path": "script1"},
-                "page2": {"icon": "🎉", "script_path": "script2"},
+                "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
+                "hash2": {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
             }
         ),
     )
@@ -286,8 +286,8 @@ class AppSessionTest(unittest.TestCase):
         expected_msg = ForwardMsg()
         expected_msg.pages_changed.app_pages.extend(
             [
-                AppPage(page_name="page1", icon="", script_path="script1"),
-                AppPage(page_name="page2", icon="🎉", script_path="script2"),
+                AppPage(page_script_hash="hash1", page_name="page1", icon=""),
+                AppPage(page_script_hash="hash2", page_name="page2", icon="🎉"),
             ]
         )
 
@@ -345,8 +345,8 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         "streamlit.app_session.source_util.get_pages",
         MagicMock(
             return_value={
-                "page1": {"icon": "", "script_path": "script1"},
-                "page2": {"icon": "🎉", "script_path": "script2"},
+                "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
+                "hash2": {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
             }
         ),
     )
@@ -366,7 +366,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
-            page_name="",
+            page_script_hash="",
         )
         add_script_run_ctx(ctx=ctx)
 
@@ -377,6 +377,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         session._on_scriptrunner_event(
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -406,8 +407,8 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         self.assertEqual(
             list(new_session_msg.app_pages),
             [
-                AppPage(page_name="page1", icon="", script_path="script1"),
-                AppPage(page_name="page2", icon="🎉", script_path="script2"),
+                AppPage(page_script_hash="hash1", page_name="page1", icon=""),
+                AppPage(page_script_hash="hash2", page_name="page2", icon="🎉"),
             ],
         )
 
@@ -499,7 +500,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
                         ForwardMsg.FINISHED_SUCCESSFULLY
                     ),
                     CLEAR_QUEUE,
-                    session._create_new_session_message(),
+                    session._create_new_session_message(page_script_hash=""),
                     session._create_session_state_changed_message(),
                 ]
             )
@@ -614,48 +615,28 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
     "streamlit.app_session.source_util.get_pages",
     MagicMock(
         return_value={
-            "script_path": {"script_path": "/fake/script_path.py"},
-            "page2": {"script_path": "/fake/pages/page2.py"},
+            "hash1": {"page_name": "page1", "script_path": "page1.py"},
+            "hash2": {"page_name": "page2", "script_path": "page2.py"},
         }
     ),
 )
 class ShouldRerunOnFileChangeTest(unittest.TestCase):
-    def test_true_if_main_page_and_empty_page_name(self):
+    def test_returns_true_if_current_page_changed(self):
         session = _create_test_session()
-        session._client_state.page_name = ""
+        session._client_state.page_script_hash = "hash2"
+
+        self.assertEqual(session._should_rerun_on_file_change("page2.py"), True)
+
+    def test_returns_true_if_changed_file_is_not_page(self):
+        session = _create_test_session()
+        session._client_state.page_script_hash = "hash1"
 
         self.assertEqual(
-            session._should_rerun_on_file_change("/fake/script_path.py"), True
+            session._should_rerun_on_file_change("some_other_file.py"), True
         )
 
-    def test_true_if_main_page_changed_and_on_main_page(self):
+    def test_returns_false_if_different_page_changed(self):
         session = _create_test_session()
-        session._client_state.page_name = "script_path"
+        session._client_state.page_script_hash = "hash2"
 
-        self.assertEqual(
-            session._should_rerun_on_file_change("/fake/script_path.py"), True
-        )
-
-    def test_true_if_changed_page_is_current_page(self):
-        session = _create_test_session()
-        session._client_state.page_name = "page2"
-
-        self.assertEqual(
-            session._should_rerun_on_file_change("/fake/pages/page2.py"), True
-        )
-
-    def test_true_if_file_is_not_page(self):
-        session = _create_test_session()
-        session._client_state.page_name = "script_path"
-
-        self.assertEqual(
-            session._should_rerun_on_file_change("/fake/some_other_file.py"), True
-        )
-
-    def test_false_if_page_but_not_current_page(self):
-        session = _create_test_session()
-        session._client_state.page_name = "script_path"
-
-        self.assertEqual(
-            session._should_rerun_on_file_change("/fake/pages/page2.py"), False
-        )
+        self.assertEqual(session._should_rerun_on_file_change("page1.py"), False)

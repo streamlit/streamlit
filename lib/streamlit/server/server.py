@@ -419,8 +419,13 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "get_pages": lambda: source_util.get_pages(
-                                self.main_script_path
+                            "get_pages": lambda: set(
+                                [
+                                    page_info["page_name"]
+                                    for page_info in source_util.get_pages(
+                                        self.main_script_path
+                                    ).values()
+                                ]
                             ),
                         },
                     ),
@@ -492,9 +497,9 @@ class Server:
 
     @property
     def is_running_hello(self) -> bool:
-        from streamlit.hello import hello
+        from streamlit.hello import Hello
 
-        return self._main_script_path == hello.__file__
+        return self._main_script_path == Hello.__file__
 
     @tornado.gen.coroutine
     def _loop_coroutine(

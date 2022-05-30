@@ -41,10 +41,46 @@ spec_with_width = {
     "width": "500",
 }
 
+interactive_spec = {
+    "title": f"Interactive Bar Chart Example",
+    "data": {
+        "values": [
+            {"a": "A", "b": 28},
+            {"a": "B", "b": 55},
+            {"a": "C", "b": 43},
+            {"a": "D", "b": 91},
+            {"a": "E", "b": 81},
+            {"a": "F", "b": 53},
+            {"a": "G", "b": 19},
+            {"a": "H", "b": 87},
+            {"a": "I", "b": 52},
+        ]
+    },
+    "params": [
+        {"name": "highlight", "select": {"type": "point", "on": "mouseover"}},
+        {"name": "select", "select": "point"},
+    ],
+    "mark": {"type": "bar", "fill": "#4C78A8", "stroke": "black", "cursor": "pointer"},
+    "encoding": {
+        "x": {"field": "a", "type": "ordinal"},
+        "y": {"field": "b", "type": "quantitative"},
+        "fillOpacity": {"condition": {"param": "select", "value": 1}, "value": 0.3},
+        "strokeWidth": {
+            "condition": [
+                {"param": "select", "empty": False, "value": 2},
+                {"param": "highlight", "empty": False, "value": 1},
+            ],
+            "value": 0,
+        },
+    },
+    "config": {"scale": {"bandPaddingInner": 0.2}},
+}
+
 st._legacy_vega_lite_chart(df, spec, use_container_width=True)
 st._legacy_vega_lite_chart(df, spec, use_container_width=True)
 st._legacy_vega_lite_chart(df, spec)
 st._legacy_vega_lite_chart(df, spec_with_width)
+st._legacy_vega_lite_chart(interactive_spec, None)
 
 # Screenshot comparison
 

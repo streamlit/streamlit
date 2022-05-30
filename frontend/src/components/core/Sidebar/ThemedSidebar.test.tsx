@@ -27,7 +27,7 @@ function getProps(
   return {
     appPages: [],
     onPageChange: jest.fn(),
-    currentPageName: "streamlit_app",
+    currentPageScriptHash: "page_hash",
     hasElements: true,
     hideSidebarNav: false,
     pageLinkBaseUrl: "",
@@ -60,8 +60,8 @@ describe("ThemedSidebar Component", () => {
     const wrapper = mount(<ThemedSidebar {...getProps({ appPages })} />)
 
     expect(wrapper.find("Sidebar").prop("appPages")).toEqual(appPages)
-    expect(wrapper.find("Sidebar").prop("currentPageName")).toBe(
-      "streamlit_app"
+    expect(wrapper.find("Sidebar").prop("currentPageScriptHash")).toBe(
+      "page_hash"
     )
     expect(typeof wrapper.find("Sidebar").prop("onPageChange")).toBe(
       "function"

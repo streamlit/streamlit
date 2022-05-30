@@ -44,6 +44,20 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.disabled, True)
 
+    def test_horizontal(self):
+        """Test that it can be called with horizontal param."""
+        st.radio("the label", ("m", "f"), horizontal=True)
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.horizontal, True)
+
+    def test_horizontal_default_value(self):
+        """Test that it can called with horizontal param value False by default."""
+        st.radio("the label", ("m", "f"))
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.horizontal, False)
+
     def test_valid_value(self):
         """Test that valid value is an int."""
         st.radio("the label", ("m", "f"), 1)
