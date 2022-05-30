@@ -205,7 +205,11 @@ class Slider extends React.PureComponent<Props, State> {
     if (slider && thumb) {
       const sliderPosition = slider.getBoundingClientRect()
       const thumbPosition = thumb.getBoundingClientRect()
+      const thumbContainer = thumb.parentElement
 
+      if (thumbContainer)
+        thumbContainer.style.left =
+          thumbPosition.left < sliderPosition.left ? "0.3rem" : "-0.3rem"
       thumb.style.left = thumbPosition.left < sliderPosition.left ? "0" : ""
       thumb.style.right = thumbPosition.right > sliderPosition.right ? "0" : ""
     }
