@@ -1049,6 +1049,7 @@ class TestScriptRunner(ScriptRunner):
             session_state=SessionState(),
             uploaded_file_mgr=UploadedFileManager(),
             initial_rerun_data=RerunData(),
+            user_info={"email": "test@test.com"},
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.

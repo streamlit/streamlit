@@ -13,11 +13,14 @@
 # limitations under the License.
 
 import asyncio
+import base64
+import binascii
 import logging
 import os
 import socket
 import sys
 import errno
+import json
 import time
 import traceback
 import click
@@ -469,6 +472,7 @@ class Server:
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=local_sources_watcher,
+            user_info={"email": "test@test.com"},
         )
 
         try:
@@ -676,12 +680,31 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
+
+        is_public_cloud_app = False
+
+        try:
+            header_content = ws.request.headers["X-Streamlit-User"]
+            payload = base64.b64decode(header_content)
+            user_obj = json.loads(payload)
+            email = user_obj["email"]
+            is_public_cloud_app = user_obj["isPublicCloudApp"]
+        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
+            email = "test@localhost.com"
+
+        user_info: Dict[str, Optional[str]] = dict()
+        if is_public_cloud_app:
+            user_info["email"] = None
+        else:
+            user_info["email"] = email
+
         session = AppSession(
             ioloop=self._ioloop,
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=local_sources_watcher,
+            user_info=user_info,
         )
 
         LOGGER.debug(

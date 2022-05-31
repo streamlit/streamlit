@@ -58,6 +58,7 @@ def _create_test_session(ioloop: Optional[IOLoop] = None) -> AppSession:
         uploaded_file_manager=MagicMock(),
         message_enqueued_callback=None,
         local_sources_watcher=MagicMock(),
+        user_info={"email": "test@test.com"},
     )
 
 
@@ -212,6 +213,7 @@ class AppSessionTest(unittest.TestCase):
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
             initial_rerun_data=RerunData(),
+            user_info={"email": "test@test.com"},
         )
 
         self.assertIsNotNone(session._scriptrunner)
@@ -367,6 +369,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
             page_script_hash="",
+            user_info={"email": "test@test.com"},
         )
         add_script_run_ctx(ctx=ctx)
 
