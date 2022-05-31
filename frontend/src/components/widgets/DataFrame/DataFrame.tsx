@@ -260,8 +260,6 @@ function DataFrame({
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
-  const minWidth = MIN_COLUMN_WIDTH + 3
-
   const onHeaderClick = React.useCallback(
     (index: number) => {
       let sortDirection = "asc"
@@ -290,7 +288,12 @@ function DataFrame({
     [sort, columns]
   )
 
-  // Calculate min height for the resizable container. header + one column, and +3 pixels for borders
+  // Calculate min width for the resizable table container.
+  // Based on one column at minimum width + 2 for borders + 1 to prevent overlap problem with selection ring.
+  const minWidth = MIN_COLUMN_WIDTH + 3
+
+  // Calculate min height for the resizable table container.
+  // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
   const minHeight = 2 * ROW_HEIGHT + 3
 
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders

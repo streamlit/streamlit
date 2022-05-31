@@ -45,7 +45,7 @@ export function determineColumnType(quiverType: QuiverType): ColumnType {
   if (!dataTypeName) {
     // Use text column as fallback
     columnType = ColumnType.Text
-  } else if (["bool"].includes(dataTypeName)) {
+  } else if (dataTypeName === "bool") {
     columnType = ColumnType.Boolean
   } else if (["int64", "float64", "range"].includes(dataTypeName)) {
     // The default index in pandas uses a range type.
@@ -194,12 +194,12 @@ export function fillCellTemplate(
   }
 
   if (cssStyles && quiverCell.cssId) {
-    const themeOverride = {}
+    const themeOverride = {} as Partial<GlideTheme>
 
     // Extract and apply the font color
     const fontColor = extractCssProperty(quiverCell.cssId, "color", cssStyles)
     if (fontColor) {
-      ;(themeOverride as GlideTheme).textDark = fontColor
+      themeOverride.textDark = fontColor
     }
 
     // Extract and apply the background color
@@ -209,7 +209,7 @@ export function fillCellTemplate(
       cssStyles
     )
     if (backgroundColor) {
-      ;(themeOverride as GlideTheme).bgCell = backgroundColor
+      themeOverride.bgCell = backgroundColor
     }
 
     if (themeOverride) {

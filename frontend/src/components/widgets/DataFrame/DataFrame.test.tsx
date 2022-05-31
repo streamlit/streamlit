@@ -65,21 +65,21 @@ describe("DataFrame widget", () => {
       useDataLoader(new Quiver({ data: TEN_BY_TEN }))
     )
 
-    // Resize column 1 to size of 123:
+    // Resize first column to size of 123:
     act(() => {
       const { columns, onColumnResize } = result.current
       onColumnResize?.(columns[0], 123)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(123)
 
-    // Resize column 1 to size of 321:
+    // Resize first column to size of 321:
     act(() => {
       const { columns, onColumnResize } = result.current
       onColumnResize?.(columns[0], 321)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
 
-    // Column 0 should stay at previous value if other column is resized
+    // First column should stay at previous value if other column is resized
     act(() => {
       const { columns, onColumnResize } = result.current
       onColumnResize?.(columns[1], 88)
@@ -117,7 +117,7 @@ describe("DataFrame widget", () => {
   it("should correctly sort the table ascending order", () => {
     const tableColumns = getColumns(new Quiver({ data: TEN_BY_TEN }))
 
-    // Add descending sort for first column
+    // Add ascending sort for first column
     const { result } = renderHook(() =>
       useDataLoader(new Quiver({ data: TEN_BY_TEN }), {
         column: tableColumns[0],
