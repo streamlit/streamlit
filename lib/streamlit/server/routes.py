@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import json
+import os
 
 import tornado.web
 from urllib.parse import quote, unquote_plus
 
-from streamlit import config
+from streamlit import config, file_util
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.string_util import generate_download_filename_from_title
@@ -82,6 +83,13 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             url_path = "/".join(url_parts[1:])
 
         return super().parse_url_path(url_path)
+
+    def write_error(self, status_code: int, **kwargs) -> None:
+        if status_code == 404:
+            index_file = os.path.join(file_util.get_static_dir(), "index.html")
+            self.render(index_file)
+        else:
+            super().write_error(status_code, **kwargs)
 
 
 class AssetsFileHandler(tornado.web.StaticFileHandler):
