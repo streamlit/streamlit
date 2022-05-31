@@ -26,6 +26,7 @@ import {
 } from "@glideapps/glide-data-grid"
 
 import { DataFrameCell, Quiver, Type as QuiverType } from "src/lib/Quiver"
+import { notNullOrUndefined } from "src/lib/utils"
 
 export enum ColumnType {
   Text = "text",
@@ -227,8 +228,7 @@ export function fillCellTemplate(
       ...cellTemplate,
       data:
         typeof quiverCell.content === "string" ||
-        quiverCell.content === undefined ||
-        quiverCell.content === null
+        !notNullOrUndefined(quiverCell.content) // don't use formattedContents for null/undefined
           ? quiverCell.content
           : formattedContents,
       displayData: formattedContents,
@@ -247,10 +247,7 @@ export function fillCellTemplate(
 
     return {
       ...cellTemplate,
-      data:
-        cellData !== undefined && cellData !== null
-          ? Number(cellData)
-          : undefined,
+      data: notNullOrUndefined(cellData) ? Number(cellData) : undefined,
       displayData: formattedContents,
     } as NumberCell
   }
@@ -263,16 +260,17 @@ export function fillCellTemplate(
   }
 
   if (cellKind === GridCellKind.Bubble) {
+    // TODO(lukasmasuch): we use JSON.parse(JSON.stringify) here to handle type conversations to base types.
+    // This could be improved by introducing some custom code for handling type conversations.
     return {
       ...cellTemplate,
-      data:
-        quiverCell.content !== undefined && quiverCell.content !== null
-          ? JSON.parse(
-              JSON.stringify(quiverCell.content, (_key, value) =>
-                typeof value === "bigint" ? Number(value) : value
-              )
+      data: notNullOrUndefined(quiverCell.content)
+        ? JSON.parse(
+            JSON.stringify(quiverCell.content, (_key, value) =>
+              typeof value === "bigint" ? Number(value) : value
             )
-          : [],
+          )
+        : [],
     } as BubbleCell
   }
 
