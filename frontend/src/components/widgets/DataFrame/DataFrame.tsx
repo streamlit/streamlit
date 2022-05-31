@@ -127,6 +127,28 @@ type ColumnSortConfig = {
 }
 
 /**
+ * Updates the column headers based on the sorting configuration.
+ */
+function updateSortingHeader(
+  columns: GridColumnWithCellTemplate[],
+  sort: ColumnSortConfig | undefined
+): GridColumnWithCellTemplate[] {
+  if (sort === undefined) {
+    return columns
+  }
+  return columns.map(column => {
+    if (column.id === sort.column.id) {
+      return {
+        ...column,
+        title:
+          sort.direction === "asc" ? `↑ ${column.title}` : `↓ ${column.title}`,
+      }
+    }
+    return column
+  })
+}
+
+/**
  * Create return type for useDataLoader hook based on the DataEditorProps.
  */
 type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
@@ -150,8 +172,8 @@ export function useDataLoader(
     () => new Map()
   )
 
-  let columns = getColumns(element)
-  columns = columns.map(column => {
+  const columns = getColumns(element).map(column => {
+    // Apply column widths from state
     if (column.id && columnSizes.has(column.id)) {
       return {
         ...column,
@@ -213,25 +235,12 @@ export function useDataLoader(
     sort,
   })
 
-  if (sort !== undefined) {
-    columns = columns.map(column => {
-      if (column.id === sort.column.id) {
-        return {
-          ...column,
-          title:
-            sort.direction === "asc"
-              ? `↑ ${column.title}`
-              : `↓ ${column.title}`,
-        }
-      }
-      return column
-    })
-  }
+  const updatedColumns = updateSortingHeader(columns, sort)
 
   return {
     numRows,
     numIndices,
-    columns,
+    columns: updatedColumns,
     getCellContent: getCellContentSorted,
     onColumnResize,
   }
