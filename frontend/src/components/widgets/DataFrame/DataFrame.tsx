@@ -44,6 +44,12 @@ import ThemedDataFrameContainer from "./DataFrameContainer"
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
 const MAX_COLUMN_WIDTH = 600
+// Min width for the resizable table container:
+// Based on one column at minimum width + 2 for borders + 1 to prevent overlap problem with selection ring.
+const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
+// Min height for the resizable table container:
+// Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
+const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
 
 /**
  * The GridColumn type extended with a function to get a template of the given type.
@@ -288,21 +294,13 @@ function DataFrame({
     [sort, columns]
   )
 
-  // Calculate min width for the resizable table container.
-  // Based on one column at minimum width + 2 for borders + 1 to prevent overlap problem with selection ring.
-  const minWidth = MIN_COLUMN_WIDTH + 3
-
-  // Calculate min height for the resizable table container.
-  // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
-  const minHeight = 2 * ROW_HEIGHT + 3
-
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
-  let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, minHeight)
+  let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, MIN_TABLE_HEIGHT)
   let height = Math.min(maxHeight, 400)
 
   if (propHeight) {
     // User has explicitly configured a height
-    height = Math.max(propHeight, minHeight)
+    height = Math.max(propHeight, MIN_TABLE_HEIGHT)
     maxHeight = Math.max(propHeight, maxHeight)
   }
 
@@ -310,9 +308,9 @@ function DataFrame({
     <ThemedDataFrameContainer
       width={propWidth}
       height={height}
-      minHeight={minHeight}
+      minHeight={MIN_TABLE_HEIGHT}
       maxHeight={maxHeight}
-      minWidth={minWidth}
+      minWidth={MIN_TABLE_WIDTH}
       maxWidth={propWidth}
       onBlur={() => {
         // If the container loses focus, clear the current selection
