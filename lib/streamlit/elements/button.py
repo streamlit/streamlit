@@ -359,7 +359,13 @@ class ButtonMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall_file(coordinates, data, proto_download_button, mimetype, file_name=None):
+def marshall_file(
+    coordinates: str,
+    data: DownloadButtonDataType,
+    proto_download_button: DownloadButtonProto,
+    mimetype: Optional[str],
+    file_name: Optional[str] = None
+) -> None:
     if isinstance(data, str):
         data = data.encode()
         mimetype = mimetype or "text/plain"
