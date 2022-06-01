@@ -64,10 +64,4 @@ describe("st._arrow_table styling", () => {
       "arrow-table-colored-cells"
     );
   });
-
-  it("raises an exception when the dataframe has a Styler", () => {
-    cy.get(".element-container .stAlert")
-      .should("have.length", 1)
-      .matchThemedSnapshots("styler-exception");
-  });
 });

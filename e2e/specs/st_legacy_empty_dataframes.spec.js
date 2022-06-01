@@ -17,7 +17,6 @@
 
 describe("Legacy Dataframes", () => {
   const DF_SELECTOR = ".stDataFrame";
-  const TABLE_SELECTOR = "[data-testid='stTable'] > table";
 
   before(() => {
     // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
@@ -31,66 +30,9 @@ describe("Legacy Dataframes", () => {
     });
   });
 
-  it("have consistent empty list visuals", () => {
-    cy.getIndexed(".element-container", 1).each(el => {
-      return cy.wrap(el).matchThemedSnapshots("legacy_empty_dataframes_list");
-    });
-  });
-
   it("have consistent empty visuals", () => {
-    cy.get(DF_SELECTOR)
-      .filter(idx => idx >= 0 && idx <= 5)
-      .each((el, idx) => {
-        return cy
-          .wrap(el)
-          .matchThemedSnapshots(`legacy_empty_dataframes${idx}`);
-      });
-  });
-
-  it("have consistent empty one-column visuals", () => {
-    cy.get(DF_SELECTOR)
-      .filter(idx => idx >= 6 && idx <= 7)
-      .each((el, idx) => {
-        // Snapshot the parent instead of `.stDataFrame` so we have a larger
-        // bounding box and a lower percentage difference on the snapshot diff
-        return cy
-          .wrap(el)
-          .parent()
-          .matchThemedSnapshots(`legacy_empty_dataframes_one_col${idx}`);
-      });
-  });
-
-  it("have consistent empty two-column visuals", () => {
-    cy.get(DF_SELECTOR)
-      .filter(idx => idx >= 8 && idx <= 9)
-      .each((el, idx) => {
-        return cy
-          .wrap(el)
-          .matchThemedSnapshots(`legacy_empty_dataframes_two_col${idx}`);
-      });
-  });
-
-  it("have consistent empty table visuals", () => {
-    cy.get(TABLE_SELECTOR)
-      .filter(idx => idx >= 0 && idx <= 3)
-      .each((el, idx) => {
-        return cy.wrap(el).matchThemedSnapshots(`legacy_empty_tables${idx}`);
-      });
-  });
-
-  it("have consistent empty one-column table visuals", () => {
-    cy.getIndexed(TABLE_SELECTOR, 4).each((el, idx) => {
-      return cy
-        .wrap(el)
-        .matchThemedSnapshots(`legacy_empty_tables_one_col${idx}`);
-    });
-  });
-
-  it("have consistent empty two-column table visuals", () => {
-    cy.getIndexed(TABLE_SELECTOR, 5).each((el, idx) => {
-      return cy
-        .wrap(el)
-        .matchThemedSnapshots(`legacy_empty_tables_two_col${idx}`);
+    cy.get(DF_SELECTOR).each((el, idx) => {
+      return cy.wrap(el).matchThemedSnapshots(`legacy_empty_dataframes${idx}`);
     });
   });
 });

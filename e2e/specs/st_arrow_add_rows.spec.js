@@ -19,7 +19,7 @@ describe("st._arrow_add_rows", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
     // Increasing timeout since we're waiting for
-    // dataframes, tables, and charts to be rendered.
+    // dataframes, and charts to be rendered.
     Cypress.config("defaultCommandTimeout", 30000);
 
     cy.loadApp("http://localhost:3000/");
@@ -56,15 +56,6 @@ describe("st._arrow_add_rows", () => {
     );
   });
 
-  it("correctly adds rows to the dataframe", () => {
-    cy.get(
-      ".element-container .stDataFrame [data-testid='StyledDataFrameRowHeaderCell']"
-    ).should("have.length", 4);
-    cy.get(
-      ".element-container .stDataFrame [data-testid='StyledDataFrameDataCell']"
-    ).should("have.length", 12);
-  });
-
   it("correctly adds rows to charts", () => {
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']").each(
       (element, index) => {
@@ -73,6 +64,12 @@ describe("st._arrow_add_rows", () => {
           .matchThemedSnapshots(`arrowstArrowVegaLiteChart-${index}`);
       }
     );
+  });
+
+  it("correctly adds rows to dataframe", () => {
+    cy.get(".element-container .stDataFrame").each((element, index) => {
+      return cy.get(element).matchThemedSnapshots(`dataFrame-${index}`);
+    });
   });
 
   it("raises an exception when the shapes don't match", () => {
