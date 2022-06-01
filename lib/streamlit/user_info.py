@@ -1,6 +1,7 @@
-from streamlit.scriptrunner import get_script_run_ctx as _get_script_run_ctx
+from typing import Mapping, Optional
+
 from streamlit.errors import StreamlitAPIException
-from typing import Mapping, Dict, Optional, Iterator
+from streamlit.scriptrunner import get_script_run_ctx as _get_script_run_ctx
 
 
 class UserInfoProxy(Mapping[str, Optional[str]]):
