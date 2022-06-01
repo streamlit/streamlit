@@ -77,6 +77,7 @@ const ThemedApp = (): JSX.Element => {
             availableThemes,
           }}
         />
+        {/* The data grid requires one root level portal element for rendering cell overlays */}
         <StyledDataFrameOverlay id="portal" />
       </ThemeProvider>
     </BaseProvider>
