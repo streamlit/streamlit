@@ -22,12 +22,12 @@ if TYPE_CHECKING:
 
 
 class AlertMixin:
-    def error(self, body: str) -> "DeltaGenerator":
+    def error(self, body: object) -> "DeltaGenerator":
         """Display error message.
 
         Parameters
         ----------
-        body : str
+        body : object
             The error text to display.
 
         Example
@@ -40,12 +40,12 @@ class AlertMixin:
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
 
-    def warning(self, body: str) -> "DeltaGenerator":
+    def warning(self, body: object) -> "DeltaGenerator":
         """Display warning message.
 
         Parameters
         ----------
-        body : str
+        body : object
             The warning text to display.
 
         Example
@@ -58,12 +58,12 @@ class AlertMixin:
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
-    def info(self, body: str) -> "DeltaGenerator":
+    def info(self, body: object) -> "DeltaGenerator":
         """Display an informational message.
 
         Parameters
         ----------
-        body : str
+        body : object
             The info text to display.
 
         Example
@@ -76,12 +76,12 @@ class AlertMixin:
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
-    def success(self, body: str) -> "DeltaGenerator":
+    def success(self, body: object) -> "DeltaGenerator":
         """Display a success message.
 
         Parameters
         ----------
-        body : str
+        body : object
             The success text to display.
 
         Example
