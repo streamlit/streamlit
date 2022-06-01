@@ -140,7 +140,6 @@ describe("ThemedApp", () => {
 
   it("contains the overlay portal required by the interactive table", () => {
     const wrapper = mount(<ThemedApp />)
-
-    expect(wrapper.find("#portal").length).toBe(1)
+    expect(wrapper.find("div#portal")).toHaveLength(1)
   })
 })
