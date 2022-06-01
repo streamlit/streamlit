@@ -1,4 +1,5 @@
 from streamlit.scriptrunner import get_script_run_ctx as _get_script_run_ctx
+from streamlit.errors import StreamlitAPIException
 from typing import Mapping, Dict, Optional, Iterator
 
 
@@ -22,6 +23,12 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
                 return user_info[key]
             except KeyError:
                 raise AttributeError
+
+    def __setattr__(self, name, value):
+        raise StreamlitAPIException("st.experimental_user cannot be modified")
+
+    def __setitem__(self, key, value):
+        raise StreamlitAPIException("st.experimental_user cannot be modified")
 
     def __iter__(self):
         ctx = _get_script_run_ctx()

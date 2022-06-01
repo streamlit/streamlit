@@ -3,6 +3,7 @@ import threading
 import streamlit as st
 
 from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.errors import StreamlitAPIException
 from streamlit.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
@@ -32,6 +33,50 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
         """Test that an error is raised when called non existed key."""
         with self.assertRaises(KeyError):
             st.write(st.experimental_user["key"])
+
+    def test_user_cannot_be_modified_existing_key(self):
+        """
+        Test that an error is raised when try to assign new value to existing key.
+        """
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.experimental_user["email"] = "NEW_VALUE"
+
+        self.assertEqual(
+            str(e.exception), "st.experimental_user cannot be modified"
+        )
+
+    def test_user_cannot_be_modified_new_key(self):
+        """
+        Test that an error is raised when try to assign new value to new key.
+        """
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.experimental_user["foo"] = "bar"
+
+        self.assertEqual(
+            str(e.exception), "st.experimental_user cannot be modified"
+        )
+
+    def test_user_cannot_be_modified_existing_attr(self):
+        """
+        Test that an error is raised when try to assign new value to existing attr.
+        """
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.experimental_user.email = "bar"
+
+        self.assertEqual(
+            str(e.exception), "st.experimental_user cannot be modified"
+        )
+
+    def test_user_cannot_be_modified_new_attr(self):
+        """
+        Test that an error is raised when try to assign new value to new attr.
+        """
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.experimental_user.foo = "bar"
+
+        self.assertEqual(
+            str(e.exception), "st.experimental_user cannot be modified"
+        )
 
     def test_user_len(self):
         self.assertEqual(len(st.experimental_user), 1)
