@@ -1,7 +1,8 @@
-from typing import Mapping, Optional
+from typing import Iterator, Mapping, NoReturn, Optional
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.scriptrunner import get_script_run_ctx as _get_script_run_ctx
+from streamlit.scriptrunner.script_run_context import UserInfo
 
 
 class UserInfoProxy(Mapping[str, Optional[str]]):
@@ -9,13 +10,13 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
     A dict like proxy object for accessing information about current user.
     """
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Optional[str]:
         ctx = _get_script_run_ctx()
         if ctx is not None:
             user_info = ctx.user_info
             return user_info[key]
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Optional[str]:
         ctx = _get_script_run_ctx()
         if ctx is not None:
             user_info = ctx.user_info
@@ -25,13 +26,13 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
             except KeyError:
                 raise AttributeError
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Optional[str]) -> NoReturn:
         raise StreamlitAPIException("st.experimental_user cannot be modified")
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, name: str, value: Optional[str]) -> NoReturn:
         raise StreamlitAPIException("st.experimental_user cannot be modified")
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         ctx = _get_script_run_ctx()
         if ctx is not None:
             return iter(ctx.user_info)
@@ -42,7 +43,7 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
             return len(ctx.user_info)
         return 0
 
-    def to_dict(self):
+    def to_dict(self) -> UserInfo:
         ctx = _get_script_run_ctx()
         if ctx is not None:
             return ctx.user_info
