@@ -1,6 +1,7 @@
 import React from "react"
 import { BaseProvider } from "baseui"
-import { Global, useTheme } from "@emotion/react"
+import { Global } from "@emotion/react"
+import styled from "@emotion/styled"
 
 import ThemeProvider from "src/components/core/ThemeProvider"
 import {
@@ -13,31 +14,22 @@ import {
   removeCachedTheme,
   setCachedTheme,
   ThemeConfig,
-  Theme,
 } from "src/theme"
 
 import AppWithScreencast from "./App"
 
-function DataFrameOverlay(): React.ReactElement {
-  const theme: Theme = useTheme()
-
-  // The glide-data-grid requires one root level portal element for rendering the cell overlays:
-  // https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#htmlcss-prerequisites
-  // This is added to the body in ThemedApp
-
-  return (
-    <div
-      id="portal"
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        zIndex: theme.zIndices.tablePortal,
-        lineHeight: "100%",
-      }}
-    />
-  )
-}
+/**
+ * The glide-data-grid requires one root level portal element for rendering the cell overlays:
+ * https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#htmlcss-prerequisites
+ * This is added to the body in ThemedApp.
+ */
+const StyledDataFrameOverlay = styled.div(({ theme }) => ({
+  position: "fixed",
+  top: 0,
+  left: 0,
+  zIndex: theme.zIndices.tablePortal,
+  lineHeight: "100%",
+}))
 
 const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()
@@ -98,7 +90,7 @@ const ThemedApp = (): JSX.Element => {
             availableThemes,
           }}
         />
-        <DataFrameOverlay />
+        <StyledDataFrameOverlay id="portal" />
       </ThemeProvider>
     </BaseProvider>
   )
