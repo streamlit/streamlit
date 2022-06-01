@@ -32,7 +32,7 @@ ST_BOKEH_VERSION: Final = "2.4.1"
 class BokehMixin:
     def bokeh_chart(
         self,
-        figure: Figure,
+        figure: "Figure",
         use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Display an interactive Bokeh chart.
