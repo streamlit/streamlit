@@ -15,7 +15,8 @@
 from datetime import date, time, datetime, timedelta, timezone
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
-from typing import Any, List, cast, Optional
+from typing import Any, List, cast, Optional, Union, Sequence
+from typing_extensions import TypeAlias
 from textwrap import dedent
 
 import streamlit
@@ -33,14 +34,19 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 
+SliderScalar: TypeAlias = Union[int, float, date, time, datetime]
+SliderValue: TypeAlias = Union[SliderScalar, Sequence[SliderScalar]]
+Step: TypeAlias = Union[int, float, timedelta]
+
+
 class SliderMixin:
     def slider(
         self,
         label: str,
-        min_value=None,
-        max_value=None,
-        value=None,
-        step=None,
+        min_value: Optional[SliderScalar] = None,
+        max_value: Optional[SliderScalar] = None,
+        value: Optional[SliderValue] = None,
+        step: Optional[Step] = None,
         format: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
