@@ -341,7 +341,7 @@ function DataFrame({
         rowHeight={ROW_HEIGHT}
         headerHeight={ROW_HEIGHT}
         getCellContent={getCellContent}
-        onColumnResized={onColumnResize}
+        onColumnResize={onColumnResize}
         // Freeze all index columns:
         freezeColumns={numIndices}
         smoothScrollX={true}

@@ -24,6 +24,7 @@ import { Theme } from "src/theme"
 import {
   StyledFullScreenFrame,
   StyledFullScreenButton,
+  StyledExpandedFrame,
 } from "./styled-components"
 
 export type Size = {
@@ -148,9 +149,13 @@ class FullScreenWrapper extends PureComponent<Props, State> {
         >
           <Icon content={buttonImage} />
         </StyledFullScreenButton>
-        {expanded
-          ? children({ width: fullWidth, height: fullHeight, expanded })
-          : children({ width, height, expanded })}
+        {expanded ? (
+          <StyledExpandedFrame>
+            {children({ width: fullWidth, height: fullHeight, expanded })}
+          </StyledExpandedFrame>
+        ) : (
+          children({ width, height, expanded })
+        )}
       </StyledFullScreenFrame>
     )
   }
