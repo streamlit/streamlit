@@ -36,13 +36,13 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
     def __setitem__(self, key: str, value: str) -> NoReturn:
         raise StreamlitAPIException("st.experimental_user cannot be modified")
 
-    def __iter__(self) -> Optional[Iterator[str]]:
+    def __iter__(self) -> Iterator[str]:
         ctx = _get_script_run_ctx()
         if ctx is not None:
             user_info = ctx.user_info
             return iter(user_info)
         else:
-            return None
+            return []
 
     def __len__(self) -> int:
         ctx = _get_script_run_ctx()
