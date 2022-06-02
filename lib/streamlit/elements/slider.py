@@ -13,39 +13,137 @@
 # limitations under the License.
 
 from datetime import date, time, datetime, timedelta, timezone
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
-from typing import Any, List, cast, Optional, Union, Sequence
-from typing_extensions import TypeAlias
 from textwrap import dedent
+from types import MappingProxyType
+from typing import (
+    Any,
+    List,
+    cast,
+    Mapping,
+    Optional,
+    Union,
+    Sequence,
+    Type,
+    TypeVar,
+    TYPE_CHECKING,
+)
+from typing import Iterable
+from typing import Tuple
 
-import streamlit
+import attr
+from typing_extensions import Final, TypeAlias, TypeGuard
+
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.type_util import Key, to_key
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 
 SliderScalar: TypeAlias = Union[int, float, date, time, datetime]
-SliderValue: TypeAlias = Union[SliderScalar, Sequence[SliderScalar]]
+SliderScalarT = TypeVar("SliderScalarT", bound=SliderScalar)
 Step: TypeAlias = Union[int, float, timedelta]
+
+
+SUPPORTED_TYPES: Final[
+    Mapping[
+        Type[SliderScalar],
+        SliderProto.DataType.ValueType,
+    ],
+] = MappingProxyType(
+    {
+        int: SliderProto.INT,
+        float: SliderProto.FLOAT,
+        datetime: SliderProto.DATETIME,
+        date: SliderProto.DATE,
+        time: SliderProto.TIME,
+    }
+)
+
+
+TIMELIKE_TYPES: Final = {SliderProto.DATETIME, SliderProto.TIME, SliderProto.DATE}
+
+
+@attr.s(auto_attribs=True, frozen=True, slots=True)
+class SliderValues:
+    value: Union[SliderScalarT, Sequence[SliderScalarT]] = None
+    min_value: Optional[SliderScalarT] = None
+    max_value: Optional[SliderScalarT] = None
+
+
+def maybe_default(
+    value: Union[None, SliderScalarT, Sequence[SliderScalarT]],
+    min_value: Optional[SliderScalarT],
+    max_value: Optional[SliderScalarT],
+) -> Union[SliderScalarT, Sequence[SliderScalarT]]:
+    # Set value default.
+    if value is None:
+        if min_value is not None:
+            return min_value
+        if max_value is not None:
+            return max_value
+        return 0
+    return value
+
+
+def _parse_slider_value(
+    value: Union[None, SliderScalarT, Sequence[SliderScalarT]],
+    min_value: Optional[SliderScalarT],
+    max_value: Optional[SliderScalarT],
+) -> Union[
+    Tuple[()],
+    Tuple[SliderScalarT],
+    Tuple[SliderScalarT, SliderScalarT],
+]:
+    value = maybe_default(value=value, min_value=min_value, max_value=max_value)
+
+    def single_value(maybe_value: object) -> TypeGuard[SliderScalarT]:
+        return isinstance(value, tuple(SUPPORTED_TYPES.keys()))
+
+    def range_value(maybe_value: object) -> TypeGuard[Sequence[SliderScalarT]]:
+        return isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
+
+    # Ensure that the value is either a single value or a range of values.
+    if not single_value and not range_value:
+        raise StreamlitAPIException(
+            "Slider value should either be an int/float/datetime or a list/tuple of "
+            "0 to 2 ints/floats/datetimes"
+        )
+
+    # Simplify future logic by always making value a tuple
+    if single_value:
+        value = (value,)
+
+    def all_same_type(items: Iterable[SliderScalar]) -> bool:
+        return len(set(map(type, items))) < 2
+
+    if not all_same_type(value):
+        raise StreamlitAPIException(
+            "Slider tuple/list components must be of the same type.\n"
+            f"But were: {list(map(type, value))}"
+        )
+    return value
 
 
 class SliderMixin:
     def slider(
         self,
         label: str,
-        min_value: Optional[SliderScalar] = None,
-        max_value: Optional[SliderScalar] = None,
-        value: Optional[SliderValue] = None,
+        min_value: Optional[SliderScalarT] = None,
+        max_value: Optional[SliderScalarT] = None,
+        value: Union[None, SliderScalarT, Sequence[SliderScalarT]] = None,
         step: Optional[Step] = None,
         format: Optional[str] = None,
         key: Optional[Key] = None,
@@ -55,7 +153,7 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ):
+    ) -> Union[SliderScalarT, Tuple[SliderScalarT, SliderScalarT]]:
         """Display a slider widget.
 
         This supports int, float, date, time, and datetime types.
@@ -162,7 +260,7 @@ class SliderMixin:
             value=value,
             step=step,
             format=format,
-            key=key,
+            key=to_key(key),
             help=help,
             on_change=on_change,
             args=args,
@@ -174,12 +272,12 @@ class SliderMixin:
     def _slider(
         self,
         label: str,
-        min_value=None,
-        max_value=None,
-        value=None,
-        step=None,
-        format=None,
-        key: Optional[Key] = None,
+        min_value: Optional[SliderScalarT] = None,
+        max_value: Optional[SliderScalarT] = None,
+        value: Union[None, SliderScalarT, Sequence[SliderScalarT]] = None,
+        step: Optional[Step] = None,
+        format: Optional[str] = None,
+        key: Optional[str] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -187,45 +285,11 @@ class SliderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ):
-        key = to_key(key)
+    ) -> Union[SliderScalarT, Tuple[SliderScalarT, SliderScalarT]]:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        # Set value default.
-        if value is None:
-            value = min_value if min_value is not None else 0
-
-        SUPPORTED_TYPES = {
-            int: SliderProto.INT,
-            float: SliderProto.FLOAT,
-            datetime: SliderProto.DATETIME,
-            date: SliderProto.DATE,
-            time: SliderProto.TIME,
-        }
-        TIMELIKE_TYPES = (SliderProto.DATETIME, SliderProto.TIME, SliderProto.DATE)
-
-        # Ensure that the value is either a single value or a range of values.
-        single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
-        range_value = isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
-        if not single_value and not range_value:
-            raise StreamlitAPIException(
-                "Slider value should either be an int/float/datetime or a list/tuple of "
-                "0 to 2 ints/floats/datetimes"
-            )
-
-        # Simplify future logic by always making value a list
-        if single_value:
-            value = [value]
-
-        def all_same_type(items):
-            return len(set(map(type, items))) < 2
-
-        if not all_same_type(value):
-            raise StreamlitAPIException(
-                "Slider tuple/list components must be of the same type.\n"
-                f"But were: {list(map(type, value))}"
-            )
+        value = _parse_slider_value(value)
 
         if len(value) == 0:
             data_type = SliderProto.INT
@@ -237,7 +301,7 @@ class SliderMixin:
         if data_type == SliderProto.TIME:
             datetime_min = time.min.replace(tzinfo=value[0].tzinfo)
             datetime_max = time.max.replace(tzinfo=value[0].tzinfo)
-        if data_type in (SliderProto.DATETIME, SliderProto.DATE):
+        if data_type in {SliderProto.DATETIME, SliderProto.DATE}:
             datetime_min = value[0] - timedelta(days=14)
             datetime_max = value[0] + timedelta(days=14)
 
@@ -450,7 +514,7 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        def deserialize_slider(ui_value: Optional[List[float]], widget_id=""):
+        def deserialize_slider(ui_value: Optional[List[float]], widget_id: str = ""):
             if ui_value is not None:
                 val = ui_value
             else:
@@ -483,8 +547,8 @@ class SliderMixin:
             return value
 
         widget_state = register_widget(
-            "slider",
-            slider_proto,
+            element_type="slider",
+            element_proto=slider_proto,
             user_key=key,
             on_change_handler=on_change,
             args=args,
@@ -505,6 +569,6 @@ class SliderMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
