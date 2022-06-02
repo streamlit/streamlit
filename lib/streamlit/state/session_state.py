@@ -21,6 +21,7 @@ from typing import (
     KeysView,
     cast,
     Dict,
+    Generic,
     Iterator,
     MutableMapping,
     Optional,
@@ -29,14 +30,14 @@ from typing import (
     Callable,
     Set,
     List,
+    TypeVar,
 )
 
 import attr
-
 from pympler.asizeof import asizeof
+from typing_extensions import Final, Literal
 
 import streamlit as st
-from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -44,12 +45,12 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 if TYPE_CHECKING:
     from streamlit.server.server import SessionInfo
 
-logger = _logger.get_logger(__name__)
+T = TypeVar("T")
 
-GENERATED_WIDGET_KEY_PREFIX = "$$GENERATED_WIDGET_KEY"
+GENERATED_WIDGET_KEY_PREFIX: Final = "$$GENERATED_WIDGET_KEY"
 
-STREAMLIT_INTERNAL_KEY_PREFIX = "$$STREAMLIT_INTERNAL_KEY"
-SCRIPT_RUN_WITHOUT_ERRORS_KEY = (
+STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
+SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
 )
 
@@ -68,26 +69,27 @@ class Value:
     value: Any
 
 
-WState = Union[Serialized, Value]
+WState = Union[Value, Serialized]
 
 WidgetArgs = Tuple[Any, ...]
+WidgetKwargs = Dict[str, Any]
 WidgetCallback = Callable[..., None]
+
 # A deserializer receives the value from whatever field is set on the
 # WidgetState proto, and returns a regular python value. A serializer
 # receives a regular python value, and returns something suitable for
 # a value field on WidgetState proto. They should be inverses.
-WidgetDeserializer = Callable[[Any, str], Any]
-WidgetSerializer = Callable[[Any], Any]
-WidgetKwargs = Dict[str, Any]
+WidgetDeserializer = Callable[[Any, str], T]
+WidgetSerializer = Callable[[T], Any]
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class WidgetMetadata:
+class WidgetMetadata(Generic[T]):
     """Metadata associated with a single widget. Immutable."""
 
     id: str
-    deserializer: WidgetDeserializer = attr.ib(repr=False)
-    serializer: WidgetSerializer = attr.ib(repr=False)
+    deserializer: WidgetDeserializer[T] = attr.ib(repr=False)
+    serializer: WidgetSerializer[T] = attr.ib(repr=False)
     value_type: Any
 
     # An optional user-code callback invoked when the widget's value changes.
@@ -106,7 +108,7 @@ class WStates(MutableMapping[str, Any]):
     """
 
     states: Dict[str, WState] = attr.Factory(dict)
-    widget_metadata: Dict[str, WidgetMetadata] = attr.Factory(dict)
+    widget_metadata: Dict[str, WidgetMetadata[Any]] = attr.Factory(dict)
 
     def __getitem__(self, k: str) -> Any:
         """Return the value of the widget with the given key.
@@ -191,7 +193,7 @@ class WStates(MutableMapping[str, Any]):
         """Set a widget's deserialized value, overwriting any existing value it has."""
         self[k] = Value(v)
 
-    def set_widget_metadata(self, widget_meta: WidgetMetadata) -> None:
+    def set_widget_metadata(self, widget_meta: WidgetMetadata[Any]) -> None:
         """Set a widget's metadata, overwriting any existing metadata it has."""
         self.widget_metadata[widget_meta.id] = widget_meta
 
@@ -276,6 +278,12 @@ def _missing_key_error_message(key: str) -> str:
         f'st.session_state has no key "{key}". Did you forget to initialize it? '
         f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
     )
+
+
+@attr.s(auto_attribs=True, frozen=True, slots=True)
+class WidgetStateReport(Generic[T]):
+    value: T
+    change: bool
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -566,7 +574,7 @@ class SessionState:
             if (k in widget_ids or not _is_widget_id(k))
         }
 
-    def _set_widget_metadata(self, widget_metadata: WidgetMetadata) -> None:
+    def _set_widget_metadata(self, widget_metadata: WidgetMetadata[Any]) -> None:
         """Set a widget's metadata."""
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
@@ -585,15 +593,15 @@ class SessionState:
         self._key_id_mapping[user_key] = widget_id
 
     def register_widget(
-        self, metadata: WidgetMetadata, user_key: Optional[str]
-    ) -> Tuple[Any, bool]:
+        self, metadata: WidgetMetadata[T], user_key: Optional[str]
+    ) -> WidgetStateReport[T]:
         """Register a widget with the SessionState.
 
         Returns
         -------
-        Tuple[Any, bool]
-            The widget's current value, and a bool that will be True if the
-            frontend needs to be updated with the current value.
+        WidgetStateReport[T]
+            Contains the widget's current value, and a bool that will be True
+            if the frontend needs to be updated with the current value.
         """
         widget_id = metadata.id
 
@@ -612,7 +620,7 @@ class SessionState:
         # Get the current value of the widget for use as its return value.
         # We return a copy, so that reference types can't be accidentally
         # mutated by user code.
-        widget_value = self[widget_id]
+        widget_value = cast(T, self[widget_id])
         widget_value = deepcopy(widget_value)
 
         # widget_value_changed indicates to the caller that the widget's
@@ -621,7 +629,7 @@ class SessionState:
             user_key
         )
 
-        return widget_value, widget_value_changed
+        return WidgetStateReport(widget_value, widget_value_changed)
 
     def get_stats(self) -> List[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))

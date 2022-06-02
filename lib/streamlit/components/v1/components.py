@@ -190,7 +190,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 return ui_value
 
             ctx = get_script_run_ctx()
-            widget_value, _ = register_widget(
+            component_state = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
                 user_key=key,
@@ -199,6 +199,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 serializer=lambda x: x,
                 ctx=ctx,
             )
+            widget_value = component_state.value
 
             if key is not None:
                 marshall_element_args()

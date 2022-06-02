@@ -173,7 +173,7 @@ class RadioMixin:
                 return 0
             return index_(options, v)
 
-        current_value, set_frontend_value = register_widget(
+        radio_state = register_widget(
             "radio",
             radio_proto,
             user_key=key,
@@ -188,12 +188,12 @@ class RadioMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         radio_proto.disabled = disabled
-        if set_frontend_value:
-            radio_proto.value = serialize_radio(current_value)
+        if radio_state.change:
+            radio_proto.value = serialize_radio(radio_state.value)
             radio_proto.set_value = True
 
         self.dg._enqueue("radio", radio_proto)
-        return cast(str, current_value)
+        return radio_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

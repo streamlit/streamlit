@@ -14,7 +14,7 @@
 
 import hashlib
 import textwrap
-from typing import Any, Dict, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Dict, Optional, Tuple, Union, TYPE_CHECKING
 
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
@@ -34,6 +34,8 @@ from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+
+from .safe_session_state import DisconnectedReport
 from .session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     WidgetMetadata,
@@ -42,6 +44,8 @@ from .session_state import (
     WidgetCallback,
     WidgetDeserializer,
     WidgetKwargs,
+    WidgetStateReport,
+    T,
 )
 
 if TYPE_CHECKING:
@@ -80,15 +84,15 @@ class NoValue:
 def register_widget(
     element_type: str,
     element_proto: WidgetProto,
-    deserializer: WidgetDeserializer,
-    serializer: WidgetSerializer,
+    deserializer: WidgetDeserializer[T],
+    serializer: WidgetSerializer[T],
     ctx: Optional["ScriptRunContext"],
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[WidgetCallback] = None,
     args: Optional[WidgetArgs] = None,
     kwargs: Optional[WidgetKwargs] = None,
-) -> Tuple[Any, bool]:
+) -> Union[DisconnectedReport, WidgetStateReport[T]]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
@@ -98,6 +102,11 @@ def register_widget(
         The type of the element as stored in proto.
     element_proto : proto
         The proto of the specified type (e.g. Button/Multiselect/Slider proto)
+    deserializer : Optional[WidgetDeserializer]
+        Called to convert a widget's protobuf value to the value returned by
+        its st.<widget_name> function.
+    serializer : Optional[WidgetSerializer]
+        Called to convert a widget's value to its protobuf representation.
     user_key : Optional[str]
         Optional user-specified string to use as the widget ID.
         If this is None, we'll generate an ID by hashing the element.
@@ -108,9 +117,6 @@ def register_widget(
         dynamically-named functions.
     on_change_handler : Optional[WidgetCallback]
         An optional callback invoked when the widget's value changes.
-    deserializer : Optional[WidgetDeserializer]
-        Called to convert a widget's protobuf value to the value returned by
-        its st.<widget_name> function.
     args : Optional[WidgetArgs]
         args to pass to on_change_handler when invoked
     kwargs : Optional[WidgetKwargs]
@@ -136,7 +142,7 @@ def register_widget(
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
-        return (deserializer(None, ""), False)
+        return WidgetStateReport(deserializer(None, ""), False)
 
     # Ensure another widget with the same id hasn't already been registered.
     new_widget = widget_id not in ctx.widget_ids_this_run

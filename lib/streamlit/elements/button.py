@@ -272,7 +272,7 @@ class ButtonMixin:
         def deserialize_button(ui_value, widget_id=""):
             return ui_value or False
 
-        current_value, _ = register_widget(
+        button_state = register_widget(
             "download_button",
             download_button_proto,
             user_key=key,
@@ -289,7 +289,7 @@ class ButtonMixin:
         download_button_proto.disabled = disabled
 
         self.dg._enqueue("download_button", download_button_proto)
-        return cast(bool, current_value)
+        return button_state.value or False
 
     def _button(
         self,
@@ -334,7 +334,7 @@ class ButtonMixin:
         def deserialize_button(ui_value: bool, widget_id: str = "") -> bool:
             return ui_value or False
 
-        current_value, _ = register_widget(
+        button_state = register_widget(
             "button",
             button_proto,
             user_key=key,
@@ -351,7 +351,7 @@ class ButtonMixin:
         button_proto.disabled = disabled
 
         self.dg._enqueue("button", button_proto)
-        return cast(bool, current_value)
+        return button_state.value or False
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
