@@ -73,4 +73,10 @@ describe("st.map", () => {
     cy.loadApp("http://localhost:3000/page_with_duplicate_name");
     cy.get(".element-container .stMarkdown h2").should("contain", "Page 4");
   });
+
+  it("serves the react app and displays the page not found modal if the page does not exist", () => {
+    cy.loadApp("http://localhost:3000/not_a_page");
+
+    cy.get('[role="dialog"]').should("contain", "Page not found");
+  });
 });

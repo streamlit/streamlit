@@ -18,7 +18,7 @@ import threading
 import types
 from contextlib import contextmanager
 from enum import Enum
-from typing import Optional, Callable
+from typing import Dict, Optional, Callable
 
 from blinker import Signal
 
@@ -98,6 +98,7 @@ class ScriptRunner:
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         initial_rerun_data: RerunData,
+        user_info: Dict[str, Optional[str]],
     ):
         """Initialize the ScriptRunner.
 
@@ -117,10 +118,22 @@ class ScriptRunner:
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
 
+        user_info: Dict
+            A dict that contains information about the current user. For now,
+            it only contains the user's email address.
+
+            {
+                "email": "example@example.com"
+            }
+
+            Information about the current user is optionally provided when a
+            websocket connection is initialized via the "X-Streamlit-User" header.
+
         """
         self._session_id = session_id
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._user_info = user_info
 
         # Initialize SessionState with the latest widget states
         session_state.set_widgets_from_proto(client_state.widget_states)
@@ -267,6 +280,7 @@ class ScriptRunner:
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             page_script_hash=self._client_state.page_script_hash,
+            user_info=self._user_info,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 

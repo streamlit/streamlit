@@ -162,11 +162,13 @@ describe("Quiver", () => {
       })
 
       it("throws an exception if row index is out of range", () => {
-        expect(() => q.getCell(5, 0)).toThrow("Row index is out of range.")
+        expect(() => q.getCell(5, 0)).toThrow("Row index is out of range: 5")
       })
 
       it("throws an exception if column index is out of range", () => {
-        expect(() => q.getCell(0, 5)).toThrow("Column index is out of range.")
+        expect(() => q.getCell(0, 5)).toThrow(
+          "Column index is out of range: 5"
+        )
       })
     })
 
@@ -353,7 +355,7 @@ describe("Quiver", () => {
 
       test("date", () => {
         expect(
-          Quiver.format(new Date(1970, 0, 1), {
+          Quiver.format(new Date(Date.UTC(1970, 0, 1)), {
             pandas_type: "date",
             numpy_type: "object",
           })

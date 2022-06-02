@@ -16,7 +16,7 @@ import sys
 import threading
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List, Union
+from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -83,6 +83,7 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
+        user_info: Dict[str, Optional[str]],
     ):
         """Initialize the AppSession.
 
@@ -102,6 +103,17 @@ class AppSession:
 
         local_sources_watcher: LocalSourcesWatcher
             The file watcher that lets the session know local files have changed.
+
+        user_info: Dict
+            A dict that contains information about the current user. For now,
+            it only contains the user's email address.
+
+            {
+                "email": "example@example.com"
+            }
+
+            Information about the current user is optionally provided when a
+            websocket connection is initialized via the "X-Streamlit-User" header.
 
         """
         # Each AppSession has a unique string ID.
@@ -140,6 +152,7 @@ class AppSession:
         from streamlit.state import SessionState
 
         self._session_state = SessionState()
+        self._user_info = user_info
 
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
@@ -290,6 +303,7 @@ class AppSession:
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             initial_rerun_data=initial_rerun_data,
+            user_info=self._user_info,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

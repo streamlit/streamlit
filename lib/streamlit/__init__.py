@@ -195,8 +195,10 @@ from streamlit.commands.page_config import set_page_config as set_page_config
 # Session State
 
 from streamlit.state import SessionStateProxy
+from streamlit.user_info import UserInfoProxy
 
 session_state = SessionStateProxy()
+experimental_user = UserInfoProxy()
 
 
 # Beta APIs

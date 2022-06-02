@@ -18,13 +18,14 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 
-import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
 import { lightTheme } from "src/theme"
 import Radio, { Props } from "./Radio"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   width: 0,
   disabled: false,
+  horizontal: false,
   value: 0,
   onChange: () => {},
   options: ["a", "b", "c"],
@@ -81,6 +82,12 @@ describe("Radio widget", () => {
     const props = getProps()
     const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find(RadioGroup).prop("disabled")).toBe(props.disabled)
+  })
+
+  it("can be horizontally aligned", () => {
+    const props = getProps({ horizontal: true })
+    const wrapper = mount(<Radio {...props} />)
+    expect(wrapper.find(RadioGroup).prop("align")).toBe(ALIGN.horizontal)
   })
 
   it("has the correct options", () => {

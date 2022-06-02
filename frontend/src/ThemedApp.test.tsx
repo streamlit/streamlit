@@ -137,4 +137,9 @@ describe("ThemedApp", () => {
     expect(activeTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(availableThemes.length).toBe(createPresetThemes().length + 1)
   })
+
+  it("contains the overlay portal required by the interactive table", () => {
+    const wrapper = mount(<ThemedApp />)
+    expect(wrapper.find("div#portal")).toHaveLength(1)
+  })
 })
