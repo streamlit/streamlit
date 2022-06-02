@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from streamlit.type_util import DataFrameCompatible
 
 
-def clean_text(text: object) -> str:
+def clean_text(text: type_util.SupportsStr) -> str:
     """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
 
