@@ -379,7 +379,6 @@ jobs:
           name: Look up the related GitHub PR number and branch name
           command: |
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-            echo "export GH_PR_NUMBER=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .number')" >> $BASH_ENV
             echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $BASH_ENV
 
       - run:
@@ -441,11 +440,10 @@ jobs:
             git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $GH_PR_BRANCH || echo "No changes to commit"
 
       - run:
-          name: Create GitHub Release and merge PR
+          name: Create GitHub Release
           command: |
             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
             gh release create $CIRCLE_TAG -n "" -t $CIRCLE_TAG
-            gh pr merge $GH_PR_NUMBER -m
 
       - slack/status:
           success_message: ":rocket: Release of version ${STREAMLIT_RELEASE_VERSION} was successful!"
