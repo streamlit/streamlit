@@ -5,7 +5,7 @@ from streamlit.scriptrunner import get_script_run_ctx as _get_script_run_ctx
 from streamlit.scriptrunner.script_run_context import UserInfo
 
 
-def get_user_info() -> UserInfo:
+def _get_user_info() -> UserInfo:
     ctx = _get_script_run_ctx()
     if ctx is None:
         # TODO: Add appropriate warnings when ctx is missing
@@ -19,11 +19,11 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
     """
 
     def __getitem__(self, key: str) -> Optional[str]:
-        return get_user_info()[key]
+        return _get_user_info()[key]
 
     def __getattr__(self, key: str) -> Optional[str]:
         try:
-            return get_user_info()[key]
+            return _get_user_info()[key]
         except KeyError:
             raise AttributeError
 
@@ -34,10 +34,10 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
         raise StreamlitAPIException("st.experimental_user cannot be modified")
 
     def __iter__(self) -> Iterator[str]:
-        return iter(get_user_info())
+        return iter(_get_user_info())
 
     def __len__(self) -> int:
-        return len(get_user_info())
+        return len(_get_user_info())
 
     def to_dict(self) -> UserInfo:
-        return get_user_info()
+        return _get_user_info()
