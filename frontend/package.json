@@ -65,7 +65,6 @@
     "immutable": "^4.0.0-rc.12",
     "jest-fetch-mock": "^3.0.3",
     "json5": "^2.2.0",
-    "jupyter-matplotlib": "^0.11.1",
     "katex": "^0.13.24",
     "lodash": "^4.17.21",
     "mapbox-gl": "^1.11.1",
