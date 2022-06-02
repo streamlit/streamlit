@@ -107,51 +107,6 @@ class PyplotMixin:
             except ImportError:
                 raise ImportError("pyplot() command requires matplotlib")
             return self.dg._enqueue("imgs", image_list_proto)
-        # print(f"TYPE OF FIG: {type(fig)}")
-        # print(fig._localaxes)
-        # labels = ["Point {0}".format(i) for i in range(40)]
-        # css = """
-        #     table
-        #     {
-        #     border-collapse: collapse;
-        #     }
-        #     th
-        #     {
-        #     color: #ffffff;
-        #     background-color: #000000;
-        #     }
-        #     td
-        #     {
-        #     background-color: #cccccc;
-        #     }
-        #     table, th, td
-        #     {
-        #     font-family:Arial, Helvetica, sans-serif;
-        #     border: 1px solid black;
-        #     text-align: right;
-        #     }
-        #     """
-        # plugins.clear(fig)
-        # print(type(fig))
-        # print(f"TYPE OF FIG.AXES {type(fig.axes[0].get_lines())}")
-        # print(f"LINES: {fig.axes[0].get_lines()}")
-        # xy_data = fig.axes[0].get_lines()[0].get_xydata()
-        # labels=[]
-        # for i in range(len(xy_data)):
-        #     label = xy_data[i]
-        #     label_string = f'<table border="1" class="dataframe"> <thead> <tr style="text-align: right;"> <th></th> <th>Row {i}</th> </tr> </thead> <tbody> <tr> <th>x</th> <td>{label[0]}</td> </tr> <tr> <th>y</th> <td>{label[1]}</td> </tr> </tbody> </table>'
-        #     labels.append(label_string)
-            # print(labels)
-            # .to_html() is unicode; so make leading 'u' go away with str()
-            # labels.append(str(label.to_html()))
-        
-
-        # tooltip = plugins.PointHTMLTooltip(points=fig.axes[0].get_lines()[0], labels=labels, css=css)
-        # plugins.connect(fig, tooltip)
-        # plugins.connect(fig, plugins.BoxZoom(button=True, enabled=True))
-        # plugins.connect(fig, plugins.Reset())
-        # plugins.connect(fig, plugins.Zoom(button=True, enabled=True))
-
         else: 
             try:
                 import json
@@ -162,30 +117,27 @@ class PyplotMixin:
                 plt.ioff()
             except ImportError:
                 raise ImportError("pyplot() command requires matplotlib")
-            h = hashlib.new("md5")
+            # TODO: Figure out how to size the image with dpi but for now make it 200
             if fig.dpi < 200:
                 fig.dpi = 200
+            h = hashlib.new("md5")
+            
             fig_json = mpld3.fig_to_dict(fig)
-            pyplot_proto = PyplotProto()
-
             json_dump = json.dumps(fig_json)
+            
             encoded = json_dump.encode()
             h.update(encoded)
-            pyplot_proto.json = json_dump
+            
             width, _ = fig.get_size_inches() * fig.dpi
+            
+            pyplot_proto = PyplotProto()
+            pyplot_proto.json = json_dump
             pyplot_proto.width = width
             # ensure that we have the first character as a letter 
             # since css ids need to have a letter first
             pyplot_proto.id = random.choice(string.ascii_letters) + h.hexdigest()[1:]
             
             return self.dg._enqueue("pyplot", pyplot_proto)
-            # html_string = mpld3.fig_to_html(fig)
-            # # print(fig.axes[0])
-            # # print(html_string)
-            # iframe_proto = IFrameProto()
-            # width, height = fig.get_size_inches() * fig.dpi
-            # marshall(iframe_proto, srcdoc=html_string, height=height +10, width=width)
-            # return self.dg._enqueue("iframe", iframe_proto)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
