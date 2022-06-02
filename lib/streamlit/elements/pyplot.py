@@ -15,7 +15,11 @@
 """Streamlit support for Matplotlib PyPlot charts."""
 
 import io
+from pprint import PrettyPrinter
 from typing import cast
+import hashlib
+import string
+import random
 
 import streamlit
 import streamlit.elements.image as image_utils
@@ -23,12 +27,15 @@ from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.proto.Pyplot_pb2 import Pyplot as PyplotProto
+from streamlit.elements.iframe import marshall
+from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 
 LOGGER = get_logger(__name__)
 
 
 class PyplotMixin:
-    def pyplot(self, fig=None, clear_figure=None, **kwargs):
+    def pyplot(self, fig=None, clear_figure=None, interactive=True, points=None, **kwargs):
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -87,12 +94,98 @@ class PyplotMixin:
 
         if not fig and config.get_option("deprecation.showPyplotGlobalUse"):
             self.dg.exception(PyplotGlobalUseWarning())
+        if not interactive:
+            image_list_proto = ImageListProto()
+            marshall_image(
+                self.dg._get_delta_path_str(), image_list_proto, fig, clear_figure, interactive, **kwargs
+            )
+            try:
+                import matplotlib
+                import matplotlib.pyplot as plt
 
-        image_list_proto = ImageListProto()
-        marshall(
-            self.dg._get_delta_path_str(), image_list_proto, fig, clear_figure, **kwargs
-        )
-        return self.dg._enqueue("imgs", image_list_proto)
+                plt.ioff()
+            except ImportError:
+                raise ImportError("pyplot() command requires matplotlib")
+            return self.dg._enqueue("imgs", image_list_proto)
+        # print(f"TYPE OF FIG: {type(fig)}")
+        # print(fig._localaxes)
+        # labels = ["Point {0}".format(i) for i in range(40)]
+        # css = """
+        #     table
+        #     {
+        #     border-collapse: collapse;
+        #     }
+        #     th
+        #     {
+        #     color: #ffffff;
+        #     background-color: #000000;
+        #     }
+        #     td
+        #     {
+        #     background-color: #cccccc;
+        #     }
+        #     table, th, td
+        #     {
+        #     font-family:Arial, Helvetica, sans-serif;
+        #     border: 1px solid black;
+        #     text-align: right;
+        #     }
+        #     """
+        # plugins.clear(fig)
+        # print(type(fig))
+        # print(f"TYPE OF FIG.AXES {type(fig.axes[0].get_lines())}")
+        # print(f"LINES: {fig.axes[0].get_lines()}")
+        # xy_data = fig.axes[0].get_lines()[0].get_xydata()
+        # labels=[]
+        # for i in range(len(xy_data)):
+        #     label = xy_data[i]
+        #     label_string = f'<table border="1" class="dataframe"> <thead> <tr style="text-align: right;"> <th></th> <th>Row {i}</th> </tr> </thead> <tbody> <tr> <th>x</th> <td>{label[0]}</td> </tr> <tr> <th>y</th> <td>{label[1]}</td> </tr> </tbody> </table>'
+        #     labels.append(label_string)
+            # print(labels)
+            # .to_html() is unicode; so make leading 'u' go away with str()
+            # labels.append(str(label.to_html()))
+        
+
+        # tooltip = plugins.PointHTMLTooltip(points=fig.axes[0].get_lines()[0], labels=labels, css=css)
+        # plugins.connect(fig, tooltip)
+        # plugins.connect(fig, plugins.BoxZoom(button=True, enabled=True))
+        # plugins.connect(fig, plugins.Reset())
+        # plugins.connect(fig, plugins.Zoom(button=True, enabled=True))
+
+        else: 
+            try:
+                import json
+                import matplotlib
+                import matplotlib.pyplot as plt, mpld3
+                # from mpld3 import plugins
+
+                plt.ioff()
+            except ImportError:
+                raise ImportError("pyplot() command requires matplotlib")
+            h = hashlib.new("md5")
+            if fig.dpi < 200:
+                fig.dpi = 200
+            fig_json = mpld3.fig_to_dict(fig)
+            pyplot_proto = PyplotProto()
+
+            json_dump = json.dumps(fig_json)
+            encoded = json_dump.encode()
+            h.update(encoded)
+            pyplot_proto.json = json_dump
+            width, _ = fig.get_size_inches() * fig.dpi
+            pyplot_proto.width = width
+            # ensure that we have the first character as a letter 
+            # since css ids need to have a letter first
+            pyplot_proto.id = random.choice(string.ascii_letters) + h.hexdigest()[1:]
+            
+            return self.dg._enqueue("pyplot", pyplot_proto)
+            # html_string = mpld3.fig_to_html(fig)
+            # # print(fig.axes[0])
+            # # print(html_string)
+            # iframe_proto = IFrameProto()
+            # width, height = fig.get_size_inches() * fig.dpi
+            # marshall(iframe_proto, srcdoc=html_string, height=height +10, width=width)
+            # return self.dg._enqueue("iframe", iframe_proto)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
@@ -100,7 +193,7 @@ class PyplotMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwargs):
+def marshall_image(coordinates, image_list_proto, fig=None, clear_figure=True, interactive=None, **kwargs):
     try:
         import matplotlib
         import matplotlib.pyplot as plt
@@ -108,7 +201,7 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
         plt.ioff()
     except ImportError:
         raise ImportError("pyplot() command requires matplotlib")
-
+    
     # You can call .savefig() on a Figure object or directly on the pyplot
     # module, in which case you're doing it to the latest Figure.
     if not fig:

@@ -44,6 +44,7 @@ import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/Metric.proto";
 import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/PlotlyChart.proto";
+import "streamlit/proto/Pyplot.proto";
 import "streamlit/proto/Components.proto";
 import "streamlit/proto/Progress.proto";
 import "streamlit/proto/Snow.proto";
@@ -93,6 +94,7 @@ message Element {
     Metric metric = 42;
     MultiSelect multiselect = 28;
     NumberInput number_input = 32;
+    Pyplot pyplot = 47;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
     Radio radio = 23;
@@ -107,7 +109,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 47
+    // Next ID: 48
   }
 
   reserved 9;

@@ -47,6 +47,7 @@ import {
   Metric as MetricProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
+  Pyplot as PyplotProto,
   Text as TextProto,
   Video as VideoProto,
 } from "src/autogen/proto"
@@ -141,6 +142,7 @@ const Multiselect = React.lazy(() =>
   import("src/components/widgets/Multiselect/")
 )
 const Progress = React.lazy(() => import("src/components/elements/Progress/"))
+const Pyplot = React.lazy(() => import("src/components/elements/Pyplot/"))
 const Spinner = React.lazy(() => import("src/components/elements/Spinner/"))
 const Radio = React.lazy(() => import("src/components/widgets/Radio/"))
 const Selectbox = React.lazy(() => import("src/components/widgets/Selectbox/"))
@@ -492,6 +494,18 @@ const RawElementNodeRenderer = (
         <NumberInput
           key={numberInputProto.id}
           element={numberInputProto}
+          width={width}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "pyplot": {
+      const pyplotProto = node.element.pyplot as PyplotProto
+      widgetProps.disabled = widgetProps.disabled || pyplotProto.disabled
+      return (
+        <Pyplot
+          element={pyplotProto}
           width={width}
           {...widgetProps}
         />
