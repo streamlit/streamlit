@@ -122,7 +122,7 @@ def get_logger(name: str) -> logging.Logger:
         logger = logging.getLogger(name)
 
     logger.setLevel(LOG_LEVEL)
-    logger.propagate = False
+    # logger.propagate = False
     setup_formatter(logger)
 
     LOGGERS[name] = logger
