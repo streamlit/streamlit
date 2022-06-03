@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import io
-from typing import cast, Optional, Union, BinaryIO, TextIO
+from typing import cast, Optional, Union, BinaryIO, TextIO, TYPE_CHECKING
 from textwrap import dedent
 from typing_extensions import Final
 
@@ -34,6 +34,9 @@ from streamlit.type_util import Key, to_key
 from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 
 FORM_DOCS_INFO: Final = """
 
@@ -41,7 +44,7 @@ For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form).
 """
 
-DownloadButtonDataType = Union[str, bytes, TextIO, BinaryIO]
+DownloadButtonDataType = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
 
 
 class ButtonMixin:
@@ -354,34 +357,50 @@ class ButtonMixin:
         return cast(bool, current_value)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-def marshall_file(coordinates, data, proto_download_button, mimetype, file_name=None):
+def marshall_file(
+    coordinates: str,
+    data: DownloadButtonDataType,
+    proto_download_button: DownloadButtonProto,
+    mimetype: Optional[str],
+    file_name: Optional[str] = None,
+) -> None:
+    data_as_bytes: bytes
     if isinstance(data, str):
-        data = data.encode()
+        data_as_bytes = data.encode()
         mimetype = mimetype or "text/plain"
     elif isinstance(data, io.TextIOWrapper):
         string_data = data.read()
-        data = string_data.encode()
+        data_as_bytes = string_data.encode()
         mimetype = mimetype or "text/plain"
     # Assume bytes; try methods until we run out.
     elif isinstance(data, bytes):
+        data_as_bytes = data
         mimetype = mimetype or "application/octet-stream"
     elif isinstance(data, io.BytesIO):
         data.seek(0)
-        data = data.getvalue()
+        data_as_bytes = data.getvalue()
         mimetype = mimetype or "application/octet-stream"
-    elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
+    elif isinstance(data, io.BufferedReader):
         data.seek(0)
-        data = data.read()
+        data_as_bytes = data.read()
+        mimetype = mimetype or "application/octet-stream"
+    elif isinstance(data, io.RawIOBase):
+        data.seek(0)
+        data_as_bytes = data.read() or b""
         mimetype = mimetype or "application/octet-stream"
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
     this_file = in_memory_file_manager.add(
-        data, mimetype, coordinates, file_name=file_name, is_for_static_download=True
+        data_as_bytes,
+        mimetype,
+        coordinates,
+        file_name=file_name,
+        is_for_static_download=True,
     )
     proto_download_button.url = this_file.url

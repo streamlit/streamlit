@@ -26,7 +26,7 @@ from typing import (
     TYPE_CHECKING,
     Union,
 )
-from typing_extensions import Final, TypeAlias
+from typing_extensions import Final, Protocol, TypeAlias
 
 from pandas import DataFrame, Series, Index
 import numpy as np
@@ -41,6 +41,11 @@ if TYPE_CHECKING:
 
 OptionSequence = Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]
 Key = Union[str, int]
+
+
+class SupportsStr(Protocol):
+    def __str__(self) -> str:
+        ...
 
 
 def is_type(obj: Any, fqn_type_pattern: Union[str, "re.Pattern[str]"]) -> bool:
