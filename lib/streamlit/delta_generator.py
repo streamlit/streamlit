@@ -60,6 +60,7 @@ from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
 from streamlit.elements.iframe import IframeMixin
+from streamlit.elements.space import SpaceMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.multiselect import MultiSelectMixin
@@ -153,6 +154,7 @@ class DeltaGenerator(
     SelectboxMixin,
     SelectSliderMixin,
     SliderMixin,
+    SpaceMixin,
     SnowMixin,
     JsonMixin,
     TextMixin,

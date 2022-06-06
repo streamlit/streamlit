@@ -30,6 +30,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   Radio as RadioProto,
+  Space as SpaceProto,
   Selectbox as SelectboxProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
@@ -141,6 +142,7 @@ const Multiselect = React.lazy(() =>
 const Progress = React.lazy(() => import("src/components/elements/Progress/"))
 const Spinner = React.lazy(() => import("src/components/elements/Spinner/"))
 const Radio = React.lazy(() => import("src/components/widgets/Radio/"))
+const Space = React.lazy(() => import("src/components/widgets/Space/"))
 const Selectbox = React.lazy(() => import("src/components/widgets/Selectbox/"))
 const Slider = React.lazy(() => import("src/components/widgets/Slider/"))
 const FileUploader = React.lazy(() =>
@@ -503,6 +505,19 @@ const RawElementNodeRenderer = (
         <Radio
           key={radioProto.id}
           element={radioProto}
+          width={width}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "space": {
+      const spaceProto = node.element.space as SpaceProto
+      // widgetProps.disabled = widgetProps.disabled || radioProto.disabled
+      return (
+        <Space
+          key={spaceProto.id}
+          element={spaceProto}
           width={width}
           {...widgetProps}
         />
