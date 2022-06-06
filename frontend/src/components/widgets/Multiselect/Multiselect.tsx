@@ -220,6 +220,18 @@ class Multiselect extends React.PureComponent<Props, State> {
           size={"compact"}
           filterOptions={this.filterOptions}
           overrides={{
+            IconsContainer: {
+              style: () => ({
+                paddingRight: ".5rem",
+              }),
+            },
+
+            ControlContainer: {
+              style: () => ({
+                borderWidth: "1px",
+              }),
+            },
+
             ValueContainer: {
               style: () => ({
                 /*
@@ -231,7 +243,9 @@ class Multiselect extends React.PureComponent<Props, State> {
 
                   Issue related: https://github.com/streamlit/streamlit/issues/590
                  */
-                minHeight: "44px",
+                minHeight: "40px",
+                padding: 0,
+                paddingLeft: ".125rem",
               }),
             },
             ClearIcon: {
@@ -254,12 +268,20 @@ class Multiselect extends React.PureComponent<Props, State> {
                       borderBottomRightRadius: theme.radii.md,
                       borderBottomLeftRadius: theme.radii.md,
                       fontSize: theme.fontSizes.sm,
-                      paddingLeft: theme.spacing.md,
+                      paddingLeft: theme.spacing.sm,
+                      marginLeft: theme.spacing.twoXS,
+                      marginRight: theme.spacing.twoXS,
+                      height: "28px",
                     },
                   },
                   Action: {
                     style: {
-                      paddingLeft: theme.spacing.sm,
+                      paddingLeft: 0,
+                    },
+                  },
+                  Text: {
+                    style: {
+                      fontSize: theme.fontSizes.md,
                     },
                   },
                 },
