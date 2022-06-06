@@ -182,6 +182,37 @@ class Selectbox extends React.PureComponent<Props, State> {
           valueKey="value"
           overrides={{
             Dropdown: { component: VirtualDropdown },
+
+            ControlContainer: {
+              style: () => ({
+                borderWidth: "1px",
+              }),
+            },
+
+            IconsContainer: {
+              style: () => ({
+                paddingRight: ".5rem",
+              }),
+            },
+
+            ValueContainer: {
+              style: () => ({
+                padding: ".5rem",
+              }),
+            },
+
+            // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
+            Popover: {
+              props: {
+                overrides: {
+                  Body: {
+                    style: () => ({
+                      marginTop: "1px",
+                    }),
+                  },
+                },
+              },
+            },
           }}
         />
       </div>
