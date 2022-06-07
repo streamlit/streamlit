@@ -25,7 +25,7 @@ export interface OverflowTooltipProps {
   placement: Placement
   children: ReactNode
   inline?: boolean
-  style: React.CSSProperties
+  style?: React.CSSProperties
 }
 
 /**
