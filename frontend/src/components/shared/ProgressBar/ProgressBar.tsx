@@ -76,7 +76,7 @@ function ProgressBar({
     },
     BarProgress: {
       style: {
-        backgroundColor: theme.colors.blue,
+        backgroundColor: theme.colors.primary,
       },
     },
   }
