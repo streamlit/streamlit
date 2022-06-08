@@ -7,6 +7,7 @@ verify_ssl = true
 # Minimum version compatible with click>=8.1
 black = ">=22.3.0"
 hypothesis = ">=6.17.4"
+isort = ">=5.0.0"
 mypy = ">=0.930"
 mypy-protobuf = ">=3.2"
 parameterized = "*"

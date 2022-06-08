@@ -90,6 +90,11 @@ pylint:
 		$(BLACK) --diff --check lib/tests/ && \
 		$(BLACK) --diff --check e2e/scripts/ ; \
 	fi
+	if command -v "isort" > /dev/null; then \
+		isort --diff --check examples/ && \
+		isort --diff --check lib/ && \
+		isort --diff --check e2e/scripts/; \
+	fi
 
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
@@ -99,6 +104,11 @@ pyformat:
 		$(BLACK) lib/streamlit/ --exclude=/*_pb2.py$/ ; \
 		$(BLACK) lib/tests/ ; \
 		$(BLACK) e2e/scripts/ ; \
+	fi
+	if command -v "isort" > /dev/null; then \
+		isort examples/ && \
+		isort lib/ && \
+		isort e2e/scripts/; \
 	fi
 
 .PHONY: pytest
