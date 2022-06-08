@@ -20,9 +20,9 @@ from streamlit.proto.Space_pb2 import Space as SpaceProto
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-SIZE_SMALL = 'small'
-SIZE_MEDIUM = 'medium'
-SIZE_LARGE = 'large'
+SIZE_SMALL = "small"
+SIZE_MEDIUM = "medium"
+SIZE_LARGE = "large"
 
 
 class SpaceMixin:
@@ -37,7 +37,7 @@ class SpaceMixin:
 
         if size not in [SIZE_SMALL, SIZE_MEDIUM, SIZE_LARGE]:
             raise StreamlitAPIException(
-                "size should be one of \"small\", \"medium\" or \"large\".\n"
+                'size should be one of "small", "medium" or "large".\n'
                 f"But were: {size}"
             )
 
