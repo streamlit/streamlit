@@ -190,6 +190,8 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       borderOpaque: colors.darkenedBgMix25,
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
+      tagPrimaryFontDisabled: colors.fadedText10,
+      tagPrimaryOutlinedDisabled: colors.transparent,
       borderFocus: colors.primary,
       contentPrimary: colors.bodyText,
       inputPlaceholder: colors.fadedText60,
