@@ -16,7 +16,7 @@ import contextlib
 import re
 import textwrap
 import traceback
-from typing import List, Iterable, Optional
+from typing import Iterable, List, Optional
 
 _SPACES_RE = re.compile("\\s*")
 _EMPTY_LINE_RE = re.compile("\\s*\n")
@@ -40,7 +40,7 @@ def echo(code_location="above"):
 
     """
 
-    from streamlit import code, warning, empty, source_util
+    from streamlit import code, empty, source_util, warning
 
     if code_location == "below":
         show_code = code

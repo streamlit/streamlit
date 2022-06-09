@@ -14,8 +14,8 @@
 import contextlib
 from typing import Iterator
 
-from .memo_decorator import MEMO_CALL_STACK, _memo_caches, MemoAPI
-from .singleton_decorator import SINGLETON_CALL_STACK, _singleton_caches, SingletonAPI
+from .memo_decorator import MEMO_CALL_STACK, MemoAPI, _memo_caches
+from .singleton_decorator import SINGLETON_CALL_STACK, SingletonAPI, _singleton_caches
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:

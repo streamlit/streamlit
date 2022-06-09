@@ -14,12 +14,13 @@
 
 """Tests coercing various objects to DataFrames"""
 
-from streamlit import type_util
-
 import unittest
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 import pyarrow as pa
+
+from streamlit import type_util
 
 
 class DataFrameCoercionTest(unittest.TestCase):

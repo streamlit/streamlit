@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union, cast
+
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 
 from streamlit import type_util
-from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+
 from .utils import clean_text
 
 if TYPE_CHECKING:
     import sympy
-
     from streamlit.delta_generator import DeltaGenerator
 
 

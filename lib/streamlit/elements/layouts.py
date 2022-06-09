@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, List, Sequence, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Sequence, Union, cast
 
 from streamlit.beta_util import function_beta_warning
 from streamlit.errors import StreamlitAPIException

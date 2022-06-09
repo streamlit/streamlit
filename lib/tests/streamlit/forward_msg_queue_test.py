@@ -19,12 +19,12 @@ import unittest
 from typing import Tuple
 
 from parameterized import parameterized
+from streamlit.cursor import make_delta_path
+from streamlit.elements import legacy_data_frame
+from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 from streamlit import RootContainer
-from streamlit.cursor import make_delta_path
-from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.elements import legacy_data_frame
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 # For the messages below, we don't really care about their contents so much as
 # their general type.

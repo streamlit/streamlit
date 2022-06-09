@@ -15,19 +15,18 @@
 """SessionStateProxy unit tests."""
 
 import unittest
-from typing import Dict, Any
+from typing import Any, Dict
 from unittest.mock import patch
 
 import pytest
-
 from streamlit.errors import StreamlitAPIException
 from streamlit.state import SafeSessionState
-from streamlit.state.session_state_proxy import SessionStateProxy
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     SessionState,
     require_valid_user_key,
 )
+from streamlit.state.session_state_proxy import SessionStateProxy
 
 
 def _create_mock_session_state(

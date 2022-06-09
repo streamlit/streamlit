@@ -14,14 +14,13 @@
 
 import contextlib
 import errno
+import fnmatch
 import io
 import os
 
-import fnmatch
-
-from streamlit import env_util
-from streamlit import util
 from streamlit.string_util import is_binary_string
+
+from streamlit import env_util, util
 
 # Configuration and credentials are stored inside the ~/.streamlit folder
 CONFIG_FOLDER_NAME = ".streamlit"

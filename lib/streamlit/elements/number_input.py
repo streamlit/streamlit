@@ -13,22 +13,24 @@
 # limitations under the License.
 
 import numbers
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import Optional, Union, cast
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.state import (
-    register_widget,
     NoValue,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    register_widget,
 )
+from streamlit.type_util import Key, to_key
+
+import streamlit
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 

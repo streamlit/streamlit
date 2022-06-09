@@ -14,8 +14,9 @@
 
 """Unit tests for cache's show_spinner option."""
 
-import streamlit as st
 from tests import testutil
+
+import streamlit as st
 
 
 @st.cache(show_spinner=False)

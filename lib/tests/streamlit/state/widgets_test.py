@@ -15,22 +15,22 @@
 """Tests widget-related functionality"""
 
 import unittest
+from unittest.mock import MagicMock, call
+
 import pytest
 from parameterized import parameterized
-from unittest.mock import call, MagicMock
+from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.state.session_state import (
+    GENERATED_WIDGET_KEY_PREFIX,
+    SessionState,
+    WidgetMetadata,
+)
+from streamlit.state.widgets import _get_widget_id, coalesce_widget_states
+from tests import testutil
 
 import streamlit as st
 from streamlit import errors
-from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.state.session_state import GENERATED_WIDGET_KEY_PREFIX
-from streamlit.state.widgets import (
-    _get_widget_id,
-    coalesce_widget_states,
-)
-from streamlit.state.session_state import SessionState, WidgetMetadata
-
-from tests import testutil
 
 
 def _create_widget(id, states):

@@ -14,17 +14,15 @@
 
 import sys
 import unittest
-
 from io import StringIO
 from unittest.mock import Mock, patch
+
 import matplotlib
-
-
-from streamlit import SECRETS_FILE_LOC, bootstrap, config
-from streamlit import config
+from streamlit.bootstrap import NEW_VERSION_TEXT
 from streamlit.session_data import SessionData
 from tests import testutil
-from streamlit.bootstrap import NEW_VERSION_TEXT
+
+from streamlit import SECRETS_FILE_LOC, bootstrap, config
 
 report = SessionData("the/path", "test command line")
 

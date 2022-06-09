@@ -14,14 +14,14 @@
 
 """st._legacy_vega_lite unit test."""
 
-import pandas as pd
-import pyarrow as pa
 import json
 
-from tests import testutil
-import streamlit as st
+import pandas as pd
+import pyarrow as pa
 from streamlit.errors import StreamlitAPIException
+from tests import testutil
 
+import streamlit as st
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 

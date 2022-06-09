@@ -16,12 +16,11 @@ from typing import Any, Callable, Dict, List
 
 import tornado.httputil
 import tornado.web
-from streamlit import session_data
-
-from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFileManager
-from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.server import routes
+from streamlit.uploaded_file_manager import UploadedFileManager, UploadedFileRec
+
+from streamlit import config, session_data
 
 # /upload_file/(optional session id)/(optional widget id)
 UPLOAD_FILE_ROUTE = "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"

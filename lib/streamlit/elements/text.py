@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Text_pb2 import Text as TextProto
+
 from .utils import clean_text
 
 if TYPE_CHECKING:

@@ -15,18 +15,15 @@
 from textwrap import dedent
 from typing import Any, Callable, Optional, cast
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
+from streamlit.state import WidgetArgs, WidgetCallback, WidgetKwargs, register_widget
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
 from streamlit.util import index_
+
+import streamlit
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 

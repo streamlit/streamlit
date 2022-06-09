@@ -18,10 +18,10 @@ from unittest.mock import patch
 
 import pandas as pd
 import plotly.graph_objs as go
+from streamlit.errors import NumpyDtypeException
+from streamlit.type_util import data_frame_to_bytes, is_bytes_like, to_bytes
 
 from streamlit import type_util
-from streamlit.type_util import data_frame_to_bytes, is_bytes_like, to_bytes
-from streamlit.errors import NumpyDtypeException
 
 
 class TypeUtilTest(unittest.TestCase):

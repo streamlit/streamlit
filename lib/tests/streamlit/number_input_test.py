@@ -15,14 +15,15 @@
 """number_input unit test."""
 
 from unittest.mock import MagicMock, patch
-import pytest
 
-import streamlit as st
+import pytest
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from tests import testutil
+
+import streamlit as st
 
 
 class NumberInputTest(testutil.DeltaGeneratorTestCase):

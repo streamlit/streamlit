@@ -18,22 +18,18 @@ import threading
 from unittest.mock import patch
 
 from parameterized import parameterized
-
-import streamlit as st
-from streamlit.scriptrunner import script_run_context
-from streamlit.caching import (
-    MEMO_CALL_STACK,
-    SINGLETON_CALL_STACK,
-)
+from streamlit.caching import MEMO_CALL_STACK, SINGLETON_CALL_STACK
 from streamlit.forward_msg_queue import ForwardMsgQueue
-
 from streamlit.scriptrunner import (
+    ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
-    ScriptRunContext,
+    script_run_context,
 )
 from streamlit.state.session_state import SessionState
 from tests.testutil import DeltaGeneratorTestCase
+
+import streamlit as st
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton

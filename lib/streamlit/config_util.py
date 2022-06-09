@@ -1,8 +1,7 @@
-import toml
 from typing import Dict
 
 import click
-
+import toml
 from streamlit.config_option import ConfigOption
 
 

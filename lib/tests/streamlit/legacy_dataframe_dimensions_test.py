@@ -15,8 +15,8 @@
 """Legacy Dataframe dimension parameters test."""
 
 import pandas as pd
-
 from tests import testutil
+
 import streamlit as st
 
 

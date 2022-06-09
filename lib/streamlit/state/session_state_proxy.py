@@ -12,16 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (
-    Any,
-    Dict,
-    Iterator,
-    MutableMapping,
-)
+from typing import Any, Dict, Iterator, MutableMapping
+
+from streamlit.type_util import Key
 
 import streamlit as st
 from streamlit import logger as _logger
-from streamlit.type_util import Key
+
 from .safe_session_state import SafeSessionState
 from .session_state import SessionState, require_valid_user_key
 

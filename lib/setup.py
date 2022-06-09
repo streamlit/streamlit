@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import os
-import setuptools
 import sys
 
+import setuptools
 from setuptools.command.install import install
 
 # Import Pipenv. We support multiple versions.

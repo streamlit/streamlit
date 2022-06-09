@@ -26,24 +26,19 @@ import threading
 import time
 import types
 from collections import namedtuple
-from typing import Dict, Optional, List, Iterator, Any, Callable
+from typing import Any, Callable, Dict, Iterator, List, Optional
+
 import attr
-
 from cachetools import TTLCache
-
 from pympler.asizeof import asizeof
-
-from streamlit import config
-from streamlit import file_util
-from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
-from streamlit.legacy_caching.hashing import update_hash, HashFuncsDict
-from streamlit.legacy_caching.hashing import HashReason
+from streamlit.legacy_caching.hashing import HashFuncsDict, HashReason, update_hash
 from streamlit.logger import get_logger
-import streamlit as st
 from streamlit.stats import CacheStat, CacheStatsProvider
 
+import streamlit as st
+from streamlit import config, file_util, util
 
 _LOGGER = get_logger(__name__)
 

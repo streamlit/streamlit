@@ -16,21 +16,21 @@
 
 import re
 from typing import (
+    TYPE_CHECKING,
     Any,
-    cast,
     Iterable,
     Optional,
     Sequence,
     Tuple,
     Type,
-    TYPE_CHECKING,
     Union,
+    cast,
 )
-from typing_extensions import Final, Protocol, TypeAlias
 
-from pandas import DataFrame, Series, Index
 import numpy as np
 import pyarrow as pa
+from pandas import DataFrame, Index, Series
+from typing_extensions import Final, Protocol, TypeAlias
 
 from streamlit import errors
 

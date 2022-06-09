@@ -12,19 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
 from textwrap import dedent
-from typing import cast, Optional
+from typing import Optional, cast
+
+from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.state import WidgetArgs, WidgetCallback, WidgetKwargs, register_widget
+from streamlit.type_util import Key, to_key
 
 import streamlit
-from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
-from streamlit.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 

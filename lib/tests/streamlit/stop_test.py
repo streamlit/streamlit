@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import pytest
-from tests import testutil
 from streamlit.scriptrunner import StopException
+from tests import testutil
+
 import streamlit as st
 
 

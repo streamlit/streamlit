@@ -14,15 +14,14 @@
 
 """A class that watches a given path via polling."""
 
-from concurrent.futures import ThreadPoolExecutor
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional
 
+from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
-
-from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 

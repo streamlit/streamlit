@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from hypothesis import strategies as hst
 from streamlit.state.session_state import (
-    SessionState,
     GENERATED_WIDGET_KEY_PREFIX,
+    SessionState,
     WidgetMetadata,
 )
-from hypothesis import strategies as hst
 
 ASCII = list("abcdefghijklmnopqrstuvwxyz0123456789_-")
 

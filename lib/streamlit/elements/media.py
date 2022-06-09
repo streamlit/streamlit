@@ -14,21 +14,20 @@
 
 import io
 import re
-from typing import cast, Optional, TYPE_CHECKING, Union
-from typing_extensions import Final, TypeAlias
+from typing import TYPE_CHECKING, Optional, Union, cast
 
-from validators import url
-
-from streamlit import type_util
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
+from typing_extensions import Final, TypeAlias
+from validators import url
+
+from streamlit import type_util
 
 if TYPE_CHECKING:
     from typing import Any
 
     from numpy import typing as npt
-
     from streamlit.delta_generator import DeltaGenerator
 
 

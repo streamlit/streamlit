@@ -21,15 +21,17 @@ import inspect
 import threading
 import types
 from abc import abstractmethod
-from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
+from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
+
+from streamlit.caching.cache_errors import CacheKeyNotFoundError
+from streamlit.logger import get_logger
 
 import streamlit as st
 from streamlit import util
-from streamlit.caching.cache_errors import CacheKeyNotFoundError
-from streamlit.logger import get_logger
+
 from .cache_errors import (
-    CacheType,
     CachedStFunctionWarning,
+    CacheType,
     UnhashableParamError,
     UnhashableTypeError,
 )

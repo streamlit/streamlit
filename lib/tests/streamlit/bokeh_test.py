@@ -14,13 +14,13 @@
 
 """Bokeh unit test."""
 
-from bokeh.plotting import figure
-
 from unittest.mock import patch
+
+from bokeh.plotting import figure
+from streamlit.errors import StreamlitAPIException
 from tests import testutil
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
 
 
 class BokehTest(testutil.DeltaGeneratorTestCase):

@@ -13,11 +13,12 @@
 # limitations under the License.
 import threading
 
-import streamlit as st
 from streamlit.caching.cache_errors import UnhashableParamError
-from tests import testutil
 from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from tests import testutil
+
+import streamlit as st
 
 
 class CacheErrorsTest(testutil.DeltaGeneratorTestCase):

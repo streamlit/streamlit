@@ -17,9 +17,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from parameterized import parameterized
-
 import streamlit.source_util as source_util
+from parameterized import parameterized
 from streamlit.util import calc_md5
 
 

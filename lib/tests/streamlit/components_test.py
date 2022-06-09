@@ -21,10 +21,9 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
+import streamlit.components.v1 as components
 import tornado.testing
 import tornado.web
-
-from streamlit import StreamlitAPIException
 from streamlit.components.v1 import component_arrow
 from streamlit.components.v1.components import (
     ComponentRegistry,
@@ -32,13 +31,14 @@ from streamlit.components.v1.components import (
     CustomComponent,
     declare_component,
 )
-import streamlit.components.v1 as components
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
+
 import streamlit as st
+from streamlit import StreamlitAPIException
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"

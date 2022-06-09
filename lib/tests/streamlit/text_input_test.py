@@ -17,10 +17,11 @@
 import re
 from unittest.mock import patch
 
-from streamlit import StreamlitAPIException
 from streamlit.proto.TextInput_pb2 import TextInput
 from tests import testutil
+
 import streamlit as st
+from streamlit import StreamlitAPIException
 
 
 class TextInputTest(testutil.DeltaGeneratorTestCase):

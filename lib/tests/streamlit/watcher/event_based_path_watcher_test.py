@@ -15,9 +15,8 @@
 import unittest
 from unittest import mock
 
-from watchdog import events
-
 from streamlit.watcher import event_based_path_watcher
+from watchdog import events
 
 
 class EventBasedPathWatcherTest(unittest.TestCase):

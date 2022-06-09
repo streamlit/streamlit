@@ -17,14 +17,12 @@
 import logging
 import unittest
 from collections import OrderedDict
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import patch
 from parameterized import parameterized
 
-from streamlit import logger
-from streamlit import config
-
+from streamlit import config, logger
 
 DUMMY_CONFIG_OPTIONS = OrderedDict()
 

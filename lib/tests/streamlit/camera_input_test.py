@@ -15,8 +15,9 @@
 """file_uploader unit test."""
 
 
-import streamlit as st
 from tests import testutil
+
+import streamlit as st
 
 
 class CameraInputTest(testutil.DeltaGeneratorTestCase):

@@ -13,18 +13,17 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import cast, TYPE_CHECKING, Union
-from typing_extensions import TypeAlias, Literal
+from typing import TYPE_CHECKING, Union, cast
 
 import attr
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
+from typing_extensions import Literal, TypeAlias
 
 from .utils import clean_text
 
 if TYPE_CHECKING:
     import numpy as np
-
     from streamlit.delta_generator import DeltaGenerator
 
 

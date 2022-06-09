@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 from datetime import date, time
+
+import streamlit as st
 
 # Tests all widgets, sans file_uploader, inside a form.
 # st.file_uploader is omitted because it's so different; its form-related

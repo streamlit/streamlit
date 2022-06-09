@@ -16,18 +16,18 @@
 
 import threading
 import types
-from typing import Optional, Any, Dict, List, TypeVar, Callable, overload, cast
+from typing import Any, Callable, Dict, List, Optional, TypeVar, cast, overload
 
 from pympler import asizeof
-
 from streamlit.logger import get_logger
-from streamlit.stats import CacheStatsProvider, CacheStat
+from streamlit.stats import CacheStat, CacheStatsProvider
+
 from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import (
     Cache,
-    create_cache_wrapper,
-    CachedFunctionCallStack,
     CachedFunction,
+    CachedFunctionCallStack,
+    create_cache_wrapper,
 )
 
 _LOGGER = get_logger(__name__)

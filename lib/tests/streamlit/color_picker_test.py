@@ -15,11 +15,13 @@
 """color_picker unit test."""
 
 from unittest.mock import patch
+
 import pytest
-from tests import testutil
-import streamlit as st
-from streamlit.errors import StreamlitAPIException
 from parameterized import parameterized
+from streamlit.errors import StreamlitAPIException
+from tests import testutil
+
+import streamlit as st
 
 
 class ColorPickerTest(testutil.DeltaGeneratorTestCase):

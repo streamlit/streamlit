@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import numpy as np
+
+import streamlit as st
 
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)

@@ -36,16 +36,14 @@ How these classes work together
 
 import os
 import threading
-from typing import Callable, cast, Dict, Optional
+from typing import Callable, Dict, Optional, cast
 
-from blinker import Signal, ANY
-
+from blinker import ANY, Signal
+from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
 from watchdog import events
 from watchdog.observers import Observer
-
-from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 

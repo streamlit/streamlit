@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import sys
+
 from streamlit.cli import main
 
 if __name__ == "__main__":

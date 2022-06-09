@@ -15,9 +15,10 @@
 """checkbox unit tests."""
 
 from unittest.mock import patch
-from parameterized import parameterized
 
+from parameterized import parameterized
 from tests import testutil
+
 import streamlit as st
 
 

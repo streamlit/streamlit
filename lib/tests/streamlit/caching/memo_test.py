@@ -16,14 +16,15 @@
 import pickle
 import re
 import unittest
-from unittest.mock import patch, mock_open, MagicMock, Mock
+from unittest.mock import MagicMock, Mock, mock_open, patch
 
-import streamlit as st
-from streamlit import StreamlitAPIException, file_util
 from streamlit.caching import memo_decorator
 from streamlit.caching.cache_errors import CacheError
 from streamlit.caching.memo_decorator import get_cache_path, get_memo_stats_provider
 from streamlit.stats import CacheStat
+
+import streamlit as st
+from streamlit import StreamlitAPIException, file_util
 
 
 class MemoTest(unittest.TestCase):

@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import pandas as pd
+
+import streamlit as st
 
 data = [[20, 30, 50]]
 df = pd.DataFrame(data, columns=["a", "b", "c"])

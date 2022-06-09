@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import pandas as pd
+
+import streamlit as st
 
 df = pd.DataFrame({"test": [3.14, 3.1]})
 st._legacy_dataframe(df.style.format({"test": "{:.2f}"}))

@@ -17,7 +17,6 @@ from enum import Enum
 from typing import Optional, cast
 
 import attr
-
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state import coalesce_widget_states
 

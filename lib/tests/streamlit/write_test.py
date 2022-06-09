@@ -14,20 +14,19 @@
 
 """Streamlit Unit test."""
 
-from collections import namedtuple
-from unittest.mock import call, patch, Mock, PropertyMock
-
 import time
 import unittest
+from collections import namedtuple
+from unittest.mock import Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
-
-import streamlit as st
-from streamlit import type_util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.state import SessionStateProxy
+
+import streamlit as st
+from streamlit import type_util
 
 
 class StreamlitWriteTest(unittest.TestCase):

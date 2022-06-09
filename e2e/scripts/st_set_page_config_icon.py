@@ -1,5 +1,7 @@
+import fnmatch
+import os
+
 import streamlit as st
-import os, fnmatch
 
 
 def is_assets_favicon_path(path):

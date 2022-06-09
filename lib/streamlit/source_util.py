@@ -15,10 +15,9 @@
 import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, cast, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 from blinker import Signal
-
 from streamlit.logger import get_logger
 from streamlit.util import calc_md5
 

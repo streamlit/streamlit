@@ -14,11 +14,12 @@
 
 """time_input unit test."""
 
-from tests import testutil
-import streamlit as st
+from datetime import datetime, time
+
 from parameterized import parameterized
-from datetime import datetime
-from datetime import time
+from tests import testutil
+
+import streamlit as st
 
 
 class TimeInputTest(testutil.DeltaGeneratorTestCase):

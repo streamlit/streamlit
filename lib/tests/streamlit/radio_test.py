@@ -19,10 +19,10 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
-
-import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests import testutil
+
+import streamlit as st
 
 
 class RadioTest(testutil.DeltaGeneratorTestCase):

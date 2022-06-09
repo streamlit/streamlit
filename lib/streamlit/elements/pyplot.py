@@ -17,12 +17,13 @@
 import io
 from typing import cast
 
-import streamlit
 import streamlit.elements.image as image_utils
-from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+
+import streamlit
+from streamlit import config
 
 LOGGER = get_logger(__name__)
 

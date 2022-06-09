@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import inspect
 import textwrap
+from urllib.error import URLError
+
 import pandas as pd
 import pydeck as pdk
 from streamlit.hello.utils import show_code
 
-
-from urllib.error import URLError
+import streamlit as st
 
 
 def mapping_demo():

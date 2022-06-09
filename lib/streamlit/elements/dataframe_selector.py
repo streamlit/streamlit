@@ -14,16 +14,15 @@
 
 """Selects between our two DataFrame serialization methods ("legacy" and
 "arrow") based on a config option"""
-from typing import Any
-from typing import Dict
-from typing import cast, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 from streamlit import config
 
 if TYPE_CHECKING:
-    from .arrow import Data
-    from streamlit.delta_generator import DeltaGenerator
     from altair.vegalite.v4.api import Chart
+    from streamlit.delta_generator import DeltaGenerator
+
+    from .arrow import Data
 
 
 def _use_arrow() -> bool:

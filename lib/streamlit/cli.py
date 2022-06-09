@@ -14,18 +14,17 @@
 
 """This is a script which is run when the Streamlit package is executed."""
 
-import sys
-from streamlit import config as _config
-
 import os
+import sys
 from typing import Optional
 
 import click
-
-import streamlit
-from streamlit.credentials import Credentials, check_credentials
 import streamlit.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
+from streamlit.credentials import Credentials, check_credentials
+
+import streamlit
+from streamlit import config as _config
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
@@ -189,6 +188,7 @@ def main_run(target, args=None, **kwargs):
 
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
+
             from streamlit import url_util
 
             path = urlparse(target).path
@@ -252,8 +252,8 @@ def cache():
 @cache.command("clear")
 def cache_clear():
     """Clear st.cache, st.memo, and st.singleton caches."""
-    import streamlit.legacy_caching
     import streamlit.caching
+    import streamlit.legacy_caching
 
     result = streamlit.legacy_caching.clear_cache()
     cache_path = streamlit.legacy_caching.get_cache_path()

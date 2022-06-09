@@ -12,29 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.type_util import Key, to_key
 from textwrap import dedent
-from typing import Optional, cast, List
+from typing import List, Optional, cast
+
+from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.state import WidgetArgs, WidgetCallback, WidgetKwargs, register_widget
+from streamlit.type_util import Key, to_key
 
 import streamlit
-from streamlit.proto.CameraInput_pb2 import (
-    CameraInput as CameraInputProto,
-)
 
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
-
-from ..proto.Common_pb2 import (
-    FileUploaderState as FileUploaderStateProto,
-    UploadedFileInfo as UploadedFileInfoProto,
-)
+from ..proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
+from ..proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
-
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 

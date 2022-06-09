@@ -13,45 +13,49 @@
 # limitations under the License.
 
 """Server.py unit tests"""
+import errno
 import os
 import shutil
+import tempfile
+import unittest
 from unittest import mock
 from unittest.mock import MagicMock, patch
-import unittest
-import tempfile
 
 import pytest
+import streamlit.server.server
+import tornado.httpserver
 import tornado.testing
 import tornado.web
 import tornado.websocket
-import tornado.httpserver
-import errno
-from tornado import gen
-
-import streamlit.server.server
-from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.uploaded_file_manager import UploadedFileRec
-from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
-from streamlit.forward_msg_cache import ForwardMsgCache
-from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import legacy_data_frame as data_frame
+from streamlit.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.server import State
-from streamlit.server.server import Server
-from streamlit.server.server import start_listening
-from streamlit.server.server import RetriesExceeded
-from streamlit.server.routes import DebugHandler
-from streamlit.server.routes import HealthHandler
-from streamlit.server.routes import MessageCacheHandler
-from streamlit.server.routes import StaticFileHandler
-from streamlit.server.server_util import is_cacheable_msg
-from streamlit.server.server_util import is_url_from_allowed_origins
-from streamlit.server.server_util import serialize_forward_msg
+from streamlit.server.routes import (
+    DebugHandler,
+    HealthHandler,
+    MessageCacheHandler,
+    StaticFileHandler,
+)
+from streamlit.server.server import (
+    MAX_PORT_SEARCH_RETRIES,
+    RetriesExceeded,
+    Server,
+    State,
+    start_listening,
+)
+from streamlit.server.server_util import (
+    is_cacheable_msg,
+    is_url_from_allowed_origins,
+    serialize_forward_msg,
+)
+from streamlit.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
 from tests.server_test_case import ServerTestCase
+from tornado import gen
 
-from streamlit.logger import get_logger
+from streamlit import RootContainer, config
 
 LOGGER = get_logger(__name__)
 

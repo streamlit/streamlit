@@ -14,14 +14,15 @@
 
 """selectbox unit tests."""
 from unittest.mock import patch
-import pytest
+
 import numpy as np
 import pandas as pd
+import pytest
 from parameterized import parameterized
-
-import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests import testutil
+
+import streamlit as st
 
 
 class SelectboxTest(testutil.DeltaGeneratorTestCase):

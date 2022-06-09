@@ -13,38 +13,37 @@
 # limitations under the License.
 
 """Streamlit Unit test."""
-from io import BytesIO
-
-from unittest.mock import patch
-import json
-import os
 import io
+import json
+import logging
+import os
 import re
 import sys
-import time
 import textwrap
+import time
 import unittest
-import logging
+from io import BytesIO
+from unittest.mock import patch
 
-from google.protobuf import json_format
-import PIL.Image as Image
 import numpy as np
 import pandas as pd
+import PIL.Image as Image
+from google.protobuf import json_format
 from parameterized import parameterized
 from scipy.io import wavfile
+from streamlit.errors import StreamlitAPIException
+from streamlit.in_memory_file_manager import (
+    STATIC_MEDIA_ENDPOINT,
+    _calculate_file_id,
+    in_memory_file_manager,
+)
+from streamlit.logger import get_logger
+from streamlit.proto.Alert_pb2 import Alert
+from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+from tests import testutil
 
 import streamlit as st
 from streamlit import __version__
-from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
-from streamlit.proto.Empty_pb2 import Empty as EmptyProto
-from streamlit.proto.Alert_pb2 import Alert
-
-from streamlit.in_memory_file_manager import _calculate_file_id
-from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.in_memory_file_manager import STATIC_MEDIA_ENDPOINT
-
-from tests import testutil
 
 
 def get_version():

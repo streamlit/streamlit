@@ -11,18 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from urllib.parse import urlparse
 from textwrap import dedent
-from typing import cast, Dict, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union, cast
+from urllib.parse import urlparse
 
-from typing_extensions import Final, Literal, TypeAlias
-
-from streamlit.scriptrunner import get_script_run_ctx
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
-from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
+from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
+from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.util import lower_clean_dict_keys
+from typing_extensions import Final, Literal, TypeAlias
 
 if TYPE_CHECKING:
     from typing_extensions import TypeGuard

@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 from datetime import datetime
+
+import streamlit as st
 
 default_tooltip = """
 This is a really long tooltip.

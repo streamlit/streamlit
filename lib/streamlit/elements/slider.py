@@ -12,23 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date, time, datetime, timedelta, timezone
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
-from typing import Any, List, cast, Optional
+from datetime import date, datetime, time, timedelta, timezone
 from textwrap import dedent
+from typing import Any, List, Optional, cast
+
+from streamlit.errors import StreamlitAPIException
+from streamlit.js_number import JSNumber, JSNumberBoundsException
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.state import WidgetArgs, WidgetCallback, WidgetKwargs, register_widget
+from streamlit.type_util import Key, to_key
 
 import streamlit
-from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber
-from streamlit.js_number import JSNumberBoundsException
-from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 

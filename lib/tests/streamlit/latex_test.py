@@ -15,6 +15,7 @@
 """LaTeX unit test."""
 
 from tests import testutil
+
 import streamlit as st
 
 

@@ -14,32 +14,32 @@
 
 import threading
 import unittest
-from typing import List, Any, Callable, cast, Optional
+from typing import Any, Callable, List, Optional, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
-import tornado.testing
-from tornado.ioloop import IOLoop
-
 import streamlit.app_session as app_session
-from streamlit import config
-from streamlit.proto.AppPage_pb2 import AppPage
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+import tornado.testing
 from streamlit.app_session import AppSession, AppSessionState
 from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.proto.AppPage_pb2 import AppPage
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import (
+    RerunData,
     ScriptRunContext,
+    ScriptRunner,
+    ScriptRunnerEvent,
     add_script_run_ctx,
     get_script_run_ctx,
-    ScriptRunner,
-    RerunData,
 )
-from streamlit.scriptrunner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from tests.testutil import patch_config_options
+from tornado.ioloop import IOLoop
+
+from streamlit import config
 
 
 @pytest.fixture

@@ -16,15 +16,14 @@
 
 import copy
 import json
-from typing import Any, Dict
-from typing import cast
+from typing import Any, Dict, cast
 
 import pandas as pd
-
-import streamlit
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
+
+import streamlit
 
 
 class MapMixin:

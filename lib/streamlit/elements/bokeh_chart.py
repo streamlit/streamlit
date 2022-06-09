@@ -16,11 +16,11 @@
 
 import hashlib
 import json
-from typing import cast, TYPE_CHECKING
-from typing_extensions import Final
+from typing import TYPE_CHECKING, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
+from typing_extensions import Final
 
 if TYPE_CHECKING:
     from bokeh.plotting.figure import Figure

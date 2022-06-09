@@ -12,25 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime, date, time
+from datetime import date, datetime, time
 from textwrap import dedent
-from typing import Any, cast, List, Optional, Sequence, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union, cast
 
 import attr
 from dateutil import relativedelta
-from typing_extensions import TypeAlias
-
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.state import WidgetArgs, WidgetCallback, WidgetKwargs, register_widget
+from streamlit.type_util import Key, to_key
+from typing_extensions import TypeAlias
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 

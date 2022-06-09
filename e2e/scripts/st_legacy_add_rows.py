@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import altair as alt
 import numpy as np
 import pandas as pd
+
 import streamlit as st
-import time
 
 # Test _legacy_add_rows for everything that supports it.
 # We test three times:

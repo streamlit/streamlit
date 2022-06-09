@@ -13,13 +13,14 @@
 # limitations under the License.
 
 import textwrap
-from typing import Any, cast, Hashable, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Hashable, Optional, Union, cast
+
+from streamlit.elements.form import is_in_form
+from streamlit.errors import StreamlitAPIException
+from streamlit.state import WidgetCallback, get_session_state
 
 import streamlit
 from streamlit import type_util
-from streamlit.elements.form import is_in_form
-from streamlit.errors import StreamlitAPIException
-from streamlit.state import get_session_state, WidgetCallback
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

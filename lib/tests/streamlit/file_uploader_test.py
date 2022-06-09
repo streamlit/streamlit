@@ -16,12 +16,12 @@
 
 from unittest.mock import patch
 
+from streamlit.scriptrunner import get_script_run_ctx
+from streamlit.uploaded_file_manager import UploadedFile, UploadedFileRec
+from tests import testutil
 
 import streamlit as st
 from streamlit import config
-from streamlit.scriptrunner import get_script_run_ctx
-from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
-from tests import testutil
 
 
 class FileUploaderTest(testutil.DeltaGeneratorTestCase):

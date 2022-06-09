@@ -22,11 +22,9 @@ from typing import Optional
 
 import click
 import toml
-
-from streamlit import util
-from streamlit import env_util
-from streamlit import file_util
 from streamlit.logger import get_logger
+
+from streamlit import env_util, file_util, util
 
 LOGGER = get_logger(__name__)
 

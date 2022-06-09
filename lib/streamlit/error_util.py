@@ -14,10 +14,11 @@
 
 import traceback
 
+from streamlit.errors import UncaughtAppException
+from streamlit.logger import get_logger
+
 import streamlit as st
 from streamlit import config
-from streamlit.logger import get_logger
-from streamlit.errors import UncaughtAppException
 
 LOGGER = get_logger(__name__)
 

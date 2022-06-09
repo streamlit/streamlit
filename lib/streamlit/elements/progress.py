@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING, Union
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Union, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
+from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

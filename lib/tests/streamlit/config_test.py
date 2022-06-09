@@ -13,18 +13,17 @@
 # limitations under the License.
 
 """Config System Unittest."""
-from unittest.mock import MagicMock, mock_open, patch
 import copy
 import os
 import textwrap
 import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from parameterized import parameterized
-
-from streamlit import config
-from streamlit import env_util
 from streamlit.config_option import ConfigOption
+
+from streamlit import config, env_util
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)

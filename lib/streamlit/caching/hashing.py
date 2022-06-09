@@ -25,16 +25,14 @@ import tempfile
 import threading
 import unittest.mock
 import weakref
-from typing import Any, Pattern, Optional, Dict, List
+from typing import Any, Dict, List, Optional, Pattern
 
-from streamlit import type_util
-from streamlit import util
 from streamlit.logger import get_logger
 from streamlit.uploaded_file_manager import UploadedFile
-from .cache_errors import (
-    CacheType,
-    UnhashableTypeError,
-)
+
+from streamlit import type_util, util
+
+from .cache_errors import CacheType, UnhashableTypeError
 
 _LOGGER = get_logger(__name__)
 

@@ -15,8 +15,8 @@
 """Graphviz unit test."""
 
 import graphviz as graphviz
-
 from tests import testutil
+
 import streamlit as st
 
 

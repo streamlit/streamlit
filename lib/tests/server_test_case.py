@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import urllib.parse
 from unittest import mock
 
 import tornado.testing
 import tornado.web
 import tornado.websocket
-import urllib.parse
+from streamlit.app_session import AppSession
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.server.server import Server
 from tornado import gen
 from tornado.concurrent import Future
-
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.app_session import AppSession
-from streamlit.server.server import Server
 
 
 class ServerTestCase(tornado.testing.AsyncHTTPTestCase):

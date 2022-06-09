@@ -17,12 +17,9 @@ from abc import abstractmethod
 from typing import List
 
 import tornado.web
-
-from streamlit.proto.openmetrics_data_model_pb2 import (
-    Metric as MetricProto,
-    MetricSet as MetricSetProto,
-    GAUGE,
-)
+from streamlit.proto.openmetrics_data_model_pb2 import GAUGE
+from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
+from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 
 
 class CacheStat(typing.NamedTuple):

@@ -19,10 +19,10 @@ from unittest.mock import patch
 
 import altair as alt
 import pandas as pd
-
-import streamlit
 from streamlit.delta_generator import DeltaGenerator
 from tests.testutil import patch_config_options
+
+import streamlit
 
 DATAFRAME = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 ALTAIR_CHART = alt.Chart(DATAFRAME).mark_bar().encode(x="a", y="b")

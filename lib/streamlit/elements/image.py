@@ -22,22 +22,22 @@
 import imghdr
 import io
 import mimetypes
-from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
-from typing_extensions import Final, Literal, TypeAlias
-from urllib.parse import urlparse
 import re
+from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple, Union, cast
+from urllib.parse import urlparse
 
 import numpy as np
 from PIL import Image, ImageFile
-
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from typing_extensions import Final, Literal, TypeAlias
 
 if TYPE_CHECKING:
-    import numpy.typing as npt
     from typing import Any
+
+    import numpy.typing as npt
     from streamlit.delta_generator import DeltaGenerator
 
 LOGGER: Final = get_logger(__name__)

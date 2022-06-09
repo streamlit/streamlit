@@ -14,18 +14,17 @@
 
 """Unit test for image."""
 
-import pytest
-from PIL import Image, ImageDraw
-from parameterized import parameterized
-
-from streamlit.errors import StreamlitAPIException
-from tests import testutil
 import cv2
 import numpy as np
+import pytest
+import streamlit.elements.image as image
+from parameterized import parameterized
+from PIL import Image, ImageDraw
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from tests import testutil
 
 import streamlit as st
-import streamlit.elements.image as image
-from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 
 def create_image(size, format="RGB", add_alpha=True):
@@ -128,8 +127,8 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
-        from streamlit.in_memory_file_manager import _calculate_file_id
         from streamlit.elements.image import _np_array_to_bytes
+        from streamlit.in_memory_file_manager import _calculate_file_id
 
         file_id = _calculate_file_id(
             _np_array_to_bytes(data_in, output_format=format),

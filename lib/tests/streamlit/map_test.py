@@ -14,12 +14,13 @@
 
 """Unit tests for st.map()."""
 
-import pandas as pd
-import numpy as np
 import json
 
+import numpy as np
+import pandas as pd
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
 from tests import testutil
+
 import streamlit as st
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})

@@ -18,19 +18,17 @@ a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
 from enum import Enum
-from typing import Any
-from typing import Dict
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, cast
 
 import altair as alt
 import pandas as pd
-from altair.vegalite.v4.api import Chart
-
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
-from streamlit import type_util
+from altair.vegalite.v4.api import Chart
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
+
+from streamlit import type_util
 
 from .arrow import Data
 from .utils import last_index_for_melted_dataframes

@@ -15,15 +15,15 @@
 import inspect
 import json as json
 import types
-from typing import cast, Any, List, Tuple, Type, TYPE_CHECKING
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, List, Tuple, Type, cast
 
 import numpy as np
-
-from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
+from typing_extensions import Final
+
+from streamlit import type_util
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import io
-import streamlit as st
-import numpy as np
+import os
 import wave
+
+import numpy as np
 from scipy.io import wavfile
+
+import streamlit as st
 
 st.title("Audio test")
 

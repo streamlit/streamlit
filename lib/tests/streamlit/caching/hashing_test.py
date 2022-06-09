@@ -21,20 +21,18 @@ import re
 import tempfile
 import types
 import unittest
-from io import BytesIO
-from io import StringIO
-from unittest.mock import Mock, MagicMock
+from io import BytesIO, StringIO
+from unittest.mock import MagicMock, Mock
 
 import cffi
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
-
 from streamlit.caching.cache_errors import UnhashableTypeError
 from streamlit.caching.hashing import (
-    _CacheFuncHasher,
-    _PANDAS_ROWS_LARGE,
     _NP_SIZE_LARGE,
+    _PANDAS_ROWS_LARGE,
+    _CacheFuncHasher,
 )
 
 try:

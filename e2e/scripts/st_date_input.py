@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import date, datetime
+
 import streamlit as st
-from datetime import datetime
-from datetime import date
 
 d1 = st.date_input("Single date", date(1970, 1, 1), min_value=date(1970, 1, 1))
 st.write("Value 1:", d1)

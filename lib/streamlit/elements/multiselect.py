@@ -13,20 +13,16 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import Any, Callable, Optional, cast, List
+from typing import Any, Callable, List, Optional, cast
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.state import WidgetArgs, WidgetCallback, WidgetKwargs, register_widget
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, to_key
 
-from streamlit.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
+import streamlit
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 

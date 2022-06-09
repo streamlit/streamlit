@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, MagicMock, mock_open
 import tempfile
 import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 from streamlit.watcher import util
 

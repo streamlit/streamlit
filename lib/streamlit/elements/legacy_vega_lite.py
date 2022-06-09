@@ -15,17 +15,18 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
-from typing import Any, cast, Dict, Optional, TYPE_CHECKING
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 import streamlit.elements.legacy_data_frame as data_frame
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
+from typing_extensions import Final
 
 if TYPE_CHECKING:
-    from .arrow import Data
     from streamlit.delta_generator import DeltaGenerator
+
+    from .arrow import Data
 
 LOGGER: Final = get_logger(__name__)
 

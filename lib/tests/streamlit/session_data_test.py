@@ -18,10 +18,10 @@ import unittest
 from unittest.mock import patch
 
 from parameterized import parameterized
-
-from streamlit import config
 from streamlit.session_data import get_url
 from tests import testutil
+
+from streamlit import config
 
 
 class SessionDataTest(unittest.TestCase):

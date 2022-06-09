@@ -16,7 +16,6 @@ import unittest
 
 from streamlit import url_util
 
-
 GITHUB_URLS = [
     (
         "https://github.com/aritropaul/streamlit/blob/b72adbcf00c91775db14e739e2ea33d6df9079c3/lib/streamlit/cli.py",

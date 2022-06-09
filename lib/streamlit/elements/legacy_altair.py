@@ -17,21 +17,20 @@ Altair is a Python visualization library based on Vega-Lite,
 a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
-from typing import Hashable
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Hashable, cast
 
-from streamlit import errors, type_util
-from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
-import streamlit.elements.legacy_vega_lite as vega_lite
 import altair as alt
 import pandas as pd
 import pyarrow as pa
+import streamlit.elements.legacy_vega_lite as vega_lite
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
+
+from streamlit import errors, type_util
 
 from .utils import last_index_for_melted_dataframes
 
 if TYPE_CHECKING:
     from altair.vegalite.v4.api import Chart
-
     from streamlit.delta_generator import DeltaGenerator
 
     from .arrow import Data

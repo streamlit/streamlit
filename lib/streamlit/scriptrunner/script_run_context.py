@@ -13,16 +13,15 @@
 # limitations under the License.
 
 import threading
-from typing import Dict, Optional, List, Callable, Set
-from typing_extensions import Final, TypeAlias
+from typing import Callable, Dict, List, Optional, Set
 
 import attr
-
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.state import SafeSessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
+from typing_extensions import Final, TypeAlias
 
 LOGGER: Final = get_logger(__name__)
 

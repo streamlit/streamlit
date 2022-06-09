@@ -17,38 +17,38 @@
 import os
 import sys
 import time
-from typing import List, Any, Optional
+from typing import Any, List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
-from tornado.testing import AsyncTestCase
-
-from streamlit.legacy_caching import caching
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.legacy_caching import caching
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
-from streamlit.scriptrunner.script_requests import (
-    ScriptRequest,
-    ScriptRequestType,
-    ScriptRequests,
-)
-from streamlit.session_data import SessionData
-from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.scriptrunner import (
-    ScriptRunner,
-    ScriptRunnerEvent,
     RerunData,
     RerunException,
+    ScriptRunner,
+    ScriptRunnerEvent,
     StopException,
 )
-from streamlit import source_util
+from streamlit.scriptrunner.script_requests import (
+    ScriptRequest,
+    ScriptRequests,
+    ScriptRequestType,
+)
+from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState, WidgetMetadata
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
+from tornado.testing import AsyncTestCase
+
+from streamlit import source_util
 
 text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"

@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple, Any, List
+from typing import Any, List, Optional, Tuple
+
+from streamlit.scriptrunner import get_script_run_ctx
 
 from streamlit import util
-from streamlit.scriptrunner import get_script_run_ctx
 
 
 def make_delta_path(

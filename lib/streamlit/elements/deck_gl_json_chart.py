@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Any, Dict
+import json
+from typing import Any, Dict, cast
+
+from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 
 import streamlit
-import json
-from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 
 
 class PydeckMixin:

@@ -16,12 +16,12 @@ import os
 import threading
 from typing import Any, Mapping, Optional
 
+import streamlit.watcher.path_watcher
 import toml
 from blinker import Signal
+from streamlit.logger import get_logger
 
 import streamlit as st
-import streamlit.watcher.path_watcher
-from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))

@@ -14,10 +14,10 @@
 
 """download_button unit test."""
 
-import streamlit as st
-
 from parameterized import parameterized
 from tests import testutil
+
+import streamlit as st
 
 
 class DownloadButtonTest(testutil.DeltaGeneratorTestCase):

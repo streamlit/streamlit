@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
-import plotly.graph_objs as go
 import numpy as np
+import plotly.graph_objs as go
+
+import streamlit as st
 
 st.title("Plotly examples")
 
@@ -69,9 +70,8 @@ st.write(fig)
 
 st.header("Fancy density plot")
 
-import plotly.figure_factory as ff
-
 import numpy as np
+import plotly.figure_factory as ff
 
 # Add histogram data
 x1 = np.random.randn(200) - 2

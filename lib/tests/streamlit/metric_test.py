@@ -13,11 +13,11 @@
 # limitations under the License.
 
 """metric unit tests."""
-from tests import testutil
-import streamlit as st
-
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
+from tests import testutil
+
+import streamlit as st
 
 
 class MetricTest(testutil.DeltaGeneratorTestCase):

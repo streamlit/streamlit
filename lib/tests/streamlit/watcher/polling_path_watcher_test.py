@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest import mock
 import unittest
+from unittest import mock
 
 from streamlit.watcher import polling_path_watcher
 

@@ -14,17 +14,16 @@
 
 """Unit tests for InMemoryFileManager"""
 
-from unittest import mock
 import random
 import time
-
-from tornado.testing import AsyncTestCase
+from unittest import mock
 
 from streamlit.in_memory_file_manager import (
+    InMemoryFile,
     InMemoryFileManager,
     _calculate_file_id,
-    InMemoryFile,
 )
+from tornado.testing import AsyncTestCase
 
 
 def random_coordinates():

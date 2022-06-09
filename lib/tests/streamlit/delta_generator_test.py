@@ -17,23 +17,22 @@
 import functools
 import json
 
+import streamlit.state.widgets as w
 from parameterized import parameterized
-
-import streamlit as st
-from streamlit.delta_generator import DeltaGenerator
 from streamlit.cursor import LockedCursor, make_delta_path
-from streamlit.errors import DuplicateWidgetID
-from streamlit.errors import StreamlitAPIException
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
-from streamlit.proto.TextArea_pb2 import TextArea
-from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.proto.TextArea_pb2 import TextArea
+from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.state.widgets import _build_duplicate_widget_message
-import streamlit.state.widgets as w
 from tests import testutil
+
+import streamlit as st
 
 
 def identity(x):

@@ -19,19 +19,19 @@ import os
 import threading
 from typing import Any, Dict, Optional, Type, Union
 
-import tornado.web
-from streamlit.scriptrunner import get_script_run_ctx
-
 import streamlit.server.routes
-from streamlit import type_util
+import tornado.web
 from streamlit.elements.form import current_form_id
-from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
+from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
+from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
+from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.state import NoValue, register_widget
 from streamlit.type_util import to_bytes
+
+from streamlit import type_util, util
 
 LOGGER = get_logger(__name__)
 

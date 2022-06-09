@@ -14,20 +14,16 @@
 
 """slider unit test."""
 
+from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import patch
+
 import pytest
 from parameterized import parameterized
-
-import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from tests import testutil
 
-from datetime import date
-from datetime import datetime
-from datetime import time
-from datetime import timedelta
-from datetime import timezone
+import streamlit as st
 
 
 class SliderTest(testutil.DeltaGeneratorTestCase):

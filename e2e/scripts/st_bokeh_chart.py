@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 from bokeh.plotting import figure
+
+import streamlit as st
 
 x = [1, 2, 3, 4, 5]
 y = [6, 7, 2, 4, 5]

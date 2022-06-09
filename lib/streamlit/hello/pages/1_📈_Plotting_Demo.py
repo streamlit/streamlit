@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import inspect
 import textwrap
 import time
+
 import numpy as np
 from streamlit.hello.utils import show_code
+
+import streamlit as st
 
 
 def plotting_demo():

@@ -28,7 +28,6 @@ from tests import testutil
 
 import streamlit as st
 
-
 # In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
 if is_pandas_version_less_than("1.3.0"):
     from pandas.io.formats.style import Styler

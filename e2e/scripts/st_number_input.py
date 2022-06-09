@@ -14,7 +14,6 @@
 
 import streamlit as st
 
-
 i1 = st.number_input("number input 1")
 st.write('value 1: "', i1, '"')
 

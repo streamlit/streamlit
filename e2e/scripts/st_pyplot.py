@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import numpy as np
 from matplotlib import pyplot
+
+import streamlit as st
 
 np.random.seed(0xDEADBEEF)
 data = np.random.normal(1, 1, size=100)

@@ -17,7 +17,7 @@ import io
 import unittest
 from unittest.mock import patch
 
-from streamlit.error_util import handle_uncaught_app_exception, _print_rich_exception
+from streamlit.error_util import _print_rich_exception, handle_uncaught_app_exception
 from tests import testutil
 
 

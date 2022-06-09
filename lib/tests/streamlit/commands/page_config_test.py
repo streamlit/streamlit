@@ -1,10 +1,10 @@
-from tests import testutil
 from parameterized import parameterized
-import streamlit as st
-
+from streamlit.commands.page_config import valid_url
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
-from streamlit.commands.page_config import valid_url
+from tests import testutil
+
+import streamlit as st
 
 
 class PageConfigTest(testutil.DeltaGeneratorTestCase):

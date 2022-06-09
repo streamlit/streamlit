@@ -15,6 +15,7 @@
 """A script for ScriptRunnerTest that never ends"""
 
 import time
+
 import streamlit as st
 
 element = st.empty()

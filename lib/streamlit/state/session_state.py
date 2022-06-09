@@ -12,34 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import deepcopy
 import json
-from streamlit.stats import CacheStat, CacheStatsProvider
+from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
-    KeysView,
-    cast,
+    Callable,
     Dict,
     Iterator,
+    KeysView,
+    List,
     MutableMapping,
     Optional,
-    Union,
-    Tuple,
-    Callable,
     Set,
-    List,
+    Tuple,
+    Union,
+    cast,
 )
 
 import attr
-
 from pympler.asizeof import asizeof
-
-import streamlit as st
-from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.stats import CacheStat, CacheStatsProvider
+
+import streamlit as st
+from streamlit import logger as _logger
 
 if TYPE_CHECKING:
     from streamlit.server.server import SessionInfo

@@ -16,9 +16,10 @@
 
 from unittest.mock import patch
 
-import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests import testutil
+
+import streamlit as st
 
 NO_FORM_ID = ""
 

@@ -16,14 +16,10 @@ import sys
 import threading
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
-
-from streamlit.uploaded_file_manager import UploadedFileManager
-
-import tornado.ioloop
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
 
 import streamlit.elements.exception as exception_utils
-from streamlit import __version__, caching, config, legacy_caching, secrets, source_util
+import tornado.ioloop
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.in_memory_file_manager import in_memory_file_manager
@@ -39,14 +35,13 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
+from streamlit.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.session_data import SessionData
-from streamlit.scriptrunner import (
-    RerunData,
-    ScriptRunner,
-    ScriptRunnerEvent,
-)
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.util import calc_md5
 from streamlit.watcher import LocalSourcesWatcher
+
+from streamlit import __version__, caching, config, legacy_caching, secrets, source_util
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:

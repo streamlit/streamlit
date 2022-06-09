@@ -15,28 +15,18 @@
 import asyncio
 import base64
 import binascii
+import errno
+import json
 import logging
 import os
 import socket
 import sys
-import errno
-import json
 import time
 import traceback
-import click
 from enum import Enum
-from typing import (
-    Any,
-    Dict,
-    Optional,
-    Tuple,
-    Callable,
-    Awaitable,
-    Generator,
-    List,
-    Set,
-)
+from typing import Any, Awaitable, Callable, Dict, Generator, List, Optional, Set, Tuple
 
+import click
 import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
@@ -44,53 +34,53 @@ import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
-from tornado.websocket import WebSocketHandler
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
-
-from streamlit import config
-from streamlit import file_util
-from streamlit import source_util
-from streamlit import util
+from streamlit.app_session import AppSession
 from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
+from streamlit.components.v1.components import (
+    ComponentRegistry,
+    ComponentRequestHandler,
+)
 from streamlit.config_option import ConfigOption
-from streamlit.forward_msg_cache import ForwardMsgCache
-from streamlit.forward_msg_cache import create_reference_msg
-from streamlit.forward_msg_cache import populate_hash_if_needed
+from streamlit.forward_msg_cache import (
+    ForwardMsgCache,
+    create_reference_msg,
+    populate_hash_if_needed,
+)
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
-from streamlit.app_session import AppSession
-from streamlit.stats import StatsHandler, StatsManager
-from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
-from streamlit.components.v1.components import ComponentRegistry
-from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.server.routes import (
+    AddSlashHandler,
+    AssetsFileHandler,
+    DebugHandler,
+    HealthHandler,
+    MediaFileHandler,
+    MessageCacheHandler,
+    StaticFileHandler,
+)
+from streamlit.server.server_util import (
+    get_max_message_size_bytes,
+    is_cacheable_msg,
+    is_url_from_allowed_origins,
+    make_url_path_regex,
+    serialize_forward_msg,
+)
 from streamlit.server.upload_file_request_handler import (
-    UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
+    UploadFileRequestHandler,
 )
-
 from streamlit.session_data import SessionData
-from streamlit.state import (
-    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
-    SessionStateStatProvider,
-)
-from streamlit.server.routes import AddSlashHandler
-from streamlit.server.routes import AssetsFileHandler
-from streamlit.server.routes import DebugHandler
-from streamlit.server.routes import HealthHandler
-from streamlit.server.routes import MediaFileHandler
-from streamlit.server.routes import MessageCacheHandler
-from streamlit.server.routes import StaticFileHandler
-from streamlit.server.server_util import is_cacheable_msg
-from streamlit.server.server_util import is_url_from_allowed_origins
-from streamlit.server.server_util import make_url_path_regex
-from streamlit.server.server_util import serialize_forward_msg
-from streamlit.server.server_util import get_max_message_size_bytes
+from streamlit.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY, SessionStateStatProvider
+from streamlit.stats import StatsHandler, StatsManager
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
+from tornado.websocket import WebSocketHandler
 
+from streamlit import config, file_util, source_util, util
 
 LOGGER = get_logger(__name__)
 

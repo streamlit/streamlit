@@ -13,10 +13,11 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Dict, Tuple, Optional, List, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+
 from .session_state import SessionState, WidgetMetadata
 
 

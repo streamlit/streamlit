@@ -18,12 +18,12 @@ from functools import reduce
 
 import altair as alt
 import pandas as pd
-from tests import testutil
-
-import streamlit as st
 from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType
 from streamlit.type_util import bytes_to_data_frame
+from tests import testutil
+
+import streamlit as st
 
 
 def _deep_get(dictionary, *keys):

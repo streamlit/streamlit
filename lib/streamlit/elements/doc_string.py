@@ -15,11 +15,11 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
 import inspect
-from typing import Any, cast, TYPE_CHECKING
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, cast
 
-from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
+from streamlit.proto.DocString_pb2 import DocString as DocStringProto
+from typing_extensions import Final
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
