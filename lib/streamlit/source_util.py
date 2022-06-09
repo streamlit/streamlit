@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple
 
 from blinker import Signal
+from emoji import emoji_list, is_emoji
 
 from streamlit.logger import get_logger
 from streamlit.util import calc_md5
@@ -44,23 +45,6 @@ def open_python_file(filename):
 
 
 PAGE_FILENAME_REGEX = re.compile(r"([0-9]*)[_ -]*(.*)\.py")
-# Regex pattern to extract emoji taken from https://gist.github.com/Alex-Just/e86110836f3f93fe7932290526529cd1#gistcomment-3208085
-# We may eventually want to swap this out for https://pypi.org/project/emoji,
-# but I want to avoid adding a dependency if possible.
-PAGE_ICON_REGEX = re.compile(
-    "(^[\U0001F1E0-\U0001F1FF"
-    "\U0001F300-\U0001F5FF"
-    "\U0001F600-\U0001F64F"
-    "\U0001F680-\U0001F6FF"
-    "\U0001F700-\U0001F77F"
-    "\U0001F780-\U0001F7FF"
-    "\U0001F800-\U0001F8FF"
-    "\U0001F900-\U0001F9FF"
-    "\U0001FA00-\U0001FA6F"
-    "\U0001FA70-\U0001FAFF"
-    "\U00002702-\U000027B0"
-    "\U000024C2-\U0001F251])[_-]*"
-)
 
 
 def page_sort_key(script_path: Path) -> Tuple[float, str]:
@@ -101,12 +85,15 @@ def page_name_and_icon(script_path: Path) -> Tuple[str, str]:
     if not name:
         name = extraction.group(1)
 
-    extracted_icon = re.search(PAGE_ICON_REGEX, name)
-    if extracted_icon is not None:
-        icon = str(extracted_icon.group(1))
-        name = re.sub(PAGE_ICON_REGEX, "", name)
-    else:
-        icon = ""
+    icon = ""
+    emojis = emoji_list(name)
+    if len(emojis) > 0:
+        first_emoji = emojis[0]
+
+        if first_emoji["match_start"] == 0:
+            icon = first_emoji["emoji"]
+            name_without_emoji = name[first_emoji["match_end"] :]
+            name = re.sub(r"^[_ -]*", "", name_without_emoji)
 
     return str(name), icon
 

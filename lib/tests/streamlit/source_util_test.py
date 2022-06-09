@@ -88,6 +88,13 @@ class PageHelperFunctionTests(unittest.TestCase):
             ("😰123.py", ("123", "😰")),
             # Test the default case for non-Python files.
             ("not_a_python_script.rs", ("", "")),
+            # Test that certain non-emoji unicode characters don't get
+            # incorrectly detected as emoji.
+            ("何_is_this.py", ("何_is_this", "")),
+            # Test that we properly handle emoji with length >1. Note that
+            # the following emoji may not render as a single character
+            # depending on the platform.
+            ("👩‍🚀_multi_character_emoji.py", ("multi_character_emoji", "👩‍🚀")),
         ]
     )
     def test_page_name_and_icon(self, path_str, expected):
