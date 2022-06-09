@@ -198,10 +198,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           {!hideSidebarNav && (
             <SidebarNav
               appPages={appPages}
-              hasSidebarElements={hasElements}
-              onPageChange={onPageChange}
-              hideParentScrollbar={this.hideScrollbar}
+              collapseSidebar={this.toggleCollapse}
               currentPageScriptHash={currentPageScriptHash}
+              hasSidebarElements={hasElements}
+              hideParentScrollbar={this.hideScrollbar}
+              onPageChange={onPageChange}
               pageLinkBaseUrl={pageLinkBaseUrl}
             />
           )}

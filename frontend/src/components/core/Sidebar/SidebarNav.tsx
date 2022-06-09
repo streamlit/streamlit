@@ -16,6 +16,9 @@
  */
 
 import React, { ReactElement, useCallback, useRef, useState } from "react"
+// We import react-device-detect in this way so that tests can mock its
+// isMobile field sanely.
+import * as reactDeviceDetect from "react-device-detect"
 import {
   ExpandMore,
   ExpandLess,
@@ -37,20 +40,21 @@ import {
 
 export interface Props {
   appPages: IAppPage[]
-  hasSidebarElements: boolean
-  onPageChange: (pageName: string) => void
-  hideParentScrollbar: (newValue: boolean) => void
-
+  collapseSidebar: () => void
   currentPageScriptHash: string
+  hasSidebarElements: boolean
+  hideParentScrollbar: (newValue: boolean) => void
+  onPageChange: (pageName: string) => void
   pageLinkBaseUrl: string
 }
 
 const SidebarNav = ({
   appPages,
-  hasSidebarElements,
-  onPageChange,
-  hideParentScrollbar,
+  collapseSidebar,
   currentPageScriptHash,
+  hasSidebarElements,
+  hideParentScrollbar,
+  onPageChange,
   pageLinkBaseUrl,
 }: Props): ReactElement | null => {
   if (appPages.length < 2) {
@@ -127,6 +131,9 @@ const SidebarNav = ({
                     onClick={e => {
                       e.preventDefault()
                       onPageChange(pageScriptHash as string)
+                      if (reactDeviceDetect.isMobile) {
+                        collapseSidebar()
+                      }
                     }}
                   >
                     {pageIcon && pageIcon.length ? (
