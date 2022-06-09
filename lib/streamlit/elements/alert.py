@@ -19,10 +19,11 @@ from .utils import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.type_util import SupportsStr
 
 
 class AlertMixin:
-    def error(self, body: str) -> "DeltaGenerator":
+    def error(self, body: "SupportsStr") -> "DeltaGenerator":
         """Display error message.
 
         Parameters
@@ -40,7 +41,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
 
-    def warning(self, body: str) -> "DeltaGenerator":
+    def warning(self, body: "SupportsStr") -> "DeltaGenerator":
         """Display warning message.
 
         Parameters
@@ -58,7 +59,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
-    def info(self, body: str) -> "DeltaGenerator":
+    def info(self, body: "SupportsStr") -> "DeltaGenerator":
         """Display an informational message.
 
         Parameters
@@ -76,7 +77,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
-    def success(self, body: str) -> "DeltaGenerator":
+    def success(self, body: "SupportsStr") -> "DeltaGenerator":
         """Display a success message.
 
         Parameters
