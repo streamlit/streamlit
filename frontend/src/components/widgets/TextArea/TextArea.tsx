@@ -208,7 +208,7 @@ class TextArea extends React.PureComponent<Props, State> {
             overrides={{
               Input: {
                 style: {
-                  padding: ".25rem .5rem",
+                  padding: "1rem",
                   lineHeight: "1.4",
                   height: height ? `${height}px` : "",
                   minHeight: "95px",
