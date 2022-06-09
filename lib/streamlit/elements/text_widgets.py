@@ -172,10 +172,10 @@ class TextWidgetsMixin:
             autocomplete = "new-password" if type == "password" else ""
         text_input_proto.autocomplete = autocomplete
 
-        def deserialize_text_input(ui_value, widget_id="") -> str:
+        def deserialize_text_input(ui_value: Optional[str], widget_id: str = "") -> str:
             return str(ui_value if ui_value is not None else value)
 
-        text_input_state = register_widget(
+        widget_state = register_widget(
             "text_input",
             text_input_proto,
             user_key=key,
@@ -186,16 +186,17 @@ class TextWidgetsMixin:
             serializer=lambda x: x,
             ctx=ctx,
         )
+        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_input_proto.disabled = disabled
-        if text_input_state.change:
-            text_input_proto.value = text_input_state.value
+        if widget_state.set_frontend_value:
+            text_input_proto.value = value
             text_input_proto.set_value = True
 
         self.dg._enqueue("text_input", text_input_proto)
-        return text_input_state.value or value
+        return value
 
     def text_area(
         self,
@@ -319,7 +320,7 @@ class TextWidgetsMixin:
         def deserialize_text_area(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
-        text_area_state = register_widget(
+        widget_state = register_widget(
             "text_area",
             text_area_proto,
             user_key=key,
@@ -330,16 +331,17 @@ class TextWidgetsMixin:
             serializer=lambda x: x,
             ctx=ctx,
         )
+        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_area_proto.disabled = disabled
-        if text_area_state.change:
-            text_area_proto.value = text_area_state.value
+        if widget_state.set_frontend_value:
+            text_area_proto.value = value
             text_area_proto.set_value = True
 
         self.dg._enqueue("text_area", text_area_proto)
-        return text_area_state.value or value
+        return value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

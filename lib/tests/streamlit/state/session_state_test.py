@@ -608,7 +608,7 @@ class SessionStateMethodTests(unittest.TestCase):
             metadata=metadata,
             user_key="widget_id_1",
         )
-        assert not wsr.change
+        assert not wsr.set_frontend_value
         assert self.session_state["widget_id_1"] == WIDGET_VALUE
 
 

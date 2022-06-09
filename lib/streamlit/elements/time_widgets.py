@@ -266,7 +266,9 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = dedent(help)
 
-        def deserialize_time_input(ui_value: str, widget_id: Any = "") -> time:
+        def deserialize_time_input(
+            ui_value: Optional[str], widget_id: Any = ""
+        ) -> time:
             return (
                 datetime.strptime(ui_value, "%H:%M").time()
                 if ui_value is not None
@@ -278,7 +280,7 @@ class TimeWidgetsMixin:
                 v = v.time()
             return time.strftime(v, "%H:%M")
 
-        time_input_state = register_widget(
+        widget_state = register_widget(
             "time_input",
             time_input_proto,
             user_key=key,
@@ -289,18 +291,17 @@ class TimeWidgetsMixin:
             serializer=serialize_time_input,
             ctx=ctx,
         )
+        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         time_input_proto.disabled = disabled
-        if time_input_state.change:
-            time_input_proto.value = serialize_time_input(
-                time_input_state.value,
-            )
+        if widget_state.set_frontend_value:
+            time_input_proto.value = serialize_time_input(value)
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
-        return time_input_state.value or value
+        return value
 
     def date_input(
         self,
@@ -442,7 +443,7 @@ class TimeWidgetsMixin:
             to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
             return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
 
-        date_input_state = register_widget(
+        widget_state = register_widget(
             "date_input",
             date_input_proto,
             user_key=key,
@@ -453,16 +454,17 @@ class TimeWidgetsMixin:
             serializer=serialize_date_input,
             ctx=ctx,
         )
+        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         date_input_proto.disabled = disabled
-        if date_input_state.change:
-            date_input_proto.value[:] = serialize_date_input(date_input_state.value)
+        if widget_state.set_frontend_value:
+            date_input_proto.value[:] = serialize_date_input(value)
             date_input_proto.set_value = True
 
         self.dg._enqueue("date_input", date_input_proto)
-        return date_input_state.value or deserialize_date_input(None)
+        return value
 
     @property
     def dg(self) -> "DeltaGenerator":

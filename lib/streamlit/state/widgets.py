@@ -35,7 +35,6 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 
-from .safe_session_state import DisconnectedReport
 from .session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     WidgetMetadata,
@@ -45,6 +44,7 @@ from .session_state import (
     WidgetDeserializer,
     WidgetKwargs,
     WidgetStateReport,
+    FallbackState,
     T,
 )
 
@@ -92,7 +92,7 @@ def register_widget(
     on_change_handler: Optional[WidgetCallback] = None,
     args: Optional[WidgetArgs] = None,
     kwargs: Optional[WidgetKwargs] = None,
-) -> Union[DisconnectedReport, WidgetStateReport[T]]:
+) -> WidgetStateReport[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
@@ -124,16 +124,18 @@ def register_widget(
 
     Returns
     -------
-    ui_value : Tuple[Any, bool]
+    ui_value : WidgetStateReport[T]
         - If our ScriptRunContext doesn't exist (meaning that we're running
-        a "bare script" outside of streamlit), we'll return None.
-        - Else if this is a new widget, it won't yet have a value and we'll
-        return None.
+        a "bare script" outside of streamlit), we'll return a FallbackState[T].
+        - Else if we are disconnected from the SessionState instance, we'll
+        return a FallbackState[T].
         - Else if the widget has already been registered on a previous run but
         the user hasn't interacted with it on the client, it will have the
-        default value it was first created with.
+        default value it was first created with. We then return a
+        RealWidgetState[T], containing this value.
         - Else the widget has already been registered and the user *has*
         interacted with it, it will have that most recent user-specified value.
+        We then return a RealWidgetState[T], containing this value.
 
     """
     widget_id = _get_widget_id(element_type, element_proto, user_key)
@@ -142,7 +144,7 @@ def register_widget(
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
-        return WidgetStateReport(deserializer(None, ""), False)
+        return FallbackState(deserializer=deserializer)
 
     # Ensure another widget with the same id hasn't already been registered.
     new_widget = widget_id not in ctx.widget_ids_this_run

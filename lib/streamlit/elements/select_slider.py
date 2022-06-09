@@ -206,7 +206,7 @@ class SelectSliderMixin:
         def serialize_select_slider(v):
             return as_index_list(v)
 
-        slider_state = register_widget(
+        widget_state = register_widget(
             "slider",
             slider_proto,
             user_key=key,
@@ -217,16 +217,17 @@ class SelectSliderMixin:
             serializer=serialize_select_slider,
             ctx=ctx,
         )
+        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
-        if slider_state.change:
-            slider_proto.value[:] = serialize_select_slider(slider_state.value)
+        if widget_state.set_frontend_value:
+            slider_proto.value[:] = serialize_select_slider(value)
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
-        return slider_state.value
+        return value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

@@ -272,7 +272,7 @@ class ButtonMixin:
         if help is not None:
             download_button_proto.help = dedent(help)
 
-        def deserialize_button(ui_value, widget_id=""):
+        def deserialize_button(ui_value: Optional[bool], widget_id: str = "") -> bool:
             return ui_value or False
 
         button_state = register_widget(
@@ -292,7 +292,7 @@ class ButtonMixin:
         download_button_proto.disabled = disabled
 
         self.dg._enqueue("download_button", download_button_proto)
-        return button_state.value or False
+        return button_state.return_value
 
     def _button(
         self,
@@ -334,7 +334,7 @@ class ButtonMixin:
         if help is not None:
             button_proto.help = dedent(help)
 
-        def deserialize_button(ui_value: bool, widget_id: str = "") -> bool:
+        def deserialize_button(ui_value: Optional[bool], widget_id: str = "") -> bool:
             return ui_value or False
 
         button_state = register_widget(
@@ -354,7 +354,8 @@ class ButtonMixin:
         button_proto.disabled = disabled
 
         self.dg._enqueue("button", button_proto)
-        return button_state.value or False
+
+        return button_state.return_value
 
     @property
     def dg(self) -> "DeltaGenerator":

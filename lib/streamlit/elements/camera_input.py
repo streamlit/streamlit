@@ -184,15 +184,14 @@ class CameraInputMixin:
             serializer=serialize_camera_image_input,
             ctx=ctx,
         )
+        value = camera_input_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         camera_input_proto.disabled = disabled
 
         ctx = get_script_run_ctx()
-        camera_image_input_state = serialize_camera_image_input(
-            camera_input_state.value
-        )
+        camera_image_input_state = serialize_camera_image_input(value)
 
         uploaded_shapshot_info = camera_image_input_state.uploaded_file_info
 
@@ -208,7 +207,7 @@ class CameraInputMixin:
             )
 
         self.dg._enqueue("camera_input", camera_input_proto)
-        return camera_input_state.value
+        return value
 
     @property
     def dg(self) -> "DeltaGenerator":

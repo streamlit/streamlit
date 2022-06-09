@@ -340,13 +340,13 @@ class FileUploaderMixin:
             serializer=serialize_file_uploader,
             ctx=ctx,
         )
-        widget_value = file_uploader_state.value
+        value = file_uploader_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         file_uploader_proto.disabled = disabled
 
-        file_uploader_state = serialize_file_uploader(widget_value)
+        file_uploader_state = serialize_file_uploader(value)
         uploaded_file_info = file_uploader_state.uploaded_file_info
         if ctx is not None and len(uploaded_file_info) != 0:
             newest_file_id = file_uploader_state.max_file_id
@@ -360,7 +360,7 @@ class FileUploaderMixin:
             )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
-        return widget_value
+        return value
 
     @staticmethod
     def _get_file_recs(

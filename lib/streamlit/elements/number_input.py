@@ -275,10 +275,12 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        def deserialize_number_input(ui_value, widget_id=""):
-            return ui_value if ui_value is not None else value
+        def deserialize_number_input(
+            ui_value: Optional[Number], widget_id: str = ""
+        ) -> Number:
+            return ui_value if ui_value is not None else cast(Number, value)
 
-        number_input_state = register_widget(
+        widget_state = register_widget(
             "number_input",
             number_input_proto,
             user_key=key,
@@ -289,16 +291,17 @@ class NumberInputMixin:
             serializer=lambda x: x,
             ctx=ctx,
         )
+        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         number_input_proto.disabled = disabled
-        if number_input_state.change:
-            number_input_proto.value = number_input_state.value
+        if widget_state.set_frontend_value:
+            number_input_proto.value = value
             number_input_proto.set_value = True
 
         self.dg._enqueue("number_input", number_input_proto)
-        return number_input_state.value or value
+        return value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

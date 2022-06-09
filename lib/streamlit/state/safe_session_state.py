@@ -13,21 +13,18 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Dict, Optional, List, Set, Union
-
-import attr
-from typing_extensions import Literal
+from typing import Any, Dict, Optional, List, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 
-from .session_state import SessionState, WidgetMetadata, WidgetStateReport, T
-
-
-@attr.s(auto_attribs=True, frozen=True, slots=True)
-class DisconnectedReport:
-    value: None = attr.ib(default=None, init=False)
-    change: Literal[False] = attr.ib(default=False, init=False)
+from .session_state import (
+    SessionState,
+    WidgetMetadata,
+    WidgetStateReport,
+    FallbackState,
+    T,
+)
 
 
 class SafeSessionState:
@@ -58,10 +55,10 @@ class SafeSessionState:
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: Optional[str]
-    ) -> Union[DisconnectedReport, WidgetStateReport[T]]:
+    ) -> WidgetStateReport[T]:
         with self._lock:
             if self._disconnected:
-                return DisconnectedReport()
+                return FallbackState.from_metadata(metadata)
 
             return self._state.register_widget(metadata, user_key)
 

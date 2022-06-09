@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from abc import abstractmethod
 from copy import deepcopy
 import json
+
 from streamlit.stats import CacheStat, CacheStatsProvider
 from typing import (
     TYPE_CHECKING,
@@ -35,7 +36,7 @@ from typing import (
 
 import attr
 from pympler.asizeof import asizeof
-from typing_extensions import Final, Literal
+from typing_extensions import Final, Literal, Protocol
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
     from streamlit.server.server import SessionInfo
 
 T = TypeVar("T")
+T_co = TypeVar("T_co", covariant=True)
 
 GENERATED_WIDGET_KEY_PREFIX: Final = "$$GENERATED_WIDGET_KEY"
 
@@ -280,10 +282,60 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
+class WidgetStateReport(Protocol[T_co]):
+    """Should be usable by widget code to determine what value to return, and
+    whether to update the UI.
+    """
+
+    @property
+    @abstractmethod
+    def return_value(self) -> T_co:
+        ...
+
+    @property
+    @abstractmethod
+    def set_frontend_value(self) -> bool:
+        ...
+
+
 @attr.s(auto_attribs=True, frozen=True, slots=True)
-class WidgetStateReport(Generic[T]):
-    value: T
-    change: bool
+class RealWidgetState(WidgetStateReport[T_co]):
+    """A WidgetStateReport signifying that an actual value was retrieved from
+    SessionState.
+    """
+
+    value: T_co
+    value_changed: bool
+
+    @property
+    def return_value(self) -> T_co:
+        return self.value
+
+    @property
+    def set_frontend_value(self) -> bool:
+        return self.value_changed
+
+
+@attr.s(auto_attribs=True, frozen=True, slots=True)
+class FallbackState(WidgetStateReport[T]):
+    """A WidgetStateReport signifying that SessionState could not be accessed.
+
+    Provides a fallback return_value, and suggests not updating the UI.
+    """
+
+    deserializer: WidgetDeserializer[T]
+
+    @classmethod
+    def from_metadata(cls, metadata: WidgetMetadata[T]) -> "FallbackState[T]":
+        return cls(deserializer=metadata.deserializer)
+
+    @property
+    def return_value(self) -> T:
+        return self.deserializer(None, "")
+
+    @property
+    def set_frontend_value(self) -> Literal[False]:
+        return False
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -594,12 +646,12 @@ class SessionState:
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: Optional[str]
-    ) -> WidgetStateReport[T]:
+    ) -> RealWidgetState[T]:
         """Register a widget with the SessionState.
 
         Returns
         -------
-        WidgetStateReport[T]
+        RealWidgetState[T]
             Contains the widget's current value, and a bool that will be True
             if the frontend needs to be updated with the current value.
         """
@@ -629,7 +681,7 @@ class SessionState:
             user_key
         )
 
-        return WidgetStateReport(widget_value, widget_value_changed)
+        return RealWidgetState(widget_value, widget_value_changed)
 
     def get_stats(self) -> List[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
