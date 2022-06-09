@@ -136,6 +136,7 @@ function withExpandable(
               style: ({ $disabled }: SharedProps) => ({
                 color: $disabled ? colors.disabled : colors.bodyText,
               }),
+              // eslint-disable-next-line react/display-name
               component: () => {
                 if (expanded) {
                   return <Icon content={ExpandLess} size="lg" />
