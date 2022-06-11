@@ -87,7 +87,7 @@ interface Types {
 }
 
 /** Type information for single-index columns, and data columns. */
-interface Type {
+export interface Type {
   /** Type name. */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
@@ -248,7 +248,7 @@ export enum DataFrameCellType {
 }
 
 /** Data for a single cell in a DataFrame. */
-interface DataFrameCell {
+export interface DataFrameCell {
   /** The cell's type (blank, index, columns, or data). */
   type: DataFrameCellType
 
@@ -745,7 +745,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
     // Nested arrays and objects.
     if (typeName === "object" || typeName?.startsWith("list")) {
-      return JSON.stringify(x)
+      return JSON.stringify(x, (_key, value) =>
+        typeof value === "bigint" ? Number(value) : value
+      )
     }
 
     if (typeName === "float64" && Number.isFinite(x)) {
@@ -858,10 +860,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     const { headerRows, headerColumns, rows, columns } = this.dimensions
 
     if (rowIndex < 0 || rowIndex >= rows) {
-      throw new Error("Row index is out of range.")
+      throw new Error(`Row index is out of range: ${rowIndex}`)
     }
     if (columnIndex < 0 || columnIndex >= columns) {
-      throw new Error("Column index is out of range.")
+      throw new Error(`Column index is out of range: ${columnIndex}`)
     }
 
     const isBlankCell = rowIndex < headerRows && columnIndex < headerColumns

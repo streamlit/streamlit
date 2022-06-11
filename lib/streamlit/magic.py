@@ -146,6 +146,10 @@ def _get_st_write_from_expr(node, i, parent_type):
     if type(node.value) is ast.Yield or type(node.value) is ast.YieldFrom:
         return None
 
+    # Don't change await nodes
+    if type(node.value) is ast.Await:
+        return None
+
     # If tuple, call st.write on the 0th element (rather than the
     # whole tuple). This allows us to add a comma at the end of a statement
     # to turn it into an expression that should be st-written. Ex:

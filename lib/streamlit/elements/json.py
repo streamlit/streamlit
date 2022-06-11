@@ -17,6 +17,7 @@ from typing import Any, cast, TYPE_CHECKING
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.state import SessionStateProxy
+from streamlit.user_info import UserInfoProxy
 
 
 if TYPE_CHECKING:
@@ -64,7 +65,7 @@ class JsonMixin:
         """
         import streamlit as st
 
-        if isinstance(body, SessionStateProxy):
+        if isinstance(body, (SessionStateProxy, UserInfoProxy)):
             body = body.to_dict()
 
         if not isinstance(body, str):

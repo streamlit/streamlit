@@ -180,8 +180,6 @@ export class App extends PureComponent<Props, State> {
 
   private readonly componentRegistry: ComponentRegistry
 
-  static contextType = AppContext
-
   constructor(props: Props) {
     super(props)
 

@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, cast, TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 
 from streamlit.proto.Text_pb2 import Text as TextProto
 from .utils import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.type_util import SupportsStr
 
 
 class TextMixin:
-    def text(self, body: Any) -> "DeltaGenerator":
+    def text(self, body: "SupportsStr") -> "DeltaGenerator":
         """Write fixed-width and preformatted text.
 
         Parameters

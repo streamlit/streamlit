@@ -179,7 +179,7 @@ describe("ElementNode.quiverElement", () => {
     expect(node.quiverElement).toStrictEqual(node.quiverElement)
   })
 
-  it("does not recompute its value (arrowDataframe)", () => {
+  it("does not recompute its value (arrowDataFrame)", () => {
     // accessing `quiverElement` twice should return the same instance.
     const node = arrowDataFrame()
     expect(node.quiverElement).toStrictEqual(node.quiverElement)

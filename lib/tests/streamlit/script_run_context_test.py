@@ -33,6 +33,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
             page_script_hash="",
+            user_info={"email": "test@test.com"},
         )
 
         msg = ForwardMsg()
@@ -54,6 +55,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
             page_script_hash="",
+            user_info={"email": "test@test.com"},
         )
 
         ctx.on_script_start()
@@ -79,6 +81,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
             page_script_hash="",
+            user_info={"email": "test@test.com"},
         )
 
         ctx.on_script_start()
@@ -103,6 +106,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
             page_script_hash="",
+            user_info={"email": "test@test.com"},
         )
 
         ctx.on_script_start()

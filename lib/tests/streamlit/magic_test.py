@@ -141,6 +141,14 @@ def yield_func():
 """
         self._testCode(CODE_YIELD_FROM_STATEMENT, 0)
 
+    def test_await_expression(self):
+        """Test that 'await' expressions do not get magicked"""
+        CODE_AWAIT_EXPRESSION = """
+async def await_func(a):
+    await coro()
+"""
+        self._testCode(CODE_AWAIT_EXPRESSION, 0)
+
     def test_async_function_statement(self):
         """Test async function definitions"""
         CODE_ASYNC_FUNCTION = """

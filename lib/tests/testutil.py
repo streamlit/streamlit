@@ -91,6 +91,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
             page_script_hash="",
+            user_info={"email": "test@test.com"},
         )
 
         if self.override_root:

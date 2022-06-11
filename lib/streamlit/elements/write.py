@@ -23,6 +23,7 @@ import numpy as np
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.state import SessionStateProxy
+from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -214,7 +215,7 @@ class WriteMixin:
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
-            elif isinstance(arg, (dict, list, SessionStateProxy)):
+            elif isinstance(arg, (dict, list, SessionStateProxy, UserInfoProxy)):
                 flush_buffer()
                 self.dg.json(arg)
             elif type_util.is_namedtuple(arg):
@@ -225,7 +226,9 @@ class WriteMixin:
                 self.dg.pydeck_chart(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
-                self.dg.text(arg)
+                # Cast is needed due to:
+                # https://github.com/python/mypy/issues/12933
+                self.dg.text(cast(type, arg))
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),

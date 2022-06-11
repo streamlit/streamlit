@@ -1,6 +1,7 @@
 import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/react"
+
 import ThemeProvider from "src/components/core/ThemeProvider"
 import {
   AUTO_THEME_NAME,
@@ -13,7 +14,9 @@ import {
   setCachedTheme,
   ThemeConfig,
 } from "src/theme"
+
 import AppWithScreencast from "./App"
+import { StyledDataFrameOverlay } from "./styled-components"
 
 const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()
@@ -74,6 +77,8 @@ const ThemedApp = (): JSX.Element => {
             availableThemes,
           }}
         />
+        {/* The data grid requires one root level portal element for rendering cell overlays */}
+        <StyledDataFrameOverlay id="portal" />
       </ThemeProvider>
     </BaseProvider>
   )

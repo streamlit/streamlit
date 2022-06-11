@@ -17,7 +17,7 @@
 
 import React from "react"
 import { withTheme } from "@emotion/react"
-import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
 import {
   WidgetLabel,
   StyledWidgetLabelHelpInline,
@@ -28,6 +28,7 @@ import { Theme } from "src/theme"
 
 export interface Props {
   disabled: boolean
+  horizontal: boolean
   theme: Theme
   width?: number
   value: number
@@ -68,7 +69,7 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { theme, width, help, label } = this.props
+    const { theme, width, help, label, horizontal } = this.props
     let { disabled } = this.props
     const { colors, radii } = theme
     const style = { width }
@@ -92,6 +93,7 @@ class Radio extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           value={this.state.value.toString()}
           disabled={disabled}
+          align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
         >
           {options.map((option: string, index: number) => (
             <UIRadio
@@ -106,8 +108,10 @@ class Radio extends React.PureComponent<Props, State> {
                   }) => ({
                     marginBottom: 0,
                     marginTop: 0,
+                    marginRight: "1rem",
                     // Make left and right padding look the same visually.
                     paddingLeft: 0,
+                    alignItems: "start",
                     paddingRight: "2px",
                     backgroundColor: $isFocusVisible
                       ? colors.darkenedBgMix25
@@ -122,6 +126,8 @@ class Radio extends React.PureComponent<Props, State> {
                   style: ({ $checked }: { $checked: boolean }) => ({
                     width: "1rem",
                     height: "1rem",
+                    marginTop: "0.35rem",
+                    marginRight: "0",
                     backgroundColor:
                       $checked && !disabled
                         ? colors.primary
@@ -137,6 +143,8 @@ class Radio extends React.PureComponent<Props, State> {
                 Label: {
                   style: {
                     color: disabled ? colors.fadedText40 : colors.bodyText,
+                    position: "relative",
+                    top: "1px",
                   },
                 },
               }}

@@ -14,7 +14,7 @@
 
 import threading
 from typing import Dict, Optional, List, Callable, Set
-from typing_extensions import Final
+from typing_extensions import Final, TypeAlias
 
 import attr
 
@@ -25,6 +25,9 @@ from streamlit.state import SafeSessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER: Final = get_logger(__name__)
+
+
+UserInfo: TypeAlias = Dict[str, Optional[str]]
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -46,6 +49,7 @@ class ScriptRunContext:
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
     page_script_hash: str
+    user_info: UserInfo
 
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
