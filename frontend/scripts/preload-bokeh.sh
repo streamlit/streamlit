@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-bokeh_version="2.4.1"
+bokeh_version="2.4.3"
 bokeh_release_url="https://cdn.bokeh.org/bokeh/release"
 bokeh_files=(
   "bokeh-${bokeh_version}.min.js"
