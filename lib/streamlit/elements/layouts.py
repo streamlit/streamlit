@@ -66,7 +66,7 @@ class LayoutsMixin:
             https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.container2.py
             height: 480px
         """
-        return self.dg._block()
+        return self.dg._enqueue_block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
     def columns(self, spec: SpecType) -> List["DeltaGenerator"]:
@@ -167,9 +167,9 @@ class LayoutsMixin:
 
         block_proto = BlockProto()
         block_proto.horizontal.SetInParent()
-        row = self.dg._block(block_proto)
+        row = self.dg._enqueue_block(block_proto)
         total_weight = sum(weights)
-        return [row._block(column_proto(w / total_weight)) for w in weights]
+        return [row._enqueue_block(column_proto(w / total_weight)) for w in weights]
 
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
         """Insert a multi-element container that can be expanded/collapsed.
@@ -240,7 +240,7 @@ class LayoutsMixin:
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
-        return self.dg._block(block_proto=block_proto)
+        return self.dg._enqueue_block(block_proto=block_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

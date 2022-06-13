@@ -525,7 +525,7 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    def _block(
+    def _enqueue_block(
         self,
         block_proto: Block_pb2.Block = Block_pb2.Block(),
     ) -> "DeltaGenerator":
