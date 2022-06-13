@@ -35,32 +35,33 @@ types-typed-ast = "*"
 [packages]
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible.
+# But include relevant lower bounds for any features we use from our dependencies.
 altair = ">=3.2.0"
-attrs = "*"
-blinker = "*"
+attrs = ">=16.0.0"
+blinker = ">=1.0.0"
 cachetools = ">=4.0"
 click = ">=7.0"
+gitpython = "!=3.1.19"
 # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
 importlib-metadata = ">=1.4"
 numpy = "*"
-packaging = "*"
+packaging = ">=14.1"
 pandas = ">=0.21.0"
 pillow = ">=6.2.0"
 protobuf = ">=3.12, <4"
-pyarrow = "*"
+pyarrow = ">=4.0"
 pydeck = ">=0.1.dev5"
 pympler = ">=0.9"
 python-dateutil = "*"
-requests = "*"
+requests = ">=2.4"
+rich = ">=10.11.0"
+semver = "*"
 toml = "*"
 # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
 tornado = ">=5.0"
-tzlocal = "*"
-validators = "*"
+typing-extensions = ">=3.10.0.0"
+tzlocal = ">=1.1"
+validators = ">=0.2"
 # Don't require watchdog on MacOS, since it'll fail without xcode tools.
 # Without watchdog, we fallback to a polling file watcher to check for app changes.
 watchdog = {version = "*", markers = "platform_system != 'Darwin'"}
-gitpython = "!=3.1.19"
-typing-extensions = "*"
-semver = "*"
-rich = "*"

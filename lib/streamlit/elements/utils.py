@@ -23,10 +23,10 @@ from streamlit.state import get_session_state, WidgetCallback
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.type_util import DataFrameCompatible
+    from streamlit.type_util import DataFrameCompatible, SupportsStr
 
 
-def clean_text(text: object) -> str:
+def clean_text(text: "SupportsStr") -> str:
     """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
 

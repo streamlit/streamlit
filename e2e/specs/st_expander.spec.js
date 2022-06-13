@@ -54,11 +54,11 @@ describe("st.expander", () => {
       const expanderHeader = cy.get(expanderHeaderIdentifier);
       expanderHeader.should("exist");
 
-      let toggle = cy.get("svg[title='Collapse']");
+      let toggle = cy.get("svg");
       toggle.should("exist");
       expanderHeader.click();
 
-      toggle = cy.get("svg[title='Expand']");
+      toggle = cy.get("svg");
       toggle.should("exist");
     });
 
@@ -67,11 +67,11 @@ describe("st.expander", () => {
       let expanderHeader = cy.get(expanderHeaderIdentifier);
       expanderHeader.should("exist");
 
-      let toggle = cy.get("svg[title='Expand']");
+      let toggle = cy.get("svg");
       toggle.should("exist");
       expanderHeader.click();
 
-      toggle = cy.get("svg[title='Collapse']");
+      toggle = cy.get("svg");
       toggle.should("exist");
     });
   });
