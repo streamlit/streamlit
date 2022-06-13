@@ -246,7 +246,7 @@ class Multiselect extends React.PureComponent<Props, State> {
                     Issue related: https://github.com/streamlit/streamlit/issues/590
                   */
                   minHeight: "40px",
-                  paddingLeft: ".25rem",
+                  paddingLeft: ".5rem",
                 }),
               },
               ClearIcon: {
@@ -270,8 +270,8 @@ class Multiselect extends React.PureComponent<Props, State> {
                         borderBottomLeftRadius: theme.radii.md,
                         fontSize: theme.fontSizes.sm,
                         paddingLeft: theme.spacing.sm,
-                        marginLeft: theme.spacing.twoXS,
-                        marginRight: theme.spacing.twoXS,
+                        marginLeft: 0,
+                        marginRight: theme.spacing.sm,
                         height: "28px",
                       },
                     },
