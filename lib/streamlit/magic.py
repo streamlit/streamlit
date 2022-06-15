@@ -129,6 +129,21 @@ def _build_st_write_call(nodes):
     )
 
 
+def _build_st_cell_call():
+    """Build AST node for `__streamlit__.cell()."""
+    return ast.Call(
+        func=ast.Attribute(
+            attr="cell",
+            value=ast.Name(id="__streamlit__", ctx=ast.Load()),
+            ctx=ast.Load(),
+        ),
+        args=[],
+        keywords=[],
+        kwargs=None,
+        starargs=None,
+    )
+
+
 def _get_st_write_from_expr(node, i, parent_type):
     # Don't change function calls
     if type(node.value) is ast.Call:
@@ -149,6 +164,10 @@ def _get_st_write_from_expr(node, i, parent_type):
     # Don't change await nodes
     if type(node.value) is ast.Await:
         return None
+
+    # If "...", replace with st.cell
+    if _is_ellipsis(node.value):
+        return _build_st_cell_call()
 
     # If tuple, call st.write on the 0th element (rather than the
     # whole tuple). This allows us to add a comma at the end of a statement
@@ -181,3 +200,10 @@ def _is_docstring_node(node):
         return type(node) is ast.Constant and type(node.value) is str
     else:
         return type(node) is ast.Str
+
+
+def _is_ellipsis(node):
+    if sys.version_info >= (3, 8, 0):
+        return type(node) is ast.Constant and node.value is ...
+    else:
+        return type(node) is ast.Ellipsis
