@@ -57,6 +57,7 @@ class ScriptRunContext:
     form_ids_this_run: Set[str] = attr.Factory(set)
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = attr.Factory(dict)
     dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = attr.Factory(list)
+    current_cell_id: int = 0
 
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
@@ -64,6 +65,7 @@ class ScriptRunContext:
         self.form_ids_this_run = set()
         self.query_string = query_string
         self.page_script_hash = page_script_hash
+        self.current_cell_id = 0
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True
         self._has_script_started = False

@@ -42,12 +42,14 @@ from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
 from streamlit.proto import Block_pb2
+from streamlit.proto import Cell_pb2
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.logger import get_logger
 
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
+from streamlit.elements.cell import CellMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
@@ -127,6 +129,7 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
+    CellMixin,
     CameraInputMixin,
     CheckboxMixin,
     ColorPickerMixin,

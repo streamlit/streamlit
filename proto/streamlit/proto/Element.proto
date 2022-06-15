@@ -18,19 +18,21 @@ syntax = "proto3";
 
 import "streamlit/proto/Alert.proto";
 import "streamlit/proto/Arrow.proto";
+import "streamlit/proto/ArrowVegaLiteChart.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Balloons.proto";
-import "streamlit/proto/ArrowVegaLiteChart.proto";
 import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
-import "streamlit/proto/DownloadButton.proto";
 import "streamlit/proto/CameraInput.proto";
+import "streamlit/proto/Cell.proto";
 import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/ColorPicker.proto";
+import "streamlit/proto/Components.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
 import "streamlit/proto/DeckGlJsonChart.proto";
 import "streamlit/proto/DocString.proto";
+import "streamlit/proto/DownloadButton.proto";
 import "streamlit/proto/Empty.proto";
 import "streamlit/proto/Exception.proto";
 import "streamlit/proto/Favicon.proto";
@@ -39,18 +41,17 @@ import "streamlit/proto/GraphVizChart.proto";
 import "streamlit/proto/IFrame.proto";
 import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
-import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/Metric.proto";
 import "streamlit/proto/MultiSelect.proto";
+import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/PlotlyChart.proto";
-import "streamlit/proto/Components.proto";
 import "streamlit/proto/Progress.proto";
-import "streamlit/proto/Snow.proto";
-import "streamlit/proto/Spinner.proto";
 import "streamlit/proto/Radio.proto";
 import "streamlit/proto/Selectbox.proto";
 import "streamlit/proto/Slider.proto";
+import "streamlit/proto/Snow.proto";
+import "streamlit/proto/Spinner.proto";
 import "streamlit/proto/Text.proto";
 import "streamlit/proto/TextArea.proto";
 import "streamlit/proto/TextInput.proto";
@@ -71,8 +72,8 @@ message Element {
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
     Button button = 19;
-    DownloadButton download_button = 43;
     CameraInput camera_input = 45;
+    Cell cell = 47;
     Checkbox checkbox = 20;
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
@@ -81,6 +82,7 @@ message Element {
     DateInput date_input = 27;
     DeckGlJsonChart deck_gl_json_chart = 34;
     DocString doc_string = 7;
+    DownloadButton download_button = 43;
     Empty empty = 2;
     Exception exception = 8;
     Favicon favicon = 36;
@@ -107,7 +109,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 47
+    // Next ID: 48
   }
 
   reserved 9;

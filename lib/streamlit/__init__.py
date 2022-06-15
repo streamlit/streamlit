@@ -170,6 +170,9 @@ warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
 
+# TODO XXX Is this the best way to do this?
+cell = _main._cell
+
 # Legacy
 _legacy_dataframe = _main._legacy_dataframe
 _legacy_table = _main._legacy_table

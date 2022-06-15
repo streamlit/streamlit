@@ -20,34 +20,35 @@ import {
   Audio as AudioProto,
   BokehChart as BokehChartProto,
   Button as ButtonProto,
-  DownloadButton as DownloadButtonProto,
   CameraInput as CameraInputProto,
+  Cell as CellProto,
   Checkbox as CheckboxProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
-  FileUploader as FileUploaderProto,
-  MultiSelect as MultiSelectProto,
-  NumberInput as NumberInputProto,
-  Radio as RadioProto,
-  Selectbox as SelectboxProto,
-  Slider as SliderProto,
-  Spinner as SpinnerProto,
-  TextArea as TextAreaProto,
-  TextInput as TextInputProto,
-  TimeInput as TimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
+  DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
+  FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
   Markdown as MarkdownProto,
   Metric as MetricProto,
+  MultiSelect as MultiSelectProto,
+  NumberInput as NumberInputProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
+  Radio as RadioProto,
+  Selectbox as SelectboxProto,
+  Slider as SliderProto,
+  Spinner as SpinnerProto,
   Text as TextProto,
+  TextArea as TextAreaProto,
+  TextInput as TextInputProto,
+  TimeInput as TimeInputProto,
   Video as VideoProto,
 } from "src/autogen/proto"
 
@@ -403,6 +404,14 @@ const RawElementNodeRenderer = (
           width={width}
           {...widgetProps}
         />
+      )
+    }
+
+    case "cell": {
+      // TODO XXX
+      const cellProto = node.element.cell as CellProto
+      return (
+        <div key={`cell-${cellProto.cellId}`}>CELL {cellProto.cellId}</div>
       )
     }
 
