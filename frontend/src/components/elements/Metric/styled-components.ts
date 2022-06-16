@@ -32,11 +32,9 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   alignItems: "center",
 }))
 
-export const StyledMetricLabelText = styled(StyledWidgetLabel)(
-  () => ({
-    marginBottom: 0,
-  })
-)
+export const StyledMetricLabelText = styled(StyledWidgetLabel)(() => ({
+  marginBottom: 0,
+}))
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.threeXL,
