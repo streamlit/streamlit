@@ -39,7 +39,7 @@ export default function Metric({ element }: MetricProps): ReactElement {
   const { colors }: Theme = useTheme()
   const { MetricColor, MetricDirection } = MetricProto
 
-  let direction = null
+  let direction: any = null
   let color = ""
 
   switch (element.color) {
