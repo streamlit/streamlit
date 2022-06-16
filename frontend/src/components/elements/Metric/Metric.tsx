@@ -27,6 +27,9 @@ import {
   StyledMetricValueText,
   StyledMetricDeltaText,
 } from "./styled-components"
+import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 
 export interface MetricProps {
   element: MetricProto
@@ -72,7 +75,14 @@ export default function Metric({ element }: MetricProps): ReactElement {
   return (
     <div data-testid="metric-container">
       <StyledMetricLabelText data-testid="stMetricLabel">
-        <StyledTruncateText> {element.label} </StyledTruncateText>
+        <StyledTruncateText> 
+          {element.label} 
+          {element.help && (
+            <StyledWidgetLabelHelpInline>
+            <TooltipIcon content={element.help} placement={Placement.TOP_RIGHT} />
+          </StyledWidgetLabelHelpInline>
+          )}
+        </StyledTruncateText>
       </StyledMetricLabelText>
       <StyledMetricValueText data-testid="stMetricValue">
         <StyledTruncateText> {element.body} </StyledTruncateText>

@@ -22,6 +22,7 @@ message Metric {
   string delta = 3;
   MetricDirection direction = 4;
   MetricColor color = 5;
+  string help = 6;
 
   enum MetricColor{
     RED = 0;
