@@ -14,10 +14,12 @@
 
 """st.memo/singleton hashing tests."""
 
+from dataclasses import dataclass
 import functools
 import hashlib
 import os
 import re
+
 import tempfile
 import types
 import unittest
@@ -270,6 +272,15 @@ class HashTest(unittest.TestCase):
         # (This also tests that MagicMock can hash at all, without blowing the
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
+
+    def test_dataclass(self):
+        @dataclass(frozen=True, eq=True)
+        class Data:
+            foo: str
+
+        bar = Data("bar")
+
+        assert get_hash(bar)
 
 
 class NotHashableTest(unittest.TestCase):
