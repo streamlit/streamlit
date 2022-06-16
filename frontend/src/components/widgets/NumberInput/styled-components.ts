@@ -17,7 +17,7 @@
 
 import styled from "@emotion/styled"
 
-const CONTROLS_WIDTH = 45 // px
+const CONTROLS_WIDTH = 32 // px
 
 export const StyledInputContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -34,7 +34,7 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledInputControls = styled.div({
-  height: "49px",
+  height: "40px",
   display: "flex",
   flexDirection: "row",
 })

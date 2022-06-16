@@ -24,7 +24,7 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
   ({ disabled, theme }) => ({
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-    marginBottom: theme.spacing.halfSmFont,
+    marginBottom: theme.spacing.sm,
     height: "auto",
     minHeight: theme.fontSizes.xl,
     verticalAlign: "middle",
@@ -42,7 +42,7 @@ export const StyledWidgetLabelHelp = styled.div(() => ({
 }))
 
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.twoSm,
   color: theme.colors.fadedText60,
   margin: theme.spacing.none,
   textAlign: "right",

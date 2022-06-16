@@ -205,6 +205,13 @@ class TextInput extends React.PureComponent<Props, State> {
                 "::placeholder": {
                   opacity: "0.7",
                 },
+                padding: ".5rem",
+                lineHeight: "1.4",
+              },
+            },
+            Root: {
+              style: {
+                borderWidth: "1px",
               },
             },
           }}

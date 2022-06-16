@@ -340,6 +340,10 @@ class NumberInput extends React.PureComponent<Props, State> {
                   min: this.getMin(),
                   max: this.getMax(),
                 },
+                style: {
+                  padding: ".5rem",
+                  lineHeight: "1.5",
+                },
               },
               InputContainer: {
                 style: () => ({
@@ -351,6 +355,7 @@ class NumberInput extends React.PureComponent<Props, State> {
                 style: () => ({
                   borderTopRightRadius: 0,
                   borderBottomRightRadius: 0,
+                  borderWidth: 0,
                 }),
               },
             }}
