@@ -79,8 +79,8 @@ export default function Metric({ element }: MetricProps): ReactElement {
           {element.label} 
           {element.help && (
             <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={element.help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelpInline>
+              <TooltipIcon content={element.help} placement={Placement.TOP_RIGHT} />
+            </StyledWidgetLabelHelpInline>
           )}
         </StyledTruncateText>
       </StyledMetricLabelText>
