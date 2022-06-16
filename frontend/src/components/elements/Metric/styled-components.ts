@@ -33,7 +33,7 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
 }))
 
 export const StyledMetricLabelText = styled(StyledWidgetLabel)(
-  ({ theme }) => ({
+  () => ({
     marginBottom: 0,
   })
 )
