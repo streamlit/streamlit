@@ -73,6 +73,8 @@ class MetricMixin:
              negative. This is useful when a negative change is considered
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
+        help : str
+            An optional tooltip that gets displayed next to the metric label.
 
         Example
         -------
