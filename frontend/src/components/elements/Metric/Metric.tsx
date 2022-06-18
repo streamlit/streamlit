@@ -21,6 +21,9 @@ import { Theme } from "src/theme"
 import Icon from "src/components/shared/Icon"
 import { useTheme } from "@emotion/react"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
+import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 import {
   StyledTruncateText,
   StyledMetricLabelText,
@@ -72,7 +75,17 @@ export default function Metric({ element }: MetricProps): ReactElement {
   return (
     <div data-testid="metric-container">
       <StyledMetricLabelText data-testid="stMetricLabel">
-        <StyledTruncateText> {element.label} </StyledTruncateText>
+        <StyledTruncateText>
+          {element.label}
+          {element.help && (
+            <StyledWidgetLabelHelpInline>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelpInline>
+          )}
+        </StyledTruncateText>
       </StyledMetricLabelText>
       <StyledMetricValueText data-testid="stMetricValue">
         <StyledTruncateText> {element.body} </StyledTruncateText>
