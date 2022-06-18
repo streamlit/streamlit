@@ -51,7 +51,10 @@ from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
-from importlib_metadata import version as _version
+try:
+    from importlib.metadata import version as _version
+except:
+    from importlib_metadata import version as _version
 
 __version__: str = _version("streamlit")
 
