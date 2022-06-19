@@ -21,7 +21,6 @@ import types
 from typing import (
     Any,
     cast,
-    Collection,
     Iterable,
     NamedTuple,
     Optional,
