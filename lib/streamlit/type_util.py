@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 
 OptionSequence: TypeAlias = "Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]"
-Key = Union[str, int]
+Key: TypeAlias = Union[str, int]
 
 
 T = TypeVar("T")
