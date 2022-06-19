@@ -22,14 +22,11 @@ from typing import (
     Any,
     cast,
     Collection,
-    Dict,
     Iterable,
-    List,
+    NamedTuple,
     Optional,
     overload,
     Sequence,
-    Tuple,
-    Type,
     TypeVar,
     TYPE_CHECKING,
     Union,
@@ -46,6 +43,7 @@ if TYPE_CHECKING:
     from pandas import DataFrame, Series, Index
     from pandas.io.formats.style import Styler
     from plotly.graph_objs._figure import Figure
+    from pydeck.bindings.deck import Deck
 
 
 OptionSequence: TypeAlias = "Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]"
@@ -62,17 +60,24 @@ class SupportsStr(Protocol):
 
 @overload
 def is_type(
+    obj: object, fqn_type_pattern: Literal["pydeck.bindings.deck.Deck"]
+) -> TypeGuard[Deck]:
+    ...
+
+
+@overload
+def is_type(
     obj: object, fqn_type_pattern: Literal["plotly.graph_objs._figure.Figure"]
 ) -> TypeGuard[Figure]:
     ...
 
 
 @overload
-def is_type(obj: object, fqn_type_pattern: Union[str, "re.Pattern[str]"]) -> bool:
+def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
     ...
 
 
-def is_type(obj: object, fqn_type_pattern: Union[str, "re.Pattern[str]"]) -> bool:
+def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
     """Check type without importing expensive modules.
 
     Parameters
@@ -117,7 +122,7 @@ _PANDAS_SERIES_TYPE_STR: Final = "pandas.core.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
 _NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
 
-_DATAFRAME_LIKE_TYPES: Final[Tuple[str, ...]] = (
+_DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
     _PANDAS_INDEX_TYPE_STR,
     _PANDAS_SERIES_TYPE_STR,
@@ -127,7 +132,7 @@ _DATAFRAME_LIKE_TYPES: Final[Tuple[str, ...]] = (
 
 DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
 
-_DATAFRAME_COMPATIBLE_TYPES: Final[Tuple[type, ...]] = (
+_DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
     dict,
     list,
     type(None),
@@ -136,7 +141,7 @@ _DATAFRAME_COMPATIBLE_TYPES: Final[Tuple[type, ...]] = (
 _DataFrameCompatible: TypeAlias = Union[dict, list, None]
 DataFrameCompatible: TypeAlias = Union[_DataFrameCompatible, DataFrameLike]
 
-_BYTES_LIKE_TYPES: Final[Tuple[type, ...]] = (
+_BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
     bytes,
     bytearray,
 )
@@ -211,7 +216,7 @@ def is_keras_model(obj: object) -> bool:
     )
 
 
-def is_plotly_chart(obj: Union[Figure, Collection[object]]) -> bool:
+def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
     """True if input looks like a Plotly chart."""
     return (
         is_type(obj, "plotly.graph_objs._figure.Figure")
@@ -238,7 +243,7 @@ def _is_plotly_obj(obj: object) -> bool:
     return the_type.__module__.startswith("plotly.graph_objs")
 
 
-def _is_list_of_plotly_objs(obj: object) -> TypeGuard[List[Any]]:
+def _is_list_of_plotly_objs(obj: object) -> TypeGuard[list[Any]]:
     if not isinstance(obj, list):
         return False
     if len(obj) == 0:
@@ -246,7 +251,7 @@ def _is_list_of_plotly_objs(obj: object) -> TypeGuard[List[Any]]:
     return all(_is_plotly_obj(item) for item in obj)
 
 
-def _is_probably_plotly_dict(obj: object) -> TypeGuard[Dict[str, Any]]:
+def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if not isinstance(obj, dict):
         return False
 
@@ -270,7 +275,7 @@ def is_function(x: object) -> TypeGuard[types.FunctionType]:
     return isinstance(x, types.FunctionType)
 
 
-def is_namedtuple(x: object) -> bool:
+def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     t = type(x)
     b = t.__bases__
     if len(b) != 1 or b[0] != tuple:
@@ -281,11 +286,11 @@ def is_namedtuple(x: object) -> bool:
     return all(type(n).__name__ == "str" for n in f)
 
 
-def is_pandas_styler(obj: object) -> "TypeGuard[Styler]":
+def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
-def is_pydeck(obj: object) -> bool:
+def is_pydeck(obj: object) -> TypeGuard[Deck]:
     """True if input looks like a pydeck chart."""
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
@@ -302,7 +307,7 @@ def convert_anything_to_df(df: Any) -> DataFrame:
     pandas.DataFrame
 
     """
-    # This is inefficent as the data will be converted back to Arrow
+    # This is inefficient as the data will be converted back to Arrow
     # when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if isinstance(df, pa.Table):
@@ -373,6 +378,16 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
         return cast(Iterable[T], obj)
     except TypeError:
         raise
+
+
+@overload
+def ensure_indexable(obj: Sequence[T]) -> Sequence[T]:
+    ...
+
+
+@overload
+def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
+    ...
 
 
 def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
