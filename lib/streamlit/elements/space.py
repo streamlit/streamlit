@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING, Literal, Optional
+from typing import cast, TYPE_CHECKING, Optional, Set
+from typing_extensions import Literal, TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Space_pb2 import Space as SpaceProto
@@ -24,22 +25,22 @@ SIZE_SMALL = "small"
 SIZE_MEDIUM = "medium"
 SIZE_LARGE = "large"
 
+SpaceSize: TypeAlias = Literal["small", "medium", "large"]
+SpaceSizes: Set[SpaceSize] = {"small", "medium", "large"}
+
 
 class SpaceMixin:
-    def space(
-        self, amount: Optional[Literal["small", "medium", "large"]] = None
-    ) -> "DeltaGenerator":
+    def space(self, amount: Optional[SpaceSize] = None) -> "DeltaGenerator":
         """
         st.space()
         """
-        size = None
 
         if amount is None:
             size = "small"
         else:
             size = amount
 
-        if size not in [SIZE_SMALL, SIZE_MEDIUM, SIZE_LARGE]:
+        if not isinstance(size, str) or size.lower() not in SpaceSizes:
             raise StreamlitAPIException(
                 'size should be one of "small", "medium" or "large".\n'
                 f"But were: {size}"
