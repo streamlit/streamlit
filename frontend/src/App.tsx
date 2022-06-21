@@ -849,6 +849,23 @@ export class App extends PureComponent<Props, State> {
           SessionInfo.current.maxCachedMessageAge
         )
       }
+    } else if (
+      status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+    ) {
+      // Notify any subscribers of this event (and do it on the next cycle of
+      // the event loop)
+      window.setTimeout(() => {
+        this.state.scriptFinishedHandlers.map(handler => handler())
+      }, 0)
+
+      // Tell the ConnectionManager to increment the message cache run
+      // count. This will result in expired ForwardMsgs being removed from
+      // the cache.
+      if (this.connectionManager !== null) {
+        this.connectionManager.incrementMessageCacheRunCount(
+          SessionInfo.current.maxCachedMessageAge
+        )
+      }
     }
   }
 

@@ -407,7 +407,7 @@ class ScriptRunnerTest(AsyncTestCase):
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
                 ScriptRunnerEvent.SCRIPT_STARTED,
                 # We use the SCRIPT_STOPPED_WITH_SUCCESS event even if the
                 # script runs into an error during execution. The user is
@@ -507,7 +507,7 @@ class ScriptRunnerTest(AsyncTestCase):
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
                 ScriptRunnerEvent.SCRIPT_STARTED,
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                 ScriptRunnerEvent.SHUTDOWN,
