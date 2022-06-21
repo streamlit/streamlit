@@ -26,13 +26,15 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   whiteSpace: "nowrap",
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.normal,
+  verticalAlign: "middle",
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
 }))
 
-export const StyledMetricLabelText = styled(StyledWidgetLabel)(
-  ({ theme }) => ({
-    marginBottom: 0,
-  })
-)
+export const StyledMetricLabelText = styled(StyledWidgetLabel)(() => ({
+  marginBottom: 0,
+}))
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.threeXL,

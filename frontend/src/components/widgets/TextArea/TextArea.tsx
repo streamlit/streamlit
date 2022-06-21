@@ -29,6 +29,7 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { isInForm } from "src/lib/utils"
+import { StyledTextAreaContainer } from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -195,27 +196,31 @@ class TextArea extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <UITextArea
-          data-testid="stTextArea"
-          value={value}
-          placeholder={placeholder}
-          onBlur={this.onBlur}
-          onChange={this.onChange}
-          onKeyDown={this.onKeyDown}
-          disabled={disabled}
-          overrides={{
-            Input: {
-              style: {
-                height: height ? `${height}px` : "",
-                minHeight: "95px",
-                resize: "vertical",
-                "::placeholder": {
-                  opacity: "0.7",
+        <StyledTextAreaContainer>
+          <UITextArea
+            data-testid="stTextArea"
+            value={value}
+            placeholder={placeholder}
+            onBlur={this.onBlur}
+            onChange={this.onChange}
+            onKeyDown={this.onKeyDown}
+            disabled={disabled}
+            overrides={{
+              Input: {
+                style: {
+                  padding: "1rem",
+                  lineHeight: "1.4",
+                  height: height ? `${height}px` : "",
+                  minHeight: "95px",
+                  resize: "vertical",
+                  "::placeholder": {
+                    opacity: "0.7",
+                  },
                 },
               },
-            },
-          }}
-        />
+            }}
+          />
+        </StyledTextAreaContainer>
         <InputInstructions
           dirty={dirty}
           value={value}

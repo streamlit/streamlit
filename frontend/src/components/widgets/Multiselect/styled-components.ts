@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,26 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+import styled from "@emotion/styled"
 
-message Metric {
-  string label = 1;
-  string body = 2;
-  string delta = 3;
-  MetricDirection direction = 4;
-  MetricColor color = 5;
-  string help = 6;
-
-  enum MetricColor{
-    RED = 0;
-    GREEN = 1;
-    GRAY = 2;
-  }
-  enum MetricDirection{
-    DOWN = 0;
-    UP = 1;
-    NONE = 2;
-  }
-}
+export const StyledUISelect = styled.div(({ theme }) => ({
+  "span[aria-disabled='true']": {
+    background: theme.colors.fadedText05,
+  },
+}))

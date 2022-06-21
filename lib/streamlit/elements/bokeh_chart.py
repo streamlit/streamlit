@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from bokeh.plotting.figure import Figure
     from streamlit.delta_generator import DeltaGenerator
 
-ST_BOKEH_VERSION: Final = "2.4.1"
+ST_BOKEH_VERSION: Final = "2.4.3"
 
 
 class BokehMixin:

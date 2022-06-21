@@ -68,7 +68,7 @@ const VirtualDropdown = React.forwardRef((props: any, ref) => {
   const height = Math.min(MAX_LIST_HEIGHT, children.length * LIST_ITEM_HEIGHT)
 
   return (
-    <StyledList ref={ref}>
+    <StyledList ref={ref} $style={{ paddingTop: 0, paddingBottom: 0 }}>
       <FixedSizeList
         width="100%"
         height={height}

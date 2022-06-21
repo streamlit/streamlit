@@ -94,6 +94,10 @@ describe("tooltips on widgets", () => {
     // two sliders, st.slider and st.select_slider
     cy.get(`.stSlider .stTooltipIcon`).should("have.length", 2);
   });
+
+  it("displays tooltips on metric", () => {
+    cy.get(`[data-testid=stMetricLabel] .stTooltipIcon`).should("have.length", 1);
+  });
 });
 
 describe("tooltip text with dedent on widgets", () => {
@@ -264,6 +268,14 @@ describe("tooltip text with dedent on widgets", () => {
 
   it("Display text properly on tooltips on button", () => {
     cy.get(".stButton [data-testid=tooltipHoverTarget]").trigger("mouseover");
+    cy.get("[data-testid=stMarkdownContainer]").should(
+      "contain.text",
+      tooltipTextBlock2
+    );
+  });
+
+  it("Display text properly on tooltips on metric", () => {
+    cy.get("[data-testid=stMetricLabel] [data-testid=tooltipHoverTarget]").trigger("mouseover");
     cy.get("[data-testid=stMarkdownContainer]").should(
       "contain.text",
       tooltipTextBlock2

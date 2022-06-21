@@ -81,7 +81,7 @@ describe("TimeInput widget", () => {
   it("can be disabled", () => {
     const props = getProps()
     const wrapper = shallow(<TimeInput {...props} />)
-    expect(wrapper.find(UITimePicker).prop("overrides")).toStrictEqual({
+    expect(wrapper.find(UITimePicker).prop("overrides")).toMatchObject({
       Select: {
         props: {
           disabled: props.disabled,
