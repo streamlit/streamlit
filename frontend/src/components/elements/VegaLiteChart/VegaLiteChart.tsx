@@ -443,14 +443,18 @@ function dataIsAnAppendOfPrev(
 ): boolean {
   // Check whether dataframes have the same shape.
 
+  // if number of df columns not equal, not an append
   if (prevNumCols !== numCols) {
     return false
   }
 
+  // an append would have prev number of rows < new number of rows
+  // the = handles cases of dynamic inputs to data having same number of rows as previous
   if (prevNumRows >= numRows) {
     return false
   }
 
+  // if no previous data, should render from scratch
   if (prevNumRows === 0) {
     return false
   }
