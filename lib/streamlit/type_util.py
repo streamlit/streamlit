@@ -14,33 +14,42 @@
 
 """A bunch of useful utilities for dealing with types."""
 
+from __future__ import annotations
+
 import re
+import types
 from typing import (
     Any,
     cast,
     Iterable,
+    NamedTuple,
     Optional,
+    overload,
     Sequence,
-    Tuple,
-    Type,
+    TypeVar,
     TYPE_CHECKING,
     Union,
 )
-from typing_extensions import Final, Protocol, TypeAlias
+from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard
 
-from pandas import DataFrame, Series, Index
-import numpy as np
 import pyarrow as pa
 
 from streamlit import errors
 
 if TYPE_CHECKING:
+    import numpy as np
     import sympy
+    from pandas import DataFrame, Series, Index
     from pandas.io.formats.style import Styler
-    from typing_extensions import TypeGuard
+    from plotly.graph_objs._figure import Figure
+    from pydeck.bindings.deck import Deck  # type: ignore[import]
 
-OptionSequence = Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]
-Key = Union[str, int]
+
+OptionSequence: TypeAlias = "Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]"
+Key: TypeAlias = Union[str, int]
+
+
+T = TypeVar("T")
 
 
 class SupportsStr(Protocol):
@@ -48,12 +57,31 @@ class SupportsStr(Protocol):
         ...
 
 
-def is_type(obj: Any, fqn_type_pattern: Union[str, "re.Pattern[str]"]) -> bool:
+@overload
+def is_type(
+    obj: object, fqn_type_pattern: Literal["pydeck.bindings.deck.Deck"]
+) -> TypeGuard[Deck]:
+    ...
+
+
+@overload
+def is_type(
+    obj: object, fqn_type_pattern: Literal["plotly.graph_objs._figure.Figure"]
+) -> TypeGuard[Figure]:
+    ...
+
+
+@overload
+def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
+    ...
+
+
+def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
     """Check type without importing expensive modules.
 
     Parameters
     ----------
-    obj : any
+    obj : object
         The object to type-check.
     fqn_type_pattern : str or regex
         The fully-qualified type string or a regular expression.
@@ -82,7 +110,7 @@ def get_fqn(the_type: type) -> str:
     return "%s.%s" % (module, name)
 
 
-def get_fqn_type(obj: Any) -> str:
+def get_fqn_type(obj: object) -> str:
     """Get module.type_name for a given object."""
     return get_fqn(type(obj))
 
@@ -93,7 +121,7 @@ _PANDAS_SERIES_TYPE_STR: Final = "pandas.core.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
 _NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
 
-_DATAFRAME_LIKE_TYPES: Final[Tuple[str, ...]] = (
+_DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
     _PANDAS_INDEX_TYPE_STR,
     _PANDAS_SERIES_TYPE_STR,
@@ -101,9 +129,9 @@ _DATAFRAME_LIKE_TYPES: Final[Tuple[str, ...]] = (
     _NUMPY_ARRAY_TYPE_STR,
 )
 
-DataFrameLike: TypeAlias = Union[DataFrame, Index, Series, "Styler"]
+DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
 
-_DATAFRAME_COMPATIBLE_TYPES: Final[Tuple[type, ...]] = (
+_DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
     dict,
     list,
     type(None),
@@ -112,7 +140,7 @@ _DATAFRAME_COMPATIBLE_TYPES: Final[Tuple[type, ...]] = (
 _DataFrameCompatible: TypeAlias = Union[dict, list, None]
 DataFrameCompatible: TypeAlias = Union[_DataFrameCompatible, DataFrameLike]
 
-_BYTES_LIKE_TYPES: Final[Tuple[type, ...]] = (
+_BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
     bytes,
     bytearray,
 )
@@ -120,35 +148,35 @@ _BYTES_LIKE_TYPES: Final[Tuple[type, ...]] = (
 BytesLike: TypeAlias = Union[bytes, bytearray]
 
 
-def is_dataframe(obj: Any) -> "TypeGuard[DataFrame]":
+def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
     return is_type(obj, _PANDAS_DF_TYPE_STR)
 
 
-def is_dataframe_like(obj: Any) -> "TypeGuard[DataFrameLike]":
+def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
 
-def is_dataframe_compatible(obj: Any) -> "TypeGuard[DataFrameCompatible]":
+def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
     """True if type that can be passed to convert_anything_to_df."""
     return is_dataframe_like(obj) or type(obj) in _DATAFRAME_COMPATIBLE_TYPES
 
 
-def is_bytes_like(obj: Any) -> "TypeGuard[BytesLike]":
+def is_bytes_like(obj: object) -> TypeGuard[BytesLike]:
     """True if the type is considered bytes-like for the purposes of
     protobuf data marshalling."""
     return isinstance(obj, _BYTES_LIKE_TYPES)
 
 
-def to_bytes(obj: Any) -> bytes:
+def to_bytes(obj: BytesLike) -> bytes:
     """Converts the given object to bytes.
 
     Only types for which `is_bytes_like` is true can be converted; anything
     else will result in an exception.
     """
-    if isinstance(obj, bytes):
-        return obj
-    elif isinstance(obj, bytearray):
+    if isinstance(obj, bytearray):
         return bytes(obj)
+    elif isinstance(obj, bytes):
+        return obj
 
     raise RuntimeError(f"{obj} is not convertible to bytes")
 
@@ -156,7 +184,7 @@ def to_bytes(obj: Any) -> bytes:
 _SYMPY_RE: Final = re.compile(r"^sympy.*$")
 
 
-def is_sympy_expession(obj: Any) -> "TypeGuard[sympy.Expr]":
+def is_sympy_expession(obj: object) -> TypeGuard[sympy.Expr]:
     """True if input is a SymPy expression."""
     if not is_type(obj, _SYMPY_RE):
         return False
@@ -172,12 +200,12 @@ def is_sympy_expession(obj: Any) -> "TypeGuard[sympy.Expr]":
 _ALTAIR_RE: Final = re.compile(r"^altair\.vegalite\.v\d+\.api\.\w*Chart$")
 
 
-def is_altair_chart(obj: Any) -> bool:
+def is_altair_chart(obj: object) -> bool:
     """True if input looks like an Altair chart."""
     return is_type(obj, _ALTAIR_RE)
 
 
-def is_keras_model(obj: Any) -> bool:
+def is_keras_model(obj: object) -> bool:
     """True if input looks like a Keras model."""
     return (
         is_type(obj, "keras.engine.sequential.Sequential")
@@ -187,7 +215,7 @@ def is_keras_model(obj: Any) -> bool:
     )
 
 
-def is_plotly_chart(obj: Any) -> bool:
+def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
     """True if input looks like a Plotly chart."""
     return (
         is_type(obj, "plotly.graph_objs._figure.Figure")
@@ -196,7 +224,7 @@ def is_plotly_chart(obj: Any) -> bool:
     )
 
 
-def is_graphviz_chart(obj: Any) -> bool:
+def is_graphviz_chart(obj: object) -> bool:
     """True if input looks like a GraphViz chart."""
     return (
         # GraphViz < 0.18
@@ -208,21 +236,21 @@ def is_graphviz_chart(obj: Any) -> bool:
     )
 
 
-def _is_plotly_obj(obj: Any) -> bool:
+def _is_plotly_obj(obj: object) -> bool:
     """True if input if from a type that lives in plotly.plotly_objs."""
     the_type = type(obj)
     return the_type.__module__.startswith("plotly.graph_objs")
 
 
-def _is_list_of_plotly_objs(obj: Any) -> bool:
-    if type(obj) is not list:
+def _is_list_of_plotly_objs(obj: object) -> TypeGuard[list[Any]]:
+    if not isinstance(obj, list):
         return False
     if len(obj) == 0:
         return False
     return all(_is_plotly_obj(item) for item in obj)
 
 
-def _is_probably_plotly_dict(obj: Any) -> bool:
+def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if not isinstance(obj, dict):
         return False
 
@@ -241,15 +269,12 @@ def _is_probably_plotly_dict(obj: Any) -> bool:
     return False
 
 
-_FUNCTION_TYPE: Final[Type[Any]] = type(lambda: 0)
-
-
-def is_function(x: Any) -> bool:
+def is_function(x: object) -> TypeGuard[types.FunctionType]:
     """Return True if x is a function."""
-    return type(x) == _FUNCTION_TYPE
+    return isinstance(x, types.FunctionType)
 
 
-def is_namedtuple(x: Any) -> bool:
+def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     t = type(x)
     b = t.__bases__
     if len(b) != 1 or b[0] != tuple:
@@ -260,11 +285,11 @@ def is_namedtuple(x: Any) -> bool:
     return all(type(n).__name__ == "str" for n in f)
 
 
-def is_pandas_styler(obj: Any) -> "TypeGuard[Styler]":
+def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
-def is_pydeck(obj: Any) -> bool:
+def is_pydeck(obj: object) -> TypeGuard[Deck]:
     """True if input looks like a pydeck chart."""
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
@@ -281,7 +306,7 @@ def convert_anything_to_df(df: Any) -> DataFrame:
     pandas.DataFrame
 
     """
-    # This is inefficent as the data will be converted back to Arrow
+    # This is inefficient as the data will be converted back to Arrow
     # when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if isinstance(df, pa.Table):
@@ -319,7 +344,17 @@ Offending object:
         )
 
 
-def ensure_iterable(obj: Any) -> Iterable[Any]:
+@overload
+def ensure_iterable(obj: Iterable[T]) -> Iterable[T]:
+    ...
+
+
+@overload
+def ensure_iterable(obj: DataFrame) -> Iterable[Any]:
+    ...
+
+
+def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -339,9 +374,19 @@ def ensure_iterable(obj: Any) -> Iterable[Any]:
 
     try:
         iter(obj)
-        return cast(Iterable[Any], obj)
+        return cast(Iterable[T], obj)
     except TypeError:
         raise
+
+
+@overload
+def ensure_indexable(obj: Sequence[T]) -> Sequence[T]:
+    ...
+
+
+@overload
+def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
+    ...
 
 
 def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
@@ -431,6 +476,16 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
 
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
+
+
+@overload
+def to_key(key: None) -> None:
+    ...
+
+
+@overload
+def to_key(key: Key) -> str:
+    ...
 
 
 def to_key(key: Optional[Key]) -> Optional[str]:

@@ -23,6 +23,7 @@ import {
   Description,
 } from "@emotion-icons/material-outlined"
 import React from "react"
+import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
 
 import Icon from "src/components/shared/Icon"
@@ -55,10 +56,11 @@ const getProps = (props: Partial<Props> = {}): Props => ({
     { pageScriptHash: "main_page_hash", pageName: "streamlit_app" },
     { pageScriptHash: "other_page_hash", pageName: "my_other_page" },
   ],
-  hasSidebarElements: false,
-  onPageChange: jest.fn(),
-  hideParentScrollbar: jest.fn(),
+  collapseSidebar: jest.fn(),
   currentPageScriptHash: "",
+  hasSidebarElements: false,
+  hideParentScrollbar: jest.fn(),
+  onPageChange: jest.fn(),
   pageLinkBaseUrl: "",
   ...props,
 })
@@ -68,6 +70,9 @@ const mockClickEvent = new MouseEvent("click") as any
 describe("SidebarNav", () => {
   afterEach(() => {
     mockUseIsOverflowing.mockReset()
+
+    // @ts-ignore
+    reactDeviceDetect.isMobile = false
   })
 
   it("returns null if 0 appPages (may be true before the first script run)", () => {
@@ -358,6 +363,23 @@ describe("SidebarNav", () => {
 
     expect(preventDefault).toHaveBeenCalled()
     expect(props.onPageChange).toHaveBeenCalledWith("other_page_hash")
+    expect(props.collapseSidebar).not.toHaveBeenCalled()
+  })
+
+  it("collapses sidebar on page change when on mobile", () => {
+    // @ts-ignore
+    reactDeviceDetect.isMobile = true
+
+    const props = getProps()
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    const preventDefault = jest.fn()
+    const links = wrapper.find(StyledSidebarNavLink)
+    links.at(1).simulate("click", { preventDefault })
+
+    expect(preventDefault).toHaveBeenCalled()
+    expect(props.onPageChange).toHaveBeenCalledWith("other_page_hash")
+    expect(props.collapseSidebar).toHaveBeenCalled()
   })
 
   it("calls hideParentScrollbar onMouseOut", () => {

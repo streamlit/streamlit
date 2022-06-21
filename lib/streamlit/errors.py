@@ -116,7 +116,7 @@ st.set_option('{1}', False)
 or in your `.streamlit/config.toml`
 ```
 [deprecation]
-{2} = False
+{2} = false
 ```
     """.format(
             msg, config_option, config_option.split(".")[1]

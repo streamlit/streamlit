@@ -35,7 +35,7 @@ class SelectSliderMixin:
     def select_slider(
         self,
         label: str,
-        options: OptionSequence = [],
+        options: OptionSequence = (),
         value: Any = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -136,7 +136,7 @@ class SelectSliderMixin:
     def _select_slider(
         self,
         label: str,
-        options: OptionSequence = [],
+        options: OptionSequence = (),
         value: Any = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import cast, TYPE_CHECKING, Union
+from typing import cast, TYPE_CHECKING, Union, Optional
 from typing_extensions import TypeAlias, Literal
 
 import attr
@@ -46,6 +46,7 @@ class MetricMixin:
         value: Value,
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
+        help: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -72,6 +73,8 @@ class MetricMixin:
              negative. This is useful when a negative change is considered
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
+        help : str
+            An optional tooltip that gets displayed next to the metric label.
 
         Example
         -------
@@ -109,6 +112,8 @@ class MetricMixin:
         metric_proto.body = self.parse_value(value)
         metric_proto.label = self.parse_label(label)
         metric_proto.delta = self.parse_delta(delta)
+        if help is not None:
+            metric_proto.help = dedent(help)
 
         color_and_direction = self.determine_delta_color_and_direction(
             cast(DeltaColor, clean_text(delta_color)), delta

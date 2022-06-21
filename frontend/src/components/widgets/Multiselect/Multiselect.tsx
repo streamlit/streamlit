@@ -31,6 +31,7 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
+import { StyledUISelect } from "src/components/widgets/Multiselect/styled-components"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
@@ -207,78 +208,101 @@ class Multiselect extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <UISelect
-          options={selectOptions}
-          labelKey="label"
-          valueKey="value"
-          placeholder={placeholder}
-          type={TYPE.select}
-          multi
-          onChange={this.onChange}
-          value={this.valueFromState}
-          disabled={disabled}
-          size={"compact"}
-          filterOptions={this.filterOptions}
-          overrides={{
-            ValueContainer: {
-              style: () => ({
-                /*
-                  This minHeight is needed to fix a bug from BaseWeb in which the
-                  div that contains the options changes their height from 40px to 44px.
-
-                  You could check this behavior in their documentation as well:
-                  https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
-
-                  Issue related: https://github.com/streamlit/streamlit/issues/590
-                 */
-                minHeight: "44px",
-              }),
-            },
-            ClearIcon: {
-              style: {
-                color: theme.colors.darkGray,
+        <StyledUISelect>
+          <UISelect
+            options={selectOptions}
+            labelKey="label"
+            valueKey="value"
+            placeholder={placeholder}
+            type={TYPE.select}
+            multi
+            onChange={this.onChange}
+            value={this.valueFromState}
+            disabled={disabled}
+            size={"compact"}
+            filterOptions={this.filterOptions}
+            overrides={{
+              IconsContainer: {
+                style: () => ({
+                  paddingRight: ".5rem",
+                }),
               },
-            },
-            SearchIcon: {
-              style: {
-                color: theme.colors.darkGray,
+
+              ControlContainer: {
+                style: () => ({
+                  borderWidth: "1px",
+                }),
               },
-            },
-            Tag: {
-              props: {
-                overrides: {
-                  Root: {
-                    style: {
-                      borderTopLeftRadius: theme.radii.md,
-                      borderTopRightRadius: theme.radii.md,
-                      borderBottomRightRadius: theme.radii.md,
-                      borderBottomLeftRadius: theme.radii.md,
-                      fontSize: theme.fontSizes.sm,
-                      paddingLeft: theme.spacing.md,
+
+              ValueContainer: {
+                style: () => ({
+                  /*
+                    This minHeight is needed to fix a bug from BaseWeb in which the
+                    div that contains the options changes their height from 40px to 44px.
+
+                    You could check this behavior in their documentation as well:
+                    https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
+
+                    Issue related: https://github.com/streamlit/streamlit/issues/590
+                  */
+                  minHeight: "40px",
+                  paddingLeft: ".5rem",
+                }),
+              },
+              ClearIcon: {
+                style: {
+                  color: theme.colors.darkGray,
+                },
+              },
+              SearchIcon: {
+                style: {
+                  color: theme.colors.darkGray,
+                },
+              },
+              Tag: {
+                props: {
+                  overrides: {
+                    Root: {
+                      style: {
+                        borderTopLeftRadius: theme.radii.md,
+                        borderTopRightRadius: theme.radii.md,
+                        borderBottomRightRadius: theme.radii.md,
+                        borderBottomLeftRadius: theme.radii.md,
+                        fontSize: theme.fontSizes.sm,
+                        paddingLeft: theme.spacing.sm,
+                        marginLeft: 0,
+                        marginRight: theme.spacing.sm,
+                        height: "28px",
+                      },
                     },
-                  },
-                  Action: {
-                    style: {
-                      paddingLeft: theme.spacing.sm,
+                    Action: {
+                      style: {
+                        paddingLeft: 0,
+                      },
+                    },
+                    Text: {
+                      style: {
+                        fontSize: theme.fontSizes.md,
+                      },
                     },
                   },
                 },
               },
-            },
-            MultiValue: {
-              props: {
-                overrides: {
-                  Root: {
-                    style: {
-                      fontSize: theme.fontSizes.sm,
+              MultiValue: {
+                props: {
+                  overrides: {
+                    Root: {
+                      style: {
+                        fontSize: theme.fontSizes.sm,
+                      },
                     },
                   },
                 },
               },
-            },
-            Dropdown: { component: VirtualDropdown },
-          }}
-        />
+              Dropdown: { component: VirtualDropdown },
+            }}
+          />
+        </StyledUISelect>
       </div>
     )
   }
