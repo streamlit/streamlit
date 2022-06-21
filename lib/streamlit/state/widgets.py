@@ -18,7 +18,7 @@ from types import MappingProxyType
 from typing import Dict, Optional, Union, TYPE_CHECKING
 from typing import Mapping
 
-from typing_extensions import Final, Literal, TypeAlias
+from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
