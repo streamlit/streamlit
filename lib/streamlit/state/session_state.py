@@ -92,7 +92,9 @@ ArrayValueType = Literal[
 
 ValueType = Literal[
     ArrayValueType,
+    "arrow_value",
     "bool_value",
+    "bytes_value",
     "double_value",
     "file_uploader_state_value",
     "int_value",
