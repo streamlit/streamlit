@@ -108,7 +108,7 @@ ARRAY_VALUE_TYPES: Final = frozenset(
             "double_array_value",
             "int_array_value",
             "string_array_value",
-        }
+        },
     )
 )
 
