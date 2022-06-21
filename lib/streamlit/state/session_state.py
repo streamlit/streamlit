@@ -84,6 +84,34 @@ WidgetCallback = Callable[..., None]
 WidgetDeserializer = Callable[[Any, str], T]
 WidgetSerializer = Callable[[T], Any]
 
+ArrayValueType = Literal[
+    "double_array_value",
+    "int_array_value",
+    "string_array_value",
+]
+
+ValueType = Literal[
+    ArrayValueType,
+    "bool_value",
+    "double_value",
+    "file_uploader_state_value",
+    "int_value",
+    "json_value",
+    "string_value",
+    "trigger_value",
+]
+
+ARRAY_VALUE_TYPES: Final = frozenset(
+    cast(
+        Set[ArrayValueType],
+        {
+            "double_array_value",
+            "int_array_value",
+            "string_array_value",
+        }
+    )
+)
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class WidgetMetadata(Generic[T]):
@@ -92,7 +120,7 @@ class WidgetMetadata(Generic[T]):
     id: str
     deserializer: WidgetDeserializer[T] = attr.ib(repr=False)
     serializer: WidgetSerializer[T] = attr.ib(repr=False)
-    value_type: Any
+    value_type: ValueType
 
     # An optional user-code callback invoked when the widget's value changes.
     # Widget callbacks are called at the start of a script run, before the
@@ -134,15 +162,11 @@ class WStates(MutableMapping[str, Any]):
             # gotten from a reconnecting browser and the script is
             # trying to access it. Pretend it doesn't exist.
             raise KeyError(k)
-        value_type = cast(str, wstate.value.WhichOneof("value"))
+        value_type = cast(ValueType, wstate.value.WhichOneof("value"))
         value = wstate.value.__getattribute__(value_type)
 
         # Array types are messages with data in a `data` field
-        if value_type in [
-            "double_array_value",
-            "int_array_value",
-            "string_array_value",
-        ]:
+        if value_type in ARRAY_VALUE_TYPES:
             value = value.data
         elif value_type == "json_value":
             value = json.loads(value)
@@ -232,11 +256,7 @@ class WStates(MutableMapping[str, Any]):
 
         field = metadata.value_type
         serialized = metadata.serializer(item.value)
-        if field in (
-            "double_array_value",
-            "int_array_value",
-            "string_array_value",
-        ):
+        if field in ARRAY_VALUE_TYPES:
             arr = getattr(widget, field)
             arr.data.extend(serialized)
         elif field == "json_value":

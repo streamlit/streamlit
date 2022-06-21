@@ -14,7 +14,11 @@
 
 import hashlib
 import textwrap
-from typing import Dict, Optional, Tuple, Union, TYPE_CHECKING
+from types import MappingProxyType
+from typing import Dict, Optional, Union, TYPE_CHECKING
+from typing import Mapping
+
+from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
@@ -37,6 +41,7 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 
 from .session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
+    ValueType,
     WidgetMetadata,
     WidgetSerializer,
     WidgetArgs,
@@ -52,7 +57,7 @@ if TYPE_CHECKING:
     from streamlit.scriptrunner import ScriptRunContext
 
 # Protobuf types for all widgets.
-WidgetProto = Union[
+WidgetProto: TypeAlias = Union[
     Button,
     CameraInput,
     Checkbox,
@@ -71,6 +76,37 @@ WidgetProto = Union[
     TimeInput,
 ]
 
+ElementType: TypeAlias = str
+
+# NOTE: We use this table to start with a best-effort guess for the value_type
+# of each widget. Once we actually receive a proto for a widget from the
+# frontend, the guess is updated to be the correct type. Unfortunately, we're
+# not able to always rely on the proto as the type may be needed earlier.
+# Thankfully, in these cases (when value_type == "trigger_value"), the static
+# table here being slightly inaccurate should never pose a problem.
+ELEMENT_TYPE_TO_VALUE_TYPE: Final[
+    Mapping[ElementType, ValueType]
+] = MappingProxyType(
+    {
+        "button": "trigger_value",
+        "download_button": "trigger_value",
+        "checkbox": "bool_value",
+        "camera_input": "file_uploader_state_value",
+        "color_picker": "string_value",
+        "date_input": "string_array_value",
+        "file_uploader": "file_uploader_state_value",
+        "multiselect": "int_array_value",
+        "number_input": "double_value",
+        "radio": "int_value",
+        "selectbox": "int_value",
+        "slider": "double_array_value",
+        "text_area": "string_value",
+        "text_input": "string_value",
+        "time_input": "string_value",
+        "component_instance": "json_value",
+    }
+)
+
 
 class NoValue:
     """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
@@ -82,7 +118,7 @@ class NoValue:
 
 
 def register_widget(
-    element_type: str,
+    element_type: ElementType,
     element_proto: WidgetProto,
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
@@ -98,15 +134,17 @@ def register_widget(
 
     Parameters
     ----------
-    element_type : str
+    element_type : ElementType
         The type of the element as stored in proto.
-    element_proto : proto
+    element_proto : WidgetProto
         The proto of the specified type (e.g. Button/Multiselect/Slider proto)
-    deserializer : Optional[WidgetDeserializer]
+    deserializer : WidgetDeserializer[T]
         Called to convert a widget's protobuf value to the value returned by
         its st.<widget_name> function.
-    serializer : Optional[WidgetSerializer]
+    serializer : WidgetSerializer[T]
         Called to convert a widget's value to its protobuf representation.
+    ctx : Optional[ScriptRunContext]
+        Used to ensure uniqueness of widget IDs, and to look up widget values.
     user_key : Optional[str]
         Optional user-specified string to use as the widget ID.
         If this is None, we'll generate an ID by hashing the element.
@@ -124,18 +162,29 @@ def register_widget(
 
     Returns
     -------
-    ui_value : WidgetStateReport[T]
-        - If our ScriptRunContext doesn't exist (meaning that we're running
-        a "bare script" outside of streamlit), we'll return a FallbackState[T].
-        - Else if we are disconnected from the SessionState instance, we'll
-        return a FallbackState[T].
-        - Else if the widget has already been registered on a previous run but
-        the user hasn't interacted with it on the client, it will have the
-        default value it was first created with. We then return a
-        RealWidgetState[T], containing this value.
-        - Else the widget has already been registered and the user *has*
-        interacted with it, it will have that most recent user-specified value.
-        We then return a RealWidgetState[T], containing this value.
+    widget_state_report : WidgetStateReport[T]
+        A report providing information on which value to return to the widget
+        caller, and whether the UI needs updating. Two kinds of reports can be
+        returned.
+
+        - Unhappy path: FallbackState[T]
+            - If our ScriptRunContext doesn't exist (meaning that we're
+            running as a "bare script" outside streamlit), we'll return a
+            FallbackState[T].
+            - Else if we are disconnected from the SessionState instance,
+            we'll also return a FallbackState[T].
+        - Happy path: RealWidgetState[T]
+            - Else if the widget has already been registered on a previous run
+            but the user hasn't interacted with it on the client, it will have
+            the default value it was first created with. We then return a
+            RealWidgetState[T], containing this value.
+            - Else the widget has already been registered and the user *has*
+            interacted with it, it will have that most recent user-specified
+            value. We then return a RealWidgetState[T], containing this value.
+
+        Both kinds of reports allow the widget implementation to return a
+        return value, allowing streamlit widgets to be used in a non-streamlit
+        setting.
 
     """
     widget_id = _get_widget_id(element_type, element_proto, user_key)
@@ -163,38 +212,12 @@ def register_widget(
         widget_id,
         deserializer,
         serializer,
-        value_type=element_type_to_value_type[element_type],
+        value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
         callback=on_change_handler,
         callback_args=args,
         callback_kwargs=kwargs,
     )
     return ctx.session_state.register_widget(metadata, user_key)
-
-
-# NOTE: We use this table to start with a best-effort guess for the value_type
-# of each widget. Once we actually receive a proto for a widget from the
-# frontend, the guess is updated to be the correct type. Unfortuantely, we're
-# not able to always rely on the proto as the type may be needed earlier.
-# Thankfully, in these cases (when value_type == "trigger_value"), the static
-# table here being slightly inaccurate should never pose a problem.
-element_type_to_value_type = {
-    "button": "trigger_value",
-    "download_button": "trigger_value",
-    "checkbox": "bool_value",
-    "camera_input": "file_uploader_state_value",
-    "color_picker": "string_value",
-    "date_input": "string_array_value",
-    "file_uploader": "file_uploader_state_value",
-    "multiselect": "int_array_value",
-    "number_input": "double_value",
-    "radio": "int_value",
-    "selectbox": "int_value",
-    "slider": "double_array_value",
-    "text_area": "string_value",
-    "text_input": "string_value",
-    "time_input": "string_value",
-    "component_instance": "json_value",
-}
 
 
 def coalesce_widget_states(
