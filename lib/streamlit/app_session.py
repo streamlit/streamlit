@@ -483,6 +483,13 @@ class AppSession:
                 )
                 self._enqueue_forward_msg(msg)
 
+        elif event == ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN:
+            script_finished_msg = self._create_script_finished_message(
+                ForwardMsg.FINISHED_EARLY_FOR_RERUN
+            )
+            self._enqueue_forward_msg(script_finished_msg)
+            self._local_sources_watcher.update_watched_modules()
+
         elif event == ScriptRunnerEvent.SHUTDOWN:
             assert (
                 client_state is not None

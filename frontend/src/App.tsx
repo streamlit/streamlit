@@ -811,35 +811,42 @@ export class App extends PureComponent<Props, State> {
    * @param status the ScriptFinishedStatus that the script finished with
    */
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
-    if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY) {
+    if (
+      status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+      status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+    ) {
+      const successful =
+        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
       // Notify any subscribers of this event (and do it on the next cycle of
       // the event loop)
       window.setTimeout(() => {
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
-      // Clear any stale elements left over from the previous run.
-      // (We don't do this if our script had a compilation error and didn't
-      // finish successfully.)
-      this.setState(
-        ({ scriptRunId }) => ({
-          // Apply any pending elements that haven't been applied.
-          elements: this.pendingElementsBuffer.clearStaleNodes(scriptRunId),
-        }),
-        () => {
-          // We now have no pending elements.
-          this.pendingElementsBuffer = this.state.elements
-        }
-      )
+      if (successful) {
+        // Clear any stale elements left over from the previous run.
+        // (We don't do this if our script had a compilation error and didn't
+        // finish successfully.)
+        this.setState(
+          ({ scriptRunId }) => ({
+            // Apply any pending elements that haven't been applied.
+            elements: this.pendingElementsBuffer.clearStaleNodes(scriptRunId),
+          }),
+          () => {
+            // We now have no pending elements.
+            this.pendingElementsBuffer = this.state.elements
+          }
+        )
 
-      // Tell the WidgetManager which widgets still exist. It will remove
-      // widget state for widgets that have been removed.
-      const activeWidgetIds = new Set(
-        Array.from(this.state.elements.getElements())
-          .map(element => getElementWidgetID(element))
-          .filter(notUndefined)
-      )
-      this.widgetMgr.removeInactive(activeWidgetIds)
+        // Tell the WidgetManager which widgets still exist. It will remove
+        // widget state for widgets that have been removed.
+        const activeWidgetIds = new Set(
+          Array.from(this.state.elements.getElements())
+            .map(element => getElementWidgetID(element))
+            .filter(notUndefined)
+        )
+        this.widgetMgr.removeInactive(activeWidgetIds)
+      }
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
