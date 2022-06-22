@@ -37,6 +37,7 @@ import {
   StyledHorizontalBlock,
   StyledVerticalBlock,
   styledVerticalBlockWrapperStyles,
+  StyledTabContainer,
 } from "./styled-components"
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
@@ -180,28 +181,29 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
   const [activeKey, setActiveKey] = React.useState("0")
 
   return (
-    <UITabs
-      activeKey={activeKey}
-      onChange={({ activeKey }) => {
-        setActiveKey(activeKey.toString())
-      }}
-      activateOnFocus
-    >
-      {props.node.children.map(
-        (node: AppNode, index: number): ReactElement => {
-          const childProps = { ...props, ...{ node: node as BlockNode } }
-          let nodeLabel = index.toString()
-          if (childProps.node.deltaBlock?.tab?.label) {
-            nodeLabel = childProps.node.deltaBlock.tab.label
+    <StyledTabContainer>
+      <UITabs
+        activeKey={activeKey}
+        onChange={({ activeKey }) => {
+          setActiveKey(activeKey.toString())
+        }}
+      >
+        {props.node.children.map(
+          (node: AppNode, index: number): ReactElement => {
+            const childProps = { ...props, ...{ node: node as BlockNode } }
+            let nodeLabel = index.toString()
+            if (childProps.node.deltaBlock?.tab?.label) {
+              nodeLabel = childProps.node.deltaBlock.tab.label
+            }
+            return (
+              <UITab title={nodeLabel} key={index}>
+                <VerticalBlock {...childProps}></VerticalBlock>
+              </UITab>
+            )
           }
-          return (
-            <UITab title={nodeLabel} key={index}>
-              <VerticalBlock {...childProps}></VerticalBlock>
-            </UITab>
-          )
-        }
-      )}
-    </UITabs>
+        )}
+      </UITabs>
+    </StyledTabContainer>
   )
 }
 

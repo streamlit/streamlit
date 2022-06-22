@@ -19,6 +19,12 @@ import React from "react"
 import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
+export const StyledTabContainer = styled.div(({ theme }) => ({
+  "& button:focus": {
+    outline: "none",
+  },
+}))
+
 export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   // While using flex for columns, padding is used for large screens and gap
   // for small ones. This can be adjusted once more information is passed.
