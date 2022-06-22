@@ -171,6 +171,23 @@ class LayoutsMixin:
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
+    def tabs(self, tabs: Sequence[str]) -> List["DeltaGenerator"]:
+        if not tabs:
+            raise StreamlitAPIException(
+                "The input argument to st.tabs must contain atleast one tab label."
+            )
+
+        def tab_proto(label: str) -> BlockProto:
+            tab_proto = BlockProto()
+            tab_proto.tab.label = label
+            tab_proto.allow_empty = True
+            return tab_proto
+
+        block_proto = BlockProto()
+        block_proto.tab_container.SetInParent()
+        tab_container = self.dg._block(block_proto)
+        return [tab_container._block(tab_proto(tab_label)) for tab_label in tabs]
+
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
         """Insert a multi-element container that can be expanded/collapsed.
 

@@ -23,6 +23,7 @@ import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
+import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
 import {
   BaseBlockProps,
@@ -76,11 +77,12 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   const childProps = { ...props, ...optionalProps, ...{ node } }
 
-  const child = node.deltaBlock.expandable ? (
-    <ExpandableLayoutBlock {...childProps} />
-  ) : (
-    <LayoutBlock {...childProps} />
-  )
+  let child
+  if (node.deltaBlock.expandable) {
+    child = <ExpandableLayoutBlock {...childProps} />
+  } else {
+    child = <LayoutBlock {...childProps} />
+  }
 
   if (node.deltaBlock.type === "form") {
     const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
@@ -112,6 +114,10 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     )
   }
 
+  if (node.deltaBlock.tabContainer) {
+    return <TabContainerBlock {...childProps} />
+  }
+
   return child
 }
 
@@ -132,6 +138,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
           // Recursive case: render a block, which can contain other blocks
           // and elements.
+
           if (node instanceof BlockNode) {
             // Put node in childProps instead of passing as a node={node} prop in React to
             // guarantee it doesn't get overwritten by {...childProps}.
@@ -166,6 +173,35 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         )
       }}
     </AutoSizer>
+  )
+}
+
+const TabContainerBlock = (props: BlockPropsWithWidth): ReactElement => {
+  const [activeKey, setActiveKey] = React.useState("0")
+
+  return (
+    <UITabs
+      activeKey={activeKey}
+      onChange={({ activeKey }) => {
+        setActiveKey(activeKey.toString())
+      }}
+      activateOnFocus
+    >
+      {props.node.children.map(
+        (node: AppNode, index: number): ReactElement => {
+          const childProps = { ...props, ...{ node: node as BlockNode } }
+          let nodeLabel = index.toString()
+          if (childProps.node.deltaBlock?.tab?.label) {
+            nodeLabel = childProps.node.deltaBlock.tab.label
+          }
+          return (
+            <UITab title={nodeLabel} key={index}>
+              <VerticalBlock {...childProps}></VerticalBlock>
+            </UITab>
+          )
+        }
+      )}
+    </UITabs>
   )
 }
 
