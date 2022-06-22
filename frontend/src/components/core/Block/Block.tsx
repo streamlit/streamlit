@@ -176,7 +176,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   )
 }
 
-const TabContainerBlock = (props: BlockPropsWithWidth): ReactElement => {
+function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
   const [activeKey, setActiveKey] = React.useState("0")
 
   return (
