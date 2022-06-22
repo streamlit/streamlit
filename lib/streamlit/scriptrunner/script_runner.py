@@ -567,28 +567,31 @@ class ScriptRunner:
             handle_uncaught_app_exception(e)
 
         finally:
-            self._on_script_finished(ctx)
+            if rerun_exception_data:
+                finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+            else:
+                finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            self._on_script_finished(ctx, finished_event)
 
         # Use _log_if_error() to make sure we never ever ever stop running the
         # script without meaning to.
         _log_if_error(_clean_problem_modules)
 
         if rerun_exception_data is not None:
-            self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN)
             self._run_script(rerun_exception_data)
-        else:
-            # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
-            # even if we were stopped with an exception.)
-            self.on_event.send(
-                self, event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
-            )
 
-    def _on_script_finished(self, ctx: ScriptRunContext) -> None:
+    def _on_script_finished(
+        self, ctx: ScriptRunContext, event: ScriptRunnerEvent
+    ) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
         # Tell session_state to update itself in response
         self._session_state.on_script_finished(ctx.widget_ids_this_run)
+
+        # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
+        # even if we were stopped with an exception.)
+        self.on_event.send(self, event=event)
 
         # Delete expired files now that the script has run and files in use
         # are marked as active.
