@@ -25,6 +25,7 @@ import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
+import { useIsOverflowing } from "src/lib/Hooks"
 
 import {
   BaseBlockProps,
@@ -179,11 +180,17 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
 }
 
 function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
+  const TAB_HEIGHT = "2.5rem"
+
   const [activeKey, setActiveKey] = React.useState("0")
+  const tabListRef = React.useRef<HTMLUListElement>(null)
+
+  const isOverflowing = useIsOverflowing(tabListRef, false)
+
   const theme = useTheme()
 
   return (
-    <StyledTabContainer>
+    <StyledTabContainer isOverflowing={isOverflowing} tabHeight={TAB_HEIGHT}>
       <UITabs
         activeKey={activeKey}
         onChange={({ activeKey }) => {
@@ -197,6 +204,7 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
                 ? theme.colors.fadedText40
                 : theme.colors.primary,
               height: `2px`,
+              // Requires bottom offset to align with the border
               bottom: `3px`,
             }),
           },
@@ -207,8 +215,14 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
             }),
           },
           TabList: {
+            props: { ref: tabListRef },
             style: () => ({
               gap: theme.spacing.lg,
+              ...(isOverflowing
+                ? {
+                    paddingRight: theme.spacing.lg,
+                  }
+                : {}),
             }),
           },
           Root: {
@@ -238,11 +252,13 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
                     style: () => ({
                       paddingLeft: theme.spacing.none,
                       paddingRight: theme.spacing.none,
+                      paddingBottom: theme.spacing.none,
+                      paddingTop: theme.spacing.lg,
                     }),
                   },
                   Tab: {
                     style: () => ({
-                      height: "2.5rem",
+                      height: TAB_HEIGHT,
                       whiteSpace: `nowrap`,
                       paddingLeft: theme.spacing.none,
                       paddingRight: theme.spacing.none,
@@ -261,7 +277,7 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
                         color: theme.colors.primary,
                         background: `none`,
                       },
-                      ...(isSelected
+                      ...(isSelected && !props.widgetsDisabled
                         ? {
                             color: theme.colors.primary,
                           }

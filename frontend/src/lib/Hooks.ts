@@ -28,16 +28,23 @@ export const usePrevious = (value: any): any => {
 }
 
 export const useIsOverflowing = (
-  ref: MutableRefObject<HTMLElement | null>
+  ref: MutableRefObject<HTMLElement | null>,
+  checkHeight = true
 ): boolean => {
   const { current } = ref
   const [isOverflowing, setIsOverflowing] = useState(false)
 
   useEffect(() => {
     if (current) {
-      const { scrollHeight, clientHeight } = current
-
-      setIsOverflowing(scrollHeight > clientHeight)
+      if (checkHeight) {
+        // Check height overflow
+        const { scrollHeight, clientHeight } = current
+        setIsOverflowing(scrollHeight > clientHeight)
+      } else {
+        // Check width overflow
+        const { scrollWidth, clientWidth } = current
+        setIsOverflowing(scrollWidth > clientWidth)
+      }
     }
   })
 
