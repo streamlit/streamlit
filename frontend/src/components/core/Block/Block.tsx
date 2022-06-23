@@ -208,7 +208,7 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
           },
           TabList: {
             style: () => ({
-              // gap: `26px`,
+              gap: theme.spacing.lg,
             }),
           },
           Root: {
@@ -227,7 +227,7 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
             if (childProps.node.deltaBlock?.tab?.label) {
               nodeLabel = childProps.node.deltaBlock.tab.label
             }
-            // const isSelected = activeKey === index.toString()
+            const isSelected = activeKey === index.toString()
 
             return (
               <UITab
@@ -242,10 +242,12 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
                   },
                   Tab: {
                     style: () => ({
-                      paddingLeft: theme.spacing.md,
-                      paddingRight: theme.spacing.md,
-                      paddingTop: theme.spacing.md,
-                      paddingBottom: theme.spacing.md,
+                      height: "2.5rem",
+                      whiteSpace: `nowrap`,
+                      paddingLeft: theme.spacing.none,
+                      paddingRight: theme.spacing.none,
+                      paddingTop: theme.spacing.none,
+                      paddingBottom: theme.spacing.none,
                       fontSize: theme.fontSizes.sm,
                       color: props.widgetsDisabled
                         ? theme.colors.fadedText40
@@ -259,11 +261,11 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
                         color: theme.colors.primary,
                         background: `none`,
                       },
-                      // ...(isSelected
-                      //   ? {
-                      //       color: theme.colors.bodyText,
-                      //     }
-                      //   : {}),
+                      ...(isSelected
+                        ? {
+                            color: theme.colors.primary,
+                          }
+                        : {}),
                     }),
                   },
                 }}
