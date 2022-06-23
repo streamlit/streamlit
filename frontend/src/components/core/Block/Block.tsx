@@ -15,15 +15,16 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto } from "src/autogen/proto"
-
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
+import { useTheme } from "@emotion/react"
+import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
+
+import { Block as BlockProto } from "src/autogen/proto"
 import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
-import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
 import {
   BaseBlockProps,
@@ -179,6 +180,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
 
 function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
   const [activeKey, setActiveKey] = React.useState("0")
+  const theme = useTheme()
 
   return (
     <StyledTabContainer>
@@ -187,6 +189,36 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
         onChange={({ activeKey }) => {
           setActiveKey(activeKey.toString())
         }}
+        disabled={props.widgetsDisabled}
+        overrides={{
+          TabHighlight: {
+            style: () => ({
+              backgroundColor: props.widgetsDisabled
+                ? theme.colors.fadedText40
+                : theme.colors.primary,
+              height: `2px`,
+              bottom: `3px`,
+            }),
+          },
+          TabBorder: {
+            style: () => ({
+              backgroundColor: theme.colors.fadedText05,
+              height: `2px`,
+            }),
+          },
+          TabList: {
+            style: () => ({
+              // gap: `26px`,
+            }),
+          },
+          Root: {
+            style: () => ({
+              // resetting transform to fix full screen wrapper
+              transform: `none`,
+            }),
+          },
+        }}
+        activateOnFocus
       >
         {props.node.children.map(
           (node: AppNode, index: number): ReactElement => {
@@ -195,8 +227,47 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
             if (childProps.node.deltaBlock?.tab?.label) {
               nodeLabel = childProps.node.deltaBlock.tab.label
             }
+            // const isSelected = activeKey === index.toString()
+
             return (
-              <UITab title={nodeLabel} key={index}>
+              <UITab
+                title={nodeLabel}
+                key={index}
+                overrides={{
+                  TabPanel: {
+                    style: () => ({
+                      paddingLeft: theme.spacing.none,
+                      paddingRight: theme.spacing.none,
+                    }),
+                  },
+                  Tab: {
+                    style: () => ({
+                      paddingLeft: theme.spacing.md,
+                      paddingRight: theme.spacing.md,
+                      paddingTop: theme.spacing.md,
+                      paddingBottom: theme.spacing.md,
+                      fontSize: theme.fontSizes.sm,
+                      color: props.widgetsDisabled
+                        ? theme.colors.fadedText40
+                        : theme.colors.bodyText,
+                      ":focus": {
+                        outline: "none",
+                        color: theme.colors.primary,
+                        background: `none`,
+                      },
+                      ":hover": {
+                        color: theme.colors.primary,
+                        background: `none`,
+                      },
+                      // ...(isSelected
+                      //   ? {
+                      //       color: theme.colors.bodyText,
+                      //     }
+                      //   : {}),
+                    }),
+                  },
+                }}
+              >
                 <VerticalBlock {...childProps}></VerticalBlock>
               </UITab>
             )
