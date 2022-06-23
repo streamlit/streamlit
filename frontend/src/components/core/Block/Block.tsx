@@ -220,7 +220,8 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
               gap: theme.spacing.lg,
               ...(isOverflowing
                 ? {
-                    paddingRight: theme.spacing.lg,
+                    // Add margin to hide the overscroll gradient
+                    marginRight: "0.6rem",
                   }
                 : {}),
             }),
