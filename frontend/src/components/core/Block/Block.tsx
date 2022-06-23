@@ -218,12 +218,6 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
             props: { ref: tabListRef },
             style: () => ({
               gap: theme.spacing.lg,
-              ...(isOverflowing
-                ? {
-                    // Add margin to hide the overscroll gradient
-                    marginRight: "0.6rem",
-                  }
-                : {}),
             }),
           },
           Root: {
@@ -243,6 +237,7 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
               nodeLabel = childProps.node.deltaBlock.tab.label
             }
             const isSelected = activeKey === index.toString()
+            const isLast = index === props.node.children.length - 1
 
             return (
               <UITab
@@ -281,6 +276,12 @@ function TabContainerBlock(props: BlockPropsWithWidth): ReactElement {
                       ...(isSelected && !props.widgetsDisabled
                         ? {
                             color: theme.colors.primary,
+                          }
+                        : {}),
+                      ...(isOverflowing && isLast
+                        ? {
+                            // Add padding to hide the overscroll gradient
+                            paddingRight: "0.6rem",
                           }
                         : {}),
                     }),
