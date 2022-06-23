@@ -69,7 +69,9 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def columns(self, spec: SpecType, *, gap: Optional[str] = None) -> List["DeltaGenerator"]:
+    def columns(
+        self, spec: SpecType, *, gap: Optional[str] = None
+    ) -> List["DeltaGenerator"]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -164,18 +166,18 @@ class LayoutsMixin:
             raise weights_exception
 
         def column_gap(gap):
-            if(gap is None):
+            if gap is None:
                 return ""
             else:
                 gap_size = gap.lower()
                 valid_sizes = ["small", "medium", "large"]
 
-                if(gap_size in valid_sizes):
+                if gap_size in valid_sizes:
                     return gap_size
                 else:
                     raise StreamlitAPIException(
-                        'The gap argument to st.columns must be \"small\", \"medium\", \"large\", or None.\n'
-                        f"The argument passed was \"{gap}\"."
+                        'The gap argument to st.columns must be "small", "medium", "large", or None. \n'
+                        f'The argument passed was "{gap}".'
                     )
 
         gap_size = column_gap(gap)
