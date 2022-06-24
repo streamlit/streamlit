@@ -448,13 +448,13 @@ function dataIsAnAppendOfPrev(
     return false
   }
 
-  // an append would have prev number of rows < new number of rows
-  // the = handles cases of dynamic inputs to data having same number of rows as previous
+  // Data can be updated, but still have the same number of rows.
+  // We consider the case an append only when the number of rows has increased
   if (prevNumRows >= numRows) {
     return false
   }
 
-  // if no previous data, should render from scratch
+  // if no previous data, render from scratch
   if (prevNumRows === 0) {
     return false
   }
