@@ -32,13 +32,10 @@ from typing import (
     Tuple,
     Callable,
     Awaitable,
-    Generator,
     List,
-    Set,
 )
 
 import tornado.concurrent
-import tornado.gen
 import tornado.ioloop
 import tornado.locks
 import tornado.netutil
@@ -345,7 +342,7 @@ class Server:
 
         LOGGER.debug("Server started on port %s", port)
 
-        self._ioloop.spawn_callback(self._loop_coroutine, on_started)
+        self._ioloop.add_callback(self._loop_coroutine, on_started)
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
@@ -467,7 +464,7 @@ class Server:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
-            ioloop=self._ioloop,
+            event_loop=self._ioloop.asyncio_loop,  # type: ignore
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -483,7 +480,7 @@ class Server:
                 SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
                 and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
             ):
-                await tornado.gen.sleep(0.1)
+                await asyncio.sleep(0.1)
 
             if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state:
                 return False, "timeout"
@@ -505,10 +502,9 @@ class Server:
 
         return self._main_script_path == Hello.__file__
 
-    @tornado.gen.coroutine
-    def _loop_coroutine(
+    async def _loop_coroutine(
         self, on_started: Optional[Callable[["Server"], Any]] = None
-    ) -> Generator[Any, None, None]:
+    ) -> None:
         try:
             if self._state == State.INITIAL:
                 self._set_state(State.WAITING_FOR_FIRST_BROWSER)
@@ -521,13 +517,10 @@ class Server:
                 on_started(self)
 
             while not self._must_stop.is_set():
-
                 if self._state == State.WAITING_FOR_FIRST_BROWSER:
-                    yield tornado.gen.convert_yielded(
-                        asyncio.wait(
-                            [self._must_stop.wait(), self._has_connection.wait()],
-                            return_when=asyncio.FIRST_COMPLETED,
-                        )
+                    await asyncio.wait(
+                        [self._must_stop.wait(), self._has_connection.wait()],
+                        return_when=asyncio.FIRST_COMPLETED,
                     )
 
                 elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
@@ -545,27 +538,23 @@ class Server:
                                 self._send_message(session_info, msg)
                             except tornado.websocket.WebSocketClosedError:
                                 self._close_app_session(session_info.session.id)
-                            yield
-                        yield
-                    yield tornado.gen.sleep(0.01)
+                            await asyncio.sleep(0)
+                        await asyncio.sleep(0)
+                    await asyncio.sleep(0.01)
 
                 elif self._state == State.NO_BROWSERS_CONNECTED:
-                    yield tornado.gen.convert_yielded(
-                        asyncio.wait(
-                            [self._must_stop.wait(), self._has_connection.wait()],
-                            return_when=asyncio.FIRST_COMPLETED,
-                        )
+                    await asyncio.wait(
+                        [self._must_stop.wait(), self._has_connection.wait()],
+                        return_when=asyncio.FIRST_COMPLETED,
                     )
 
                 else:
                     # Break out of the thread loop if we encounter any other state.
                     break
 
-                yield tornado.gen.convert_yielded(
-                    asyncio.wait(
-                        [self._must_stop.wait(), self._need_send_data.wait()],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
+                await asyncio.wait(
+                    [self._must_stop.wait(), self._need_send_data.wait()],
+                    return_when=asyncio.FIRST_COMPLETED,
                 )
 
             # Shut down all AppSessions
@@ -699,7 +688,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             user_info["email"] = email
 
         session = AppSession(
-            ioloop=self._ioloop,
+            event_loop=self._ioloop.asyncio_loop,  # type: ignore
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -781,7 +770,6 @@ class _BrowserWebSocketHandler(WebSocketHandler):
             return {}
         return None
 
-    @tornado.gen.coroutine
     def on_message(self, payload: bytes) -> None:
         if not self._session:
             return
