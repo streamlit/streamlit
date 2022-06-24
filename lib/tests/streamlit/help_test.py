@@ -80,8 +80,8 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("dataframe", ds.name)
         self.assertEqual("streamlit", ds.module)
         self.assertEqual("<class 'method'>", ds.type)
-        if sys.version_info[1] == 7:
-            # Python 3.7 represents the signature slightly differently
+        if sys.version_info < (3, 9):
+            # Python < 3.9 represents the signature slightly differently
             self.assertEqual(
                 "(data: 'Data' = None, width: Union[int, NoneType] = None, "
                 "height: Union[int, NoneType] = None) -> 'DeltaGenerator'",
