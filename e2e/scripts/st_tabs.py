@@ -34,3 +34,5 @@ with st.expander("Expander", expanded=True):
 sidebar_tab1, sidebar_tab2 = st.sidebar.tabs(["Foo", "Bar"])
 sidebar_tab1.write("I am in the sidebar")
 sidebar_tab2.write("I'm also in the sidebar")
+
+st.tabs(["test", True])
