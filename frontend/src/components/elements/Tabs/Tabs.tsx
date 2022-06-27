@@ -43,7 +43,11 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
     const theme = useTheme()
 
     return (
-      <StyledTabContainer isOverflowing={isOverflowing} tabHeight={TAB_HEIGHT}>
+      <StyledTabContainer
+        isOverflowing={isOverflowing}
+        tabHeight={TAB_HEIGHT}
+        className="stTabs"
+      >
         <UITabs
           activeKey={activeKey}
           onChange={({ activeKey }) => {
@@ -57,7 +61,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
                   ? theme.colors.fadedText40
                   : theme.colors.primary,
                 height: `2px`,
-                // Requires bottom offset to align with the border
+                // Requires bottom offset to align with the TabBorder
                 bottom: `3px`,
               }),
             },
@@ -136,7 +140,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
                           : {}),
                         ...(isOverflowing && isLast
                           ? {
-                              // Add padding to hide the overscroll gradient
+                              // Add minimal required padding to hide the overscroll gradient
                               paddingRight: "0.6rem",
                             }
                           : {}),
