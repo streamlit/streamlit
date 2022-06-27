@@ -47,7 +47,7 @@ class IsolatedAsyncioTestCase(unittest.TestCase):
     # should reset a policy in every test module
     # by calling asyncio.set_event_loop_policy(None) in tearDownModule()
 
-    def __init__(self, methodName='runTest'):
+    def __init__(self, methodName="runTest"):
         super().__init__(methodName)
         self._asyncioTestLoop = None
         self._asyncioCallsQueue = None
@@ -88,15 +88,15 @@ class IsolatedAsyncioTestCase(unittest.TestCase):
         self._callMaybeAsync(function, *args, **kwargs)
 
     def _callAsync(self, func, /, *args, **kwargs):
-        assert self._asyncioTestLoop is not None, 'asyncio test loop is not initialized'
+        assert self._asyncioTestLoop is not None, "asyncio test loop is not initialized"
         ret = func(*args, **kwargs)
-        assert inspect.isawaitable(ret), f'{func!r} returned non-awaitable'
+        assert inspect.isawaitable(ret), f"{func!r} returned non-awaitable"
         fut = self._asyncioTestLoop.create_future()
         self._asyncioCallsQueue.put_nowait((fut, ret))
         return self._asyncioTestLoop.run_until_complete(fut)
 
     def _callMaybeAsync(self, func, /, *args, **kwargs):
-        assert self._asyncioTestLoop is not None, 'asyncio test loop is not initialized'
+        assert self._asyncioTestLoop is not None, "asyncio test loop is not initialized"
         ret = func(*args, **kwargs)
         if inspect.isawaitable(ret):
             fut = self._asyncioTestLoop.create_future()
@@ -125,7 +125,7 @@ class IsolatedAsyncioTestCase(unittest.TestCase):
                     fut.set_exception(ex)
 
     def _setupAsyncioLoop(self):
-        assert self._asyncioTestLoop is None, 'asyncio test loop already initialized'
+        assert self._asyncioTestLoop is None, "asyncio test loop already initialized"
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.set_debug(True)
@@ -135,7 +135,7 @@ class IsolatedAsyncioTestCase(unittest.TestCase):
         loop.run_until_complete(fut)
 
     def _tearDownAsyncioLoop(self):
-        assert self._asyncioTestLoop is not None, 'asyncio test loop is not initialized'
+        assert self._asyncioTestLoop is not None, "asyncio test loop is not initialized"
         loop = self._asyncioTestLoop
         self._asyncioTestLoop = None
         self._asyncioCallsQueue.put_nowait(None)
@@ -150,18 +150,19 @@ class IsolatedAsyncioTestCase(unittest.TestCase):
             for task in to_cancel:
                 task.cancel()
 
-            loop.run_until_complete(
-                asyncio.gather(*to_cancel, return_exceptions=True))
+            loop.run_until_complete(asyncio.gather(*to_cancel, return_exceptions=True))
 
             for task in to_cancel:
                 if task.cancelled():
                     continue
                 if task.exception() is not None:
-                    loop.call_exception_handler({
-                        'message': 'unhandled exception during test shutdown',
-                        'exception': task.exception(),
-                        'task': task,
-                    })
+                    loop.call_exception_handler(
+                        {
+                            "message": "unhandled exception during test shutdown",
+                            "exception": task.exception(),
+                            "task": task,
+                        }
+                    )
             # shutdown asyncgens
             loop.run_until_complete(loop.shutdown_asyncgens())
         finally:
