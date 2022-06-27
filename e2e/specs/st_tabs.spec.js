@@ -29,7 +29,10 @@ describe("st.tabs", () => {
   });
 
   it("displays correctly in sidebar", () => {
-    cy.get("[data-testid='stSidebar'] .stTabs").should("have.length", 2);
+    cy.get("[data-testid='stSidebar'] .stTabs [data-baseweb='tab']").should(
+      "have.length",
+      2
+    );
 
     cy.get("[data-testid='stSidebar'] .stTabs")
       .first()
@@ -40,11 +43,11 @@ describe("st.tabs", () => {
 
   it("changes rendered content on tab selection", () => {
     cy.getIndexed(".main .stTabs", 0).within(() => {
-      let tab_2_button = cy.getIndexed("button", 1);
+      let tab_2_button = cy.getIndexed("[data-baseweb='tab']", 1);
       tab_2_button.should("exist");
       tab_2_button.click();
 
-      cy.get("[data-baseweb='tab-panel'] stNumberInput").should(
+      cy.get("[data-baseweb='tab-panel'] .stNumberInput").should(
         "have.length",
         1
       );
@@ -52,6 +55,9 @@ describe("st.tabs", () => {
   });
 
   it("containes all tabs when overflowing", () => {
-    cy.get(".stExpander .stTabs button").should("have.length", 25);
+    cy.get("[data-testid='stExpander'] .stTabs [data-baseweb='tab']").should(
+      "have.length",
+      25
+    );
   });
 });
