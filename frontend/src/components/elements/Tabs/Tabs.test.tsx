@@ -71,7 +71,7 @@ describe("st.tabs", () => {
     )
 
     wrapper.find("StyledTab").forEach((option, index) => {
-      if (index == 0) {
+      if (index === 0) {
         // the selected tab does not have the disabled prop as true in baseweb
         expect(option.prop("disabled")).toBe(false)
       } else {
