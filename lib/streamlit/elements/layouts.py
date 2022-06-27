@@ -176,23 +176,21 @@ class LayoutsMixin:
 
         Inserts a number of multi-element containers as tabs.
         Tabs are a navigational element that allows users to easily
-        move between groups of related content. The first tab is selected by default.
-
-        The content of every tab is always sent to the frontend and rendered.
-        Conditional rendering is currently not supported.
+        move between groups of related content.
 
         To add elements to the returned containers, you can use "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
         .. warning::
-            The content of every tab is always sent to the frontend and rendered.
+            All the content of every tab is always sent to and rendered on the frontend.
             Conditional rendering is currently not supported.
 
         Parameters
         ----------
         tabs : list of strings
             Creates a tab for each string in the list. The string is used as the name of the tab.
+            The first tab is selected by default.
 
         Returns
         -------
