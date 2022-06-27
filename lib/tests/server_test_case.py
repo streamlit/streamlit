@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from asyncio import Future
 from unittest import mock
 
 import tornado.testing
 import tornado.web
 import tornado.websocket
 import urllib.parse
-from tornado import gen
-from tornado.concurrent import Future
+from tornado.websocket import WebSocketClientConnection
+from typing_extensions import Awaitable
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.app_session import AppSession
@@ -53,18 +53,17 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # Clear the Server singleton for the next test
         Server._singleton = None
 
-    def start_server_loop(self):
+    def start_server_loop(self) -> Future:
         """Starts the server's loop coroutine.
 
         Returns
         -------
         Future
             A Future that resolves when the loop has started.
-            You need to yield on this value from within a
-            'tornado.testing.gen_test' coroutine.
+            You need to await this value from within an async function.
 
         """
-        server_started = Future()  # type: ignore[var-annotated]
+        server_started = Future()
         self.io_loop.spawn_callback(
             self.server._loop_coroutine, lambda _: server_started.set_result(None)
         )
@@ -79,33 +78,31 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         parts[0] = "ws"
         return urllib.parse.urlunparse(tuple(parts))
 
-    def ws_connect(self):
+    def ws_connect(self) -> Awaitable[WebSocketClientConnection]:
         """Open a websocket connection to the server.
 
         Returns
         -------
-        Future
+        Awaitable
             A Future that resolves with the connected websocket client.
-            You need to yield on this value from within a
-            'tornado.testing.gen_test' coroutine.
+            You need to await on this value from within an async function.
 
         """
         return tornado.websocket.websocket_connect(self.get_ws_url("/stream"))
 
-    @tornado.gen.coroutine
-    def read_forward_msg(self, ws_client):
+    async def read_forward_msg(self, ws_client: WebSocketClientConnection) -> ForwardMsg:
         """Parse the next message from a Websocket client into a ForwardMsg."""
-        data = yield ws_client.read_message()
+        data = await ws_client.read_message()
         message = ForwardMsg()
         message.ParseFromString(data)
-        raise gen.Return(message)
+        return message
 
     @staticmethod
     def _create_mock_app_session(*args, **kwargs):
         """Create a mock AppSession. Each mocked instance will have
         its own unique ID."""
         mock_id = mock.PropertyMock(
-            return_value="mock_id:%s" % ServerTestCase._next_session_id
+            return_value=f"mock_id:{ServerTestCase._next_session_id}"
         )
         ServerTestCase._next_session_id += 1
 
