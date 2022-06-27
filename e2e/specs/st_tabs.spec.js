@@ -29,14 +29,13 @@ describe("st.tabs", () => {
   });
 
   it("displays correctly in sidebar", () => {
-    cy.getIndexed("[data-testid='stSidebar'] .stTabs").should(
-      "have.length",
-      2
-    );
+    cy.get("[data-testid='stSidebar'] .stTabs").should("have.length", 2);
 
-    cy.getIndexed("[data-testid='stSidebar'] .stTabs", 0).within(() => {
-      cy.get(".stMarkdown").should("have.text", "I am in the sidebar");
-    });
+    cy.get("[data-testid='stSidebar'] .stTabs")
+      .first()
+      .within(() => {
+        cy.get(".stMarkdown").should("have.text", "I am in the sidebar");
+      });
   });
 
   it("changes rendered content on tab selection", () => {
