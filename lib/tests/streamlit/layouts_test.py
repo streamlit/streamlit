@@ -86,6 +86,7 @@ class ExpanderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(expander_block.add_block.expandable.label, "label")
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
 
+
 class TabsTest(testutil.DeltaGeneratorTestCase):
     def test_tab_required(self):
         """Test that atleast one tab is required."""
