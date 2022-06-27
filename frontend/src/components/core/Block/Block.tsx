@@ -139,7 +139,6 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
           // Recursive case: render a block, which can contain other blocks
           // and elements.
-
           if (node instanceof BlockNode) {
             // Put node in childProps instead of passing as a node={node} prop in React to
             // guarantee it doesn't get overwritten by {...childProps}.
