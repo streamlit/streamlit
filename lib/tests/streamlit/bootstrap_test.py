@@ -30,7 +30,7 @@ report = SessionData("the/path", "test command line")
 
 
 class BootstrapTest(unittest.TestCase):
-    @patch("streamlit.bootstrap.tornado.ioloop", Mock())
+    @patch("streamlit.bootstrap.AsyncIOLoop", Mock())
     @patch("streamlit.bootstrap.Server", Mock())
     @patch("streamlit.bootstrap._install_pages_watcher", Mock())
     def test_fix_matplotlib_crash(self):

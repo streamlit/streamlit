@@ -42,9 +42,9 @@ import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
+from tornado.platform.asyncio import AsyncIOLoop
 from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
 
 from streamlit import config
 from streamlit import file_util
@@ -250,7 +250,7 @@ class Server:
         return Server._singleton
 
     def __init__(
-        self, ioloop: IOLoop, main_script_path: str, command_line: Optional[str]
+        self, ioloop: AsyncIOLoop, main_script_path: str, command_line: Optional[str]
     ):
         """Create the server. It won't be started yet."""
         if Server._singleton is not None:
@@ -465,7 +465,7 @@ class Server:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,  # type: ignore
+            event_loop=self._ioloop.asyncio_loop,
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -689,7 +689,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             user_info["email"] = email
 
         session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,  # type: ignore
+            event_loop=self._ioloop.asyncio_loop,
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
