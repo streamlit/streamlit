@@ -511,7 +511,7 @@ class Server:
             elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
                 pass
             else:
-                raise RuntimeError("Bad server state at start: %s" % self._state)
+                raise RuntimeError(f"Bad server state at start: {self._state}")
 
             if on_started is not None:
                 on_started(self)
@@ -602,13 +602,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             ):
                 # This session has probably cached this message. Send
                 # a reference instead.
-                LOGGER.debug("Sending cached message ref (hash=%s)" % msg.hash)
+                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
                 msg_to_send = create_reference_msg(msg)
 
             # Cache the message so it can be referenced in the future.
             # If the message is already cached, this will reset its
             # age.
-            LOGGER.debug("Caching message (hash=%s)" % msg.hash)
+            LOGGER.debug("Caching message (hash=%s)", msg.hash)
             self._message_cache.add_message(
                 msg, session_info.session, session_info.script_run_count
             )
