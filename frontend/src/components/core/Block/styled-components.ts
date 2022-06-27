@@ -17,7 +17,6 @@
 
 import React from "react"
 import styled from "@emotion/styled"
-
 import { Theme } from "src/theme"
 
 export const StyledHorizontalBlock = styled.div(({ theme }) => ({
