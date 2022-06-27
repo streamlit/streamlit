@@ -126,16 +126,22 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
                           : theme.colors.bodyText,
                         ":focus": {
                           outline: "none",
-                          color: theme.colors.primary,
+                          color: widgetsDisabled
+                            ? theme.colors.fadedText40
+                            : theme.colors.primary,
                           background: `none`,
                         },
                         ":hover": {
-                          color: theme.colors.primary,
+                          color: widgetsDisabled
+                            ? theme.colors.fadedText40
+                            : theme.colors.primary,
                           background: `none`,
                         },
-                        ...(isSelected && widgetsDisabled
+                        ...(isSelected
                           ? {
-                              color: theme.colors.primary,
+                              color: widgetsDisabled
+                                ? theme.colors.fadedText40
+                                : theme.colors.primary,
                             }
                           : {}),
                         ...(isOverflowing && isLast
