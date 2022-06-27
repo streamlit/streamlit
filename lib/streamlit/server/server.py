@@ -33,6 +33,7 @@ from typing import (
     Callable,
     Awaitable,
     List,
+    Union,
 )
 
 import tornado.concurrent
@@ -770,13 +771,21 @@ class _BrowserWebSocketHandler(WebSocketHandler):
             return {}
         return None
 
-    def on_message(self, payload: bytes) -> None:
+    def on_message(self, payload: Union[str, bytes]) -> None:
         if not self._session:
             return
 
         msg = BackMsg()
 
         try:
+            if isinstance(payload, str):
+                # Sanity check. (The frontend should only be sending us bytes;
+                # Protobuf.ParseFromString does not accept str input.)
+                raise RuntimeError(
+                    "WebSocket received an unexpected `str` message. "
+                    "(We expect `bytes` only.)"
+                )
+
             msg.ParseFromString(payload)
             msg_type = msg.WhichOneof("type")
 
