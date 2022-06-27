@@ -14,18 +14,17 @@
 
 import sys
 import unittest
-
 from io import StringIO
 from unittest.mock import Mock, patch
-import matplotlib
 
-import tornado.ioloop
+import matplotlib
 
 from streamlit import SECRETS_FILE_LOC, bootstrap
 from streamlit import config
+from streamlit.bootstrap import NEW_VERSION_TEXT
 from streamlit.session_data import SessionData
 from tests import testutil
-from streamlit.bootstrap import NEW_VERSION_TEXT
+from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 report = SessionData("the/path", "test command line")
 
@@ -63,7 +62,7 @@ class BootstrapTest(unittest.TestCase):
         sys.platform = ORIG_PLATFORM
 
 
-class BootstrapPrintTest(unittest.IsolatedAsyncioTestCase):
+class BootstrapPrintTest(IsolatedAsyncioTestCase):
     """Test bootstrap.py's printing functions.
 
     (We use `IsolatedAsyncioTestCase` to ensure that an asyncio event loop

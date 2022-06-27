@@ -22,10 +22,10 @@ import pytest
 
 import streamlit.app_session as app_session
 from streamlit import config
-from streamlit.proto.AppPage_pb2 import AppPage
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.app_session import AppSession, AppSessionState
 from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.proto.AppPage_pb2 import AppPage
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -38,6 +38,7 @@ from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 from tests.testutil import patch_config_options
 
 
@@ -335,7 +336,7 @@ def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
     return get_options_for_section
 
 
-class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
+class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
     """Tests for AppSession's ScriptRunner event handling."""
 
     @patch(
