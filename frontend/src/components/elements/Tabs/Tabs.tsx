@@ -29,11 +29,12 @@ const TAB_HEIGHT = "2.5rem"
 export interface Props {
   widgetsDisabled: boolean
   node: BlockNode
+  isStale: boolean
 }
 
 function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
   const TabContainer = (props: Props): ReactElement => {
-    const { widgetsDisabled, node } = props
+    const { widgetsDisabled, node, isStale } = props
 
     const [activeKey, setActiveKey] = useState("0")
     const tabListRef = useRef<HTMLUListElement>(null)
@@ -75,6 +76,12 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
               props: { ref: tabListRef },
               style: () => ({
                 gap: theme.spacing.lg,
+                ...(isStale
+                  ? {
+                      opacity: 0.33,
+                      transition: "opacity 1s ease-in 0.5s",
+                    }
+                  : {}),
               }),
             },
             Root: {

@@ -43,6 +43,7 @@ const getProps = (props?: Partial<Props>): Props =>
   Object({
     widgetsDisabled: false,
     node: makeTabsNode(5),
+    isStale: false,
     ...props,
   })
 
