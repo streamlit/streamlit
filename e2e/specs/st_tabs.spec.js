@@ -40,7 +40,7 @@ describe("st.tabs", () => {
   });
 
   it("changes rendered content on tab selection", () => {
-    cy.getIndexed(".stTabs", 0).within(() => {
+    cy.getIndexed(".main .stTabs", 0).within(() => {
       let tab_2_button = cy.getIndexed("button", 1);
       tab_2_button.should("exist");
       tab_2_button.click();
@@ -53,8 +53,6 @@ describe("st.tabs", () => {
   });
 
   it("containes all tabs when overflowing", () => {
-    cy.getIndexed(".stExpander .stTabs button", 0).within(() => {
-      cy.get(".stMarkdown").should("have.text", "I am in the sidebar");
-    });
+    cy.get(".stExpander .stTabs button").should("have.length", 25);
   });
 });
