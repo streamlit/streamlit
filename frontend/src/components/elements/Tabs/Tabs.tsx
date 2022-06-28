@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useRef, useState } from "react"
+import React, { ReactElement, useRef, useState, useEffect } from "react"
 import { useTheme } from "@emotion/react"
 import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
@@ -23,7 +23,6 @@ import { BlockNode, AppNode } from "src/lib/AppNode"
 import VerticalBlock, {
   BlockPropsWithoutWidth,
 } from "src/components/core/Block"
-import { useIsOverflowing } from "src/lib/Hooks"
 
 import { StyledTabContainer } from "./styled-components"
 
@@ -38,10 +37,16 @@ function Tabs(props: Props): ReactElement {
 
   const [activeKey, setActiveKey] = useState<React.Key>(0)
   const tabListRef = useRef<HTMLUListElement>(null)
-
-  const { horizontal: isOverflowing } = useIsOverflowing(tabListRef)
-
   const theme = useTheme()
+
+  const [isOverflowing, setIsOverflowing] = useState(false)
+
+  useEffect(() => {
+    if (tabListRef.current) {
+      const { scrollWidth, clientWidth } = tabListRef.current
+      setIsOverflowing(scrollWidth > clientWidth)
+    }
+  }, [tabListRef.current, node.children.length])
 
   const TAB_HEIGHT = "2.5rem"
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS

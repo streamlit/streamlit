@@ -50,7 +50,7 @@ export const useIsOverflowing = (
         horizontal: scrollWidth > clientWidth,
       })
     }
-  })
+  }, [current])
 
   return overflowingState
 }
