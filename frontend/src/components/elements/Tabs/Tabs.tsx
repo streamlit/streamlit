@@ -39,7 +39,7 @@ function Tabs(props: Props): ReactElement {
   const [activeKey, setActiveKey] = useState<React.Key>(0)
   const tabListRef = useRef<HTMLUListElement>(null)
 
-  const isOverflowing = useIsOverflowing(tabListRef, false)
+  const { horizontal: isOverflowing } = useIsOverflowing(tabListRef)
 
   const theme = useTheme()
 

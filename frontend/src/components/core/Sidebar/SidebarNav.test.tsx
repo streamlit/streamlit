@@ -229,7 +229,10 @@ describe("SidebarNav", () => {
   })
 
   it("renders ExpandMore icon when not expanded and overflowing", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
+    mockUseIsOverflowing.mockReturnValueOnce({
+      vertical: true,
+      horizontal: false,
+    })
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
@@ -246,7 +249,10 @@ describe("SidebarNav", () => {
     // We need to have useIsOverflowing return true once so that we can click
     // on the separator to expand the nav component. After this click, it
     // returns false.
-    mockUseIsOverflowing.mockReturnValueOnce(true)
+    mockUseIsOverflowing.mockReturnValueOnce({
+      vertical: true,
+      horizontal: false,
+    })
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
@@ -265,7 +271,15 @@ describe("SidebarNav", () => {
   it("renders ExpandLess icon when expanded and overflowing", () => {
     // Have useIsOverflowing return true both before and after the nav is
     // expanded.
-    mockUseIsOverflowing.mockReturnValueOnce(true).mockReturnValueOnce(true)
+    mockUseIsOverflowing
+      .mockReturnValueOnce({
+        vertical: true,
+        horizontal: false,
+      })
+      .mockReturnValueOnce({
+        vertical: true,
+        horizontal: false,
+      })
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
@@ -282,7 +296,10 @@ describe("SidebarNav", () => {
   })
 
   it("changes cursor to pointer above separator when overflowing", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
+    mockUseIsOverflowing.mockReturnValueOnce({
+      vertical: true,
+      horizontal: false,
+    })
     // Need mount > shallow here so that toHaveStyleRule can be used.
     const wrapper = mount(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
@@ -319,7 +336,10 @@ describe("SidebarNav", () => {
   })
 
   it("toggles to expanded and back when the separator is clicked", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
+    mockUseIsOverflowing.mockReturnValueOnce({
+      vertical: true,
+      horizontal: false,
+    })
 
     // Need mount > shallow here so that toHaveStyleRule can be used.
     const wrapper = mount(
@@ -401,7 +421,10 @@ describe("SidebarNav", () => {
   })
 
   it("does call hideParentScrollbar on mouseOver if overflowing", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
+    mockUseIsOverflowing.mockReturnValueOnce({
+      vertical: true,
+      horizontal: false,
+    })
     const props = getProps()
     const wrapper = shallow(<SidebarNav {...props} />)
 

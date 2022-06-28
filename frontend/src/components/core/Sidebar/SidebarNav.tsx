@@ -63,7 +63,7 @@ const SidebarNav = ({
 
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
-  const isOverflowing = useIsOverflowing(navItemsRef)
+  const { vertical: isOverflowing } = useIsOverflowing(navItemsRef)
   // We use React.useContext here instead of destructuring it in the imports
   // above so that we can mock it in tests.
   const { getBaseUriParts } = React.useContext(AppContext)
