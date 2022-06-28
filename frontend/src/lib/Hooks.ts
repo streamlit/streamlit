@@ -27,30 +27,19 @@ export const usePrevious = (value: any): any => {
   return ref.current
 }
 
-interface OverflowingState {
-  vertical: boolean
-  horizontal: boolean
-}
-
 export const useIsOverflowing = (
   ref: MutableRefObject<HTMLElement | null>
-): OverflowingState => {
+): boolean => {
   const { current } = ref
-
-  const [overflowingState, setOverflowingState] = useState<OverflowingState>({
-    vertical: false,
-    horizontal: false,
-  })
+  const [isOverflowing, setIsOverflowing] = useState(false)
 
   useEffect(() => {
     if (current) {
-      const { scrollHeight, clientHeight, scrollWidth, clientWidth } = current
-      setOverflowingState({
-        vertical: scrollHeight > clientHeight,
-        horizontal: scrollWidth > clientWidth,
-      })
-    }
-  }, [current])
+      const { scrollHeight, clientHeight } = current
 
-  return overflowingState
+      setIsOverflowing(scrollHeight > clientHeight)
+    }
+  })
+
+  return isOverflowing
 }

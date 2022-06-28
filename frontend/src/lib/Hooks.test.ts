@@ -37,40 +37,20 @@ jest.mock("react", () => ({
 // check that the state setter was called.
 describe("useIsOverflowing", () => {
   it("sets state to true if the element is overflowing", () => {
-    const ref = {
-      current: {
-        scrollHeight: 1,
-        clientHeight: 0,
-        scrollWidth: 1,
-        clientWidth: 0,
-      },
-    }
+    const ref = { current: { scrollHeight: 1, clientHeight: 0 } }
     // @ts-ignore
     useIsOverflowing(ref)
 
     const setIsOverflowing = stateSetters.pop()
-    expect(setIsOverflowing).toHaveBeenCalledWith({
-      vertical: true,
-      horizontal: true,
-    })
+    expect(setIsOverflowing).toHaveBeenCalledWith(true)
   })
 
   it("sets state to false if the element is not overflowing", () => {
-    const ref = {
-      current: {
-        scrollHeight: 1,
-        clientHeight: 1,
-        scrollWidth: 1,
-        clientWidth: 1,
-      },
-    }
+    const ref = { current: { scrollHeight: 1, clientHeight: 1 } }
     // @ts-ignore
     useIsOverflowing(ref)
 
     const setIsOverflowing = stateSetters.pop()
-    expect(setIsOverflowing).toHaveBeenCalledWith({
-      vertical: false,
-      horizontal: false,
-    })
+    expect(setIsOverflowing).toHaveBeenCalledWith(false)
   })
 })
