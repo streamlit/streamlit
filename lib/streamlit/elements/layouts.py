@@ -172,7 +172,7 @@ class LayoutsMixin:
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
     def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
-        """Insert containers laid out as tabs.
+        """Insert containers seperated into tabs.
 
         Inserts a number of multi-element containers as tabs.
         Tabs are a navigational element that allows users to easily
@@ -206,23 +206,23 @@ class LayoutsMixin:
         >>>
         >>> with tab1:
         ...    st.header("A cat")
-        ...    st.image("https://static.streamlit.io/examples/cat.jpg")
+        ...    st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
         ...
         >>> with tab2:
         ...    st.header("A dog")
-        ...    st.image("https://static.streamlit.io/examples/dog.jpg")
+        ...    st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
         ...
         >>> with tab3:
         ...    st.header("An owl")
-        ...    st.image("https://static.streamlit.io/examples/owl.jpg")
+        ...    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output ::
             https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.tabs1.py
-            height: 620px
+            height: 700px
 
         Or you can just call methods directly in the returned objects:
 
-        >>> tab1, tab2 = st.tabs(["Chart", "Data"])
+        >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
         >>> data = np.random.randn(10, 1)
         >>>
         >>> tab1.subheader("A tab with a chart")
@@ -234,7 +234,7 @@ class LayoutsMixin:
 
         .. output ::
             https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.tabs2.py
-            height: 750px
+            height: 700px
 
         """
         if not tabs:
