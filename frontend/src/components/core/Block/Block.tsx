@@ -23,7 +23,7 @@ import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
-import withTabs from "src/components/elements/Tabs"
+import Tabs from "src/components/elements/Tabs"
 
 import {
   BaseBlockProps,
@@ -40,7 +40,6 @@ import {
 } from "./styled-components"
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
-const TabContainer = withTabs(LayoutBlock)
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
@@ -116,7 +115,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   if (node.deltaBlock.tabContainer) {
     const tabsProps = { ...childProps, isStale }
-    return <TabContainer {...tabsProps} />
+    return <Tabs {...tabsProps} />
   }
 
   return child
