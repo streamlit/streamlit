@@ -24,8 +24,6 @@ import { useIsOverflowing } from "src/lib/Hooks"
 
 import { StyledTabContainer } from "./styled-components"
 
-const TAB_HEIGHT = "2.5rem"
-
 export interface Props {
   widgetsDisabled: boolean
   node: BlockNode
@@ -42,6 +40,9 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
     const isOverflowing = useIsOverflowing(tabListRef, false)
 
     const theme = useTheme()
+
+    const TAB_HEIGHT = theme.spacing.fourXL
+    const TAB_BORDER_HEIGHT = theme.spacing.threeXS
 
     return (
       <StyledTabContainer
@@ -61,21 +62,23 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
                 backgroundColor: widgetsDisabled
                   ? theme.colors.fadedText40
                   : theme.colors.primary,
-                height: "2px",
+                height: TAB_BORDER_HEIGHT,
                 // Requires bottom offset to align with the TabBorder
-                bottom: "3px",
+                // bottom: "3px",
               }),
             },
             TabBorder: {
               style: () => ({
                 backgroundColor: theme.colors.fadedText05,
-                height: "2px",
+                height: TAB_BORDER_HEIGHT,
               }),
             },
             TabList: {
               props: { ref: tabListRef },
               style: () => ({
                 gap: theme.spacing.lg,
+                marginBottom: `-${TAB_BORDER_HEIGHT}`,
+                paddingBottom: TAB_BORDER_HEIGHT,
                 ...(isStale
                   ? {
                       opacity: 0.33,
@@ -103,7 +106,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
               if (childProps.node.deltaBlock?.tab?.label) {
                 nodeLabel = childProps.node.deltaBlock.tab.label
               }
-              const isSelected = activeKey === index
+              const isSelected = activeKey.toString() === index.toString()
               const isLast = index === node.children.length - 1
 
               return (
