@@ -30,5 +30,4 @@ export const spacing = {
   xl: "1.25rem",
   twoXL: "1.5rem",
   threeXL: "2rem",
-  fourXL: "2.5rem",
 }

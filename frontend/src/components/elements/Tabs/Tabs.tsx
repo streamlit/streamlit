@@ -43,7 +43,7 @@ function Tabs(props: Props): ReactElement {
 
   const theme = useTheme()
 
-  const TAB_HEIGHT = theme.spacing.fourXL
+  const TAB_HEIGHT = "2.5rem"
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
 
   return (
