@@ -69,7 +69,10 @@ const mockClickEvent = new MouseEvent("click") as any
 
 describe("SidebarNav", () => {
   afterEach(() => {
-    mockUseIsOverflowing.mockReset()
+    mockUseIsOverflowing.mockReturnValue({
+      vertical: false,
+      horizontal: false,
+    })
 
     // @ts-ignore
     reactDeviceDetect.isMobile = false
