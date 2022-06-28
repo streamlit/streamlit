@@ -40,9 +40,8 @@ import {
 } from "./styled-components"
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
-const TabContainer = Tabs(LayoutBlock)
 
-interface BlockPropsWithoutWidth extends BaseBlockProps {
+export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
 }
 
@@ -68,20 +67,13 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     props.scriptRunId
   )
 
-  const optionalProps = {
-    ...(node.deltaBlock.expandable
-      ? {
-          empty: node.isEmpty,
-          isStale,
-          ...node.deltaBlock.expandable,
-        }
-      : {}),
-    ...(node.deltaBlock.tabContainer
-      ? {
-          isStale,
-        }
-      : {}),
-  }
+  const optionalProps = node.deltaBlock.expandable
+    ? {
+        empty: node.isEmpty,
+        isStale,
+        ...node.deltaBlock.expandable,
+      }
+    : {}
 
   const childProps = { ...props, ...optionalProps, ...{ node } }
 
@@ -122,7 +114,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.tabContainer) {
-    return <TabContainer {...childProps} />
+    const tabsProps = { ...childProps, isStale }
+    return <Tabs {...tabsProps} />
   }
 
   return child

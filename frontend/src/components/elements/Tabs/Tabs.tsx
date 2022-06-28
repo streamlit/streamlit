@@ -20,160 +20,161 @@ import { useTheme } from "@emotion/react"
 import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
 import { BlockNode, AppNode } from "src/lib/AppNode"
+import VerticalBlock, {
+  BlockPropsWithoutWidth,
+} from "src/components/core/Block"
 import { useIsOverflowing } from "src/lib/Hooks"
 
 import { StyledTabContainer } from "./styled-components"
+import { Block } from "../../../autogen/proto.d"
 
-export interface Props {
+export interface Props extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
   node: BlockNode
   isStale: boolean
 }
 
-function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
-  const TabContainer = (props: Props): ReactElement => {
-    const { widgetsDisabled, node, isStale } = props
+function Tabs(props: Props): ReactElement {
+  const { widgetsDisabled, node, isStale } = props
 
-    const [activeKey, setActiveKey] = useState<React.Key>(0)
-    const tabListRef = useRef<HTMLUListElement>(null)
+  const [activeKey, setActiveKey] = useState<React.Key>(0)
+  const tabListRef = useRef<HTMLUListElement>(null)
 
-    const isOverflowing = useIsOverflowing(tabListRef, false)
+  const isOverflowing = useIsOverflowing(tabListRef, false)
 
-    const theme = useTheme()
+  const theme = useTheme()
 
-    const TAB_HEIGHT = theme.spacing.fourXL
-    const TAB_BORDER_HEIGHT = theme.spacing.threeXS
+  const TAB_HEIGHT = theme.spacing.fourXL
+  const TAB_BORDER_HEIGHT = theme.spacing.threeXS
 
-    return (
-      <StyledTabContainer
-        isOverflowing={isOverflowing}
-        tabHeight={TAB_HEIGHT}
-        className="stTabs"
+  return (
+    <StyledTabContainer
+      isOverflowing={isOverflowing}
+      tabHeight={TAB_HEIGHT}
+      className="stTabs"
+    >
+      <UITabs
+        activeKey={activeKey}
+        onChange={({ activeKey }) => {
+          setActiveKey(activeKey)
+        }}
+        disabled={widgetsDisabled}
+        overrides={{
+          TabHighlight: {
+            style: () => ({
+              backgroundColor: widgetsDisabled
+                ? theme.colors.fadedText40
+                : theme.colors.primary,
+              height: TAB_BORDER_HEIGHT,
+              // Requires bottom offset to align with the TabBorder
+              // bottom: "3px",
+            }),
+          },
+          TabBorder: {
+            style: () => ({
+              backgroundColor: theme.colors.fadedText05,
+              height: TAB_BORDER_HEIGHT,
+            }),
+          },
+          TabList: {
+            props: { ref: tabListRef },
+            style: () => ({
+              gap: theme.spacing.lg,
+              marginBottom: `-${TAB_BORDER_HEIGHT}`,
+              paddingBottom: TAB_BORDER_HEIGHT,
+              ...(isStale
+                ? {
+                    opacity: 0.33,
+                    transition: "opacity 1s ease-in 0.5s",
+                  }
+                : {}),
+            }),
+          },
+          Root: {
+            style: () => ({
+              // resetting transform to fix full screen wrapper
+              transform: "none",
+            }),
+          },
+        }}
+        activateOnFocus
       >
-        <UITabs
-          activeKey={activeKey}
-          onChange={({ activeKey }) => {
-            setActiveKey(activeKey)
-          }}
-          disabled={widgetsDisabled}
-          overrides={{
-            TabHighlight: {
-              style: () => ({
-                backgroundColor: widgetsDisabled
-                  ? theme.colors.fadedText40
-                  : theme.colors.primary,
-                height: TAB_BORDER_HEIGHT,
-                // Requires bottom offset to align with the TabBorder
-                // bottom: "3px",
-              }),
-            },
-            TabBorder: {
-              style: () => ({
-                backgroundColor: theme.colors.fadedText05,
-                height: TAB_BORDER_HEIGHT,
-              }),
-            },
-            TabList: {
-              props: { ref: tabListRef },
-              style: () => ({
-                gap: theme.spacing.lg,
-                marginBottom: `-${TAB_BORDER_HEIGHT}`,
-                paddingBottom: TAB_BORDER_HEIGHT,
-                ...(isStale
-                  ? {
-                      opacity: 0.33,
-                      transition: "opacity 1s ease-in 0.5s",
-                    }
-                  : {}),
-              }),
-            },
-            Root: {
-              style: () => ({
-                // resetting transform to fix full screen wrapper
-                transform: "none",
-              }),
-            },
-          }}
-          activateOnFocus
-        >
-          {node.children.map(
-            (appNode: AppNode, index: number): ReactElement => {
-              const childProps = {
-                ...props,
-                node: appNode as BlockNode,
-              }
-              let nodeLabel = index.toString()
-              if (childProps.node.deltaBlock?.tab?.label) {
-                nodeLabel = childProps.node.deltaBlock.tab.label
-              }
-              const isSelected = activeKey.toString() === index.toString()
-              const isLast = index === node.children.length - 1
+        {node.children.map(
+          (appNode: AppNode, index: number): ReactElement => {
+            const childProps = {
+              ...props,
+              node: appNode as BlockNode,
+            }
+            let nodeLabel = index.toString()
+            if (childProps.node.deltaBlock?.tab?.label) {
+              nodeLabel = childProps.node.deltaBlock.tab.label
+            }
+            const isSelected = activeKey.toString() === index.toString()
+            const isLast = index === node.children.length - 1
 
-              return (
-                <UITab
-                  title={nodeLabel}
-                  key={index}
-                  overrides={{
-                    TabPanel: {
-                      style: () => ({
-                        paddingLeft: theme.spacing.none,
-                        paddingRight: theme.spacing.none,
-                        paddingBottom: theme.spacing.none,
-                        paddingTop: theme.spacing.lg,
-                      }),
-                    },
-                    Tab: {
-                      style: () => ({
-                        height: TAB_HEIGHT,
-                        whiteSpace: "nowrap",
-                        paddingLeft: theme.spacing.none,
-                        paddingRight: theme.spacing.none,
-                        paddingTop: theme.spacing.none,
-                        paddingBottom: theme.spacing.none,
-                        fontSize: theme.fontSizes.sm,
+            return (
+              <UITab
+                title={nodeLabel}
+                key={index}
+                overrides={{
+                  TabPanel: {
+                    style: () => ({
+                      paddingLeft: theme.spacing.none,
+                      paddingRight: theme.spacing.none,
+                      paddingBottom: theme.spacing.none,
+                      paddingTop: theme.spacing.lg,
+                    }),
+                  },
+                  Tab: {
+                    style: () => ({
+                      height: TAB_HEIGHT,
+                      whiteSpace: "nowrap",
+                      paddingLeft: theme.spacing.none,
+                      paddingRight: theme.spacing.none,
+                      paddingTop: theme.spacing.none,
+                      paddingBottom: theme.spacing.none,
+                      fontSize: theme.fontSizes.sm,
+                      color: widgetsDisabled
+                        ? theme.colors.fadedText40
+                        : theme.colors.bodyText,
+                      ":focus": {
+                        outline: "none",
                         color: widgetsDisabled
                           ? theme.colors.fadedText40
-                          : theme.colors.bodyText,
-                        ":focus": {
-                          outline: "none",
-                          color: widgetsDisabled
-                            ? theme.colors.fadedText40
-                            : theme.colors.primary,
-                          background: "none",
-                        },
-                        ":hover": {
-                          color: widgetsDisabled
-                            ? theme.colors.fadedText40
-                            : theme.colors.primary,
-                          background: "none",
-                        },
-                        ...(isSelected
-                          ? {
-                              color: widgetsDisabled
-                                ? theme.colors.fadedText40
-                                : theme.colors.primary,
-                            }
-                          : {}),
-                        ...(isOverflowing && isLast
-                          ? {
-                              // Add minimal required padding to hide the overscroll gradient
-                              paddingRight: "0.6rem",
-                            }
-                          : {}),
-                      }),
-                    },
-                  }}
-                >
-                  <TabLayoutComponent {...childProps}></TabLayoutComponent>
-                </UITab>
-              )
-            }
-          )}
-        </UITabs>
-      </StyledTabContainer>
-    )
-  }
-  return TabContainer
+                          : theme.colors.primary,
+                        background: "none",
+                      },
+                      ":hover": {
+                        color: widgetsDisabled
+                          ? theme.colors.fadedText40
+                          : theme.colors.primary,
+                        background: "none",
+                      },
+                      ...(isSelected
+                        ? {
+                            color: widgetsDisabled
+                              ? theme.colors.fadedText40
+                              : theme.colors.primary,
+                          }
+                        : {}),
+                      ...(isOverflowing && isLast
+                        ? {
+                            // Add minimal required padding to hide the overscroll gradient
+                            paddingRight: "0.6rem",
+                          }
+                        : {}),
+                    }),
+                  },
+                }}
+              >
+                <VerticalBlock {...childProps}></VerticalBlock>
+              </UITab>
+            )
+          }
+        )}
+      </UITabs>
+    </StyledTabContainer>
+  )
 }
 
 export default Tabs

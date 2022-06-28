@@ -15,4 +15,5 @@
  * limitations under the License.
  */
 
+export type { BlockPropsWithoutWidth } from "./Block"
 export { default } from "./Block"
