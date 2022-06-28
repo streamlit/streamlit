@@ -144,11 +144,8 @@ describe("VegaLiteChart Element", () => {
     [baseCase, case7, true, "Case 7: data is an append"],
   ]
 
-  cases.forEach(test => {
-    it(`tests for appended data properly - ${test[3]}`, () => {
-      const prevData = test[0]
-      const data = test[1]
-      const expected = test[2]
+  cases.forEach(([prevData, data, expected, testDescription]) => {
+    it(`tests for appended data properly - ${testDescription}`, () => {
       const [prevNumRows, prevNumCols] = tableGetRowsAndCols(
         prevData.get("data")
       )
