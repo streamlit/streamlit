@@ -15,5 +15,7 @@
  * limitations under the License.
  */
 
-export type { BlockPropsWithoutWidth } from "./Block"
+import { BlockPropsWithoutWidth as BlockPropsWithoutWidthT } from "./Block"
+
+export type BlockPropsWithoutWidth = BlockPropsWithoutWidthT
 export { default } from "./Block"

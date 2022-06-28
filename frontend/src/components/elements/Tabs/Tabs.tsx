@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, ReactElement, useRef, useState } from "react"
+import React, { ReactElement, useRef, useState } from "react"
 import { useTheme } from "@emotion/react"
 import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
@@ -26,7 +26,6 @@ import VerticalBlock, {
 import { useIsOverflowing } from "src/lib/Hooks"
 
 import { StyledTabContainer } from "./styled-components"
-import { Block } from "../../../autogen/proto.d"
 
 export interface Props extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
