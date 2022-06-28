@@ -130,7 +130,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
           if (node instanceof ElementNode) {
             // Put node in childProps instead of passing as a node={node} prop in React to
             // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = { ...props, ...{ node: node as ElementNode } }
+            const childProps = { ...props, node: node as ElementNode }
 
             const key = getElementWidgetID(node.element) || index
             return <ElementNodeRenderer key={key} {...childProps} />
@@ -141,7 +141,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
           if (node instanceof BlockNode) {
             // Put node in childProps instead of passing as a node={node} prop in React to
             // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = { ...props, ...{ node: node as BlockNode } }
+            const childProps = { ...props, node: node as BlockNode }
 
             return <BlockNodeRenderer key={index} {...childProps} />
           }

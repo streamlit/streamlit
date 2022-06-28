@@ -97,7 +97,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
             (appNode: AppNode, index: number): ReactElement => {
               const childProps = {
                 ...props,
-                ...{ node: appNode as BlockNode },
+                node: appNode as BlockNode,
               }
               let nodeLabel = index.toString()
               if (childProps.node.deltaBlock?.tab?.label) {
