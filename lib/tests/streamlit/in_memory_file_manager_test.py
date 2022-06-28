@@ -14,11 +14,9 @@
 
 """Unit tests for InMemoryFileManager"""
 
-from unittest import mock
+from unittest import mock, TestCase
 import random
 import time
-
-from tornado.testing import AsyncTestCase
 
 from streamlit.in_memory_file_manager import (
     InMemoryFileManager,
@@ -90,7 +88,7 @@ ALL_FIXTURES.update(IMAGE_FIXTURES)
 ALL_FIXTURES.update(TEXT_FIXTURES)
 
 
-class InMemoryFileManagerTest(AsyncTestCase):
+class InMemoryFileManagerTest(TestCase):
     def setUp(self):
         super(InMemoryFileManagerTest, self).setUp()
         self.in_memory_file_manager = InMemoryFileManager()
