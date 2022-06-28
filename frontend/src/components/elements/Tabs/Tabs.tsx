@@ -61,15 +61,15 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
                 backgroundColor: widgetsDisabled
                   ? theme.colors.fadedText40
                   : theme.colors.primary,
-                height: `2px`,
+                height: "2px",
                 // Requires bottom offset to align with the TabBorder
-                bottom: `3px`,
+                bottom: "3px",
               }),
             },
             TabBorder: {
               style: () => ({
                 backgroundColor: theme.colors.fadedText05,
-                height: `2px`,
+                height: "2px",
               }),
             },
             TabList: {
@@ -87,7 +87,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
             Root: {
               style: () => ({
                 // resetting transform to fix full screen wrapper
-                transform: `none`,
+                transform: "none",
               }),
             },
           }}
@@ -122,7 +122,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
                     Tab: {
                       style: () => ({
                         height: TAB_HEIGHT,
-                        whiteSpace: `nowrap`,
+                        whiteSpace: "nowrap",
                         paddingLeft: theme.spacing.none,
                         paddingRight: theme.spacing.none,
                         paddingTop: theme.spacing.none,
@@ -136,13 +136,13 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
                           color: widgetsDisabled
                             ? theme.colors.fadedText40
                             : theme.colors.primary,
-                          background: `none`,
+                          background: "none",
                         },
                         ":hover": {
                           color: widgetsDisabled
                             ? theme.colors.fadedText40
                             : theme.colors.primary,
-                          background: `none`,
+                          background: "none",
                         },
                         ...(isSelected
                           ? {

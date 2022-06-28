@@ -34,7 +34,7 @@ export const StyledTabContainer = styled.div<StyledTabContainerProps>(
             zIndex: 1,
             top: 0,
             right: 0,
-            pointerEvents: `none`,
+            pointerEvents: "none",
             backgroundImage: `linear-gradient(to right, ${transparentize(
               theme.colors.bgColor,
               1
