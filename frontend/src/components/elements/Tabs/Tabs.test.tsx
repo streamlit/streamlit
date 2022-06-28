@@ -15,13 +15,15 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ComponentType } from "react"
 import { mount } from "src/lib/test_util"
 import { BlockNode } from "src/lib/AppNode"
 import { Block as BlockProto } from "src/autogen/proto"
 
 import { Tabs as UITabs } from "baseui/tabs-motion"
-import Tabs, { Props } from "./Tabs"
+import withTabs, { Props } from "./Tabs"
+
+const testComponent: ComponentType = () => <div>test</div>
 
 function makeTab(label: string, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
@@ -47,12 +49,14 @@ const getProps = (props?: Partial<Props>): Props =>
 
 describe("st.tabs", () => {
   it("renders without crashing", () => {
+    const Tabs = withTabs(testComponent)
     const wrapper = mount(<Tabs {...getProps()} />)
     expect(wrapper.find(UITabs).exists()).toBe(true)
     expect(wrapper.find("StyledTab").length).toBe(5)
   })
 
   it("sets the tab labels correctly", () => {
+    const Tabs = withTabs(testComponent)
     const wrapper = mount(<Tabs {...getProps()} />)
 
     expect(wrapper.find("StyledTab").length).toBe(5)
@@ -62,6 +66,7 @@ describe("st.tabs", () => {
   })
 
   it("can be disabled", () => {
+    const Tabs = withTabs(testComponent)
     const wrapper = mount(<Tabs {...getProps({ widgetsDisabled: true })} />)
 
     wrapper.find("StyledTab").forEach((option, index) => {
