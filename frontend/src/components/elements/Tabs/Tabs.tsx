@@ -36,7 +36,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
   const TabContainer = (props: Props): ReactElement => {
     const { widgetsDisabled, node, isStale } = props
 
-    const [activeKey, setActiveKey] = useState("0")
+    const [activeKey, setActiveKey] = useState<React.Key>(0)
     const tabListRef = useRef<HTMLUListElement>(null)
 
     const isOverflowing = useIsOverflowing(tabListRef, false)
@@ -52,7 +52,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
         <UITabs
           activeKey={activeKey}
           onChange={({ activeKey }) => {
-            setActiveKey(activeKey.toString())
+            setActiveKey(activeKey)
           }}
           disabled={widgetsDisabled}
           overrides={{
@@ -103,7 +103,7 @@ function Tabs(TabLayoutComponent: ComponentType<any>): ComponentType<any> {
               if (childProps.node.deltaBlock?.tab?.label) {
                 nodeLabel = childProps.node.deltaBlock.tab.label
               }
-              const isSelected = activeKey === index.toString()
+              const isSelected = activeKey === index
               const isLast = index === node.children.length - 1
 
               return (
