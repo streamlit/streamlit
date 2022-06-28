@@ -26,6 +26,7 @@ from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
 import streamlit as st
 from streamlit import util
 from streamlit.caching.cache_errors import CacheKeyNotFoundError
+from streamlit.elements import NONWIDGET_ELEMENTS
 from streamlit.logger import get_logger
 from .cache_errors import (
     CacheType,
@@ -194,7 +195,10 @@ class CachedFunctionCallStack(threading.local):
             assert self._suppress_st_function_warning >= 0
 
     def maybe_show_cached_st_function_warning(
-        self, dg: "st.delta_generator.DeltaGenerator", st_func_name: str
+        self,
+        dg: "st.delta_generator.DeltaGenerator",
+        st_func_name: str,
+        allow_uninteractive: bool,
     ) -> None:
         """If appropriate, warn about calling st.foo inside @memo.
 
@@ -211,6 +215,8 @@ class CachedFunctionCallStack(threading.local):
             The name of the Streamlit function that was called.
 
         """
+        if allow_uninteractive and st_func_name in NONWIDGET_ELEMENTS:
+            return
         if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
             cached_func = self._cached_func_stack[-1]
             self._show_cached_st_function_warning(dg, st_func_name, cached_func)
