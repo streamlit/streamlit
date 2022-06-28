@@ -41,7 +41,7 @@ export const useIsOverflowing = (
     vertical: false,
     horizontal: false,
   })
-  const [horizontal, setHorizontal] = useState(false)
+
   useEffect(() => {
     if (current) {
       const { scrollHeight, clientHeight, scrollWidth, clientWidth } = current
