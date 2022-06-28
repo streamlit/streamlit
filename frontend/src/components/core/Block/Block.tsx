@@ -78,12 +78,11 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   const childProps = { ...props, ...optionalProps, ...{ node } }
 
-  let child
-  if (node.deltaBlock.expandable) {
-    child = <ExpandableLayoutBlock {...childProps} />
-  } else {
-    child = <LayoutBlock {...childProps} />
-  }
+  const child = node.deltaBlock.expandable ? (
+    <ExpandableLayoutBlock {...childProps} />
+  ) : (
+    <LayoutBlock {...childProps} />
+  )
 
   if (node.deltaBlock.type === "form") {
     const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
