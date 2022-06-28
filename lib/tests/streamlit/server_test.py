@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Server.py unit tests"""
+import asyncio
 import os
 import shutil
 from unittest import mock
@@ -26,7 +27,6 @@ import tornado.web
 import tornado.websocket
 import tornado.httpserver
 import errno
-from tornado import gen
 
 import streamlit.server.server
 from streamlit import config, RootContainer
@@ -85,36 +85,36 @@ class ServerTest(ServerTestCase):
         return super().tearDown()
 
     @tornado.testing.gen_test
-    def test_start_stop(self):
+    async def test_start_stop(self):
         """Test that we can start and stop the server."""
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
-            yield self.start_server_loop()
+            await self.start_server_loop()
             self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
 
-            yield self.ws_connect()
+            await self.ws_connect()
             self.assertEqual(State.ONE_OR_MORE_BROWSERS_CONNECTED, self.server._state)
 
             self.server.stop()
             self.assertEqual(State.STOPPING, self.server._state)
 
-            yield gen.sleep(0.1)
+            await asyncio.sleep(0.1)
             self.assertEqual(State.STOPPED, self.server._state)
 
     @tornado.testing.gen_test
-    def test_websocket_connect(self):
+    async def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
 
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
-            yield self.start_server_loop()
+            await self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
 
             # Open a websocket connection
-            ws_client = yield self.ws_connect()
+            ws_client = await self.ws_connect()
             self.assertTrue(self.server.browser_is_connected)
 
             # Get this client's SessionInfo object
@@ -123,7 +123,7 @@ class ServerTest(ServerTestCase):
 
             # Close the connection
             ws_client.close()
-            yield gen.sleep(0.1)
+            await asyncio.sleep(0.1)
             self.assertFalse(self.server.browser_is_connected)
 
             # Ensure AppSession.shutdown() was called, and that our
@@ -132,22 +132,22 @@ class ServerTest(ServerTestCase):
             self.assertEqual(0, len(self.server._session_info_by_id))
 
     @tornado.testing.gen_test
-    def test_multiple_connections(self):
+    async def test_multiple_connections(self):
         """Test multiple websockets can connect simultaneously."""
 
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
-            yield self.start_server_loop()
+            await self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
 
             # Open a websocket connection
-            ws_client1 = yield self.ws_connect()
+            ws_client1 = await self.ws_connect()
             self.assertTrue(self.server.browser_is_connected)
 
             # Open another
-            ws_client2 = yield self.ws_connect()
+            ws_client2 = await self.ws_connect()
             self.assertTrue(self.server.browser_is_connected)
 
             # Assert that our session_infos are sane
@@ -160,24 +160,24 @@ class ServerTest(ServerTestCase):
 
             # Close the first
             ws_client1.close()
-            yield gen.sleep(0.1)
+            await asyncio.sleep(0.1)
             self.assertTrue(self.server.browser_is_connected)
 
             # Close the second
             ws_client2.close()
-            yield gen.sleep(0.1)
+            await asyncio.sleep(0.1)
             self.assertFalse(self.server.browser_is_connected)
 
     @tornado.testing.gen_test
-    def test_websocket_compression(self):
+    async def test_websocket_compression(self):
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", True, "test")
-            yield self.start_server_loop()
+            await self.start_server_loop()
 
             # Connect to the server, and explicitly request compression.
-            ws_client = yield tornado.websocket.websocket_connect(
+            ws_client = await tornado.websocket.websocket_connect(
                 self.get_ws_url("/stream"), compression_options={}
             )
 
@@ -187,15 +187,15 @@ class ServerTest(ServerTestCase):
             self.assertIn("permessage-deflate", extensions)
 
     @tornado.testing.gen_test
-    def test_websocket_compression_disabled(self):
+    async def test_websocket_compression_disabled(self):
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", False, "test")
-            yield self.start_server_loop()
+            await self.start_server_loop()
 
             # Connect to the server, and explicitly request compression.
-            ws_client = yield tornado.websocket.websocket_connect(
+            ws_client = await tornado.websocket.websocket_connect(
                 self.get_ws_url("/stream"), compression_options={}
             )
 
@@ -204,14 +204,14 @@ class ServerTest(ServerTestCase):
             self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
 
     @tornado.testing.gen_test
-    def test_forwardmsg_hashing(self):
+    async def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
-            yield self.start_server_loop()
+            await self.start_server_loop()
 
-            ws_client = yield self.ws_connect()
+            ws_client = await self.ws_connect()
 
             # Get the server's socket and session for this client
             session_info = list(self.server._session_info_by_id.values())[0]
@@ -222,40 +222,40 @@ class ServerTest(ServerTestCase):
             msg.ClearField("hash")
             self.server._send_message(session_info, msg)
 
-            received = yield self.read_forward_msg(ws_client)
+            received = await self.read_forward_msg(ws_client)
             self.assertEqual(populate_hash_if_needed(msg), received.hash)
 
     @tornado.testing.gen_test
-    def test_get_session_by_id_nonexistent_session(self):
+    async def test_get_session_by_id_nonexistent_session(self):
         """Test getting a nonexistent session returns None."""
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
-            yield self.start_server_loop()
+            await self.start_server_loop()
             self.assertEqual(self.server.get_session_by_id("abc123"), None)
 
     @tornado.testing.gen_test
-    def test_get_session_by_id(self):
+    async def test_get_session_by_id(self):
         """Test getting sessions by id produces the correct AppSession."""
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
-            yield self.start_server_loop()
-            ws_client = yield self.ws_connect()
+            await self.start_server_loop()
+            ws_client = await self.ws_connect()
 
             session = list(self.server._session_info_by_id.values())[0].session
             self.assertEqual(self.server.get_session_by_id(session.id), session)
 
     @tornado.testing.gen_test
-    def test_forwardmsg_cacheable_flag(self):
+    async def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
-            yield self.start_server_loop()
+            await self.start_server_loop()
 
-            ws_client = yield self.ws_connect()
+            ws_client = await self.ws_connect()
 
             # Get the server's socket and session for this client
             session_info = list(self.server._session_info_by_id.values())[0]
@@ -263,27 +263,27 @@ class ServerTest(ServerTestCase):
             config._set_option("global.minCachedMessageSize", 0, "test")
             cacheable_msg = _create_dataframe_msg([1, 2, 3])
             self.server._send_message(session_info, cacheable_msg)
-            received = yield self.read_forward_msg(ws_client)
+            received = await self.read_forward_msg(ws_client)
             self.assertTrue(cacheable_msg.metadata.cacheable)
             self.assertTrue(received.metadata.cacheable)
 
             config._set_option("global.minCachedMessageSize", 1000, "test")
             cacheable_msg = _create_dataframe_msg([4, 5, 6])
             self.server._send_message(session_info, cacheable_msg)
-            received = yield self.read_forward_msg(ws_client)
+            received = await self.read_forward_msg(ws_client)
             self.assertFalse(cacheable_msg.metadata.cacheable)
             self.assertFalse(received.metadata.cacheable)
 
     @tornado.testing.gen_test
-    def test_duplicate_forwardmsg_caching(self):
+    async def test_duplicate_forwardmsg_caching(self):
         """Test that duplicate ForwardMsgs are sent only once."""
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
 
-            yield self.start_server_loop()
-            ws_client = yield self.ws_connect()
+            await self.start_server_loop()
+            ws_client = await self.ws_connect()
 
             # Get the server's socket and session for this client
             session_info = list(self.server._session_info_by_id.values())[0]
@@ -292,7 +292,7 @@ class ServerTest(ServerTestCase):
 
             # Send the message, and read it back. It will not have been cached.
             self.server._send_message(session_info, msg1)
-            uncached = yield self.read_forward_msg(ws_client)
+            uncached = await self.read_forward_msg(ws_client)
             self.assertEqual("delta", uncached.WhichOneof("type"))
 
             msg2 = _create_dataframe_msg([1, 2, 3], 123)
@@ -300,7 +300,7 @@ class ServerTest(ServerTestCase):
             # Send an equivalent message. This time, it should be cached,
             # and a "hash_reference" message should be received instead.
             self.server._send_message(session_info, msg2)
-            cached = yield self.read_forward_msg(ws_client)
+            cached = await self.read_forward_msg(ws_client)
             self.assertEqual("ref_hash", cached.WhichOneof("type"))
             # We should have the *hash* of msg1 and msg2:
             self.assertEqual(msg1.hash, cached.ref_hash)
@@ -309,7 +309,7 @@ class ServerTest(ServerTestCase):
             self.assertEqual(msg2.metadata, cached.metadata)
 
     @tornado.testing.gen_test
-    def test_cache_clearing(self):
+    async def test_cache_clearing(self):
         """Test that report_run_count is incremented when a report
         finishes running.
         """
@@ -319,8 +319,8 @@ class ServerTest(ServerTestCase):
             config._set_option("global.minCachedMessageSize", 0, "test")
             config._set_option("global.maxCachedMessageAge", 1, "test")
 
-            yield self.start_server_loop()
-            yield self.ws_connect()
+            await self.start_server_loop()
+            await self.ws_connect()
 
             session = list(self.server._session_info_by_id.values())[0]
 
@@ -370,14 +370,14 @@ class ServerTest(ServerTestCase):
             self.assertFalse(is_data_msg_cached())
 
     @tornado.testing.gen_test
-    def test_orphaned_upload_file_deletion(self):
+    async def test_orphaned_upload_file_deletion(self):
         """An uploaded file with no associated AppSession should be
         deleted."""
         with patch(
             "streamlit.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
-            yield self.start_server_loop()
-            yield self.ws_connect()
+            await self.start_server_loop()
+            await self.ws_connect()
 
             # "Upload a file" for a session that doesn't exist
             self.server._uploaded_file_mgr.add_file(

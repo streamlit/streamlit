@@ -11,18 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import typing
+import urllib.parse
+from asyncio import Future
 from unittest import mock
 
 import tornado.testing
 import tornado.web
 import tornado.websocket
-import urllib.parse
-from tornado import gen
-from tornado.concurrent import Future
+from tornado.ioloop import IOLoop
+from tornado.platform.asyncio import AsyncIOLoop
+from tornado.websocket import WebSocketClientConnection
+from typing_extensions import Awaitable
 
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.app_session import AppSession
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import Server
 
 
@@ -39,11 +42,22 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
 
     _next_session_id = 0
 
-    def get_app(self):
+    def get_new_ioloop(self) -> IOLoop:
+        """Returns the `.IOLoop` to use for this test. We explicitly
+        create a new AsyncIOLoop so that we can access its underlying
+        asyncio_loop instance in our `event_loop` property.
+        """
+        return AsyncIOLoop()
+
+    def get_app(self) -> tornado.web.Application:
         # Create a Server, and patch its _on_stopped function
         # to no-op. This prevents it from shutting down the
         # ioloop when it stops.
-        self.server = Server(self.io_loop, "/not/a/script.py", "test command line")
+        self.server = Server(
+            typing.cast(AsyncIOLoop, self.io_loop),
+            "/not/a/script.py",
+            "test command line",
+        )
         self.server._on_stopped = mock.MagicMock()  # type: ignore[assignment]
         app = self.server._create_app()
         return app
@@ -53,22 +67,13 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # Clear the Server singleton for the next test
         Server._singleton = None
 
-    def start_server_loop(self):
-        """Starts the server's loop coroutine.
-
-        Returns
-        -------
-        Future
-            A Future that resolves when the loop has started.
-            You need to yield on this value from within a
-            'tornado.testing.gen_test' coroutine.
-
-        """
-        server_started = Future()  # type: ignore[var-annotated]
+    async def start_server_loop(self) -> None:
+        """Starts the server's loop coroutine."""
+        server_started = Future()
         self.io_loop.spawn_callback(
             self.server._loop_coroutine, lambda _: server_started.set_result(None)
         )
-        return server_started
+        await server_started
 
     def get_ws_url(self, path):
         """Return a ws:// URL with the given path for our test server."""
@@ -79,33 +84,32 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         parts[0] = "ws"
         return urllib.parse.urlunparse(tuple(parts))
 
-    def ws_connect(self):
+    async def ws_connect(self) -> WebSocketClientConnection:
         """Open a websocket connection to the server.
 
         Returns
         -------
-        Future
-            A Future that resolves with the connected websocket client.
-            You need to yield on this value from within a
-            'tornado.testing.gen_test' coroutine.
+        WebSocketClientConnection
+            The connected websocket client.
 
         """
-        return tornado.websocket.websocket_connect(self.get_ws_url("/stream"))
+        return await tornado.websocket.websocket_connect(self.get_ws_url("/stream"))
 
-    @tornado.gen.coroutine
-    def read_forward_msg(self, ws_client):
+    async def read_forward_msg(
+        self, ws_client: WebSocketClientConnection
+    ) -> ForwardMsg:
         """Parse the next message from a Websocket client into a ForwardMsg."""
-        data = yield ws_client.read_message()
+        data = await ws_client.read_message()
         message = ForwardMsg()
         message.ParseFromString(data)
-        raise gen.Return(message)
+        return message
 
     @staticmethod
     def _create_mock_app_session(*args, **kwargs):
         """Create a mock AppSession. Each mocked instance will have
         its own unique ID."""
         mock_id = mock.PropertyMock(
-            return_value="mock_id:%s" % ServerTestCase._next_session_id
+            return_value=f"mock_id:{ServerTestCase._next_session_id}"
         )
         ServerTestCase._next_session_id += 1
 

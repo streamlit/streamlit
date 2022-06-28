@@ -15,12 +15,11 @@
 import sys
 import threading
 import uuid
+from asyncio import AbstractEventLoop
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
 
 from streamlit.uploaded_file_manager import UploadedFileManager
-
-import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
 from streamlit import __version__, caching, config, legacy_caching, secrets, source_util
@@ -45,7 +44,6 @@ from streamlit.scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
 )
-from streamlit.util import calc_md5
 from streamlit.watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
@@ -78,7 +76,7 @@ class AppSession:
 
     def __init__(
         self,
-        ioloop: tornado.ioloop.IOLoop,
+        event_loop: AbstractEventLoop,
         session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
@@ -89,8 +87,8 @@ class AppSession:
 
         Parameters
         ----------
-        ioloop : tornado.ioloop.IOLoop
-            The Tornado IOLoop that we're running within.
+        event_loop : AbstractEventLoop
+            The asyncio EventLoop that we're running within.
 
         session_data : SessionData
             Object storing parameters related to running a script
@@ -119,7 +117,7 @@ class AppSession:
         # Each AppSession has a unique string ID.
         self.id = str(uuid.uuid4())
 
-        self._ioloop = ioloop
+        self._event_loop = event_loop
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
@@ -243,7 +241,7 @@ class AppSession:
         # this exception ForwardMsg *must* also be enqueued in a callback,
         # so that it will be enqueued *after* the various ForwardMsgs that
         # _on_scriptrunner_event sends.
-        self._ioloop.spawn_callback(
+        self._event_loop.call_soon_threadsafe(
             lambda: self._enqueue_forward_msg(self._create_exception_message(e))
         )
 
@@ -375,7 +373,7 @@ class AppSession:
         We forward the event on to _handle_scriptrunner_event_on_main_thread,
         which will be called on the main thread.
         """
-        self._ioloop.spawn_callback(
+        self._event_loop.call_soon_threadsafe(
             lambda: self._handle_scriptrunner_event_on_main_thread(
                 sender, event, forward_msg, exception, client_state, page_script_hash
             )
