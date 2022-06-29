@@ -16,8 +16,9 @@
  */
 
 describe("st.tabs", () => {
-  before(() => {
+  beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
+
     cy.prepForElementSnapshots();
   });
 
