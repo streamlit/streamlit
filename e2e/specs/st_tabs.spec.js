@@ -18,6 +18,7 @@
 describe("st.tabs", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
+    cy.prepForElementSnapshots();
   });
 
   it("displays correctly", () => {
