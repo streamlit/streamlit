@@ -196,6 +196,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     position: "relative",
     transition: "margin-left 300ms, box-shadow 300ms",
     width: theme.sizes.sidebar,
+    maxWidth: "100vw",
     zIndex: theme.zIndices.header + 1,
     marginLeft: isCollapsed ? `-${theme.sizes.sidebar}` : theme.spacing.none,
 
