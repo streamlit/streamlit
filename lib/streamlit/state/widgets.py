@@ -48,8 +48,7 @@ from .session_state import (
     WidgetCallback,
     WidgetDeserializer,
     WidgetKwargs,
-    WidgetStateResult,
-    FallbackState,
+    RegisterWidgetResult,
     T,
 )
 
@@ -128,7 +127,7 @@ def register_widget(
     on_change_handler: Optional[WidgetCallback] = None,
     args: Optional[WidgetArgs] = None,
     kwargs: Optional[WidgetKwargs] = None,
-) -> WidgetStateResult[T]:
+) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
@@ -162,30 +161,27 @@ def register_widget(
 
     Returns
     -------
-    widget_state_result : WidgetStateResult[T]
+    register_widget_result : RegisterWidgetResult[T]
         Provides information on which value to return to the widget caller,
-        and whether the UI needs updating. Two kinds of reports can be
-        returned.
+        and whether the UI needs updating.
 
-        - Unhappy path: FallbackState[T]
-            - If our ScriptRunContext doesn't exist (meaning that we're
-            running as a "bare script" outside streamlit), we'll return a
-            FallbackState[T].
-            - Else if we are disconnected from the SessionState instance,
-            we'll also return a FallbackState[T].
-        - Happy path: RealWidgetState[T]
-            - Else if the widget has already been registered on a previous run
-            but the user hasn't interacted with it on the client, it will have
+        - Unhappy path:
+            - Our ScriptRunContext doesn't exist (meaning that we're running
+            as a "bare script" outside streamlit).
+            - We are disconnected from the SessionState instance.
+            In both cases we'll return a fallback RegisterWidgetResult[T].
+        - Happy path:
+            - The widget has already been registered on a previous run but the
+            user hasn't interacted with it on the client. The widget will have
             the default value it was first created with. We then return a
-            RealWidgetState[T], containing this value.
-            - Else the widget has already been registered and the user *has*
-            interacted with it, it will have that most recent user-specified
-            value. We then return a RealWidgetState[T], containing this value.
+            RegisterWidgetResult[T], containing this value.
+            - The widget has already been registered and the user *has*
+            interacted with it. The widget will have that most recent
+            user-specified value. We then return a RegisterWidgetResult[T],
+            containing this value.
 
-        Both kinds of reports allow the widget implementation to return a
-        return value, allowing streamlit widgets to be used in a non-streamlit
-        setting.
-
+        For both paths a widget return value is provided, allowing the widgets
+        to be used in a non-streamlit setting.
     """
     widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
@@ -193,7 +189,7 @@ def register_widget(
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
-        return FallbackState(deserializer=deserializer)
+        return RegisterWidgetResult.failure(deserializer=deserializer)
 
     # Ensure another widget with the same id hasn't already been registered.
     new_widget = widget_id not in ctx.widget_ids_this_run

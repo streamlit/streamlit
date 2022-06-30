@@ -286,72 +286,35 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class WidgetStateResult(Protocol[T_co]):
+@attr.s(auto_attribs=True, frozen=True, slots=True)
+class RegisterWidgetResult(Generic[T_co]):
     """Result returned by the `register_widget` family of functions/methods.
 
     Should be usable by widget code to determine what value to return, and
     whether to update the UI.
-    """
 
-    @property
-    @abstractmethod
-    def return_value(self) -> T_co:
-        """The widget's current value, or an appropriate default in cases
-        where the true widget value could not be determined.
+    Parameters
+    ----------
+    value : T_co
+        The widget's current value, or, in cases where the true widget value
+        could not be determined, an appropriate fallback value.
 
         This value should be returned by the widget call.
-        """
-        ...
-
-    @property
-    @abstractmethod
-    def set_frontend_value(self) -> bool:
-        """True if the widget's value is different from the value most
-        recently returned from the frontend.
+    value_changed : bool
+        True if the widget's value is different from the value most recently
+        returned from the frontend.
 
         Implies an update to the frontend is needed.
-        """
-        ...
-
-
-@attr.s(auto_attribs=True, frozen=True, slots=True)
-class RealWidgetState(WidgetStateResult[T_co]):
-    """A WidgetStateReport signifying that an actual value was retrieved from
-    SessionState.
     """
-
     value: T_co
     value_changed: bool
 
-    @property
-    def return_value(self) -> T_co:
-        return self.value
-
-    @property
-    def set_frontend_value(self) -> bool:
-        return self.value_changed
-
-
-@attr.s(auto_attribs=True, frozen=True, slots=True)
-class FallbackState(WidgetStateResult[T]):
-    """A WidgetStateReport signifying that SessionState could not be accessed.
-
-    Provides a fallback return_value, and suggests not updating the UI.
-    """
-
-    deserializer: WidgetDeserializer[T]
-
     @classmethod
-    def from_metadata(cls, metadata: WidgetMetadata[T]) -> "FallbackState[T]":
-        return cls(deserializer=metadata.deserializer)
-
-    @property
-    def return_value(self) -> T:
-        return self.deserializer(None, "")
-
-    @property
-    def set_frontend_value(self) -> Literal[False]:
-        return False
+    def failure(cls, deserializer: WidgetDeserializer[T]) -> "RegisterWidgetResult[T]":
+        """The canonical way to construct a RegisterWidgetResult in cases
+        where the true widget value could not be determined.
+        """
+        return cls(value=deserializer(None, ""), value_changed=False)
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -662,7 +625,7 @@ class SessionState:
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: Optional[str]
-    ) -> RealWidgetState[T]:
+    ) -> RegisterWidgetResult[T]:
         """Register a widget with the SessionState.
 
         Returns
@@ -697,7 +660,7 @@ class SessionState:
             user_key
         )
 
-        return RealWidgetState(widget_value, widget_value_changed)
+        return RegisterWidgetResult(widget_value, widget_value_changed)
 
     def get_stats(self) -> List[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
