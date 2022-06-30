@@ -287,18 +287,30 @@ def _missing_key_error_message(key: str) -> str:
 
 
 class WidgetStateResult(Protocol[T_co]):
-    """Should be usable by widget code to determine what value to return, and
+    """Result returned by the `register_widget` family of functions/methods.
+
+    Should be usable by widget code to determine what value to return, and
     whether to update the UI.
     """
 
     @property
     @abstractmethod
     def return_value(self) -> T_co:
+        """The widget's current value, or an appropriate default in cases
+        where the true widget value could not be determined.
+
+        This value should be returned by the widget call.
+        """
         ...
 
     @property
     @abstractmethod
     def set_frontend_value(self) -> bool:
+        """True if the widget's value is different from the value most
+        recently returned from the frontend.
+
+        Implies an update to the frontend is needed.
+        """
         ...
 
 

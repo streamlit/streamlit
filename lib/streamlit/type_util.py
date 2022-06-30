@@ -68,7 +68,7 @@ ArrayValueFieldName: TypeAlias = Literal[
 # Useful for membership checking.
 ARRAY_VALUE_FIELD_NAMES: Final = frozenset(
     cast(
-        tuple[ArrayValueFieldName, ...],
+        "tuple[ArrayValueFieldName, ...]",
         # NOTE: get_args is not recursive, so this only works as long as
         # ArrayValueFieldName remains flat.
         get_args(ArrayValueFieldName),
