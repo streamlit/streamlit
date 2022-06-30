@@ -20,13 +20,11 @@ import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
 function translateGapWidth(gap: string, theme: Theme): string {
-  let gapWidth = theme.spacing.twoXS
-  if (gap === "small") {
-    gapWidth = theme.spacing.lg
-  } else if (gap === "medium") {
+  let gapWidth = theme.spacing.lg
+  if (gap === "medium") {
     gapWidth = theme.spacing.threeXL
   } else if (gap === "large") {
-    gapWidth = "3rem"
+    gapWidth = theme.spacing.fourXL
   }
   return gapWidth
 }
