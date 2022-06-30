@@ -155,7 +155,7 @@ class ColorPickerMixin:
         ) -> str:
             return str(ui_value if ui_value is not None else value)
 
-        current_value, set_frontend_value = register_widget(
+        widget_state = register_widget(
             "color_picker",
             color_picker_proto,
             user_key=key,
@@ -170,12 +170,12 @@ class ColorPickerMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         color_picker_proto.disabled = disabled
-        if set_frontend_value:
-            color_picker_proto.value = current_value
+        if widget_state.value_changed:
+            color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True
 
         self.dg._enqueue("color_picker", color_picker_proto)
-        return cast(str, current_value)
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

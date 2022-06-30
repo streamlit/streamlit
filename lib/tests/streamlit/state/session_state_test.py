@@ -604,11 +604,11 @@ class SessionStateMethodTests(unittest.TestCase):
             serializer=identity,
             value_type="int_value",
         )
-        _, widget_value_changed = self.session_state.register_widget(
+        wsr = self.session_state.register_widget(
             metadata=metadata,
             user_key="widget_id_1",
         )
-        assert not widget_value_changed
+        assert not wsr.value_changed
         assert self.session_state["widget_id_1"] == WIDGET_VALUE
 
 

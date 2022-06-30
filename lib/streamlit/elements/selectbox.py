@@ -159,7 +159,7 @@ class SelectboxMixin:
                 return 0
             return index_(opt, v)
 
-        current_value, set_frontend_value = register_widget(
+        widget_state = register_widget(
             "selectbox",
             selectbox_proto,
             user_key=key,
@@ -174,12 +174,12 @@ class SelectboxMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         selectbox_proto.disabled = disabled
-        if set_frontend_value:
-            selectbox_proto.value = serialize_select_box(current_value)
+        if widget_state.value_changed:
+            selectbox_proto.value = serialize_select_box(widget_state.value)
             selectbox_proto.set_value = True
 
         self.dg._enqueue("selectbox", selectbox_proto)
-        return cast(str, current_value)
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
