@@ -286,7 +286,7 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class WidgetStateReport(Protocol[T_co]):
+class WidgetStateResult(Protocol[T_co]):
     """Should be usable by widget code to determine what value to return, and
     whether to update the UI.
     """
@@ -303,7 +303,7 @@ class WidgetStateReport(Protocol[T_co]):
 
 
 @attr.s(auto_attribs=True, frozen=True, slots=True)
-class RealWidgetState(WidgetStateReport[T_co]):
+class RealWidgetState(WidgetStateResult[T_co]):
     """A WidgetStateReport signifying that an actual value was retrieved from
     SessionState.
     """
@@ -321,7 +321,7 @@ class RealWidgetState(WidgetStateReport[T_co]):
 
 
 @attr.s(auto_attribs=True, frozen=True, slots=True)
-class FallbackState(WidgetStateReport[T]):
+class FallbackState(WidgetStateResult[T]):
     """A WidgetStateReport signifying that SessionState could not be accessed.
 
     Provides a fallback return_value, and suggests not updating the UI.

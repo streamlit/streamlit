@@ -21,7 +21,7 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from .session_state import (
     SessionState,
     WidgetMetadata,
-    WidgetStateReport,
+    WidgetStateResult,
     FallbackState,
     T,
 )
@@ -55,7 +55,7 @@ class SafeSessionState:
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: Optional[str]
-    ) -> WidgetStateReport[T]:
+    ) -> WidgetStateResult[T]:
         with self._lock:
             if self._disconnected:
                 return FallbackState.from_metadata(metadata)

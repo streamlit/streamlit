@@ -48,7 +48,7 @@ from .session_state import (
     WidgetCallback,
     WidgetDeserializer,
     WidgetKwargs,
-    WidgetStateReport,
+    WidgetStateResult,
     FallbackState,
     T,
 )
@@ -128,7 +128,7 @@ def register_widget(
     on_change_handler: Optional[WidgetCallback] = None,
     args: Optional[WidgetArgs] = None,
     kwargs: Optional[WidgetKwargs] = None,
-) -> WidgetStateReport[T]:
+) -> WidgetStateResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
@@ -162,9 +162,9 @@ def register_widget(
 
     Returns
     -------
-    widget_state_report : WidgetStateReport[T]
-        A report providing information on which value to return to the widget
-        caller, and whether the UI needs updating. Two kinds of reports can be
+    widget_state_result : WidgetStateResult[T]
+        Provides information on which value to return to the widget caller,
+        and whether the UI needs updating. Two kinds of reports can be
         returned.
 
         - Unhappy path: FallbackState[T]
