@@ -14,23 +14,23 @@
 
 import sys
 import unittest
-
 from io import StringIO
 from unittest.mock import Mock, patch
+
 import matplotlib
 
-
-from streamlit import SECRETS_FILE_LOC, bootstrap, config
+from streamlit import SECRETS_FILE_LOC, bootstrap
 from streamlit import config
+from streamlit.bootstrap import NEW_VERSION_TEXT
 from streamlit.session_data import SessionData
 from tests import testutil
-from streamlit.bootstrap import NEW_VERSION_TEXT
+from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 report = SessionData("the/path", "test command line")
 
 
 class BootstrapTest(unittest.TestCase):
-    @patch("streamlit.bootstrap.tornado.ioloop", Mock())
+    @patch("streamlit.bootstrap.AsyncIOLoop", Mock())
     @patch("streamlit.bootstrap.Server", Mock())
     @patch("streamlit.bootstrap._install_pages_watcher", Mock())
     def test_fix_matplotlib_crash(self):
@@ -62,8 +62,12 @@ class BootstrapTest(unittest.TestCase):
         sys.platform = ORIG_PLATFORM
 
 
-class BootstrapPrintTest(unittest.TestCase):
-    """Test bootstrap.py's printing functions."""
+class BootstrapPrintTest(IsolatedAsyncioTestCase):
+    """Test bootstrap.py's printing functions.
+
+    (We use `IsolatedAsyncioTestCase` to ensure that an asyncio event loop
+    exists in tests that implicitly rely on one.)
+    """
 
     def setUp(self):
         self.orig_stdout = sys.stdout

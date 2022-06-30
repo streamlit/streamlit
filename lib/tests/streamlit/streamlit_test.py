@@ -420,8 +420,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el.doc_string.doc_string.startswith("Display text in header formatting.")
         )
         self.assertEqual(el.doc_string.type, "<class 'method'>")
-        if sys.version_info[1] == 7:
-            # Python 3.7 represents the signature slightly differently
+        if sys.version_info < (3, 9):
+            # Python < 3.9 represents the signature slightly differently
             self.assertEqual(
                 el.doc_string.signature,
                 "(body: str, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'",

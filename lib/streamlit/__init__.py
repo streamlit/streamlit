@@ -123,6 +123,7 @@ camera_input = _main.camera_input
 checkbox = _main.checkbox
 code = _main.code
 columns = _main.columns
+tabs = _main.tabs
 container = _main.container
 dataframe = _main.dataframe
 date_input = _main.date_input
