@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.state.session_state import RealWidgetState
+from streamlit.state.session_state import RegisterWidgetResult
 from tests import testutil
 
 NO_FORM_ID = ""
@@ -280,7 +280,7 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
 
     @patch(
         "streamlit.elements.button.register_widget",
-        return_value=RealWidgetState(True, False),
+        return_value=RegisterWidgetResult(True, False),
     )
     def test_return_true_when_submitted(self, _):
         with st.form("form"):

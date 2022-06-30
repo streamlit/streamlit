@@ -633,7 +633,7 @@ class SessionState:
 
         Returns
         -------
-        RealWidgetState[T]
+        RegisterWidgetResult[T]
             Contains the widget's current value, and a bool that will be True
             if the frontend needs to be updated with the current value.
         """
