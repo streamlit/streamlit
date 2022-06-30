@@ -70,4 +70,20 @@ describe("st.column", () => {
       3
     ).should("have.css", "flex", "1 1 calc(10% - 16px)");
   });
+
+  it("creates small gap between columns", () => {
+    cy.getIndexed("[data-testid='stHorizontalBlock']",
+    2).matchThemedSnapshots("columns-small-gap");
+  });
+
+  it("creates medium gap between columns", () => {
+    cy.getIndexed("[data-testid='stHorizontalBlock']",
+    3).matchThemedSnapshots("columns-medium-gap");
+  });
+
+  it("creates large gap between columns", () => {
+    cy.getIndexed("[data-testid='stHorizontalBlock']",
+    4).matchThemedSnapshots("columns-large-gap");
+  });
+
 });
