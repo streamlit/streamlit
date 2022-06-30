@@ -19,8 +19,8 @@ from .singleton_decorator import SINGLETON_CALL_STACK, _singleton_caches, Single
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
-    MEMO_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name, True)
-    SINGLETON_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name, False)
+    MEMO_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
+    SINGLETON_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
 
 
 @contextlib.contextmanager

@@ -23,6 +23,8 @@ import types
 from abc import abstractmethod
 from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
 
+from google.protobuf.message import Message
+
 import streamlit as st
 from streamlit import util
 from streamlit.caching.cache_errors import CacheKeyNotFoundError
@@ -87,6 +89,10 @@ class CachedFunction:
 
     @property
     def call_stack(self) -> "CachedFunctionCallStack":
+        raise NotImplementedError
+
+    @property
+    def message_call_stack(self) -> "CachedFunctionMessagesCallStack":
         raise NotImplementedError
 
     def get_function_cache(self, function_key: str) -> Cache:
@@ -198,7 +204,6 @@ class CachedFunctionCallStack(threading.local):
         self,
         dg: "st.delta_generator.DeltaGenerator",
         st_func_name: str,
-        allow_uninteractive: bool,
     ) -> None:
         """If appropriate, warn about calling st.foo inside @memo.
 
@@ -215,7 +220,7 @@ class CachedFunctionCallStack(threading.local):
             The name of the Streamlit function that was called.
 
         """
-        if allow_uninteractive and st_func_name in NONWIDGET_ELEMENTS:
+        if st_func_name in NONWIDGET_ELEMENTS:
             return
         if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
             cached_func = self._cached_func_stack[-1]
@@ -232,6 +237,32 @@ class CachedFunctionCallStack(threading.local):
         with self.suppress_cached_st_function_warning():
             e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
             dg.exception(e)
+
+
+class CachedFunctionMessagesCallStack(threading.local):
+    """A utility for warning users when they call `st` commands inside
+    a cached function. Internally, this is just a counter that's incremented
+    when we enter a cache function, and decremented when we exit.
+
+    Data is stored in a thread-local object, so it's safe to use an instance
+    of this class across multiple threads.
+    """
+
+    def __init__(self, cache_type: CacheType):
+        self._cached_message_stack: List[List["Message"]] = []
+        self._most_recent_messages: List["Message"] = []
+        self._cache_type = cache_type
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    @contextlib.contextmanager
+    def calling_cached_function(self) -> Iterator[None]:
+        self._cached_message_stack.append([])
+        try:
+            yield
+        finally:
+            self._most_recent_messages = self._cached_message_stack.pop()
 
 
 def _make_value_key(

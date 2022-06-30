@@ -13,18 +13,21 @@
 # limitations under the License.
 
 """@st.memo: pickle-based caching"""
+import contextlib
+import functools
 import os
 import pickle
 import shutil
 import threading
 import time
 import types
-from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload
-from typing import Union
+from typing import Optional, Any, Dict, Tuple, cast, List, Callable, TypeVar, overload
+from typing import Union, Iterator
 
 import math
 from cachetools import TTLCache
 
+import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import (
@@ -44,6 +47,7 @@ from .cache_utils import (
     create_cache_wrapper,
     CachedFunctionCallStack,
     CachedFunction,
+    CachedFunctionMessagesCallStack,
 )
 
 _LOGGER = get_logger(__name__)
@@ -59,6 +63,51 @@ _CACHE_DIR_NAME = "cache"
 
 
 MEMO_CALL_STACK = CachedFunctionCallStack(CacheType.MEMO)
+MEMO_MESSAGES_CALL_STACK = CachedFunctionMessagesCallStack(CacheType.MEMO)
+
+
+class MemoizedFunction(CachedFunction):
+    """Implements the CachedFunction protocol for @st.memo"""
+
+    def __init__(
+        self,
+        func: types.FunctionType,
+        show_spinner: bool,
+        suppress_st_warning: bool,
+        persist: Optional[str],
+        max_entries: Optional[int],
+        ttl: Optional[float],
+    ):
+        super().__init__(func, show_spinner, suppress_st_warning)
+        self.persist = persist
+        self.max_entries = max_entries
+        self.ttl = ttl
+
+    @property
+    def cache_type(self) -> CacheType:
+        return CacheType.MEMO
+
+    @property
+    def call_stack(self) -> CachedFunctionCallStack:
+        return MEMO_CALL_STACK
+
+    @property
+    def message_call_stack(self) -> CachedFunctionMessagesCallStack:
+        return MEMO_MESSAGES_CALL_STACK
+
+    @property
+    def display_name(self) -> str:
+        """A human-readable name for the cached function"""
+        return f"{self.func.__module__}.{self.func.__qualname__}"
+
+    def get_function_cache(self, function_key: str) -> Cache:
+        return _memo_caches.get_cache(
+            key=function_key,
+            persist=self.persist,
+            max_entries=self.max_entries,
+            ttl=self.ttl,
+            display_name=self.display_name,
+        )
 
 
 class MemoCaches(CacheStatsProvider):
@@ -145,46 +194,6 @@ _memo_caches = MemoCaches()
 def get_memo_stats_provider() -> CacheStatsProvider:
     """Return the StatsProvider for all memoized functions."""
     return _memo_caches
-
-
-class MemoizedFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.memo"""
-
-    def __init__(
-        self,
-        func: types.FunctionType,
-        show_spinner: bool,
-        suppress_st_warning: bool,
-        persist: Optional[str],
-        max_entries: Optional[int],
-        ttl: Optional[float],
-    ):
-        super().__init__(func, show_spinner, suppress_st_warning)
-        self.persist = persist
-        self.max_entries = max_entries
-        self.ttl = ttl
-
-    @property
-    def cache_type(self) -> CacheType:
-        return CacheType.MEMO
-
-    @property
-    def call_stack(self) -> CachedFunctionCallStack:
-        return MEMO_CALL_STACK
-
-    @property
-    def display_name(self) -> str:
-        """A human-readable name for the cached function"""
-        return f"{self.func.__module__}.{self.func.__qualname__}"
-
-    def get_function_cache(self, function_key: str) -> Cache:
-        return _memo_caches.get_cache(
-            key=function_key,
-            persist=self.persist,
-            max_entries=self.max_entries,
-            ttl=self.ttl,
-            display_name=self.display_name,
-        )
 
 
 class MemoAPI:
