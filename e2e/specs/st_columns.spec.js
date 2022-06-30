@@ -61,7 +61,7 @@ describe("st.column", () => {
     // This assertion ensures that the report rerun completes first
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']").should(
       "have.length",
-      7
+      16
     );
 
     // When layout was shifting, there was an old "flex: 8" block here.
