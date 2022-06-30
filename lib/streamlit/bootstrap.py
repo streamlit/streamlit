@@ -345,7 +345,7 @@ def _install_pages_watcher(main_script_path_str: str) -> None:
     print(main_script_path.absolute())
     LOGGER.warning(main_script_path.absolute())
     print("NEW PAGES DIR")
-    LOGGER.warning("NEW PAGES DIF")
+    LOGGER.warning("NEW PAGES DIR")
     print(new_pages_dir.absolute())
     LOGGER.warning(new_pages_dir.absolute())
 

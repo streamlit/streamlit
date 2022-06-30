@@ -159,6 +159,12 @@ class _MultiPathWatcher(object):
     ) -> None:
         """Start watching a path."""
         folder_path = os.path.abspath(os.path.dirname(path))
+        LOGGER.debug("FOLDER PATH TH TH TH")
+        LOGGER.debug(str(folder_path))
+        print("FFFFF")
+        print(folder_path)
+        print("PAZZZZ")
+        print(path)
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
