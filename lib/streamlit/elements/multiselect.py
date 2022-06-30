@@ -218,17 +218,16 @@ class MultiSelectMixin:
             serializer=serialize_multiselect,
             ctx=ctx,
         )
-        return_value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
         if widget_state.set_frontend_value:
-            multiselect_proto.value[:] = serialize_multiselect(return_value)
+            multiselect_proto.value[:] = serialize_multiselect(widget_state.value)
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
-        return return_value
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

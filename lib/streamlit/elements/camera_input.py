@@ -190,7 +190,9 @@ class CameraInputMixin:
         camera_input_proto.disabled = disabled
 
         ctx = get_script_run_ctx()
-        camera_image_input_state = serialize_camera_image_input(camera_input_state.value)
+        camera_image_input_state = serialize_camera_image_input(
+            camera_input_state.value
+        )
 
         uploaded_shapshot_info = camera_image_input_state.uploaded_file_info
 

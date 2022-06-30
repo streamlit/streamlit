@@ -199,7 +199,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 serializer=lambda x: x,
                 ctx=ctx,
             )
-            widget_value = component_state.return_value
+            widget_value = component_state.value
 
             if key is not None:
                 marshall_element_args()

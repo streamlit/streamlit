@@ -186,17 +186,16 @@ class TextWidgetsMixin:
             serializer=lambda x: x,
             ctx=ctx,
         )
-        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_input_proto.disabled = disabled
         if widget_state.set_frontend_value:
-            text_input_proto.value = value
+            text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
         self.dg._enqueue("text_input", text_input_proto)
-        return value
+        return widget_state.value
 
     def text_area(
         self,
@@ -331,17 +330,16 @@ class TextWidgetsMixin:
             serializer=lambda x: x,
             ctx=ctx,
         )
-        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_area_proto.disabled = disabled
         if widget_state.set_frontend_value:
-            text_area_proto.value = value
+            text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
         self.dg._enqueue("text_area", text_area_proto)
-        return value
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

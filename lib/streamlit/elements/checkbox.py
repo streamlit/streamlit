@@ -141,17 +141,16 @@ class CheckboxMixin:
             serializer=bool,
             ctx=ctx,
         )
-        value = checkbox_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         checkbox_proto.disabled = disabled
         if checkbox_state.set_frontend_value:
-            checkbox_proto.value = value
+            checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True
 
         self.dg._enqueue("checkbox", checkbox_proto)
-        return value
+        return checkbox_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":

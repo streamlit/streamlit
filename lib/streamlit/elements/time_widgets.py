@@ -291,17 +291,16 @@ class TimeWidgetsMixin:
             serializer=serialize_time_input,
             ctx=ctx,
         )
-        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         time_input_proto.disabled = disabled
         if widget_state.set_frontend_value:
-            time_input_proto.value = serialize_time_input(value)
+            time_input_proto.value = serialize_time_input(widget_state.value)
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
-        return value
+        return widget_state.value
 
     def date_input(
         self,

@@ -166,17 +166,16 @@ class ColorPickerMixin:
             serializer=str,
             ctx=ctx,
         )
-        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         color_picker_proto.disabled = disabled
         if widget_state.set_frontend_value:
-            color_picker_proto.value = value
+            color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True
 
         self.dg._enqueue("color_picker", color_picker_proto)
-        return value
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
