@@ -142,6 +142,46 @@ class TimeInput extends PureComponent<Props, State> {
       Select: {
         props: {
           disabled,
+
+          overrides: {
+            ControlContainer: {
+              style: {
+                borderWidth: "1px",
+              },
+            },
+
+            IconsContainer: {
+              style: () => ({
+                paddingRight: ".5rem",
+              }),
+            },
+
+            ValueContainer: {
+              style: () => ({
+                padding: ".5rem",
+              }),
+            },
+
+            Dropdown: {
+              style: () => ({
+                paddingTop: 0,
+                paddingBottom: 0,
+              }),
+            },
+
+            // Nudge the dropdown menu by 1px so the focus state doesn't get cut off
+            Popover: {
+              props: {
+                overrides: {
+                  Body: {
+                    style: () => ({
+                      marginTop: "1px",
+                    }),
+                  },
+                },
+              },
+            },
+          },
         },
       },
     }

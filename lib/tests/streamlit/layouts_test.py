@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit import StreamlitAPIException
+
 from tests import testutil
 
 
@@ -83,3 +85,41 @@ class ExpanderTest(testutil.DeltaGeneratorTestCase):
         expander_block = self.get_delta_from_queue()
         self.assertEqual(expander_block.add_block.expandable.label, "label")
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
+
+
+class TabsTest(testutil.DeltaGeneratorTestCase):
+    def test_tab_required(self):
+        """Test that atleast one tab is required."""
+        with self.assertRaises(TypeError):
+            tabs = st.tabs()
+
+        with self.assertRaises(StreamlitAPIException):
+            tabs = st.tabs([])
+
+    def test_only_label_strings_allowed(self):
+        """Test that only strings are allowed as tab labels."""
+        with self.assertRaises(StreamlitAPIException):
+            tabs = st.tabs(["tab1", True])
+
+        with self.assertRaises(StreamlitAPIException):
+            tabs = st.tabs(["tab1", 10])
+
+    def test_returns_all_expected_tabs(self):
+        """Test that all labels are added in correct order."""
+        tabs = st.tabs([f"tab {i}" for i in range(5)])
+
+        self.assertEqual(len(tabs), 5)
+
+        for tab in tabs:
+            with tab:
+                pass
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        horizontal_block = all_deltas[0]
+        tabs_block = all_deltas[1:]
+        # 6 elements will be created: 1 horizontal block, 5 tabs
+        self.assertEqual(len(all_deltas), 6)
+        self.assertEqual(len(tabs_block), 5)
+        for index, tabs_block in enumerate(tabs_block):
+            self.assertEqual(tabs_block.add_block.tab.label, f"tab {index}")

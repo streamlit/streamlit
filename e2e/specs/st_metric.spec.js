@@ -24,7 +24,7 @@ describe("st.metric", () => {
     it("displays the correct label text", () => {
       cy.getIndexed("[data-testid='stMetricLabel']", 0).should(
         "have.text",
-        " User growth "
+        "User growth"
       );
     });
 
@@ -47,7 +47,7 @@ describe("st.metric", () => {
     it("displays the correct label text", () => {
       cy.getIndexed("[data-testid='stMetricLabel']", 1).should(
         "have.text",
-        " S&P 500 "
+        "S&P 500"
       );
     });
 
@@ -70,7 +70,7 @@ describe("st.metric", () => {
     it("displays the correct metric label text", () => {
       cy.getIndexed("[data-testid='stMetricLabel']", 2).should(
         "have.text",
-        " Apples I've eaten "
+        "Apples I've eaten"
       );
     });
 

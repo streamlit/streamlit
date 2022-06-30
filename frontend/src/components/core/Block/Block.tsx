@@ -15,14 +15,15 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto } from "src/autogen/proto"
-
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
+
+import { Block as BlockProto } from "src/autogen/proto"
 import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
+import Tabs from "src/components/elements/Tabs"
 
 import {
   BaseBlockProps,
@@ -40,7 +41,7 @@ import {
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
-interface BlockPropsWithoutWidth extends BaseBlockProps {
+export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
 }
 
@@ -112,6 +113,11 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     )
   }
 
+  if (node.deltaBlock.tabContainer) {
+    const tabsProps = { ...childProps, isStale }
+    return <Tabs {...tabsProps} />
+  }
+
   return child
 }
 
@@ -124,7 +130,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
           if (node instanceof ElementNode) {
             // Put node in childProps instead of passing as a node={node} prop in React to
             // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = { ...props, ...{ node: node as ElementNode } }
+            const childProps = { ...props, node: node as ElementNode }
 
             const key = getElementWidgetID(node.element) || index
             return <ElementNodeRenderer key={key} {...childProps} />
@@ -135,7 +141,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
           if (node instanceof BlockNode) {
             // Put node in childProps instead of passing as a node={node} prop in React to
             // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = { ...props, ...{ node: node as BlockNode } }
+            const childProps = { ...props, node: node as BlockNode }
 
             return <BlockNodeRenderer key={index} {...childProps} />
           }

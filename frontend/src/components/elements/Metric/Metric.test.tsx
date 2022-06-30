@@ -90,4 +90,10 @@ describe("Metric element", () => {
       "#ff2b2b"
     )
   })
+
+  it("should render TooltipIcon if help text provided", () => {
+    const props = getProps({ help: "help text" })
+    const wrapper = mount(<Metric {...props} />)
+    expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
+  })
 })

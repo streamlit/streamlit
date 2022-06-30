@@ -42,6 +42,9 @@ message ForwardMsg {
 
     // The script failed to compile
     FINISHED_WITH_COMPILE_ERROR = 1;
+
+    // Script was interrupted by rerun
+    FINISHED_EARLY_FOR_RERUN = 2;
   }
 
   oneof type {
