@@ -334,12 +334,23 @@ def _install_pages_watcher(main_script_path_str: str) -> None:
 
     main_script_path = Path(main_script_path_str)
     pages_dir = main_script_path.parent / "pages"
+
+    new_pages_dir = main_script_path.cwd() / "pages"
     print("Pages dir" * 10)
+    LOGGER.warning("Pages dir")
     print(pages_dir.absolute())
+    LOGGER.warning(pages_dir.absolute())
     print("Main Script Path")
+    LOGGER.warning("Main Script Path")
     print(main_script_path.absolute())
+    LOGGER.warning(main_script_path.absolute())
+    print("NEW PAGES DIR")
+    LOGGER.warning("NEW PAGES DIF")
+    print(new_pages_dir.absolute())
+    LOGGER.warning(new_pages_dir.absolute())
+
     watch_dir(
-        str(pages_dir),
+        str(new_pages_dir),
         _on_pages_changed,
         glob_pattern="*.py",
         allow_nonexistent=True,
