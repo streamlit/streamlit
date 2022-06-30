@@ -28,10 +28,17 @@ from typing import (
     TYPE_CHECKING,
     Union,
     cast,
-    get_args,
     overload,
 )
-from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard
+
+from typing_extensions import (
+    Final,
+    Literal,
+    Protocol,
+    TypeAlias,
+    TypeGuard,
+    get_args,
+)
 
 import pyarrow as pa
 
