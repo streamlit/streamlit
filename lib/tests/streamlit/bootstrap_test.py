@@ -31,9 +31,9 @@ report = SessionData("the/path", "test command line")
 
 
 class BootstrapTest(unittest.TestCase):
-    @patch("streamlit.bootstrap.AsyncIOLoop", Mock())
-    @patch("streamlit.bootstrap.Server", Mock())
-    @patch("streamlit.bootstrap._install_pages_watcher", Mock())
+    @patch("streamlit.web.bootstrap.AsyncIOLoop", Mock())
+    @patch("streamlit.web.bootstrap.Server", Mock())
+    @patch("streamlit.web.bootstrap._install_pages_watcher", Mock())
     def test_fix_matplotlib_crash(self):
         """Test that bootstrap.run sets the matplotlib backend to
         "Agg" if config.runner.fixMatplotlib=True.
@@ -99,7 +99,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     def test_print_new_version_message(self):
         with patch(
-            "streamlit.version.should_show_new_version_notice", return_value=True
+            "streamlit.lib.version.should_show_new_version_notice", return_value=True
         ), patch("click.secho") as mock_echo:
             bootstrap._print_new_version_message()
             mock_echo.assert_called_once_with(NEW_VERSION_TEXT)
@@ -121,8 +121,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("You can now view your Streamlit app in your browser." in out)
         self.assertTrue("URL: http://the-address" in out)
 
-    @patch("streamlit.net_util.get_external_ip")
-    @patch("streamlit.net_util.get_internal_ip")
+    @patch("streamlit.lib.net_util.get_external_ip")
+    @patch("streamlit.lib.net_util.get_internal_ip")
     def test_print_urls_remote(self, mock_get_internal_ip, mock_get_external_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -143,8 +143,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Network URL: http://internal-ip" in out)
         self.assertTrue("External URL: http://external-ip" in out)
 
-    @patch("streamlit.net_util.get_external_ip")
-    @patch("streamlit.net_util.get_internal_ip")
+    @patch("streamlit.lib.net_util.get_external_ip")
+    @patch("streamlit.lib.net_util.get_internal_ip")
     def test_print_urls_remote_no_external(
         self, mock_get_internal_ip, mock_get_external_ip
     ):
@@ -167,8 +167,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Network URL: http://internal-ip" in out)
         self.assertTrue("External URL: http://external-ip" not in out)
 
-    @patch("streamlit.net_util.get_external_ip")
-    @patch("streamlit.net_util.get_internal_ip")
+    @patch("streamlit.lib.net_util.get_external_ip")
+    @patch("streamlit.lib.net_util.get_internal_ip")
     def test_print_urls_remote_no_internal(
         self, mock_get_internal_ip, mock_get_external_ip
     ):
@@ -191,7 +191,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Network URL: http://internal-ip" not in out)
         self.assertTrue("External URL: http://external-ip" in out)
 
-    @patch("streamlit.net_util.get_internal_ip")
+    @patch("streamlit.lib.net_util.get_internal_ip")
     def test_print_urls_local(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -211,7 +211,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Local URL: http://localhost" in out)
         self.assertTrue("Network URL: http://internal-ip" in out)
 
-    @patch("streamlit.net_util.get_internal_ip")
+    @patch("streamlit.lib.net_util.get_internal_ip")
     def test_print_urls_port(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -235,7 +235,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Local URL: http://localhost:9988" in out)
         self.assertTrue("Network URL: http://internal-ip:9988" in out)
 
-    @patch("streamlit.net_util.get_internal_ip")
+    @patch("streamlit.lib.net_util.get_internal_ip")
     def test_print_urls_base(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -260,7 +260,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)
         self.assertTrue("Network URL: http://internal-ip:8501/foo" in out)
 
-    @patch("streamlit.net_util.get_internal_ip")
+    @patch("streamlit.lib.net_util.get_internal_ip")
     def test_print_urls_base_no_internal(self, mock_get_internal_ip):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -285,7 +285,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)
         self.assertTrue("Network URL: http://internal-ip:8501/foo" not in out)
 
-    @patch("streamlit.bootstrap.GitRepo")
+    @patch("streamlit.web.bootstrap.GitRepo")
     def test_print_old_git_warning(self, mock_git_repo):
         mock_git_repo.return_value.is_valid.return_value = False
         mock_git_repo.return_value.git_version = (1, 2, 3)
@@ -296,7 +296,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             "Streamlit requires Git 2.7.0 or later, but you have 1.2.3." in out
         )
 
-    @patch("streamlit.config.get_config_options")
+    @patch("streamlit.lib.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):
         """Test that bootstrap.load_config_options parses the keys properly and
         passes down the parameters.
@@ -323,14 +323,14 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             },
         )
 
-    @patch("streamlit.bootstrap.secrets.load_if_toml_exists")
+    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
         bootstrap._on_server_start(Mock())
         mock_load_secrets.assert_called_once()
 
-    @patch("streamlit.bootstrap.LOGGER.error")
-    @patch("streamlit.bootstrap.secrets.load_if_toml_exists")
+    @patch("streamlit.web.bootstrap.LOGGER.error")
+    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
@@ -342,8 +342,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             exc_info=mock_exception,
         )
 
-    @patch("streamlit.config.get_config_options")
-    @patch("streamlit.bootstrap.watch_file")
+    @patch("streamlit.lib.config.get_config_options")
+    @patch("streamlit.web.bootstrap.watch_file")
     def test_install_config_watcher(
         self, patched_watch_file, patched_get_config_options
     ):
@@ -364,8 +364,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             },
         )
 
-    @patch("streamlit.bootstrap.invalidate_pages_cache")
-    @patch("streamlit.bootstrap.watch_dir")
+    @patch("streamlit.web.bootstrap.invalidate_pages_cache")
+    @patch("streamlit.web.bootstrap.watch_dir")
     def test_install_pages_watcher(
         self, patched_watch_dir, patched_invalidate_pages_cache
     ):

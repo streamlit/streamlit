@@ -75,7 +75,7 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
+@patch("streamlit.lib.source_util._cached_pages", new=None)
 class ScriptRunnerTest(AsyncTestCase):
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
@@ -278,7 +278,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    @patch("streamlit.lib.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks(self, patched_call_callbacks):
         """Before a script is rerun, we call callbacks for any widgets
         whose value has changed.
@@ -323,7 +323,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.request_stop()
         scriptrunner.join()
 
-    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    @patch("streamlit.lib.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_on_new_scriptrunner_instance(
         self, patched_call_callbacks
     ):
@@ -359,7 +359,7 @@ class ScriptRunnerTest(AsyncTestCase):
         patched_call_callbacks.assert_called_once()
 
     @patch("streamlit.exception")
-    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    @patch("streamlit.lib.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_error(
         self, patched_call_callbacks, patched_st_exception
     ):
@@ -615,7 +615,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self._assert_no_exceptions(scriptrunner)
 
     @patch(
-        "streamlit.source_util.get_pages",
+        "streamlit.lib.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash1": {
@@ -823,7 +823,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
     @patch(
-        "streamlit.source_util.get_pages",
+        "streamlit.lib.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash2": {
@@ -859,7 +859,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
     @patch(
-        "streamlit.source_util.get_pages",
+        "streamlit.lib.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash2": {
@@ -899,7 +899,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(shutdown_data["client_state"].page_script_hash, "hash2")
 
     @patch(
-        "streamlit.source_util.get_pages",
+        "streamlit.lib.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash2": {"page_script_hash": "hash2", "script_path": "script2"},
@@ -935,7 +935,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
     @patch(
-        "streamlit.source_util.get_pages",
+        "streamlit.lib.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash2": {

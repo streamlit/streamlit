@@ -35,7 +35,7 @@ def main():
     # that we previously accidentally supported, but we decided that we should
     # only keep official support for the similar `python -m streamlit <command>`
     # invocation.
-    unsupported_module_cli = ["python", "-m", "streamlit.cli", "test", "prog_name"]
+    unsupported_module_cli = ["python", "-m", "streamlit.web.cli", "test", "prog_name"]
     if _can_run_streamlit(unsupported_module_cli):
         sys.exit("`python -m streamlit.cli test prog_name` should not run")
 

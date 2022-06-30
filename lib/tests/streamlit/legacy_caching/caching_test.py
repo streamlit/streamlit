@@ -112,7 +112,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
         exception.assert_not_called()
 
-    @patch("streamlit.legacy_caching.caching._show_cached_st_function_warning")
+    @patch("streamlit.lib.legacy_caching.caching._show_cached_st_function_warning")
     def test_cached_st_function_warning(self, warning):
         st.text("foo")
         warning.assert_not_called()
@@ -261,8 +261,8 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual([0, 1, 2], bar_vals)
 
     # Reduce the huge amount of logspam we get from hashing/caching
-    @patch("streamlit.legacy_caching.hashing._LOGGER.debug")
-    @patch("streamlit.legacy_caching.caching._LOGGER.debug")
+    @patch("streamlit.lib.legacy_caching.hashing._LOGGER.debug")
+    @patch("streamlit.lib.legacy_caching.caching._LOGGER.debug")
     def test_no_max_size(self, _1, _2):
         """If max_size is None, the cache is unbounded."""
         called_values = []
@@ -283,7 +283,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
             f(ii)
         self.assertEqual([], called_values)
 
-    @patch("streamlit.legacy_caching.caching._TTLCACHE_TIMER")
+    @patch("streamlit.lib.legacy_caching.caching._TTLCACHE_TIMER")
     def test_ttl(self, timer_patch):
         """Entries should expire after the given ttl."""
         # Create 2 cached functions to test that they don't interfere

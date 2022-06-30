@@ -119,7 +119,7 @@ class InMemoryFileManagerTest(TestCase):
             _calculate_file_id(fake_bytes, "audio/wav", file_name="name2.wav"),
         )
 
-    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.lib.in_memory_file_manager._get_session_id")
     def test_add_files(self, _get_session_id):
         """Test that InMemoryFileManager.add works as expected."""
         _get_session_id.return_value = "SESSION1"
@@ -148,7 +148,7 @@ class InMemoryFileManagerTest(TestCase):
             len(self.in_memory_file_manager._files_by_session_and_coord), 1
         )
 
-    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.lib.in_memory_file_manager._get_session_id")
     @mock.patch("time.time")
     def test_add_files_same_coord(self, _time, _get_session_id):
         """Test that InMemoryFileManager.add works as expected."""
@@ -186,7 +186,7 @@ class InMemoryFileManagerTest(TestCase):
             len(self.in_memory_file_manager._files_by_session_and_coord), 0
         )
 
-    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.lib.in_memory_file_manager._get_session_id")
     def test_add_file_already_exists_same_coord(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
@@ -211,7 +211,7 @@ class InMemoryFileManagerTest(TestCase):
             len(self.in_memory_file_manager._files_by_session_and_coord), 1
         )
 
-    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.lib.in_memory_file_manager._get_session_id")
     def test_add_file_already_exists_different_coord(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
@@ -237,7 +237,7 @@ class InMemoryFileManagerTest(TestCase):
             len(self.in_memory_file_manager._files_by_session_and_coord), 1
         )
 
-    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.lib.in_memory_file_manager._get_session_id")
     def test_add_file_different_mimetypes(self, _get_session_id):
         """Test that we create a new file if new mimetype, even with same bytes for content."""
         _get_session_id.return_value = "SESSION1"
@@ -259,7 +259,7 @@ class InMemoryFileManagerTest(TestCase):
             len(self.in_memory_file_manager._files_by_session_and_coord), 1
         )
 
-    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.lib.in_memory_file_manager._get_session_id")
     @mock.patch("time.time")
     def test_clear_session_files(self, _time, _get_session_id):
         """Test that InMemoryFileManager removes session maps when requested (even if empty)."""
@@ -313,7 +313,7 @@ class InMemoryFileManagerTest(TestCase):
             len(self.in_memory_file_manager._files_by_session_and_coord), 0
         )
 
-    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.lib.in_memory_file_manager._get_session_id")
     def test_add_file_multiple_sessions_then_clear(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
@@ -370,7 +370,7 @@ class InMemoryFileManagerTest(TestCase):
             InMemoryFile("abcd", None, "video/webm").url, "/media/abcd.webm"
         )
 
-    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.lib.in_memory_file_manager._get_session_id")
     def test_stats_provider(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
         manager = self.in_memory_file_manager

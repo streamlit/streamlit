@@ -255,7 +255,7 @@ class HashTest(unittest.TestCase):
 
         with self.assertRaises(InternalHashError):
             with patch(
-                "streamlit.legacy_caching.hashing._int_to_bytes",
+                "streamlit.lib.legacy_caching.hashing._int_to_bytes",
                 side_effect=side_effect,
             ):
                 get_hash(123456789)

@@ -62,7 +62,7 @@ class ConfigUtilTest(unittest.TestCase):
         result = config_util._clean_paragraphs(input)
         self.assertEqual(truth, result)
 
-    @patch("streamlit.config_util.click.echo")
+    @patch("streamlit.lib.config_util.click.echo")
     def test_default_config_options_commented_out(self, patched_echo):
         config_options = create_config_options(
             {
@@ -86,7 +86,7 @@ class ConfigUtilTest(unittest.TestCase):
         assert 'address = "example.com"' in lines
         assert "port = 8501" in lines
 
-    @patch("streamlit.config_util.click.echo")
+    @patch("streamlit.lib.config_util.click.echo")
     def test_ui_section_hidden(self, patched_echo):
         config_options = create_config_options({})
 

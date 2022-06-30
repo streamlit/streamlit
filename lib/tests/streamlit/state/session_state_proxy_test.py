@@ -43,7 +43,7 @@ def _create_mock_session_state(
 
 
 @patch(
-    "streamlit.state.session_state_proxy.get_session_state",
+    "streamlit.lib.state.session_state_proxy.get_session_state",
     return_value=_create_mock_session_state({"foo": "bar"}),
 )
 class SessionStateProxyTests(unittest.TestCase):
@@ -107,7 +107,7 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
         self.session_state_proxy = SessionStateProxy()
 
     @patch(
-        "streamlit.state.session_state_proxy.get_session_state",
+        "streamlit.lib.state.session_state_proxy.get_session_state",
         return_value=SessionState(new_session_state={"foo": "bar"}),
     )
     def test_delattr(self, _):
@@ -115,14 +115,14 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
         assert "foo" not in self.session_state_proxy
 
     @patch(
-        "streamlit.state.session_state_proxy.get_session_state",
+        "streamlit.lib.state.session_state_proxy.get_session_state",
         return_value=SessionState(new_session_state={"foo": "bar"}),
     )
     def test_getattr(self, _):
         assert self.session_state_proxy.foo == "bar"
 
     @patch(
-        "streamlit.state.session_state_proxy.get_session_state",
+        "streamlit.lib.state.session_state_proxy.get_session_state",
         return_value=SessionState(new_session_state={"foo": "bar"}),
     )
     def test_getattr_error(self, _):
@@ -130,7 +130,7 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
             del self.session_state_proxy.nonexistent
 
     @patch(
-        "streamlit.state.session_state_proxy.get_session_state",
+        "streamlit.lib.state.session_state_proxy.get_session_state",
         return_value=SessionState(new_session_state={"foo": "bar"}),
     )
     def test_setattr(self, _):

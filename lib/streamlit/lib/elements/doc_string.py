@@ -30,8 +30,8 @@ LOGGER: Final = get_logger(__name__)
 
 CONFUSING_STREAMLIT_MODULES: Final = (
     "streamlit.echo",
-    "streamlit.delta_generator",
-    "streamlit.legacy_caching.caching",
+    "streamlit.lib.delta_generator",
+    "streamlit.lib.legacy_caching.caching",
 )
 
 CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
@@ -122,7 +122,7 @@ def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
 def _get_signature(f):
     is_delta_gen = False
     try:
-        is_delta_gen = f.__module__ == "streamlit.delta_generator"
+        is_delta_gen = f.__module__ == "streamlit.lib.delta_generator"
 
         if is_delta_gen:
             # DeltaGenerator functions are doubly wrapped, and their function

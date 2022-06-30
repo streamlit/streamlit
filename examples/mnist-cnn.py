@@ -15,7 +15,7 @@
 """An example of monitoring a neural net as it trains."""
 
 import streamlit as st
-from streamlit import config
+from streamlit.lib import config
 
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten

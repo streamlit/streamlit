@@ -103,7 +103,7 @@ class DeclareComponentTest(unittest.TestCase):
             return path == PATH or path == os.path.abspath(PATH)
 
         with mock.patch(
-            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+            "streamlit.lib.components.v1.components.os.path.isdir", side_effect=isdir
         ):
             component = components.declare_component("test", path=PATH)
 
@@ -160,7 +160,7 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch(
-            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+            "streamlit.lib.components.v1.components.os.path.isdir", side_effect=isdir
         ):
             registry.register_component(
                 CustomComponent("test_component", path=test_path)
@@ -204,7 +204,7 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch(
-            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+            "streamlit.lib.components.v1.components.os.path.isdir", side_effect=isdir
         ):
             registry.register_component(CustomComponent("test_component", test_path_1))
             registry.register_component(CustomComponent("test_component", test_path_1))
@@ -421,12 +421,12 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_success_request(self):
         """Test request success when valid parameters are provided."""
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch("streamlit.lib.components.v1.components.os.path.isdir"):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
         with mock.patch(
-            "streamlit.components.v1.components.open",
+            "streamlit.lib.components.v1.components.open",
             mock.mock_open(read_data="Test Content"),
         ):
             response = self._request_component("components_test.test")
@@ -444,10 +444,10 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_invalid_content_request(self):
         """Test request failure when invalid content (file) is provided."""
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch("streamlit.lib.components.v1.components.os.path.isdir"):
             declare_component("test", path=PATH)
 
-        with mock.patch("streamlit.components.v1.components.open") as m:
+        with mock.patch("streamlit.lib.components.v1.components.open") as m:
             m.side_effect = OSError("Invalid content")
             response = self._request_component("components_test.test")
 
@@ -479,12 +479,12 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
                 return TextIOWrapper(str(payload, encoding=encoding))
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch("streamlit.lib.components.v1.components.os.path.isdir"):
             declare_component("test", path=PATH)
 
         payload = b"\x00\x01\x00\x00\x00\x0D\x00\x80"  # binary non utf-8 payload
 
-        with mock.patch("streamlit.components.v1.components.open") as m:
+        with mock.patch("streamlit.lib.components.v1.components.open") as m:
             m.return_value.__enter__ = lambda _: _open_read(m, payload)
             response = self._request_component("components_test.test")
 

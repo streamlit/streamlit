@@ -317,7 +317,7 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("date_interval", date_interval)
 
-    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
+    @patch("streamlit.lib.elements.file_uploader.FileUploaderMixin._get_file_recs")
     def test_file_uploader_serde(self, get_file_recs_patch):
         file_recs = [
             UploadedFileRec(1, "file1", "type", b"123"),
@@ -540,7 +540,7 @@ class SessionStateMethodTests(unittest.TestCase):
         mock_ctx = MagicMock()
         mock_ctx.widget_ids_this_run = {"widget_id"}
 
-        with patch("streamlit.scriptrunner.get_script_run_ctx", return_value=mock_ctx):
+        with patch("streamlit.lib.scriptrunner.get_script_run_ctx", return_value=mock_ctx):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state._key_id_mapping = {"widget_id": "widget_id"}
                 self.session_state["widget_id"] = "blah"
@@ -550,7 +550,7 @@ class SessionStateMethodTests(unittest.TestCase):
         mock_ctx = MagicMock()
         mock_ctx.form_ids_this_run = {"form_id"}
 
-        with patch("streamlit.scriptrunner.get_script_run_ctx", return_value=mock_ctx):
+        with patch("streamlit.lib.scriptrunner.get_script_run_ctx", return_value=mock_ctx):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state["form_id"] = "blah"
             assert "`st.session_state.form_id` cannot be modified" in str(e.value)

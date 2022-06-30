@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit import config
+from streamlit.lib import config
 import random
 
 

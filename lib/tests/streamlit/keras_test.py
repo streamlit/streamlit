@@ -42,7 +42,7 @@ class KerasTest(unittest.TestCase):
         model.add(Dense(8, activation="relu"))
 
         with patch(
-            "streamlit.delta_generator.DeltaGenerator.graphviz_chart"
+            "streamlit.lib.delta_generator.DeltaGenerator.graphviz_chart"
         ) as graphviz_chart:
             st.write(model)
 

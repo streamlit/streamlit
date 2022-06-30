@@ -41,7 +41,7 @@ class UtilTest(unittest.TestCase):
         env_util.IS_DARWIN = os_type == "Darwin"
         env_util.IS_LINUX_OR_BSD = os_type == "Linux"
 
-        with patch("streamlit.env_util.is_executable_in_path", return_value=True):
+        with patch("streamlit.lib.env_util.is_executable_in_path", return_value=True):
             with patch("webbrowser.open") as webbrowser_open:
                 with patch("subprocess.Popen") as subprocess_popen:
                     util.open_browser("http://some-url")
@@ -50,11 +50,11 @@ class UtilTest(unittest.TestCase):
 
     def test_open_browser_linux_no_xdg(self):
         """Test opening the browser on Linux with no xdg installed"""
-        from streamlit import env_util
+        from streamlit.lib import env_util
 
         env_util.IS_LINUX_OR_BSD = True
 
-        with patch("streamlit.env_util.is_executable_in_path", return_value=False):
+        with patch("streamlit.lib.env_util.is_executable_in_path", return_value=False):
             with patch("webbrowser.open") as webbrowser_open:
                 with patch("subprocess.Popen") as subprocess_popen:
                     util.open_browser("http://some-url")

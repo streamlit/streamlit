@@ -25,10 +25,10 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
     def setUp(self):
         self.observer_class_patcher = mock.patch(
-            "streamlit.watcher.event_based_path_watcher.Observer"
+            "streamlit.lib.watcher.event_based_path_watcher.Observer"
         )
         self.util_patcher = mock.patch(
-            "streamlit.watcher.event_based_path_watcher.util"
+            "streamlit.lib.watcher.event_based_path_watcher.util"
         )
         self.MockObserverClass = self.observer_class_patcher.start()
         self.mock_util = self.util_patcher.start()

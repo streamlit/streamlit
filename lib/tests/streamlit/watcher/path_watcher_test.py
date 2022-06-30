@@ -31,8 +31,8 @@ from tests.testutil import patch_config_options
 class FileWatcherTest(unittest.TestCase):
     def test_report_watchdog_availability_mac(self):
         with patch(
-            "streamlit.watcher.path_watcher.watchdog_available", new=False
-        ), patch("streamlit.env_util.IS_DARWIN", new=True), patch(
+            "streamlit.lib.watcher.path_watcher.watchdog_available", new=False
+        ), patch("streamlit.lib.env_util.IS_DARWIN", new=True), patch(
             "click.secho"
         ) as mock_echo:
             streamlit.lib.watcher.path_watcher.report_watchdog_availability()
@@ -55,8 +55,8 @@ class FileWatcherTest(unittest.TestCase):
 
     def test_report_watchdog_availability_nonmac(self):
         with patch(
-            "streamlit.watcher.path_watcher.watchdog_available", new=False
-        ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
+            "streamlit.lib.watcher.path_watcher.watchdog_available", new=False
+        ), patch("streamlit.lib.env_util.IS_DARWIN", new=False), patch(
             "click.secho"
         ) as mock_echo:
             streamlit.lib.watcher.path_watcher.report_watchdog_availability()
@@ -77,8 +77,8 @@ class FileWatcherTest(unittest.TestCase):
         ]
         mock_echo.assert_has_calls(calls)
 
-    @patch("streamlit.watcher.path_watcher.PollingPathWatcher")
-    @patch("streamlit.watcher.path_watcher.EventBasedPathWatcher")
+    @patch("streamlit.lib.watcher.path_watcher.PollingPathWatcher")
+    @patch("streamlit.lib.watcher.path_watcher.EventBasedPathWatcher")
     def test_watch_file(self, mock_event_watcher, mock_polling_watcher):
         """Test all possible outcomes of both `get_default_path_watcher_class` and
         `watch_file`, based on config.fileWatcherType and whether
@@ -100,7 +100,7 @@ class FileWatcherTest(unittest.TestCase):
                 with patch_config_options(
                     {"server.fileWatcherType": watcher_config}
                 ), patch(
-                    "streamlit.watcher.path_watcher.watchdog_available",
+                    "streamlit.lib.watcher.path_watcher.watchdog_available",
                     watchdog_available,
                 ):
                     # Test get_default_path_watcher_class() result
@@ -125,8 +125,8 @@ class FileWatcherTest(unittest.TestCase):
                     else:
                         self.assertFalse(watching_file)
 
-    @patch("streamlit.watcher.path_watcher.watchdog_available", Mock(return_value=True))
-    @patch("streamlit.watcher.path_watcher.EventBasedPathWatcher")
+    @patch("streamlit.lib.watcher.path_watcher.watchdog_available", Mock(return_value=True))
+    @patch("streamlit.lib.watcher.path_watcher.EventBasedPathWatcher")
     def test_watch_dir_kwarg_plumbing(self, mock_event_watcher):
         # NOTE: We only test kwarg plumbing for watch_dir since watcher_class
         # selection is tested extensively in test_watch_file, and the two

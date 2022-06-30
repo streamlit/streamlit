@@ -26,30 +26,30 @@ mock_get_path = MagicMock(return_value=FILENAME)
 
 class FileUtilTest(unittest.TestCase):
     def setUp(self):
-        self.patch1 = patch("streamlit.file_util.os.stat")
+        self.patch1 = patch("streamlit.lib.file_util.os.stat")
         self.os_stat = self.patch1.start()
 
     def tearDown(self):
         self.patch1.stop()
 
-    @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
-    @patch("streamlit.file_util.open", mock_open(read_data="data"))
+    @patch("streamlit.lib.file_util.get_streamlit_file_path", mock_get_path)
+    @patch("streamlit.lib.file_util.open", mock_open(read_data="data"))
     def test_streamlit_read(self):
         """Test streamlitfile_util.streamlit_read."""
         with file_util.streamlit_read(FILENAME) as input:
             data = input.read()
         self.assertEqual("data", data)
 
-    @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
-    @patch("streamlit.file_util.open", mock_open(read_data=b"\xaa\xbb"))
+    @patch("streamlit.lib.file_util.get_streamlit_file_path", mock_get_path)
+    @patch("streamlit.lib.file_util.open", mock_open(read_data=b"\xaa\xbb"))
     def test_streamlit_read_binary(self):
         """Test streamlitfile_util.streamlit_read."""
         with file_util.streamlit_read(FILENAME, binary=True) as input:
             data = input.read()
         self.assertEqual(b"\xaa\xbb", data)
 
-    @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
-    @patch("streamlit.file_util.open", mock_open(read_data="data"))
+    @patch("streamlit.lib.file_util.get_streamlit_file_path", mock_get_path)
+    @patch("streamlit.lib.file_util.open", mock_open(read_data="data"))
     def test_streamlit_read_zero_bytes(self):
         """Test streamlitfile_util.streamlit_read."""
         self.os_stat.return_value.st_size = 0
@@ -58,25 +58,25 @@ class FileUtilTest(unittest.TestCase):
                 data = input.read()
         self.assertEqual(str(e.value), 'Read zero byte file: "/some/cache/file"')
 
-    @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
+    @patch("streamlit.lib.file_util.get_streamlit_file_path", mock_get_path)
     def test_streamlit_write(self):
         """Test streamlitfile_util.streamlit_write."""
 
         dirname = os.path.dirname(file_util.get_streamlit_file_path(FILENAME))
         # patch streamlit.*.os.makedirs instead of os.makedirs for py35 compat
-        with patch("streamlit.file_util.open", mock_open()) as open, patch(
-            "streamlit.util.os.makedirs"
+        with patch("streamlit.lib.file_util.open", mock_open()) as open, patch(
+            "streamlit.lib.util.os.makedirs"
         ) as makedirs, file_util.streamlit_write(FILENAME) as output:
             output.write("some data")
             open().write.assert_called_once_with("some data")
             makedirs.assert_called_once_with(dirname, exist_ok=True)
 
-    @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
-    @patch("streamlit.env_util.IS_DARWIN", True)
+    @patch("streamlit.lib.file_util.get_streamlit_file_path", mock_get_path)
+    @patch("streamlit.lib.env_util.IS_DARWIN", True)
     def test_streamlit_write_exception(self):
         """Test streamlitfile_util.streamlit_write."""
-        with patch("streamlit.file_util.open", mock_open()) as p, patch(
-            "streamlit.util.os.makedirs"
+        with patch("streamlit.lib.file_util.open", mock_open()) as p, patch(
+            "streamlit.lib.util.os.makedirs"
         ):
             p.side_effect = OSError(errno.EINVAL, "[Errno 22] Invalid argument")
             with pytest.raises(util.Error) as e, file_util.streamlit_write(

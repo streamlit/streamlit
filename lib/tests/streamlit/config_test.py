@@ -350,7 +350,7 @@ class ConfigTest(unittest.TestCase):
             "server.port does not work when global.developmentMode is true.",
         )
 
-    @patch("streamlit.logger.get_logger")
+    @patch("streamlit.lib.logger.get_logger")
     def test_check_conflicts_server_csrf(self, get_logger):
         config._set_option("server.enableXsrfProtection", True, "test")
         config._set_option("server.enableCORS", True, "test")
@@ -392,7 +392,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(False, config.get_option("client.caching"))
 
     def test_set_option(self):
-        with self.assertLogs(logger="streamlit.config", level="WARNING") as cm:
+        with self.assertLogs(logger="streamlit.lib.config", level="WARNING") as cm:
             config._set_option("not.defined", "no.value", "test")
         # cm.output is a list of messages and there shouldn't be any other messages besides one created by this test
         self.assertTrue(
@@ -543,7 +543,7 @@ class ConfigLoadingTest(unittest.TestCase):
 
     def test_missing_config(self):
         """Test that we can initialize our config even if the file is missing."""
-        with patch("streamlit.config.os.path.exists") as path_exists:
+        with patch("streamlit.lib.config.os.path.exists") as path_exists:
             path_exists.return_value = False
             config.get_config_options()
 
@@ -559,11 +559,11 @@ class ConfigLoadingTest(unittest.TestCase):
         """
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
 
-        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+        open_patch = patch("streamlit.lib.config.open", mock_open(read_data=global_config))
         # patch streamlit.*.os.* instead of os.* for py35 compat
-        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch = patch("streamlit.lib.config.os.makedirs")
         makedirs_patch.return_value = True
-        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch = patch("streamlit.lib.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == global_config_path
 
         with open_patch, makedirs_patch, pathexists_patch:
@@ -585,11 +585,11 @@ class ConfigLoadingTest(unittest.TestCase):
 
         local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
 
-        open_patch = patch("streamlit.config.open", mock_open(read_data=local_config))
+        open_patch = patch("streamlit.lib.config.open", mock_open(read_data=local_config))
         # patch streamlit.*.os.* instead of os.* for py35 compat
-        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch = patch("streamlit.lib.config.os.makedirs")
         makedirs_patch.return_value = True
-        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch = patch("streamlit.lib.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == local_config_path
 
         with open_patch, makedirs_patch, pathexists_patch:
@@ -623,11 +623,11 @@ class ConfigLoadingTest(unittest.TestCase):
         open = mock_open()
         open.side_effect = [global_open.return_value, local_open.return_value]
 
-        open_patch = patch("streamlit.config.open", open)
+        open_patch = patch("streamlit.lib.config.open", open)
         # patch streamlit.*.os.* instead of os.* for py35 compat
-        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch = patch("streamlit.lib.config.os.makedirs")
         makedirs_patch.return_value = True
-        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch = patch("streamlit.lib.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path in [
             global_config_path,
             local_config_path,
@@ -671,11 +671,11 @@ class ConfigLoadingTest(unittest.TestCase):
         open = mock_open()
         open.side_effect = [global_open.return_value, local_open.return_value]
 
-        open_patch = patch("streamlit.config.open", open)
+        open_patch = patch("streamlit.lib.config.open", open)
         # patch streamlit.*.os.* instead of os.* for py35 compat
-        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch = patch("streamlit.lib.config.os.makedirs")
         makedirs_patch.return_value = True
-        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch = patch("streamlit.lib.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path in [
             global_config_path,
             local_config_path,
@@ -699,9 +699,9 @@ class ConfigLoadingTest(unittest.TestCase):
         from our _config_options dict."""
 
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
-        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch = patch("streamlit.lib.config.os.makedirs")
         makedirs_patch.return_value = True
-        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch = patch("streamlit.lib.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == global_config_path
 
         global_config = """
@@ -709,7 +709,7 @@ class ConfigLoadingTest(unittest.TestCase):
         base = "dark"
         font = "sans serif"
         """
-        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+        open_patch = patch("streamlit.lib.config.open", mock_open(read_data=global_config))
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
@@ -721,7 +721,7 @@ class ConfigLoadingTest(unittest.TestCase):
         [theme]
         base = "dark"
         """
-        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+        open_patch = patch("streamlit.lib.config.open", mock_open(read_data=global_config))
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(force_reparse=True)
@@ -729,15 +729,15 @@ class ConfigLoadingTest(unittest.TestCase):
             self.assertEqual("dark", config.get_option("theme.base"))
             self.assertEqual(None, config.get_option("theme.font"))
 
-    @patch("streamlit.logger.get_logger")
+    @patch("streamlit.lib.logger.get_logger")
     def test_config_options_warn_on_server_change(self, get_logger):
         """Test that a warning is logged if a user changes a config file in the
         server section."""
 
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
-        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch = patch("streamlit.lib.config.os.makedirs")
         makedirs_patch.return_value = True
-        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch = patch("streamlit.lib.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == global_config_path
         mock_logger = get_logger()
 
@@ -745,7 +745,7 @@ class ConfigLoadingTest(unittest.TestCase):
         [server]
         address = "localhost"
         """
-        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+        open_patch = patch("streamlit.lib.config.open", mock_open(read_data=global_config))
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
@@ -754,7 +754,7 @@ class ConfigLoadingTest(unittest.TestCase):
         [server]
         address = "streamlit.io"
         """
-        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+        open_patch = patch("streamlit.lib.config.open", mock_open(read_data=global_config))
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(force_reparse=True)

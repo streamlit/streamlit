@@ -21,12 +21,12 @@ from streamlit.lib.watcher import util
 
 class UtilTest(unittest.TestCase):
     def test_md5_calculation_succeeds_with_bytes_input(self):
-        with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")) as m:
+        with patch("streamlit.lib.watcher.util.open", mock_open(read_data=b"hello")) as m:
             md5 = util.calc_md5_with_blocking_retries("foo")
             self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
 
     @patch("os.path.isdir", MagicMock(return_value=True))
-    @patch("streamlit.watcher.util._stable_dir_identifier")
+    @patch("streamlit.lib.watcher.util._stable_dir_identifier")
     def test_md5_calculation_succeeds_with_dir_input(self, mock_stable_dir_identifier):
         mock_stable_dir_identifier.return_value = "hello"
 
@@ -35,7 +35,7 @@ class UtilTest(unittest.TestCase):
         mock_stable_dir_identifier.assert_called_once_with("foo", "*")
 
     @patch("os.path.isdir", MagicMock(return_value=True))
-    @patch("streamlit.watcher.util._stable_dir_identifier")
+    @patch("streamlit.lib.watcher.util._stable_dir_identifier")
     def test_md5_calculation_can_pass_glob(self, mock_stable_dir_identifier):
         mock_stable_dir_identifier.return_value = "hello"
 
@@ -51,7 +51,7 @@ class UtilTest(unittest.TestCase):
         # This tests implementation :( . But since the issue this is addressing
         # could easily come back to bite us if a distracted coder tweaks the
         # implementation, I'm putting this here anyway.
-        with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")) as m:
+        with patch("streamlit.lib.watcher.util.open", mock_open(read_data=b"hello")) as m:
             md5 = util.calc_md5_with_blocking_retries("foo")
             m.assert_called_once_with("foo", "rb")
 
@@ -65,20 +65,20 @@ class FakeStat(object):
 
 class PathModificationTimeTests(unittest.TestCase):
     @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
+        "streamlit.lib.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
     )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    @patch("streamlit.lib.watcher.util.os.path.exists", new=MagicMock(return_value=True))
     def test_st_mtime_if_file_exists(self):
         assert util.path_modification_time("foo") == 101.0
 
     @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
+        "streamlit.lib.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
     )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    @patch("streamlit.lib.watcher.util.os.path.exists", new=MagicMock(return_value=True))
     def test_st_mtime_if_file_exists_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 101.0
 
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=False))
+    @patch("streamlit.lib.watcher.util.os.path.exists", new=MagicMock(return_value=False))
     def test_zero_if_file_nonexistent_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 0.0
 
@@ -113,12 +113,12 @@ class DirHelperTests(unittest.TestCase):
         filename_prefixes = [f[:2] for f in dirfiles.split("+")]
         assert filename_prefixes == ["01", "02", "03"]
 
-    @patch("streamlit.watcher.util._dirfiles", MagicMock(side_effect=["foo", "foo"]))
+    @patch("streamlit.lib.watcher.util._dirfiles", MagicMock(side_effect=["foo", "foo"]))
     def test_stable_dir(self):
         assert util._stable_dir_identifier("my_dir", "*") == "my_dir+foo"
 
     @patch(
-        "streamlit.watcher.util._dirfiles", MagicMock(side_effect=["foo", "bar", "bar"])
+        "streamlit.lib.watcher.util._dirfiles", MagicMock(side_effect=["foo", "bar", "bar"])
     )
     def test_stable_dir_files_change(self):
         assert util._stable_dir_identifier("my_dir", "*") == "my_dir+bar"

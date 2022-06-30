@@ -93,15 +93,15 @@ class PageHelperFunctionTests(unittest.TestCase):
     def test_page_name_and_icon(self, path_str, expected):
         assert source_util.page_name_and_icon(Path(path_str)) == expected
 
-    @patch("streamlit.source_util._on_pages_changed", new=MagicMock())
-    @patch("streamlit.source_util._cached_pages", new="Some pages")
+    @patch("streamlit.lib.source_util._on_pages_changed", new=MagicMock())
+    @patch("streamlit.lib.source_util._cached_pages", new="Some pages")
     def test_invalidate_pages_cache(self):
         source_util.invalidate_pages_cache()
 
         assert source_util._cached_pages is None
         source_util._on_pages_changed.send.assert_called_once()
 
-    @patch("streamlit.source_util._on_pages_changed", new=MagicMock())
+    @patch("streamlit.lib.source_util._on_pages_changed", new=MagicMock())
     def test_register_pages_changed_callback(self):
         callback = lambda: None
 
@@ -119,7 +119,7 @@ class PageHelperFunctionTests(unittest.TestCase):
 # using unittest.TestCase like in the rest of the codebase) because the tmpdir
 # pytest fixture is so useful for writing this test it's worth having the
 # slight inconsistency.
-@patch("streamlit.source_util._cached_pages", new=None)
+@patch("streamlit.lib.source_util._cached_pages", new=None)
 def test_get_pages(tmpdir):
     # Write an empty string to create a file.
     tmpdir.join("streamlit_app.py").write("")

@@ -212,7 +212,7 @@ def _get_command_line_as_string() -> Optional[str]:
     if parent is None:
         return None
 
-    if "streamlit.cli" in parent.command_path:
+    if "streamlit.web.cli" in parent.command_path:
         raise RuntimeError(
             "Running streamlit via `python -m streamlit.cli <command>` is"
             " unsupported. Please use `python -m streamlit <command>` instead."

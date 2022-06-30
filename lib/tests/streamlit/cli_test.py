@@ -64,7 +64,7 @@ class CliTest(unittest.TestCase):
     def test_run_existing_file_argument(self):
         """streamlit run succeeds if an existing file is passed."""
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
             result = self.runner.invoke(cli, ["run", "file_name.py"])
@@ -74,7 +74,7 @@ class CliTest(unittest.TestCase):
         """streamlit run should fail if a non existing file is passed."""
 
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=False):
 
             result = self.runner.invoke(cli, ["run", "file_name.py"])
@@ -96,12 +96,12 @@ class CliTest(unittest.TestCase):
         """streamlit run succeeds if an existing url is passed."""
 
         with patch("validators.url", return_value=True), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), requests_mock.mock() as m:
 
             file_content = b"content"
             m.get("http://url/app.py", content=file_content)
-            with patch("streamlit.temporary_directory.TemporaryDirectory") as mock_tmp:
+            with patch("streamlit.web.temporary_directory.TemporaryDirectory") as mock_tmp:
                 mock_tmp.return_value.__enter__.return_value = temp_dir.path
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])
                 with open(os.path.join(temp_dir.path, "app.py"), "rb") as f:
@@ -116,11 +116,11 @@ class CliTest(unittest.TestCase):
         """
 
         with patch("validators.url", return_value=True), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), requests_mock.mock() as m:
 
             m.get("http://url/app.py", exc=requests.exceptions.RequestException)
-            with patch("streamlit.temporary_directory.TemporaryDirectory") as mock_tmp:
+            with patch("streamlit.web.temporary_directory.TemporaryDirectory") as mock_tmp:
                 mock_tmp.return_value.__enter__.return_value = temp_dir.path
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])
 
@@ -132,7 +132,7 @@ class CliTest(unittest.TestCase):
         with patch("validators.url", return_value=False), patch(
             "os.path.exists", return_value=True
         ):
-            with patch("streamlit.cli._main_run") as mock_main_run:
+            with patch("streamlit.web.cli._main_run") as mock_main_run:
                 result = self.runner.invoke(
                     cli,
                     [
@@ -153,7 +153,7 @@ class CliTest(unittest.TestCase):
 
     def test_run_command_with_flag_config_options(self):
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
             result = self.runner.invoke(
@@ -191,9 +191,9 @@ class CliTest(unittest.TestCase):
         calling `streamlit run...`, and false otherwise.
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
-        with patch("streamlit.cli.bootstrap.run"), mock.patch(
-            "streamlit.credentials.Credentials._check_activated"
-        ), patch("streamlit.cli._get_command_line_as_string"):
+        with patch("streamlit.web.cli.bootstrap.run"), mock.patch(
+            "streamlit.lib.credentials.Credentials._check_activated"
+        ), patch("streamlit.web.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
             self.assertTrue(streamlit._is_running_with_streamlit)
@@ -239,14 +239,14 @@ class CliTest(unittest.TestCase):
     def test_credentials_headless_no_config(self):
         """If headless mode and no config is present,
         activation should be None."""
-        from streamlit import config
+        from streamlit.lib import config
 
         config._set_option("server.headless", True, "test")
 
         with patch("validators.url", return_value=False), patch(
-            "streamlit.bootstrap.run"
+            "streamlit.web.bootstrap.run"
         ), patch("os.path.exists", return_value=True), patch(
-            "streamlit.credentials._check_credential_file_exists", return_value=False
+            "streamlit.lib.credentials._check_credential_file_exists", return_value=False
         ):
             result = self.runner.invoke(cli, ["run", "some script.py"])
         from streamlit.lib.credentials import Credentials
@@ -261,16 +261,16 @@ class CliTest(unittest.TestCase):
         defined.
         So we call `_check_activated`.
         """
-        from streamlit import config
+        from streamlit.lib import config
 
         config._set_option("server.headless", headless_mode, "test")
 
         with patch("validators.url", return_value=False), patch(
-            "streamlit.bootstrap.run"
+            "streamlit.web.bootstrap.run"
         ), patch("os.path.exists", return_value=True), mock.patch(
-            "streamlit.credentials.Credentials._check_activated"
+            "streamlit.lib.credentials.Credentials._check_activated"
         ) as mock_check, patch(
-            "streamlit.credentials._check_credential_file_exists", return_value=True
+            "streamlit.lib.credentials._check_credential_file_exists", return_value=True
         ):
             result = self.runner.invoke(cli, ["run", "some script.py"])
         self.assertTrue(mock_check.called)
@@ -290,7 +290,7 @@ class CliTest(unittest.TestCase):
 
     def test_docs_command(self):
         """Tests the docs command opens the browser"""
-        with patch("streamlit.util.open_browser") as mock_open_browser:
+        with patch("streamlit.lib.util.open_browser") as mock_open_browser:
             self.runner.invoke(cli, ["docs"])
             mock_open_browser.assert_called_once_with("https://docs.streamlit.io")
 
@@ -298,18 +298,18 @@ class CliTest(unittest.TestCase):
         """Tests the hello command runs the hello script in streamlit"""
         from streamlit.lib.hello import Hello
 
-        with patch("streamlit.cli._main_run") as mock_main_run:
+        with patch("streamlit.web.cli._main_run") as mock_main_run:
             self.runner.invoke(cli, ["hello"])
 
             mock_main_run.assert_called_once()
             positional_args = mock_main_run.call_args[0]
             self.assertEqual(positional_args[0], Hello.__file__)
 
-    @patch("streamlit.logger.get_logger")
+    @patch("streamlit.lib.logger.get_logger")
     def test_hello_command_with_logs(self, get_logger):
         """Tests setting log level using --log_level prints a warning."""
 
-        with patch("streamlit.cli._main_run"):
+        with patch("streamlit.web.cli._main_run"):
             self.runner.invoke(cli, ["--log_level", "error", "hello"])
 
             mock_logger = get_logger()
@@ -317,7 +317,7 @@ class CliTest(unittest.TestCase):
 
     def test_hello_command_with_flag_config_options(self):
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
             result = self.runner.invoke(cli, ["hello", "--server.port=8502"])
@@ -331,13 +331,13 @@ class CliTest(unittest.TestCase):
         """Tests the config show command calls the corresponding method in
         config
         """
-        with patch("streamlit.config.show_config") as mock_config:
+        with patch("streamlit.lib.config.show_config") as mock_config:
             self.runner.invoke(cli, ["config", "show"])
             mock_config.assert_called()
 
     def test_config_show_command_with_flag_config_options(self):
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
             result = self.runner.invoke(cli, ["config", "show", "--server.port=8502"])
@@ -347,9 +347,9 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
-    @patch("streamlit.legacy_caching.clear_cache")
-    @patch("streamlit.caching.memo.clear")
-    @patch("streamlit.caching.singleton.clear")
+    @patch("streamlit.lib.legacy_caching.clear_cache")
+    @patch("streamlit.lib.caching.memo.clear")
+    @patch("streamlit.lib.caching.singleton.clear")
     def test_cache_clear_all_caches(
         self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
     ):
@@ -363,7 +363,7 @@ class CliTest(unittest.TestCase):
     def test_cache_clear_command_with_cache(self, mock_print):
         """Tests clear cache announces that cache is cleared when completed"""
         with patch(
-            "streamlit.legacy_caching.clear_cache", return_value=True
+            "streamlit.lib.legacy_caching.clear_cache", return_value=True
         ) as mock_clear_cache:
             self.runner.invoke(cli, ["cache", "clear"])
             mock_clear_cache.assert_called()
@@ -375,7 +375,7 @@ class CliTest(unittest.TestCase):
     def test_cache_clear_command_without_cache(self, mock_print):
         """Tests clear cache announces when there is nothing to clear"""
         with patch(
-            "streamlit.legacy_caching.clear_cache", return_value=False
+            "streamlit.lib.legacy_caching.clear_cache", return_value=False
         ) as mock_clear_cache:
             self.runner.invoke(cli, ["cache", "clear"])
             mock_clear_cache.assert_called()
@@ -387,7 +387,7 @@ class CliTest(unittest.TestCase):
         """Tests activating a credential"""
         mock_credential = MagicMock()
         with mock.patch(
-            "streamlit.credentials.Credentials.get_current",
+            "streamlit.lib.credentials.Credentials.get_current",
             return_value=mock_credential,
         ):
             self.runner.invoke(cli, ["activate"])
@@ -397,7 +397,7 @@ class CliTest(unittest.TestCase):
         """Tests that it doesn't activate the credential when not specified"""
         mock_credential = MagicMock()
         with mock.patch(
-            "streamlit.credentials.Credentials.get_current",
+            "streamlit.lib.credentials.Credentials.get_current",
             return_value=mock_credential,
         ):
             self.runner.invoke(cli)
@@ -407,7 +407,7 @@ class CliTest(unittest.TestCase):
         """Tests resetting a credential"""
         mock_credential = MagicMock()
         with mock.patch(
-            "streamlit.credentials.Credentials.get_current",
+            "streamlit.lib.credentials.Credentials.get_current",
             return_value=mock_credential,
         ):
             self.runner.invoke(cli, ["activate", "reset"])
