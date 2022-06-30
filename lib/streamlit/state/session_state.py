@@ -20,7 +20,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     KeysView,
-    cast,
     Dict,
     Generic,
     Iterator,
@@ -32,25 +31,41 @@ from typing import (
     Set,
     List,
     TypeVar,
+    cast,
 )
 
 import attr
 from pympler.asizeof import asizeof
-from typing_extensions import Final, Literal, Protocol
+from typing_extensions import Final, Literal, Protocol, TypeAlias
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.type_util import ValueFieldName
+from streamlit.type_util import is_array_value_field_name
 
 if TYPE_CHECKING:
     from streamlit.server.server import SessionInfo
 
+
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 
-GENERATED_WIDGET_KEY_PREFIX: Final = "$$GENERATED_WIDGET_KEY"
 
+WidgetArgs: TypeAlias = Tuple[Any, ...]
+WidgetKwargs: TypeAlias = Dict[str, Any]
+WidgetCallback: TypeAlias = Callable[..., None]
+
+# A deserializer receives the value from whatever field is set on the
+# WidgetState proto, and returns a regular python value. A serializer
+# receives a regular python value, and returns something suitable for
+# a value field on WidgetState proto. They should be inverses.
+WidgetDeserializer: TypeAlias = Callable[[Any, str], T]
+WidgetSerializer: TypeAlias = Callable[[T], Any]
+
+
+GENERATED_WIDGET_KEY_PREFIX: Final = "$$GENERATED_WIDGET_KEY"
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
@@ -71,48 +86,7 @@ class Value:
     value: Any
 
 
-WState = Union[Value, Serialized]
-
-WidgetArgs = Tuple[Any, ...]
-WidgetKwargs = Dict[str, Any]
-WidgetCallback = Callable[..., None]
-
-# A deserializer receives the value from whatever field is set on the
-# WidgetState proto, and returns a regular python value. A serializer
-# receives a regular python value, and returns something suitable for
-# a value field on WidgetState proto. They should be inverses.
-WidgetDeserializer = Callable[[Any, str], T]
-WidgetSerializer = Callable[[T], Any]
-
-ArrayValueType = Literal[
-    "double_array_value",
-    "int_array_value",
-    "string_array_value",
-]
-
-ValueType = Literal[
-    ArrayValueType,
-    "arrow_value",
-    "bool_value",
-    "bytes_value",
-    "double_value",
-    "file_uploader_state_value",
-    "int_value",
-    "json_value",
-    "string_value",
-    "trigger_value",
-]
-
-ARRAY_VALUE_TYPES: Final = frozenset(
-    cast(
-        Set[ArrayValueType],
-        {
-            "double_array_value",
-            "int_array_value",
-            "string_array_value",
-        },
-    )
-)
+WState: TypeAlias = Union[Value, Serialized]
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -122,7 +96,7 @@ class WidgetMetadata(Generic[T]):
     id: str
     deserializer: WidgetDeserializer[T] = attr.ib(repr=False)
     serializer: WidgetSerializer[T] = attr.ib(repr=False)
-    value_type: ValueType
+    value_type: ValueFieldName
 
     # An optional user-code callback invoked when the widget's value changes.
     # Widget callbacks are called at the start of a script run, before the
@@ -164,19 +138,27 @@ class WStates(MutableMapping[str, Any]):
             # gotten from a reconnecting browser and the script is
             # trying to access it. Pretend it doesn't exist.
             raise KeyError(k)
-        value_type = cast(ValueType, wstate.value.WhichOneof("value"))
-        value = wstate.value.__getattribute__(value_type)
+        value_field_name = cast(
+            ValueFieldName,
+            wstate.value.WhichOneof("value"),
+        )
+        value = wstate.value.__getattribute__(value_field_name)
 
-        # Array types are messages with data in a `data` field
-        if value_type in ARRAY_VALUE_TYPES:
+        if is_array_value_field_name(value_field_name):
+            # Array types are messages with data in a `data` field
             value = value.data
-        elif value_type == "json_value":
+        elif value_field_name == "json_value":
             value = json.loads(value)
 
         deserialized = metadata.deserializer(value, metadata.id)
 
         # Update metadata to reflect information from WidgetState proto
-        self.set_widget_metadata(attr.evolve(metadata, value_type=value_type))
+        self.set_widget_metadata(
+            attr.evolve(
+                metadata,
+                value_type=value_field_name,
+            )
+        )
 
         self.states[k] = Value(deserialized)
         return deserialized
@@ -200,13 +182,13 @@ class WStates(MutableMapping[str, Any]):
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
 
-    def items(self) -> Set[Tuple[str, Any]]:  # type: ignore
+    def items(self) -> Set[Tuple[str, Any]]:  # type: ignore[override]
         return {(k, self[k]) for k in self}
 
-    def values(self) -> Set[Any]:  # type: ignore
+    def values(self) -> Set[Any]:  # type: ignore[override]
         return {self[wid] for wid in self}
 
-    def update(self, other: "WStates") -> None:  # type: ignore
+    def update(self, other: "WStates") -> None:  # type: ignore[override]
         """Copy all widget values and metadata from 'other' into this mapping,
         overwriting any data in this mapping that's also present in 'other'.
         """
@@ -258,7 +240,7 @@ class WStates(MutableMapping[str, Any]):
 
         field = metadata.value_type
         serialized = metadata.serializer(item.value)
-        if field in ARRAY_VALUE_TYPES:
+        if is_array_value_field_name(field):
             arr = getattr(widget, field)
             arr.data.extend(serialized)
         elif field == "json_value":

@@ -38,10 +38,10 @@ from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+from streamlit.type_util import ValueFieldName
 
 from .session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
-    ValueType,
     WidgetMetadata,
     WidgetSerializer,
     WidgetArgs,
@@ -84,7 +84,7 @@ ElementType: TypeAlias = str
 # not able to always rely on the proto as the type may be needed earlier.
 # Thankfully, in these cases (when value_type == "trigger_value"), the static
 # table here being slightly inaccurate should never pose a problem.
-ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueType]] = MappingProxyType(
+ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = MappingProxyType(
     {
         "button": "trigger_value",
         "download_button": "trigger_value",
