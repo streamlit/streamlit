@@ -306,7 +306,7 @@ class RegisterWidgetResult(Generic[T_co]):
 
         Implies an update to the frontend is needed.
     """
-    
+
     value: T_co
     value_changed: bool
 
