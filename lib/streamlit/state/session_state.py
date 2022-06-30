@@ -311,7 +311,9 @@ class RegisterWidgetResult(Generic[T_co]):
     value_changed: bool
 
     @classmethod
-    def failure(cls, deserializer: WidgetDeserializer[T_co]) -> "RegisterWidgetResult[T_co]":
+    def failure(
+        cls, deserializer: WidgetDeserializer[T_co]
+    ) -> "RegisterWidgetResult[T_co]":
         """The canonical way to construct a RegisterWidgetResult in cases
         where the true widget value could not be determined.
         """
