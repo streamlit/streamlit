@@ -334,7 +334,10 @@ def _install_pages_watcher(main_script_path_str: str) -> None:
 
     main_script_path = Path(main_script_path_str)
     pages_dir = main_script_path.parent / "pages"
-
+    print("Pages dir" * 10)
+    print(pages_dir.absolute())
+    print("Main Script Path")
+    print(main_script_path.absolute())
     watch_dir(
         str(pages_dir),
         _on_pages_changed,
