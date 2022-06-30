@@ -145,7 +145,7 @@ class CheckboxMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         checkbox_proto.disabled = disabled
-        if checkbox_state.set_frontend_value:
+        if checkbox_state.value_changed:
             checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True
 

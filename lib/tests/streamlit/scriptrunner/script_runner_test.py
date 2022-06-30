@@ -559,7 +559,7 @@ class ScriptRunnerTest(AsyncTestCase):
             MagicMock(spec=WidgetMetadata),
             user_key="mock_user_key",
         )
-        self.assertEqual(False, widget_state.set_frontend_value)
+        self.assertEqual(False, widget_state.value_changed)
 
         # Ensure the ScriptRunner thread shuts down.
         scriptrunner.join()

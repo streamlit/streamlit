@@ -170,7 +170,7 @@ class ColorPickerMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         color_picker_proto.disabled = disabled
-        if widget_state.set_frontend_value:
+        if widget_state.value_changed:
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True
 

@@ -295,7 +295,7 @@ class TimeWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         time_input_proto.disabled = disabled
-        if widget_state.set_frontend_value:
+        if widget_state.value_changed:
             time_input_proto.value = serialize_time_input(widget_state.value)
             time_input_proto.set_value = True
 
@@ -453,17 +453,16 @@ class TimeWidgetsMixin:
             serializer=serialize_date_input,
             ctx=ctx,
         )
-        value = widget_state.return_value
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         date_input_proto.disabled = disabled
-        if widget_state.set_frontend_value:
-            date_input_proto.value[:] = serialize_date_input(value)
+        if widget_state.value_changed:
+            date_input_proto.value[:] = serialize_date_input(widget_state.value)
             date_input_proto.set_value = True
 
         self.dg._enqueue("date_input", date_input_proto)
-        return value
+        return widget_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":

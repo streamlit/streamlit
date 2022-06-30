@@ -174,7 +174,7 @@ class SelectboxMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         selectbox_proto.disabled = disabled
-        if widget_state.set_frontend_value:
+        if widget_state.value_changed:
             selectbox_proto.value = serialize_select_box(widget_state.value)
             selectbox_proto.set_value = True
 

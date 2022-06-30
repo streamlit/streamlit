@@ -222,7 +222,7 @@ class MultiSelectMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
-        if widget_state.set_frontend_value:
+        if widget_state.value_changed:
             multiselect_proto.value[:] = serialize_multiselect(widget_state.value)
             multiselect_proto.set_value = True
 
