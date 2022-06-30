@@ -17,8 +17,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
-from streamlit.errors import StreamlitAPIException
+from streamlit.lib.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.lib.errors import StreamlitAPIException
 
 
 class ElementUtilsTest(unittest.TestCase):

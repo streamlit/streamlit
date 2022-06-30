@@ -16,7 +16,7 @@ import unittest
 from typing import Tuple, Dict, Any
 from unittest.mock import MagicMock, Mock, PropertyMock
 
-from streamlit.state import SessionState, SafeSessionState
+from streamlit.lib.state import SessionState, SafeSessionState
 
 
 def _create_state_spy(

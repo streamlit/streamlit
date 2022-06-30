@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 from toml import TomlDecodeError
 
-from streamlit.secrets import SECRETS_FILE_LOC, Secrets
+from streamlit.lib.secrets import SECRETS_FILE_LOC, Secrets
 
 MOCK_TOML = """
 # Everything in this section will be available as an environment variable

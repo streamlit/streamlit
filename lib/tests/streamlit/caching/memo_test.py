@@ -19,11 +19,12 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import streamlit as st
-from streamlit import StreamlitAPIException, file_util
-from streamlit.caching import memo_decorator
-from streamlit.caching.cache_errors import CacheError
-from streamlit.caching.memo_decorator import get_cache_path, get_memo_stats_provider
-from streamlit.stats import CacheStat
+from streamlit import StreamlitAPIException
+from streamlit.lib import file_util
+from streamlit.lib.caching import memo_decorator
+from streamlit.lib.caching.cache_errors import CacheError
+from streamlit.lib.caching.memo_decorator import get_cache_path, get_memo_stats_provider
+from streamlit.lib.stats import CacheStat
 
 
 class MemoTest(unittest.TestCase):

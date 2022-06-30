@@ -2,9 +2,9 @@ from tests import testutil
 from parameterized import parameterized
 import streamlit as st
 
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
-from streamlit.commands.page_config import valid_url
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.proto.PageConfig_pb2 import PageConfig as PageConfigProto
+from streamlit.lib.commands.page_config import valid_url
 
 
 class PageConfigTest(testutil.DeltaGeneratorTestCase):

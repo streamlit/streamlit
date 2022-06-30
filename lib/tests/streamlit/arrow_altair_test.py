@@ -21,9 +21,9 @@ import pandas as pd
 from tests import testutil
 
 import streamlit as st
-from streamlit.elements import arrow_altair as altair
-from streamlit.elements.arrow_altair import ChartType
-from streamlit.type_util import bytes_to_data_frame
+from streamlit.lib.elements import arrow_altair as altair
+from streamlit.lib.elements.arrow_altair import ChartType
+from streamlit.lib.type_util import bytes_to_data_frame
 
 
 def _deep_get(dictionary, *keys):

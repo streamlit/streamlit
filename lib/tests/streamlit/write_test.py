@@ -24,10 +24,10 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from streamlit import type_util
-from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.errors import StreamlitAPIException
-from streamlit.state import SessionStateProxy
+from streamlit.lib import type_util
+from streamlit.lib.error_util import handle_uncaught_app_exception
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.state import SessionStateProxy
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -268,7 +268,7 @@ class StreamlitWriteTest(unittest.TestCase):
         with self.assertRaises(StreamlitAPIException):
             # Also override dg._is_top_level for this test.
             with patch.object(
-                st.delta_generator.DeltaGenerator,
+                streamlit.lib.delta_generator.DeltaGenerator,
                 "_is_top_level",
                 new_callable=PropertyMock,
             ) as top_level:

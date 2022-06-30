@@ -17,7 +17,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from streamlit.config_option import ConfigOption, DeprecationError
+from streamlit.lib.config_option import ConfigOption, DeprecationError
 
 
 class ConfigOptionTest(unittest.TestCase):

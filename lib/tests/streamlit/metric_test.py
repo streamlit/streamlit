@@ -16,8 +16,8 @@
 from tests import testutil
 import streamlit as st
 
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Metric_pb2 import Metric as MetricProto
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.proto.Metric_pb2 import Metric as MetricProto
 
 
 class MetricTest(testutil.DeltaGeneratorTestCase):

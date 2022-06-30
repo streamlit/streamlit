@@ -18,9 +18,9 @@ from unittest.mock import patch
 
 
 import streamlit as st
-from streamlit import config
-from streamlit.scriptrunner import get_script_run_ctx
-from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
+from streamlit.lib import config
+from streamlit.lib.scriptrunner import get_script_run_ctx
+from streamlit.lib.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
 

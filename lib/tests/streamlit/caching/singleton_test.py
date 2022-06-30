@@ -21,11 +21,11 @@ from unittest.mock import patch
 from pympler.asizeof import asizeof
 
 import streamlit as st
-from streamlit.caching import (
-    singleton_decorator,
+from streamlit.lib.caching import (
     get_singleton_stats_provider,
 )
-from streamlit.stats import CacheStat
+from streamlit.lib.caching import singleton_decorator
+from streamlit.lib.stats import CacheStat
 
 
 class SingletonTest(unittest.TestCase):

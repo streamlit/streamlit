@@ -14,11 +14,11 @@
 
 import unittest
 
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.scriptrunner import ScriptRunContext
-from streamlit.state import SafeSessionState, SessionState
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.lib.scriptrunner import ScriptRunContext
+from streamlit.lib.state import SafeSessionState, SessionState
+from streamlit.lib.uploaded_file_manager import UploadedFileManager
 
 
 class ScriptRunContextTest(unittest.TestCase):

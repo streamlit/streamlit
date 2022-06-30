@@ -23,12 +23,12 @@ import pytest
 from hypothesis import given, strategies as hst
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.scriptrunner import get_script_run_ctx
-from streamlit.state.session_state_proxy import get_session_state
-from streamlit.state.session_state import (
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
+from streamlit.lib.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.lib.scriptrunner import get_script_run_ctx
+from streamlit.lib.state.session_state_proxy import get_session_state
+from streamlit.lib.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     SessionState,
     Serialized,
@@ -36,7 +36,7 @@ from streamlit.state.session_state import (
     WidgetMetadata,
     WStates,
 )
-from streamlit.uploaded_file_manager import UploadedFileRec
+from streamlit.lib.uploaded_file_manager import UploadedFileRec
 from tests import testutil
 import tests.streamlit.state.strategies as stst
 

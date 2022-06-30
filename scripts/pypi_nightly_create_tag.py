@@ -19,18 +19,17 @@ Increment the version number, add a dev suffix and add todays date
 """
 import packaging.version
 import pytz
-import sys
 
 from datetime import datetime
 
-import streamlit.version
+import streamlit.lib.version
 
 
 def create_tag():
     """Create tag with updated version, a suffix and date."""
 
     # Get latest version
-    current_version = streamlit.version._get_latest_streamlit_version()
+    current_version = streamlit.lib.version._get_latest_streamlit_version()
 
     # Update micro
     version_with_inc_micro = (

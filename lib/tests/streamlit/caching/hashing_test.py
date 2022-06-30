@@ -32,8 +32,8 @@ import numpy as np
 import pandas as pd
 from parameterized import parameterized
 
-from streamlit.caching.cache_errors import UnhashableTypeError
-from streamlit.caching.hashing import (
+from streamlit.lib.caching.cache_errors import UnhashableTypeError
+from streamlit.lib.caching.hashing import (
     _CacheFuncHasher,
     _PANDAS_ROWS_LARGE,
     _NP_SIZE_LARGE,
@@ -49,8 +49,8 @@ try:
 except ImportError:
     pass
 
-from streamlit.type_util import is_type
-from streamlit.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.lib.type_util import is_type
+from streamlit.lib.uploaded_file_manager import UploadedFile, UploadedFileRec
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 

@@ -14,7 +14,7 @@
 
 """Tests coercing various objects to DataFrames"""
 
-from streamlit import type_util
+from streamlit.lib import type_util
 
 import unittest
 import pandas as pd

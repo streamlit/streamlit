@@ -28,10 +28,10 @@ from parameterized import parameterized
 from testfixtures import tempdir
 
 import streamlit
-from streamlit import cli
-from streamlit import config
-from streamlit.cli import _convert_config_option_to_click_option
-from streamlit.config_option import ConfigOption
+from streamlit.web import cli
+from streamlit.lib import config
+from streamlit.web.cli import _convert_config_option_to_click_option
+from streamlit.lib.config_option import ConfigOption
 
 
 class CliTest(unittest.TestCase):
@@ -46,7 +46,7 @@ class CliTest(unittest.TestCase):
             patch.object(config._on_config_parsed, "send"),
             # Make sure the calls to `streamlit run` in this file don't unset
             # the config options loaded in conftest.py.
-            patch.object(cli.bootstrap, "load_config_options"),
+            patch.object(streamlit.web.cli.bootstrap, "load_config_options"),
         ]
 
         for p in self.patches:
@@ -160,8 +160,8 @@ class CliTest(unittest.TestCase):
                 cli, ["run", "file_name.py", "--server.port=8502"]
             )
 
-        cli.bootstrap.load_config_options.assert_called_once()
-        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        streamlit.web.cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.cli.bootstrap.load_config_options.call_args
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
@@ -249,7 +249,7 @@ class CliTest(unittest.TestCase):
             "streamlit.credentials._check_credential_file_exists", return_value=False
         ):
             result = self.runner.invoke(cli, ["run", "some script.py"])
-        from streamlit.credentials import Credentials
+        from streamlit.lib.credentials import Credentials
 
         credentials = Credentials.get_current()
         self.assertIsNone(credentials.activation)
@@ -296,7 +296,7 @@ class CliTest(unittest.TestCase):
 
     def test_hello_command(self):
         """Tests the hello command runs the hello script in streamlit"""
-        from streamlit.hello import Hello
+        from streamlit.lib.hello import Hello
 
         with patch("streamlit.cli._main_run") as mock_main_run:
             self.runner.invoke(cli, ["hello"])
@@ -308,7 +308,6 @@ class CliTest(unittest.TestCase):
     @patch("streamlit.logger.get_logger")
     def test_hello_command_with_logs(self, get_logger):
         """Tests setting log level using --log_level prints a warning."""
-        from streamlit.hello import Hello
 
         with patch("streamlit.cli._main_run"):
             self.runner.invoke(cli, ["--log_level", "error", "hello"])
@@ -323,8 +322,8 @@ class CliTest(unittest.TestCase):
 
             result = self.runner.invoke(cli, ["hello", "--server.port=8502"])
 
-        cli.bootstrap.load_config_options.assert_called_once()
-        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        streamlit.web.cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.cli.bootstrap.load_config_options.call_args
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
@@ -343,8 +342,8 @@ class CliTest(unittest.TestCase):
 
             result = self.runner.invoke(cli, ["config", "show", "--server.port=8502"])
 
-        cli.bootstrap.load_config_options.assert_called_once()
-        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        streamlit.web.cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.cli.bootstrap.load_config_options.call_args
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 

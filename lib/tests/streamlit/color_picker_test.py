@@ -18,7 +18,7 @@ from unittest.mock import patch
 import pytest
 from tests import testutil
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.lib.errors import StreamlitAPIException
 from parameterized import parameterized
 
 

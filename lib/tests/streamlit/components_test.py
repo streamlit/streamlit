@@ -25,17 +25,17 @@ import tornado.testing
 import tornado.web
 
 from streamlit import StreamlitAPIException
-from streamlit.components.v1 import component_arrow
-from streamlit.components.v1.components import (
+from streamlit.lib.components.v1 import component_arrow
+from streamlit.lib.components.v1.components import (
     ComponentRegistry,
     ComponentRequestHandler,
     CustomComponent,
     declare_component,
 )
-import streamlit.components.v1 as components
-from streamlit.errors import DuplicateWidgetID
-from streamlit.proto.Components_pb2 import SpecialArg
-from streamlit.type_util import to_bytes
+import streamlit.lib.components.v1 as components
+from streamlit.lib.errors import DuplicateWidgetID
+from streamlit.lib.proto.Components_pb2 import SpecialArg
+from streamlit.lib.type_util import to_bytes
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
 import streamlit as st

@@ -14,10 +14,10 @@
 import threading
 
 import streamlit as st
-from streamlit.caching.cache_errors import UnhashableParamError
+from streamlit.lib.caching.cache_errors import UnhashableParamError
 from tests import testutil
-from streamlit.elements import exception
-from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from streamlit.lib.elements import exception
+from streamlit.lib.proto.Exception_pb2 import Exception as ExceptionProto
 
 
 class CacheErrorsTest(testutil.DeltaGeneratorTestCase):

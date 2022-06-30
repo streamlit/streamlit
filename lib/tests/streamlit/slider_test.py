@@ -19,8 +19,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.js_number import JSNumber
 from tests import testutil
 
 from datetime import date

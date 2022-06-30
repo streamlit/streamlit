@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 from parameterized import parameterized
 
-from streamlit import util
+from streamlit.lib import util, env_util
 
 
 class UtilTest(unittest.TestCase):
@@ -36,7 +36,6 @@ class UtilTest(unittest.TestCase):
     )
     def test_open_browser(self, os_type, webbrowser_expect, popen_expect):
         """Test web browser opening scenarios."""
-        from streamlit import env_util
 
         env_util.IS_WINDOWS = os_type == "Windows"
         env_util.IS_DARWIN = os_type == "Darwin"

@@ -20,24 +20,24 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import streamlit.app_session as app_session
-from streamlit import config
-from streamlit.app_session import AppSession, AppSessionState
-from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.proto.AppPage_pb2 import AppPage
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.scriptrunner import (
+import streamlit.lib.app_session as app_session
+from streamlit.lib import config
+from streamlit.lib.app_session import AppSession, AppSessionState
+from streamlit.lib.forward_msg_queue import ForwardMsgQueue
+from streamlit.lib.proto.AppPage_pb2 import AppPage
+from streamlit.lib.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.lib.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunner,
     RerunData,
 )
-from streamlit.scriptrunner import ScriptRunnerEvent
-from streamlit.session_data import SessionData
-from streamlit.state.session_state import SessionState
-from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from streamlit.lib.scriptrunner import ScriptRunnerEvent
+from streamlit.lib.session_data import SessionData
+from streamlit.lib.state.session_state import SessionState
+from streamlit.lib.uploaded_file_manager import UploadedFileManager
+from streamlit.lib.watcher import LocalSourcesWatcher
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 from tests.testutil import patch_config_options
 
@@ -62,9 +62,11 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
     )
 
 
-@patch("streamlit.app_session.LocalSourcesWatcher", MagicMock(spec=LocalSourcesWatcher))
+@patch(
+    "streamlit.lib.app_session.LocalSourcesWatcher", MagicMock(spec=LocalSourcesWatcher)
+)
 class AppSessionTest(unittest.TestCase):
-    @patch("streamlit.app_session.secrets._file_change_listener.disconnect")
+    @patch("streamlit.lib.app_session.secrets._file_change_listener.disconnect")
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
         session = _create_test_session()
@@ -113,9 +115,9 @@ class AppSessionTest(unittest.TestCase):
         session.handle_clear_cache_request()
         self.assertTrue("foo" not in session._session_state)
 
-    @patch("streamlit.legacy_caching.clear_cache")
-    @patch("streamlit.caching.memo.clear")
-    @patch("streamlit.caching.singleton.clear")
+    @patch("streamlit.lib.legacy_caching.clear_cache")
+    @patch("streamlit.lib.caching.memo.clear")
+    @patch("streamlit.lib.caching.singleton.clear")
     def test_clear_cache_all_caches(
         self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
     ):
@@ -125,14 +127,14 @@ class AppSessionTest(unittest.TestCase):
         clear_memo_cache.assert_called_once()
         clear_legacy_cache.assert_called_once()
 
-    @patch("streamlit.app_session.secrets._file_change_listener.connect")
+    @patch("streamlit.lib.app_session.secrets._file_change_listener.connect")
     def test_request_rerun_on_secrets_file_change(self, patched_connect):
         """AppSession should add a secrets listener on creation."""
         session = _create_test_session()
         patched_connect.assert_called_once_with(session._on_secrets_file_changed)
 
     @patch_config_options({"runner.fastReruns": False})
-    @patch("streamlit.app_session.AppSession._create_scriptrunner")
+    @patch("streamlit.lib.app_session.AppSession._create_scriptrunner")
     def test_rerun_with_no_scriptrunner(self, mock_create_scriptrunner: MagicMock):
         """If we don't have a ScriptRunner, a rerun request will result in
         one being created."""
@@ -141,7 +143,7 @@ class AppSessionTest(unittest.TestCase):
         mock_create_scriptrunner.assert_called_once_with(RerunData())
 
     @patch_config_options({"runner.fastReruns": False})
-    @patch("streamlit.app_session.AppSession._create_scriptrunner")
+    @patch("streamlit.lib.app_session.AppSession._create_scriptrunner")
     def test_rerun_with_active_scriptrunner(self, mock_create_scriptrunner: MagicMock):
         """If we have an active ScriptRunner, it receives rerun requests."""
         session = _create_test_session()
@@ -159,7 +161,7 @@ class AppSessionTest(unittest.TestCase):
         mock_create_scriptrunner.assert_not_called()
 
     @patch_config_options({"runner.fastReruns": False})
-    @patch("streamlit.app_session.AppSession._create_scriptrunner")
+    @patch("streamlit.lib.app_session.AppSession._create_scriptrunner")
     def test_rerun_with_stopped_scriptrunner(self, mock_create_scriptrunner: MagicMock):
         """If have a ScriptRunner but it's shutting down and cannot handle
         new rerun requests, we'll create a new ScriptRunner."""
@@ -178,7 +180,7 @@ class AppSessionTest(unittest.TestCase):
         mock_create_scriptrunner.assert_called_once_with(RerunData())
 
     @patch_config_options({"runner.fastReruns": True})
-    @patch("streamlit.app_session.AppSession._create_scriptrunner")
+    @patch("streamlit.lib.app_session.AppSession._create_scriptrunner")
     def test_fast_rerun(self, mock_create_scriptrunner: MagicMock):
         """If runner.fastReruns is enabled, a rerun request will stop the
         existing ScriptRunner and immediately create a new one.
@@ -197,7 +199,7 @@ class AppSessionTest(unittest.TestCase):
         # And a new ScriptRunner should be created.
         mock_create_scriptrunner.assert_called_once()
 
-    @patch("streamlit.app_session.ScriptRunner")
+    @patch("streamlit.lib.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
         """Test that _create_scriptrunner does what it should."""
         session = _create_test_session()
@@ -225,8 +227,8 @@ class AppSessionTest(unittest.TestCase):
         )
         scriptrunner.start.assert_called_once()
 
-    @patch("streamlit.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
-    @patch("streamlit.app_session.AppSession._enqueue_forward_msg")
+    @patch("streamlit.lib.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
+    @patch("streamlit.lib.app_session.AppSession._enqueue_forward_msg")
     def test_ignore_events_from_noncurrent_scriptrunner(self, mock_enqueue: MagicMock):
         """If we receive ScriptRunnerEvents from anything other than our
         current ScriptRunner, we should silently ignore them.
@@ -260,7 +262,7 @@ class AppSessionTest(unittest.TestCase):
         session.request_rerun.assert_called_once_with(session._client_state)
 
     @patch(
-        "streamlit.app_session.AppSession._should_rerun_on_file_change",
+        "streamlit.lib.app_session.AppSession._should_rerun_on_file_change",
         MagicMock(return_value=False),
     )
     def test_does_not_rerun_if_not_current_page(self):
@@ -272,7 +274,7 @@ class AppSessionTest(unittest.TestCase):
         self.assertEqual(session.request_rerun.called, False)
 
     @patch(
-        "streamlit.app_session.source_util.get_pages",
+        "streamlit.lib.app_session.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
@@ -280,7 +282,7 @@ class AppSessionTest(unittest.TestCase):
             }
         ),
     )
-    @patch("streamlit.app_session.AppSession._enqueue_forward_msg")
+    @patch("streamlit.lib.app_session.AppSession._enqueue_forward_msg")
     def test_on_pages_changed(self, mock_enqueue: MagicMock):
         session = _create_test_session()
         session._on_pages_changed("/foo/pages")
@@ -296,13 +298,13 @@ class AppSessionTest(unittest.TestCase):
         mock_enqueue.assert_called_once_with(expected_msg)
 
     @patch(
-        "streamlit.app_session.source_util.register_pages_changed_callback",
+        "streamlit.lib.app_session.source_util.register_pages_changed_callback",
     )
     def test_installs_pages_watcher_on_init(self, patched_register_callback):
         session = _create_test_session()
         patched_register_callback.assert_called_once_with(session._on_pages_changed)
 
-    @patch("streamlit.app_session.source_util._on_pages_changed")
+    @patch("streamlit.lib.app_session.source_util._on_pages_changed")
     def test_deregisters_pages_watcher_on_shutdown(self, patched_on_pages_changed):
         session = _create_test_session()
         session.shutdown()
@@ -340,11 +342,11 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
     """Tests for AppSession's ScriptRunner event handling."""
 
     @patch(
-        "streamlit.app_session.config.get_options_for_section",
+        "streamlit.lib.app_session.config.get_options_for_section",
         MagicMock(side_effect=_mock_get_options_for_section()),
     )
     @patch(
-        "streamlit.app_session.source_util.get_pages",
+        "streamlit.lib.app_session.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
@@ -353,7 +355,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         ),
     )
     @patch(
-        "streamlit.app_session._generate_scriptrun_id",
+        "streamlit.lib.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
     async def test_enqueue_new_session_message(self):
@@ -449,11 +451,11 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         mock_handle_event.assert_called_once()
 
     @patch(
-        "streamlit.app_session.config.get_options_for_section",
+        "streamlit.lib.app_session.config.get_options_for_section",
         MagicMock(side_effect=_mock_get_options_for_section()),
     )
     @patch(
-        "streamlit.app_session._generate_scriptrun_id",
+        "streamlit.lib.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
     async def test_handle_backmsg_exception(self):
@@ -521,7 +523,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
-    @patch("streamlit.app_session.config")
+    @patch("streamlit.lib.app_session.config")
     def test_no_custom_theme_prop_if_no_theme(self, patched_config):
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
@@ -542,7 +544,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
         self.assertEqual(new_session_msg.HasField("custom_theme"), False)
 
-    @patch("streamlit.app_session.config")
+    @patch("streamlit.lib.app_session.config")
     def test_can_specify_some_options(self, patched_config):
         patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
             {
@@ -563,7 +565,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # set to the type's zero value when undefined.
         self.assertEqual(new_session_msg.custom_theme.background_color, "")
 
-    @patch("streamlit.app_session.config")
+    @patch("streamlit.lib.app_session.config")
     def test_can_specify_all_options(self, patched_config):
         patched_config.get_options_for_section.side_effect = (
             # Specifies all options by default.
@@ -578,8 +580,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         self.assertEqual(new_session_msg.custom_theme.primary_color, "coral")
         self.assertEqual(new_session_msg.custom_theme.background_color, "white")
 
-    @patch("streamlit.app_session.LOGGER")
-    @patch("streamlit.app_session.config")
+    @patch("streamlit.lib.app_session.LOGGER")
+    @patch("streamlit.lib.app_session.config")
     def test_logs_warning_if_base_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section({"base": "blah"})
@@ -594,8 +596,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['light', 'dark']. Setting theme.base to \"light\"."
         )
 
-    @patch("streamlit.app_session.LOGGER")
-    @patch("streamlit.app_session.config")
+    @patch("streamlit.lib.app_session.LOGGER")
+    @patch("streamlit.lib.app_session.config")
     def test_logs_warning_if_font_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section({"font": "comic sans"})
@@ -612,7 +614,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
 
 @patch(
-    "streamlit.app_session.source_util.get_pages",
+    "streamlit.lib.app_session.source_util.get_pages",
     MagicMock(
         return_value={
             "hash1": {"page_name": "page1", "script_path": "page1.py"},

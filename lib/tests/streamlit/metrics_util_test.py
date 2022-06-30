@@ -15,7 +15,7 @@
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
 
-from streamlit import metrics_util
+from streamlit.lib import metrics_util
 
 MAC = "mac"
 UUID = "uuid"

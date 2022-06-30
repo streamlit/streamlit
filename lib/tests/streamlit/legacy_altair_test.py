@@ -21,8 +21,8 @@ import json
 import pandas as pd
 import pyarrow as pa
 
-from streamlit.errors import StreamlitAPIException
-from streamlit.elements import legacy_altair as altair
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.elements import legacy_altair as altair
 from tests import testutil
 import streamlit as st
 

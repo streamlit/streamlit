@@ -19,8 +19,8 @@ from unittest.mock import patch
 
 from parameterized import parameterized
 
-from streamlit import config
-from streamlit.session_data import get_url
+from streamlit.lib import config
+from streamlit.lib.session_data import get_url
 from tests import testutil
 
 

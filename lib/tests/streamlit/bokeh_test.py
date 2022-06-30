@@ -20,7 +20,7 @@ from unittest.mock import patch
 from tests import testutil
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.lib.errors import StreamlitAPIException
 
 
 class BokehTest(testutil.DeltaGeneratorTestCase):

@@ -18,7 +18,7 @@ import unittest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import code_util
+from streamlit.lib import code_util
 
 
 class ShowTest(unittest.TestCase):

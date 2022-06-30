@@ -24,30 +24,30 @@ import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit.legacy_caching import caching
-from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.Element_pb2 import Element
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
-from streamlit.scriptrunner.script_requests import (
+from streamlit.lib.legacy_caching import caching
+from streamlit.lib.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.lib.proto.ClientState_pb2 import ClientState
+from streamlit.lib.proto.Delta_pb2 import Delta
+from streamlit.lib.proto.Element_pb2 import Element
+from streamlit.lib.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.lib.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+from streamlit.lib.scriptrunner.script_requests import (
     ScriptRequest,
     ScriptRequestType,
     ScriptRequests,
 )
-from streamlit.session_data import SessionData
-from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.scriptrunner import (
+from streamlit.lib.session_data import SessionData
+from streamlit.lib.forward_msg_queue import ForwardMsgQueue
+from streamlit.lib.scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
     RerunData,
     RerunException,
     StopException,
 )
-from streamlit import source_util
-from streamlit.state.session_state import SessionState, WidgetMetadata
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.lib import source_util
+from streamlit.lib.state.session_state import SessionState, WidgetMetadata
+from streamlit.lib.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -60,7 +60,7 @@ def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     """
     Returns
     -------
-    streamlit.proto.WidgetStates_pb2.WidgetState
+    WidgetState
 
     """
     states.widgets.add().id = id

@@ -20,9 +20,9 @@ from unittest.mock import patch, Mock
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.legacy_caching import hashing, caching
-from streamlit.elements import exception
-from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from streamlit.lib.legacy_caching import hashing, caching
+from streamlit.lib.elements import exception
+from streamlit.lib.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
 
 

@@ -22,9 +22,8 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from streamlit import config
-from streamlit import env_util
-from streamlit.config_option import ConfigOption
+from streamlit.lib import env_util, config
+from streamlit.lib.config_option import ConfigOption
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)

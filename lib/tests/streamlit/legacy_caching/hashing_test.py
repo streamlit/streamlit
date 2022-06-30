@@ -46,14 +46,14 @@ except ImportError:
     HAS_TENSORFLOW = False
 
 
-from streamlit.legacy_caching.hashing import InternalHashError, _FFI_TYPE_NAMES
-from streamlit.legacy_caching.hashing import UnhashableTypeError
-from streamlit.legacy_caching.hashing import UserHashError
-from streamlit.legacy_caching.hashing import _CodeHasher
-from streamlit.legacy_caching.hashing import _NP_SIZE_LARGE
-from streamlit.legacy_caching.hashing import _PANDAS_ROWS_LARGE
-from streamlit.type_util import is_type, get_fqn_type
-from streamlit.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.lib.legacy_caching.hashing import InternalHashError, _FFI_TYPE_NAMES
+from streamlit.lib.legacy_caching.hashing import UnhashableTypeError
+from streamlit.lib.legacy_caching.hashing import UserHashError
+from streamlit.lib.legacy_caching.hashing import _CodeHasher
+from streamlit.lib.legacy_caching.hashing import _NP_SIZE_LARGE
+from streamlit.lib.legacy_caching.hashing import _PANDAS_ROWS_LARGE
+from streamlit.lib.type_util import is_type, get_fqn_type
+from streamlit.lib.uploaded_file_manager import UploadedFile, UploadedFileRec
 import streamlit as st
 
 get_main_script_director = MagicMock(return_value=os.getcwd())

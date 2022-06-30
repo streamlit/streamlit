@@ -18,10 +18,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber
-from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.js_number import JSNumber
+from streamlit.lib.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.lib.proto.NumberInput_pb2 import NumberInput
 from tests import testutil
 
 

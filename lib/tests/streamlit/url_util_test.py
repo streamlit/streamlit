@@ -14,8 +14,7 @@
 
 import unittest
 
-from streamlit import url_util
-
+from streamlit.lib import url_util
 
 GITHUB_URLS = [
     (

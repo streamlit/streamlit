@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.state.session_state import (
+from streamlit.lib.state.session_state import (
     SessionState,
     GENERATED_WIDGET_KEY_PREFIX,
     WidgetMetadata,

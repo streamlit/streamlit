@@ -20,10 +20,10 @@ from unittest.mock import patch
 
 import pytest
 
-from streamlit.errors import StreamlitAPIException
-from streamlit.state import SafeSessionState
-from streamlit.state.session_state_proxy import SessionStateProxy
-from streamlit.state.session_state import (
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.state import SafeSessionState
+from streamlit.lib.state.session_state_proxy import SessionStateProxy
+from streamlit.lib.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     SessionState,
     require_valid_user_key,

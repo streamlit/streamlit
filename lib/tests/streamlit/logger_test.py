@@ -22,9 +22,7 @@ import pytest
 from unittest.mock import patch
 from parameterized import parameterized
 
-from streamlit import logger
-from streamlit import config
-
+from streamlit.lib import logger, config
 
 DUMMY_CONFIG_OPTIONS = OrderedDict()
 

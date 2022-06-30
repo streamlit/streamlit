@@ -15,7 +15,7 @@
 """streamlit.black_list unit test."""
 import unittest
 
-from streamlit.folder_black_list import FolderBlackList
+from streamlit.lib.folder_black_list import FolderBlackList
 
 
 class FileIsInFolderTest(unittest.TestCase):

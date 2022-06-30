@@ -1,4 +1,4 @@
-import streamlit.util as util
+import streamlit.lib.util as util
 
 
 def test_repr_simple_class():

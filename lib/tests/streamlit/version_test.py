@@ -20,11 +20,11 @@ import unittest
 import requests_mock
 from packaging.version import Version as PkgVersion
 
-from streamlit import version
-from streamlit.version import PYPI_STREAMLIT_URL
-from streamlit.version import _get_installed_streamlit_version
-from streamlit.version import _get_latest_streamlit_version
-from streamlit.version import should_show_new_version_notice
+from streamlit.lib import version
+from streamlit.lib.version import PYPI_STREAMLIT_URL
+from streamlit.lib.version import _get_installed_streamlit_version
+from streamlit.lib.version import _get_latest_streamlit_version
+from streamlit.lib.version import should_show_new_version_notice
 
 
 class VersionTest(unittest.TestCase):

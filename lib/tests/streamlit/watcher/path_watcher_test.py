@@ -18,8 +18,8 @@ import unittest
 from unittest.mock import call, Mock, patch
 
 
-import streamlit.watcher.path_watcher
-from streamlit.watcher.path_watcher import (
+import streamlit.lib.watcher.path_watcher
+from streamlit.lib.watcher.path_watcher import (
     get_default_path_watcher_class,
     NoOpPathWatcher,
     watch_dir,
@@ -35,7 +35,7 @@ class FileWatcherTest(unittest.TestCase):
         ), patch("streamlit.env_util.IS_DARWIN", new=True), patch(
             "click.secho"
         ) as mock_echo:
-            streamlit.watcher.path_watcher.report_watchdog_availability()
+            streamlit.lib.watcher.path_watcher.report_watchdog_availability()
 
         msg = "\n  $ xcode-select --install"
         calls = [
@@ -59,7 +59,7 @@ class FileWatcherTest(unittest.TestCase):
         ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
             "click.secho"
         ) as mock_echo:
-            streamlit.watcher.path_watcher.report_watchdog_availability()
+            streamlit.lib.watcher.path_watcher.report_watchdog_availability()
 
         msg = ""
         calls = [

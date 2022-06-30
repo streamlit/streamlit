@@ -22,12 +22,18 @@ import numpy as np
 import pandas as pd
 import pytest
 import pyarrow as pa
-import streamlit.elements.legacy_data_frame as data_frame
+import streamlit.lib.elements.legacy_data_frame as data_frame
 
 from google.protobuf import json_format
 
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.DataFrame_pb2 import AnyArray, CSSStyle, Index, Table, DataFrame
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.proto.DataFrame_pb2 import (
+    AnyArray,
+    CSSStyle,
+    Index,
+    Table,
+    DataFrame,
+)
 
 
 def _css_style(prop, value):

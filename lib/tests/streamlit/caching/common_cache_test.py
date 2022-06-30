@@ -20,19 +20,19 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.scriptrunner import script_run_context
-from streamlit.caching import (
+from streamlit.lib.scriptrunner import script_run_context
+from streamlit.lib.caching import (
     MEMO_CALL_STACK,
     SINGLETON_CALL_STACK,
 )
-from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.lib.forward_msg_queue import ForwardMsgQueue
 
-from streamlit.scriptrunner import (
+from streamlit.lib.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,
 )
-from streamlit.state.session_state import SessionState
+from streamlit.lib.state.session_state import SessionState
 from tests.testutil import DeltaGeneratorTestCase
 
 memo = st.experimental_memo

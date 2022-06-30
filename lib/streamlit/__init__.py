@@ -43,10 +43,10 @@ For more detailed info, see https://docs.streamlit.io.
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
 
 # Must be at the top, to avoid circular dependency.
-from streamlit import logger as _logger
-from streamlit import config as _config
-from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.secrets import Secrets, SECRETS_FILE_LOC
+from streamlit.lib import logger as _logger
+from streamlit.lib import config as _config
+from streamlit.lib.proto.RootContainer_pb2 import RootContainer
+from streamlit.lib.secrets import Secrets, SECRETS_FILE_LOC
 
 _LOGGER = _logger.get_logger("root")
 
@@ -63,28 +63,28 @@ import urllib.parse as _parse
 
 import click as _click
 
-from streamlit import code_util as _code_util
-from streamlit import env_util as _env_util
-from streamlit import source_util as _source_util
-from streamlit import string_util as _string_util
-from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.scriptrunner import (
+from streamlit.lib import code_util as _code_util
+from streamlit.lib import env_util as _env_util
+from streamlit.lib import source_util as _source_util
+from streamlit.lib import string_util as _string_util
+from streamlit.lib.delta_generator import DeltaGenerator as _DeltaGenerator
+from streamlit.lib.scriptrunner import (
     add_script_run_ctx as _add_script_run_ctx,
     get_script_run_ctx as _get_script_run_ctx,
     StopException,
     RerunException as _RerunException,
     RerunData as _RerunData,
 )
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 
-from streamlit.echo import echo as echo
-from streamlit.legacy_caching import cache as cache
-from streamlit.caching import singleton as experimental_singleton
-from streamlit.caching import memo as experimental_memo
+from streamlit.lib.echo import echo as echo
+from streamlit.lib.legacy_caching import cache as cache
+from streamlit.lib.caching import singleton as experimental_singleton
+from streamlit.lib.caching import memo as experimental_memo
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -191,12 +191,12 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
 # Config
 get_option = _config.get_option
-from streamlit.commands.page_config import set_page_config as set_page_config
+from streamlit.lib.commands.page_config import set_page_config as set_page_config
 
 # Session State
 
-from streamlit.state import SessionStateProxy
-from streamlit.user_info import UserInfoProxy
+from streamlit.lib.state import SessionStateProxy
+from streamlit.lib.user_info import UserInfoProxy
 
 session_state = SessionStateProxy()
 experimental_user = UserInfoProxy()
@@ -405,10 +405,10 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
     >>> st.success('Done!')
 
     """
-    import streamlit.legacy_caching.caching as legacy_caching
-    import streamlit.caching as caching
-    from streamlit.elements.utils import clean_text
-    from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
+    import streamlit.lib.legacy_caching.caching as legacy_caching
+    import streamlit.lib.caching as caching
+    from streamlit.lib.elements.utils import clean_text
+    from streamlit.lib.proto.Spinner_pb2 import Spinner as SpinnerProto
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions

@@ -22,7 +22,7 @@ from pytest import raises
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.lib.errors import StreamlitAPIException
 from tests import testutil
 
 

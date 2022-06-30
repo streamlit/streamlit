@@ -18,7 +18,7 @@ from unittest import mock, TestCase
 import random
 import time
 
-from streamlit.in_memory_file_manager import (
+from streamlit.lib.in_memory_file_manager import (
     InMemoryFileManager,
     _calculate_file_id,
     InMemoryFile,

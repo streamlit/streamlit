@@ -16,7 +16,7 @@ from unittest.mock import patch, MagicMock, mock_open
 import tempfile
 import unittest
 
-from streamlit.watcher import util
+from streamlit.lib.watcher import util
 
 
 class UtilTest(unittest.TestCase):

@@ -19,8 +19,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from parameterized import parameterized
 
-import streamlit.source_util as source_util
-from streamlit.util import calc_md5
+import streamlit.lib.source_util as source_util
+from streamlit.lib.util import calc_md5
 
 
 class PageHelperFunctionTests(unittest.TestCase):

@@ -20,10 +20,10 @@ from unittest.mock import MagicMock, call, mock_open, patch
 
 import pytest
 
-from streamlit import file_util
-from streamlit.credentials import _Activation
-from streamlit.credentials import Credentials
-from streamlit.credentials import _verify_email
+from streamlit.lib import file_util
+from streamlit.lib.credentials import _Activation
+from streamlit.lib.credentials import Credentials
+from streamlit.lib.credentials import _verify_email
 
 PROMPT = "streamlit.credentials.click.prompt"
 

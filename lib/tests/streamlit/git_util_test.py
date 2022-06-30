@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 from git.exc import InvalidGitRepositoryError
 
-from streamlit.git_util import GITHUB_HTTP_URL, GITHUB_SSH_URL, GitRepo
+from streamlit.lib.git_util import GITHUB_HTTP_URL, GITHUB_SSH_URL, GitRepo
 
 
 class GitUtilTest(unittest.TestCase):

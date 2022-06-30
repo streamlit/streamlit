@@ -14,7 +14,7 @@
 
 import unittest
 
-from streamlit import string_util
+from streamlit.lib import string_util
 
 
 class StringUtilTest(unittest.TestCase):

@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.components.v1 import declare_component
+from streamlit.lib.components.v1 import declare_component
 
 component = declare_component("foo", url="http://not.a.url")

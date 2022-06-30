@@ -18,7 +18,7 @@ import pandas as pd
 from tests import testutil
 
 import streamlit as st
-from streamlit.type_util import bytes_to_data_frame
+from streamlit.lib.type_util import bytes_to_data_frame
 
 DATAFRAME = pd.DataFrame({"a": [1], "b": [10]})
 NEW_ROWS = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})

@@ -15,7 +15,7 @@
 import unittest
 from unittest.mock import patch
 
-from streamlit.beta_util import function_beta_warning, object_beta_warning
+from streamlit.lib.beta_util import function_beta_warning, object_beta_warning
 
 
 class BetaUtilTest(unittest.TestCase):

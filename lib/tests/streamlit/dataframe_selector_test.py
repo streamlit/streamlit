@@ -21,7 +21,7 @@ import altair as alt
 import pandas as pd
 
 import streamlit
-from streamlit.delta_generator import DeltaGenerator
+from streamlit.lib.delta_generator import DeltaGenerator
 from tests.testutil import patch_config_options
 
 DATAFRAME = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T

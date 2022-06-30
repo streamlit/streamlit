@@ -17,7 +17,7 @@
 import unittest
 import ast
 
-import streamlit.magic as magic
+import streamlit.lib.magic as magic
 
 
 class MagicTest(unittest.TestCase):

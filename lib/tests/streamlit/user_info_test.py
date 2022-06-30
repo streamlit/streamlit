@@ -2,15 +2,15 @@ import threading
 
 import streamlit as st
 
-from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.errors import StreamlitAPIException
-from streamlit.scriptrunner import (
+from streamlit.lib.forward_msg_queue import ForwardMsgQueue
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,
 )
 
-from streamlit.state import SafeSessionState, SessionState
+from streamlit.lib.state import SafeSessionState, SessionState
 from tests.testutil import DeltaGeneratorTestCase
 
 

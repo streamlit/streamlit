@@ -35,14 +35,14 @@ from scipy.io import wavfile
 
 import streamlit as st
 from streamlit import __version__
-from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
-from streamlit.proto.Empty_pb2 import Empty as EmptyProto
-from streamlit.proto.Alert_pb2 import Alert
+from streamlit.lib.errors import StreamlitAPIException
+from streamlit.lib.logger import get_logger
+from streamlit.lib.proto.Empty_pb2 import Empty as EmptyProto
+from streamlit.lib.proto.Alert_pb2 import Alert
 
-from streamlit.in_memory_file_manager import _calculate_file_id
-from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.in_memory_file_manager import STATIC_MEDIA_ENDPOINT
+from streamlit.lib.in_memory_file_manager import _calculate_file_id
+from streamlit.lib.in_memory_file_manager import in_memory_file_manager
+from streamlit.lib.in_memory_file_manager import STATIC_MEDIA_ENDPOINT
 
 from tests import testutil
 
@@ -176,7 +176,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_arrow_area_chart(self):
         """Test st._arrow_area_chart."""
-        from streamlit.type_util import bytes_to_data_frame
+        from streamlit.lib.type_util import bytes_to_data_frame
 
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
@@ -261,7 +261,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
-        from streamlit.in_memory_file_manager import _calculate_file_id
+        from streamlit.lib.in_memory_file_manager import _calculate_file_id
 
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
@@ -300,7 +300,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_arrow_bar_chart(self):
         """Test st._arrow_bar_chart."""
-        from streamlit.type_util import bytes_to_data_frame
+        from streamlit.lib.type_util import bytes_to_data_frame
 
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
@@ -350,7 +350,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_arrow_dataframe(self):
         """Test st._arrow_dataframe."""
-        from streamlit.type_util import bytes_to_data_frame
+        from streamlit.lib.type_util import bytes_to_data_frame
 
         df = pd.DataFrame({"one": [1, 2], "two": [11, 22]})
 
@@ -443,7 +443,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.imgs[0].caption, "some caption")
 
         # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image import _PIL_to_bytes
+        from streamlit.lib.elements.image import _PIL_to_bytes
 
         file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
         self.assertTrue(file_id in in_memory_file_manager)
@@ -473,7 +473,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.width, -2)
 
         # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image import _PIL_to_bytes
+        from streamlit.lib.elements.image import _PIL_to_bytes
 
         for idx in range(len(imgs)):
             file_id = _calculate_file_id(
@@ -566,7 +566,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_arrow_line_chart(self):
         """Test st._arrow_line_chart."""
-        from streamlit.type_util import bytes_to_data_frame
+        from streamlit.lib.type_util import bytes_to_data_frame
 
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
@@ -772,7 +772,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_arrow_table(self):
         """Test st._arrow_table."""
-        from streamlit.type_util import bytes_to_data_frame
+        from streamlit.lib.type_util import bytes_to_data_frame
 
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
@@ -869,7 +869,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_video_options(self):
         """Test st.video with options."""
 
-        from streamlit.in_memory_file_manager import _calculate_file_id
+        from streamlit.lib.in_memory_file_manager import _calculate_file_id
 
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.video(fake_video_data, format="video/mp4", start_time=10)

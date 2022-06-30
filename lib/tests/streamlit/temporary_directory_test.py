@@ -17,7 +17,7 @@ import os
 import unittest
 from testfixtures import tempdir
 
-from streamlit.temporary_directory import TemporaryDirectory
+from streamlit.web.temporary_directory import TemporaryDirectory
 
 
 class TemporaryFileTest(unittest.TestCase):

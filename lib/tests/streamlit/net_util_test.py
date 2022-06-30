@@ -17,7 +17,7 @@ import unittest
 import requests
 import requests_mock
 
-from streamlit import net_util
+from streamlit.lib import net_util
 
 
 class UtilTest(unittest.TestCase):

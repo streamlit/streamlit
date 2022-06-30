@@ -19,18 +19,18 @@ from contextlib import contextmanager
 from typing import Any, Dict, List
 from unittest.mock import patch
 
-from streamlit import config
-from streamlit.app_session import AppSession
-from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.scriptrunner import (
+from streamlit.lib import config
+from streamlit.lib.app_session import AppSession
+from streamlit.lib.forward_msg_queue import ForwardMsgQueue
+from streamlit.lib.proto.Delta_pb2 import Delta
+from streamlit.lib.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.lib.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,
 )
-from streamlit.state import SafeSessionState, SessionState
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.lib.state import SafeSessionState, SessionState
+from streamlit.lib.uploaded_file_manager import UploadedFileManager
 
 
 @contextmanager

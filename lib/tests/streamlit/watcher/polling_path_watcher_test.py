@@ -15,7 +15,7 @@
 from unittest import mock
 import unittest
 
-from streamlit.watcher import polling_path_watcher
+from streamlit.lib.watcher import polling_path_watcher
 
 
 class PollingPathWatcherTest(unittest.TestCase):

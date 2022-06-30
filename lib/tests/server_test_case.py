@@ -22,11 +22,10 @@ import tornado.websocket
 from tornado.ioloop import IOLoop
 from tornado.platform.asyncio import AsyncIOLoop
 from tornado.websocket import WebSocketClientConnection
-from typing_extensions import Awaitable
 
-from streamlit.app_session import AppSession
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.server import Server
+from streamlit.lib.app_session import AppSession
+from streamlit.lib.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.web.server.server import Server
 
 
 class ServerTestCase(tornado.testing.AsyncHTTPTestCase):

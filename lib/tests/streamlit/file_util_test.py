@@ -18,9 +18,7 @@ import os
 import pytest
 import unittest
 
-from streamlit import file_util
-from streamlit import util
-
+from streamlit.lib import file_util, util
 
 FILENAME = "/some/cache/file"
 mock_get_path = MagicMock(return_value=FILENAME)

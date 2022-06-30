@@ -28,30 +28,31 @@ import tornado.websocket
 import tornado.httpserver
 import errno
 
-import streamlit.server.server
-from streamlit import config, RootContainer
-from streamlit.cursor import make_delta_path
-from streamlit.uploaded_file_manager import UploadedFileRec
-from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
-from streamlit.forward_msg_cache import ForwardMsgCache
-from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.elements import legacy_data_frame as data_frame
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.server import State
-from streamlit.server.server import Server
-from streamlit.server.server import start_listening
-from streamlit.server.server import RetriesExceeded
-from streamlit.server.routes import DebugHandler
-from streamlit.server.routes import HealthHandler
-from streamlit.server.routes import MessageCacheHandler
-from streamlit.server.routes import StaticFileHandler
-from streamlit.server.server_util import is_cacheable_msg
-from streamlit.server.server_util import is_url_from_allowed_origins
-from streamlit.server.server_util import serialize_forward_msg
-from streamlit.watcher import event_based_path_watcher
+import streamlit.web.server.server
+from streamlit.lib.proto.RootContainer_pb2 import RootContainer
+from streamlit.lib import config
+from streamlit.lib.cursor import make_delta_path
+from streamlit.lib.uploaded_file_manager import UploadedFileRec
+from streamlit.web.server.server import MAX_PORT_SEARCH_RETRIES
+from streamlit.lib.forward_msg_cache import ForwardMsgCache
+from streamlit.lib.forward_msg_cache import populate_hash_if_needed
+from streamlit.lib.elements import legacy_data_frame as data_frame
+from streamlit.lib.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.web.server.server import State
+from streamlit.web.server.server import Server
+from streamlit.web.server.server import start_listening
+from streamlit.web.server.server import RetriesExceeded
+from streamlit.web.server.routes import DebugHandler
+from streamlit.web.server.routes import HealthHandler
+from streamlit.web.server.routes import MessageCacheHandler
+from streamlit.web.server.routes import StaticFileHandler
+from streamlit.web.server.server_util import is_cacheable_msg
+from streamlit.web.server.server_util import is_url_from_allowed_origins
+from streamlit.web.server.server_util import serialize_forward_msg
+from streamlit.lib.watcher import event_based_path_watcher
 from tests.server_test_case import ServerTestCase
 
-from streamlit.logger import get_logger
+from streamlit.lib.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -425,7 +426,7 @@ class ServerUtilsTest(unittest.TestCase):
     def test_should_limit_msg_size(self):
         max_message_size_mb = 50
         # Set max message size to defined value
-        from streamlit.server import server_util
+        from streamlit.web.server import server_util
 
         server_util._max_message_size_bytes = None  # Reset cached value
         config._set_option("server.maxMessageSize", max_message_size_mb, "test")
@@ -512,7 +513,7 @@ class PortRotateAHundredTest(unittest.TestCase):
     def test_rotates_a_hundred_ports(self):
         app = mock.MagicMock()
 
-        RetriesExceeded = streamlit.server.server.RetriesExceeded
+        RetriesExceeded = streamlit.web.server.server.RetriesExceeded
         with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
             with patch(
                 "streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
@@ -680,12 +681,12 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test(timeout=30)
     async def test_timeout_script(self):
         try:
-            streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 0.1
+            streamlit.web.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 0.1
             await self._check_script_loading(
                 "import time\n\ntime.sleep(5)", False, "timeout"
             )
         finally:
-            streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 60
+            streamlit.web.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 60
 
     async def _check_script_loading(self, script, expected_loads, expected_msg):
         with os.fdopen(self._fd, "w") as tmp:

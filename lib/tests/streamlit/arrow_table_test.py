@@ -19,7 +19,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from streamlit.type_util import (
+from streamlit.lib.type_util import (
     bytes_to_data_frame,
     is_pandas_version_less_than,
     pyarrow_table_to_bytes,

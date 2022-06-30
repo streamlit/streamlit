@@ -17,14 +17,14 @@ import os
 import unittest
 
 import streamlit as st
-from streamlit import errors
-from streamlit.elements import exception
-from streamlit.elements.exception import (
+from streamlit.lib import errors
+from streamlit.lib.elements import exception
+from streamlit.lib.elements.exception import (
     _format_syntax_error_message,
     _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
 )
-from streamlit.errors import StreamlitAPIException, UncaughtAppException
-from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from streamlit.lib.errors import StreamlitAPIException, UncaughtAppException
+from streamlit.lib.proto.Exception_pb2 import Exception as ExceptionProto
 
 
 class ExceptionProtoTest(unittest.TestCase):
