@@ -17,7 +17,6 @@
 from typing import NamedTuple
 
 import requests
-import tornado.gen
 import tornado.testing
 import tornado.web
 import tornado.websocket

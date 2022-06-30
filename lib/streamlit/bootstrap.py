@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import os
 import signal
 import sys
@@ -20,17 +19,18 @@ from typing import Any, Dict, List, Optional
 
 import click
 import tornado.ioloop
-from streamlit import session_data
-from streamlit.git_util import GitRepo, MIN_GIT_VERSION
+from tornado.platform.asyncio import AsyncIOLoop
 
-from streamlit import version
 from streamlit import config
-from streamlit import net_util
-from streamlit import url_util
 from streamlit import env_util
+from streamlit import net_util
 from streamlit import secrets
+from streamlit import session_data
+from streamlit import url_util
 from streamlit import util
+from streamlit import version
 from streamlit.config import CONFIG_FILENAMES
+from streamlit.git_util import GitRepo, MIN_GIT_VERSION
 from streamlit.logger import get_logger
 from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.server.server import Server, server_address_is_unix_socket
@@ -365,7 +365,10 @@ def run(
     # and close all our threads
     _set_up_signal_handler()
 
-    ioloop = tornado.ioloop.IOLoop.current()
+    # Create our Tornado IOLoop.
+    # (AsyncIOLoop is actually the default IOLoop type - we're just being
+    # explicit about it so that we can grab its asyncio_loop instance.)
+    ioloop = AsyncIOLoop()
 
     # Create and start the server.
     server = Server(ioloop, main_script_path, command_line)
