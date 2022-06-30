@@ -84,7 +84,9 @@ ElementType: TypeAlias = str
 # not able to always rely on the proto as the type may be needed earlier.
 # Thankfully, in these cases (when value_type == "trigger_value"), the static
 # table here being slightly inaccurate should never pose a problem.
-ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = MappingProxyType(
+ELEMENT_TYPE_TO_VALUE_TYPE: Final[
+    Mapping[ElementType, ValueFieldName]
+] = MappingProxyType(
     {
         "button": "trigger_value",
         "download_button": "trigger_value",
