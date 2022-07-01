@@ -350,7 +350,7 @@ def _install_pages_watcher(main_script_path_str: str) -> None:
     LOGGER.warning(new_pages_dir.absolute())
 
     watch_dir(
-        str(new_pages_dir),
+        str(pages_dir),
         _on_pages_changed,
         glob_pattern="*.py",
         allow_nonexistent=True,
