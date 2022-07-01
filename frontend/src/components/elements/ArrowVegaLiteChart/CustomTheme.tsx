@@ -79,7 +79,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       symbolType: "circle",
     },
     range: {
-      // TODO: Eventually, we might want to move those color ranges to our theme.
+      // TODO: Eventually, we might want to move those color schemes to our theme.
       // But For now, this is specifically defined for vega lite based charts.
       // Ramp & heatmap are both using the sequential color scheme.
       ...(hasLightBg

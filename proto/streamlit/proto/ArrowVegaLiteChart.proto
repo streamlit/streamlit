@@ -34,6 +34,8 @@ message ArrowVegaLiteChart {
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 5;
 
+  // The theme to use for the chart. Currently, we only support "streamlit"
+  // as a theme option. If not specified, the default vega lite theme is used.
   string theme = 6;
 
   reserved 3;

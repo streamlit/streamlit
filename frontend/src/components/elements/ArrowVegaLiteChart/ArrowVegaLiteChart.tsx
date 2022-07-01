@@ -216,7 +216,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const spec = JSON.parse(el.spec)
     const { useContainerWidth } = el
 
-    if (el.theme) {
+    if (el.theme === "streamlit") {
       spec.config = applyStreamlitTheme(spec.config, theme)
     } else {
       spec.config = applyThemeDefaults(spec.config, theme)
