@@ -170,6 +170,8 @@ def _streamlit_theme(grid: str = "horizontal") -> dict:
     """Returns a config dict for Vega-Lite."""
     config = dict(
         axis=dict(
+            labelFont="Source Sans Pro",
+            titleFont="Source Sans Pro",
             labelColor=get_color("gray-70"),
             tickColor=get_color("gray-30"),
             gridColor=get_color("gray-30"),
@@ -356,11 +358,14 @@ def marshall(
             data = data_spec
             del spec["data"]
 
-    if theme is not None:
-        # Apply streamlit theme
-        spec["config"] = _streamlit_theme()
+    # if theme is not None:
+    #     # Apply streamlit theme
+    #     spec["config"] = _streamlit_theme()
 
     proto.spec = json.dumps(spec)
+    if theme:
+        proto.theme = str(theme)
+    print(proto.spec)
     proto.use_container_width = use_container_width
 
     if data is not None:
