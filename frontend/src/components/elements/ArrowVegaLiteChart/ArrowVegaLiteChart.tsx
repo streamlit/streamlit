@@ -17,14 +17,16 @@
 
 import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
+import embed from "vega-embed"
+import * as vega from "vega"
+
 import { logMessage } from "src/lib/log"
-import { merge } from "lodash"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { ensureError } from "src/lib/ErrorHandling"
 import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import { Theme } from "src/theme"
-import embed from "vega-embed"
-import * as vega from "vega"
+
+import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -215,9 +217,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const { useContainerWidth } = el
 
     if (el.theme) {
-      spec.config = configWithStreamlitTheme(spec.config, theme)
+      spec.config = applyStreamlitTheme(spec.config, theme)
     } else {
-      spec.config = configWithThemeDefaults(spec.config, theme)
+      spec.config = applyThemeDefaults(spec.config, theme)
     }
 
     if (this.props.height) {
@@ -506,197 +508,6 @@ function dataIsAnAppendOfPrev(
   }
 
   return true
-}
-
-function configWithStreamlitTheme(config: any, theme: Theme): any {
-  const StreamlitTheme = {
-    font: "Source Sans Pro",
-    background: null,
-    fieldTitle: "verbal",
-    autosize: { type: "fit", contains: "padding" },
-    // "padding": 16,
-    title: {
-      align: "left",
-      anchor: "start",
-      color: "#262730",
-      titleFontStyle: "normal",
-      fontWeight: 700,
-      fontSize: 16,
-      lineHeight: 24,
-      orient: "top",
-      offset: 26,
-    },
-    axis: {
-      labelFontSize: 12,
-      labelFontWeight: 400,
-      labelColor: "#808495",
-      labelFontStyle: "normal",
-      titleFontWeight: 400,
-      titleFontSize: 14,
-      titleColor: "#808495",
-      titleFontStyle: "normal",
-      ticks: false,
-      gridColor: "#E6EAF1",
-      domain: false,
-      domainWidth: 1,
-      domainColor: "#E6EAF1",
-      titlePadding: 16,
-      labelPadding: 16,
-      labelFlush: false,
-      labelBound: false,
-      labelSeparation: 4,
-      labelLimit: 100,
-    },
-    legend: {
-      labelFontSize: 12,
-      labelFontWeight: 400,
-      labelColor: "#262730",
-      // "symbolSize": 100,
-      titleFontSize: 14,
-      titleFontWeight: 400,
-      titleFontStyle: "normal",
-      titleColor: "#808495",
-      titlePadding: 12,
-      labelPadding: 16,
-      columnPadding: 8,
-      rowPadding: 5,
-      orient: "bottom",
-      layout: { bottom: { anchor: "left" } },
-      symbolType: "circle",
-    },
-    range: {
-      category: [
-        "#0068C9",
-        "#83C9FF",
-        "#FF2B2B",
-        "#FFABAB",
-        "#29B09D",
-        "#7DEFA1",
-        "#FF8700",
-        "#FFD16A",
-        "#6D3FC0",
-        "#D5DAE5",
-      ],
-      diverging: [
-        "#004280",
-        "#0054A3",
-        "#1C83E1",
-        "#60B4FF",
-        "#A6DCFF",
-        "#FFC7C7",
-        "#FF8C8C",
-        "#FF4B4B",
-        "#BD4043",
-        "#7D353B",
-      ],
-      ramp: [
-        "#E4F5FF",
-        "#C7EBFF",
-        "#A6DCFF",
-        "#83C9FF",
-        "#60B4FF",
-        "#3D9DF3",
-        "#1C83E1",
-        "#0068C9",
-        "#0054A3",
-        "#004280",
-      ],
-      heatmap: [
-        "#E4F5FF",
-        "#C7EBFF",
-        "#A6DCFF",
-        "#83C9FF",
-        "#60B4FF",
-        "#3D9DF3",
-        "#1C83E1",
-        "#0068C9",
-        "#0054A3",
-        "#004280",
-      ],
-    },
-    view: {
-      columns: 1,
-      strokeWidth: 0,
-      stroke: "transparent",
-      continuousHeight: 350,
-      continuousWidth: 650,
-      discreteWidth: 650,
-    },
-    concat: {
-      columns: 1,
-    },
-    facet: {
-      columns: 1,
-    },
-    mark: {
-      color: "#0068C9",
-    },
-    bar: {
-      binSpacing: 4,
-      discreteBandSize: { band: 0.85 },
-    },
-    axisQuantitative: {
-      grid: true,
-    },
-    axisDiscrete: {
-      grid: false,
-    },
-    axisXPoint: {
-      grid: false,
-    },
-    axisTemporal: {
-      grid: false,
-    },
-    axisXBand: {
-      grid: false,
-    },
-  }
-
-  if (!config) {
-    return StreamlitTheme
-  }
-
-  // Fill in theme defaults where the user didn't specify config options.
-  return merge({}, StreamlitTheme, config || {})
-}
-
-function configWithThemeDefaults(config: any, theme: Theme): any {
-  const { colors, fontSizes, genericFonts } = theme
-  const themeFonts = {
-    labelFont: genericFonts.bodyFont,
-    titleFont: genericFonts.bodyFont,
-    labelFontSize: fontSizes.twoSmPx,
-    titleFontSize: fontSizes.twoSmPx,
-  }
-  const themeDefaults = {
-    background: colors.bgColor,
-    axis: {
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
-      gridColor: colors.fadedText10,
-      ...themeFonts,
-    },
-    legend: {
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
-      ...themeFonts,
-    },
-    title: {
-      color: colors.bodyText,
-      subtitleColor: colors.bodyText,
-      ...themeFonts,
-    },
-    header: {
-      labelColor: colors.bodyText,
-    },
-  }
-
-  if (!config) {
-    return themeDefaults
-  }
-
-  // Fill in theme defaults where the user didn't specify config options.
-  return merge({}, themeDefaults, config || {})
 }
 
 export default withTheme(withFullScreenWrapper(ArrowVegaLiteChart))
