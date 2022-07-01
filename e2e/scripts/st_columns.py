@@ -30,7 +30,7 @@ c3.image(CAT_IMAGE)
 for c in st.columns((1, 2, 3, 4)):
     c.image(CAT_IMAGE)
 
-# Various columns gaps
+# Various column gaps
 c4, c5, c6 = st.columns(3, gap="small")
 c4.image(CAT_IMAGE)
 c5.image(CAT_IMAGE)
