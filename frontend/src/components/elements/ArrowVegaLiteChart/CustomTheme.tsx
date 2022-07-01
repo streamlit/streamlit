@@ -75,8 +75,8 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       columnPadding: 8,
       rowPadding: 4,
       orient: "bottom",
-      layout: { bottom: { anchor: "left" } },
-      symbolType: "circle",
+      // layout: { bottom: { anchor: "left" } },
+      // symbolType: "circle",
     },
     range: {
       // TODO: Eventually, we might want to move those color schemes to our theme.

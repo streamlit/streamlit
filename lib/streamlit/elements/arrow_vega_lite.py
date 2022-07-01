@@ -175,7 +175,6 @@ def marshall(
     proto.spec = json.dumps(spec)
     if theme:
         proto.theme = str(theme)
-    print(proto.spec)
     proto.use_container_width = use_container_width
 
     if data is not None:

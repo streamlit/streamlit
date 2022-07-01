@@ -328,7 +328,8 @@ def _generate_chart(
         )()
         .encode(
             alt.X(index_name, title="", scale=x_scale, type=x_type),
-            alt.Y("value", title="", scale=y_scale),
+            # TODO: has to contain an empty space, otherwise the full y-axis disappears (bug in vega-lite)?
+            alt.Y("value", title=" ", scale=y_scale),
             alt.Color("variable", title="", type="nominal"),
             alt.Tooltip([index_name, "value", "variable"]),
             opacity=opacity,
