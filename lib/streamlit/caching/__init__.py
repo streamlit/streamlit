@@ -14,8 +14,25 @@
 import contextlib
 from typing import Iterator
 
-from .memo_decorator import MEMO_CALL_STACK, _memo_caches, MemoAPI
-from .singleton_decorator import SINGLETON_CALL_STACK, _singleton_caches, SingletonAPI
+from google.protobuf.message import Message
+
+from .memo_decorator import (
+    MEMO_CALL_STACK,
+    MEMO_MESSAGES_CALL_STACK,
+    _memo_caches,
+    MemoAPI,
+)
+from .singleton_decorator import (
+    SINGLETON_CALL_STACK,
+    SINGLETON_MESSAGE_CALL_STACK,
+    _singleton_caches,
+    SingletonAPI,
+)
+
+
+def save_element_message(delta_type: str, element_proto: Message) -> None:
+    MEMO_MESSAGES_CALL_STACK.save_element_message(delta_type, element_proto)
+    SINGLETON_MESSAGE_CALL_STACK.save_element_message(delta_type, element_proto)
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:

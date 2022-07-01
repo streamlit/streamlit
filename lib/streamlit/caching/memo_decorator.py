@@ -25,7 +25,9 @@ from typing import Optional, Any, Dict, Tuple, cast, List, Callable, TypeVar, ov
 from typing import Union, Iterator
 
 import math
+from attr import define
 from cachetools import TTLCache
+from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import util
@@ -44,6 +46,7 @@ from .cache_errors import (
 )
 from .cache_utils import (
     Cache,
+    MsgData,
     create_cache_wrapper,
     CachedFunctionCallStack,
     CachedFunction,
@@ -363,6 +366,12 @@ class MemoAPI:
         _memo_caches.clear_all()
 
 
+@define
+class CachedValue:
+    value: bytes
+    messages: List[MsgData]
+
+
 class MemoCache(Cache):
     """Manages cached values for a single st.memo-ized function."""
 
@@ -379,6 +388,9 @@ class MemoCache(Cache):
         self.persist = persist
         self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
         self._mem_cache_lock = threading.Lock()
+        self._message_cache: TTLCache[str, List[MsgData]] = TTLCache(
+            maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER
+        )
 
     @property
     def max_entries(self) -> float:
@@ -401,34 +413,36 @@ class MemoCache(Cache):
                 )
         return stats
 
-    def read_value(self, key: str) -> Any:
+    def read_value(self, key: str) -> Tuple[Any, List[MsgData]]:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
         """
         try:
-            pickled_value = self._read_from_mem_cache(key)
+            pickled_value = self._read_from_mem_cache(key).value
+            messages = self._read_from_mem_cache(key).messages
 
         except CacheKeyNotFoundError as e:
             if self.persist == "disk":
                 pickled_value = self._read_from_disk_cache(key)
-                self._write_to_mem_cache(key, pickled_value)
+                messages = []
+                self._write_to_mem_cache(key, CachedValue(pickled_value, messages))
             else:
                 raise e
 
         try:
-            return pickle.loads(pickled_value)
+            return (pickle.loads(pickled_value), messages)
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
-    def write_value(self, key: str, value: Any) -> None:
+    def write_value(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value to the cache. It must be pickleable."""
         try:
             pickled_value = pickle.dumps(value)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
-        self._write_to_mem_cache(key, pickled_value)
+        self._write_to_mem_cache(key, CachedValue(pickled_value, messages))
         if self.persist == "disk":
             self._write_to_disk_cache(key, pickled_value)
 
@@ -441,12 +455,13 @@ class MemoCache(Cache):
 
             self._mem_cache.clear()
 
-    def _read_from_mem_cache(self, key: str) -> bytes:
+    def _read_from_mem_cache(self, key: str) -> CachedValue:
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = bytes(self._mem_cache[key])
+                messages: List[MsgData] = self._message_cache[key]
                 _LOGGER.debug("Memory cache HIT: %s", key)
-                return entry
+                return CachedValue(entry, messages)
 
             else:
                 _LOGGER.debug("Memory cache MISS: %s", key)
@@ -465,9 +480,10 @@ class MemoCache(Cache):
             _LOGGER.error(e)
             raise CacheError("Unable to read from cache") from e
 
-    def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
+    def _write_to_mem_cache(self, key: str, value: CachedValue) -> None:
         with self._mem_cache_lock:
-            self._mem_cache[key] = pickled_value
+            self._mem_cache[key] = value.value
+            self._message_cache[key] = value.messages
 
     def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
         path = self._get_file_path(key)

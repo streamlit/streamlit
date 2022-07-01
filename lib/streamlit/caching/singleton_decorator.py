@@ -16,7 +16,8 @@
 
 import threading
 import types
-from typing import Optional, Any, Dict, List, TypeVar, Callable, overload, cast
+from typing import Optional, Any, Dict, List, TypeVar, Callable, overload, cast, Tuple
+from google.protobuf.message import Message
 
 from pympler import asizeof
 
@@ -25,6 +26,8 @@ from streamlit.stats import CacheStatsProvider, CacheStat
 from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import (
     Cache,
+    CachedFunctionMessagesCallStack,
+    MsgData,
     create_cache_wrapper,
     CachedFunctionCallStack,
     CachedFunction,
@@ -34,6 +37,7 @@ _LOGGER = get_logger(__name__)
 
 
 SINGLETON_CALL_STACK = CachedFunctionCallStack(CacheType.SINGLETON)
+SINGLETON_MESSAGE_CALL_STACK = CachedFunctionMessagesCallStack(CacheType.SINGLETON)
 
 
 class SingletonCaches(CacheStatsProvider):
@@ -98,6 +102,10 @@ class SingletonFunction(CachedFunction):
     @property
     def call_stack(self) -> CachedFunctionCallStack:
         return SINGLETON_CALL_STACK
+
+    @property
+    def message_call_stack(self) -> CachedFunctionMessagesCallStack:
+        return SINGLETON_MESSAGE_CALL_STACK
 
     @property
     def display_name(self) -> str:
@@ -248,23 +256,26 @@ class SingletonCache(Cache):
         self.display_name = display_name
         self._mem_cache: Dict[str, Any] = {}
         self._mem_cache_lock = threading.Lock()
+        self._message_cache: Dict[str, List[MsgData]] = {}
 
-    def read_value(self, key: str) -> Any:
+    def read_value(self, key: str) -> Tuple[Any, List[MsgData]]:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist.
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = self._mem_cache[key]
-                return entry
+                messages = self._message_cache[key]
+                return (entry, messages)
 
             else:
                 raise CacheKeyNotFoundError()
 
-    def write_value(self, key: str, value: Any) -> None:
+    def write_value(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value to the cache."""
         with self._mem_cache_lock:
             self._mem_cache[key] = value
+            self._message_cache[key] = messages
 
     def clear(self) -> None:
         with self._mem_cache_lock:

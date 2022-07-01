@@ -22,6 +22,7 @@ import threading
 import types
 from abc import abstractmethod
 from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
+from attr import define
 
 from google.protobuf.message import Message
 
@@ -41,11 +42,17 @@ from .hashing import update_hash
 _LOGGER = get_logger(__name__)
 
 
+@define
+class MsgData:
+    delta_type: str
+    message: Message
+
+
 class Cache:
     """Function cache interface. Caches persist across script runs."""
 
     @abstractmethod
-    def read_value(self, value_key: str) -> Any:
+    def read_value(self, value_key: str) -> Tuple[Any, List[MsgData]]:
         """Read a value from the cache.
 
         Raises
@@ -57,7 +64,7 @@ class Cache:
         raise NotImplementedError
 
     @abstractmethod
-    def write_value(self, value_key: str, value: Any) -> None:
+    def write_value(self, value_key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value to the cache, overwriting any existing value that
         uses the value_key.
         """
@@ -130,20 +137,26 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
 
             try:
-                return_value = cache.read_value(value_key)
+                return_value, messages = cache.read_value(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
+                dg = st._main
+                for msg in messages:
+                    dg._enqueue(msg.delta_type, msg.message)
 
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with cached_func.call_stack.calling_cached_function(func):
+                with cached_func.call_stack.calling_cached_function(
+                    func
+                ), cached_func.message_call_stack.calling_cached_function():
                     if cached_func.suppress_st_warning:
                         with cached_func.call_stack.suppress_cached_st_function_warning():
                             return_value = func(*args, **kwargs)
                     else:
                         return_value = func(*args, **kwargs)
 
-                cache.write_value(value_key, return_value)
+                messages = cached_func.message_call_stack._most_recent_messages
+                cache.write_value(value_key, return_value, messages)
 
             return return_value
 
@@ -249,8 +262,8 @@ class CachedFunctionMessagesCallStack(threading.local):
     """
 
     def __init__(self, cache_type: CacheType):
-        self._cached_message_stack: List[List["Message"]] = []
-        self._most_recent_messages: List["Message"] = []
+        self._cached_message_stack: List[List[MsgData]] = []
+        self._most_recent_messages: List[MsgData] = []
         self._cache_type = cache_type
 
     def __repr__(self) -> str:
@@ -263,6 +276,14 @@ class CachedFunctionMessagesCallStack(threading.local):
             yield
         finally:
             self._most_recent_messages = self._cached_message_stack.pop()
+
+    def save_element_message(self, delta_type: str, element_proto: Message):
+        """Record the element protobuf as having been produced during any currently
+        executing cached functions, so they can be replayed any time the function's
+        execution is skipped because they're in the cache.
+        """
+        for msgs in self._cached_message_stack:
+            msgs.append(MsgData(delta_type, element_proto))
 
 
 def _make_value_key(

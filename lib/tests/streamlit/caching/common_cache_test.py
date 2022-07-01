@@ -165,7 +165,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
     )
     def test_cached_st_function_warning(self, _, cache_decorator, call_stack):
-        """Ensure we properly warn when st.foo functions are called
+        """Ensure we properly warn when interactive st.foo functions are called
         inside a cached function.
         """
         forward_msg_queue = ForwardMsgQueue()
@@ -254,6 +254,76 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             warning.assert_not_called()
 
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay(self, _, cache_decorator):
+        @cache_decorator
+        def foo(i):
+            st.text(i)
+            return i
+
+        foo(1)
+        st.text("---")
+        foo(1)
+
+        deltas = self.get_all_deltas_from_queue()
+        text = [
+            element.text.body
+            for element in (delta.new_element for delta in deltas)
+            if element.WhichOneof("type") == "text"
+        ]
+        assert text == ["1", "---", "1"]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_nested(self, _, cache_decorator):
+        @cache_decorator
+        def inner(i):
+            st.text(i)
+
+        @cache_decorator
+        def outer(i):
+            inner(i)
+            st.text(i + 10)
+
+        outer(1)
+        outer(1)
+        st.text("---")
+        inner(2)
+        outer(2)
+        st.text("---")
+        outer(3)
+        inner(3)
+
+        deltas = self.get_all_deltas_from_queue()
+        text = [
+            element.text.body
+            for element in (delta.new_element for delta in deltas)
+            if element.WhichOneof("type") == "text"
+        ]
+        assert text == [
+            "1",
+            "11",
+            "1",
+            "11",
+            "---",
+            "2",
+            "2",
+            "12",
+            "---",
+            "3",
+            "13",
+            "3",
+        ]
 
     @parameterized.expand(
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
