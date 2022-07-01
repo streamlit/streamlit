@@ -71,8 +71,25 @@ export const globalStyles = (theme: Theme): any => css`
   }
 
   // VegaLite Specific CSS information
+  #vg-tooltip-element {
+    font-family: ${theme.genericFonts.bodyFont};
+    color: ${theme.colors.bodyText};
+    border: 1px solid ${theme.colors.fadedText10};
+    background-color: ${transparentize(theme.colors.bgColor, 0.05)};
+    font-size: ${theme.fontSizes.sm};
+    box-shadow: rgb(0 0 0 / 16%) 0px 4px 16px;
+    padding: ${theme.spacing.sm};
+  }
+
   #vg-tooltip-element td {
     border: none;
+  }
+
+  #vg-tooltip-element table tr td.key {
+    color: ${theme.colors.fadedText60};
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   // Embedded Overflow Management
