@@ -57,11 +57,14 @@ SliderScalarT = TypeVar("SliderScalarT", bound=SliderScalar)
 Step: TypeAlias = Union[int, float, timedelta]
 
 
+ParsedValue: TypeAlias = Union[
+    Tuple[()],
+    Tuple[SliderScalarT],
+    Tuple[SliderScalarT, SliderScalarT],
+]
+
 SUPPORTED_TYPES: Final[
-    Mapping[
-        Type[SliderScalar],
-        SliderProto.DataType.ValueType,
-    ],
+    Mapping[Type[SliderScalar], SliderProto.DataType.ValueType]
 ] = MappingProxyType(
     {
         int: SliderProto.INT,
@@ -73,7 +76,13 @@ SUPPORTED_TYPES: Final[
 )
 
 
-TIMELIKE_TYPES: Final = {SliderProto.DATETIME, SliderProto.TIME, SliderProto.DATE}
+TIMELIKE_TYPES: Final = frozenset(
+    {
+        SliderProto.DATETIME,
+        SliderProto.TIME,
+        SliderProto.DATE,
+    }
+)
 
 
 @attr.s(auto_attribs=True, frozen=True, slots=True)
@@ -81,60 +90,8 @@ class SliderValues:
     value: Union[SliderScalarT, Sequence[SliderScalarT]] = None
     min_value: Optional[SliderScalarT] = None
     max_value: Optional[SliderScalarT] = None
-
-
-def maybe_default(
-    value: Union[None, SliderScalarT, Sequence[SliderScalarT]],
-    min_value: Optional[SliderScalarT],
-    max_value: Optional[SliderScalarT],
-) -> Union[SliderScalarT, Sequence[SliderScalarT]]:
-    # Set value default.
-    if value is None:
-        if min_value is not None:
-            return min_value
-        if max_value is not None:
-            return max_value
-        return 0
-    return value
-
-
-def _parse_slider_value(
-    value: Union[None, SliderScalarT, Sequence[SliderScalarT]],
-    min_value: Optional[SliderScalarT],
-    max_value: Optional[SliderScalarT],
-) -> Union[
-    Tuple[()],
-    Tuple[SliderScalarT],
-    Tuple[SliderScalarT, SliderScalarT],
-]:
-    value = maybe_default(value=value, min_value=min_value, max_value=max_value)
-
-    def single_value(maybe_value: object) -> TypeGuard[SliderScalarT]:
-        return isinstance(value, tuple(SUPPORTED_TYPES.keys()))
-
-    def range_value(maybe_value: object) -> TypeGuard[Sequence[SliderScalarT]]:
-        return isinstance(value, (list, tuple)) and len(value) in (0, 1, 2)
-
-    # Ensure that the value is either a single value or a range of values.
-    if not single_value and not range_value:
-        raise StreamlitAPIException(
-            "Slider value should either be an int/float/datetime or a list/tuple of "
-            "0 to 2 ints/floats/datetimes"
-        )
-
-    # Simplify future logic by always making value a tuple
-    if single_value:
-        value = (value,)
-
-    def all_same_type(items: Iterable[SliderScalar]) -> bool:
-        return len(set(map(type, items))) < 2
-
-    if not all_same_type(value):
-        raise StreamlitAPIException(
-            "Slider tuple/list components must be of the same type.\n"
-            f"But were: {list(map(type, value))}"
-        )
-    return value
+    step:
+    format: str
 
 
 class SliderMixin:
@@ -252,7 +209,6 @@ class SliderMixin:
            height: 300px
 
         """
-        ctx = get_script_run_ctx()
         return self._slider(
             label=label,
             min_value=min_value,
@@ -266,7 +222,7 @@ class SliderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
-            ctx=ctx,
+            ctx=get_script_run_ctx(),
         )
 
     def _slider(
@@ -288,218 +244,6 @@ class SliderMixin:
     ) -> Union[SliderScalarT, Tuple[SliderScalarT, SliderScalarT]]:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
-
-        value = _parse_slider_value(value)
-
-        if len(value) == 0:
-            data_type = SliderProto.INT
-        else:
-            data_type = SUPPORTED_TYPES[type(value[0])]
-
-        datetime_min = time.min
-        datetime_max = time.max
-        if data_type == SliderProto.TIME:
-            datetime_min = time.min.replace(tzinfo=value[0].tzinfo)
-            datetime_max = time.max.replace(tzinfo=value[0].tzinfo)
-        if data_type in {SliderProto.DATETIME, SliderProto.DATE}:
-            datetime_min = value[0] - timedelta(days=14)
-            datetime_max = value[0] + timedelta(days=14)
-
-        DEFAULTS = {
-            SliderProto.INT: {
-                "min_value": 0,
-                "max_value": 100,
-                "step": 1,
-                "format": "%d",
-            },
-            SliderProto.FLOAT: {
-                "min_value": 0.0,
-                "max_value": 1.0,
-                "step": 0.01,
-                "format": "%0.2f",
-            },
-            SliderProto.DATETIME: {
-                "min_value": datetime_min,
-                "max_value": datetime_max,
-                "step": timedelta(days=1),
-                "format": "YYYY-MM-DD",
-            },
-            SliderProto.DATE: {
-                "min_value": datetime_min,
-                "max_value": datetime_max,
-                "step": timedelta(days=1),
-                "format": "YYYY-MM-DD",
-            },
-            SliderProto.TIME: {
-                "min_value": datetime_min,
-                "max_value": datetime_max,
-                "step": timedelta(minutes=15),
-                "format": "HH:mm",
-            },
-        }
-
-        if min_value is None:
-            min_value = DEFAULTS[data_type]["min_value"]
-        if max_value is None:
-            max_value = DEFAULTS[data_type]["max_value"]
-        if step is None:
-            step = DEFAULTS[data_type]["step"]
-            if data_type in (
-                SliderProto.DATETIME,
-                SliderProto.DATE,
-            ) and max_value - min_value < timedelta(days=1):
-                step = timedelta(minutes=15)
-        if format is None:
-            format = DEFAULTS[data_type]["format"]
-
-        if step == 0:
-            raise StreamlitAPIException(
-                "Slider components cannot be passed a `step` of 0."
-            )
-
-        # Ensure that all arguments are of the same type.
-        slider_args = [min_value, max_value, step]
-        int_args = all(map(lambda a: isinstance(a, int), slider_args))
-        float_args = all(map(lambda a: isinstance(a, float), slider_args))
-        # When min and max_value are the same timelike, step should be a timedelta
-        timelike_args = (
-            data_type in TIMELIKE_TYPES
-            and isinstance(step, timedelta)
-            and type(min_value) == type(max_value)
-        )
-
-        if not int_args and not float_args and not timelike_args:
-            raise StreamlitAPIException(
-                "Slider value arguments must be of matching types."
-                "\n`min_value` has %(min_type)s type."
-                "\n`max_value` has %(max_type)s type."
-                "\n`step` has %(step)s type."
-                % {
-                    "min_type": type(min_value).__name__,
-                    "max_type": type(max_value).__name__,
-                    "step": type(step).__name__,
-                }
-            )
-
-        # Ensure that the value matches arguments' types.
-        all_ints = data_type == SliderProto.INT and int_args
-        all_floats = data_type == SliderProto.FLOAT and float_args
-        all_timelikes = data_type in TIMELIKE_TYPES and timelike_args
-
-        if not all_ints and not all_floats and not all_timelikes:
-            raise StreamlitAPIException(
-                "Both value and arguments must be of the same type."
-                "\n`value` has %(value_type)s type."
-                "\n`min_value` has %(min_type)s type."
-                "\n`max_value` has %(max_type)s type."
-                % {
-                    "value_type": type(value).__name__,
-                    "min_type": type(min_value).__name__,
-                    "max_type": type(max_value).__name__,
-                }
-            )
-
-        # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
-        min_value = min(min_value, max_value)
-        max_value = max(min_value, max_value)
-        if len(value) == 1:
-            min_value = min(value[0], min_value)
-            max_value = max(value[0], max_value)
-        elif len(value) == 2:
-            start, end = value
-            if start > end:
-                # Swap start and end, since they seem reversed
-                start, end = end, start
-                value = start, end
-            min_value = min(start, min_value)
-            max_value = max(end, max_value)
-        else:
-            # Empty list, so let's just use the outer bounds
-            value = [min_value, max_value]
-
-        # Bounds checks. JSNumber produces human-readable exceptions that
-        # we simply re-package as StreamlitAPIExceptions.
-        # (We check `min_value` and `max_value` here; `value` and `step` are
-        # already known to be in the [min_value, max_value] range.)
-        try:
-            if all_ints:
-                JSNumber.validate_int_bounds(min_value, "`min_value`")
-                JSNumber.validate_int_bounds(max_value, "`max_value`")
-            elif all_floats:
-                JSNumber.validate_float_bounds(min_value, "`min_value`")
-                JSNumber.validate_float_bounds(max_value, "`max_value`")
-            elif all_timelikes:
-                # No validation yet. TODO: check between 0001-01-01 to 9999-12-31
-                pass
-        except JSNumberBoundsException as e:
-            raise StreamlitAPIException(str(e))
-
-        # Convert dates or times into datetimes
-        if data_type == SliderProto.TIME:
-
-            def _time_to_datetime(time):
-                # Note, here we pick an arbitrary date well after Unix epoch.
-                # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
-                # We're dropping the date from datetime laters, anyways.
-                return datetime.combine(date(2000, 1, 1), time)
-
-            value = list(map(_time_to_datetime, value))
-            min_value = _time_to_datetime(min_value)
-            max_value = _time_to_datetime(max_value)
-
-        if data_type == SliderProto.DATE:
-
-            def _date_to_datetime(date):
-                return datetime.combine(date, time())
-
-            value = list(map(_date_to_datetime, value))
-            min_value = _date_to_datetime(min_value)
-            max_value = _date_to_datetime(max_value)
-
-        # Now, convert to microseconds (so we can serialize datetime to a long)
-        if data_type in TIMELIKE_TYPES:
-            SECONDS_TO_MICROS = 1000 * 1000
-            DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
-
-            def _delta_to_micros(delta):
-                return (
-                    delta.microseconds
-                    + delta.seconds * SECONDS_TO_MICROS
-                    + delta.days * DAYS_TO_MICROS
-                )
-
-            UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-            def _datetime_to_micros(dt):
-                # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
-                # Since we want to show the date/time exactly as it is in the given datetime object,
-                # we just set the tzinfo to UTC and do not do any timezone conversions.
-                # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
-                utc_dt = dt.replace(tzinfo=timezone.utc)
-                return _delta_to_micros(utc_dt - UTC_EPOCH)
-
-            # Restore times/datetimes to original timezone (dates are always naive)
-            orig_tz = (
-                value[0].tzinfo
-                if data_type in (SliderProto.TIME, SliderProto.DATETIME)
-                else None
-            )
-
-            def _micros_to_datetime(micros):
-                utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
-                # Add the original timezone. No conversion is required here,
-                # since in the serialization, we also just replace the timestamp with UTC.
-                return utc_dt.replace(tzinfo=orig_tz)
-
-            value = list(map(_datetime_to_micros, value))
-            min_value = _datetime_to_micros(min_value)
-            max_value = _datetime_to_micros(max_value)
-            step = _delta_to_micros(step)
-
-        # It would be great if we could guess the number of decimal places from
-        # the `step` argument, but this would only be meaningful if step were a
-        # decimal. As a possible improvement we could make this function accept
-        # decimals and/or use some heuristics for floats.
 
         slider_proto = SliderProto()
         slider_proto.label = label
@@ -572,3 +316,335 @@ class SliderMixin:
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _parse_values(
+
+):
+    value = _parse_slider_value(
+        value=value,
+        max_value=max_value,
+        min_value=min_value,
+    )
+
+    defaults = TypeDefaults.from_value(value=value)
+
+    if min_value is None:
+        min_value = defaults.min_value
+    if max_value is None:
+        max_value = defaults.max_value
+    if format is None:
+        format = defaults.format
+
+    if step is None:
+        step = defaults.step
+        if data_type in {
+            SliderProto.DATETIME,
+            SliderProto.DATE,
+        } and max_value - min_value < timedelta(days=1):
+            step = timedelta(minutes=15)
+
+    if step == 0:
+        raise StreamlitAPIException(
+            "Slider components cannot be passed a `step` of 0."
+        )
+
+    # Ensure that all arguments are of the same type.
+    slider_args = [min_value, max_value, step]
+    int_args = all(map(lambda a: isinstance(a, int), slider_args))
+    float_args = all(map(lambda a: isinstance(a, float), slider_args))
+    # When min and max_value are the same timelike, step should be a timedelta
+    timelike_args = (
+        data_type in TIMELIKE_TYPES
+        and isinstance(step, timedelta)
+        and type(min_value) == type(max_value)
+    )
+
+    if not int_args and not float_args and not timelike_args:
+        raise StreamlitAPIException(
+            "Slider value arguments must be of matching types."
+            "\n`min_value` has %(min_type)s type."
+            "\n`max_value` has %(max_type)s type."
+            "\n`step` has %(step)s type."
+            % {
+                "min_type": type(min_value).__name__,
+                "max_type": type(max_value).__name__,
+                "step": type(step).__name__,
+            }
+        )
+
+    # Ensure that the value matches arguments' types.
+    all_ints = data_type == SliderProto.INT and int_args
+    all_floats = data_type == SliderProto.FLOAT and float_args
+    all_timelikes = data_type in TIMELIKE_TYPES and timelike_args
+
+    if not all_ints and not all_floats and not all_timelikes:
+        raise StreamlitAPIException(
+            "Both value and arguments must be of the same type."
+            "\n`value` has %(value_type)s type."
+            "\n`min_value` has %(min_type)s type."
+            "\n`max_value` has %(max_type)s type."
+            % {
+                "value_type": type(value).__name__,
+                "min_type": type(min_value).__name__,
+                "max_type": type(max_value).__name__,
+            }
+        )
+
+    # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
+    min_value = min(min_value, max_value)
+    max_value = max(min_value, max_value)
+    if len(value) == 1:
+        min_value = min(value[0], min_value)
+        max_value = max(value[0], max_value)
+    elif len(value) == 2:
+        start, end = value
+        if start > end:
+            # Swap start and end, since they seem reversed
+            start, end = end, start
+            value = start, end
+        min_value = min(start, min_value)
+        max_value = max(end, max_value)
+    else:
+        # Empty list, so let's just use the outer bounds
+        value = [min_value, max_value]
+
+    # Bounds checks. JSNumber produces human-readable exceptions that
+    # we simply re-package as StreamlitAPIExceptions.
+    # (We check `min_value` and `max_value` here; `value` and `step` are
+    # already known to be in the [min_value, max_value] range.)
+    try:
+        if all_ints:
+            JSNumber.validate_int_bounds(min_value, "`min_value`")
+            JSNumber.validate_int_bounds(max_value, "`max_value`")
+        elif all_floats:
+            JSNumber.validate_float_bounds(min_value, "`min_value`")
+            JSNumber.validate_float_bounds(max_value, "`max_value`")
+        elif all_timelikes:
+            # No validation yet. TODO: check between 0001-01-01 to 9999-12-31
+            pass
+    except JSNumberBoundsException as e:
+        raise StreamlitAPIException(str(e))
+
+    # Convert dates or times into datetimes
+    if data_type == SliderProto.TIME:
+        def _time_to_datetime(time):
+            # Note, here we pick an arbitrary date well after Unix epoch.
+            # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
+            # We're dropping the date from datetime laters, anyways.
+            return datetime.combine(date(2000, 1, 1), time)
+
+        value = list(map(_time_to_datetime, value))
+        min_value = _time_to_datetime(min_value)
+        max_value = _time_to_datetime(max_value)
+
+    if data_type == SliderProto.DATE:
+        def _date_to_datetime(date):
+            return datetime.combine(date, time())
+
+        value = list(map(_date_to_datetime, value))
+        min_value = _date_to_datetime(min_value)
+        max_value = _date_to_datetime(max_value)
+
+    # Now, convert to microseconds (so we can serialize datetime to a long)
+    if data_type in TIMELIKE_TYPES:
+        SECONDS_TO_MICROS = 1000 * 1000
+        DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
+
+        def _delta_to_micros(delta):
+            return (
+                delta.microseconds
+                + delta.seconds * SECONDS_TO_MICROS
+                + delta.days * DAYS_TO_MICROS
+            )
+
+        UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+        def _datetime_to_micros(dt):
+            # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
+            # Since we want to show the date/time exactly as it is in the given datetime object,
+            # we just set the tzinfo to UTC and do not do any timezone conversions.
+            # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
+            utc_dt = dt.replace(tzinfo=timezone.utc)
+            return _delta_to_micros(utc_dt - UTC_EPOCH)
+
+        # Restore times/datetimes to original timezone (dates are always naive)
+        orig_tz = (
+            value[0].tzinfo
+            if data_type in (SliderProto.TIME, SliderProto.DATETIME)
+            else None
+        )
+
+        def _micros_to_datetime(micros):
+            utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
+            # Add the original timezone. No conversion is required here,
+            # since in the serialization, we also just replace the timestamp with UTC.
+            return utc_dt.replace(tzinfo=orig_tz)
+
+        value = list(map(_datetime_to_micros, value))
+        min_value = _datetime_to_micros(min_value)
+        max_value = _datetime_to_micros(max_value)
+        step = _delta_to_micros(step)
+
+    # It would be great if we could guess the number of decimal places from
+    # the `step` argument, but this would only be meaningful if step were a
+    # decimal. As a possible improvement we could make this function accept
+    # decimals and/or use some heuristics for floats.
+
+
+def _value_or_default(
+    value: Union[None, SliderScalarT, Sequence[SliderScalarT]],
+    min_value: Optional[SliderScalarT],
+    max_value: Optional[SliderScalarT],
+) -> Union[SliderScalarT, Sequence[SliderScalarT]]:
+    # Set value default.
+    if value is not None:
+        return value
+    if min_value is not None:
+        return min_value
+    if max_value is not None:
+        return max_value
+    return 0
+
+
+def _single_value(obj: object) -> TypeGuard[SliderScalarT]:
+    return isinstance(obj, tuple(SUPPORTED_TYPES.keys()))
+
+
+def _correct_length(obj: Iterable[SliderScalarT]) -> TypeGuard[ParsedValue[SliderScalarT]]:
+    return isinstance(obj, tuple) and len(obj) in (0, 1, 2)
+
+
+def _ensure_tuple(
+    value: Union[SliderScalarT, Sequence[SliderScalarT]]
+) -> Tuple[SliderScalarT, ...]:
+    # Simplify future logic by always making value a tuple
+    if _single_value(value):
+        return value,
+
+    # Ensure that the value is either a single value or a range of values.
+    if not isinstance(value, (list, tuple)):
+        raise StreamlitAPIException(
+            "Slider value should either be an int/float/datetime or a "
+            "list/tuple of 0 to 2 ints/floats/datetimes"
+        )
+
+    if isinstance(value, list):
+        return tuple(value)
+
+
+def _ensure_correct_length(
+    value: Tuple[SliderScalarT, ...]
+) -> ParsedValue[SliderScalarT]:
+    if _correct_length(value):
+        return value
+
+    raise StreamlitAPIException(
+        "Slider value should either be an int/float/datetime or a "
+        "list/tuple of 0 to 2 ints/floats/datetimes"
+    )
+
+
+def _parse_slider_value(
+    value: Union[None, SliderScalarT, Sequence[SliderScalarT]],
+    min_value: Optional[SliderScalarT],
+    max_value: Optional[SliderScalarT],
+) -> ParsedValue[SliderScalarT]:
+    value = _ensure_correct_length(
+        _ensure_tuple(
+            _value_or_default(
+                value=value,
+                min_value=min_value,
+                max_value=max_value,
+            )
+        )
+    )
+
+    def all_same_type(items: Iterable[SliderScalar]) -> bool:
+        return len(set(map(type, items))) < 2
+
+    if not all_same_type(value):
+        raise StreamlitAPIException(
+            "Slider tuple/list components must be of the same type.\n"
+            f"But were: {list(map(type, value))}"
+        )
+
+    return value
+
+
+@attr.s(auto_attribs=True, frozen=True, slots=True)
+class TypeDefaults:
+    min_value: SliderScalarT
+    max_value: SliderScalarT
+    step: Step
+    format: str
+
+    @classmethod
+    def for_int(cls) -> "TypeDefaults":
+        return cls(
+            min_value=0,
+            max_value=100,
+            step=1,
+            format="%d",
+        )
+
+    @classmethod
+    def for_float(cls) -> "TypeDefaults":
+        return cls(
+            min_value=0.0,
+            max_value=1.0,
+            step=0.01,
+            format="%0.2f",
+        )
+
+    @classmethod
+    def for_date_and_datetime(cls, value: ParsedValue[
+        Union[date, datetime]]) -> "TypeDefaults":
+        return cls(
+            min_value=value[0] - timedelta(days=14),
+            max_value=value[0] + timedelta(days=14),
+            step=timedelta(days=1),
+            format="YYYY-MM-DD",
+        )
+
+    @classmethod
+    def for_time(cls, value: ParsedValue[time]) -> "TypeDefaults":
+        return cls(
+            min_value=time.min.replace(tzinfo=value[0].tzinfo),
+            max_value=time.max.replace(tzinfo=value[0].tzinfo),
+            step=timedelta(minutes=15),
+            format="YYYY-MM-DD",
+        )
+
+    @classmethod
+    def from_value(cls, value: ParsedValue) -> "TypeDefaults":
+        if len(value) == 0:
+            data_type = SliderProto.INT
+        else:
+            data_type = SUPPORTED_TYPES[type(value[0])]
+
+        if data_type == SliderProto.INT:
+            return cls.for_int()
+        if data_type == SliderProto.FLOAT:
+            return cls.for_float()
+        if data_type == SliderProto.TIME:
+            return cls.for_time(value=value)
+        return cls.for_date_and_datetime(value=value)
+
+
+def _marshall_slider_proto(
+    slider_proto: SliderProto,
+    label: str,
+    format: str,
+) -> None:
+    slider_proto.label = label
+    slider_proto.format = format
+    slider_proto.default[:] = value
+    slider_proto.min = min_value
+    slider_proto.max = max_value
+    slider_proto.step = step
+    slider_proto.data_type = data_type
+    slider_proto.options[:] = []
+    slider_proto.form_id = current_form_id(self.dg)
+    if help is not None:
+        slider_proto.help = dedent(help)
