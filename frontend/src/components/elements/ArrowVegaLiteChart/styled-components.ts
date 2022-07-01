@@ -22,6 +22,28 @@ export const StyledVegaLiteChartContainer = styled.div(({ theme }) => ({
   "&.vega-embed": {
     ".vega-actions": {
       zIndex: theme.zIndices.popupMenu,
+      // Customize menu UI to look like the Streamlit menu:
+      backgroundColor: theme.colors.bgColor,
+      boxShadow: "rgb(0 0 0 / 16%) 0px 4px 16px",
+      border: `1px solid ${theme.colors.fadedText10}`,
+      a: {
+        fontFamily: theme.genericFonts.bodyFont,
+        fontWeight: theme.fontWeights.normal,
+        fontSize: theme.fontSizes.md,
+        margin: 0,
+        padding: `${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
+        color: theme.colors.bodyText,
+      },
+      "a:hover": {
+        backgroundColor: theme.colors.secondaryBg,
+        color: theme.colors.bodyText,
+      },
+      ":before": {
+        content: "none",
+      },
+      ":after": {
+        content: "none",
+      },
     },
     summary: {
       // Fix weird floating button height issue in Vega Lite.
