@@ -23,7 +23,7 @@ describe("st.text_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextInput").should("have.length", 7);
+    cy.get(".stTextInput").should("have.length", 8);
 
     cy.get(".stTextInput").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("text_input" + idx);
@@ -40,7 +40,8 @@ describe("st.text_input", () => {
         'value 5: "  "' +
         'value 6: " default text "' +
         'value 7: "  "' +
-        "text input changed: False"
+        "text input changed: False" +
+        'value 8: "  "'
     );
   });
 
@@ -58,7 +59,8 @@ describe("st.text_input", () => {
         'value 5: "  "' +
         'value 6: " default text "' +
         'value 7: "  "' +
-        "text input changed: False"
+        "text input changed: False" +
+        'value 8: "  "'
     );
   });
 
@@ -76,7 +78,8 @@ describe("st.text_input", () => {
         'value 5: "  "' +
         'value 6: " default text "' +
         'value 7: "  "' +
-        "text input changed: False"
+        "text input changed: False" +
+        'value 8: "  "'
     );
   });
 
@@ -95,7 +98,8 @@ describe("st.text_input", () => {
         'value 5: "  "' +
         'value 6: " default text "' +
         'value 7: "  "' +
-        "text input changed: False"
+        "text input changed: False" +
+        'value 8: "  "'
     );
   });
 
@@ -113,7 +117,26 @@ describe("st.text_input", () => {
         'value 5: "  "' +
         'value 6: " default text "' +
         'value 7: " test input "' +
-        "text input changed: True"
+        "text input changed: True" +
+        'value 8: "  "'
+    );
+  });
+
+  it("updates value correctly when live", () => {
+    cy.getIndexed(".stTextInput input", 7)
+      .type("live test input");
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      'value 1: " test input "' +
+        'value 2: " default text "' +
+        'value 3: " 1234 "' +
+        'value 4: " None "' +
+        'value 5: "  "' +
+        'value 6: " default text "' +
+        'value 7: "  "' +
+        "text input changed: False" +
+        'value 8: " live test input "'
     );
   });
 });

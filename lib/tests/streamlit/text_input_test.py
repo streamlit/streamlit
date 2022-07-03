@@ -140,6 +140,19 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.text_input
         self.assertEqual("you-complete-me", proto.autocomplete)
 
+    def test_live_default(self):
+        """If 'live' is unspecified, it defaults to False."""
+        st.text_input("foo")
+        proto = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual(proto.live, False)
+
+    def test_live(self):
+        """Test that it can be called with live"""
+        st.text_input("the label", live=True)
+
+        proto = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual(proto.live, True)
+
 
 class SomeObj:
     pass

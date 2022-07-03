@@ -29,6 +29,7 @@ const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
     default: "",
     placeholder: "Placeholder",
     type: TextInputProto.Type.DEFAULT,
+    live: false,
     ...elementProps,
   }),
   width: 0,
@@ -160,6 +161,60 @@ describe("TextInput widget", () => {
       "testing",
       {
         fromUi: true,
+      }
+    )
+  })
+
+  it("sets widget value when live", () => {
+    const props = getProps({ live: true })
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: { value: "test" },
+    } as React.ChangeEvent<HTMLInputElement>)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "test",
+      {
+        fromUi: true,
+      }
+    )
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: { value: "testing" },
+    } as React.ChangeEvent<HTMLInputElement>)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "testing",
+      {
+        fromUi: true,
+      }
+    )
+  })
+
+  it("does not update widget value when live is false", () => {
+    const props = getProps({ live: false })
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: { value: "test" },
+    } as React.ChangeEvent<HTMLInputElement>)
+
+    expect(wrapper.state("dirty")).toBe(true)
+
+    // Check that the last call was in componentDidMount.
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: false,
       }
     )
   })

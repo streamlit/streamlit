@@ -43,6 +43,7 @@ class TextWidgetsMixin:
         help: Optional[str] = None,
         autocomplete: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
+        live: bool = False,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
@@ -78,6 +79,8 @@ class TextWidgetsMixin:
             "default" inputs. For more details, see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
         on_change : callable
             An optional callback invoked when this text_input's value changes.
+        live : bool
+            If True, do not wait for the user to press enter before updating.
         args : tuple
             An optional tuple of args to pass to the callback.
         kwargs : dict
@@ -114,6 +117,7 @@ class TextWidgetsMixin:
             help=help,
             autocomplete=autocomplete,
             on_change=on_change,
+            live=live,
             args=args,
             kwargs=kwargs,
             placeholder=placeholder,
@@ -131,6 +135,7 @@ class TextWidgetsMixin:
         help: Optional[str] = None,
         autocomplete: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
+        live: bool = False,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
@@ -144,6 +149,7 @@ class TextWidgetsMixin:
 
         text_input_proto = TextInputProto()
         text_input_proto.label = label
+        text_input_proto.live = bool(live)
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
 

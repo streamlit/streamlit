@@ -40,3 +40,6 @@ if st._is_running_with_streamlit:
     st.text_input("text input 7", key="text_input7", on_change=on_change)
     st.write('value 7: "', st.session_state.text_input7, '"')
     st.write("text input changed:", "text_input_changed" in st.session_state)
+
+    i8 = st.text_input("text input 8", key="text_input8", live=True)
+    st.write('value 8: "', i8, '"')

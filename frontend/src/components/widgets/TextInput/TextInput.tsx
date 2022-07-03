@@ -131,6 +131,15 @@ class TextInput extends React.PureComponent<Props, State> {
       return
     }
 
+    // If live is set, we immediately update the WidgetStateManager and pass the
+    // value to python.
+    if (this.props.element.live) {
+      this.setState({ dirty: false, value }, () =>
+        this.commitWidgetValue({ fromUi: true })
+      )
+      return
+    }
+
     // If the TextInput is *not* part of a form, we mark it dirty but don't
     // update its value in the WidgetMgr. This means that individual keypresses
     // won't trigger a script re-run.
