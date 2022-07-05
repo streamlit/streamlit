@@ -20,9 +20,9 @@ from plotly import figure_factory
 np.random.seed(0)
 
 # Add histogram data
-x1 = np.random.randn(200) - 2
-x2 = np.random.randn(200)
-x3 = np.random.randn(200) + 2
+x1: "np.typing.NDArray[np.float_]" = np.random.randn(200) - 2
+x2: "np.typing.NDArray[np.float_]" = np.random.randn(200)
+x3: "np.typing.NDArray[np.float_]" = np.random.randn(200) + 2
 
 # Group data together
 hist_data = [x1, x2, x3]

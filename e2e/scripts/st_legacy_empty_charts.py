@@ -62,6 +62,6 @@ except Exception as e:
     st.write(e)
 
 try:
-    st._legacy_altair_chart(use_container_width=True)
+    st._legacy_altair_chart(use_container_width=True)  # type: ignore[call-arg]
 except Exception as e:
     st.write(e)
