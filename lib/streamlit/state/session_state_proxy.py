@@ -19,16 +19,18 @@ from typing import (
     MutableMapping,
 )
 
+from typing_extensions import Final
+
 import streamlit as st
 from streamlit import logger as _logger
 from streamlit.type_util import Key
 from .safe_session_state import SafeSessionState
 from .session_state import SessionState, require_valid_user_key
 
-logger = _logger.get_logger(__name__)
+LOGGER: Final = _logger.get_logger(__name__)
 
 
-_state_use_warning_already_displayed = False
+_state_use_warning_already_displayed: bool = False
 
 
 def get_session_state() -> SafeSessionState:
@@ -49,7 +51,7 @@ def get_session_state() -> SafeSessionState:
         if not _state_use_warning_already_displayed:
             _state_use_warning_already_displayed = True
             if not st._is_running_with_streamlit:
-                logger.warning(
+                LOGGER.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )
         return SafeSessionState(SessionState())

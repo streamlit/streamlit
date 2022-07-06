@@ -555,11 +555,11 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertRaises(KeyError, lambda: scriptrunner._session_state["new_foo"])
 
         # Assert that Widget registration is a no-op
-        _, widget_value_changed = scriptrunner._session_state.register_widget(
+        widget_state = scriptrunner._session_state.register_widget(
             MagicMock(spec=WidgetMetadata),
             user_key="mock_user_key",
         )
-        self.assertEqual(False, widget_value_changed)
+        self.assertEqual(False, widget_state.value_changed)
 
         # Ensure the ScriptRunner thread shuts down.
         scriptrunner.join()

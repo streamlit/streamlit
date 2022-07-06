@@ -329,7 +329,7 @@ class FileUploaderMixin:
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
         # know about.
-        widget_value, _ = register_widget(
+        widget_state = register_widget(
             "file_uploader",
             file_uploader_proto,
             user_key=key,
@@ -345,7 +345,7 @@ class FileUploaderMixin:
         # the following proto fields to affect a widget's ID.
         file_uploader_proto.disabled = disabled
 
-        file_uploader_state = serialize_file_uploader(widget_value)
+        file_uploader_state = serialize_file_uploader(widget_state.value)
         uploaded_file_info = file_uploader_state.uploaded_file_info
         if ctx is not None and len(uploaded_file_info) != 0:
             newest_file_id = file_uploader_state.max_file_id
@@ -359,7 +359,7 @@ class FileUploaderMixin:
             )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
-        return cast(SomeUploadedFiles, widget_value)
+        return widget_state.value
 
     @staticmethod
     def _get_file_recs(

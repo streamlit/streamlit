@@ -476,7 +476,7 @@ class SliderMixin:
                 value = [_datetime_to_micros(v) for v in value]
             return value
 
-        current_value, set_frontend_value = register_widget(
+        widget_state = register_widget(
             "slider",
             slider_proto,
             user_key=key,
@@ -491,12 +491,12 @@ class SliderMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
-        if set_frontend_value:
-            slider_proto.value[:] = serialize_slider(current_value)
+        if widget_state.value_changed:
+            slider_proto.value[:] = serialize_slider(widget_state.value)
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
-        return current_value
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

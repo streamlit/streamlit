@@ -16,20 +16,21 @@ import socket
 from typing import Optional
 
 import requests
+from typing_extensions import Final
 
 from streamlit import util
-
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
 # URL for checking the current machine's external IP address.
-_AWS_CHECK_IP = "http://checkip.amazonaws.com"
+_AWS_CHECK_IP: Final = "http://checkip.amazonaws.com"
 
-_external_ip = None  # type: Optional[str]
+_external_ip: Optional[str] = None
+_internal_ip: Optional[str] = None
 
 
-def get_external_ip():
+def get_external_ip() -> Optional[str]:
     """Get the *external* IP address of the current machine.
 
     Returns
@@ -60,10 +61,7 @@ def get_external_ip():
     return _external_ip
 
 
-_internal_ip = None  # type: Optional[str]
-
-
-def get_internal_ip():
+def get_internal_ip() -> Optional[str]:
     """Get the *local* IP address of the current machine.
 
     From: https://stackoverflow.com/a/28950776
@@ -92,17 +90,17 @@ def get_internal_ip():
     return _internal_ip
 
 
-def _make_blocking_http_get(url, timeout=5):
+def _make_blocking_http_get(url: str, timeout: float = 5) -> Optional[str]:
     try:
         text = requests.get(url, timeout=timeout).text
         if isinstance(text, str):
             text = text.strip()
         return text
-    except Exception as e:
+    except Exception:
         return None
 
 
-def _looks_like_an_ip_adress(address):
+def _looks_like_an_ip_adress(address: Optional[str]) -> bool:
     if address is None:
         return False
 
