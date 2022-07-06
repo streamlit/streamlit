@@ -50,6 +50,15 @@ export const StyledVegaLiteChartContainer = styled.div(({ theme }) => ({
       height: "auto",
       // Fix floating button appearing above pop-ups.
       zIndex: theme.zIndices.menuButton,
+      border: "none",
+      background: theme.colors.lightenedBg05,
+      boxShadow: "none",
+      color: theme.colors.fadedText60,
+      "&:active, &:focus-visible, &:hover": {
+        border: "none",
+        boxShadow: "none",
+        color: theme.colors.bodyText,
+      },
     },
   },
 }))
