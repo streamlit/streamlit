@@ -189,8 +189,8 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       strokeWidth: 0,
       stroke: "transparent",
       continuousHeight: 350,
-      continuousWidth: 650,
-      discreteWidth: 650,
+      // continuousWidth: 650,
+      // discreteWidth: 650,
     },
     concat: {
       columns: 1,
@@ -199,15 +199,16 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       columns: 1,
     },
     mark: {
+      tooltip: true,
       color: "#0068C9",
     },
     bar: {
       binSpacing: 4,
       discreteBandSize: { band: 0.85 },
     },
-    axisQuantitative: {
-      grid: true,
-    },
+    // axisQuantitative: {
+    //   grid: true,
+    // },
     axisDiscrete: {
       grid: false,
     },
