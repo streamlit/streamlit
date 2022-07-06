@@ -13,11 +13,17 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Dict, Tuple, Optional, List, Set
+from typing import Any, Dict, Optional, List, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from .session_state import SessionState, WidgetMetadata
+
+from .session_state import (
+    SessionState,
+    WidgetMetadata,
+    RegisterWidgetResult,
+    T,
+)
 
 
 class SafeSessionState:
@@ -47,11 +53,11 @@ class SafeSessionState:
             self._disconnected = True
 
     def register_widget(
-        self, metadata: WidgetMetadata, user_key: Optional[str]
-    ) -> Tuple[Any, bool]:
+        self, metadata: WidgetMetadata[T], user_key: Optional[str]
+    ) -> RegisterWidgetResult[T]:
         with self._lock:
             if self._disconnected:
-                return None, False
+                return RegisterWidgetResult.failure(metadata.deserializer)
 
             return self._state.register_widget(metadata, user_key)
 

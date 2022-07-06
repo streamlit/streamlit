@@ -15,9 +15,8 @@
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from textwrap import dedent
-from typing import cast, Optional
+from typing import cast, Optional, TYPE_CHECKING
 
-import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.state import (
     register_widget,
@@ -27,6 +26,10 @@ from streamlit.state import (
 )
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 class CheckboxMixin:
@@ -127,7 +130,7 @@ class CheckboxMixin:
         def deserialize_checkbox(ui_value: Optional[bool], widget_id: str = "") -> bool:
             return bool(ui_value if ui_value is not None else value)
 
-        current_value, set_frontend_value = register_widget(
+        checkbox_state = register_widget(
             "checkbox",
             checkbox_proto,
             user_key=key,
@@ -142,14 +145,14 @@ class CheckboxMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         checkbox_proto.disabled = disabled
-        if set_frontend_value:
-            checkbox_proto.value = current_value
+        if checkbox_state.value_changed:
+            checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True
 
         self.dg._enqueue("checkbox", checkbox_proto)
-        return cast(bool, current_value)
+        return checkbox_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

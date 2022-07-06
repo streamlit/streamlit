@@ -20,17 +20,25 @@ import re
 import types
 from typing import (
     Any,
-    cast,
     Iterable,
     NamedTuple,
     Optional,
-    overload,
     Sequence,
     TypeVar,
     TYPE_CHECKING,
     Union,
+    cast,
+    overload,
 )
-from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard
+
+from typing_extensions import (
+    Final,
+    Literal,
+    Protocol,
+    TypeAlias,
+    TypeGuard,
+    get_args,
+)
 
 import pyarrow as pa
 
@@ -45,7 +53,56 @@ if TYPE_CHECKING:
     from pydeck.bindings.deck import Deck  # type: ignore[import]
 
 
-OptionSequence: TypeAlias = "Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]"
+# The array value field names are part of the larger set of possible value
+# field names. See the explanation for said set below. The message types
+# associated with these fields are distinguished by storing data in a `data`
+# field in their messages, meaning they need special treatment in certain
+# circumstances. Hence, they need their own, dedicated, sub-type.
+ArrayValueFieldName: TypeAlias = Literal[
+    "double_array_value",
+    "int_array_value",
+    "string_array_value",
+]
+
+# A frozenset containing the allowed values of the ArrayValueFieldName type.
+# Useful for membership checking.
+ARRAY_VALUE_FIELD_NAMES: Final = frozenset(
+    cast(
+        "tuple[ArrayValueFieldName, ...]",
+        # NOTE: get_args is not recursive, so this only works as long as
+        # ArrayValueFieldName remains flat.
+        get_args(ArrayValueFieldName),
+    )
+)
+
+# These are the possible field names that can be set in the `value` oneof-field
+# of the WidgetState message (schema found in .proto/WidgetStates.proto).
+# We need these as a literal type to ensure correspondence with the protobuf
+# schema in certain parts of the python code.
+# TODO(harahu): It would be preferable if this type was automatically derived
+#  from the protobuf schema, rather than manually maintained. Not sure how to
+#  achieve that, though.
+ValueFieldName: TypeAlias = Literal[
+    ArrayValueFieldName,
+    "arrow_value",
+    "bool_value",
+    "bytes_value",
+    "double_value",
+    "file_uploader_state_value",
+    "int_value",
+    "json_value",
+    "string_value",
+    "trigger_value",
+]
+
+OptionSequence: TypeAlias = Union[
+    Sequence[Any],
+    "DataFrame",
+    "Series",
+    "Index",
+    "np.ndarray",
+]
+
 Key: TypeAlias = Union[str, int]
 
 
@@ -55,6 +112,10 @@ T = TypeVar("T")
 class SupportsStr(Protocol):
     def __str__(self) -> str:
         ...
+
+
+def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
+    return obj in ARRAY_VALUE_FIELD_NAMES
 
 
 @overload
