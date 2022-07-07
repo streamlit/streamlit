@@ -258,7 +258,7 @@ class SingletonCache(Cache):
         self._mem_cache_lock = threading.Lock()
         self._message_cache: Dict[str, List[MsgData]] = {}
 
-    def read_value(self, key: str) -> CachedResult:
+    def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
         Raise `CacheKeyNotFoundError` if the value doesn't exist.
         """
@@ -271,7 +271,7 @@ class SingletonCache(Cache):
             else:
                 raise CacheKeyNotFoundError()
 
-    def write_value(self, key: str, value: Any, messages: List[MsgData]) -> None:
+    def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         with self._mem_cache_lock:
             self._mem_cache[key] = value

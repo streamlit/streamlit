@@ -58,7 +58,7 @@ class Cache:
     """Function cache interface. Caches persist across script runs."""
 
     @abstractmethod
-    def read_value(self, value_key: str) -> CachedResult:
+    def read_result(self, value_key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
 
         Raises
@@ -70,9 +70,9 @@ class Cache:
         raise NotImplementedError
 
     @abstractmethod
-    def write_value(self, value_key: str, value: Any, messages: List[MsgData]) -> None:
+    def write_result(self, value_key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache, overwriting any existing
-        value that uses the value_key.
+        result that uses the value_key.
         """
         raise NotImplementedError
 
@@ -143,7 +143,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
 
             try:
-                result = cache.read_value(value_key)
+                result = cache.read_result(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
                 dg = st._main
                 for msg in result.messages:
@@ -163,7 +163,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                         return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
-                cache.write_value(value_key, return_value, messages)
+                cache.write_result(value_key, return_value, messages)
 
             return return_value
 
