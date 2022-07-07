@@ -23,6 +23,7 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.sansSerif,
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   lineHeight: theme.lineHeights.table,
+  overflow: ["auto", "overlay"],
 }))
 
 export const StyledTable = styled.table(({ theme }) => ({
