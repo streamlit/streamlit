@@ -59,7 +59,7 @@ class Cache:
 
     @abstractmethod
     def read_value(self, value_key: str) -> CachedResult:
-        """Read a value from the cache.
+        """Read a value and associated messages from the cache.
 
         Raises
         ------
@@ -71,8 +71,8 @@ class Cache:
 
     @abstractmethod
     def write_value(self, value_key: str, value: Any, messages: List[MsgData]) -> None:
-        """Write a value to the cache, overwriting any existing value that
-        uses the value_key.
+        """Write a value and associated messages to the cache, overwriting any existing
+        value that uses the value_key.
         """
         raise NotImplementedError
 

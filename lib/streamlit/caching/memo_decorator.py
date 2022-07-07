@@ -402,8 +402,8 @@ class MemoCache(Cache):
         return stats
 
     def read_value(self, key: str) -> CachedResult:
-        """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
-        value doesn't exist, and `CacheError` if the value exists but can't
+        """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`
+        if the value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
         """
         try:
@@ -424,7 +424,9 @@ class MemoCache(Cache):
             raise CacheError(f"Failed to unpickle {key}") from exc
 
     def write_value(self, key: str, value: Any, messages: List[MsgData]) -> None:
-        """Write a value to the cache. It must be pickleable."""
+        """Write a value and associated messages to the cache.
+        The value must be pickleable.
+        """
         try:
             entry = CachedResult(value, messages)
             pickled_entry = pickle.dumps(entry)
