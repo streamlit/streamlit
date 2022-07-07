@@ -254,9 +254,8 @@ class SingletonCache(Cache):
     def __init__(self, key: str, display_name: str):
         self.key = key
         self.display_name = display_name
-        self._mem_cache: Dict[str, Any] = {}
+        self._mem_cache: Dict[str, CachedResult] = {}
         self._mem_cache_lock = threading.Lock()
-        self._message_cache: Dict[str, List[MsgData]] = {}
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -264,9 +263,7 @@ class SingletonCache(Cache):
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
-                entry = self._mem_cache[key]
-                messages = self._message_cache[key]
-                return CachedResult(entry, messages)
+                return self._mem_cache[key]
 
             else:
                 raise CacheKeyNotFoundError()
@@ -274,8 +271,7 @@ class SingletonCache(Cache):
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         with self._mem_cache_lock:
-            self._mem_cache[key] = value
-            self._message_cache[key] = messages
+            self._mem_cache[key] = CachedResult(value, messages)
 
     def clear(self) -> None:
         with self._mem_cache_lock:
@@ -288,7 +284,6 @@ class SingletonCache(Cache):
         with self._mem_cache_lock:
             mem_cache = self._mem_cache.copy()
 
-        # TODO: also record message memory use
         stats: List[CacheStat] = []
         for item_key, item_value in mem_cache.items():
             stats.append(

@@ -22,9 +22,8 @@ import streamlit as st
 from streamlit import StreamlitAPIException, file_util
 from streamlit.caching import memo_decorator
 from streamlit.caching.cache_errors import CacheError
-from streamlit.caching.cache_utils import MsgData
+from streamlit.caching.cache_utils import CachedResult, MsgData
 from streamlit.caching.memo_decorator import (
-    CachedResult,
     get_cache_path,
     get_memo_stats_provider,
 )
