@@ -91,7 +91,7 @@ export function extractCssProperty(
     "gm"
   )
   // Makes the regex simpler to match the element correctly:
-  cssStyle = cssStyle.replaceAll("{", " {")
+  cssStyle = cssStyle.replace(/{/g, " {")
 
   const match = regex.exec(cssStyle)
   if (match) {
