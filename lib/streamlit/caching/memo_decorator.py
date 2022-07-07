@@ -418,7 +418,8 @@ class MemoCache(Cache):
 
         try:
             entry = pickle.loads(pickled_entry)
-            assert isinstance(entry, CachedResult)
+            if not isinstance(entry, CachedResult):
+                raise CacheError(f"Failed to unpickle {key}")
             return entry
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
