@@ -288,6 +288,7 @@ class SingletonCache(Cache):
         with self._mem_cache_lock:
             mem_cache = self._mem_cache.copy()
 
+        # TODO: also record message memory use
         stats: List[CacheStat] = []
         for item_key, item_value in mem_cache.items():
             stats.append(
