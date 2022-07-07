@@ -35,7 +35,7 @@ function makeHorizontalBlock(numColumns: number): BlockNode {
 
   return new BlockNode(
     Array.from({ length: numColumns }, () => makeColumn(weight)),
-    new BlockProto({ allowEmpty: true, horizontal: true })
+    new BlockProto({ allowEmpty: true, horizontal: { gap: "small" } })
   )
 }
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, List, Sequence, TYPE_CHECKING, Union
+from typing import cast, List, Sequence, TYPE_CHECKING, Union, Optional
 
 from streamlit.beta_util import function_beta_warning
 from streamlit.errors import StreamlitAPIException
@@ -69,7 +69,9 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def columns(self, spec: SpecType) -> List["DeltaGenerator"]:
+    def columns(
+        self, spec: SpecType, *, gap: Optional[str] = "small"
+    ) -> List["DeltaGenerator"]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -97,6 +99,10 @@ class LayoutsMixin:
                 For example, `st.columns([3, 1, 2])` creates 3 columns where
                 the first column is 3 times the width of the second, and the last
                 column is 2 times that width.
+        gap : string ("small", "medium", or "large")
+            An optional string, which indicates the size of the gap between each column.
+            The default is a small gap between columns. This argument can only be supplied by
+            keyword.
 
         Returns
         -------
@@ -159,14 +165,30 @@ class LayoutsMixin:
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise weights_exception
 
+        def column_gap(gap):
+            if type(gap) == str:
+                gap_size = gap.lower()
+                valid_sizes = ["small", "medium", "large"]
+
+                if gap_size in valid_sizes:
+                    return gap_size
+
+            raise StreamlitAPIException(
+                'The gap argument to st.columns must be "small", "medium", or "large". \n'
+                f"The argument passed was {gap}."
+            )
+
+        gap_size = column_gap(gap)
+
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
+            col_proto.column.gap = gap_size
             col_proto.allow_empty = True
             return col_proto
 
         block_proto = BlockProto()
-        block_proto.horizontal.SetInParent()
+        block_proto.horizontal.gap = gap_size
         row = self.dg._block(block_proto)
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]

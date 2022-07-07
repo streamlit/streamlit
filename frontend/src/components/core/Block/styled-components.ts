@@ -19,16 +19,35 @@ import React from "react"
 import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
-export const StyledHorizontalBlock = styled.div(({ theme }) => ({
-  // While using flex for columns, padding is used for large screens and gap
-  // for small ones. This can be adjusted once more information is passed.
-  // More information and discussions can be found: Issue #2716, PR #2811
-  display: "flex",
-  flexWrap: "wrap",
-  flexGrow: 1,
-  alignItems: "stretch",
-  gap: theme.spacing.lg,
-}))
+function translateGapWidth(gap: string, theme: Theme): string {
+  let gapWidth = theme.spacing.lg
+  if (gap === "medium") {
+    gapWidth = theme.spacing.threeXL
+  } else if (gap === "large") {
+    gapWidth = theme.spacing.fourXL
+  }
+  return gapWidth
+}
+export interface StyledHorizontalBlockProps {
+  gap: string
+}
+
+export const StyledHorizontalBlock = styled.div<StyledHorizontalBlockProps>(
+  ({ theme, gap }) => {
+    const gapWidth = translateGapWidth(gap, theme)
+
+    return {
+      // While using flex for columns, padding is used for large screens and gap
+      // for small ones. This can be adjusted once more information is passed.
+      // More information and discussions can be found: Issue #2716, PR #2811
+      display: "flex",
+      flexWrap: "wrap",
+      flexGrow: 1,
+      alignItems: "stretch",
+      gap: gapWidth,
+    }
+  }
+)
 
 export interface StyledElementContainerProps {
   isStale: boolean
@@ -74,12 +93,14 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 interface StyledColumnProps {
   weight: number
+  gap: string
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ weight, theme }) => {
+  ({ weight, gap, theme }) => {
     const percentage = weight * 100
-    const width = `calc(${percentage}% - ${theme.spacing.lg})`
+    const gapWidth = translateGapWidth(gap, theme)
+    const width = `calc(${percentage}% - ${gapWidth})`
 
     return {
       // Calculate width based on percentage, but fill all available space,
