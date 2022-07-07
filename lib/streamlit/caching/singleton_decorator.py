@@ -25,19 +25,19 @@ from streamlit.stats import CacheStatsProvider, CacheStat
 from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import (
     Cache,
-    CachedFunctionMessagesCallStack,
+    CacheMessagesCallStack,
     CachedResult,
     MsgData,
     create_cache_wrapper,
-    CachedFunctionCallStack,
+    CacheWarningCallStack,
     CachedFunction,
 )
 
 _LOGGER = get_logger(__name__)
 
 
-SINGLETON_CALL_STACK = CachedFunctionCallStack(CacheType.SINGLETON)
-SINGLETON_MESSAGE_CALL_STACK = CachedFunctionMessagesCallStack(CacheType.SINGLETON)
+SINGLETON_CALL_STACK = CacheWarningCallStack(CacheType.SINGLETON)
+SINGLETON_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.SINGLETON)
 
 
 class SingletonCaches(CacheStatsProvider):
@@ -100,11 +100,11 @@ class SingletonFunction(CachedFunction):
         return CacheType.SINGLETON
 
     @property
-    def call_stack(self) -> CachedFunctionCallStack:
+    def call_stack(self) -> CacheWarningCallStack:
         return SINGLETON_CALL_STACK
 
     @property
-    def message_call_stack(self) -> CachedFunctionMessagesCallStack:
+    def message_call_stack(self) -> CacheMessagesCallStack:
         return SINGLETON_MESSAGE_CALL_STACK
 
     @property

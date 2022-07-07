@@ -43,9 +43,9 @@ from .cache_utils import (
     CachedResult,
     MsgData,
     create_cache_wrapper,
-    CachedFunctionCallStack,
+    CacheWarningCallStack,
     CachedFunction,
-    CachedFunctionMessagesCallStack,
+    CacheMessagesCallStack,
 )
 
 _LOGGER = get_logger(__name__)
@@ -60,8 +60,8 @@ _TTLCACHE_TIMER = time.monotonic
 _CACHE_DIR_NAME = "cache"
 
 
-MEMO_CALL_STACK = CachedFunctionCallStack(CacheType.MEMO)
-MEMO_MESSAGES_CALL_STACK = CachedFunctionMessagesCallStack(CacheType.MEMO)
+MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
+MEMO_MESSAGES_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
 
 
 class MemoizedFunction(CachedFunction):
@@ -86,11 +86,11 @@ class MemoizedFunction(CachedFunction):
         return CacheType.MEMO
 
     @property
-    def call_stack(self) -> CachedFunctionCallStack:
+    def call_stack(self) -> CacheWarningCallStack:
         return MEMO_CALL_STACK
 
     @property
-    def message_call_stack(self) -> CachedFunctionMessagesCallStack:
+    def message_call_stack(self) -> CacheMessagesCallStack:
         return MEMO_MESSAGES_CALL_STACK
 
     @property
