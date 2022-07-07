@@ -463,6 +463,8 @@ class MemoCache(Cache):
             with streamlit_read(path, binary=True) as input:
                 value = input.read()
                 _LOGGER.debug("Disk cache HIT: %s", key)
+                # The value is a pickled CachedResult, but we don't unpickle it yet
+                # so we can avoid having to repickle it when writing to the mem_cache
                 return bytes(value)
         except FileNotFoundError:
             raise CacheKeyNotFoundError("Key not found in disk cache")
