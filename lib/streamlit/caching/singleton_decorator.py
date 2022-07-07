@@ -16,7 +16,7 @@
 
 import threading
 import types
-from typing import Optional, Any, Dict, List, TypeVar, Callable, overload, cast, Tuple
+from typing import Optional, Any, Dict, List, TypeVar, Callable, overload, cast
 
 from pympler import asizeof
 

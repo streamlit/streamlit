@@ -13,16 +13,13 @@
 # limitations under the License.
 
 """@st.memo: pickle-based caching"""
-import contextlib
-import functools
 import os
 import pickle
 import shutil
 import threading
 import time
 import types
-from typing import Optional, Any, Dict, Tuple, cast, List, Callable, TypeVar, overload
-from typing import Union
+from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload, Union
 
 import math
 from cachetools import TTLCache
