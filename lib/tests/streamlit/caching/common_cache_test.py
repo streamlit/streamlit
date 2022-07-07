@@ -191,7 +191,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 st.text("Inside cached func")
 
             cached_func()
-            warning.assert_not_called
+            warning.assert_not_called()
 
             warning.reset_mock()
 
