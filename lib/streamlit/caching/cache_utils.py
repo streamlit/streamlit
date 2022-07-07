@@ -48,11 +48,17 @@ class MsgData:
     message: Message
 
 
+@define
+class CachedValue:
+    value: Any
+    messages: List[MsgData]
+
+
 class Cache:
     """Function cache interface. Caches persist across script runs."""
 
     @abstractmethod
-    def read_value(self, value_key: str) -> Tuple[Any, List[MsgData]]:
+    def read_value(self, value_key: str) -> CachedValue:
         """Read a value from the cache.
 
         Raises
@@ -137,11 +143,12 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
 
             try:
-                return_value, messages = cache.read_value(value_key)
+                value = cache.read_value(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
                 dg = st._main
-                for msg in messages:
+                for msg in value.messages:
                     dg._enqueue(msg.delta_type, msg.message)
+                return_value = value.value
 
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)

@@ -22,14 +22,11 @@ import threading
 import time
 import types
 from typing import Optional, Any, Dict, Tuple, cast, List, Callable, TypeVar, overload
-from typing import Union, Iterator
+from typing import Union
 
 import math
-from attr import define
 from cachetools import TTLCache
-from google.protobuf.message import Message
 
-import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import (
@@ -46,6 +43,7 @@ from .cache_errors import (
 )
 from .cache_utils import (
     Cache,
+    CachedValue,
     MsgData,
     create_cache_wrapper,
     CachedFunctionCallStack,
@@ -366,12 +364,6 @@ class MemoAPI:
         _memo_caches.clear_all()
 
 
-@define
-class CachedValue:
-    value: Any
-    messages: List[MsgData]
-
-
 class MemoCache(Cache):
     """Manages cached values for a single st.memo-ized function."""
 
@@ -412,7 +404,7 @@ class MemoCache(Cache):
                 )
         return stats
 
-    def read_value(self, key: str) -> Tuple[Any, List[MsgData]]:
+    def read_value(self, key: str) -> CachedValue:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
@@ -429,7 +421,7 @@ class MemoCache(Cache):
 
         try:
             entry = pickle.loads(pickled_entry)
-            return (entry.value, entry.messages)
+            return entry
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
