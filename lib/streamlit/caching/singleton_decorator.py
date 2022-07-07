@@ -100,7 +100,7 @@ class SingletonFunction(CachedFunction):
         return CacheType.SINGLETON
 
     @property
-    def call_stack(self) -> CacheWarningCallStack:
+    def warning_call_stack(self) -> CacheWarningCallStack:
         return SINGLETON_CALL_STACK
 
     @property

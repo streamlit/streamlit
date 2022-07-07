@@ -86,7 +86,7 @@ class MemoizedFunction(CachedFunction):
         return CacheType.MEMO
 
     @property
-    def call_stack(self) -> CacheWarningCallStack:
+    def warning_call_stack(self) -> CacheWarningCallStack:
         return MEMO_CALL_STACK
 
     @property

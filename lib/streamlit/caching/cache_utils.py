@@ -101,7 +101,7 @@ class CachedFunction:
         raise NotImplementedError
 
     @property
-    def call_stack(self) -> "CacheWarningCallStack":
+    def warning_call_stack(self) -> "CacheWarningCallStack":
         raise NotImplementedError
 
     @property
@@ -153,11 +153,11 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with cached_func.call_stack.calling_cached_function(
+                with cached_func.warning_call_stack.calling_cached_function(
                     func
                 ), cached_func.message_call_stack.calling_cached_function():
                     if cached_func.suppress_st_warning:
-                        with cached_func.call_stack.suppress_cached_st_function_warning():
+                        with cached_func.warning_call_stack.suppress_cached_st_function_warning():
                             return_value = func(*args, **kwargs)
                     else:
                         return_value = func(*args, **kwargs)
