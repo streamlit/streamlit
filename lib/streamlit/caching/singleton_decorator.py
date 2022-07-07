@@ -26,7 +26,7 @@ from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import (
     Cache,
     CachedFunctionMessagesCallStack,
-    CachedValue,
+    CachedResult,
     MsgData,
     create_cache_wrapper,
     CachedFunctionCallStack,
@@ -258,7 +258,7 @@ class SingletonCache(Cache):
         self._mem_cache_lock = threading.Lock()
         self._message_cache: Dict[str, List[MsgData]] = {}
 
-    def read_value(self, key: str) -> CachedValue:
+    def read_value(self, key: str) -> CachedResult:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist.
         """
@@ -266,7 +266,7 @@ class SingletonCache(Cache):
             if key in self._mem_cache:
                 entry = self._mem_cache[key]
                 messages = self._message_cache[key]
-                return CachedValue(entry, messages)
+                return CachedResult(entry, messages)
 
             else:
                 raise CacheKeyNotFoundError()

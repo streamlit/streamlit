@@ -24,7 +24,7 @@ from streamlit.caching import memo_decorator
 from streamlit.caching.cache_errors import CacheError
 from streamlit.caching.cache_utils import MsgData
 from streamlit.caching.memo_decorator import (
-    CachedValue,
+    CachedResult,
     get_cache_path,
     get_memo_stats_provider,
 )
@@ -33,8 +33,8 @@ from streamlit.stats import CacheStat
 from tests.testutil import DeltaGeneratorTestCase
 
 
-def as_cached_value(value):
-    return CachedValue(value, [])
+def as_cached_result(value):
+    return CachedResult(value, [])
 
 
 class MemoTest(unittest.TestCase):
@@ -158,7 +158,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
         "streamlit.file_util.open",
-        mock_open(read_data=pickle.dumps(as_cached_value("mock_pickled_value"))),
+        mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
     @patch(
         "streamlit.caching.memo_decorator.streamlit_read",
@@ -225,7 +225,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
         "streamlit.file_util.open",
-        wraps=mock_open(read_data=pickle.dumps(as_cached_value("mock_pickled_value"))),
+        wraps=mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
     @patch("streamlit.caching.memo_decorator.os.remove")
     def test_clear_one_disk_cache(self, mock_os_remove: Mock, mock_open: Mock):
@@ -270,7 +270,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         "streamlit.file_util.open",
         wraps=mock_open(
             read_data=pickle.dumps(
-                CachedValue(1, [MsgData("text", TextProto(body="1"))])
+                CachedResult(1, [MsgData("text", TextProto(body="1"))])
             )
         ),
     )
@@ -324,17 +324,17 @@ class MemoStatsProviderTest(unittest.TestCase):
             CacheStat(
                 category_name="st_memo",
                 cache_name=foo_cache_name,
-                byte_length=get_byte_length(as_cached_value([3.14])),
+                byte_length=get_byte_length(as_cached_result([3.14])),
             ),
             CacheStat(
                 category_name="st_memo",
                 cache_name=foo_cache_name,
-                byte_length=get_byte_length(as_cached_value([3.14] * 53)),
+                byte_length=get_byte_length(as_cached_result([3.14] * 53)),
             ),
             CacheStat(
                 category_name="st_memo",
                 cache_name=bar_cache_name,
-                byte_length=get_byte_length(as_cached_value("shivermetimbers")),
+                byte_length=get_byte_length(as_cached_result("shivermetimbers")),
             ),
         ]
 
