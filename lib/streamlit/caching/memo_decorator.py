@@ -468,15 +468,15 @@ class MemoCache(Cache):
             _LOGGER.error(e)
             raise CacheError("Unable to read from cache") from e
 
-    def _write_to_mem_cache(self, key: str, value: bytes) -> None:
+    def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
         with self._mem_cache_lock:
-            self._mem_cache[key] = value
+            self._mem_cache[key] = pickled_value
 
-    def _write_to_disk_cache(self, key: str, value: bytes) -> None:
+    def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
         path = self._get_file_path(key)
         try:
             with streamlit_write(path, binary=True) as output:
-                output.write(value)
+                output.write(pickled_value)
         except util.Error as e:
             _LOGGER.debug(e)
             # Clean up file so we don't leave zero byte files.
