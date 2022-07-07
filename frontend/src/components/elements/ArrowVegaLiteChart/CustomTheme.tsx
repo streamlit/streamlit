@@ -64,7 +64,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       labelSeparation: 4,
     },
     legend: {
-      labelFontSize: theme.fontSizes.twoSmPx,
+      labelFontSize: theme.fontSizes.smPx,
       labelFontWeight: theme.fontWeights.normal,
       labelColor: theme.colors.bodyText,
       titleFontSize: theme.fontSizes.smPx,
