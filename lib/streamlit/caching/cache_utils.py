@@ -21,8 +21,8 @@ import inspect
 import threading
 import types
 from abc import abstractmethod
+from dataclasses import dataclass
 from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
-from attr import define
 
 from google.protobuf.message import Message
 
@@ -42,13 +42,13 @@ from .hashing import update_hash
 _LOGGER = get_logger(__name__)
 
 
-@define
+@dataclass
 class MsgData:
     delta_type: str
     message: Message
 
 
-@define
+@dataclass
 class CachedResult:
     value: Any
     messages: List[MsgData]
