@@ -202,7 +202,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
     },
     mark: {
       tooltip: true,
-      color: "#0068C9",
+      ...(hasLightBg ? { color: "#0068C9" } : { color: "#83C9FF" }),
     },
     bar: {
       binSpacing: 4,
