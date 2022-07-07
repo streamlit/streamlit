@@ -418,6 +418,7 @@ class MemoCache(Cache):
 
         try:
             entry = pickle.loads(pickled_entry)
+            assert isinstance(entry, CachedResult)
             return entry
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
@@ -446,8 +447,9 @@ class MemoCache(Cache):
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
             if key in self._mem_cache:
+                entry = bytes(self._mem_cache[key])
                 _LOGGER.debug("Memory cache HIT: %s", key)
-                return self._mem_cache[key]
+                return entry
 
             else:
                 _LOGGER.debug("Memory cache MISS: %s", key)
