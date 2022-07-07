@@ -368,7 +368,7 @@ class MemoAPI:
 
 @define
 class CachedValue:
-    value: bytes
+    value: Any
     messages: List[MsgData]
 
 
@@ -386,11 +386,10 @@ class MemoCache(Cache):
         self.key = key
         self.display_name = display_name
         self.persist = persist
-        self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
-        self._mem_cache_lock = threading.Lock()
-        self._message_cache: TTLCache[str, List[MsgData]] = TTLCache(
+        self._mem_cache: TTLCache[str, bytes] = TTLCache(
             maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER
         )
+        self._mem_cache_lock = threading.Lock()
 
     @property
     def max_entries(self) -> float:
@@ -419,32 +418,32 @@ class MemoCache(Cache):
         be unpickled.
         """
         try:
-            pickled_value = self._read_from_mem_cache(key).value
-            messages = self._read_from_mem_cache(key).messages
+            pickled_entry = self._read_from_mem_cache(key)
 
         except CacheKeyNotFoundError as e:
             if self.persist == "disk":
-                pickled_value = self._read_from_disk_cache(key)
-                messages = []
-                self._write_to_mem_cache(key, CachedValue(pickled_value, messages))
+                pickled_entry = self._read_from_disk_cache(key)
+                self._write_to_mem_cache(key, pickled_entry)
             else:
                 raise e
 
         try:
-            return (pickle.loads(pickled_value), messages)
+            entry = pickle.loads(pickled_entry)
+            return (entry.value, entry.messages)
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
     def write_value(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value to the cache. It must be pickleable."""
         try:
-            pickled_value = pickle.dumps(value)
+            entry = CachedValue(value, messages)
+            pickled_entry = pickle.dumps(entry)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
-        self._write_to_mem_cache(key, CachedValue(pickled_value, messages))
+        self._write_to_mem_cache(key, pickled_entry)
         if self.persist == "disk":
-            self._write_to_disk_cache(key, pickled_value)
+            self._write_to_disk_cache(key, pickled_entry)
 
     def clear(self) -> None:
         with self._mem_cache_lock:
@@ -455,13 +454,11 @@ class MemoCache(Cache):
 
             self._mem_cache.clear()
 
-    def _read_from_mem_cache(self, key: str) -> CachedValue:
+    def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
             if key in self._mem_cache:
-                entry = bytes(self._mem_cache[key])
-                messages: List[MsgData] = self._message_cache[key]
                 _LOGGER.debug("Memory cache HIT: %s", key)
-                return CachedValue(entry, messages)
+                return self._mem_cache[key]
 
             else:
                 _LOGGER.debug("Memory cache MISS: %s", key)
@@ -480,16 +477,15 @@ class MemoCache(Cache):
             _LOGGER.error(e)
             raise CacheError("Unable to read from cache") from e
 
-    def _write_to_mem_cache(self, key: str, value: CachedValue) -> None:
+    def _write_to_mem_cache(self, key: str, value: bytes) -> None:
         with self._mem_cache_lock:
-            self._mem_cache[key] = value.value
-            self._message_cache[key] = value.messages
+            self._mem_cache[key] = value
 
-    def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
+    def _write_to_disk_cache(self, key: str, value: bytes) -> None:
         path = self._get_file_path(key)
         try:
             with streamlit_write(path, binary=True) as output:
-                output.write(pickled_value)
+                output.write(value)
         except util.Error as e:
             _LOGGER.debug(e)
             # Clean up file so we don't leave zero byte files.
