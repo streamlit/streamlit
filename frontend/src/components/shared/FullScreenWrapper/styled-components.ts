@@ -26,7 +26,7 @@ export const StyledFullScreenButton = styled.button<
 >(({ isExpanded, theme }) => {
   const variableProps = isExpanded
     ? {
-        right: "0.3rem",
+        right: "0.4rem",
         top: "0.5rem",
         backgroundColor: "transparent",
       }

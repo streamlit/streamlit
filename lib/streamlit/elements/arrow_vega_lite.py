@@ -16,7 +16,7 @@
 
 import json
 from typing import Any, Dict, Optional, cast, TYPE_CHECKING
-from typing_extensions import Final, Literal
+from typing_extensions import Final
 
 import altair as alt
 
@@ -45,8 +45,6 @@ class ArrowVegaLiteMixin:
         data: Data = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
-        *,  # keyword-only arguments:
-        theme: Optional[Literal["streamlit"]] = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
@@ -112,7 +110,6 @@ class ArrowVegaLiteMixin:
             data,
             spec,
             use_container_width=use_container_width,
-            theme=theme,
             **kwargs,
         )
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
@@ -128,7 +125,6 @@ def marshall(
     data: Data = None,
     spec: Optional[Dict[str, Any]] = None,
     use_container_width: bool = False,
-    theme: Optional[Literal["streamlit"]] = None,
     **kwargs,
 ):
     """Construct a Vega-Lite chart object.
@@ -190,8 +186,6 @@ def marshall(
             del spec["data"]
 
     proto.spec = json.dumps(spec)
-    if theme:
-        proto.theme = str(theme)
     proto.use_container_width = use_container_width
 
     if data is not None:

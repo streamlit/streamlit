@@ -79,8 +79,6 @@ export interface VegaLiteChartElement {
 
   /** If True, will overwrite the chart width spec to fit to container. */
   useContainerWidth: boolean
-
-  theme: string | null
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */

@@ -20,8 +20,7 @@ from datetime import date
 from enum import Enum
 from typing import Any
 from typing import Dict
-from typing import cast, TYPE_CHECKING, Optional
-from typing_extensions import Literal
+from typing import cast, TYPE_CHECKING
 
 import altair as alt
 import pandas as pd
@@ -53,7 +52,6 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Optional[Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a line chart.
 
@@ -95,7 +93,7 @@ class ArrowAltairMixin:
         """
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.LINE, data, width, height)
-        marshall(proto, chart, use_container_width, theme=theme)
+        marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
@@ -106,7 +104,6 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Optional[Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display an area chart.
 
@@ -148,7 +145,7 @@ class ArrowAltairMixin:
         """
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.AREA, data, width, height)
-        marshall(proto, chart, use_container_width, theme=theme)
+        marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
@@ -159,7 +156,6 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Optional[Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a bar chart.
 
@@ -201,7 +197,7 @@ class ArrowAltairMixin:
         """
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.BAR, data, width, height)
-        marshall(proto, chart, use_container_width, theme=theme)
+        marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
@@ -210,7 +206,6 @@ class ArrowAltairMixin:
         self,
         altair_chart: Chart,
         use_container_width: bool = False,
-        theme: Optional[Literal["streamlit"]] = None,
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -252,7 +247,6 @@ class ArrowAltairMixin:
             proto,
             altair_chart,
             use_container_width=use_container_width,
-            theme=theme,
         )
 
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
@@ -346,7 +340,6 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: Chart,
     use_container_width: bool = False,
-    theme: Optional[Literal["streamlit"]] = None,
     **kwargs: Any,
 ) -> None:
     """Marshall chart's data into proto."""
@@ -378,6 +371,5 @@ def marshall(
             vega_lite_chart,
             chart_dict,
             use_container_width=use_container_width,
-            theme=theme,
             **kwargs,
         )
