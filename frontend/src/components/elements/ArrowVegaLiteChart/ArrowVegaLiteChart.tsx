@@ -36,11 +36,6 @@ const MagicFields = {
 const DEFAULT_DATA_NAME = "source"
 
 /**
- * Horizontal space needed for the embed actions button.
- */
-const EMBED_PADDING = 38
-
-/**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
  * For example, in e2e/scripts/add_rows.py
  */
@@ -215,19 +210,21 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const { element: el, theme } = this.props
     const spec = JSON.parse(el.spec)
     const { useContainerWidth } = el
-
-    if (el.theme === "streamlit") {
+    if (spec.usermeta?.embedOptions?.theme === "streamlit") {
       spec.config = applyStreamlitTheme(spec.config, theme)
+      // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
+      spec.usermeta.embedOptions.theme = undefined
     } else {
+      // Apply minor theming improvments to work better with Streamlit
       spec.config = applyThemeDefaults(spec.config, theme)
     }
 
     if (this.props.height) {
       // fullscreen
-      spec.width = this.props.width - EMBED_PADDING
+      spec.width = this.props.width
       spec.height = this.props.height
     } else if (useContainerWidth) {
-      spec.width = this.props.width - EMBED_PADDING
+      spec.width = this.props.width
     }
 
     if (!spec.padding) {
@@ -327,7 +324,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const spec = this.generateSpec()
     const { vgSpec, view, finalize } = await embed(this.element, spec, {
       defaultStyle: true,
-      tooltip: { theme: "custom" },
     })
 
     this.vegaView = view

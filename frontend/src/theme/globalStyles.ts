@@ -77,8 +77,9 @@ export const globalStyles = (theme: Theme): any => css`
     border: 1px solid ${theme.colors.fadedText10};
     background-color: ${transparentize(theme.colors.bgColor, 0.05)};
     font-size: ${theme.fontSizes.sm};
-    box-shadow: rgb(0 0 0 / 16%) 0px 4px 16px;
-    padding: ${theme.spacing.sm};
+    box-shadow: rgb(0 0 0 / 16%) 0px 1px 4px;
+    padding: ${theme.spacing.xs} ${theme.spacing.md};
+    border-radius: ${theme.radii.md};
   }
 
   #vg-tooltip-element td {
