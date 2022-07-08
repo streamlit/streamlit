@@ -80,6 +80,7 @@ export const globalStyles = (theme: Theme): any => css`
     box-shadow: rgb(0 0 0 / 16%) 0px 1px 4px;
     padding: ${theme.spacing.xs} ${theme.spacing.md};
     border-radius: ${theme.radii.md};
+    z-index: ${theme.zIndices.fullscreenWrapper};
   }
 
   #vg-tooltip-element td {
