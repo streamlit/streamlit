@@ -47,7 +47,7 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv "typing-extensions < 3.10" ;
+	pip install pip-tools pipenv ;
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install py-test-install
@@ -164,7 +164,8 @@ install:
 .PHONY: develop
 # Install Streamlit as links in your Python environment, pointing to local workspace.
 develop:
-	cd lib ; python setup.py develop
+	cd lib; \
+		pipenv install --skip-lock --sequential
 
 .PHONY: distribution
 # Create Python distribution files in dist/.
