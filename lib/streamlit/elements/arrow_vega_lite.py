@@ -37,9 +37,9 @@ LOGGER: Final = get_logger(__name__)
 
 # Create and enable streamlit theme
 alt.themes.register(
-    'streamlit', lambda: {"usermeta": {"embedOptions": {"theme": "streamlit"}}}
+    "streamlit", lambda: {"usermeta": {"embedOptions": {"theme": "streamlit"}}}
 )
-alt.themes.enable('streamlit')
+alt.themes.enable("streamlit")
 
 class ArrowVegaLiteMixin:
     def _arrow_vega_lite_chart(
