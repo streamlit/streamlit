@@ -24,21 +24,21 @@ import pytest
 import tornado.testing
 import tornado.web
 
+import streamlit as st
+import streamlit.components.v1 as components
 from streamlit import StreamlitAPIException
 from streamlit.components.v1 import component_arrow
 from streamlit.components.v1.components import (
     ComponentRegistry,
-    ComponentRequestHandler,
     CustomComponent,
     declare_component,
 )
-import streamlit.components.v1 as components
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
+from streamlit.web.server import ComponentRequestHandler
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
-import streamlit as st
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
@@ -426,7 +426,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             declare_component("test", path=PATH)
 
         with mock.patch(
-            "streamlit.components.v1.components.open",
+            "streamlit.web.server.component_request_handler.open",
             mock.mock_open(read_data="Test Content"),
         ):
             response = self._request_component("components_test.test")
@@ -447,7 +447,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         with mock.patch("streamlit.components.v1.components.os.path.isdir"):
             declare_component("test", path=PATH)
 
-        with mock.patch("streamlit.components.v1.components.open") as m:
+        with mock.patch("streamlit.web.server.component_request_handler.open") as m:
             m.side_effect = OSError("Invalid content")
             response = self._request_component("components_test.test")
 
@@ -484,7 +484,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         payload = b"\x00\x01\x00\x00\x00\x0D\x00\x80"  # binary non utf-8 payload
 
-        with mock.patch("streamlit.components.v1.components.open") as m:
+        with mock.patch("streamlit.web.server.component_request_handler.open") as m:
             m.return_value.__enter__ = lambda _: _open_read(m, payload)
             response = self._request_component("components_test.test")
 

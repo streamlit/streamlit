@@ -62,10 +62,10 @@ from streamlit.stats import StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.components.v1.components import ComponentRegistry
-from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from .stats_request_handler import StatsRequestHandler
+from .component_request_handler import ComponentRequestHandler
 from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,

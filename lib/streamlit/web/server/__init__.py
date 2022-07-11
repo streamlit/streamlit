@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .component_request_handler import ComponentRequestHandler
+from .routes import (
+    allow_cross_origin_requests as allow_cross_origin_requests,
+)
 from .server import (
     Server as Server,
     server_address_is_unix_socket as server_address_is_unix_socket,
 )
-
-from .routes import (
-    allow_cross_origin_requests as allow_cross_origin_requests,
-)
-
 from .stats_request_handler import StatsRequestHandler
