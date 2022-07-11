@@ -28,9 +28,9 @@ from parameterized import parameterized
 from testfixtures import tempdir
 
 import streamlit
-from streamlit import cli
+from streamlit.web import cli
 from streamlit import config
-from streamlit.cli import _convert_config_option_to_click_option
+from streamlit.web.cli import _convert_config_option_to_click_option
 from streamlit.config_option import ConfigOption
 
 
@@ -64,7 +64,7 @@ class CliTest(unittest.TestCase):
     def test_run_existing_file_argument(self):
         """streamlit run succeeds if an existing file is passed."""
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
             result = self.runner.invoke(cli, ["run", "file_name.py"])
@@ -74,7 +74,7 @@ class CliTest(unittest.TestCase):
         """streamlit run should fail if a non existing file is passed."""
 
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=False):
 
             result = self.runner.invoke(cli, ["run", "file_name.py"])
@@ -96,7 +96,7 @@ class CliTest(unittest.TestCase):
         """streamlit run succeeds if an existing url is passed."""
 
         with patch("validators.url", return_value=True), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), requests_mock.mock() as m:
 
             file_content = b"content"
@@ -116,7 +116,7 @@ class CliTest(unittest.TestCase):
         """
 
         with patch("validators.url", return_value=True), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), requests_mock.mock() as m:
 
             m.get("http://url/app.py", exc=requests.exceptions.RequestException)
@@ -132,7 +132,7 @@ class CliTest(unittest.TestCase):
         with patch("validators.url", return_value=False), patch(
             "os.path.exists", return_value=True
         ):
-            with patch("streamlit.cli._main_run") as mock_main_run:
+            with patch("streamlit.web.cli._main_run") as mock_main_run:
                 result = self.runner.invoke(
                     cli,
                     [
@@ -153,7 +153,7 @@ class CliTest(unittest.TestCase):
 
     def test_run_command_with_flag_config_options(self):
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
             result = self.runner.invoke(
@@ -191,9 +191,9 @@ class CliTest(unittest.TestCase):
         calling `streamlit run...`, and false otherwise.
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
-        with patch("streamlit.cli.bootstrap.run"), mock.patch(
+        with patch("streamlit.web.cli.bootstrap.run"), mock.patch(
             "streamlit.credentials.Credentials._check_activated"
-        ), patch("streamlit.cli._get_command_line_as_string"):
+        ), patch("streamlit.web.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
             self.assertTrue(streamlit._is_running_with_streamlit)
@@ -298,7 +298,7 @@ class CliTest(unittest.TestCase):
         """Tests the hello command runs the hello script in streamlit"""
         from streamlit.hello import Hello
 
-        with patch("streamlit.cli._main_run") as mock_main_run:
+        with patch("streamlit.web.cli._main_run") as mock_main_run:
             self.runner.invoke(cli, ["hello"])
 
             mock_main_run.assert_called_once()
@@ -308,9 +308,8 @@ class CliTest(unittest.TestCase):
     @patch("streamlit.logger.get_logger")
     def test_hello_command_with_logs(self, get_logger):
         """Tests setting log level using --log_level prints a warning."""
-        from streamlit.hello import Hello
 
-        with patch("streamlit.cli._main_run"):
+        with patch("streamlit.web.cli._main_run"):
             self.runner.invoke(cli, ["--log_level", "error", "hello"])
 
             mock_logger = get_logger()
@@ -318,7 +317,7 @@ class CliTest(unittest.TestCase):
 
     def test_hello_command_with_flag_config_options(self):
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
             result = self.runner.invoke(cli, ["hello", "--server.port=8502"])
@@ -338,7 +337,7 @@ class CliTest(unittest.TestCase):
 
     def test_config_show_command_with_flag_config_options(self):
         with patch("validators.url", return_value=False), patch(
-            "streamlit.cli._main_run"
+            "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
 
             result = self.runner.invoke(cli, ["config", "show", "--server.port=8502"])
