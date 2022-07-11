@@ -20,3 +20,5 @@ from .server import (
 from .routes import (
     allow_cross_origin_requests as allow_cross_origin_requests,
 )
+
+from .stats_request_handler import StatsRequestHandler

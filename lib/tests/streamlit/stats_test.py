@@ -21,7 +21,8 @@ import tornado.web
 from google.protobuf.json_format import MessageToDict
 
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
-from streamlit.stats import StatsHandler, CacheStat, CacheStatsProvider, StatsManager
+from streamlit.stats import CacheStat, CacheStatsProvider, StatsManager
+from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from tornado.httputil import HTTPHeaders
 
 
@@ -65,7 +66,7 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         mock_stats_manager = MagicMock()
         mock_stats_manager.get_stats = MagicMock(side_effect=lambda: self.mock_stats)
         return tornado.web.Application(
-            [(r"/st-metrics", StatsHandler, dict(stats_manager=mock_stats_manager))]
+            [(r"/st-metrics", StatsRequestHandler, dict(stats_manager=mock_stats_manager))]
         )
 
     def test_no_stats(self):

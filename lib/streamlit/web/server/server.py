@@ -58,13 +58,14 @@ from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.app_session import AppSession
-from streamlit.stats import StatsHandler, StatsManager
+from streamlit.stats import StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from .stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
@@ -368,7 +369,7 @@ class Server:
             ),
             (
                 make_url_path_regex(base, "st-metrics"),
-                StatsHandler,
+                StatsRequestHandler,
                 dict(stats_manager=self._stats_mgr),
             ),
             (
