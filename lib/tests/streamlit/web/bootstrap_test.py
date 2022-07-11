@@ -24,7 +24,6 @@ from streamlit import config
 from streamlit.session_data import SessionData
 from streamlit.web import bootstrap
 from streamlit.web.bootstrap import NEW_VERSION_TEXT
-from streamlit.web.server.server import Server
 from tests import testutil
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
