@@ -76,3 +76,8 @@ class GitUtilTest(unittest.TestCase):
             repo = GitRepo(".")
             self.assertTrue(repo.is_valid())
             self.assertEqual((2, 20, 3), repo.git_version)
+
+    def test_gitpython_not_installed(self):
+        with patch.dict("sys.modules", {"git": None}):
+            repo = GitRepo(".")
+            self.assertFalse(repo.is_valid())

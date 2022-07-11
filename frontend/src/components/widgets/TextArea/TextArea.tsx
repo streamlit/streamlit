@@ -208,7 +208,6 @@ class TextArea extends React.PureComponent<Props, State> {
             overrides={{
               Input: {
                 style: {
-                  padding: "1rem",
                   lineHeight: "1.4",
                   height: height ? `${height}px` : "",
                   minHeight: "95px",
@@ -216,6 +215,11 @@ class TextArea extends React.PureComponent<Props, State> {
                   "::placeholder": {
                     opacity: "0.7",
                   },
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  paddingRight: "1rem",
+                  paddingLeft: "1rem",
+                  paddingBottom: "1rem",
+                  paddingTop: "1rem",
                 },
               },
             }}

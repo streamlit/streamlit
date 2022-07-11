@@ -341,8 +341,12 @@ class NumberInput extends React.PureComponent<Props, State> {
                   max: this.getMax(),
                 },
                 style: {
-                  padding: ".5rem",
                   lineHeight: "1.5",
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  paddingRight: ".5rem",
+                  paddingLeft: ".5rem",
+                  paddingBottom: ".5rem",
+                  paddingTop: ".5rem",
                 },
               },
               InputContainer: {
@@ -355,7 +359,11 @@ class NumberInput extends React.PureComponent<Props, State> {
                 style: () => ({
                   borderTopRightRadius: 0,
                   borderBottomRightRadius: 0,
-                  borderWidth: 0,
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  borderLeftWidth: 0,
+                  borderRightWidth: 0,
+                  borderTopWidth: 0,
+                  borderBottomWidth: 0,
                 }),
               },
             }}
