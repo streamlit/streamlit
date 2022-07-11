@@ -30,10 +30,15 @@ describe("st._arrow_altair_chart", () => {
   });
 
   it("displays correctly", () => {
-    cy.get(".stVegaLiteChart").should("have.length", 5);
+    cy.get(".element-container [data-testid='stArrowVegaLiteChart']").should(
+      "have.length",
+      5
+    );
 
-    cy.get(".stVegaLiteChart").each((el, idx) => {
-      return cy.wrap(el).matchThemedSnapshots("altair_chart_" + idx);
-    });
+    cy.get(".element-container [data-testid='stArrowVegaLiteChart']").each(
+      (el, idx) => {
+        return cy.wrap(el).matchThemedSnapshots("altair_chart_" + idx);
+      }
+    );
   });
 });
