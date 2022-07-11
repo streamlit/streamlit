@@ -14,14 +14,13 @@
 
 import json
 
+import altair as alt
 import pandas as pd
 import pyarrow as pa
 from tests import testutil
 
 import streamlit as st
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
-
-import altair as alt
 
 # Use default altair theme for tests
 alt.themes.enable("none")

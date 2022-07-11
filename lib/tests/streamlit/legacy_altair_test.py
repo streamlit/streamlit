@@ -60,7 +60,6 @@ class LegacyAltairTest(testutil.DeltaGeneratorTestCase):
         )
         self.assertEqual(spec_dict["data"], {"name": c.datasets[0].name})
         self.assertEqual(spec_dict["mark"], "bar")
-        self.assertTrue("config" in spec_dict)
         self.assertTrue("encoding" in spec_dict)
 
     def test_date_column_utc_scale(self):
