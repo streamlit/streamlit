@@ -370,6 +370,7 @@ class MemoCache(Cache):
         self.persist = persist
         self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
         self._mem_cache_lock = threading.Lock()
+        self.PERSISTENT_DISK_CACHE_EXPIRES_DATES: Dict[str, float] = {}
 
     @property
     def max_entries(self) -> float:
@@ -402,6 +403,19 @@ class MemoCache(Cache):
 
         except CacheKeyNotFoundError as e:
             if self.persist == "disk":
+                if self.ttl < float("inf"):
+                    if (
+                        key in self.PERSISTENT_DISK_CACHE_EXPIRES_DATES
+                        and self.PERSISTENT_DISK_CACHE_EXPIRES_DATES[key]
+                        < _TTLCACHE_TIMER()
+                    ):
+                        with self._mem_cache_lock:
+                            self._remove_from_disk_cache(key)
+                            del self.PERSISTENT_DISK_CACHE_EXPIRES_DATES[key]
+                            _LOGGER.debug("Disk cache expired: %s", key)
+                            _LOGGER.debug("CURRENT STATE OF PERSISTENT DICT")
+                            _LOGGER.debug(self.PERSISTENT_DISK_CACHE_EXPIRES_DATES)
+                        raise e
                 pickled_value = self._read_from_disk_cache(key)
                 self._write_to_mem_cache(key, pickled_value)
             else:
@@ -422,6 +436,10 @@ class MemoCache(Cache):
         self._write_to_mem_cache(key, pickled_value)
         if self.persist == "disk":
             self._write_to_disk_cache(key, pickled_value)
+            if self.ttl is not None and self.ttl is not float("inf"):
+                self.PERSISTENT_DISK_CACHE_EXPIRES_DATES[key] = (
+                    _TTLCACHE_TIMER() + self.ttl
+                )
 
     def clear(self) -> None:
         with self._mem_cache_lock:
@@ -429,6 +447,7 @@ class MemoCache(Cache):
             # disk cache race conditions.
             for key in self._mem_cache.keys():
                 self._remove_from_disk_cache(key)
+                del self.PERSISTENT_DISK_CACHE_EXPIRES_DATES[key]
 
             self._mem_cache.clear()
 
