@@ -41,6 +41,7 @@ alt.themes.register(
 )
 alt.themes.enable("streamlit")
 
+
 class ArrowVegaLiteMixin:
     def _arrow_vega_lite_chart(
         self,
