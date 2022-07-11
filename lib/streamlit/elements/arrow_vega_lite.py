@@ -36,7 +36,9 @@ if TYPE_CHECKING:
 LOGGER: Final = get_logger(__name__)
 
 # Create and enable streamlit theme
-alt.themes.register('streamlit', lambda: {"usermeta": {"embedOptions": {"theme": "streamlit"}}})
+alt.themes.register(
+    'streamlit', lambda: {"usermeta": {"embedOptions": {"theme": "streamlit"}}}
+)
 alt.themes.enable('streamlit')
 
 class ArrowVegaLiteMixin:
@@ -95,7 +97,7 @@ class ArrowVegaLiteMixin:
 
         if spec and alt.themes.get() and not spec.get("config"):
             try:
-                custom_theme = spec['usermeta']['embedOptions']['theme']
+                custom_theme = spec["usermeta"]["embedOptions"]["theme"]
             except KeyError:
                 custom_theme = None
 
