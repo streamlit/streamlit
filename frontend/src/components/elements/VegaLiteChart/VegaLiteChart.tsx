@@ -506,7 +506,7 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
       labelColor: colors.bodyText,
     },
     view: {
-      continuousHeight: 350,
+      continuousHeight: 300,
       continuousWidth: 400,
     },
   }
