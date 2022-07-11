@@ -70,7 +70,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.disabled};
   }
 
-  // VegaLite Specific CSS information
+  // VegaLite-specific CSS to style tootips
   #vg-tooltip-element {
     font-family: ${theme.genericFonts.bodyFont};
     color: ${theme.colors.bodyText};
