@@ -155,3 +155,17 @@ st._arrow_vega_lite_chart(
         },
     }
 )
+
+import altair as alt
+
+with alt.themes.enable("none"):
+    st.write("Show default vega lite theme:")
+    st._arrow_vega_lite_chart(df, spec, use_container_width=True)
+
+with alt.themes.enable("streamlit"):
+    st.write("Show streamlit theme:")
+    st._arrow_vega_lite_chart(df, spec, use_container_width=True)
+
+st.write("Show default vega lite theme:")
+spec["usermeta"] = {"embedOptions": {"theme": None}}
+st._arrow_vega_lite_chart(df, spec, use_container_width=True)

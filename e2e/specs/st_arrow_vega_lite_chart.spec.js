@@ -71,4 +71,12 @@ describe("st._arrow_vega_lite_chart", () => {
         return cy.wrap(el).matchThemedSnapshots(`arrow_vega_lite_chart${idx}`);
       });
   });
+
+  it("supports Streamlit theme", () => {
+    cy.get("[data-testid='stArrowVegaLiteChart']")
+      .filter(idx => idx >= 9 && idx <= 12)
+      .each((el, idx) => {
+        return cy.wrap(el).matchThemedSnapshots(`arrow_vega_lite_chart${idx}`);
+      });
+  });
 });

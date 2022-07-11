@@ -24,7 +24,16 @@ describe("st._arrow_altair_chart", () => {
 
   it("displays an altair chart", () => {
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
+      .first()
       .find("canvas")
       .should("have.class", "marks");
+  });
+
+  it("displays correctly", () => {
+    cy.get(".stVegaLiteChart").should("have.length", 5);
+
+    cy.get(".stVegaLiteChart").each((el, idx) => {
+      return cy.wrap(el).matchThemedSnapshots("altair_chart_" + idx);
+    });
   });
 });

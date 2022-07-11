@@ -21,3 +21,21 @@ data = np.random.randn(200, 3)
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
 st._arrow_altair_chart(chart)
+
+with alt.themes.enable("none"):
+    st.write("Show default vega lite theme:")
+    st._arrow_altair_chart(chart)
+
+with alt.themes.enable("streamlit"):
+    st.write("Show streamlit theme:")
+    st._arrow_altair_chart(chart)
+
+with alt.themes.enable("streamlit"):
+    st.write("Show default vega lite theme:")
+    chart = alt.Chart(df, usermeta={"embedOptions": {"theme": None}}).mark_circle().encode(x="a", y="b", size="c", color="c")
+    st._arrow_altair_chart(chart)
+
+with alt.themes.enable("streamlit"):
+    st.write("Overwrite theme props:")
+    chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c").configure_mark(color="black", fill="black")
+    st._arrow_altair_chart(chart)
