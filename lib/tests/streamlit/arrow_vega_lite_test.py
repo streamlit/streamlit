@@ -21,10 +21,14 @@ from tests import testutil
 import streamlit as st
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 
+import altair as alt
+
+# Use default altair theme for tests
+alt.themes.enable("default")
+
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
-theme_metadata_spec = {"usermeta": {"embedOptions": {"theme": "streamlit"}}}
 
 
 class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
@@ -47,8 +51,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
         self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"mark": "rect"}, theme_metadata_spec),
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
 
     def test_spec_in_arg1(self):
@@ -58,8 +61,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
         self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"mark": "rect"}, theme_metadata_spec),
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
 
     def test_data_in_spec(self):
@@ -71,8 +73,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
             bytes_to_data_frame(proto.data.data), df1, check_dtype=False
         )
         self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"mark": "rect"}, theme_metadata_spec),
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
 
     def test_data_values_in_spec(self):
@@ -85,7 +86,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         )
         self.assertDictEqual(
             json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"mark": "rect"}, theme_metadata_spec),
+            merge_dicts(autosize_spec, {"mark": "rect"}),
         )
 
     def test_datasets_in_spec(self):
@@ -95,8 +96,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
         self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"mark": "rect"}, theme_metadata_spec),
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
 
     def test_datasets_correctly_in_spec(self):
@@ -109,11 +109,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(proto.HasField("data"), False)
         self.assertDictEqual(
             json.loads(proto.spec),
-            merge_dicts(
-                autosize_spec,
-                {"data": {"name": "foo"}, "mark": "rect"},
-                theme_metadata_spec,
-            ),
+            merge_dicts(autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}),
         )
 
     def test_dict_unflatten(self):
@@ -133,7 +129,6 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
                     "boink": {"boop": 100},
                     "encoding": {"x": "foo"},
                 },
-                theme_metadata_spec,
             ),
         )
 
@@ -181,8 +176,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertDictEqual(
-            json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"mark": "rect"}, theme_metadata_spec),
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
 
         self.assertEqual(proto.use_container_width, True)
@@ -194,9 +188,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertDictEqual(
             json.loads(proto.spec),
-            merge_dicts(
-                autosize_spec, {"mark": "rect", "width": 200}, theme_metadata_spec
-            ),
+            merge_dicts(autosize_spec, {"mark": "rect", "width": 200}),
         )
 
 
