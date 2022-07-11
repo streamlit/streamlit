@@ -30,6 +30,7 @@ import streamlit
 import streamlit.web.bootstrap
 from streamlit import config
 from streamlit.config_option import ConfigOption
+from streamlit.credentials import Credentials
 from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
 
@@ -38,6 +39,10 @@ class CliTest(unittest.TestCase):
     """Unit tests for the cli."""
 
     def setUp(self):
+        # Credentials._singleton should be None here, but a mis-behaving
+        # test may have left it intact.
+        Credentials._singleton = None
+
         cli.name = "streamlit"
         self.runner = CliRunner()
         streamlit._is_running_with_streamlit = False
@@ -53,6 +58,8 @@ class CliTest(unittest.TestCase):
             p.start()
 
     def tearDown(self):
+        Credentials._singleton = None
+
         for p in self.patches:
             p.stop()
 
