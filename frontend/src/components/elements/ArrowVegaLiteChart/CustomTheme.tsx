@@ -77,8 +77,6 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       rowPadding: 4,
       padding: -1,
       orient: "bottom",
-      // layout: { bottom: { anchor: "left" } },
-      // symbolType: "circle",
     },
     range: {
       // TODO: Eventually, we might want to move those color schemes to our theme.
@@ -191,8 +189,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       strokeWidth: 0,
       stroke: "transparent",
       continuousHeight: 350,
-      // continuousWidth: 650,
-      // discreteWidth: 650,
+      continuousWidth: 400,
     },
     concat: {
       columns: 1,
@@ -208,9 +205,6 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       binSpacing: 4,
       discreteBandSize: { band: 0.85 },
     },
-    // axisQuantitative: {
-    //   grid: true,
-    // },
     axisDiscrete: {
       grid: false,
     },

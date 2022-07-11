@@ -505,6 +505,10 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
     header: {
       labelColor: colors.bodyText,
     },
+    view: {
+      continuousHeight: 350,
+      continuousWidth: 400,
+    },
   }
 
   if (!config) {
