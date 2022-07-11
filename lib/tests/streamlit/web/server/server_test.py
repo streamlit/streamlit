@@ -706,8 +706,6 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         return True, "test_message"
 
     def setUp(self):
-        self._server = Server(None, None, "test command line")
-        self._server.does_script_run_without_error = self.does_script_run_without_error
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", True, "test")
         super().setUp()
@@ -718,7 +716,9 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        return self._server._create_app()
+        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server.does_script_run_without_error = self.does_script_run_without_error
+        return server._create_app()
 
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
@@ -731,8 +731,6 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         self.fail("Should not be called")
 
     def setUp(self):
-        self._server = Server(None, None, "test command line")
-        self._server.does_script_run_without_error = self.does_script_run_without_error
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", False, "test")
         super().setUp()
@@ -743,7 +741,9 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        return self._server._create_app()
+        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server.does_script_run_without_error = self.does_script_run_without_error
+        return server._create_app()
 
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
