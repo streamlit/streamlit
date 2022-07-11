@@ -198,14 +198,13 @@ class MemoAPI:
 
     # Bare decorator usage
     @overload
-    @staticmethod
-    def __call__(func: F) -> F:
+    def __call__(self, func: F) -> F:
         ...
 
     # Decorator with arguments
     @overload
-    @staticmethod
     def __call__(
+        self,
         *,
         persist: Optional[str] = None,
         show_spinner: bool = True,
@@ -215,8 +214,8 @@ class MemoAPI:
     ) -> Callable[[F], F]:
         ...
 
-    @staticmethod
     def __call__(
+        self,
         func: Optional[F] = None,
         *,
         persist: Optional[str] = None,
