@@ -46,7 +46,7 @@ class CliTest(unittest.TestCase):
             patch.object(config._on_config_parsed, "send"),
             # Make sure the calls to `streamlit run` in this file don't unset
             # the config options loaded in conftest.py.
-            patch.object(cli.bootstrap, "load_config_options"),
+            patch.object(streamlit.web.bootstrap, "load_config_options"),
         ]
 
         for p in self.patches:
@@ -160,8 +160,8 @@ class CliTest(unittest.TestCase):
                 cli, ["run", "file_name.py", "--server.port=8502"]
             )
 
-        cli.bootstrap.load_config_options.assert_called_once()
-        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        streamlit.web.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
@@ -244,7 +244,7 @@ class CliTest(unittest.TestCase):
         config._set_option("server.headless", True, "test")
 
         with patch("validators.url", return_value=False), patch(
-            "streamlit.bootstrap.run"
+            "streamlit.web.bootstrap.run"
         ), patch("os.path.exists", return_value=True), patch(
             "streamlit.credentials._check_credential_file_exists", return_value=False
         ):
@@ -266,7 +266,7 @@ class CliTest(unittest.TestCase):
         config._set_option("server.headless", headless_mode, "test")
 
         with patch("validators.url", return_value=False), patch(
-            "streamlit.bootstrap.run"
+            "streamlit.web.bootstrap.run"
         ), patch("os.path.exists", return_value=True), mock.patch(
             "streamlit.credentials.Credentials._check_activated"
         ) as mock_check, patch(
@@ -322,8 +322,8 @@ class CliTest(unittest.TestCase):
 
             result = self.runner.invoke(cli, ["hello", "--server.port=8502"])
 
-        cli.bootstrap.load_config_options.assert_called_once()
-        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        streamlit.web.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
@@ -342,8 +342,8 @@ class CliTest(unittest.TestCase):
 
             result = self.runner.invoke(cli, ["config", "show", "--server.port=8502"])
 
-        cli.bootstrap.load_config_options.assert_called_once()
-        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        streamlit.web.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
