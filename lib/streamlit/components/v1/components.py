@@ -22,7 +22,7 @@ from typing import Any, Dict, Optional, Type, Union
 import tornado.web
 from streamlit.scriptrunner import get_script_run_ctx
 
-import streamlit.server.routes
+import streamlit.web.server.routes
 from streamlit import type_util
 from streamlit.elements.form import current_form_id
 from streamlit import util
@@ -349,7 +349,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             self.set_header("Cache-Control", "public")
 
     def set_default_headers(self) -> None:
-        if streamlit.server.routes.allow_cross_origin_requests():
+        if streamlit.web.server.routes.allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def options(self) -> None:
