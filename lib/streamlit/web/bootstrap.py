@@ -33,9 +33,9 @@ from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import GitRepo, MIN_GIT_VERSION
 from streamlit.logger import get_logger
 from streamlit.secrets import SECRETS_FILE_LOC
-from streamlit.server.server import Server, server_address_is_unix_socket
 from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
+from streamlit.web.server import Server, server_address_is_unix_socket
 
 LOGGER = get_logger(__name__)
 

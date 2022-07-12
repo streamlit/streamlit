@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import abstractmethod
 from copy import deepcopy
 import json
 
@@ -36,7 +35,7 @@ from typing import (
 
 import attr
 from pympler.asizeof import asizeof
-from typing_extensions import Final, Literal, Protocol, TypeAlias
+from typing_extensions import Final, TypeAlias
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -46,7 +45,7 @@ from streamlit.type_util import ValueFieldName
 from streamlit.type_util import is_array_value_field_name
 
 if TYPE_CHECKING:
-    from streamlit.server.server import SessionInfo
+    from streamlit.web.server.server import SessionInfo
 
 
 T = TypeVar("T")

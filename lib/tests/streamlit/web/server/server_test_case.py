@@ -22,11 +22,10 @@ import tornado.websocket
 from tornado.ioloop import IOLoop
 from tornado.platform.asyncio import AsyncIOLoop
 from tornado.websocket import WebSocketClientConnection
-from typing_extensions import Awaitable
 
 from streamlit.app_session import AppSession
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.server import Server
+from streamlit.web.server import Server
 
 
 class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
@@ -123,7 +122,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         """
 
         return mock.patch(
-            "streamlit.server.server.AppSession",
+            "streamlit.web.server.server.AppSession",
             # new_callable must return a function, not an object, or else
             # there will only be a single AppSession mock. Hence the lambda.
             new_callable=lambda: self._create_mock_app_session,

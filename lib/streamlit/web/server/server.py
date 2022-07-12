@@ -58,14 +58,15 @@ from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.app_session import AppSession
-from streamlit.stats import StatsHandler, StatsManager
+from streamlit.stats import StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.components.v1.components import ComponentRegistry
-from streamlit.components.v1.components import ComponentRequestHandler
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.upload_file_request_handler import (
+from .stats_request_handler import StatsRequestHandler
+from .component_request_handler import ComponentRequestHandler
+from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
 )
@@ -75,18 +76,18 @@ from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
-from streamlit.server.routes import AddSlashHandler
-from streamlit.server.routes import AssetsFileHandler
-from streamlit.server.routes import DebugHandler
-from streamlit.server.routes import HealthHandler
-from streamlit.server.routes import MediaFileHandler
-from streamlit.server.routes import MessageCacheHandler
-from streamlit.server.routes import StaticFileHandler
-from streamlit.server.server_util import is_cacheable_msg
-from streamlit.server.server_util import is_url_from_allowed_origins
-from streamlit.server.server_util import make_url_path_regex
-from streamlit.server.server_util import serialize_forward_msg
-from streamlit.server.server_util import get_max_message_size_bytes
+from streamlit.web.server.routes import AddSlashHandler
+from streamlit.web.server.routes import AssetsFileHandler
+from streamlit.web.server.routes import DebugHandler
+from streamlit.web.server.routes import HealthHandler
+from streamlit.web.server.routes import MediaFileHandler
+from streamlit.web.server.routes import MessageCacheHandler
+from streamlit.web.server.routes import StaticFileHandler
+from streamlit.web.server.server_util import is_cacheable_msg
+from streamlit.web.server.server_util import is_url_from_allowed_origins
+from streamlit.web.server.server_util import make_url_path_regex
+from streamlit.web.server.server_util import serialize_forward_msg
+from streamlit.web.server.server_util import get_max_message_size_bytes
 from streamlit.watcher import LocalSourcesWatcher
 
 
@@ -368,7 +369,7 @@ class Server:
             ),
             (
                 make_url_path_regex(base, "st-metrics"),
-                StatsHandler,
+                StatsRequestHandler,
                 dict(stats_manager=self._stats_mgr),
             ),
             (

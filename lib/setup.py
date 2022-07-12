@@ -88,7 +88,7 @@ setuptools.setup(
     install_requires=requirements,
     zip_safe=False,  # install source files not egg
     include_package_data=True,  # copy html and friends
-    entry_points={"console_scripts": ["streamlit = streamlit.cli:main"]},
+    entry_points={"console_scripts": ["streamlit = streamlit.web.cli:main"]},
     # For Windows so that streamlit * commands work ie.
     # - streamlit version
     # - streamlit hello

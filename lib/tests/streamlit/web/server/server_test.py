@@ -14,44 +14,44 @@
 
 """Server.py unit tests"""
 import asyncio
+import errno
 import os
 import shutil
+import tempfile
+import unittest
 from unittest import mock
 from unittest.mock import MagicMock, patch
-import unittest
-import tempfile
 
 import pytest
+import tornado.httpserver
 import tornado.testing
 import tornado.web
 import tornado.websocket
-import tornado.httpserver
-import errno
 
-import streamlit.server.server
+import streamlit.web.server.server
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.uploaded_file_manager import UploadedFileRec
-from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
+from streamlit.elements import legacy_data_frame as data_frame
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.elements import legacy_data_frame as data_frame
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.server.server import State
-from streamlit.server.server import Server
-from streamlit.server.server import start_listening
-from streamlit.server.server import RetriesExceeded
-from streamlit.server.routes import DebugHandler
-from streamlit.server.routes import HealthHandler
-from streamlit.server.routes import MessageCacheHandler
-from streamlit.server.routes import StaticFileHandler
-from streamlit.server.server_util import is_cacheable_msg
-from streamlit.server.server_util import is_url_from_allowed_origins
-from streamlit.server.server_util import serialize_forward_msg
-from streamlit.watcher import event_based_path_watcher
-from tests.server_test_case import ServerTestCase
-
 from streamlit.logger import get_logger
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.uploaded_file_manager import UploadedFileRec
+from streamlit.watcher import event_based_path_watcher
+from streamlit.web.server.server import DebugHandler
+from streamlit.web.server.server import HealthHandler
+from streamlit.web.server.server import MAX_PORT_SEARCH_RETRIES
+from streamlit.web.server.server import MessageCacheHandler
+from streamlit.web.server.server import RetriesExceeded
+from streamlit.web.server.server import Server
+from streamlit.web.server.server import State
+from streamlit.web.server.server import StaticFileHandler
+from streamlit.web.server.server import is_cacheable_msg
+from streamlit.web.server.server import is_url_from_allowed_origins
+from streamlit.web.server.server import serialize_forward_msg
+from streamlit.web.server.server import start_listening
+
+from .server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)
 
@@ -88,7 +88,7 @@ class ServerTest(ServerTestCase):
     async def test_start_stop(self):
         """Test that we can start and stop the server."""
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
             self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
@@ -107,7 +107,7 @@ class ServerTest(ServerTestCase):
         """Test that we can connect to the server via websocket."""
 
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
 
@@ -136,7 +136,7 @@ class ServerTest(ServerTestCase):
         """Test multiple websockets can connect simultaneously."""
 
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
 
@@ -171,7 +171,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_websocket_compression(self):
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", True, "test")
             await self.start_server_loop()
@@ -189,7 +189,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_websocket_compression_disabled(self):
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", False, "test")
             await self.start_server_loop()
@@ -207,7 +207,7 @@ class ServerTest(ServerTestCase):
     async def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
 
@@ -229,7 +229,7 @@ class ServerTest(ServerTestCase):
     async def test_get_session_by_id_nonexistent_session(self):
         """Test getting a nonexistent session returns None."""
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
             self.assertEqual(self.server.get_session_by_id("abc123"), None)
@@ -238,7 +238,7 @@ class ServerTest(ServerTestCase):
     async def test_get_session_by_id(self):
         """Test getting sessions by id produces the correct AppSession."""
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
             ws_client = await self.ws_connect()
@@ -251,7 +251,7 @@ class ServerTest(ServerTestCase):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
 
@@ -278,7 +278,7 @@ class ServerTest(ServerTestCase):
     async def test_duplicate_forwardmsg_caching(self):
         """Test that duplicate ForwardMsgs are sent only once."""
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
 
@@ -314,7 +314,7 @@ class ServerTest(ServerTestCase):
         finishes running.
         """
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
             config._set_option("global.maxCachedMessageAge", 1, "test")
@@ -374,7 +374,7 @@ class ServerTest(ServerTestCase):
         """An uploaded file with no associated AppSession should be
         deleted."""
         with patch(
-            "streamlit.server.server.LocalSourcesWatcher"
+            "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
             await self.ws_connect()
@@ -401,15 +401,16 @@ class ServerUtilsTest(unittest.TestCase):
 
     def test_is_url_from_allowed_origins_CORS_off(self):
         with patch(
-            "streamlit.server.server_util.config.get_option", side_effect=[False]
+            "streamlit.web.server.server_util.config.get_option", side_effect=[False]
         ):
             self.assertTrue(is_url_from_allowed_origins("does not matter"))
 
     def test_is_url_from_allowed_origins_browser_serverAddress(self):
         with patch(
-            "streamlit.server.server_util.config.is_manually_set", side_effect=[True]
+            "streamlit.web.server.server_util.config.is_manually_set",
+            side_effect=[True],
         ), patch(
-            "streamlit.server.server_util.config.get_option",
+            "streamlit.web.server.server_util.config.get_option",
             side_effect=[True, "browser.server.address"],
         ):
             self.assertTrue(is_url_from_allowed_origins("browser.server.address"))
@@ -425,7 +426,7 @@ class ServerUtilsTest(unittest.TestCase):
     def test_should_limit_msg_size(self):
         max_message_size_mb = 50
         # Set max message size to defined value
-        from streamlit.server import server_util
+        from streamlit.web.server import server_util
 
         server_util._max_message_size_bytes = None  # Reset cached value
         config._set_option("server.maxMessageSize", max_message_size_mb, "test")
@@ -512,10 +513,11 @@ class PortRotateAHundredTest(unittest.TestCase):
     def test_rotates_a_hundred_ports(self):
         app = mock.MagicMock()
 
-        RetriesExceeded = streamlit.server.server.RetriesExceeded
+        RetriesExceeded = streamlit.web.server.server.RetriesExceeded
         with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
             with patch(
-                "streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
+                "streamlit.web.server.server.HTTPServer",
+                return_value=self.get_httpserver(),
             ) as mock_server:
                 start_listening(app)
                 self.assertEqual(pytest_wrapped_e.type, SystemExit)
@@ -537,8 +539,8 @@ class PortRotateOneTest(unittest.TestCase):
 
         return httpserver
 
-    @mock.patch("streamlit.server.server.config._set_option")
-    @mock.patch("streamlit.server.server.server_port_is_manually_set")
+    @mock.patch("streamlit.web.server.server.config._set_option")
+    @mock.patch("streamlit.web.server.server.server_port_is_manually_set")
     def test_rotates_one_port(
         self, patched_server_port_is_manually_set, patched__set_option
     ):
@@ -547,7 +549,8 @@ class PortRotateOneTest(unittest.TestCase):
         patched_server_port_is_manually_set.return_value = False
         with pytest.raises(RetriesExceeded):
             with patch(
-                "streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
+                "streamlit.web.server.server.HTTPServer",
+                return_value=self.get_httpserver(),
             ):
                 start_listening(app)
 
@@ -586,7 +589,7 @@ class UnixSocketTest(unittest.TestCase):
 
         mock_server = self.get_httpserver()
         with patch(
-            "streamlit.server.server.HTTPServer", return_value=mock_server
+            "streamlit.web.server.server.HTTPServer", return_value=mock_server
         ), patch.object(
             tornado.netutil, "bind_unix_socket", return_value=some_socket
         ) as bind_unix_socket, patch.dict(
@@ -680,12 +683,12 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test(timeout=30)
     async def test_timeout_script(self):
         try:
-            streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 0.1
+            streamlit.web.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 0.1
             await self._check_script_loading(
                 "import time\n\ntime.sleep(5)", False, "timeout"
             )
         finally:
-            streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 60
+            streamlit.web.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 60
 
     async def _check_script_loading(self, script, expected_loads, expected_msg):
         with os.fdopen(self._fd, "w") as tmp:
@@ -703,8 +706,6 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         return True, "test_message"
 
     def setUp(self):
-        self._server = Server(None, None, "test command line")
-        self._server.does_script_run_without_error = self.does_script_run_without_error
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", True, "test")
         super().setUp()
@@ -715,7 +716,9 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        return self._server._create_app()
+        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server.does_script_run_without_error = self.does_script_run_without_error
+        return server._create_app()
 
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
@@ -728,8 +731,6 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         self.fail("Should not be called")
 
     def setUp(self):
-        self._server = Server(None, None, "test command line")
-        self._server.does_script_run_without_error = self.does_script_run_without_error
         self._old_config = config.get_option("server.scriptHealthCheckEnabled")
         config._set_option("server.scriptHealthCheckEnabled", False, "test")
         super().setUp()
@@ -740,7 +741,9 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        return self._server._create_app()
+        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server.does_script_run_without_error = self.does_script_run_without_error
+        return server._create_app()
 
     def test_endpoint(self):
         response = self.fetch("/script-health-check")

@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-from streamlit.cli import main
+from streamlit.web.cli import main
 
 if __name__ == "__main__":
     # Set prog_name so that the Streamlit server sees the same command line
