@@ -97,7 +97,7 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.button.py
+           https://doc-buton.streamlitapp.com/
            height: 220px
 
         """
@@ -219,7 +219,7 @@ class ButtonMixin:
         ...           )
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.download_button.py
+           https://doc-download-buton.streamlitapp.com/
            height: 335px
 
         """

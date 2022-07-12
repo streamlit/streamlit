@@ -106,7 +106,7 @@ class MultiSelectMixin:
         >>> st.write('You selected:', options)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.multiselect.py
+           https://doc-multiselect.streamlitapp.com/
            height: 420px
 
         """

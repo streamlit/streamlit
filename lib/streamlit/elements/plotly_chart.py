@@ -128,7 +128,7 @@ class PlotlyMixin:
         >>> st.plotly_chart(fig, use_container_width=True)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.plotly_chart.py
+           https://doc-plotly-chart.streamlitapp.com/
            height: 400px
 
         """
