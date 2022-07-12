@@ -252,8 +252,6 @@ def cache():
 @cache.command("clear")
 def cache_clear():
     """Clear st.cache, st.memo, and st.singleton caches."""
-    import streamlit.caching
-
     result = streamlit.legacy_caching.clear_cache()
     cache_path = streamlit.legacy_caching.get_cache_path()
     if result:
