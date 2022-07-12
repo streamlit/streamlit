@@ -32,13 +32,13 @@ describe("st._arrow_vega_lite_chart", () => {
     cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 0).should(
       "have.css",
       "width",
-      "700px"
+      "704px"
     );
 
     cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 1).should(
       "have.css",
       "width",
-      "700px"
+      "704px"
     );
 
     cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 2)

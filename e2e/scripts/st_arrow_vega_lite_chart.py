@@ -158,14 +158,16 @@ st._arrow_vega_lite_chart(
 
 import altair as alt
 
+df = pd.DataFrame(data, columns=["a", "b", "c"])
+
 with alt.themes.enable("none"):
-    st.write("Show default vega lite theme:")
+    st.write("Show vega lite theme:")
     st._arrow_vega_lite_chart(df, spec, use_container_width=True)
 
 with alt.themes.enable("streamlit"):
     st.write("Show streamlit theme:")
     st._arrow_vega_lite_chart(df, spec, use_container_width=True)
 
-st.write("Show default vega lite theme:")
-spec["usermeta"] = {"embedOptions": {"theme": None}}
+st.write("Show vega lite theme:")
+spec["usermeta"] = {"embedOptions": {"theme": "none"}}
 st._arrow_vega_lite_chart(df, spec, use_container_width=True)

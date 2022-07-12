@@ -105,6 +105,8 @@ class ArrowVegaLiteMixin:
             if not custom_theme:
                 # User hasn't configured a custom theme, applying altair theme
                 altair_theme = alt.themes.get()
+                # Clone spec for mutation
+                spec = dict(spec)
                 spec.update(altair_theme())
 
         proto = ArrowVegaLiteChartProto()
