@@ -18,21 +18,6 @@ import sys
 
 from setuptools.command.install import install
 
-# Import Pipenv. We support multiple versions.
-try:
-    from pipenv.project import Project
-
-    try:
-        # Pipenv 2022.4.8
-        from pipenv.utils.dependencies import convert_deps_to_pip
-    except:
-        # Older Pipenv
-        from pipenv.utils import convert_deps_to_pip
-except:
-    exit_msg = (
-        "pipenv is required to package Streamlit. Please install pipenv and try again."
-    )
-    sys.exit(exit_msg)
 
 VERSION = "1.10.0"  # PEP-440
 
@@ -47,10 +32,40 @@ LONG_DESCRIPTION = (
     "All in pure Python. All for free."
 )
 
-pipfile = Project(chdir=False).parsed_pipfile
-
-packages = pipfile["packages"].copy()
-requirements = convert_deps_to_pip(packages, r=False)
+# IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
+# And if you do add one, make the required version as general as possible.
+# But include relevant lower bounds for any features we use from our dependencies.
+INSTALL_REQUIRES = [
+    "altair>=3.2.0",
+    "attrs>=16.0.0",
+    "blinker>=1.0.0",
+    "cachetools>=4.0",
+    "click>=7.0",
+    "gitpython!=3.1.19",
+    # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
+    "importlib-metadata>=1.4",
+    "numpy",
+    "packaging>=14.1",
+    "pandas>=0.21.0",
+    "pillow>=6.2.0",
+    "protobuf<4,>=3.12",
+    "pyarrow>=4.0",
+    "pydeck>=0.1.dev5",
+    "pympler>=0.9",
+    "python-dateutil",
+    "requests>=2.4",
+    "rich>=10.11.0",
+    "semver",
+    "toml",
+    # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
+    "tornado>=5.0",
+    "typing-extensions>=3.10.0.0",
+    "tzlocal>=1.1",
+    "validators>=0.2",
+    # Don't require watchdog on MacOS, since it'll fail without xcode tools.
+    # Without watchdog, we fallback to a polling file watcher to check for app changes.
+    "watchdog; platform_system != 'Darwin'",
+]
 
 
 class VerifyVersionCommand(install):
@@ -85,7 +100,7 @@ setuptools.setup(
     package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
-    install_requires=requirements,
+    install_requires=INSTALL_REQUIRES,
     zip_safe=False,  # install source files not egg
     include_package_data=True,  # copy html and friends
     entry_points={"console_scripts": ["streamlit = streamlit.web.cli:main"]},
