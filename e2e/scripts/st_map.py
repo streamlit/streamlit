@@ -23,7 +23,7 @@ st.map()
 
 # Simple map.
 
-# Cast is needed due to mypy not understanding the outcome of divinging 
+# Cast is needed due to mypy not understanding the outcome of dividing 
 # an array by a list of numbers.
 coords: "np.typing.NDArray[np.float_]" = cast(
     Any,
