@@ -30,9 +30,7 @@ from typing import (
     cast,
     overload,
 )
-from typing import Callable
 
-from typing_extensions import ClassVar
 from typing_extensions import (
     Final,
     Literal,
