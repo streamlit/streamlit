@@ -630,7 +630,6 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
 
     def tearDown(self) -> None:
         self._server.stop()
-        Server._singleton = None
 
         if event_based_path_watcher._MultiPathWatcher._singleton is not None:
             event_based_path_watcher._MultiPathWatcher.get_singleton().close()
@@ -691,7 +690,6 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
-        Server._singleton = None
         super().tearDown()
 
     def get_app(self):
@@ -716,7 +714,6 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
-        Server._singleton = None
         super().tearDown()
 
     def get_app(self):

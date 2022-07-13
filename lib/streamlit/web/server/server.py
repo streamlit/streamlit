@@ -235,30 +235,10 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
 
 class Server:
-    _singleton: Optional["Server"] = None
-
-    @classmethod
-    def get_current(cls) -> "Server":
-        """
-        Returns
-        -------
-        Server
-            The singleton Server object.
-        """
-        if Server._singleton is None:
-            raise RuntimeError("Server has not been initialized yet")
-
-        return Server._singleton
-
     def __init__(
         self, ioloop: AsyncIOLoop, main_script_path: str, command_line: Optional[str]
     ):
         """Create the server. It won't be started yet."""
-        if Server._singleton is not None:
-            raise RuntimeError("Server already initialized. Use .get_current() instead")
-
-        Server._singleton = self
-
         _set_tornado_log_levels()
 
         self._ioloop = ioloop
@@ -795,7 +775,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
                 self._session.handle_stop_script_request()
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):
-                    Server.get_current().stop()
+                    self._server.stop()
                 else:
                     LOGGER.warning(
                         "Client tried to close connection when "

@@ -61,11 +61,6 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         app = self.server._create_app()
         return app
 
-    def tearDown(self):
-        super(ServerTestCase, self).tearDown()
-        # Clear the Server singleton for the next test
-        Server._singleton = None
-
     async def start_server_loop(self) -> None:
         """Starts the server's loop coroutine."""
         server_started = Future()
