@@ -269,7 +269,14 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         "streamlit.file_util.open",
         wraps=mock_open(
             read_data=pickle.dumps(
-                CachedResult(1, [ElementMsgData("text", TextProto(body="1"), "", "")])
+                CachedResult(
+                    1,
+                    [
+                        ElementMsgData(
+                            "text", TextProto(body="1"), str(id(st._main)), ""
+                        )
+                    ],
+                )
             )
         ),
     )

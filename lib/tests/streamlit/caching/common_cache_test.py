@@ -340,7 +340,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             ("singleton", singleton),
         ]
     )
-    def test_cached_st_function_replay_blocks(self, _, cache_decorator):
+    def test_cached_st_function_replay_outer_blocks(self, _, cache_decorator):
         @cache_decorator
         def foo(i):
             st.text(i)
@@ -366,14 +366,14 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
     )
     def test_cached_st_function_replay_sidebar(self, _, cache_decorator):
-        @cache_decorator
+        @cache_decorator(show_spinner=False)
         def foo(i):
             st.sidebar.text(i)
             return i
 
-        foo(1)
-        st.sidebar.text("---")
-        foo(1)
+        foo(1)  # [1,0]
+        st.text("---")  # [0,0]
+        foo(1)  # [1,1]
 
         deltas = self.get_all_deltas_from_queue()
         text = [
@@ -381,9 +381,14 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             for delta in deltas
             if get_text_or_block(delta) is not None
         ]
-        # unclear what to assert to check the sidebar
         assert text == ["1", "---", "1"]
-        assert False
+
+        paths = [
+            msg.metadata.delta_path
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+        ]
+        assert paths == [[1, 0], [0, 0], [1, 1]]
 
     @parameterized.expand(
         [
@@ -412,7 +417,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             msg for msg in self.forward_msg_queue._queue if msg.HasField("delta")
         ]
         paths = [msg.metadata.delta_path for msg in fwd_msgs]
-        print(paths)
         assert paths == [
             [0, 0],
             [0, 0, 0],
@@ -425,6 +429,59 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             [0, 5],
             [0, 5, 0],
         ]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_inner_direct(self, _, cache_decorator):
+        @cache_decorator(show_spinner=False)
+        def foo(i):
+            cont = st.container()
+            cont.text(i)
+            return i
+
+        foo(1)  # [0,0] and [0,0,0]
+        st.text("---")  # [0,1]
+        foo(1)  # [0,2] and [0,2,0]
+
+        deltas = self.get_all_deltas_from_queue()
+        text = [
+            element.text.body
+            for element in (delta.new_element for delta in deltas)
+            if element.WhichOneof("type") == "text"
+        ]
+        assert text == ["1", "---", "1"]
+
+        # TODO: test that the elements are correctly in the containers
+        paths = [
+            msg.metadata.delta_path
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+        ]
+        assert paths == [[0, 0], [0, 0, 0], [0, 1], [0, 2], [0, 2, 0]]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_outer_direct(self, _, cache_decorator):
+        cont = st.container
+
+        @cache_decorator
+        def foo(i):
+            cont.text(i)
+            return i
+
+        # TODO make exception more specific
+        with self.assertRaises(Exception):
+            foo(1)
+            st.text("---")
+            foo(1)
 
     @parameterized.expand(
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
