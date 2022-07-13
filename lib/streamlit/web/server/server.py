@@ -296,15 +296,6 @@ class Server:
     def main_script_path(self) -> str:
         return self._main_script_path
 
-    def get_session_by_id(self, session_id: str) -> Optional[AppSession]:
-        """Return the AppSession corresponding to the given id, or None if
-        no such session exists."""
-        session_info = self._get_session_info(session_id)
-        if session_info is None:
-            return None
-
-        return session_info.session
-
     def on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
         Ensures that uploaded files from stale sessions get deleted.
