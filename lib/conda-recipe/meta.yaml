@@ -1,0 +1,80 @@
+# Copyright 2018-2022 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# NOTE: Our conda release of streamlit currently requires Python 3.8+ while
+# the PyPI release requires Python 3.7+, so we can't grab the minimum python
+# version from package_data.get('python_requires') for now.
+{% set python_version_bound = ">=3.8" %}
+{% set package_data = load_setup_py_data() %}
+
+
+package:
+  name: {{ package_data.get('name')|lower }}
+  version: {{ package_data.get('version') }}
+
+source:
+  path: ..
+
+build:
+  # NOTE: The build number is set because it's required, but it's essentially
+  # unused since the GIT_HASH uniquely identifies this build.
+  number: 0
+  string: {{ environ.get('GIT_HASH') }}
+  noarch: python
+  script: python -m pip install . -vv
+  entry_points:
+    {% for ep in package_data.get('entry_points').get('console_scripts') %}
+      - {{ ep }}
+    {% endfor %}
+  script_env:
+   - GIT_HASH
+
+requirements:
+  host:
+    - pip
+    - python {{ python_version_bound }}
+  run:
+    {% for req in package_data.get('install_requires', []) %}
+      # 2022.07.01 - temporarily set protobuf's lower bound to 3.11 to work
+      # around a conda resolution issue
+      {% if 'protobuf' in req %}
+        - protobuf >=3.11, <4
+      # Conda doesn't support the `platform_system` conditional that pip does.
+      # We may need to figure out how to avoid installing watchdog on MacOS
+      # by default in our conda distribution due to this.
+      {% elif 'watchdog' in req %}
+        - watchdog
+      # TODO(vdonato): Possibly remove this check if gitpython and pydeck are
+      # moved to extras_require.
+      {% elif 'gitpython' not in req and 'pydeck' not in req %}
+        - {{ req }}
+      {% endif %}
+    {% endfor %}
+
+# TODO(vdonato): Uncomment this section once we've figured out what to do with
+# optional dependencies (pip check will currently fail due to gitpython and
+# pydeck being uninstalled).
+# test:
+#   imports:
+#     - streamlit
+#   commands:
+#     - pip check
+#   requires:
+#     - pip
+
+about:
+  home: https://streamlit.io
+  summary: The fastest way to build data apps in Python
+  license: Apache-2.0
+  license_file: LICENSE
