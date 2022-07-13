@@ -144,7 +144,7 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.slider.py
+           https://doc-slider.streamlitapp.com/
            height: 300px
 
         """

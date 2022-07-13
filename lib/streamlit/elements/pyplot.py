@@ -63,7 +63,7 @@ class PyplotMixin:
         >>> st.pyplot(fig)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.pyplot.py
+           https://doc-pyplot.streamlitapp.com/
            height: 630px
 
         Notes

@@ -108,7 +108,7 @@ class WriteMixin:
         >>> write('Hello, *World!* :sunglasses:')
 
         ..  output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write1.py
+            https://doc-write1.streamlitapp.com/
             height: 150px
 
         As mentioned earlier, `st.write()` also accepts other data formats, such as
@@ -121,7 +121,7 @@ class WriteMixin:
         ... }))
 
         ..  output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write2.py
+            https://doc-write2.streamlitapp.com/
             height: 350px
 
         Finally, you can pass in multiple arguments to do things like:
@@ -130,7 +130,7 @@ class WriteMixin:
         >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
 
         ..  output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write3.py
+            https://doc-write3.streamlitapp.com/
             height: 410px
 
         Oh, one more thing: `st.write` accepts chart objects too! For example:
@@ -149,7 +149,7 @@ class WriteMixin:
         >>> st.write(c)
 
         ..  output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.vega_lite_chart.py
+            https://doc-vega-lite-chart.streamlitapp.com/
             height: 300px
 
         """

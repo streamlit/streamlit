@@ -85,7 +85,7 @@ class GraphvizMixin:
         ''')
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.graphviz_chart.py
+           https://doc-graphviz-chart.streamlitapp.com/
            height: 600px
 
         """

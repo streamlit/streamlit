@@ -67,7 +67,7 @@ class MediaMixin:
         >>> st.audio(audio_bytes, format='audio/ogg')
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.audio.py
+           https://doc-audio.streamlitapp.com/
            height: 465px
 
         """
@@ -106,7 +106,7 @@ class MediaMixin:
         >>> st.video(video_bytes)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.video.py
+           https://doc-video.streamlitapp.com/
            height: 700px
 
         .. note::

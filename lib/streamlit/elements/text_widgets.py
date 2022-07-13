@@ -101,7 +101,7 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.text_input.py
+           https://doc-text-input.streamlitapp.com/
            height: 260px
 
         """

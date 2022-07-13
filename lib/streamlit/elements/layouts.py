@@ -50,7 +50,7 @@ class LayoutsMixin:
         >>> st.write("This is outside the container")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.container1.py
+            https://doc-container1.streamlitapp.com/
             height: 520px
 
         Inserting elements out of order:
@@ -63,7 +63,7 @@ class LayoutsMixin:
         >>> container.write("This is inside too")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.container2.py
+            https://doc-container2.streamlitapp.com/
             height: 480px
         """
         return self.dg._block()
@@ -129,7 +129,7 @@ class LayoutsMixin:
         ...    st.image("https://static.streamlit.io/examples/owl.jpg")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.columns1.py
+            https://doc-columns1.streamlitapp.com/
             height: 620px
 
         Or you can just call methods directly in the returned objects:
@@ -144,7 +144,7 @@ class LayoutsMixin:
         >>> col2.write(data)
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.columns2.py
+            https://doc-columns2.streamlitapp.com/
             height: 550px
 
         """
@@ -239,8 +239,8 @@ class LayoutsMixin:
         ...    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.tabs1.py
-            height: 700px
+            https://doc-tabs1.streamlitapp.com/
+            height: 620px
 
         Or you can just call methods directly in the returned objects:
 
@@ -255,7 +255,7 @@ class LayoutsMixin:
 
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.tabs2.py
+            https://doc-tabs2.streamlitapp.com/
             height: 700px
 
         """
@@ -318,7 +318,7 @@ class LayoutsMixin:
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.expander.py
+            https://doc-expander.streamlitapp.com/
             height: 750px
 
         Or you can just call methods directly in the returned objects:
@@ -334,7 +334,7 @@ class LayoutsMixin:
         >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.expander.py
+            https://doc-expander.streamlitapp.com/
             height: 750px
 
         """
