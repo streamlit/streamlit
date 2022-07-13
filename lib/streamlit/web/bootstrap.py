@@ -60,12 +60,12 @@ NEW_VERSION_TEXT = """
 }
 
 
-def _set_up_signal_handler() -> None:
+def _set_up_signal_handler(server: Server) -> None:
     LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
         # The server will shut down its threads and stop the ioloop
-        Server.get_current().stop(from_signal=True)
+        server.stop(from_signal=True)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -361,19 +361,19 @@ def run(
     _install_config_watchers(flag_options)
     _install_pages_watcher(main_script_path)
 
-    # Install a signal handler that will shut down the ioloop
-    # and close all our threads
-    _set_up_signal_handler()
-
     # Create our Tornado IOLoop.
     # (AsyncIOLoop is actually the default IOLoop type - we're just being
     # explicit about it so that we can grab its asyncio_loop instance.)
     ioloop = AsyncIOLoop()
 
-    # Create and start the server.
+    # Create the server. It won't start running yet.
     server = Server(ioloop, main_script_path, command_line)
-    server.start(_on_server_start)
 
-    # Start the ioloop. This function will not return until the
+    # Install a signal handler that will shut down the ioloop
+    # and close all our threads
+    _set_up_signal_handler(server)
+
+    # Start the server and its ioloop. This function will not return until the
     # server is shut down.
+    server.start(_on_server_start)
     ioloop.start()
