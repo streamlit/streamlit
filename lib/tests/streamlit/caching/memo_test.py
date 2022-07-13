@@ -33,7 +33,7 @@ from tests.testutil import DeltaGeneratorTestCase
 
 
 def as_cached_result(value):
-    return CachedResult(value, [])
+    return CachedResult(value, [], str(id(st._main)), str(id(st.sidebar)))
 
 
 class MemoTest(unittest.TestCase):
@@ -276,6 +276,8 @@ class MemoPersistTest(DeltaGeneratorTestCase):
                             "text", TextProto(body="1"), str(id(st._main)), ""
                         )
                     ],
+                    str(id(st._main)),
+                    str(id(st.sidebar)),
                 )
             )
         ),

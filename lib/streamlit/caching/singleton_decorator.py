@@ -20,6 +20,7 @@ from typing import Optional, Any, Dict, List, TypeVar, Callable, overload, cast
 
 from pympler import asizeof
 
+import streamlit as st
 from streamlit.logger import get_logger
 from streamlit.stats import CacheStatsProvider, CacheStat
 from .cache_errors import CacheKeyNotFoundError, CacheType
@@ -270,8 +271,10 @@ class SingletonCache(Cache):
 
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
+        main_id = str(id(st._main))
+        sidebar_id = str(id(st.sidebar))
         with self._mem_cache_lock:
-            self._mem_cache[key] = CachedResult(value, messages)
+            self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
 
     def clear(self) -> None:
         with self._mem_cache_lock:

@@ -24,6 +24,7 @@ from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload,
 import math
 from cachetools import TTLCache
 
+import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import (
@@ -429,7 +430,9 @@ class MemoCache(Cache):
         The value must be pickleable.
         """
         try:
-            entry = CachedResult(value, messages)
+            main_id = str(id(st._main))
+            sidebar_id = str(id(st.sidebar))
+            entry = CachedResult(value, messages, main_id, sidebar_id)
             pickled_entry = pickle.dumps(entry)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc

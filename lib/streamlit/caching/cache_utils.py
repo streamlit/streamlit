@@ -79,6 +79,8 @@ MsgData = Union[ElementMsgData, BlockMsgData]
 class CachedResult:
     value: Any
     messages: List[MsgData]
+    main_id: str
+    sidebar_id: str
 
 
 class Cache:
@@ -175,8 +177,8 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
                 # maps originally recorded dg ids to the instance of that dg in this script run
                 returned_dgs: Dict[str, "DeltaGenerator"] = {}
-                returned_dgs[str(id(st._main))] = st._main  # FIXME
-                returned_dgs[str(id(st.sidebar))] = st.sidebar  # FIXME
+                returned_dgs[result.main_id] = st._main
+                returned_dgs[result.sidebar_id] = st.sidebar
 
                 from streamlit.delta_generator import DeltaGenerator
 

@@ -30,7 +30,7 @@ from streamlit.stats import CacheStat
 
 
 def as_cached_result(value):
-    return CachedResult(value, [])
+    return CachedResult(value, [], str(id(st._main)), str(id(st.sidebar)))
 
 
 class SingletonTest(unittest.TestCase):
