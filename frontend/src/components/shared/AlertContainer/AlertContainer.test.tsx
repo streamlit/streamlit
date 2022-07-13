@@ -17,7 +17,6 @@
 
 import React from "react"
 import { mount } from "src/lib/test_util"
-import { lightTheme } from "src/theme"
 
 import AlertContainer, { AlertContainerProps, Kind } from "./AlertContainer"
 
