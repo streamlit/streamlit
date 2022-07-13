@@ -24,9 +24,20 @@ import pickle
 import shutil
 import threading
 import time
-import types
 from collections import namedtuple
-from typing import Dict, Optional, List, Iterator, Any, Callable
+from typing import (
+    Dict,
+    Optional,
+    List,
+    Iterator,
+    Any,
+    Callable,
+    TypeVar,
+    overload,
+    Union,
+    cast,
+)
+
 import attr
 
 from cachetools import TTLCache
@@ -145,7 +156,7 @@ _mem_caches = _MemCaches()
 # and decremented when we exit.
 class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
-        self.cached_func_stack: List[types.FunctionType] = []
+        self.cached_func_stack: List[Callable[..., Any]] = []
         self.suppress_st_function_warning = 0
 
     def __repr__(self) -> str:
@@ -156,7 +167,7 @@ _cache_info = ThreadLocalCacheInfo()
 
 
 @contextlib.contextmanager
-def _calling_cached_function(func: types.FunctionType) -> Iterator[None]:
+def _calling_cached_function(func: Callable[..., Any]) -> Iterator[None]:
     _cache_info.cached_func_stack.append(func)
     try:
         yield
@@ -177,7 +188,7 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 def _show_cached_st_function_warning(
     dg: "st.delta_generator.DeltaGenerator",
     st_func_name: str,
-    cached_func: types.FunctionType,
+    cached_func: Callable[..., Any],
 ) -> None:
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
@@ -354,16 +365,47 @@ def _write_to_cache(
         _write_to_disk_cache(key, value)
 
 
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+@overload
 def cache(
-    func=None,
-    persist=False,
-    allow_output_mutation=False,
-    show_spinner=True,
-    suppress_st_warning=False,
-    hash_funcs=None,
-    max_entries=None,
-    ttl=None,
-):
+    func: F,
+    persist: bool = False,
+    allow_output_mutation: bool = False,
+    show_spinner: bool = True,
+    suppress_st_warning: bool = False,
+    hash_funcs: Optional[HashFuncsDict] = None,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
+) -> F:
+    ...
+
+
+@overload
+def cache(
+    func: None = None,
+    persist: bool = False,
+    allow_output_mutation: bool = False,
+    show_spinner: bool = True,
+    suppress_st_warning: bool = False,
+    hash_funcs: Optional[HashFuncsDict] = None,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
+) -> Callable[[F], F]:
+    ...
+
+
+def cache(
+    func: Optional[F] = None,
+    persist: bool = False,
+    allow_output_mutation: bool = False,
+    show_spinner: bool = True,
+    suppress_st_warning: bool = False,
+    hash_funcs: Optional[HashFuncsDict] = None,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
+) -> Union[Callable[[F], F], F]:
     """Function decorator to memoize function executions.
 
     Parameters
@@ -457,20 +499,27 @@ def cache(
     # Support passing the params via function decorator, e.g.
     # @st.cache(persist=True, allow_output_mutation=True)
     if func is None:
-        return lambda f: cache(
-            func=f,
-            persist=persist,
-            allow_output_mutation=allow_output_mutation,
-            show_spinner=show_spinner,
-            suppress_st_warning=suppress_st_warning,
-            hash_funcs=hash_funcs,
-            max_entries=max_entries,
-            ttl=ttl,
-        )
+
+        def wrapper(f: F) -> F:
+            return cache(
+                func=f,
+                persist=persist,
+                allow_output_mutation=allow_output_mutation,
+                show_spinner=show_spinner,
+                suppress_st_warning=suppress_st_warning,
+                hash_funcs=hash_funcs,
+                max_entries=max_entries,
+                ttl=ttl,
+            )
+
+        return wrapper
+    else:
+        # To make mypy type narrow Optional[F] -> F
+        non_optional_func = func
 
     cache_key = None
 
-    @functools.wraps(func)
+    @functools.wraps(non_optional_func)
     def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
@@ -478,9 +527,9 @@ def cache(
 
         if not config.get_option("client.caching"):
             _LOGGER.debug("Purposefully skipping cache")
-            return func(*args, **kwargs)
+            return non_optional_func(*args, **kwargs)
 
-        name = func.__qualname__
+        name = non_optional_func.__qualname__
 
         if len(args) == 0 and len(kwargs) == 0:
             message = "Running `%s()`." % name
@@ -495,7 +544,7 @@ def cache(
                 # defined after this one.
                 # If we generated the key earlier we would only hash those
                 # globals by name, and miss changes in their code or value.
-                cache_key = _hash_func(func, hash_funcs)
+                cache_key = _hash_func(non_optional_func, hash_funcs)
 
             # First, get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
@@ -515,7 +564,7 @@ def cache(
                     hasher=value_hasher,
                     hash_funcs=hash_funcs,
                     hash_reason=HashReason.CACHING_FUNC_ARGS,
-                    hash_source=func,
+                    hash_source=non_optional_func,
                 )
 
             if kwargs:
@@ -524,7 +573,7 @@ def cache(
                     hasher=value_hasher,
                     hash_funcs=hash_funcs,
                     hash_reason=HashReason.CACHING_FUNC_ARGS,
-                    hash_source=func,
+                    hash_source=non_optional_func,
                 )
 
             value_key = value_hasher.hexdigest()
@@ -541,20 +590,20 @@ def cache(
                     key=value_key,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
-                    func_or_code=func,
+                    func_or_code=non_optional_func,
                     hash_funcs=hash_funcs,
                 )
-                _LOGGER.debug("Cache hit: %s", func)
+                _LOGGER.debug("Cache hit: %s", non_optional_func)
 
             except CacheKeyNotFoundError:
-                _LOGGER.debug("Cache miss: %s", func)
+                _LOGGER.debug("Cache miss: %s", non_optional_func)
 
-                with _calling_cached_function(func):
+                with _calling_cached_function(non_optional_func):
                     if suppress_st_warning:
                         with suppress_cached_st_function_warning():
-                            return_value = func(*args, **kwargs)
+                            return_value = non_optional_func(*args, **kwargs)
                     else:
-                        return_value = func(*args, **kwargs)
+                        return_value = non_optional_func(*args, **kwargs)
 
                 _write_to_cache(
                     mem_cache=mem_cache,
@@ -562,7 +611,7 @@ def cache(
                     value=return_value,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
-                    func_or_code=func,
+                    func_or_code=non_optional_func,
                     hash_funcs=hash_funcs,
                 )
 
@@ -577,14 +626,14 @@ def cache(
     # Make this a well-behaved decorator by preserving important function
     # attributes.
     try:
-        wrapped_func.__dict__.update(func.__dict__)
+        wrapped_func.__dict__.update(non_optional_func.__dict__)
     except AttributeError:
         pass
 
-    return wrapped_func
+    return cast(F, wrapped_func)
 
 
-def _hash_func(func: types.FunctionType, hash_funcs: HashFuncsDict) -> str:
+def _hash_func(func: Callable[..., Any], hash_funcs: Optional[HashFuncsDict]) -> str:
     # Create the unique key for a function's cache. The cache will be retrieved
     # from inside the wrapped function.
     #
@@ -746,7 +795,7 @@ For more information and detailed solutions check out [our documentation.]
         ).strip("\n")
 
 
-def _get_cached_func_name_md(func: types.FunctionType) -> str:
+def _get_cached_func_name_md(func: Callable[..., Any]) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return "`%s()`" % func.__name__
