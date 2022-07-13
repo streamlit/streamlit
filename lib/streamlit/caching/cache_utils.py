@@ -142,6 +142,39 @@ class CachedFunction:
         raise NotImplementedError
 
 
+def replay_result_messages(result: CachedResult) -> None:
+    """Replay the st element function calls that happened when executing a cache-decorated function.
+
+    When a cache function is executed, we record the element and block messages produced,
+    and use those to reproduce the DeltaGenerator calls, so the elements will appear in
+    the web app even when execution of the function is skipped because the result was cached.
+
+    To make this work, for each st function call we record an identifier for the
+    DG it was effectively called on. We also record the identifier for each DG returned
+    by an st function call. Then, for each recorded message, we get the current DG
+    instance corresponding to the DG the message was originally called on, and enqueue
+    the message using that, recording any new DGs produced in case a later st function
+    call is on one of them.
+    """
+    from streamlit.delta_generator import DeltaGenerator
+
+    # Maps originally recorded dg ids to this script run's version of that dg
+    returned_dgs: Dict[str, DeltaGenerator] = {}
+    returned_dgs[result.main_id] = st._main
+    returned_dgs[result.sidebar_id] = st.sidebar
+
+    for msg in result.messages:
+        if isinstance(msg, ElementMsgData):
+            dg = returned_dgs[msg.id_of_dg_called_on]
+            maybe_dg = dg._enqueue(msg.delta_type, msg.message)
+            if isinstance(maybe_dg, DeltaGenerator):
+                returned_dgs[msg.returned_dgs_id] = maybe_dg
+        elif isinstance(msg, BlockMsgData):
+            dg = returned_dgs[msg.id_of_dg_called_on]
+            new_dg = dg._block(msg.message)
+            returned_dgs[msg.returned_dgs_id] = new_dg
+
+
 def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
     """Create a wrapper for a CachedFunction. This implements the common
     plumbing for both st.memo and st.singleton.
@@ -175,23 +208,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                 result = cache.read_result(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
 
-                # maps originally recorded dg ids to the instance of that dg in this script run
-                returned_dgs: Dict[str, "DeltaGenerator"] = {}
-                returned_dgs[result.main_id] = st._main
-                returned_dgs[result.sidebar_id] = st.sidebar
-
-                from streamlit.delta_generator import DeltaGenerator
-
-                for msg in result.messages:
-                    if isinstance(msg, ElementMsgData):
-                        dg = returned_dgs[msg.id_of_dg_called_on]
-                        maybe_dg = dg._enqueue(msg.delta_type, msg.message)
-                        if isinstance(maybe_dg, DeltaGenerator):
-                            returned_dgs[msg.returned_dgs_id] = maybe_dg
-                    elif isinstance(msg, BlockMsgData):
-                        dg = returned_dgs[msg.id_of_dg_called_on]
-                        new_dg = dg._block(msg.message)
-                        returned_dgs[msg.returned_dgs_id] = new_dg
+                replay_result_messages(result)
 
                 return_value = result.value
 
@@ -304,10 +321,30 @@ class CacheWarningCallStack(threading.local):
             dg.exception(e)
 
 
-# indirect invocation and known by cache stack frame -> rewrite as direct invocation on block dg
-# direct invocation and dg known by cache stack frame -> fine, use directly
-# indirect invocation and unknown -> external with block, rewrite as invocation on main
-# direct invocation and dg unknown -> ERROR
+"""
+Note [DeltaGenerator method invocation]
+There are 3 different ways an st function can be invoked:
+1. Implicitly on the main DG instance (plain `st.foo` calls)
+2. Implicitly on an active context's block (`st.foo` within a `with st.block` context)
+3. Explicitly on a DG instance (`st.sidebar.foo`, `my_container.foo`)
+
+To simplify replaying messages from a cached function result, we convert all of these
+to explicit invocations. How they get rewritten depends on both implicit vs explicit,
+and if the target DG is already known within the replay.
+
+Implicit invocation on a known DG -> Explicit invocation on that DG
+Implicit invocation on an unknown DG -> Rewrite as explicit invocation on main
+    This is situation 2 above, and the DG is a block entirely outside our function call,
+    so we interpret it as "put these elements within the current context", which is achieved
+    by invoking on main
+Explicit invocation on a known DG -> No change needed
+Explicit invocation on a known DG -> Raise an error
+    We have no way to identify the target DG, and it may not even be present in the
+    current script run, so the least surprising thing to do is raise an error
+
+"""
+
+
 class CacheMessagesCallStack(threading.local):
     """A utility for storing messages generated by `st` commands called inside
     a cached function.
