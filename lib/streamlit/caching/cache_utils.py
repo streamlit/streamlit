@@ -184,8 +184,6 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
                 for msg in result.messages:
                     if isinstance(msg, ElementMsgData):
-                        # Get the DG this element was called on. If we haven't produced it, assume it was an outer `with` block and fall back to the main dg FIXME
-                        # dg = returned_dgs.get(msg.id_of_dg_called_on, st._main)
                         dg = returned_dgs[msg.id_of_dg_called_on]
                         maybe_dg = dg._enqueue(msg.delta_type, msg.message)
                         if isinstance(maybe_dg, DeltaGenerator):
