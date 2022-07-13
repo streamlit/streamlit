@@ -66,7 +66,7 @@ class MapMixin:
         >>> st.map(df)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.map.py
+           https://doc-map.streamlitapp.com/
            height: 650px
 
         """

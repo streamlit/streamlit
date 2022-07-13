@@ -83,7 +83,7 @@ class ColorPickerMixin:
         >>> st.write('The current color is', color)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.color_picker.py
+           https://doc-color-picker.streamlitapp.com/
            height: 335px
 
         """
