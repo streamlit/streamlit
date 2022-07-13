@@ -178,11 +178,32 @@ distribution:
 # Build lib and frontend, and then run 'distribution'.
 package: mini-devel frontend install distribution
 
+.PHONY: conda-distribution
+# Create conda distribution files in lib/conda-recipe/dist.
+conda-distribution:
+	rm -rf lib/conda-recipe/dist
+	mkdir lib/conda-recipe/dist
+	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
+	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
+
+.PHONY: conda-hash
+# Get the sha256 hash of the conda distribution
+conda-hash:
+	@# `conda build --output` will tell us where the output file lives.
+	@# `sha256sum` outputs hash + filename - we just print the hash here.
+	# (NB: on Mac, do `brew install coreutils` to get the `sha256sum` command.)
+	sha256sum lib/conda-recipe/dist/noarch/streamlit*.tar.bz2 | cut -d " " -f 1
+
+.PHONY: conda-package
+# Build lib and frontend, and then run 'conda-distribution'
+conda-package: mini-devel frontend install conda-distribution conda-hash
+
 
 .PHONY: clean
 # Remove all generated files.
 clean:
 	cd lib; rm -rf build dist  .eggs *.egg-info
+	rm -rf lib/conda-recipe/dist
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
