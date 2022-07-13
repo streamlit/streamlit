@@ -468,8 +468,6 @@ class DeltaGenerator(
         legacy_caching.maybe_show_cached_st_function_warning(dg, delta_type)
         # Warn if we're called from within @st.memo or @st.singleton
         caching.maybe_show_cached_st_function_warning(dg, delta_type)
-        # Save message for replay if we're called from within @st.memo or @st.singleton
-        caching.save_element_message(delta_type, element_proto)
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
         st._maybe_print_use_warning()
@@ -525,6 +523,15 @@ class DeltaGenerator(
             # no-op from the point of view of the app.
             output_dg = dg
 
+        # Save message for replay if we're called from within @st.memo or @st.singleton
+        caching.save_element_message(
+            delta_type,
+            element_proto,
+            invoked_dg_id=str(id(self)),
+            used_dg_id=str(id(dg)),
+            returned_dg_id=str(id(output_dg)),
+        )
+
         return _value_or_dg(return_value, output_dg)
 
     def _block(
@@ -574,6 +581,13 @@ class DeltaGenerator(
         # Must be called to increment this cursor's index.
         dg._cursor.get_locked_cursor(last_index=None)
         _enqueue_message(msg)
+
+        caching.save_block_message(
+            block_proto,
+            invoked_dg_id=str(id(self)),
+            used_dg_id=str(id(dg)),
+            returned_dg_id=str(id(block_dg)),
+        )
 
         return block_dg
 

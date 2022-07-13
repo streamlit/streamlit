@@ -22,7 +22,7 @@ import streamlit as st
 from streamlit import StreamlitAPIException, file_util
 from streamlit.caching import memo_decorator
 from streamlit.caching.cache_errors import CacheError
-from streamlit.caching.cache_utils import CachedResult, MsgData
+from streamlit.caching.cache_utils import CachedResult, ElementMsgData
 from streamlit.caching.memo_decorator import (
     get_cache_path,
     get_memo_stats_provider,
@@ -269,7 +269,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         "streamlit.file_util.open",
         wraps=mock_open(
             read_data=pickle.dumps(
-                CachedResult(1, [MsgData("text", TextProto(body="1"))])
+                CachedResult(1, [ElementMsgData("text", TextProto(body="1"), "", "")])
             )
         ),
     )
