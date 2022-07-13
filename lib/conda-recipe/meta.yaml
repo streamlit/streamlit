@@ -27,8 +27,8 @@ source:
   path: ..
 
 build:
-  # TODO(vdonato): Figure out a good way to increment this build number
-  # automatically? Not sure if this is strictly necessary.
+  # NOTE: The build number is set because it's required, but it's essentially
+  # unused since the GIT_HASH uniquely identifies this build.
   number: 0
   string: {{ environ.get('GIT_HASH') }}
   noarch: python

@@ -184,19 +184,13 @@ conda-distribution:
 	rm -rf lib/conda-recipe/dist
 	mkdir lib/conda-recipe/dist
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
+	# NOTE: Running the following command requires both conda and conda-build to
+	# be installed.
 	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
-
-.PHONY: conda-hash
-# Get the sha256 hash of the conda distribution
-conda-hash:
-	@# `conda build --output` will tell us where the output file lives.
-	@# `sha256sum` outputs hash + filename - we just print the hash here.
-	# (NB: on Mac, do `brew install coreutils` to get the `sha256sum` command.)
-	sha256sum lib/conda-recipe/dist/noarch/streamlit*.tar.bz2 | cut -d " " -f 1
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: mini-devel frontend install conda-distribution conda-hash
+conda-package: mini-devel frontend install conda-distribution
 
 
 .PHONY: clean
