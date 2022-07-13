@@ -83,7 +83,7 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence,
-        default: Union[Iterable[Any], Any, None] = None,
+        default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
