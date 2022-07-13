@@ -355,8 +355,6 @@ class CacheMessagesCallStack(threading.local):
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
 
-        print(self._seen_dg_stack)
-
     def save_block_message(
         self,
         block_proto: Block,
@@ -369,7 +367,6 @@ class CacheMessagesCallStack(threading.local):
             msgs.append(BlockMsgData(block_proto, id_to_save, returned_dg_id))
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
-        print(self._seen_dg_stack)
 
     def get_dg_to_save_as_invoked(self, invoked_id: str, acting_on_id: str) -> str:
         if len(self._seen_dg_stack) > 0 and acting_on_id in self._seen_dg_stack[-1]:
