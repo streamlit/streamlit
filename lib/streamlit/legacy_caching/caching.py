@@ -513,12 +513,10 @@ def cache(
             )
 
         return wrapper
-    else:
-        non_optional_func = func
 
     cache_key = None
 
-    @functools.wraps(non_optional_func)
+    @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss. Cached objects are stored in the cache/
@@ -526,9 +524,9 @@ def cache(
 
         if not config.get_option("client.caching"):
             _LOGGER.debug("Purposefully skipping cache")
-            return non_optional_func(*args, **kwargs)
+            return func(*args, **kwargs)
 
-        name = non_optional_func.__qualname__
+        name = func.__qualname__
 
         if len(args) == 0 and len(kwargs) == 0:
             message = "Running `%s()`." % name
@@ -543,7 +541,7 @@ def cache(
                 # defined after this one.
                 # If we generated the key earlier we would only hash those
                 # globals by name, and miss changes in their code or value.
-                cache_key = _hash_func(non_optional_func, hash_funcs)
+                cache_key = _hash_func(func, hash_funcs)
 
             # First, get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
@@ -563,7 +561,7 @@ def cache(
                     hasher=value_hasher,
                     hash_funcs=hash_funcs,
                     hash_reason=HashReason.CACHING_FUNC_ARGS,
-                    hash_source=non_optional_func,
+                    hash_source=func,
                 )
 
             if kwargs:
@@ -572,7 +570,7 @@ def cache(
                     hasher=value_hasher,
                     hash_funcs=hash_funcs,
                     hash_reason=HashReason.CACHING_FUNC_ARGS,
-                    hash_source=non_optional_func,
+                    hash_source=func,
                 )
 
             value_key = value_hasher.hexdigest()
@@ -589,20 +587,20 @@ def cache(
                     key=value_key,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
-                    func_or_code=non_optional_func,
+                    func_or_code=func,
                     hash_funcs=hash_funcs,
                 )
-                _LOGGER.debug("Cache hit: %s", non_optional_func)
+                _LOGGER.debug("Cache hit: %s", func)
 
             except CacheKeyNotFoundError:
-                _LOGGER.debug("Cache miss: %s", non_optional_func)
+                _LOGGER.debug("Cache miss: %s", func)
 
-                with _calling_cached_function(non_optional_func):
+                with _calling_cached_function(func):
                     if suppress_st_warning:
                         with suppress_cached_st_function_warning():
-                            return_value = non_optional_func(*args, **kwargs)
+                            return_value = func(*args, **kwargs)
                     else:
-                        return_value = non_optional_func(*args, **kwargs)
+                        return_value = func(*args, **kwargs)
 
                 _write_to_cache(
                     mem_cache=mem_cache,
@@ -610,7 +608,7 @@ def cache(
                     value=return_value,
                     persist=persist,
                     allow_output_mutation=allow_output_mutation,
-                    func_or_code=non_optional_func,
+                    func_or_code=func,
                     hash_funcs=hash_funcs,
                 )
 
@@ -625,7 +623,7 @@ def cache(
     # Make this a well-behaved decorator by preserving important function
     # attributes.
     try:
-        wrapped_func.__dict__.update(non_optional_func.__dict__)
+        wrapped_func.__dict__.update(func.__dict__)
     except AttributeError:
         pass
 
