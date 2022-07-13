@@ -226,27 +226,6 @@ class ServerTest(ServerTestCase):
             self.assertEqual(populate_hash_if_needed(msg), received.hash)
 
     @tornado.testing.gen_test
-    async def test_get_session_by_id_nonexistent_session(self):
-        """Test getting a nonexistent session returns None."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
-            await self.start_server_loop()
-            self.assertEqual(self.server.get_session_by_id("abc123"), None)
-
-    @tornado.testing.gen_test
-    async def test_get_session_by_id(self):
-        """Test getting sessions by id produces the correct AppSession."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
-            await self.start_server_loop()
-            ws_client = await self.ws_connect()
-
-            session = list(self.server._session_info_by_id.values())[0].session
-            self.assertEqual(self.server.get_session_by_id(session.id), session)
-
-    @tornado.testing.gen_test
     async def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""
