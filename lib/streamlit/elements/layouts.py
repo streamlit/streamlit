@@ -240,7 +240,7 @@ class LayoutsMixin:
 
         .. output ::
             https://doc-tabs1.streamlitapp.com/
-            height: 700px
+            height: 620px
 
         Or you can just call methods directly in the returned objects:
 
