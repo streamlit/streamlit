@@ -12,42 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import List
 
 import attr
-import os
 
-from streamlit import config
 from streamlit.forward_msg_queue import ForwardMsgQueue
-
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 LOGGER = get_logger(__name__)
-
-
-def get_url(host_ip: str) -> str:
-    """Get the URL for any app served at the given host_ip.
-
-    Parameters
-    ----------
-    host_ip : str
-        The IP address of the machine that is running the Streamlit Server.
-
-    Returns
-    -------
-    str
-        The URL.
-    """
-    port = _get_browser_address_bar_port()
-    base_path = config.get_option("server.baseUrlPath").strip("/")
-
-    if base_path:
-        base_path = "/" + base_path
-
-    host_ip = host_ip.strip("/")
-
-    return f"http://{host_ip}:{port}{base_path}"
 
 
 @attr.s(auto_attribs=True, slots=True, init=False)
@@ -109,16 +83,3 @@ class SessionData:
 
         """
         return self._browser_queue.flush()
-
-
-def _get_browser_address_bar_port() -> int:
-    """Get the app URL that will be shown in the browser's address bar.
-
-    That is, this is the port where static assets will be served from. In dev,
-    this is different from the URL that will be used to connect to the
-    server-browser websocket.
-
-    """
-    if config.get_option("global.developmentMode"):
-        return 3000
-    return int(config.get_option("browser.serverPort"))
