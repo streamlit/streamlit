@@ -92,12 +92,13 @@ export default function AlertContainer({
             marginTop: 0,
             marginBottom: 0,
             width,
-            border: getAlertBorder(kind, theme),
+            border: 0,
           },
         },
         InnerContainer: {
           style: {
             width: "100%",
+            lineHeight: "1.5",
           },
         },
       }}
