@@ -214,6 +214,9 @@ class MemoAPI:
     ) -> Callable[[F], F]:
         ...
 
+    # __call__ should be a static method, but there's a mypy bug that
+    # breaks type checking for overloaded static functions:
+    # https://github.com/python/mypy/issues/7781
     def __call__(
         self,
         func: Optional[F] = None,
