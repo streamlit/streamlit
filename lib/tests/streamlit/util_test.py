@@ -15,6 +15,7 @@
 import random
 import unittest
 from unittest.mock import patch
+import numpy as np
 
 from parameterized import parameterized
 
@@ -90,3 +91,21 @@ class UtilTest(unittest.TestCase):
     def test_lower_clean_dict_keys(self, input_dict, answer_dict):
         return_dict = util.lower_clean_dict_keys(input_dict)
         self.assertEqual(return_dict, answer_dict)
+
+    @parameterized.expand(
+        [
+            (np.array([1, 2, 3, 4, 5]), 5, True),
+            (np.array([1, 2, 3, 4, 5]), 6, False),
+            (np.arange(0.0, 0.25, 0.05), .15, True),
+            (np.arange(0.0, 0.25, 0.05), .1500002, False),
+            ([0,1,2,3], 3, True),
+            ([0,1,2,3], 3.000000000000000000000001, False),
+            ([0.1,0.2,0.3], .3, True),
+            ([0.1,0.2,0.3], .3000000000000000000000000004, False),
+            (["He","ello w","orld"], "He", True),
+            (["He","ello w","orld"], "world", False),
+        ]
+    )
+    def test_index_(self, input, find_value, expected):
+        actual_return_bool = util._index(input, find_value)
+        self.assertEqual(actual_return_bool, expected)
