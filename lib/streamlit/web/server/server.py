@@ -120,7 +120,7 @@ SCRIPT_RUN_CHECK_TIMEOUT = 60
 
 
 class SessionClient(Protocol):
-    """Interface for sending data a session's client."""
+    """Interface for sending data to a session's client."""
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Deliver a ForwardMsg to the client."""
