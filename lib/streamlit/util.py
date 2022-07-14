@@ -27,7 +27,7 @@ from streamlit import env_util
 
 # URL of Streamlit's help page.
 HELP_DOC: Final = "https://docs.streamlit.io/"
-ERROR_CONSTANT: Final = .000000000005
+ERROR_CONSTANT: Final = 0.000000000005
 
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
@@ -130,7 +130,7 @@ def index_(iterable, x) -> int:
         # https://stackoverflow.com/questions/588004/is-floating-point-math-broken
         # https://github.com/streamlit/streamlit/issues/4663
         if isinstance(iterable, np.ndarray):
-            if abs(x-value) < ERROR_CONSTANT:
+            if abs(x - value) < ERROR_CONSTANT:
                 return True
         if x == value:
             return i
