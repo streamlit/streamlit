@@ -94,18 +94,26 @@ class UtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (np.array([1, 2, 3, 4, 5]), 5, True),
-            (np.array([1, 2, 3, 4, 5]), 6, False),
-            (np.arange(0.0, 0.25, 0.05), .15, True),
-            (np.arange(0.0, 0.25, 0.05), .1500002, False),
-            ([0,1,2,3], 3, True),
-            ([0,1,2,3], 3.000000000000000000000001, False),
-            ([0.1,0.2,0.3], .3, True),
-            ([0.1,0.2,0.3], .3000000000000000000000000004, False),
-            (["He","ello w","orld"], "He", True),
-            (["He","ello w","orld"], "world", False),
+            (np.array([1, 2, 3, 4, 5]), 5, 4),
+            (np.arange(0.0, 0.25, 0.05), .15, 3),
+            ([0,1,2,3], 3, 3),
+            ([0.1,0.2,0.3], .2, 1),
+            (["He","ello w","orld"], "He", 0),
         ]
     )
-    def test_index_(self, input, find_value, expected):
-        actual_return_bool = util._index(input, find_value)
-        self.assertEqual(actual_return_bool, expected)
+    def test_successful_index_(self, input, find_value, expected_index):
+        actual_index = util.index_(input, find_value)
+        self.assertEqual(actual_index, expected_index)
+
+    @parameterized.expand(
+        [
+            (np.array([1, 2, 3, 4, 5]), 6),
+            (np.arange(0.0, 0.25, 0.05), .1500002),
+            ([0,1,2,3], 3.00001), 
+            ([0.1,0.2,0.3], .3000004),
+            (["He","ello w","orld"], "world"),
+        ]
+    )
+    def test_unsuccessful_index_(self, input, find_value):
+        with self.assertRaises(ValueError):
+            util.index_(input, find_value)
