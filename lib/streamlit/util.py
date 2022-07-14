@@ -27,7 +27,7 @@ from streamlit import env_util
 
 # URL of Streamlit's help page.
 HELP_DOC: Final = "https://docs.streamlit.io/"
-ERROR_CONSTANT: Final = 0.000000000005
+FLOAT_EQUALITY_EPSILON: Final = 0.000000000005
 
 
 def memoize(func):
@@ -131,7 +131,7 @@ def index_(iterable, x) -> int:
         # https://stackoverflow.com/questions/588004/is-floating-point-math-broken
         # https://github.com/streamlit/streamlit/issues/4663
         if isinstance(iterable, np.ndarray):
-            if abs(x - value) < ERROR_CONSTANT:
+            if abs(x - value) < FLOAT_EQUALITY_EPSILON:
                 return i
         if x == value:
             return i
