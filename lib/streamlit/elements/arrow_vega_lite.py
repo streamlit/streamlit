@@ -18,8 +18,6 @@ import json
 from typing import Any, Dict, Optional, cast, TYPE_CHECKING
 from typing_extensions import Final
 
-import altair as alt
-
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
@@ -34,12 +32,6 @@ if TYPE_CHECKING:
 
 
 LOGGER: Final = get_logger(__name__)
-
-# Create and enable streamlit theme
-alt.themes.register(
-    "streamlit", lambda: {"usermeta": {"embedOptions": {"theme": "streamlit"}}}
-)
-alt.themes.enable("streamlit")
 
 
 class ArrowVegaLiteMixin:
@@ -95,19 +87,6 @@ class ArrowVegaLiteMixin:
         translated to the syntax shown above.
 
         """
-
-        if spec and alt.themes.get() and not spec.get("config"):
-            try:
-                custom_theme = spec["usermeta"]["embedOptions"]["theme"]
-            except KeyError:
-                custom_theme = None
-
-            if not custom_theme:
-                # User hasn't configured a custom theme, applying altair theme
-                altair_theme = alt.themes.get()
-                # Clone spec for mutation
-                spec = dict(spec)
-                spec.update(altair_theme())
 
         proto = ArrowVegaLiteChartProto()
         marshall(

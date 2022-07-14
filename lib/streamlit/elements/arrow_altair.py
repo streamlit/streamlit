@@ -38,6 +38,13 @@ from .utils import last_index_for_melted_dataframes
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+# Create and enable streamlit theme
+STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
+
+alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
+# We don't want to activate the streamlit theme for Altair as default for now:
+alt.themes.enable("none")
+
 
 class ChartType(Enum):
     AREA = "area"
@@ -321,7 +328,8 @@ def _generate_chart(
 
     chart = (
         getattr(
-            alt.Chart(data, width=width, height=height), "mark_" + chart_type.value
+            alt.Chart(data, width=width, height=height, usermeta=STREAMLIT_THEME),
+            "mark_" + chart_type.value,
         )()
         .encode(
             alt.X(index_name, title="", scale=x_scale, type=x_type),
