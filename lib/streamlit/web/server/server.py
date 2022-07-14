@@ -732,7 +732,7 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             header_content = self.request.headers["X-Streamlit-User"]
             payload = base64.b64decode(header_content)
             user_obj = json.loads(payload)
-            is_public_cloud_app = bool(user_obj["isPublicCloudApp"])
+            is_public_cloud_app = user_obj["isPublicCloudApp"]
             if not is_public_cloud_app:
                 email = user_obj["email"]
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
