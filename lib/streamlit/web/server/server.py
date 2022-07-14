@@ -145,7 +145,7 @@ class SessionInfo:
             The concrete SessionClient for this session.
         """
         self.session = session
-        self.handler = client
+        self.client = client
         self.script_run_count = 0
 
     def __repr__(self) -> str:
@@ -611,7 +611,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         # Ship it off!
-        session_info.handler.write_forward_msg(msg_to_send)
+        session_info.client.write_forward_msg(msg_to_send)
 
     def _enqueued_some_message(self) -> None:
         self._ioloop.add_callback(self._need_send_data.set)
