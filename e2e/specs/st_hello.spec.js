@@ -73,28 +73,8 @@ describe("hello", () => {
       });
   });
 
-  it("displays mapping demo", () => {
-    cy.getIndexed('[data-testid="stSidebarNav"] a', 3)
-      .click({ force: true })
-      .then(() => {
-        cy.get(".element-container .stMarkdown h1").should(
-          "contain",
-          "Mapping Demo"
-        );
-
-        cy.get(".element-container .stDeckGlJsonChart")
-          .find("canvas")
-          .should("have.css", "height", "500px");
-
-        // Wait for Mapbox to build the canvas.
-        cy.wait(5000);
-
-        cy.get(".appview-container").matchThemedSnapshots("mapping-demo");
-      });
-  });
-
   it("displays dataframe demo", () => {
-    cy.getIndexed('[data-testid="stSidebarNav"] a', 4)
+    cy.getIndexed('[data-testid="stSidebarNav"] a', 3)
       .click()
       .then(() => {
         cy.get(".element-container .stMarkdown h1").should(

@@ -55,9 +55,8 @@ requirements:
       # by default in our conda distribution due to this.
       {% elif 'watchdog' in req %}
         - watchdog
-      # TODO(vdonato): Possibly remove this check if gitpython and pydeck are
-      # moved to extras_require.
-      {% elif 'gitpython' not in req and 'pydeck' not in req %}
+      # TODO(vdonato): Remove this check once gitpython is no longer required.
+      {% elif 'gitpython' not in req %}
         - {{ req }}
       {% endif %}
     {% endfor %}
