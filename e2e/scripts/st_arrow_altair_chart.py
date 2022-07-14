@@ -20,6 +20,8 @@ import altair as alt
 # Set to default vega lite theme
 alt.themes.enable("none")
 
+np.random.seed(0)
+
 data = np.random.randn(200, 3)
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
