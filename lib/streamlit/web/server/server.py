@@ -91,7 +91,6 @@ from streamlit.web.server.server_util import serialize_forward_msg
 from streamlit.web.server.server_util import get_max_message_size_bytes
 from streamlit.watcher import LocalSourcesWatcher
 
-
 LOGGER = get_logger(__name__)
 
 TORNADO_SETTINGS = {
@@ -120,11 +119,11 @@ UNIX_SOCKET_PREFIX = "unix://"
 SCRIPT_RUN_CHECK_TIMEOUT = 60
 
 
-class SessionHandler(Protocol):
-    """Interface for writing data to a connected session."""
+class SessionClient(Protocol):
+    """Interface for sending data a session's client."""
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Called to deliver a ForwardMsg to session."""
+        """Deliver a ForwardMsg to the client."""
 
 
 class SessionInfo:
@@ -135,18 +134,18 @@ class SessionInfo:
     the ForwardMsgCache.
     """
 
-    def __init__(self, handler: SessionHandler, session: AppSession):
+    def __init__(self, client: SessionClient, session: AppSession):
         """Initialize a SessionInfo instance.
 
         Parameters
         ----------
         session : AppSession
             The AppSession object.
-        handler : SessionHandler
-            The concrete SessionHandler for this session.
+        client : SessionClient
+            The concrete SessionClient for this session.
         """
         self.session = session
-        self.handler = handler
+        self.handler = client
         self.script_run_count = 0
 
     def __repr__(self) -> str:
@@ -635,14 +634,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         self._ioloop.stop()
 
     def _create_app_session(
-        self, handler: SessionHandler, user_info: Dict[str, Optional[str]]
+        self, client: SessionClient, user_info: Dict[str, Optional[str]]
     ) -> AppSession:
         """Register a connected browser with the server.
 
         Parameters
         ----------
-        handler : SessionHandler
-            A concrete SessionHandler for writing data to the session.
+        client : SessionClient
+            The SessionClient for sending data to the session's client.
 
         user_info: Dict
             A dict that contains information about the current user. For now,
@@ -671,14 +670,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         )
 
         LOGGER.debug(
-            "Created new session for ws %s. Session ID: %s", id(handler), session.id
+            "Created new session for client %s. Session ID: %s", id(client), session.id
         )
 
         assert (
             session.id not in self._session_info_by_id
         ), f"session.id '{session.id}' registered multiple times!"
 
-        self._session_info_by_id[session.id] = SessionInfo(handler, session)
+        self._session_info_by_id[session.id] = SessionInfo(client, session)
         self._set_state(State.ONE_OR_MORE_SESSIONS_CONNECTED)
         self._has_connection.notify_all()
 
@@ -704,7 +703,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             self._set_state(State.NO_SESSIONS_CONNECTED)
 
 
-class _BrowserWebSocketHandler(WebSocketHandler, SessionHandler):
+class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     """Handles a WebSocket connection from the browser"""
 
     def initialize(self, server: Server) -> None:
@@ -727,23 +726,19 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionHandler):
         self.write_message(serialize_forward_msg(msg), binary=True)
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
-        is_public_cloud_app = False
-
+        # Extract user info from the X-Streamlit-User header
+        email: Optional[str] = None
         try:
             header_content = self.request.headers["X-Streamlit-User"]
             payload = base64.b64decode(header_content)
             user_obj = json.loads(payload)
-            email = user_obj["email"]
-            is_public_cloud_app = user_obj["isPublicCloudApp"]
+            is_public_cloud_app = bool(user_obj["isPublicCloudApp"])
+            if not is_public_cloud_app:
+                email = user_obj["email"]
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
-            email = "test@localhost.com"
+            email = None
 
-        user_info: Dict[str, Optional[str]] = dict()
-        if is_public_cloud_app:
-            user_info["email"] = None
-        else:
-            user_info["email"] = email
-
+        user_info = {"email": email}
         self._session = self._server._create_app_session(self, user_info)
         return None
 
