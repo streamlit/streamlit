@@ -130,10 +130,11 @@ def index_(iterable, x) -> int:
     for i, value in enumerate(iterable):
         # https://stackoverflow.com/questions/588004/is-floating-point-math-broken
         # https://github.com/streamlit/streamlit/issues/4663
-        if isinstance(value, np.float64) or isinstance(value, float):
-            if abs(x - value) < FLOAT_EQUALITY_EPSILON:
-                return i
-        elif x == value:
+        if len(iterable) != 0:
+            if isinstance(iterable[0], np.float64) or isinstance(iterable[0], float):
+                if abs(x - value) < FLOAT_EQUALITY_EPSILON:
+                    return i
+        if x == value:
             return i
     raise ValueError("{} is not in iterable".format(str(x)))
 
