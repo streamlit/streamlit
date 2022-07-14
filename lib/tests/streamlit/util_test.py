@@ -95,6 +95,7 @@ class UtilTest(unittest.TestCase):
     @parameterized.expand(
         [
             (np.array([1, 2, 3, 4, 5]), 5, 4),
+            # This one will have 0.15000000000000002 because of floating point precision
             (np.arange(0.0, 0.25, 0.05), .15, 3),
             ([0,1,2,3], 3, 3),
             ([0.1,0.2,0.3], .2, 1),
