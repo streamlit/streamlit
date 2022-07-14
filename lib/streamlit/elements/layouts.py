@@ -194,7 +194,7 @@ class LayoutsMixin:
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
     def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
-        """Insert containers seperated into tabs.
+        """Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
         Tabs are a navigational element that allows users to easily
