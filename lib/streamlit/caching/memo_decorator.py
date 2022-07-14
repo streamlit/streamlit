@@ -430,8 +430,8 @@ class MemoCache(Cache):
         The value must be pickleable.
         """
         try:
-            main_id = str(id(st._main))
-            sidebar_id = str(id(st.sidebar))
+            main_id = st._main.id
+            sidebar_id = st.sidebar.id
             entry = CachedResult(value, messages, main_id, sidebar_id)
             pickled_entry = pickle.dumps(entry)
         except pickle.PicklingError as exc:

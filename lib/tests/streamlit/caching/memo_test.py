@@ -33,7 +33,7 @@ from tests.testutil import DeltaGeneratorTestCase
 
 
 def as_cached_result(value):
-    return CachedResult(value, [], str(id(st._main)), str(id(st.sidebar)))
+    return CachedResult(value, [], st._main.id, st.sidebar.id)
 
 
 class MemoTest(unittest.TestCase):
@@ -271,13 +271,9 @@ class MemoPersistTest(DeltaGeneratorTestCase):
             read_data=pickle.dumps(
                 CachedResult(
                     1,
-                    [
-                        ElementMsgData(
-                            "text", TextProto(body="1"), str(id(st._main)), ""
-                        )
-                    ],
-                    str(id(st._main)),
-                    str(id(st.sidebar)),
+                    [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
+                    st._main.id,
+                    st.sidebar.id,
                 )
             )
         ),

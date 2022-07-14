@@ -271,8 +271,8 @@ class SingletonCache(Cache):
 
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
-        main_id = str(id(st._main))
-        sidebar_id = str(id(st.sidebar))
+        main_id = st._main.id
+        sidebar_id = st.sidebar.id
         with self._mem_cache_lock:
             self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
 
