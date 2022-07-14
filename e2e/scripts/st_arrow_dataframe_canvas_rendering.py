@@ -268,7 +268,7 @@ table1 = pa.Table.from_pandas(df_arr1)
 st._arrow_dataframe(table1)
 
 st.header("Input Data: numpy.ndarray")
-np_array = np.ndarray(
+np_array: "np.typing.NDArray[np.int_]" = np.ndarray(
     shape=(5, 5),
     buffer=np.arange(40),
     dtype=int,

@@ -105,7 +105,7 @@ class NumberInputMixin:
         >>> st.write('The current number is ', number)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.number_input.py
+           https://doc-number-input.streamlitapp.com/
            height: 260px
 
         """

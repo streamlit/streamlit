@@ -24,7 +24,7 @@ import click
 
 import streamlit
 from streamlit.credentials import Credentials, check_credentials
-import streamlit.bootstrap as bootstrap
+import streamlit.web.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
@@ -252,9 +252,6 @@ def cache():
 @cache.command("clear")
 def cache_clear():
     """Clear st.cache, st.memo, and st.singleton caches."""
-    import streamlit.legacy_caching
-    import streamlit.caching
-
     result = streamlit.legacy_caching.clear_cache()
     cache_path = streamlit.legacy_caching.get_cache_path()
     if result:

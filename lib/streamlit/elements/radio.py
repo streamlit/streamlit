@@ -102,7 +102,7 @@ class RadioMixin:
         ...     st.write("You didn\'t select comedy.")
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.radio.py
+           https://doc-radio.streamlitapp.com/
            height: 260px
 
         """
