@@ -15,6 +15,7 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
+from typing import List
 from unittest.mock import patch
 
 from parameterized import parameterized
@@ -67,6 +68,16 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         if ctx is not None:
             ctx.widget_ids_this_run.clear()
         super().tearDown()
+
+    def get_text_delta_contents(self) -> List[str]:
+
+        deltas = self.get_all_deltas_from_queue()
+        text = [
+            element.text.body
+            for element in (delta.new_element for delta in deltas)
+            if element.WhichOneof("type") == "text"
+        ]
+        return text
 
     @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_simple(self, _, cache_decorator):
@@ -280,12 +291,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         st.text("---")
         foo(1)
 
-        deltas = self.get_all_deltas_from_queue()
-        text = [
-            element.text.body
-            for element in (delta.new_element for delta in deltas)
-            if element.WhichOneof("type") == "text"
-        ]
+        text = self.get_text_delta_contents()
+
         assert text == ["1", "---", "1"]
 
     @parameterized.expand(
@@ -313,12 +320,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         outer(3)
         inner(3)
 
-        deltas = self.get_all_deltas_from_queue()
-        text = [
-            element.text.body
-            for element in (delta.new_element for delta in deltas)
-            if element.WhichOneof("type") == "text"
-        ]
+        text = self.get_text_delta_contents()
         assert text == [
             "1",
             "11",
@@ -351,12 +353,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             st.text("---")
             foo(1)
 
-        deltas = self.get_all_deltas_from_queue()
-        text = [
-            element.text.body
-            for element in (delta.new_element for delta in deltas)
-            if element.WhichOneof("type") == "text"
-        ]
+        text = self.get_text_delta_contents()
         assert text == ["1", "---", "1"]
 
     @parameterized.expand(
@@ -375,10 +372,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         st.text("---")  # [0,0]
         foo(1)  # [1,1]
 
-        deltas = self.get_all_deltas_from_queue()
         text = [
             get_text_or_block(delta)
-            for delta in deltas
+            for delta in self.get_all_deltas_from_queue()
             if get_text_or_block(delta) is not None
         ]
         assert text == ["1", "---", "1"]
@@ -413,10 +409,11 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         st.text("---")  # [0,4]
         foo(1)  # [0,5] and [0,5,0]
 
-        fwd_msgs = [
-            msg for msg in self.forward_msg_queue._queue if msg.HasField("delta")
+        paths = [
+            msg.metadata.delta_path
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
         ]
-        paths = [msg.metadata.delta_path for msg in fwd_msgs]
         assert paths == [
             [0, 0],
             [0, 0, 0],
@@ -447,15 +444,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         st.text("---")  # [0,1]
         foo(1)  # [0,2] and [0,2,0]
 
-        deltas = self.get_all_deltas_from_queue()
-        text = [
-            element.text.body
-            for element in (delta.new_element for delta in deltas)
-            if element.WhichOneof("type") == "text"
-        ]
+        text = self.get_text_delta_contents()
         assert text == ["1", "---", "1"]
 
-        # TODO: test that the elements are correctly in the containers
         paths = [
             msg.metadata.delta_path
             for msg in self.forward_msg_queue._queue
