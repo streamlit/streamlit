@@ -41,7 +41,7 @@ describe("st._legacy_vega_lite_chart", () => {
       "666px"
     );
 
-    cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 2).should(
+    cy.getIndexed("[data-testid='stVegaLiteChart'] canvas", 2).should(
       "have.css",
       "width",
       "400px"
