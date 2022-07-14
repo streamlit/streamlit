@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { merge } from "lodash"
+import { merge, mergeWith, isArray } from "lodash"
 import { getLuminance } from "color2k"
 
 import { Theme } from "src/theme"
@@ -224,7 +224,9 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
   }
 
   // Fill in theme defaults where the user didn't specify config options.
-  return merge({}, streamlitTheme, config || {})
+  return mergeWith({}, streamlitTheme, config, (_, b) =>
+    isArray(b) ? b : undefined
+  )
 }
 
 export function applyThemeDefaults(config: any, theme: Theme): any {

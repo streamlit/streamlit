@@ -32,7 +32,7 @@ describe("st._arrow_altair_chart", () => {
   it("displays correctly", () => {
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']").should(
       "have.length",
-      5
+      7
     );
 
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']").each(

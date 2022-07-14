@@ -15,7 +15,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from dateutil.parser import parse
 
 np.random.seed(0)
 data = np.random.randn(200, 3)
@@ -156,18 +155,12 @@ st._arrow_vega_lite_chart(
     }
 )
 
-import altair as alt
-
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 
-with alt.themes.enable("none"):
-    st.write("Show vega lite theme:")
-    st._arrow_vega_lite_chart(df, spec, use_container_width=True)
+st.write("Show streamlit theme:")
+spec["usermeta"] = {"embedOptions": {"theme": "streamlit"}}
+st._arrow_vega_lite_chart(df, spec, use_container_width=True)
 
-with alt.themes.enable("streamlit"):
-    st.write("Show streamlit theme:")
-    st._arrow_vega_lite_chart(df, spec, use_container_width=True)
-
-st.write("Show vega lite theme:")
+st.write("Show default theme:")
 spec["usermeta"] = {"embedOptions": {"theme": "none"}}
 st._arrow_vega_lite_chart(df, spec, use_container_width=True)

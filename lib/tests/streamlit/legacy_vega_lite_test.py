@@ -14,7 +14,6 @@
 
 """st._legacy_vega_lite unit test."""
 
-import altair as alt
 import pandas as pd
 import pyarrow as pa
 import json
@@ -23,8 +22,6 @@ from tests import testutil
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 
-# Use default altair theme for tests
-alt.themes.enable("none")
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 

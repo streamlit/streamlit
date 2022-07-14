@@ -14,16 +14,12 @@
 
 import json
 
-import altair as alt
 import pandas as pd
 import pyarrow as pa
 from tests import testutil
 
 import streamlit as st
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
-
-# Use default altair theme for tests
-alt.themes.enable("none")
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T

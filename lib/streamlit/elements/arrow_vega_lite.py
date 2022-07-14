@@ -87,7 +87,6 @@ class ArrowVegaLiteMixin:
         translated to the syntax shown above.
 
         """
-
         proto = ArrowVegaLiteChartProto()
         marshall(
             proto,
@@ -171,7 +170,7 @@ def marshall(
 
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
-
+    print(proto.spec)
     if data is not None:
         arrow.marshall(proto.data, data)
 
