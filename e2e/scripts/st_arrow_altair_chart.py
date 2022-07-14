@@ -34,7 +34,7 @@ with alt.themes.enable("streamlit"):
     st._arrow_altair_chart(chart)
 
 with alt.themes.enable("streamlit"):
-    st.write("Show default vega lite theme:")
+    st.write("Overwrite theme config:")
     chart = (
         alt.Chart(df, usermeta={"embedOptions": {"theme": None}})
         .mark_circle()
@@ -54,8 +54,8 @@ chart = alt.Chart(data).mark_bar().encode(x="a", y="b")
 st.write("Bar chart with default theme:")
 st._arrow_altair_chart(chart)
 
-st.write("Bar chart with streamlit theme:")
 with alt.themes.enable("streamlit"):
+    st.write("Bar chart with streamlit theme:")
     st._arrow_altair_chart(chart)
 
 with alt.themes.enable("streamlit"):
