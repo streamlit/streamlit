@@ -155,9 +155,9 @@ class SessionInfo:
 
 class State(Enum):
     INITIAL = "INITIAL"
-    WAITING_FOR_FIRST_BROWSER = "WAITING_FOR_FIRST_BROWSER"
-    ONE_OR_MORE_BROWSERS_CONNECTED = "ONE_OR_MORE_BROWSERS_CONNECTED"
-    NO_BROWSERS_CONNECTED = "NO_BROWSERS_CONNECTED"
+    WAITING_FOR_FIRST_SESSION = "WAITING_FOR_FIRST_SESSION"
+    ONE_OR_MORE_SESSIONS_CONNECTED = "ONE_OR_MORE_SESSIONS_CONNECTED"
+    NO_SESSIONS_CONNECTED = "NO_SESSIONS_CONNECTED"
     STOPPING = "STOPPING"
     STOPPED = "STOPPED"
 
@@ -475,7 +475,7 @@ class Server:
 
     @property
     def browser_is_connected(self) -> bool:
-        return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
+        return self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED
 
     @property
     def is_running_hello(self) -> bool:
@@ -488,8 +488,8 @@ class Server:
     ) -> None:
         try:
             if self._state == State.INITIAL:
-                self._set_state(State.WAITING_FOR_FIRST_BROWSER)
-            elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+                self._set_state(State.WAITING_FOR_FIRST_SESSION)
+            elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
@@ -498,13 +498,13 @@ class Server:
                 on_started(self)
 
             while not self._must_stop.is_set():
-                if self._state == State.WAITING_FOR_FIRST_BROWSER:
+                if self._state == State.WAITING_FOR_FIRST_SESSION:
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
                     )
 
-                elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+                elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
                     self._need_send_data.clear()
 
                     # Shallow-clone our sessions into a list, so we can iterate
@@ -523,7 +523,7 @@ class Server:
                         await asyncio.sleep(0)
                     await asyncio.sleep(0.01)
 
-                elif self._state == State.NO_BROWSERS_CONNECTED:
+                elif self._state == State.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
@@ -679,7 +679,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         ), f"session.id '{session.id}' registered multiple times!"
 
         self._session_info_by_id[session.id] = SessionInfo(handler, session)
-        self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
+        self._set_state(State.ONE_OR_MORE_SESSIONS_CONNECTED)
         self._has_connection.notify_all()
 
         return session
@@ -701,7 +701,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             session_info.session.shutdown()
 
         if len(self._session_info_by_id) == 0:
-            self._set_state(State.NO_BROWSERS_CONNECTED)
+            self._set_state(State.NO_SESSIONS_CONNECTED)
 
 
 class _BrowserWebSocketHandler(WebSocketHandler, SessionHandler):
