@@ -59,6 +59,10 @@ _LOGGER = get_logger(__name__)
 
 @dataclass
 class ElementMsgData:
+    """A non-interactive element's message and related metadata for
+    replaying that element's function call.
+    """
+
     delta_type: str
     message: Message
     id_of_dg_called_on: str
@@ -77,6 +81,10 @@ MsgData = Union[ElementMsgData, BlockMsgData]
 
 @dataclass
 class CachedResult:
+    """The full results of calling a cache-decorated function, enough to
+    replay the st functions called while executing it.
+    """
+
     value: Any
     messages: List[MsgData]
     main_id: str
