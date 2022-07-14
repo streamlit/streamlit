@@ -260,7 +260,6 @@ class Server:
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
-        self._session_data: Optional[SessionData] = None
         self._has_connection = tornado.locks.Condition()
         self._need_send_data = tornado.locks.Event()
 
