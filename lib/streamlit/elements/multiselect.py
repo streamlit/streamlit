@@ -23,6 +23,7 @@ from typing import (
     List,
     Sequence,
     Union,
+    TypeVar,
 )
 
 import streamlit
@@ -40,13 +41,49 @@ from streamlit.state import (
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
+T = TypeVar("T")
+
 
 class MultiSelectMixin:
+    @overload
+    def multiselect(
+        self,
+        label: str,
+        options: Sequence[T],
+        default: Optional[Any] = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+    ) -> List[T]:
+        ...
+
+    @overload
     def multiselect(
         self,
         label: str,
         options: OptionSequence,
-        default: Union[Iterable[Any], Any, None] = None,
+        default: Optional[Any] = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+    ) -> List[Any]:
+        ...
+
+    def multiselect(
+        self,
+        label: str,
+        options: OptionSequence,
+        default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -106,7 +143,7 @@ class MultiSelectMixin:
         >>> st.write('You selected:', options)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.multiselect.py
+           https://doc-multiselect.streamlitapp.com/
            height: 420px
 
         """

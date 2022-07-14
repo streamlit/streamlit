@@ -35,6 +35,11 @@ class CredentialsClassTest(unittest.TestCase):
 
     def setUp(self):
         """Setup."""
+        # Credentials._singleton should be None here, but a mis-behaving
+        # test may have left it intact.
+        Credentials._singleton = None
+
+    def tearDown(self) -> None:
         Credentials._singleton = None
 
     @patch("streamlit.credentials.file_util.get_streamlit_file_path", mock_get_path)

@@ -230,7 +230,7 @@ class FileUploaderMixin:
         ...     st.write(bytes_data)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.file_uploader.py
+           https://doc-file-uploader.streamlitapp.com/
            height: 375px
 
         """

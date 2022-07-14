@@ -211,7 +211,7 @@ class TimeWidgetsMixin:
         >>> st.write('Alarm is set for', t)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.time_input.py
+           https://doc-time-input.streamlitapp.com/
            height: 260px
 
         """
@@ -362,7 +362,7 @@ class TimeWidgetsMixin:
         >>> st.write('Your birthday is:', d)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.date_input.py
+           https://doc-date-input.streamlitapp.com/
            height: 260px
 
         """

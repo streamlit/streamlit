@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Mapping
 from urllib.parse import urlparse
 from textwrap import dedent
 from typing import cast, Dict, Optional, TYPE_CHECKING, Union
@@ -38,7 +39,7 @@ _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
 _ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
 _About: TypeAlias = Literal["About", "about"]
 MenuKey: TypeAlias = Literal[_GetHelp, _ReportABug, _About]
-MenuItems: TypeAlias = Dict[MenuKey, Optional[str]]
+MenuItems: TypeAlias = Mapping[MenuKey, Optional[str]]
 
 
 def set_page_config(
@@ -216,8 +217,8 @@ def set_menu_items_proto(lowercase_menu_items, menu_items_proto) -> None:
             menu_items_proto.about_section_md = dedent(lowercase_menu_items[ABOUT_KEY])
 
 
-def validate_menu_items(dict: MenuItems) -> None:
-    for k, v in dict.items():
+def validate_menu_items(menu_items: MenuItems) -> None:
+    for k, v in menu_items.items():
         if not valid_menu_item_key(k):
             raise StreamlitAPIException(
                 "We only accept the keys: "

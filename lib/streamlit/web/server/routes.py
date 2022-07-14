@@ -20,7 +20,7 @@ from urllib.parse import quote, unquote_plus
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
-from streamlit.server.server_util import serialize_forward_msg
+from streamlit.web.server.server_util import serialize_forward_msg
 from streamlit.string_util import generate_download_filename_from_title
 from streamlit.in_memory_file_manager import _get_extension_for_mimetype
 from streamlit.in_memory_file_manager import in_memory_file_manager

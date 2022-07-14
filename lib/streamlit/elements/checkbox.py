@@ -84,7 +84,7 @@ class CheckboxMixin:
         ...     st.write('Great!')
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.checkbox.py
+           https://doc-checkbox.streamlitapp.com/
            height: 220px
 
         """
