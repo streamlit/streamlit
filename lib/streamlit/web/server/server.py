@@ -259,7 +259,7 @@ class Server:
         self._state = State.INITIAL
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
+        self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._session_data: Optional[SessionData] = None
         self._has_connection = tornado.locks.Condition()
         self._need_send_data = tornado.locks.Event()
@@ -283,7 +283,7 @@ class Server:
     def main_script_path(self) -> str:
         return self._main_script_path
 
-    def on_files_updated(self, session_id: str) -> None:
+    def _on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
         Ensures that uploaded files from stale sessions get deleted.
         """
