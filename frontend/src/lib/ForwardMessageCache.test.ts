@@ -133,18 +133,18 @@ test("caches messages correctly", async () => {
 test("caches messages as a deep copy", async () => {
   const { cache, getCachedMessage } = createCache()
 
-  const msg1 = createForwardMsg("Cacheable", true)
-  const encodedMsg1 = ForwardMsg.encode(msg1).finish()
+  const msg = createForwardMsg("Cacheable", true)
+  const encodedMsg = ForwardMsg.encode(msg).finish()
 
-  await cache.processMessagePayload(msg1, encodedMsg1)
+  await cache.processMessagePayload(msg, encodedMsg)
 
   // Check if message is correctly cached
-  expect(getCachedMessage("Cacheable")).toEqual(msg1)
+  expect(getCachedMessage("Cacheable")).toEqual(msg)
   expect(getCachedMessage("Cacheable")?.metadata?.deltaPath).toEqual([])
 
   // Modify the message content
-  if (msg1.metadata) {
-    msg1.metadata.deltaPath = [10]
+  if (msg.metadata) {
+    msg.metadata.deltaPath = [10]
   }
 
   // Check that it does not impact the cached message
