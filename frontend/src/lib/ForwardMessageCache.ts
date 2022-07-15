@@ -107,8 +107,20 @@ export class ForwardMsgCache {
     } else {
       // Cache miss: fetch from the server
       logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
-      newMsg = await this.fetchMessagePayload(msg.refHash as string)
-      this.maybeCacheMessage(newMsg, encodedMsg)
+      const encodedNewMsg = await this.fetchMessagePayload(
+        msg.refHash as string
+      )
+      try {
+        newMsg = ForwardMsg.decode(encodedNewMsg)
+      } catch (e) {
+        throw new Error(
+          `Failed to decode ForwardMsg (hash=${msg.refHash}): ${
+            ensureError(e).message
+          }`
+        )
+      }
+
+      this.maybeCacheMessage(newMsg, encodedNewMsg)
     }
 
     // Copy the metadata from the refMsg into our new message
@@ -126,7 +138,7 @@ export class ForwardMsgCache {
    * cache. This should happen rarely, as the client and server's
    * caches should generally be in sync.
    */
-  private async fetchMessagePayload(hash: string): Promise<ForwardMsg> {
+  private async fetchMessagePayload(hash: string): Promise<Uint8Array> {
     const serverURI = this.getServerUri()
     if (serverURI === undefined) {
       throw new Error(
@@ -145,14 +157,7 @@ export class ForwardMsgCache {
     }
 
     const data = await rsp.arrayBuffer()
-    const arrayBuffer = new Uint8Array(data)
-    try {
-      return ForwardMsg.decode(arrayBuffer)
-    } catch (e) {
-      throw new Error(
-        `Failed to decode ForwardMsg (hash=${hash}): ${ensureError(e).message}`
-      )
-    }
+    return new Uint8Array(data)
   }
 
   /**
