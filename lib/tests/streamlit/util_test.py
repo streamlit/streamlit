@@ -100,6 +100,7 @@ class UtilTest(unittest.TestCase):
             ([0, 1, 2, 3], 3, 3),
             ([0.1, 0.2, 0.3], 0.2, 1),
             (["He", "ello w", "orld"], "He", 0),
+            (list(np.arange(0.0, 0.25, 0.05)), 0.15, 3),
         ]
     )
     def test_successful_index_(self, input, find_value, expected_index):
@@ -113,6 +114,7 @@ class UtilTest(unittest.TestCase):
             ([0, 1, 2, 3], 3.00001),
             ([0.1, 0.2, 0.3], 0.3000004),
             (["He", "ello w", "orld"], "world"),
+            (list(np.arange(0.0, 0.25, 0.05)), 0.150002),
         ]
     )
     def test_unsuccessful_index_(self, input, find_value):
