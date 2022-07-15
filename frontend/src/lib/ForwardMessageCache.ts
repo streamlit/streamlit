@@ -115,7 +115,6 @@ export class ForwardMsgCache {
     if (!msg.metadata) {
       throw new Error("ForwardMsg has no metadata")
     }
-
     newMsg.metadata = ForwardMsg.decode(encodedMsg).metadata
     return newMsg
   }
