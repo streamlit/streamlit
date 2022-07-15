@@ -105,12 +105,14 @@ test("caches messages correctly", async () => {
 
   // Cacheable messages should be cached
   const msg1 = createForwardMsg("Cacheable", true)
-  await cache.processMessagePayload(msg1)
+  const encodedMsg1 = ForwardMsg.encode(msg1).finish()
+  await cache.processMessagePayload(msg1, encodedMsg1)
   expect(getCachedMessage("Cacheable")).toEqual(msg1)
 
   // Uncacheable ones shouldn't!
   const msg2 = createForwardMsg("Uncacheable", false)
-  await cache.processMessagePayload(msg2)
+  const encodedMsg2 = ForwardMsg.encode(msg2).finish()
+  await cache.processMessagePayload(msg2, encodedMsg2)
   expect(getCachedMessage("Uncacheable")).toBeUndefined()
 
   // Ref messages should never be cached
@@ -119,7 +121,8 @@ test("caches messages correctly", async () => {
     msg3.metadata.deltaPath = [2]
   }
   const ref = createRefMsg(msg3)
-  const unreferenced = await cache.processMessagePayload(ref)
+  const encodedMsg3 = ForwardMsg.encode(msg3).finish()
+  const unreferenced = await cache.processMessagePayload(ref, encodedMsg3)
   expect(getCachedMessage(ref.hash)).toBeUndefined()
   expect(unreferenced).toEqual(msg3)
 
@@ -130,6 +133,7 @@ test("caches messages correctly", async () => {
 test("fetches uncached messages from server", async () => {
   const msg = createForwardMsg("Cacheable", true)
   const refMsg = createRefMsg(msg)
+  const encodedRefMsg = ForwardMsg.encode(refMsg).finish()
 
   // Mock response: /message?hash=Cacheable -> msg
   mockGetMessageResponse(msg)
@@ -139,7 +143,9 @@ test("fetches uncached messages from server", async () => {
   // processMessagePayload on a reference message whose
   // original version does *not* exist in our local cache. We
   // should hit the server's /message endpoint to fetch it.
-  await expect(cache.processMessagePayload(refMsg)).resolves.toEqual(msg)
+  await expect(
+    cache.processMessagePayload(refMsg, encodedRefMsg)
+  ).resolves.toEqual(msg)
 
   // The fetched message should now be cached
   expect(getCachedMessage("Cacheable")).toEqual(msg)
@@ -148,12 +154,15 @@ test("fetches uncached messages from server", async () => {
 test("errors when uncached message is not on server", async () => {
   const msg = createForwardMsg("Cacheable", true)
   const refMsg = createRefMsg(msg)
+  const encodedRefMsg = ForwardMsg.encode(refMsg).finish()
 
   // Mock response: /message?hash=Cacheable -> 404
   mockMissingMessageResponse(msg)
 
   const { cache } = createCache()
-  await expect(cache.processMessagePayload(refMsg)).rejects.toThrow()
+  await expect(
+    cache.processMessagePayload(refMsg, encodedRefMsg)
+  ).rejects.toThrow()
 })
 
 test("removes expired messages", () => {
