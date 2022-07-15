@@ -121,8 +121,8 @@ test("caches messages correctly", async () => {
     msg3.metadata.deltaPath = [2]
   }
   const ref = createRefMsg(msg3)
-  const encodedMsg3 = ForwardMsg.encode(msg3).finish()
-  const unreferenced = await cache.processMessagePayload(ref, encodedMsg3)
+  const encodedRefMsg = ForwardMsg.encode(ref).finish()
+  const unreferenced = await cache.processMessagePayload(ref, encodedRefMsg)
   expect(getCachedMessage(ref.hash)).toBeUndefined()
   expect(unreferenced).toEqual(msg3)
 
