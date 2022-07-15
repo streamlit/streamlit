@@ -68,8 +68,6 @@ import {
   WidgetStates,
   SessionState,
   Config,
-  IGitInfo,
-  GitInfo,
   IAppPage,
   AppPage,
 } from "src/autogen/proto"
@@ -139,7 +137,6 @@ interface State {
   scriptFinishedHandlers: (() => void)[]
   developerMode: boolean
   themeHash: string | null
-  gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
@@ -207,7 +204,6 @@ export class App extends PureComponent<Props, State> {
       // developer mode should be designed in the long term.
       developerMode: window.location.host.includes("localhost"),
       themeHash: null,
-      gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
       currentPageScriptHash: "",
@@ -324,21 +320,6 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
-  showDeployError = (
-    title: string,
-    errorNode: ReactNode,
-    onContinue?: () => void
-  ): void => {
-    this.openDialog({
-      type: DialogType.DEPLOY_ERROR,
-      title,
-      msg: errorNode,
-      onContinue,
-      onClose: () => {},
-      onTryAgain: this.sendLoadGitInfoBackMsg,
-    })
-  }
-
   /**
    * Checks if the code version from the backend is different than the frontend
    */
@@ -381,12 +362,6 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleGitInfoChanged = (gitInfo: IGitInfo): void => {
-    this.setState({
-      gitInfo,
-    })
-  }
-
   /**
    * Callback when we get a message from the server.
    */
@@ -422,8 +397,6 @@ export class App extends PureComponent<Props, State> {
           this.handlePagesChanged(pagesChangedMsg),
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
-        gitInfoChanged: (gitInfo: GitInfo) =>
-          this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleScriptFinished(status),
       })
@@ -994,19 +967,6 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
-  sendLoadGitInfoBackMsg = (): void => {
-    if (!this.isServerConnected()) {
-      logError("Cannot load git information when disconnected from server.")
-      return
-    }
-
-    this.sendBackMsg(
-      new BackMsg({
-        loadGitInfo: true,
-      })
-    )
-  }
-
   onPageChange = (pageScriptHash: string): void => {
     this.sendRerunBackMsg(undefined, pageScriptHash)
   }
@@ -1247,7 +1207,6 @@ export class App extends PureComponent<Props, State> {
       scriptRunId,
       scriptRunState,
       userSettings,
-      gitInfo,
       hideTopBar,
       hideSidebarNav,
       currentPageScriptHash,
@@ -1333,14 +1292,7 @@ export class App extends PureComponent<Props, State> {
                 }
                 s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                gitInfo={gitInfo}
-                showDeployError={this.showDeployError}
                 closeDialog={this.closeDialog}
-                isDeployErrorModalOpen={
-                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                }
-                loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
                 menuItems={menuItems}
               />
             </Header>

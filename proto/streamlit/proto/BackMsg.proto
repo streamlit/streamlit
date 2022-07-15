@@ -51,7 +51,8 @@ message BackMsg {
 
     ClientState rerun_script = 11;
 
-    bool load_git_info = 12;
+    // DEPRECATED.
+    // bool load_git_info = 12;
   }
 
   reserved 1, 2, 3, 4, 8, 9;

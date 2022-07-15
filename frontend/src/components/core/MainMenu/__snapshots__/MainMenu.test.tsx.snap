@@ -3,13 +3,9 @@
 exports[`App renders without crashing 1`] = `
 <Memo(MainMenu)
   aboutCallback={[MockFunction]}
-  canDeploy={true}
   clearCacheCallback={[MockFunction]}
   closeDialog={[MockFunction]}
-  gitInfo={null}
-  isDeployErrorModalOpen={false}
   isServerConnected={true}
-  loadGitInfo={[MockFunction]}
   menuItems={Object {}}
   quickRerunCallback={[MockFunction]}
   s4aIsOwner={false}
@@ -18,7 +14,6 @@ exports[`App renders without crashing 1`] = `
   screencastCallback={[MockFunction]}
   sendS4AMessage={[MockFunction]}
   settingsCallback={[MockFunction]}
-  showDeployError={[MockFunction]}
 >
   <StatefulPopover
     accessibilityType="menu"
@@ -29,7 +24,6 @@ exports[`App renders without crashing 1`] = `
     ignoreBoundary={false}
     onMouseEnterDelay={200}
     onMouseLeaveDelay={200}
-    onOpen={[Function]}
     overrides={
       Object {
         "Body": Object {
@@ -54,7 +48,6 @@ exports[`App renders without crashing 1`] = `
       ignoreBoundary={false}
       onMouseEnterDelay={200}
       onMouseLeaveDelay={200}
-      onOpen={[Function]}
       overrides={
         Object {
           "Body": Object {

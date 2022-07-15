@@ -136,12 +136,6 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
   },
 }))
 
-export const StyledDeployErrorContent = styled.div(({ theme }) => ({
-  "& > ul": {
-    paddingLeft: "1.4rem",
-  },
-}))
-
 export const StyledAboutInfo = styled.div(() => ({
   padding: "0 0 1rem 0",
   overflowY: "scroll",

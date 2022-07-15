@@ -29,7 +29,6 @@ from streamlit import url_util
 from streamlit import util
 from streamlit import version
 from streamlit.config import CONFIG_FILENAMES
-from streamlit.git_util import GitRepo, MIN_GIT_VERSION
 from streamlit.logger import get_logger
 from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.source_util import invalidate_pages_cache
@@ -156,7 +155,6 @@ def _fix_sys_argv(main_script_path: str, args: List[str]) -> None:
 
 
 def _on_server_start(server: Server) -> None:
-    _maybe_print_old_git_warning(server.main_script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
     _print_new_version_message()
@@ -264,33 +262,6 @@ def _print_url(is_running_hello: bool) -> None:
         click.secho("  May you create awesome apps!")
         click.secho("")
         click.secho("")
-
-
-def _maybe_print_old_git_warning(main_script_path: str) -> None:
-    """If our script is running in a Git repo, and we're running a very old
-    Git version, print a warning that Git integration will be unavailable.
-    """
-    repo = GitRepo(main_script_path)
-    if (
-        not repo.is_valid()
-        and repo.git_version is not None
-        and repo.git_version < MIN_GIT_VERSION
-    ):
-        git_version_string = ".".join(str(val) for val in repo.git_version)
-        min_version_string = ".".join(str(val) for val in MIN_GIT_VERSION)
-        click.secho("")
-        click.secho("  Git integration is disabled.", fg="yellow", bold=True)
-        click.secho("")
-        click.secho(
-            f"  Streamlit requires Git {min_version_string} or later, "
-            f"but you have {git_version_string}.",
-            fg="yellow",
-        )
-        click.secho(
-            "  Git is used by Streamlit Cloud (https://streamlit.io/cloud).",
-            fg="yellow",
-        )
-        click.secho("  To enable this feature, please update Git.", fg="yellow")
 
 
 def load_config_options(flag_options: Dict[str, Any]) -> None:

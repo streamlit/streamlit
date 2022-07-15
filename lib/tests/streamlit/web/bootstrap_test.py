@@ -285,17 +285,6 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)
         self.assertTrue("Network URL: http://internal-ip:8501/foo" not in out)
 
-    @patch("streamlit.web.bootstrap.GitRepo")
-    def test_print_old_git_warning(self, mock_git_repo):
-        mock_git_repo.return_value.is_valid.return_value = False
-        mock_git_repo.return_value.git_version = (1, 2, 3)
-
-        bootstrap._maybe_print_old_git_warning("main_script_path")
-        out = sys.stdout.getvalue()
-        self.assertTrue(
-            "Streamlit requires Git 2.7.0 or later, but you have 1.2.3." in out
-        )
-
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):
         """Test that bootstrap.load_config_options parses the keys properly and
