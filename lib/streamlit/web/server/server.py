@@ -119,11 +119,21 @@ UNIX_SOCKET_PREFIX = "unix://"
 SCRIPT_RUN_CHECK_TIMEOUT = 60
 
 
+class SessionClientDisconnectedError(Exception):
+    """Raised by operations on a disconnected SessionClient."""
+
+    pass
+
+
 class SessionClient(Protocol):
     """Interface for sending data to a session's client."""
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Deliver a ForwardMsg to the client."""
+        """Deliver a ForwardMsg to the client.
+
+        If the SessionClient has been disconnected, it should raise a
+        SessionClientDisconnectedError.
+        """
 
 
 class SessionInfo:
@@ -515,7 +525,7 @@ class Server:
                         for msg in msg_list:
                             try:
                                 self._send_message(session_info, msg)
-                            except tornado.websocket.WebSocketClosedError:
+                            except SessionClientDisconnectedError:
                                 self._close_app_session(session_info.session.id)
                             await asyncio.sleep(0)
                         await asyncio.sleep(0)
@@ -722,7 +732,10 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Send a ForwardMsg to the browser."""
-        self.write_message(serialize_forward_msg(msg), binary=True)
+        try:
+            self.write_message(serialize_forward_msg(msg), binary=True)
+        except tornado.websocket.WebSocketClosedError as e:
+            raise SessionClientDisconnectedError from e
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
         # Extract user info from the X-Streamlit-User header
