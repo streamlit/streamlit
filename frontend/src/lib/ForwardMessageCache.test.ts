@@ -130,6 +130,27 @@ test("caches messages correctly", async () => {
   expect(unreferenced).not.toBe(msg3)
 })
 
+test("caches messages as a deep copy", async () => {
+  const { cache, getCachedMessage } = createCache()
+
+  const msg1 = createForwardMsg("Cacheable", true)
+  const encodedMsg1 = ForwardMsg.encode(msg1).finish()
+
+  await cache.processMessagePayload(msg1, encodedMsg1)
+
+  // Check if message is correctly cached
+  expect(getCachedMessage("Cacheable")).toEqual(msg1)
+  expect(getCachedMessage("Cacheable")?.metadata?.deltaPath).toEqual([])
+
+  // Modify the message content
+  if (msg1.metadata) {
+    msg1.metadata.deltaPath = [10]
+  }
+
+  // Check that it does not impact the cached message
+  expect(getCachedMessage("Cacheable")?.metadata?.deltaPath).not.toEqual([10])
+})
+
 test("fetches uncached messages from server", async () => {
   const msg = createForwardMsg("Cacheable", true)
   const refMsg = createRefMsg(msg)
@@ -168,10 +189,11 @@ test("errors when uncached message is not on server", async () => {
 test("removes expired messages", () => {
   const { cache, getCachedMessage } = createCache()
   const msg = createForwardMsg("Cacheable", true)
+  const encodedMsg = ForwardMsg.encode(msg).finish()
 
   // Add the message to the cache
   // @ts-ignore accessing into internals for testing
-  cache.maybeCacheMessage(msg)
+  cache.maybeCacheMessage(msg, encodedMsg)
   expect(getCachedMessage(msg.hash)).toEqual(msg)
 
   // Increment our age. Our message should still exist.
