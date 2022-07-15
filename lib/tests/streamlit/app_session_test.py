@@ -25,6 +25,7 @@ from streamlit import config
 from streamlit.app_session import AppSession, AppSessionState
 from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.AppPage_pb2 import AppPage
+from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import (
     ScriptRunContext,
@@ -518,6 +519,27 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         # Assert the results!
         self.assertEqual(expected_events, forward_msg_queue_events)
+
+    def test_handle_backmsg_handles_exceptions(self):
+        """Exceptions raised in handle_backmsg should be sent to
+        handle_backmsg_exception.
+        """
+        session = _create_test_session(asyncio.get_event_loop())
+        with patch.object(
+            session, "handle_backmsg_exception"
+        ) as handle_backmsg_exception, patch.object(
+            session, "handle_clear_cache_request"
+        ) as handle_clear_cache_request:
+
+            error = Exception("explode!")
+            handle_clear_cache_request.side_effect = error
+
+            msg = BackMsg()
+            msg.clear_cache = True
+            session.handle_backmsg(msg)
+
+            handle_clear_cache_request.assert_called_once()
+            handle_backmsg_exception.assert_called_once_with(error)
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
