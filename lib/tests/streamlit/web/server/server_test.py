@@ -374,8 +374,8 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     async def test_send_message_to_disconnected_websocket(self):
-        """We gracefully handle sending a message to a disconnected
-        BrowserWebSocketHandler by simply cleaning up the handler.
+        """Sending a message to a disconnected SessionClient raises an error.
+        We should gracefully handle the error by cleaning up the session.
         """
         with patch(
             "streamlit.web.server.server.LocalSourcesWatcher"
