@@ -91,10 +91,10 @@ class ServerTest(ServerTestCase):
             "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
-            self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
+            self.assertEqual(State.WAITING_FOR_FIRST_SESSION, self.server._state)
 
             await self.ws_connect()
-            self.assertEqual(State.ONE_OR_MORE_BROWSERS_CONNECTED, self.server._state)
+            self.assertEqual(State.ONE_OR_MORE_SESSIONS_CONNECTED, self.server._state)
 
             self.server.stop()
             self.assertEqual(State.STOPPING, self.server._state)
