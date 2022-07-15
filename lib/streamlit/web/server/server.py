@@ -780,21 +780,11 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 )
 
             msg.ParseFromString(payload)
-            msg_type = msg.WhichOneof("type")
-
             LOGGER.debug("Received the following back message:\n%s", msg)
 
-            if msg_type == "rerun_script":
-                self._session.handle_rerun_script_request(msg.rerun_script)
-            elif msg_type == "load_git_info":
-                self._session.handle_git_information_request()
-            elif msg_type == "clear_cache":
-                self._session.handle_clear_cache_request()
-            elif msg_type == "set_run_on_save":
-                self._session.handle_set_run_on_save_request(msg.set_run_on_save)
-            elif msg_type == "stop_script":
-                self._session.handle_stop_script_request()
-            elif msg_type == "close_connection":
+            if msg.WhichOneof("type") == "close_connection":
+                # "close_connection" is a special developmentMode-only
+                # message used in e2e tests to test disabling widgets.
                 if config.get_option("global.developmentMode"):
                     self._server.stop()
                 else:
@@ -803,7 +793,8 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                         "not in development mode"
                     )
             else:
-                LOGGER.warning('No handler for "%s"', msg_type)
+                # AppSession handles all other BackMsg types.
+                self._session.handle_backmsg(msg)
 
         except BaseException as e:
             LOGGER.error(e)
