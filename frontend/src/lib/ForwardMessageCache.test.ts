@@ -133,22 +133,30 @@ test("caches messages correctly", async () => {
 test("caches messages as a deep copy", async () => {
   const { cache, getCachedMessage } = createCache()
 
-  const msg = createForwardMsg("Cacheable", true)
+  const msg = ForwardMsg.fromObject({
+    hash: "Cacheable",
+    delta: { newElement: { text: { body: "test" } } },
+    metadata: { cacheable: true, deltaPath: [2] },
+  })
+
   const encodedMsg = ForwardMsg.encode(msg).finish()
 
   await cache.processMessagePayload(msg, encodedMsg)
 
   // Check if message is correctly cached
   expect(getCachedMessage("Cacheable")).toEqual(msg)
-  expect(getCachedMessage("Cacheable")?.metadata?.deltaPath).toEqual([])
 
   // Modify the message content
-  if (msg.metadata) {
-    msg.metadata.deltaPath = [10]
-  }
+  msg.delta!.newElement!.text.body = "foo"
+  msg.metadata!.deltaPath = [10]
 
   // Check that it does not impact the cached message
-  expect(getCachedMessage("Cacheable")?.metadata?.deltaPath).not.toEqual([10])
+  expect(getCachedMessage("Cacheable")?.delta?.newElement?.text.body).toEqual(
+    "test"
+  )
+  expect(getCachedMessage("Cacheable")?.metadata?.deltaPath).toEqual([2])
+  // It should not be equal to the changed message
+  expect(getCachedMessage("Cacheable")).not.toEqual(msg)
 })
 
 test("fetches uncached messages from server", async () => {
