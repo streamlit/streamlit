@@ -146,8 +146,10 @@ test("caches messages as a deep copy", async () => {
   // Check if message is correctly cached
   expect(getCachedMessage("Cacheable")).toEqual(msg)
 
-  // Modify the message content
+  // Modify specific values inside the message structure:
+  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   msg.delta!.newElement!.text.body = "foo"
+  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   msg.metadata!.deltaPath = [10]
 
   // Check that it does not impact the cached message
