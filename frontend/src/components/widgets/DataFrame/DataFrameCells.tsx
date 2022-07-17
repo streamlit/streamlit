@@ -87,9 +87,11 @@ export function extractCssProperty(
   // This regex is supposed to extract the value of a CSS property
   // for a specified HTML element ID from a CSS style string:
   const regex = new RegExp(
-    `${htmlElementId}[^{]*{(?:[^}]*[\\s;]{1})?${property}:\\s*([^;\\s]+)[;]?.*}`,
+    `${htmlElementId}[,\\s].*{(?:[^}]*[\\s;]{1})?${property}:\\s*([^;\\s]+)[;]?.*}`,
     "gm"
   )
+  // Makes the regex simpler to match the element correctly:
+  cssStyle = cssStyle.replace(/{/g, " {")
 
   const match = regex.exec(cssStyle)
   if (match) {

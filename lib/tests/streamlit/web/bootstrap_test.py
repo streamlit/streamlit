@@ -19,10 +19,11 @@ from unittest.mock import Mock, patch
 
 import matplotlib
 
-from streamlit import SECRETS_FILE_LOC, bootstrap
+from streamlit import SECRETS_FILE_LOC
 from streamlit import config
-from streamlit.bootstrap import NEW_VERSION_TEXT
 from streamlit.session_data import SessionData
+from streamlit.web import bootstrap
+from streamlit.web.bootstrap import NEW_VERSION_TEXT
 from tests import testutil
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
@@ -30,9 +31,9 @@ report = SessionData("the/path", "test command line")
 
 
 class BootstrapTest(unittest.TestCase):
-    @patch("streamlit.bootstrap.AsyncIOLoop", Mock())
-    @patch("streamlit.bootstrap.Server", Mock())
-    @patch("streamlit.bootstrap._install_pages_watcher", Mock())
+    @patch("streamlit.web.bootstrap.AsyncIOLoop", Mock())
+    @patch("streamlit.web.bootstrap.Server", Mock())
+    @patch("streamlit.web.bootstrap._install_pages_watcher", Mock())
     def test_fix_matplotlib_crash(self):
         """Test that bootstrap.run sets the matplotlib backend to
         "Agg" if config.runner.fixMatplotlib=True.
@@ -284,7 +285,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)
         self.assertTrue("Network URL: http://internal-ip:8501/foo" not in out)
 
-    @patch("streamlit.bootstrap.GitRepo")
+    @patch("streamlit.web.bootstrap.GitRepo")
     def test_print_old_git_warning(self, mock_git_repo):
         mock_git_repo.return_value.is_valid.return_value = False
         mock_git_repo.return_value.git_version = (1, 2, 3)
@@ -322,14 +323,14 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             },
         )
 
-    @patch("streamlit.bootstrap.secrets.load_if_toml_exists")
+    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
         bootstrap._on_server_start(Mock())
         mock_load_secrets.assert_called_once()
 
-    @patch("streamlit.bootstrap.LOGGER.error")
-    @patch("streamlit.bootstrap.secrets.load_if_toml_exists")
+    @patch("streamlit.web.bootstrap.LOGGER.error")
+    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
@@ -342,7 +343,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
     @patch("streamlit.config.get_config_options")
-    @patch("streamlit.bootstrap.watch_file")
+    @patch("streamlit.web.bootstrap.watch_file")
     def test_install_config_watcher(
         self, patched_watch_file, patched_get_config_options
     ):
@@ -363,8 +364,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             },
         )
 
-    @patch("streamlit.bootstrap.invalidate_pages_cache")
-    @patch("streamlit.bootstrap.watch_dir")
+    @patch("streamlit.web.bootstrap.invalidate_pages_cache")
+    @patch("streamlit.web.bootstrap.watch_dir")
     def test_install_pages_watcher(
         self, patched_watch_dir, patched_invalidate_pages_cache
     ):

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for session_data.py."""
+"""Unit tests for server_util.py."""
 
 import unittest
 from unittest.mock import patch
@@ -20,7 +20,7 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 from streamlit import config
-from streamlit.session_data import get_url
+from streamlit.web.server.server_util import get_url
 from tests import testutil
 
 

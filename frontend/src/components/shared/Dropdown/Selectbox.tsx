@@ -185,7 +185,11 @@ class Selectbox extends React.PureComponent<Props, State> {
 
             ControlContainer: {
               style: () => ({
-                borderWidth: "1px",
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: "1px",
+                borderRightWidth: "1px",
+                borderTopWidth: "1px",
+                borderBottomWidth: "1px",
               }),
             },
 
@@ -197,7 +201,11 @@ class Selectbox extends React.PureComponent<Props, State> {
 
             ValueContainer: {
               style: () => ({
-                padding: ".5rem",
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                paddingRight: ".5rem",
+                paddingLeft: ".5rem",
+                paddingBottom: ".5rem",
+                paddingTop: ".5rem",
               }),
             },
 

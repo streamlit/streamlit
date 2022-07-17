@@ -23,7 +23,8 @@ test("extractCssProperty should extract the correct property value", () => {
   #T_f116e_row0_col1, #T_f116e_row1_col0 { color: white; background-color: pink }
   #T_f116e_row0_col2 { color: red; opacity: 20% }
   #T_f116e_row2_col2, #T_f116e_row5_col1 { opacity: 20% }
-  #T_f116e_row3_col3, #T_f116e_row12_col1 { color: white; background-color: darkblue; color: white; background-color: pink }`
+  #T_f116e_row3_col3, #T_f116e_row12_col1 { color: white; background-color: darkblue; color: white; background-color: pink }
+  #T_f116e_row11_col10, #T_f116e_row11_col10 {  background-color: darkblue }`
 
   const cssStyle2 = `
   #T_7e5cc_row6_col0 { background-color: #f8fcc9; color: #000000 }
@@ -51,6 +52,13 @@ test("extractCssProperty should extract the correct property value", () => {
   expect(extractCssProperty("#T_f116e_row0_col2", "color", cssStyle1)).toBe(
     "red"
   )
+  expect(
+    extractCssProperty("#T_f116e_row11_col10", "background-color", cssStyle1)
+  ).toBe("darkblue")
+  // Should not extract if it only partly matches:
+  expect(
+    extractCssProperty("#T_f116e_row11_col1", "background-color", cssStyle1)
+  ).toBe(undefined)
 
   expect(
     extractCssProperty("#T_7e5cc_row6_col0", "background-color", cssStyle2)

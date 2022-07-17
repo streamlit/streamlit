@@ -81,7 +81,7 @@ class MetricMixin:
         >>> st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
 
         .. output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example1.py
+            https://doc-metric-example1.streamlitapp.com/
             height: 210px
 
         ``st.metric`` looks especially nice in combination with ``st.columns``:
@@ -92,7 +92,7 @@ class MetricMixin:
         >>> col3.metric("Humidity", "86%", "4%")
 
         .. output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example2.py
+            https://doc-metric-example2.streamlitapp.com/
             height: 210px
 
         The delta indicator color can also be inverted or turned off:
@@ -104,7 +104,7 @@ class MetricMixin:
         ...     delta_color="off")
 
         .. output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example3.py
+            https://doc-metric-example3.streamlitapp.com/
             height: 320px
 
         """

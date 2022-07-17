@@ -30,13 +30,14 @@ from streamlit.state import (
 
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+from ..type_util import SupportsStr
 
 
 class TextWidgetsMixin:
     def text_input(
         self,
         label: str,
-        value: str = "",
+        value: SupportsStr = "",
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
         type: str = "default",
@@ -55,7 +56,7 @@ class TextWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
-        value : any
+        value : object
             The text value of this widget when it first renders. This will be
             cast to str internally.
         max_chars : int or None
@@ -100,7 +101,7 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.text_input.py
+           https://doc-text-input.streamlitapp.com/
            height: 260px
 
         """
@@ -124,7 +125,7 @@ class TextWidgetsMixin:
     def _text_input(
         self,
         label: str,
-        value: str = "",
+        value: SupportsStr = "",
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
         type: str = "default",
@@ -172,10 +173,10 @@ class TextWidgetsMixin:
             autocomplete = "new-password" if type == "password" else ""
         text_input_proto.autocomplete = autocomplete
 
-        def deserialize_text_input(ui_value, widget_id="") -> str:
+        def deserialize_text_input(ui_value: Optional[str], widget_id: str = "") -> str:
             return str(ui_value if ui_value is not None else value)
 
-        current_value, set_frontend_value = register_widget(
+        widget_state = register_widget(
             "text_input",
             text_input_proto,
             user_key=key,
@@ -190,17 +191,17 @@ class TextWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_input_proto.disabled = disabled
-        if set_frontend_value:
-            text_input_proto.value = current_value
+        if widget_state.value_changed:
+            text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
         self.dg._enqueue("text_input", text_input_proto)
-        return cast(str, current_value)
+        return widget_state.value
 
     def text_area(
         self,
         label: str,
-        value: str = "",
+        value: SupportsStr = "",
         height: Optional[int] = None,
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
@@ -218,7 +219,7 @@ class TextWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
-        value : any
+        value : object
             The text value of this widget when it first renders. This will be
             cast to str internally.
         height : int or None
@@ -282,7 +283,7 @@ class TextWidgetsMixin:
     def _text_area(
         self,
         label: str,
-        value: str = "",
+        value: SupportsStr = "",
         height: Optional[int] = None,
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
@@ -319,7 +320,7 @@ class TextWidgetsMixin:
         def deserialize_text_area(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
-        current_value, set_frontend_value = register_widget(
+        widget_state = register_widget(
             "text_area",
             text_area_proto,
             user_key=key,
@@ -334,12 +335,12 @@ class TextWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_area_proto.disabled = disabled
-        if set_frontend_value:
-            text_area_proto.value = current_value
+        if widget_state.value_changed:
+            text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
         self.dg._enqueue("text_area", text_area_proto)
-        return cast(str, current_value)
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

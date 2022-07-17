@@ -15,6 +15,7 @@
 import random
 import unittest
 from unittest.mock import patch
+import numpy as np
 
 from parameterized import parameterized
 
@@ -90,3 +91,32 @@ class UtilTest(unittest.TestCase):
     def test_lower_clean_dict_keys(self, input_dict, answer_dict):
         return_dict = util.lower_clean_dict_keys(input_dict)
         self.assertEqual(return_dict, answer_dict)
+
+    @parameterized.expand(
+        [
+            (np.array([1, 2, 3, 4, 5]), 5, 4),
+            # This one will have 0.15000000000000002 because of floating point precision
+            (np.arange(0.0, 0.25, 0.05), 0.15, 3),
+            ([0, 1, 2, 3], 3, 3),
+            ([0.1, 0.2, 0.3], 0.2, 1),
+            (["He", "ello w", "orld"], "He", 0),
+            (list(np.arange(0.0, 0.25, 0.05)), 0.15, 3),
+        ]
+    )
+    def test_successful_index_(self, input, find_value, expected_index):
+        actual_index = util.index_(input, find_value)
+        self.assertEqual(actual_index, expected_index)
+
+    @parameterized.expand(
+        [
+            (np.array([1, 2, 3, 4, 5]), 6),
+            (np.arange(0.0, 0.25, 0.05), 0.1500002),
+            ([0, 1, 2, 3], 3.00001),
+            ([0.1, 0.2, 0.3], 0.3000004),
+            (["He", "ello w", "orld"], "world"),
+            (list(np.arange(0.0, 0.25, 0.05)), 0.150002),
+        ]
+    )
+    def test_unsuccessful_index_(self, input, find_value):
+        with self.assertRaises(ValueError):
+            util.index_(input, find_value)

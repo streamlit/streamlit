@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import textwrap
+from typing import Any, cast
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -28,9 +29,12 @@ yLabel = "Very long long y label"
 # Generate data
 n = 200
 np.random.seed(1234)
-xData = np.random.randn(n, 1) * 30 + 30
-yData = np.random.randn(n, 1) * 30
-data = np.random.randn(n, 2)
+
+# Casting to Any in order to support differences in typing behaviour for
+# python 3.7
+xData: "np.typing.NDArray[np.float_]" = cast(Any, np.random.randn(n, 1) * 30) + 30
+yData: "np.typing.NDArray[np.float_]" = np.random.randn(n, 1) * 30
+data: "np.typing.NDArray[np.float_]" = np.random.randn(n, 2)
 
 # Generate plot
 fig, ax = plt.subplots(figsize=(4.5, 4.5))

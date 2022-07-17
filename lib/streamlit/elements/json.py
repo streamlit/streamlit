@@ -59,7 +59,7 @@ class JsonMixin:
         ... })
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.json.py
+           https://doc-json.streamlitapp.com/
            height: 385px
 
         """

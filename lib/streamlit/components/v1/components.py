@@ -14,22 +14,19 @@
 
 import inspect
 import json
-import mimetypes
 import os
 import threading
 from typing import Any, Dict, Optional, Type, Union
 
-import tornado.web
-from streamlit.scriptrunner import get_script_run_ctx
-
-import streamlit.server.routes
+import streamlit
 from streamlit import type_util
-from streamlit.elements.form import current_form_id
 from streamlit import util
+from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
 from streamlit.proto.Element_pb2 import Element
+from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.state import NoValue, register_widget
 from streamlit.type_util import to_bytes
 
@@ -190,7 +187,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 return ui_value
 
             ctx = get_script_run_ctx()
-            widget_value, _ = register_widget(
+            component_state = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
                 user_key=key,
@@ -199,6 +196,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 serializer=lambda x: x,
                 ctx=ctx,
             )
+            widget_value = component_state.value
 
             if key is not None:
                 marshall_element_args()
@@ -302,89 +300,9 @@ def declare_component(
     return component
 
 
-class ComponentRequestHandler(tornado.web.RequestHandler):
-    def initialize(self, registry: "ComponentRegistry"):
-        self._registry = registry
-
-    def get(self, path: str) -> None:
-        parts = path.split("/")
-        component_name = parts[0]
-        component_root = self._registry.get_component_path(component_name)
-        if component_root is None:
-            self.write("not found")
-            self.set_status(404)
-            return
-
-        filename = "/".join(parts[1:])
-        abspath = os.path.join(component_root, filename)
-
-        LOGGER.debug("ComponentRequestHandler: GET: %s -> %s", path, abspath)
-
-        try:
-            with open(abspath, "rb") as file:
-                contents = file.read()
-        except (OSError) as e:
-            LOGGER.error(f"ComponentRequestHandler: GET {path} read error", exc_info=e)
-            self.write("read error")
-            self.set_status(404)
-            return
-
-        self.write(contents)
-        self.set_header("Content-Type", self.get_content_type(abspath))
-
-        self.set_extra_headers(path)
-
-    def set_extra_headers(self, path) -> None:
-        """Disable cache for HTML files.
-
-        Other assets like JS and CSS are suffixed with their hash, so they can
-        be cached indefinitely.
-        """
-        is_index_url = len(path) == 0
-
-        if is_index_url or path.endswith(".html"):
-            self.set_header("Cache-Control", "no-cache")
-        else:
-            self.set_header("Cache-Control", "public")
-
-    def set_default_headers(self) -> None:
-        if streamlit.server.routes.allow_cross_origin_requests():
-            self.set_header("Access-Control-Allow-Origin", "*")
-
-    def options(self) -> None:
-        """/OPTIONS handler for preflight CORS checks."""
-        self.set_status(204)
-        self.finish()
-
-    @staticmethod
-    def get_content_type(abspath) -> str:
-        """Returns the ``Content-Type`` header to be used for this request.
-        From tornado.web.StaticFileHandler.
-        """
-        mime_type, encoding = mimetypes.guess_type(abspath)
-        # per RFC 6713, use the appropriate type for a gzip compressed file
-        if encoding == "gzip":
-            return "application/gzip"
-        # As of 2015-07-21 there is no bzip2 encoding defined at
-        # http://www.iana.org/assignments/media-types/media-types.xhtml
-        # So for that (and any other encoding), use octet-stream.
-        elif encoding is not None:
-            return "application/octet-stream"
-        elif mime_type is not None:
-            return mime_type
-        # if mime_type not detected, use application/octet-stream
-        else:
-            return "application/octet-stream"
-
-    @staticmethod
-    def get_url(file_id: str) -> str:
-        """Return the URL for a component file with the given ID."""
-        return "components/{}".format(file_id)
-
-
 class ComponentRegistry:
-    _instance_lock = threading.Lock()
-    _instance = None  # type: Optional[ComponentRegistry]
+    _instance_lock: threading.Lock = threading.Lock()
+    _instance: Optional["ComponentRegistry"] = None
 
     @classmethod
     def instance(cls) -> "ComponentRegistry":

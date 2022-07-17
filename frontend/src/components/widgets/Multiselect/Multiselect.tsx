@@ -230,7 +230,11 @@ class Multiselect extends React.PureComponent<Props, State> {
 
               ControlContainer: {
                 style: () => ({
-                  borderWidth: "1px",
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  borderLeftWidth: "1px",
+                  borderRightWidth: "1px",
+                  borderTopWidth: "1px",
+                  borderBottomWidth: "1px",
                 }),
               },
 

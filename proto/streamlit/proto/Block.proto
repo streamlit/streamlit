@@ -33,10 +33,12 @@ message Block {
   }
 
   message Horizontal {
+    string gap = 1;
   }
 
   message Column {
     double weight = 1;
+    string gap = 2;
   }
 
   message Expandable {

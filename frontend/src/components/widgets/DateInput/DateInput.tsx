@@ -278,19 +278,21 @@ class DateInput extends React.PureComponent<Props, State> {
                 overrides: {
                   Root: {
                     style: {
-                      borderWidth: "1px",
+                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                      borderLeftWidth: "1px",
+                      borderRightWidth: "1px",
+                      borderTopWidth: "1px",
+                      borderBottomWidth: "1px",
                     },
                   },
 
-                  InputContainer: {
-                    style: {
-                      borderWidth: "1px",
-                    },
-                  },
                   Input: {
                     style: {
-                      padding: ".5rem",
-                      borderWidth: "1px",
+                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                      paddingRight: ".5rem",
+                      paddingLeft: ".5rem",
+                      paddingBottom: ".5rem",
+                      paddingTop: ".5rem",
                     },
                   },
                 },

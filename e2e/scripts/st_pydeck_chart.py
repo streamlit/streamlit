@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Any, cast
 
 import streamlit as st
 import numpy as np
@@ -26,7 +27,8 @@ st.pydeck_chart()
 np.random.seed(12345)
 
 df = pd.DataFrame(
-    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4], columns=["lat", "lon"]
+    cast(Any, np.random.randn(1000, 2) / [50, 50]) + [37.76, -122.4],
+    columns=["lat", "lon"],
 )
 
 st.pydeck_chart(
