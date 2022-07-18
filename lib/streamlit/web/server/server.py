@@ -58,7 +58,7 @@ from streamlit.session_data import SessionData
 from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
-from streamlit.streamlit_runtime import StreamlitRuntime, RuntimeConfig, \
+from streamlit.runtime import Runtime, RuntimeConfig, \
     SessionClient, SessionClientDisconnectedError, RuntimeState
 from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler
@@ -200,7 +200,7 @@ class Server:
             script_path=main_script_path,
             command_line=command_line,
         )
-        self._runtime = StreamlitRuntime(ioloop.asyncio_loop, runtime_config)
+        self._runtime = Runtime(ioloop.asyncio_loop, runtime_config)
 
     def __repr__(self) -> str:
         return util.repr_(self)

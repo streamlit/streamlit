@@ -88,7 +88,7 @@ class RuntimeState(Enum):
     STOPPED = "STOPPED"
 
 
-class StreamlitRuntime:
+class Runtime:
     def __init__(self, event_loop: AbstractEventLoop, config: RuntimeConfig):
         """Create a StreamlitRuntime. It won't be started yet.
 
