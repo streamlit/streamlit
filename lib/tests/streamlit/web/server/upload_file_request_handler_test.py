@@ -73,7 +73,6 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "/upload_file", method=req.method, headers=req.headers, body=req.body
         )
 
-    @tornado.testing.gen_test
     def test_upload_one_file(self):
         """Uploading a file should populate our file_mgr."""
         file = MockFile("filename", b"123")
@@ -93,7 +92,6 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ],
         )
 
-    @tornado.testing.gen_test
     def test_upload_multiple_files_error(self):
         """Uploading multiple files will error"""
         file_1 = MockFile("file1", b"123")
@@ -109,7 +107,6 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(400, response.code)
         self.assertIn("Expected 1 file, but got 2", response.reason)
 
-    @tornado.testing.gen_test
     def test_upload_missing_params_error(self):
         """Missing params in the body should fail with 400 status."""
         params = {
@@ -123,7 +120,6 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(400, response.code)
         self.assertIn("Missing 'widgetId'", response.reason)
 
-    @tornado.testing.gen_test
     def test_upload_missing_file_error(self):
         """Missing file should fail with 400 status."""
         params = {
@@ -169,7 +165,6 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
             "/upload_file", method=req.method, headers=req.headers, body=req.body
         )
 
-    @tornado.testing.gen_test
     def test_upload_one_file(self):
         """Upload should fail if the sessionId doesn't exist."""
         file = MockFile("filename", b"123")
