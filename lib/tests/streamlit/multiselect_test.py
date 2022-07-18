@@ -24,10 +24,12 @@ from streamlit.errors import StreamlitAPIException
 from tests import testutil
 from enum import Enum
 
+
 class Drinks(Enum):
     COFFEE = 1
     TEA = 2
     WATER = 3
+
 
 class Multiselectbox(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall multiselect protos."""
