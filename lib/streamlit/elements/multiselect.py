@@ -268,7 +268,7 @@ class MultiSelectMixin:
 
         if len(widget_state.value) != 0:
             if isinstance(widget_state.value[0], Enum):
-                widget_state.value = str(widget_state.value)
+                return str(widget_state.value)
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
