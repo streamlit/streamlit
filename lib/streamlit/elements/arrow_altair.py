@@ -330,7 +330,7 @@ def _generate_chart(
 
     chart = (
         getattr(
-            # Built-in charts use the streamlit theme as default. So, we set this explicitly here.
+            # Built-in charts use the streamlit theme as default. So, we set usermeta explicitly here.
             alt.Chart(data, width=width, height=height, usermeta=STREAMLIT_THEME),
             "mark_" + chart_type.value,
         )()
