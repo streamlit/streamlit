@@ -17,6 +17,7 @@ from typing import Any, List
 import streamlit as st
 from enum import Enum
 
+
 class Colors(Enum):
     yellow = 1
     blue = 2
@@ -59,11 +60,6 @@ if st._is_running_with_streamlit:
     st.text("value 7: %s" % st.session_state.multiselect7)
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")
 
-i7 = st.multiselect(
-    "choose colors",
-    list(Colors),
-    Colors.yellow
-)
+i7 = st.multiselect("choose colors", list(Colors), Colors.yellow)
 
 i7 = st.text("value 8: %s" % i7)
-
