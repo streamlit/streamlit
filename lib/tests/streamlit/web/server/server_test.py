@@ -46,11 +46,14 @@ from streamlit.web.server.server import RetriesExceeded
 from streamlit.web.server.server import Server
 from streamlit.web.server.server import State
 from streamlit.web.server.server import StaticFileHandler
+from streamlit.web.server.server import (
+    _BrowserWebSocketHandler,
+    SessionClientDisconnectedError,
+)
 from streamlit.web.server.server import is_cacheable_msg
 from streamlit.web.server.server import is_url_from_allowed_origins
 from streamlit.web.server.server import serialize_forward_msg
 from streamlit.web.server.server import start_listening
-
 from .server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)
@@ -371,6 +374,82 @@ class ServerTest(ServerTestCase):
                 ),
                 [],
             )
+
+    @tornado.testing.gen_test
+    async def test_send_message_to_disconnected_websocket(self):
+        """Sending a message to a disconnected SessionClient raises an error.
+        We should gracefully handle the error by cleaning up the session.
+        """
+        with patch(
+            "streamlit.web.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
+            await self.start_server_loop()
+            await self.ws_connect()
+
+            # Get the server's socket and session for this client
+            session_info = list(self.server._session_info_by_id.values())[0]
+
+            with patch.object(
+                session_info.session, "flush_browser_queue"
+            ) as flush_browser_queue, patch.object(
+                session_info.client, "write_message"
+            ) as ws_write_message:
+                # Patch flush_browser_queue to simulate a pending message.
+                flush_browser_queue.return_value = [_create_dataframe_msg([1, 2, 3])]
+
+                # Patch the session's WebsocketHandler to raise a
+                # WebSocketClosedError when we write to it.
+                ws_write_message.side_effect = tornado.websocket.WebSocketClosedError()
+
+                # Tick the server. Our session's browser_queue will be flushed,
+                # and the Websocket client's write_message will be called,
+                # raising our WebSocketClosedError.
+                while not flush_browser_queue.called:
+                    self.server._need_send_data.set()
+                    await asyncio.sleep(0)
+
+                flush_browser_queue.assert_called_once()
+                ws_write_message.assert_called_once()
+
+                # Our session should have been removed from the server as
+                # a result of the WebSocketClosedError.
+                self.assertIsNone(
+                    self.server._get_session_info(session_info.session.id)
+                )
+
+    @tornado.testing.gen_test
+    async def test_write_forward_msg_reraises_websocket_closed_error(self):
+        """`write_forward_msg` should re-raise WebSocketClosedError as
+        as SessionClientDisconnectedError.
+        """
+
+        with self._patch_app_session():
+            await self.start_server_loop()
+            await self.ws_connect()
+
+            # Get our connected BrowserWebSocketHandler
+            session_info = list(self.server._session_info_by_id.values())[0]
+            websocket_handler = session_info.client
+            self.assertIsInstance(websocket_handler, _BrowserWebSocketHandler)
+
+            # Patch _BrowserWebSocketHandler.write_message to raise an error
+            with mock.patch.object(
+                websocket_handler, "write_message"
+            ) as write_message_mock:
+                write_message_mock.side_effect = tornado.websocket.WebSocketClosedError
+
+                msg = ForwardMsg()
+                msg.script_finished = (
+                    ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+                )
+
+                # Send a ForwardMsg. write_message will raise a
+                # WebSocketClosedError, and write_forward_msg should re-raise
+                # it as a SessionClientDisconnectedError.
+                with self.assertRaises(SessionClientDisconnectedError):
+                    websocket_handler.write_forward_msg(msg)
+
+                write_message_mock.assert_called_once()
 
 
 class ServerUtilsTest(unittest.TestCase):
