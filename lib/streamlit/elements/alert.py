@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING
+from typing import cast, Optional, TYPE_CHECKING
 
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from .utils import clean_text
@@ -23,75 +23,118 @@ if TYPE_CHECKING:
 
 
 class AlertMixin:
-    def error(self, body: "SupportsStr") -> "DeltaGenerator":
+    def error(
+        self,
+        body: "SupportsStr",
+        *, # keyword-only args: 
+        icon: Optional[str] = "",
+        ) -> "DeltaGenerator":
         """Display error message.
 
         Parameters
         ----------
+        icon : str
+            An optional string, that adds an emoji to the alert.
+            The default is an empty string.
+            This argument can only be supplied by keyword.
         body : str
             The error text to display.
 
         Example
         -------
-        >>> st.error('This is an error')
+        >>> st.error('This is an error', icon=":rotating_light:")
 
         """
         alert_proto = AlertProto()
+        alert_proto.icon = clean_text(icon)
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
 
-    def warning(self, body: "SupportsStr") -> "DeltaGenerator":
+    def warning(
+        self,
+        body: "SupportsStr",
+        *, # keyword-only args:
+        icon: Optional[str] = ""
+        ) -> "DeltaGenerator":
         """Display warning message.
 
         Parameters
         ----------
+        icon : str
+            An optional string, that adds an emoji to the alert.
+            The default is an empty string.
+            This argument can only be supplied by keyword.
+
         body : str
             The warning text to display.
 
         Example
         -------
-        >>> st.warning('This is a warning')
+        >>> st.warning('This is a warning', icon=":warning:")
 
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
+        alert_proto.icon = clean_text(icon)
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
-    def info(self, body: "SupportsStr") -> "DeltaGenerator":
+    def info(
+        self,
+        body: "SupportsStr",
+        *, # keyword-only args:
+        icon: Optional[str] = ""
+        ) -> "DeltaGenerator":
         """Display an informational message.
 
         Parameters
         ----------
+        icon : str
+            An optional string, that adds an emoji to the alert.
+            The default is an empty string.
+            This argument can only be supplied by keyword.
+
         body : str
             The info text to display.
 
         Example
         -------
-        >>> st.info('This is a purely informational message')
+        >>> st.info('This is a purely informational message', icon=":information_source:")
 
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
+        alert_proto.icon = clean_text(icon)
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
-    def success(self, body: "SupportsStr") -> "DeltaGenerator":
+    def success(
+        self,
+        body: "SupportsStr",
+        *, # keyword-only args:
+        icon: Optional[str] = ""
+        ) -> "DeltaGenerator":
         """Display a success message.
 
         Parameters
         ----------
+        icon : str
+            An optional string, that adds an emoji to the alert.
+            The default is an empty string.
+            This argument can only be supplied by keyword.
+
         body : str
             The success text to display.
 
         Example
         -------
-        >>> st.success('This is a success message!')
+        >>> st.success('This is a success message!', icon:":white_check_mark:")
 
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
+        alert_proto.icon = clean_text(icon)
         alert_proto.format = AlertProto.SUCCESS
         return self.dg._enqueue("alert", alert_proto)
 

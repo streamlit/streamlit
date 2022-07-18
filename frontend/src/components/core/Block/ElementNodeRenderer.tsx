@@ -201,6 +201,7 @@ const RawElementNodeRenderer = (
       return (
         <Alert
           width={width}
+          icon={alertProto.icon}
           body={alertProto.body}
           kind={getAlertKind(alertProto.format)}
         />

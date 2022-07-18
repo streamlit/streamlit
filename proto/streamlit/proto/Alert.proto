@@ -19,6 +19,7 @@ syntax = "proto3";
 message Alert {
   // Content to display.
   string body = 1;
+  string icon = 3;
 
   // Type of Alert
   enum Format {

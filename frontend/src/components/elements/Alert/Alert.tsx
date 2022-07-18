@@ -38,6 +38,7 @@ export function getAlertKind(format: AlertProto.Format): Kind {
 
 export interface AlertProps {
   body: string
+  icon?: string
   kind: Kind
   width: number
 }
@@ -46,6 +47,7 @@ export interface AlertProps {
  * Display an (error|warning|info|success) box with a Markdown-formatted body.
  */
 export default function Alert({
+  icon,
   body,
   kind,
   width,
@@ -53,6 +55,7 @@ export default function Alert({
   return (
     <div className="stAlert">
       <AlertContainer width={width} kind={kind}>
+        {icon && <StreamlitMarkdown source={icon} allowHTML={false} />}
         <StreamlitMarkdown source={body} allowHTML={false} />
       </AlertContainer>
     </div>
