@@ -44,7 +44,7 @@ from streamlit.web.server.server import MAX_PORT_SEARCH_RETRIES
 from streamlit.web.server.server import MessageCacheHandler
 from streamlit.web.server.server import RetriesExceeded
 from streamlit.web.server.server import Server
-from streamlit.web.server.server import State
+from streamlit.web.server.server import RuntimeState
 from streamlit.web.server.server import StaticFileHandler
 from streamlit.web.server.server import (
     _BrowserWebSocketHandler,
@@ -94,16 +94,16 @@ class ServerTest(ServerTestCase):
             "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
-            self.assertEqual(State.WAITING_FOR_FIRST_SESSION, self.server._state)
+            self.assertEqual(RuntimeState.WAITING_FOR_FIRST_SESSION, self.server._state)
 
             await self.ws_connect()
-            self.assertEqual(State.ONE_OR_MORE_SESSIONS_CONNECTED, self.server._state)
+            self.assertEqual(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.server._state)
 
             self.server.stop()
-            self.assertEqual(State.STOPPING, self.server._state)
+            self.assertEqual(RuntimeState.STOPPING, self.server._state)
 
             await asyncio.sleep(0.1)
-            self.assertEqual(State.STOPPED, self.server._state)
+            self.assertEqual(RuntimeState.STOPPED, self.server._state)
 
     @tornado.testing.gen_test
     async def test_websocket_connect(self):

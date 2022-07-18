@@ -79,7 +79,7 @@ class SessionInfo:
         self.script_run_count = 0
 
 
-class State(Enum):
+class RuntimeState(Enum):
     INITIAL = "INITIAL"
     WAITING_FOR_FIRST_SESSION = "WAITING_FOR_FIRST_SESSION"
     ONE_OR_MORE_SESSIONS_CONNECTED = "ONE_OR_MORE_SESSIONS_CONNECTED"
@@ -108,7 +108,7 @@ class StreamlitRuntime:
         # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
 
-        self._state = State.INITIAL
+        self._state = RuntimeState.INITIAL
 
         # asyncio eventloop synchronization primitives.
         # Note: these are not thread-safe!
@@ -193,11 +193,11 @@ class StreamlitRuntime:
         ---------
         May be called on any thread.
         """
-        if self._state in (State.STOPPING, State.STOPPED):
+        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             return
 
         LOGGER.debug("Runtime stopping...")
-        self._set_state(State.STOPPING)
+        self._set_state(RuntimeState.STOPPING)
         self._event_loop.call_soon_threadsafe(self._must_stop.set)
 
     def create_session(
@@ -228,7 +228,7 @@ class StreamlitRuntime:
         ---------
         Must be called on the eventloop thread.
         """
-        if self._state in (State.STOPPING, State.STOPPED):
+        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeError(f"Can't create_session (state={self._state})")
 
         session_data = SessionData(
@@ -253,7 +253,7 @@ class StreamlitRuntime:
         ), f"session.id '{session.id}' registered multiple times!"
 
         self._session_info_by_id[session.id] = SessionInfo(client, session)
-        self._set_state(State.ONE_OR_MORE_SESSIONS_CONNECTED)
+        self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
         self._has_connection.notify_all()
 
         return session.id
@@ -283,10 +283,10 @@ class StreamlitRuntime:
             session_info.session.shutdown()
 
         if (
-            self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED
+            self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
             and len(self._session_info_by_id) == 0
         ):
-            self._set_state(State.NO_SESSIONS_CONNECTED)
+            self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
 
     def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
         """Send a BackMsg to a connected session.
@@ -302,7 +302,7 @@ class StreamlitRuntime:
         ---------
         Must be called on the eventloop thread.
         """
-        if self._state in (State.STOPPING, State.STOPPED):
+        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeError(f"Can't handle_backmsg (state={self._state})")
 
         session_info = self._session_info_by_id.get(session_id)
@@ -314,7 +314,7 @@ class StreamlitRuntime:
 
         session_info.session.handle_backmsg(msg)
 
-    def _set_state(self, new_state: State) -> None:
+    def _set_state(self, new_state: RuntimeState) -> None:
         LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
         self._state = new_state
 
@@ -330,9 +330,9 @@ class StreamlitRuntime:
         Must be called on the eventloop thread.
         """
         try:
-            if self._state == State.INITIAL:
-                self._set_state(State.WAITING_FOR_FIRST_SESSION)
-            elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
+            if self._state == RuntimeState.INITIAL:
+                self._set_state(RuntimeState.WAITING_FOR_FIRST_SESSION)
+            elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
@@ -341,13 +341,13 @@ class StreamlitRuntime:
                 on_started()
 
             while not self._must_stop.is_set():
-                if self._state == State.WAITING_FOR_FIRST_SESSION:
+                if self._state == RuntimeState.WAITING_FOR_FIRST_SESSION:
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
                     )
 
-                elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
+                elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     self._need_send_data.clear()
 
                     # Shallow-clone our sessions into a list, so we can iterate
@@ -370,7 +370,7 @@ class StreamlitRuntime:
                     # flushing.
                     await asyncio.sleep(0.01)
 
-                elif self._state == State.NO_SESSIONS_CONNECTED:
+                elif self._state == RuntimeState.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
@@ -389,7 +389,7 @@ class StreamlitRuntime:
             for session_info in list(self._session_info_by_id.values()):
                 session_info.session.shutdown()
 
-            self._set_state(State.STOPPED)
+            self._set_state(RuntimeState.STOPPED)
 
         except Exception:
             traceback.print_exc()

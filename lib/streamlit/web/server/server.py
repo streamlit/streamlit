@@ -59,7 +59,7 @@ from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
 from streamlit.streamlit_runtime import StreamlitRuntime, RuntimeConfig, \
-    SessionClient, SessionClientDisconnectedError, State
+    SessionClient, SessionClientDisconnectedError, RuntimeState
 from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler
 from streamlit.web.server.routes import AssetsFileHandler
@@ -331,7 +331,7 @@ class Server:
 
     @property
     async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
-        if self._state not in (State.INITIAL, State.STOPPING, State.STOPPED):
+        if self._state not in (RuntimeState.INITIAL, RuntimeState.STOPPING, RuntimeState.STOPPED):
             return True, "ok"
 
         return False, "unavailable"
@@ -377,7 +377,7 @@ class Server:
 
     @property
     def browser_is_connected(self) -> bool:
-        return self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED
+        return self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
 
     @property
     def is_running_hello(self) -> bool:
