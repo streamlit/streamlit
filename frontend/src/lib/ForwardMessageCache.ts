@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { ForwardMsg, ForwardMsgMetadata } from "src/autogen/proto"
+import { ForwardMsg } from "src/autogen/proto"
 import { logMessage } from "src/lib/log"
 import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { ensureError } from "./ErrorHandling"
 
 class CacheEntry {
-  public readonly msg: ForwardMsg
+  public readonly encodedMsg: Uint8Array
 
   public scriptRunCount = 0
 
@@ -29,8 +29,8 @@ class CacheEntry {
     return curScriptRunCount - this.scriptRunCount
   }
 
-  constructor(msg: ForwardMsg, scriptRunCount: number) {
-    this.msg = msg
+  constructor(encodedMsg: Uint8Array, scriptRunCount: number) {
+    this.encodedMsg = encodedMsg
     this.scriptRunCount = scriptRunCount
   }
 }
@@ -91,8 +91,11 @@ export class ForwardMsgCache {
    * - If the referenced message isn't in our cache, request it from the
    *   server, cache it, and return it.
    */
-  public async processMessagePayload(msg: ForwardMsg): Promise<ForwardMsg> {
-    this.maybeCacheMessage(msg)
+  public async processMessagePayload(
+    msg: ForwardMsg,
+    encodedMsg: Uint8Array
+  ): Promise<ForwardMsg> {
+    this.maybeCacheMessage(msg, encodedMsg)
 
     if (msg.type !== "refHash") {
       return msg
@@ -104,15 +107,27 @@ export class ForwardMsgCache {
     } else {
       // Cache miss: fetch from the server
       logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
-      newMsg = await this.fetchMessagePayload(msg.refHash as string)
-      this.maybeCacheMessage(newMsg)
+      const encodedNewMsg = await this.fetchMessagePayload(
+        msg.refHash as string
+      )
+      try {
+        newMsg = ForwardMsg.decode(encodedNewMsg)
+      } catch (e) {
+        throw new Error(
+          `Failed to decode ForwardMsg (hash=${msg.refHash}): ${
+            ensureError(e).message
+          }`
+        )
+      }
+
+      this.maybeCacheMessage(newMsg, encodedNewMsg)
     }
 
     // Copy the metadata from the refMsg into our new message
     if (!msg.metadata) {
       throw new Error("ForwardMsg has no metadata")
     }
-    newMsg.metadata = ForwardMsgMetadata.create(msg.metadata)
+    newMsg.metadata = ForwardMsg.decode(encodedMsg).metadata
     return newMsg
   }
 
@@ -123,7 +138,7 @@ export class ForwardMsgCache {
    * cache. This should happen rarely, as the client and server's
    * caches should generally be in sync.
    */
-  private async fetchMessagePayload(hash: string): Promise<ForwardMsg> {
+  private async fetchMessagePayload(hash: string): Promise<Uint8Array> {
     const serverURI = this.getServerUri()
     if (serverURI === undefined) {
       throw new Error(
@@ -142,20 +157,13 @@ export class ForwardMsgCache {
     }
 
     const data = await rsp.arrayBuffer()
-    const arrayBuffer = new Uint8Array(data)
-    try {
-      return ForwardMsg.decode(arrayBuffer)
-    } catch (e) {
-      throw new Error(
-        `Failed to decode ForwardMsg (hash=${hash}): ${ensureError(e).message}`
-      )
-    }
+    return new Uint8Array(data)
   }
 
   /**
    * Add a new message to the cache if appropriate.
    */
-  private maybeCacheMessage(msg: ForwardMsg): void {
+  private maybeCacheMessage(msg: ForwardMsg, encodedMsg: Uint8Array): void {
     if (msg.type === "refHash") {
       // We never cache reference messages. These messages
       // may have `metadata.cacheable` set, but this is
@@ -180,7 +188,7 @@ export class ForwardMsgCache {
     logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
     this.messages.set(
       msg.hash,
-      new CacheEntry(ForwardMsg.create(msg), this.scriptRunCount)
+      new CacheEntry(encodedMsg, this.scriptRunCount)
     )
   }
 
@@ -203,6 +211,6 @@ export class ForwardMsgCache {
     if (updateScriptRunCount) {
       cached.scriptRunCount = this.scriptRunCount
     }
-    return ForwardMsg.create(cached.msg)
+    return ForwardMsg.decode(cached.encodedMsg)
   }
 }

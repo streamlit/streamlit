@@ -122,8 +122,6 @@ SCRIPT_RUN_CHECK_TIMEOUT = 60
 class SessionClientDisconnectedError(Exception):
     """Raised by operations on a disconnected SessionClient."""
 
-    pass
-
 
 class SessionClient(Protocol):
     """Interface for sending data to a session's client."""

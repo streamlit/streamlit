@@ -17,14 +17,16 @@
 
 import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
+import embed from "vega-embed"
+import * as vega from "vega"
+
 import { logMessage } from "src/lib/log"
-import { merge } from "lodash"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { ensureError } from "src/lib/ErrorHandling"
 import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import { Theme } from "src/theme"
-import embed from "vega-embed"
-import * as vega from "vega"
+
+import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -32,11 +34,6 @@ const MagicFields = {
 }
 
 const DEFAULT_DATA_NAME = "source"
-
-/**
- * Horizontal space needed for the embed actions button.
- */
-const EMBED_PADDING = 38
 
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
@@ -211,15 +208,21 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const { element: el, theme } = this.props
     const spec = JSON.parse(el.spec)
     const { useContainerWidth } = el
-
-    spec.config = configWithThemeDefaults(spec.config, theme)
+    if (spec.usermeta?.embedOptions?.theme === "streamlit") {
+      spec.config = applyStreamlitTheme(spec.config, theme)
+      // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
+      spec.usermeta.embedOptions.theme = undefined
+    } else {
+      // Apply minor theming improvments to work better with Streamlit
+      spec.config = applyThemeDefaults(spec.config, theme)
+    }
 
     if (this.props.height) {
       // fullscreen
-      spec.width = this.props.width - EMBED_PADDING
+      spec.width = this.props.width
       spec.height = this.props.height
     } else if (useContainerWidth) {
-      spec.width = this.props.width - EMBED_PADDING
+      spec.width = this.props.width
     }
 
     if (!spec.padding) {
@@ -317,7 +320,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
     const el = this.props.element
     const spec = this.generateSpec()
-    const { vgSpec, view, finalize } = await embed(this.element, spec)
+    const { vgSpec, view, finalize } = await embed(this.element, spec, {
+      defaultStyle: true,
+    })
 
     this.vegaView = view
     this.vegaFinalizer = finalize
@@ -497,45 +502,6 @@ function dataIsAnAppendOfPrev(
   }
 
   return true
-}
-
-function configWithThemeDefaults(config: any, theme: Theme): any {
-  const { colors, fontSizes, genericFonts } = theme
-  const themeFonts = {
-    labelFont: genericFonts.bodyFont,
-    titleFont: genericFonts.bodyFont,
-    labelFontSize: fontSizes.twoSmPx,
-    titleFontSize: fontSizes.twoSmPx,
-  }
-  const themeDefaults = {
-    background: colors.bgColor,
-    axis: {
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
-      gridColor: colors.fadedText10,
-      ...themeFonts,
-    },
-    legend: {
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
-      ...themeFonts,
-    },
-    title: {
-      color: colors.bodyText,
-      subtitleColor: colors.bodyText,
-      ...themeFonts,
-    },
-    header: {
-      labelColor: colors.bodyText,
-    },
-  }
-
-  if (!config) {
-    return themeDefaults
-  }
-
-  // Fill in theme defaults where the user didn't specify config options.
-  return merge({}, themeDefaults, config || {})
 }
 
 export default withTheme(withFullScreenWrapper(ArrowVegaLiteChart))

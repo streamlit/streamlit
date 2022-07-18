@@ -41,14 +41,11 @@ describe("st._legacy_vega_lite_chart", () => {
       "666px"
     );
 
-    cy.getIndexed("[data-testid='stVegaLiteChart'] canvas", 2)
-      .should("have.css", "width")
-      .and(width => {
-        // Tests run on mac expect 282px while running on linux expects 284px
-        if (width != "200px") {
-          throw new Error("Expected default width to be 200px. Was: " + width);
-        }
-      });
+    cy.getIndexed("[data-testid='stVegaLiteChart'] canvas", 2).should(
+      "have.css",
+      "width",
+      "400px"
+    );
 
     cy.getIndexed("[data-testid='stVegaLiteChart'] canvas", 3).should(
       "have.css",
