@@ -2,11 +2,12 @@ import asyncio
 import traceback
 from asyncio import AbstractEventLoop
 from enum import Enum
-from typing import Optional, Dict, Protocol, NamedTuple
+from typing import Optional, Dict, Protocol, NamedTuple, Callable, Any
 
 from streamlit import config
 from streamlit.app_session import AppSession
-from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
+from streamlit.caching import get_memo_stats_provider, \
+    get_singleton_stats_provider
 from streamlit.forward_msg_cache import (
     ForwardMsgCache,
     populate_hash_if_needed,
@@ -29,8 +30,6 @@ LOGGER = get_logger(__name__)
 
 class SessionClientDisconnectedError(Exception):
     """Raised by operations on a disconnected SessionClient."""
-
-    pass
 
 
 class SessionClient(Protocol):
@@ -111,6 +110,8 @@ class StreamlitRuntime:
 
         self._state = State.INITIAL
 
+        # asyncio eventloop synchronization primitives.
+        # Note: these are not thread-safe!
         self._must_stop = asyncio.Event()
         self._has_connection = asyncio.Condition()
         self._need_send_data = asyncio.Event()
@@ -131,9 +132,22 @@ class StreamlitRuntime:
             SessionStateStatProvider(self._session_info_by_id)
         )
 
+    @property
+    def config(self) -> RuntimeConfig:
+        return self._config
+
+    @property
+    def stats_manager(self) -> StatsManager:
+        """The runtime's StatsManager instance."""
+        return self._stats_mgr
+
     def _on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
         Ensures that uploaded files from stale sessions get deleted.
+
+        Threading
+        ---------
+        May be called on any thread.
         """
         session_info = self._get_session_info(session_id)
         if session_info is None:
@@ -144,21 +158,40 @@ class StreamlitRuntime:
     def _get_session_info(self, session_id: str) -> Optional[SessionInfo]:
         """Return the SessionInfo with the given id, or None if no such
         session exists.
+
+        Threading
+        ---------
+        Must be called on the eventloop thread.
         """
         return self._session_info_by_id.get(session_id, None)
 
-    def start(self) -> None:
+    def start(self, on_started: Optional[Callable[[], Any]] = None) -> None:
         """Start the runtime. This must be called only once, before
         any other functions are called.
 
-        The StreamlitRuntime.started Future will resolve after the runtime
-        is successfully started.
+        Parameters
+        ----------
+        on_started
+            An optional callback that will be called when the runtime's loop
+            has started. It will be called on the eventloop thread.
+
+        Returns
+        -------
+        None
+
+        Threading
+        ---------
+        Must be called on the eventloop thread.
         """
-        self._event_loop.call_soon_threadsafe(self._loop_coroutine)
+        self._event_loop.call_soon_threadsafe(self._loop_coroutine, on_started)
 
     def stop(self) -> None:
         """Request that Streamlit close all sessions and stop running.
         Note that Streamlit won't stop running immediately.
+
+        Threading
+        ---------
+        May be called on any thread.
         """
         if self._state in (State.STOPPING, State.STOPPED):
             return
@@ -190,6 +223,10 @@ class StreamlitRuntime:
         Returns
         -------
         The session's unique string ID.
+
+        Threading
+        ---------
+        Must be called on the eventloop thread.
         """
         if self._state in (State.STOPPING, State.STOPPED):
             raise RuntimeError(f"Can't create_session (state={self._state})")
@@ -231,6 +268,14 @@ class StreamlitRuntime:
         ----------
         session_id
             The session's unique ID.
+
+        Returns
+        -------
+        None
+
+        Threading
+        ---------
+        Must be called on the eventloop thread.
         """
         if session_id in self._session_info_by_id:
             session_info = self._session_info_by_id[session_id]
@@ -252,6 +297,10 @@ class StreamlitRuntime:
             The session's unique ID.
         msg
             The BackMsg to deliver to the session.
+
+        Threading
+        ---------
+        Must be called on the eventloop thread.
         """
         if self._state in (State.STOPPING, State.STOPPED):
             raise RuntimeError(f"Can't handle_backmsg (state={self._state})")
@@ -269,7 +318,17 @@ class StreamlitRuntime:
         LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
         self._state = new_state
 
-    async def _loop_coroutine(self) -> None:
+    async def _loop_coroutine(self, on_started: Optional[Callable[[], Any]] = None) -> None:
+        """The main Runtime loop.
+
+        Returns
+        -------
+        None
+
+        Threading
+        ---------
+        Must be called on the eventloop thread.
+        """
         try:
             if self._state == State.INITIAL:
                 self._set_state(State.WAITING_FOR_FIRST_SESSION)
@@ -277,6 +336,9 @@ class StreamlitRuntime:
                 pass
             else:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
+
+            if on_started is not None:
+                on_started()
 
             while not self._must_stop.is_set():
                 if self._state == State.WAITING_FOR_FIRST_SESSION:
@@ -303,6 +365,10 @@ class StreamlitRuntime:
 
                             # Yield for a tick after sending a message.
                             await asyncio.sleep(0)
+
+                    # Yield for a few milliseconds between session message
+                    # flushing.
+                    await asyncio.sleep(0.01)
 
                 elif self._state == State.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
@@ -354,6 +420,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         msg : ForwardMsg
             The message to send to the client
 
+        Threading
+        ---------
+        Must be called on the eventloop thread.
         """
         msg.metadata.cacheable = is_cacheable_msg(msg)
         msg_to_send = msg

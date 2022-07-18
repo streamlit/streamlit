@@ -15,16 +15,13 @@
 import asyncio
 import base64
 import binascii
+import errno
+import json
 import logging
 import os
 import socket
 import sys
-import errno
-import json
 import time
-import traceback
-import click
-from enum import Enum
 from typing import (
     Any,
     Dict,
@@ -36,47 +33,34 @@ from typing import (
     Union,
 )
 
+import click
 import tornado.concurrent
 import tornado.ioloop
 import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
+from tornado.httpserver import HTTPServer
 from tornado.platform.asyncio import AsyncIOLoop
 from tornado.websocket import WebSocketHandler
-from tornado.httpserver import HTTPServer
-from typing_extensions import Protocol
 
 from streamlit import config
 from streamlit import file_util
 from streamlit import source_util
 from streamlit import util
-from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
-from streamlit.config_option import ConfigOption
-from streamlit.forward_msg_cache import ForwardMsgCache
-from streamlit.forward_msg_cache import create_reference_msg
-from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.app_session import AppSession
-from streamlit.stats import StatsManager
-from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.logger import get_logger
 from streamlit.components.v1.components import ComponentRegistry
+from streamlit.config_option import ConfigOption
+from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from .stats_request_handler import StatsRequestHandler
-from .component_request_handler import ComponentRequestHandler
-from streamlit.web.server.upload_file_request_handler import (
-    UploadFileRequestHandler,
-    UPLOAD_FILE_ROUTE,
-)
-
 from streamlit.session_data import SessionData
 from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
-    SessionStateStatProvider,
 )
+from streamlit.streamlit_runtime import StreamlitRuntime, RuntimeConfig, \
+    SessionClient, SessionClientDisconnectedError, State
+from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler
 from streamlit.web.server.routes import AssetsFileHandler
 from streamlit.web.server.routes import DebugHandler
@@ -84,12 +68,16 @@ from streamlit.web.server.routes import HealthHandler
 from streamlit.web.server.routes import MediaFileHandler
 from streamlit.web.server.routes import MessageCacheHandler
 from streamlit.web.server.routes import StaticFileHandler
-from streamlit.web.server.server_util import is_cacheable_msg
+from streamlit.web.server.server_util import get_max_message_size_bytes
 from streamlit.web.server.server_util import is_url_from_allowed_origins
 from streamlit.web.server.server_util import make_url_path_regex
 from streamlit.web.server.server_util import serialize_forward_msg
-from streamlit.web.server.server_util import get_max_message_size_bytes
-from streamlit.watcher import LocalSourcesWatcher
+from streamlit.web.server.upload_file_request_handler import (
+    UploadFileRequestHandler,
+    UPLOAD_FILE_ROUTE,
+)
+from .component_request_handler import ComponentRequestHandler
+from .stats_request_handler import StatsRequestHandler
 
 LOGGER = get_logger(__name__)
 
@@ -117,56 +105,6 @@ UNIX_SOCKET_PREFIX = "unix://"
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT = 60
-
-
-class SessionClientDisconnectedError(Exception):
-    """Raised by operations on a disconnected SessionClient."""
-
-
-class SessionClient(Protocol):
-    """Interface for sending data to a session's client."""
-
-    def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Deliver a ForwardMsg to the client.
-
-        If the SessionClient has been disconnected, it should raise a
-        SessionClientDisconnectedError.
-        """
-
-
-class SessionInfo:
-    """Type stored in our _session_info_by_id dict.
-
-    For each AppSession, the server tracks that session's
-    script_run_count. This is used to track the age of messages in
-    the ForwardMsgCache.
-    """
-
-    def __init__(self, client: SessionClient, session: AppSession):
-        """Initialize a SessionInfo instance.
-
-        Parameters
-        ----------
-        session : AppSession
-            The AppSession object.
-        client : SessionClient
-            The concrete SessionClient for this session.
-        """
-        self.session = session
-        self.client = client
-        self.script_run_count = 0
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-
-class State(Enum):
-    INITIAL = "INITIAL"
-    WAITING_FOR_FIRST_SESSION = "WAITING_FOR_FIRST_SESSION"
-    ONE_OR_MORE_SESSIONS_CONNECTED = "ONE_OR_MORE_SESSIONS_CONNECTED"
-    NO_SESSIONS_CONNECTED = "NO_SESSIONS_CONNECTED"
-    STOPPING = "STOPPING"
-    STOPPED = "STOPPED"
 
 
 class RetriesExceeded(Exception):
@@ -257,55 +195,19 @@ class Server:
         _set_tornado_log_levels()
 
         self._ioloop = ioloop
-        self._main_script_path = main_script_path
-        self._command_line = command_line if command_line is not None else ""
 
-        # Mapping of AppSession.id -> SessionInfo.
-        self._session_info_by_id: Dict[str, SessionInfo] = {}
-
-        self._must_stop = tornado.locks.Event()
-        self._state = State.INITIAL
-        self._message_cache = ForwardMsgCache()
-        self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
-        self._has_connection = tornado.locks.Condition()
-        self._need_send_data = tornado.locks.Event()
-
-        # StatsManager
-        self._stats_mgr = StatsManager()
-        self._stats_mgr.register_provider(get_memo_stats_provider())
-        self._stats_mgr.register_provider(get_singleton_stats_provider())
-        self._stats_mgr.register_provider(_mem_caches)
-        self._stats_mgr.register_provider(self._message_cache)
-        self._stats_mgr.register_provider(in_memory_file_manager)
-        self._stats_mgr.register_provider(self._uploaded_file_mgr)
-        self._stats_mgr.register_provider(
-            SessionStateStatProvider(self._session_info_by_id)
+        runtime_config = RuntimeConfig(
+            script_path=main_script_path,
+            command_line=command_line,
         )
+        self._runtime = StreamlitRuntime(ioloop.asyncio_loop, runtime_config)
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @property
     def main_script_path(self) -> str:
-        return self._main_script_path
-
-    def _on_files_updated(self, session_id: str) -> None:
-        """Event handler for UploadedFileManager.on_file_added.
-        Ensures that uploaded files from stale sessions get deleted.
-        """
-        session_info = self._get_session_info(session_id)
-        if session_info is None:
-            # If an uploaded file doesn't belong to an existing session,
-            # remove it so it doesn't stick around forever.
-            self._uploaded_file_mgr.remove_session_files(session_id)
-
-    def _get_session_info(self, session_id: str) -> Optional[SessionInfo]:
-        """Return the SessionInfo with the given id, or None if no such
-        session exists.
-
-        """
-        return self._session_info_by_id.get(session_id, None)
+        return self._runtime.config.script_path
 
     def start(self, on_started: Callable[["Server"], Any]) -> None:
         """Start the server.
@@ -317,8 +219,6 @@ class Server:
             has started, and the server is ready to begin receiving clients.
 
         """
-        if self._state != State.INITIAL:
-            raise RuntimeError("Server has already been started")
 
         LOGGER.debug("Starting server...")
 
@@ -329,7 +229,7 @@ class Server:
 
         LOGGER.debug("Server started on port %s", port)
 
-        self._ioloop.add_callback(self._loop_coroutine, on_started)
+        self._runtime.start(on_started=lambda: on_started(self))
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
@@ -429,10 +329,6 @@ class Server:
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
-    def _set_state(self, new_state: State) -> None:
-        LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
-        self._state = new_state
-
     @property
     async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
         if self._state not in (State.INITIAL, State.STOPPING, State.STOPPED):
@@ -489,147 +385,9 @@ class Server:
 
         return self._main_script_path == Hello.__file__
 
-    async def _loop_coroutine(
-        self, on_started: Optional[Callable[["Server"], Any]] = None
-    ) -> None:
-        try:
-            if self._state == State.INITIAL:
-                self._set_state(State.WAITING_FOR_FIRST_SESSION)
-            elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
-                pass
-            else:
-                raise RuntimeError(f"Bad server state at start: {self._state}")
-
-            if on_started is not None:
-                on_started(self)
-
-            while not self._must_stop.is_set():
-                if self._state == State.WAITING_FOR_FIRST_SESSION:
-                    await asyncio.wait(
-                        [self._must_stop.wait(), self._has_connection.wait()],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-
-                elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
-                    self._need_send_data.clear()
-
-                    # Shallow-clone our sessions into a list, so we can iterate
-                    # over it and not worry about whether it's being changed
-                    # outside this coroutine.
-                    session_infos = list(self._session_info_by_id.values())
-
-                    for session_info in session_infos:
-                        msg_list = session_info.session.flush_browser_queue()
-                        for msg in msg_list:
-                            try:
-                                self._send_message(session_info, msg)
-                            except SessionClientDisconnectedError:
-                                self._close_app_session(session_info.session.id)
-                            await asyncio.sleep(0)
-                        await asyncio.sleep(0)
-                    await asyncio.sleep(0.01)
-
-                elif self._state == State.NO_SESSIONS_CONNECTED:
-                    await asyncio.wait(
-                        [self._must_stop.wait(), self._has_connection.wait()],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-
-                else:
-                    # Break out of the thread loop if we encounter any other state.
-                    break
-
-                await asyncio.wait(
-                    [self._must_stop.wait(), self._need_send_data.wait()],
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-
-            # Shut down all AppSessions
-            for session_info in list(self._session_info_by_id.values()):
-                session_info.session.shutdown()
-
-            self._set_state(State.STOPPED)
-
-        except Exception:
-            # Can't just re-raise here because co-routines use Tornado
-            # exceptions for control flow, which appears to swallow the reraised
-            # exception.
-            traceback.print_exc()
-            LOGGER.info(
-                """
-Please report this bug at https://github.com/streamlit/streamlit/issues.
-"""
-            )
-
-        finally:
-            self._on_stopped()
-
-    def _send_message(self, session_info: SessionInfo, msg: ForwardMsg) -> None:
-        """Send a message to a client.
-
-        If the client is likely to have already cached the message, we may
-        instead send a "reference" message that contains only the hash of the
-        message.
-
-        Parameters
-        ----------
-        session_info : SessionInfo
-            The SessionInfo associated with websocket
-        msg : ForwardMsg
-            The message to send to the client
-
-        """
-        msg.metadata.cacheable = is_cacheable_msg(msg)
-        msg_to_send = msg
-        if msg.metadata.cacheable:
-            populate_hash_if_needed(msg)
-
-            if self._message_cache.has_message_reference(
-                msg, session_info.session, session_info.script_run_count
-            ):
-                # This session has probably cached this message. Send
-                # a reference instead.
-                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
-                msg_to_send = create_reference_msg(msg)
-
-            # Cache the message so it can be referenced in the future.
-            # If the message is already cached, this will reset its
-            # age.
-            LOGGER.debug("Caching message (hash=%s)", msg.hash)
-            self._message_cache.add_message(
-                msg, session_info.session, session_info.script_run_count
-            )
-
-        # If this was a `script_finished` message, we increment the
-        # script_run_count for this session, and update the cache
-        if (
-            msg.WhichOneof("type") == "script_finished"
-            and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
-        ):
-            LOGGER.debug(
-                "Script run finished successfully; "
-                "removing expired entries from MessageCache "
-                "(max_age=%s)",
-                config.get_option("global.maxCachedMessageAge"),
-            )
-            session_info.script_run_count += 1
-            self._message_cache.remove_expired_session_entries(
-                session_info.session, session_info.script_run_count
-            )
-
-        # Ship it off!
-        session_info.client.write_forward_msg(msg_to_send)
-
-    def _enqueued_some_message(self) -> None:
-        self._ioloop.add_callback(self._need_send_data.set)
-
     def stop(self, from_signal=False) -> None:
         click.secho("  Stopping...", fg="blue")
-        self._set_state(State.STOPPING)
-        if from_signal:
-            self._ioloop.add_callback_from_signal(self._must_stop.set)
-        else:
-            self._ioloop.add_callback(self._must_stop.set)
+        self._runtime.stop()
 
     def _on_stopped(self) -> None:
         """Called when our runloop is exiting, to shut down the ioloop.
@@ -639,75 +397,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         from being shutdown.)
         """
         self._ioloop.stop()
-
-    def _create_app_session(
-        self, client: SessionClient, user_info: Dict[str, Optional[str]]
-    ) -> AppSession:
-        """Register a connected browser with the server.
-
-        Parameters
-        ----------
-        client : SessionClient
-            The SessionClient for sending data to the session's client.
-
-        user_info: Dict
-            A dict that contains information about the current user. For now,
-            it only contains the user's email address.
-
-            {
-                "email": "example@example.com"
-            }
-
-        Returns
-        -------
-        AppSession
-            The newly-created AppSession for this browser connection.
-
-        """
-        session_data = SessionData(self._main_script_path, self._command_line)
-        local_sources_watcher = LocalSourcesWatcher(session_data)
-
-        session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,
-            session_data=session_data,
-            uploaded_file_manager=self._uploaded_file_mgr,
-            message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=local_sources_watcher,
-            user_info=user_info,
-        )
-
-        LOGGER.debug(
-            "Created new session for client %s. Session ID: %s", id(client), session.id
-        )
-
-        assert (
-            session.id not in self._session_info_by_id
-        ), f"session.id '{session.id}' registered multiple times!"
-
-        self._session_info_by_id[session.id] = SessionInfo(client, session)
-        self._set_state(State.ONE_OR_MORE_SESSIONS_CONNECTED)
-        self._has_connection.notify_all()
-
-        return session
-
-    def _close_app_session(self, session_id: str) -> None:
-        """Shutdown and remove a AppSession.
-
-        This function may be called multiple times for the same session,
-        which is not an error. (Subsequent calls just no-op.)
-
-        Parameters
-        ----------
-        session_id : str
-            The AppSession's id string.
-        """
-        if session_id in self._session_info_by_id:
-            session_info = self._session_info_by_id[session_id]
-            del self._session_info_by_id[session_id]
-            session_info.session.shutdown()
-
-        if len(self._session_info_by_id) == 0:
-            self._set_state(State.NO_SESSIONS_CONNECTED)
 
 
 class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
