@@ -39,6 +39,7 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ]
         )
 
+    @tornado.testing.gen_test
     def test_no_stats(self):
         """If we have no stats, we expect to see just the header and footer."""
         response = self.fetch("/st-metrics")
@@ -53,6 +54,7 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(expected_body, response.body)
 
+    @tornado.testing.gen_test
     def test_has_stats(self):
         self.mock_stats = [
             CacheStat(
@@ -84,6 +86,7 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(expected_body, response.body)
 
+    @tornado.testing.gen_test
     def test_protobuf_stats(self):
         """Stats requests are returned in OpenMetrics protobuf format
         if the request's Content-Type header is protobuf.
