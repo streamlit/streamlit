@@ -151,17 +151,20 @@ class CachedFunction:
 
 
 def replay_result_messages(result: CachedResult) -> None:
-    """Replay the st element function calls that happened when executing a cache-decorated function.
+    """Replay the st element function calls that happened when executing a
+    cache-decorated function.
 
-    When a cache function is executed, we record the element and block messages produced,
-    and use those to reproduce the DeltaGenerator calls, so the elements will appear in
-    the web app even when execution of the function is skipped because the result was cached.
+    When a cache function is executed, we record the element and block messages
+    produced, and use those to reproduce the DeltaGenerator calls, so the elements
+    will appear in the web app even when execution of the function is skipped
+    because the result was cached.
 
     To make this work, for each st function call we record an identifier for the
-    DG it was effectively called on. We also record the identifier for each DG returned
-    by an st function call. Then, for each recorded message, we get the current DG
-    instance corresponding to the DG the message was originally called on, and enqueue
-    the message using that, recording any new DGs produced in case a later st function
+    DG it was effectively called on (see Note [DeltaGenerator method invocation]).
+    We also record the identifier for each DG returned by an st function call, if
+    it returns one. Then, for each recorded message, we get the current DG instance
+    corresponding to the DG the message was originally called on, and enqueue the
+    message using that, recording any new DGs produced in case a later st function
     call is on one of them.
     """
     from streamlit.delta_generator import DeltaGenerator
@@ -331,24 +334,31 @@ class CacheWarningCallStack(threading.local):
 
 """
 Note [DeltaGenerator method invocation]
+There are two top level DG instances defined for all apps:
+`main`, which is for putting elements in the main part of the app
+`sidebar`, for the sidebar
+
 There are 3 different ways an st function can be invoked:
 1. Implicitly on the main DG instance (plain `st.foo` calls)
-2. Implicitly on an active context's block (`st.foo` within a `with st.block` context)
-3. Explicitly on a DG instance (`st.sidebar.foo`, `my_container.foo`)
+2. Implicitly in an active contextmanager block (`st.foo` within a `with st.container` context)
+3. Explicitly on a DG instance (`st.sidebar.foo`, `my_column_1.foo`)
 
 To simplify replaying messages from a cached function result, we convert all of these
-to explicit invocations. How they get rewritten depends on both implicit vs explicit,
-and if the target DG is already known within the replay.
+to explicit invocations. How they get rewritten depends on if the invocation was
+implicit vs explicit, and if the target DG has been seen/produced during replay.
 
 Implicit invocation on a known DG -> Explicit invocation on that DG
 Implicit invocation on an unknown DG -> Rewrite as explicit invocation on main
+    with st.container():
+        my_cache_decorated_function()
+
     This is situation 2 above, and the DG is a block entirely outside our function call,
-    so we interpret it as "put these elements within the current context", which is achieved
-    by invoking on main
+    so we interpret it as "put this element in the enclosing contextmanager block"
+    (or main if there isn't one), which is achieved by invoking on main.
 Explicit invocation on a known DG -> No change needed
-Explicit invocation on a known DG -> Raise an error
+Explicit invocation on an unknown DG -> Raise an error
     We have no way to identify the target DG, and it may not even be present in the
-    current script run, so the least surprising thing to do is raise an error
+    current script run, so the least surprising thing to do is raise an error.
 
 """
 
@@ -419,7 +429,7 @@ class CacheMessagesCallStack(threading.local):
 
         See Note [DeltaGenerator method invocation]
 
-        invoked_id is the DG the st function was called on, usually `st._main`
+        invoked_id is the DG the st function was called on, usually `st._main`.
         acting_on_id is the DG the st function ultimately runs on, which may be different
         if the invoked DG delegated to another one because it was in a `with` block.
         """
