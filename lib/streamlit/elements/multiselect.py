@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from textwrap import dedent
 from typing import (
     Any,
@@ -214,6 +215,15 @@ class MultiSelectMixin:
                     default_values = [default_values]
                 else:
                     default_values = list(default_values)
+            if len(default_values) != 0 and isinstance(default_values[0], Enum):
+                str_default_values = list(map(lambda enum: str(enum), default_values))
+                mapped_opt_keys = list(map(lambda enum: str(enum), opt))
+                for value in str_default_values:
+                    if value not in mapped_opt_keys:
+                        raise StreamlitAPIException(
+                            "Every Multiselect default value must exist in options"
+                        )
+                return [mapped_opt_keys.index(value) for value in str_default_values]
 
             for value in default_values:
                 if value not in opt:
@@ -255,6 +265,9 @@ class MultiSelectMixin:
             serializer=serialize_multiselect,
             ctx=ctx,
         )
+
+        if isinstance(widget_state.value, Enum):
+            widget_state.value = str(widget_state.value)
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.

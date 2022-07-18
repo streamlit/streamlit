@@ -124,7 +124,7 @@ class MarkdownMixin:
         if anchor is None:
             subheader_proto.body = f"### {clean_text(body)}"
         else:
-            subheader_proto.body = f'<h3 data-anchor="{anchor}">{f" ### {clean_text(body)}"}</h3>'
+            subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
             subheader_proto.allow_html = True
 
         return self.dg._enqueue("markdown", subheader_proto)
