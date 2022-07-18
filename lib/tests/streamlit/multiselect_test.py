@@ -23,10 +23,12 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests import testutil
 from enum import Enum
+
 class Drinks(Enum):
     COFFEE = 1
     TEA = 2
     WATER = 3
+
 class Multiselectbox(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall multiselect protos."""
 
@@ -156,7 +158,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:],[0,1])
+        self.assertListEqual(c.default[:], [0, 1])
         self.assertEqual(c.options, list(map(lambda enum: str(enum), list(Drinks))))
 
     @parameterized.expand(
@@ -196,7 +198,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
                 [Drinks.COFFEE],
                 list(map(lambda enum: str(enum), list(Drinks))),
                 [0],
-            )
+            ),
         ]
     )
     def test_options_with_default_types(
