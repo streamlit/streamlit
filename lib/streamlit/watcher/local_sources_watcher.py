@@ -42,7 +42,7 @@ PathWatcher = None
 class LocalSourcesWatcher:
     def __init__(self, session_data: SessionData):
         self._session_data = session_data
-        self._on_file_changed: List[Callable[[str], None]] = []
+        self._on_file_changed: List[Callable[[str, str], None]] = []
         self._is_closed = False
         self._cached_sys_modules: Set[str] = set()
 
@@ -59,10 +59,10 @@ class LocalSourcesWatcher:
                 module_name=None,  # Only root scripts have their modules set to None
             )
 
-    def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
+    def register_file_change_callback(self, cb: Callable[[str, str], None]) -> None:
         self._on_file_changed.append(cb)
 
-    def on_file_changed(self, filepath):
+    def on_file_changed(self, filepath, content_hash):
         if filepath not in self._watched_modules:
             LOGGER.error("Received event for non-watched file: %s", filepath)
             return
@@ -84,7 +84,7 @@ class LocalSourcesWatcher:
                 del sys.modules[wm.module_name]
 
         for cb in self._on_file_changed:
-            cb(filepath)
+            cb(filepath, content_hash)
 
     def close(self):
         for wm in self._watched_modules.values():

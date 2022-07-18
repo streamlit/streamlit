@@ -327,25 +327,27 @@ class AppSession:
 
         return True
 
-    def _on_source_file_changed(self, filepath: Optional[str] = None) -> None:
+    def _on_source_file_changed(self, filepath: str, content_hash: str) -> None:
         """One of our source files changed. Schedule a rerun if appropriate."""
-        if filepath is not None and not self._should_rerun_on_file_change(filepath):
+        if not self._should_rerun_on_file_change(filepath):
             return
 
         if self._run_on_save:
             self.request_rerun(self._client_state)
-        else:
-            self._enqueue_forward_msg(self._create_file_change_message())
+
+        self._enqueue_forward_msg(self._create_file_change_message(filepath, content_hash))
 
     def _on_secrets_file_changed(self, _) -> None:
-        """Called when `secrets._file_change_listener` emits a Signal."""
+        """Called when `secrets._file_change_listener` emits a Signal.
 
-        # NOTE: At the time of writing, this function only calls `_on_source_file_changed`.
-        # The reason behind creating this function instead of just passing `_on_source_file_changed`
-        # to `connect` / `disconnect` directly is that every function that is passed to `connect` / `disconnect`
-        # must have at least one argument for `sender` (in this case we don't really care about it, thus `_`),
-        # and introducing an unnecessary argument to `_on_source_file_changed` just for this purpose sounded finicky.
-        self._on_source_file_changed()
+        NOTE: Every function that is passed to `connect` / `disconnect` must have at least one
+        argument for `sender` (in this case we don't really care about it, thus `_`).
+        """
+
+        if self._run_on_save:
+            self.request_rerun(self._client_state)
+
+        self._enqueue_forward_msg(self._create_secrets_change_message())
 
     def _on_pages_changed(self, _) -> None:
         # TODO: Double-check the product behavior we want on this. In the spec,
@@ -444,7 +446,8 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
-            self._clear_queue()
+            # HACK: Don't clear queue, or the script_contents_changed_on_disk message won't go through.
+            #self._clear_queue()
             self._enqueue_forward_msg(
                 self._create_new_session_message(page_script_hash)
             )
@@ -517,10 +520,17 @@ class AppSession:
         )
         return msg
 
-    def _create_file_change_message(self) -> ForwardMsg:
-        """Create and return a 'script_changed_on_disk' ForwardMsg."""
+    def _create_file_change_message(self, filepath: str, content_hash: str) -> ForwardMsg:
+        """Create and return a 'ScriptContentsChangedOnDisk' ForwardMsg."""
         msg = ForwardMsg()
-        msg.session_event.script_changed_on_disk = True
+        msg.session_event.script_contents_changed_on_disk.path_hash = calc_md5(filepath)
+        msg.session_event.script_contents_changed_on_disk.content_hash = content_hash
+        return msg
+
+    def _create_secrets_change_message(self) -> ForwardMsg:
+        """Create and return a 'SecretsChangedOnDisk' ForwardMsg."""
+        msg = ForwardMsg()
+        msg.session_event.secrets_changed_on_disk = True
         return msg
 
     def _create_new_session_message(self, page_script_hash: str) -> ForwardMsg:

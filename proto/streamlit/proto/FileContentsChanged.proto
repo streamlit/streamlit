@@ -16,8 +16,10 @@
 
 syntax = "proto3";
 
-message Cell {
-  // The cell's location, starting from 0 at the top, and incrementing as you move down.
-  // TODO: Remove since this is in metadata now?
-  uint32 cell_index = 1;
+message FileContentsChanged {
+  // A hash of the *path* of the changed file.
+  string path_hash = 1;
+
+  // A hash of the *contents* of the changed file.
+  string content_hash = 2;
 }

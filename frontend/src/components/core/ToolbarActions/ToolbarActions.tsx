@@ -22,6 +22,7 @@ import {
   IGuestToHostMessage,
   IToolbarItem,
 } from "src/hocs/withS4ACommunication/types"
+
 import {
   StyledActionButtonContainer,
   StyledActionButtonIcon,
@@ -55,11 +56,13 @@ export function ActionButton({
 export interface ToolbarActionsProps {
   sendS4AMessage: (message: IGuestToHostMessage) => void
   s4aToolbarItems: IToolbarItem[]
+  onEditClicked: () => void
 }
 
 function ToolbarActions({
   sendS4AMessage,
   s4aToolbarItems,
+  onEditClicked,
 }: ToolbarActionsProps): ReactElement {
   return (
     <>
@@ -77,6 +80,8 @@ function ToolbarActions({
           }
         />
       ))}
+
+      <ActionButton label="Edit" borderless={true} onClick={onEditClicked} />
     </>
   )
 }

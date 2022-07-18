@@ -18,13 +18,17 @@ import os
 import tornado.web
 from urllib.parse import quote, unquote_plus
 
+from streamlit.proto import SourceCode_pb2
+
 from streamlit import config, file_util
-from streamlit.logger import get_logger
-from streamlit.server.server_util import serialize_forward_msg
-from streamlit.string_util import generate_download_filename_from_title
+from streamlit import session_data
+from streamlit import source_util
+from streamlit.in_memory_file_manager import FILE_TYPE_DOWNLOADABLE
 from streamlit.in_memory_file_manager import _get_extension_for_mimetype
 from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.in_memory_file_manager import FILE_TYPE_DOWNLOADABLE
+from streamlit.logger import get_logger
+from streamlit.string_util import generate_download_filename_from_title
+from streamlit.util import calc_md5
 
 LOGGER = get_logger(__name__)
 
@@ -324,3 +328,114 @@ class MessageCacheHandler(tornado.web.RequestHandler):
         """/OPTIONS handler for preflight CORS checks."""
         self.set_status(204)
         self.finish()
+
+class SourceCodeHandler(tornado.web.RequestHandler):
+    # Blindly copied from upload_file_request_handler
+    # TODO XXX: Set this up correctly
+    def options(self, **kwargs):
+        """/OPTIONS handler for preflight CORS checks.
+
+        When a browser is making a CORS request, it may sometimes first
+        send an OPTIONS request, to check whether the server understands the
+        CORS protocol. This is optional, and doesn't happen for every request
+        or in every browser. If an OPTIONS request does get sent, and is not
+        then handled by the server, the browser will fail the underlying
+        request.
+
+        The proper way to handle this is to send a 204 response ("no content")
+        with the CORS headers attached. (These headers are automatically added
+        to every outgoing response, including OPTIONS responses,
+        via set_default_headers().)
+
+        See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+        """
+        self.set_status(204)
+        self.finish()
+
+    # Blindly copied from upload_file_request_handler
+    # TODO XXX: Set this up correctly
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type")
+        if config.get_option("server.enableXsrfProtection"):
+            self.set_header(
+                "Access-Control-Allow-Origin",
+                session_data.get_url(config.get_option("browser.serverAddress")),
+            )
+            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
+            self.set_header("Vary", "Origin")
+            self.set_header("Access-Control-Allow-Credentials", "true")
+        elif routes.allow_cross_origin_requests():
+            self.set_header("Access-Control-Allow-Origin", "*")
+
+    def initialize(self, main_script_path):
+        self.main_script_path = main_script_path
+
+    def get_file_path(self, filename_hash):
+        pages = source_util.get_pages(self.main_script_path)
+
+        if filename_hash not in pages:
+            LOGGER.error("File does not exist or access not allowed.")
+            self.set_status(404)
+            raise tornado.web.Finish()
+
+        page_info = pages[filename_hash]
+        file_path = page_info["script_path"]
+        return file_path
+
+    def get(self):
+        filename_hash = self.get_argument("filenameHash", None)
+
+        if filename_hash is None:
+            LOGGER.error("Malformed request. 'filename_hash' required.")
+            self.set_status(400)
+            raise tornado.web.Finish()
+
+        # TODO XXX: Do some sort of permission check to make sure the user is allowed to see the
+        # app's code.
+        file_path = self.get_file_path(filename_hash)
+
+        with open(file_path) as f:
+            file_body = f.read()
+
+        # Support Windows line-separators.
+        file_body = file_body.replace('\r\n', '\n')
+
+        file_body = file_body.replace('\nst.cell()\n', '\n...\n')
+        cells = file_body.split('\n...\n')
+
+        cells = [cell.strip() for cell in cells]
+
+        source_code = SourceCode_pb2.SourceCode()
+        source_code.filename_hash = filename_hash
+        source_code.content_sync_token = calc_md5(file_body)
+        source_code.cells[:] = cells
+
+        response_serialized = source_code.SerializeToString()
+
+        self.set_header("Content-Type", "application/octet-stream")
+        self.write(response_serialized)
+        self.set_status(200)
+
+    def put(self):
+
+        # BUG: Protobufs don't work here. Maybe a PB2 vs PB3 issue?
+        # source_code = SourceCode_pb2.SourceCode()
+        # source_code.ParseFromString(self.request.body)
+        # source_code.ParseFromString(self.request.body.decode('utf-8'))
+        # BUGFIX: Switched to JSON instead.
+        source_code = json.loads(self.request.body)
+
+        cells = source_code['cells']
+        cells = [cell.strip() for cell in cells]
+        file_body = '\n\n...\n\n'.join(cells)
+
+        # TODO XXX: Do some sort of permission check to make sure the user is allowed to see the
+        # app's code.
+
+        filename_hash = source_code['filenameHash']
+        file_path = self.get_file_path(filename_hash)
+
+        # TODO: What if the file is being read by ScriptRunner *right now*?
+        with open(file_path, 'wt') as f:
+            f.write(file_body)

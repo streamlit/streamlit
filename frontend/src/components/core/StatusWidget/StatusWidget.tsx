@@ -76,6 +76,8 @@ export interface StatusWidgetProps {
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
 
+  runOnSave: boolean
+
   theme: Theme
 }
 
@@ -95,7 +97,7 @@ interface State {
    * This is reverted to false in getDerivedStateFromProps when the script
    * begins running again.
    */
-  scriptChangedOnDisk: boolean
+  appChangedOnDisk: boolean
 
   /** True if our Script Changed prompt should be minimized. */
   promptMinimized: boolean
@@ -142,7 +144,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     this.state = {
       statusMinimized: StatusWidget.shouldMinimize(),
       promptMinimized: false,
-      scriptChangedOnDisk: false,
+      appChangedOnDisk: false,
       promptHovered: false,
     }
 
@@ -162,7 +164,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
     if (props.scriptRunState === ScriptRunState.RUNNING) {
-      return { scriptChangedOnDisk: false, promptHovered: false }
+      return { appChangedOnDisk: false, promptHovered: false }
     }
 
     return null
@@ -191,8 +193,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 
   private handleSessionEvent(event: SessionEvent): void {
-    if (event.type === "scriptChangedOnDisk") {
-      this.setState({ scriptChangedOnDisk: true, promptMinimized: false })
+    if (event.type === "scriptContentsChangedOnDisk") {
+      this.setState({ appChangedOnDisk: true, promptMinimized: false })
       this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
     }
   }
@@ -270,7 +272,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         // more responsive by claiming it's started immemdiately.
         return this.renderScriptIsRunning()
       }
-      if (!RERUN_PROMPT_MODAL_DIALOG && this.state.scriptChangedOnDisk) {
+      if (
+        !RERUN_PROMPT_MODAL_DIALOG &&
+        this.state.appChangedOnDisk &&
+        !this.props.runOnSave
+      ) {
         return this.renderRerunScriptPrompt()
       }
     }

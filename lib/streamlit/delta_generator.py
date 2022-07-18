@@ -502,6 +502,9 @@ class DeltaGenerator(
             if element_height is not None:
                 msg.metadata.element_dimension_spec.height = element_height
 
+            ctx = get_script_run_ctx()
+            msg.metadata.current_cell_index = ctx.current_cell_index
+
             _enqueue_message(msg)
             msg_was_enqueued = True
 

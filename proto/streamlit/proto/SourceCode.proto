@@ -16,8 +16,8 @@
 
 syntax = "proto3";
 
-message Cell {
-  // The cell's location, starting from 0 at the top, and incrementing as you move down.
-  // TODO: Remove since this is in metadata now?
-  uint32 cell_index = 1;
+message SourceCode {
+  string filename_hash = 1;
+  string content_sync_token = 2;
+  repeated string cells = 3;
 }

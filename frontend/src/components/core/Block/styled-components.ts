@@ -127,3 +127,37 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
     gap: theme.spacing.lg,
   })
 )
+
+export const StyledEditButton = styled.div(({ theme }) => {
+  return {
+    position: "absolute",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+
+    left: "-3rem",
+    top: "-1rem",
+    opacity: 0,
+    backgroundColor: theme.colors.lightenedBg05,
+
+    zIndex: theme.zIndices.sidebar + 1,
+    height: "2.5rem",
+    width: "2.5rem",
+    transition: "opacity 300ms 150ms",
+    border: "none",
+    color: theme.colors.fadedText60,
+    borderRadius: "50%",
+    cursor: "pointer",
+
+    "&:focus": {
+      outline: "none",
+    },
+
+    "&:active, &:focus-visible, &:hover": {
+      opacity: 1,
+      outline: "none",
+      color: theme.colors.bodyText,
+      transition: "none",
+    },
+  }
+})

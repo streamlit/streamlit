@@ -17,13 +17,15 @@
 syntax = "proto3";
 
 import "streamlit/proto/Exception.proto";
+import "streamlit/proto/FileContentsChanged.proto";
 
 // A transient event sent to all browsers connected to an associated app.
 message SessionEvent {
   oneof type {
-    // The app's script changed on disk, but is *not* being re-run
-    // automatically. The browser should prompt the user to re-run.
-    bool script_changed_on_disk = 1;
+    // Files related to the script changed on disk, but is *not* being re-run automatically. The
+    // browser should prompt the user to re-run.
+    bool secrets_changed_on_disk = 1;
+    FileContentsChanged script_contents_changed_on_disk = 4;
 
     // The app's script was running, but it was manually stopped before
     // completion.

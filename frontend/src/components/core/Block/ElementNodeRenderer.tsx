@@ -15,6 +15,17 @@
  * limitations under the License.
  */
 
+import React, {
+  ReactElement,
+  Suspense,
+  useContext,
+  useCallback,
+  useRef,
+} from "react"
+// @ts-ignore
+import debounceRender from "react-debounce-render"
+import { Edit } from "@emotion-icons/material-outlined"
+
 import {
   Alert as AlertProto,
   Audio as AudioProto,
@@ -52,15 +63,15 @@ import {
   Video as VideoProto,
 } from "src/autogen/proto"
 
-import React, { ReactElement, Suspense } from "react"
-// @ts-ignore
-import debounceRender from "react-debounce-render"
 import { ElementNode } from "src/lib/AppNode"
 import { Quiver } from "src/lib/Quiver"
+import CallbacksContext from "src/components/core/CallbacksContext"
+import Icon from "src/components/shared/Icon"
 
 // Load (non-lazy) elements.
 import Alert from "src/components/elements/Alert/"
 import ArrowTable from "src/components/elements/ArrowTable/"
+import Cell from "src/components/widgets/Cell/Cell"
 import DocString from "src/components/elements/DocString/"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import ExceptionElement from "src/components/elements/ExceptionElement/"
@@ -83,7 +94,7 @@ import {
   isComponentStale,
 } from "./utils"
 
-import { StyledElementContainer } from "./styled-components"
+import { StyledElementContainer, StyledEditButton } from "./styled-components"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
@@ -407,14 +418,6 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "cell": {
-      // TODO XXX
-      const cellProto = node.element.cell as CellProto
-      return (
-        <div key={`cell-${cellProto.cellId}`}>CELL {cellProto.cellId}</div>
-      )
-    }
-
     case "checkbox": {
       const checkboxProto = node.element.checkbox as CheckboxProto
       widgetProps.disabled = widgetProps.disabled || checkboxProto.disabled
@@ -596,6 +599,9 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
+  const { toggleCellVisible } = useContext(CallbacksContext)
+  const editButtonRef = useRef<HTMLDivElement>(null)
+
   const { node } = props
 
   const elementType = node.element.type || ""
@@ -612,6 +618,32 @@ const ElementNodeRenderer = (
   // and propagates widths.
   const width = props.width ?? 0
 
+  const elementIsCell = node.element.type === "cell"
+  const cellIndex = node.metadata.currentCellIndex
+
+  const toggleCell = useCallback(() => {
+    toggleCellVisible(cellIndex)
+  }, [toggleCellVisible, cellIndex])
+
+  const showCellToggleButton = useCallback(() => {
+    if (editButtonRef.current) {
+      editButtonRef.current.style.opacity = "1"
+    }
+  }, [editButtonRef])
+
+  const hideCellToggleButton = useCallback(() => {
+    if (editButtonRef.current) {
+      editButtonRef.current.style.opacity = "0"
+    }
+  }, [editButtonRef])
+
+  if (elementIsCell) {
+    // Don't wrap cell in StyledElementContainer to avoid all the padding around it.
+    const cellProto = node.element.cell as CellProto
+    const cellIndex = node.metadata.currentCellIndex
+    return <Cell element={cellProto} cellIndex={cellIndex} />
+  }
+
   // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
@@ -624,7 +656,13 @@ const ElementNodeRenderer = (
         width={width}
         className={"element-container"}
         elementType={elementType}
+        onMouseOver={showCellToggleButton}
+        onMouseOut={hideCellToggleButton}
       >
+        <StyledEditButton ref={editButtonRef} onClick={toggleCell}>
+          <Icon content={Edit} size="lg" />
+        </StyledEditButton>
+
         <ErrorBoundary width={width}>
           <Suspense
             fallback={

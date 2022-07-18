@@ -114,7 +114,7 @@ class PollingPathWatcher:
         self._md5 = md5
 
         LOGGER.debug("Change detected: %s", self._path)
-        self._on_changed(self._path)
+        self._on_changed(self._path, self._md5)
 
         self._schedule()
 

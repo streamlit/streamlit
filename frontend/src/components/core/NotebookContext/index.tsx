@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +13,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+import React from "react"
 
-message Cell {
-  // The cell's location, starting from 0 at the top, and incrementing as you move down.
-  // TODO: Remove since this is in metadata now?
-  uint32 cell_index = 1;
+import {
+  CellModel,
+  NotebookModel,
+  INotebookModel,
+} from "src/lib/NotebookModel"
+
+export interface Props {
+  notebookModel: INotebookModel
 }
+
+export default React.createContext<Props>({
+  notebookModel: NotebookModel(),
+})

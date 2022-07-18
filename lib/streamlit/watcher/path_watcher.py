@@ -87,7 +87,7 @@ def report_watchdog_availability():
 
 def _watch_path(
     path: str,
-    on_path_changed: Callable[[str], None],
+    on_path_changed: Callable[[str, str], None],
     watcher_type: Optional[str] = None,
     *,  # keyword-only arguments:
     glob_pattern: Optional[str] = None,

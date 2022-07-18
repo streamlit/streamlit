@@ -87,6 +87,8 @@ message ForwardMsgMetadata {
   repeated uint32 delta_path = 2;
 
   ElementDimensionSpec element_dimension_spec = 3;
+
+  uint32 current_cell_index = 4;
 }
 
 // Specifies the dimensions for the element

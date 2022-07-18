@@ -15,17 +15,28 @@
  * limitations under the License.
  */
 
-export interface UserSettings {
-  /**
-   * If true, the app will be rendered with a wider column size
-   */
-  wideMode: boolean
+import { List, Record, RecordOf } from "immutable"
 
-  /**
-   * Flag indicating the value of the config value server.runOnSave on the server.
-   *
-   * This whether the server should re-run an app's scripts automatically
-   * when their source files are modified on disk.
-   */
-  runOnSave: boolean
+interface IRawCellModel {
+  visible: boolean
+  body: string
+}
+
+export const CellModel = Record({
+  visible: false,
+  body: "",
+})
+
+export type ICellModel = RecordOf<IRawCellModel>
+
+export type INotebookModel = List<ICellModel>
+
+// This represents holds the code that the user is editing.
+// (i.e. the server-side code may be older, or even newer if someone else edited it)
+export function NotebookModel(initStates?: ICellModel[]): INotebookModel {
+  if (initStates) {
+    return List<ICellModel>(initStates)
+  }
+
+  return List<ICellModel>()
 }

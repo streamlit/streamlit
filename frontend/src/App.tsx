@@ -27,6 +27,8 @@ import AppContext from "src/components/core/AppContext"
 import AppView from "src/components/core/AppView"
 import StatusWidget from "src/components/core/StatusWidget"
 import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
+import NotebookContext from "src/components/core/NotebookContext"
+import CallbacksContext from "src/components/core/CallbacksContext"
 import ToolbarActions from "src/components/core/ToolbarActions"
 import Header from "src/components/core/Header"
 import {
@@ -67,6 +69,7 @@ import {
   SessionEvent,
   WidgetStates,
   SessionState,
+  SourceCode,
   Config,
   IGitInfo,
   GitInfo,
@@ -78,9 +81,16 @@ import { without, concat } from "lodash"
 import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { MetricsManager } from "src/lib/MetricsManager"
+import { SourceCodeManager } from "src/lib/SourceCodeManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError, logMessage } from "src/lib/log"
 import { AppRoot } from "src/lib/AppNode"
+import {
+  CellModel,
+  ICellModel,
+  NotebookModel,
+  INotebookModel,
+} from "src/lib/NotebookModel"
 
 import { UserSettings } from "src/components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
@@ -145,6 +155,8 @@ interface State {
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
+  notebookModel: INotebookModel
+  allCellsAreVisible: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -178,7 +190,12 @@ export class App extends PureComponent<Props, State> {
 
   private pendingElementsTimerRunning: boolean
 
+  private sourceCodeManager: SourceCodeManager
+
   private readonly componentRegistry: ComponentRegistry
+
+  private appContextValue: any
+  private callbacksContextValue: any // TODO
 
   constructor(props: Props) {
     super(props)
@@ -219,6 +236,8 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
+      notebookModel: NotebookModel(),
+      allCellsAreVisible: false,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -240,10 +259,42 @@ export class App extends PureComponent<Props, State> {
       csrfEnabled: true,
     })
 
+    this.sourceCodeManager = new SourceCodeManager({
+      getServerUri: this.getBaseUriParts,
+      csrfEnabled: true,
+      onSourceCodeChanged: this.onSourceCodeChanged,
+    })
+
     this.componentRegistry = new ComponentRegistry(this.getBaseUriParts)
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
+
+    this.appContextValue = {
+      initialSidebarState: this.state.initialSidebarState,
+      layout: this.state.layout,
+      wideMode: this.state.userSettings.wideMode,
+      embedded: isEmbeddedInIFrame(),
+      isFullScreen: this.state.isFullScreen,
+      setFullScreen: this.handleFullScreen,
+      addScriptFinishedHandler: this.addScriptFinishedHandler,
+      removeScriptFinishedHandler: this.removeScriptFinishedHandler,
+      activeTheme: this.props.theme.activeTheme,
+      availableThemes: this.props.theme.availableThemes,
+      setTheme: this.setAndSendTheme,
+      addThemes: this.props.theme.addThemes,
+      sidebarChevronDownshift: this.props.s4aCommunication.currentState
+        .sidebarChevronDownshift,
+      getBaseUriParts: this.getBaseUriParts,
+    }
+
+    this.callbacksContextValue = {
+      toggleCellVisible: this.toggleCellVisible,
+      updateCellModel: this.updateCellModel,
+      insertCell: this.insertCell,
+      deleteCell: this.deleteCell,
+      storeAndRun: this.storeCellsAndRerun,
+    }
 
     window.streamlitDebug = {}
     window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
@@ -498,6 +549,7 @@ export class App extends PureComponent<Props, State> {
     this.showError("Page not found", `${errMsg}. Running the app's main page.`)
 
     const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
+    // XXX
     this.setState({ currentPageScriptHash }, () => {
       this.props.s4aCommunication.sendMessage({
         type: "SET_CURRENT_PAGE_NAME",
@@ -592,25 +644,53 @@ export class App extends PureComponent<Props, State> {
    */
   handleSessionEvent = (sessionEvent: SessionEvent): void => {
     this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
-    if (sessionEvent.type === "scriptCompilationException") {
-      this.setState({ scriptRunState: ScriptRunState.COMPILATION_ERROR })
-      const newDialog: DialogProps = {
-        type: DialogType.SCRIPT_COMPILE_ERROR,
-        exception: sessionEvent.scriptCompilationException,
-        onClose: () => {},
+
+    switch (sessionEvent.type) {
+      case "scriptCompilationException": {
+        this.setState({ scriptRunState: ScriptRunState.COMPILATION_ERROR })
+        const newDialog: DialogProps = {
+          type: DialogType.SCRIPT_COMPILE_ERROR,
+          exception: sessionEvent.scriptCompilationException,
+          onClose: () => {},
+        }
+        this.openDialog(newDialog)
+        break
       }
-      this.openDialog(newDialog)
-    } else if (
-      RERUN_PROMPT_MODAL_DIALOG &&
-      sessionEvent.type === "scriptChangedOnDisk"
-    ) {
-      const newDialog: DialogProps = {
-        type: DialogType.SCRIPT_CHANGED,
-        onRerun: this.rerunScript,
-        onClose: () => {},
-        allowRunOnSave: this.state.allowRunOnSave,
+
+      case "secretsChangedOnDisk": {
+        if (RERUN_PROMPT_MODAL_DIALOG) {
+          this.openDialog({
+            type: DialogType.SCRIPT_CHANGED,
+            onRerun: this.rerunScript,
+            onClose: () => {},
+            allowRunOnSave: this.state.allowRunOnSave,
+          })
+        }
+        break
       }
-      this.openDialog(newDialog)
+
+      case "scriptContentsChangedOnDisk": {
+        if (RERUN_PROMPT_MODAL_DIALOG) {
+          this.openDialog({
+            type: DialogType.SCRIPT_CHANGED,
+            onRerun: this.rerunScript,
+            onClose: () => {},
+            allowRunOnSave: this.state.allowRunOnSave,
+          })
+        }
+
+        const evInfo = sessionEvent.scriptContentsChangedOnDisk
+        if (evInfo?.pathHash && evInfo?.contentHash) {
+          this.sourceCodeManager.contentChangedRemotely(
+            evInfo.pathHash,
+            evInfo.contentHash
+          )
+        }
+        break
+      }
+
+      default:
+      // TODO
     }
   }
 
@@ -666,6 +746,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.processThemeInput(themeInput)
+
     this.setState(
       {
         allowRunOnSave: config.allowRunOnSave,
@@ -850,6 +931,126 @@ export class App extends PureComponent<Props, State> {
         )
       }
     }
+  }
+
+  loadSourceCodeAndToggleCells = async (): Promise<void> => {
+    if (this.state.allCellsAreVisible) {
+      this.setCellsVisible(false)
+    } else {
+      await this.sourceCodeManager.setCurrentFileAndSync(
+        this.state.currentPageScriptHash,
+        "XXX sync token"
+      )
+      this.setCellsVisible(true)
+    }
+
+    this.setState({
+      allCellsAreVisible: !this.state.allCellsAreVisible,
+    })
+  }
+
+  updateCellModel = (cellIndex: number, body: string): void => {
+    const cellModel = this.state.notebookModel
+      .get(cellIndex)
+      ?.set("body", body)
+
+    if (!cellModel) {
+      return
+    }
+
+    const notebookModel = this.state.notebookModel.set(cellIndex, cellModel)
+    this.setState({ notebookModel })
+  }
+
+  deleteCell = async (cellIndex: number): Promise<void> => {
+    this.setState({
+      notebookModel: this.state.notebookModel.delete(cellIndex),
+    })
+
+    this.storeCellsAndRerun()
+  }
+
+  insertCell = async (cellIndex: number): Promise<void> => {
+    // TODO XXX: Insert shouldn't store and run. But inserting in the elements list is hard.
+    // Maybe cells should remember their deltapath to make this easier?
+
+    this.setState({
+      notebookModel: this.state.notebookModel.insert(
+        cellIndex,
+        CellModel({ visible: true, body: "" })
+      ),
+    })
+
+    this.storeCellsAndRerun()
+  }
+
+  storeCells = async (): Promise<void> => {
+    const cellBodies = this.state.notebookModel
+      .map((cellModel: ICellModel) => cellModel.get("body"))
+      .toArray()
+
+    return this.sourceCodeManager.storeSourceCode(cellBodies)
+  }
+
+  storeCellsAndRerun = async (): Promise<void> => {
+    await this.storeCells()
+    this.rerunScript()
+  }
+
+  onSourceCodeChanged = (sourceCode: SourceCode): void => {
+    this.setCellsSourceCode(sourceCode)
+  }
+
+  setCellsSourceCode = (sourceCode: SourceCode): void => {
+    const newNotebookModel = NotebookModel(
+      sourceCode.cells.map(
+        (body: string, i: number): ICellModel => {
+          const existingCell = this.state.notebookModel.get(i, null)
+          if (existingCell) {
+            return existingCell.set("body", body)
+          } else {
+            return new CellModel({
+              body,
+              visible: this.state.allCellsAreVisible,
+            })
+          }
+        }
+      )
+    )
+
+    this.setState({
+      notebookModel: newNotebookModel,
+    })
+  }
+
+  toggleCellVisible = async (cellIndex: number): Promise<void> => {
+    await this.sourceCodeManager.setCurrentFileAndSync(
+      this.state.currentPageScriptHash,
+      "XXX sync token"
+    )
+
+    const cellModel = this.state.notebookModel.get(cellIndex)
+
+    if (!cellModel) {
+      return
+    }
+
+    const visible = cellModel.get("visible")
+
+    this.setState({
+      notebookModel: this.state.notebookModel.set(
+        cellIndex,
+        cellModel.set("visible", !visible)
+      ),
+    })
+  }
+
+  setCellsVisible = (visible: boolean): void => {
+    this.setState({
+      notebookModel: this.state.notebookModel.map((cellModel: ICellModel) =>
+        cellModel.set("visible", visible)
+      ),
+    })
   }
 
   /*
@@ -1244,6 +1445,7 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       currentPageScriptHash,
+      notebookModel,
     } = this.state
 
     const {
@@ -1262,103 +1464,104 @@ export class App extends PureComponent<Props, State> {
         })
       : null
 
+    this.appContextValue.initialSidebarState = initialSidebarState
+    this.appContextValue.layout = layout
+    this.appContextValue.isFullScreen = isFullScreen
+
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
     // attach: DOM element the keyboard listeners should attach to
     // focused: A way to force focus behaviour
     return (
-      <AppContext.Provider
-        value={{
-          initialSidebarState,
-          layout,
-          wideMode: userSettings.wideMode,
-          embedded: isEmbeddedInIFrame(),
-          isFullScreen,
-          setFullScreen: this.handleFullScreen,
-          addScriptFinishedHandler: this.addScriptFinishedHandler,
-          removeScriptFinishedHandler: this.removeScriptFinishedHandler,
-          activeTheme: this.props.theme.activeTheme,
-          availableThemes: this.props.theme.availableThemes,
-          setTheme: this.setAndSendTheme,
-          addThemes: this.props.theme.addThemes,
-          sidebarChevronDownshift: this.props.s4aCommunication.currentState
-            .sidebarChevronDownshift,
-          getBaseUriParts: this.getBaseUriParts,
-        }}
-      >
-        <HotKeys
-          keyMap={this.keyMap}
-          handlers={this.keyHandlers}
-          attach={window}
-          focused={true}
-        >
-          <StyledApp className={outerDivClass}>
-            {/* The tabindex below is required for testing. */}
-            <Header>
-              {!hideTopBar && (
-                <>
-                  <StatusWidget
-                    connectionState={connectionState}
-                    sessionEventDispatcher={this.sessionEventDispatcher}
-                    scriptRunState={scriptRunState}
-                    rerunScript={this.rerunScript}
-                    stopScript={this.stopScript}
-                    allowRunOnSave={allowRunOnSave}
-                  />
-                  <ToolbarActions
-                    s4aToolbarItems={
-                      this.props.s4aCommunication.currentState.toolbarItems
-                    }
-                    sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                  />
-                </>
-              )}
-              <MainMenu
-                isServerConnected={this.isServerConnected()}
-                quickRerunCallback={this.rerunScript}
-                clearCacheCallback={this.openClearCacheDialog}
-                settingsCallback={this.settingsCallback}
-                aboutCallback={this.aboutCallback}
-                screencastCallback={this.screencastCallback}
-                screenCastState={this.props.screenCast.currentState}
-                s4aMenuItems={
-                  this.props.s4aCommunication.currentState.menuItems
-                }
-                s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
-                sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                gitInfo={gitInfo}
-                showDeployError={this.showDeployError}
-                closeDialog={this.closeDialog}
-                isDeployErrorModalOpen={
-                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                }
-                loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
-                menuItems={menuItems}
-              />
-            </Header>
+      <React.StrictMode>
+        <AppContext.Provider value={this.appContextValue}>
+          <CallbacksContext.Provider value={this.callbacksContextValue}>
+            <NotebookContext.Provider value={{ notebookModel }}>
+              <HotKeys
+                keyMap={this.keyMap}
+                handlers={this.keyHandlers}
+                attach={window}
+                focused={true}
+              >
+                <StyledApp className={outerDivClass}>
+                  {/* The tabindex below is required for testing. */}
+                  <Header>
+                    {!hideTopBar && (
+                      <>
+                        <StatusWidget
+                          connectionState={connectionState}
+                          sessionEventDispatcher={this.sessionEventDispatcher}
+                          scriptRunState={scriptRunState}
+                          rerunScript={this.rerunScript}
+                          stopScript={this.stopScript}
+                          allowRunOnSave={allowRunOnSave}
+                          runOnSave={userSettings.runOnSave}
+                        />
+                        <ToolbarActions
+                          s4aToolbarItems={
+                            this.props.s4aCommunication.currentState
+                              .toolbarItems
+                          }
+                          sendS4AMessage={
+                            this.props.s4aCommunication.sendMessage
+                          }
+                          onEditClicked={this.loadSourceCodeAndToggleCells}
+                        />
+                      </>
+                    )}
+                    <MainMenu
+                      isServerConnected={this.isServerConnected()}
+                      quickRerunCallback={this.rerunScript}
+                      clearCacheCallback={this.openClearCacheDialog}
+                      settingsCallback={this.settingsCallback}
+                      aboutCallback={this.aboutCallback}
+                      screencastCallback={this.screencastCallback}
+                      screenCastState={this.props.screenCast.currentState}
+                      s4aMenuItems={
+                        this.props.s4aCommunication.currentState.menuItems
+                      }
+                      s4aIsOwner={
+                        this.props.s4aCommunication.currentState.isOwner
+                      }
+                      sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                      gitInfo={gitInfo}
+                      showDeployError={this.showDeployError}
+                      closeDialog={this.closeDialog}
+                      isDeployErrorModalOpen={
+                        this.state.dialog?.type === DialogType.DEPLOY_ERROR
+                      }
+                      loadGitInfo={this.sendLoadGitInfoBackMsg}
+                      canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
+                      menuItems={menuItems}
+                    />
+                  </Header>
 
-            <AppView
-              elements={elements}
-              scriptRunId={scriptRunId}
-              scriptRunState={scriptRunState}
-              widgetMgr={this.widgetMgr}
-              widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
-              uploadClient={this.uploadClient}
-              componentRegistry={this.componentRegistry}
-              formsData={this.state.formsData}
-              appPages={this.state.appPages}
-              onPageChange={this.onPageChange}
-              currentPageScriptHash={currentPageScriptHash}
-              hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
-              pageLinkBaseUrl={
-                this.props.s4aCommunication.currentState.pageLinkBaseUrl
-              }
-            />
-            {renderedDialog}
-          </StyledApp>
-        </HotKeys>
-      </AppContext.Provider>
+                  <AppView
+                    elements={elements}
+                    scriptRunId={scriptRunId}
+                    scriptRunState={scriptRunState}
+                    widgetMgr={this.widgetMgr}
+                    widgetsDisabled={
+                      connectionState !== ConnectionState.CONNECTED
+                    }
+                    uploadClient={this.uploadClient}
+                    componentRegistry={this.componentRegistry}
+                    formsData={this.state.formsData}
+                    appPages={this.state.appPages}
+                    onPageChange={this.onPageChange}
+                    currentPageScriptHash={currentPageScriptHash}
+                    hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
+                    pageLinkBaseUrl={
+                      this.props.s4aCommunication.currentState.pageLinkBaseUrl
+                    }
+                  />
+                  {renderedDialog}
+                </StyledApp>
+              </HotKeys>
+            </NotebookContext.Provider>
+          </CallbacksContext.Provider>
+        </AppContext.Provider>
+      </React.StrictMode>
     )
   }
 }

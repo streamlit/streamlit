@@ -18,7 +18,7 @@ import os
 
 from streamlit.proto.Cell_pb2 import Cell as CellProto
 
-from streamlit.scriptrunner import get_script_run_ctx
+from streamlit.scriptrunner.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -32,7 +32,7 @@ class CellMixin:
 
         cell_proto = CellProto()
         cell_proto.file_path = user_frame.f_code.co_filename
-        cell_proto.cell_id = _get_next_cell_id()
+        cell_proto.cell_index = _get_next_cell_index()
         return self.dg._enqueue("cell", cell_proto)
 
     @property
@@ -41,8 +41,7 @@ class CellMixin:
         return cast("DeltaGenerator", self)
 
 
-def _get_next_cell_id():
+def _get_next_cell_index():
     ctx = get_script_run_ctx()
-    ctx.current_cell_id += 1
-    return ctx.current_cell_id
-
+    ctx.current_cell_index += 1
+    return ctx.current_cell_index

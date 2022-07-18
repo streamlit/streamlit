@@ -21,6 +21,7 @@ import attr
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.state import SafeSessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -57,7 +58,7 @@ class ScriptRunContext:
     form_ids_this_run: Set[str] = attr.Factory(set)
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = attr.Factory(dict)
     dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = attr.Factory(list)
-    current_cell_id: int = 0
+    current_cell_index: int = -1
 
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
@@ -65,7 +66,7 @@ class ScriptRunContext:
         self.form_ids_this_run = set()
         self.query_string = query_string
         self.page_script_hash = page_script_hash
-        self.current_cell_id = 0
+        self.current_cell_index = -1
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True
         self._has_script_started = False

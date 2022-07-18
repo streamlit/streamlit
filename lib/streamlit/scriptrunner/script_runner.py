@@ -551,6 +551,11 @@ class ScriptRunner:
                     self._session_state.on_script_will_rerun(rerun_data.widget_states)
 
                 ctx.on_script_start()
+
+                # TODO XXX HACK: Add cell to the top of every script.
+                # This should be done in JS, but it's too hard over there.
+                exec("import streamlit as st\nst.cell()", module.__dict__)
+
                 exec(code, module.__dict__)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:

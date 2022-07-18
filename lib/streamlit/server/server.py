@@ -84,6 +84,7 @@ from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import StaticFileHandler
+from streamlit.server.routes import SourceCodeHandler
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
@@ -352,6 +353,11 @@ class Server:
         base = config.get_option("server.baseUrlPath")
 
         routes: List[Any] = [
+            (
+                make_url_path_regex(base, "source"),
+                SourceCodeHandler,
+                dict(main_script_path=self.main_script_path),
+            ),
             (
                 make_url_path_regex(base, "stream"),
                 _BrowserWebSocketHandler,

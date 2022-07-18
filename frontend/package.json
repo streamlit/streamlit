@@ -30,6 +30,7 @@
     }
   },
   "dependencies": {
+    "@codemirror/lang-python": "^6.0.0",
     "@emotion-icons/emotion-icon": "^4.1.0",
     "@emotion-icons/material-outlined": "^3.14.0",
     "@emotion-icons/material-rounded": "^3.14.0",
@@ -44,6 +45,8 @@
     "@loaders.gl/core": "^2.2.8",
     "@loaders.gl/csv": "^2.2.8",
     "@loaders.gl/gltf": "^2.2.8",
+    "@uiw/codemirror-theme-dracula": "^4.9.4",
+    "@uiw/react-codemirror": "^4.9.4",
     "apache-arrow": "^8.0.0",
     "axios": "^0.21.4",
     "baseui": "9.106.0",
