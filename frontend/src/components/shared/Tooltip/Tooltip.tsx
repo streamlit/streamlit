@@ -84,7 +84,7 @@ function Tooltip({
             paddingRight: "0 !important",
 
             border: `1px solid ${colors.fadedText10}`,
-            backgroundColor: colors.fadedText10,
+            backgroundColor: colors.bgColor,
           },
         },
         Inner: {
