@@ -487,6 +487,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
             [(r"/healthz", HealthHandler, dict(callback=self.is_healthy))]
         )
 
+    @tornado.testing.gen_test
     def test_healthz(self):
         response = self.fetch("/healthz")
         self.assertEqual(200, response.code)
@@ -496,6 +497,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/healthz")
         self.assertEqual(503, response.code)
 
+    @tornado.testing.gen_test
     def test_healthz_without_csrf(self):
         config._set_option("server.enableXsrfProtection", False, "test")
         response = self.fetch("/healthz")
@@ -503,6 +505,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(b"ok", response.body)
         self.assertNotIn("Set-Cookie", response.headers)
 
+    @tornado.testing.gen_test
     def test_healthz_with_csrf(self):
         config._set_option("server.enableXsrfProtection", True, "test")
         response = self.fetch("/healthz")
@@ -630,6 +633,7 @@ class DebugHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         return tornado.web.Application([(r"/debugz", DebugHandler)])
 
+    @tornado.testing.gen_test
     def test_debug(self):
         # TODO - debugz is currently broken
         pass
@@ -642,6 +646,7 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
             [(r"/message", MessageCacheHandler, dict(cache=self._cache))]
         )
 
+    @tornado.testing.gen_test
     def test_message_cache(self):
         # Create a new ForwardMsg and cache it
         msg = _create_dataframe_msg([1, 2, 3])
@@ -739,6 +744,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         server.does_script_run_without_error = self.does_script_run_without_error
         return server._create_app()
 
+    @tornado.testing.gen_test
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
         self.assertEqual(200, response.code)
@@ -763,6 +769,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         server.does_script_run_without_error = self.does_script_run_without_error
         return server._create_app()
 
+    @tornado.testing.gen_test
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
         self.assertEqual(404, response.code)
@@ -799,6 +806,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ]
         )
 
+    @tornado.testing.gen_test
     def test_parse_url_path_200(self):
         responses = [
             self.fetch("/"),
@@ -812,6 +820,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         for r in responses:
             assert r.code == 200
 
+    @tornado.testing.gen_test
     def test_parse_url_path_404(self):
         responses = [
             self.fetch("/nonexistent"),

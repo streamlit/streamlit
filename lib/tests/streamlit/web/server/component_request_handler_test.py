@@ -48,6 +48,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def _request_component(self, path):
         return self.fetch("/component/%s" % path, method="GET")
 
+    @tornado.testing.gen_test
     def test_success_request(self):
         """Test request success when valid parameters are provided."""
 
@@ -66,6 +67,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(200, response.code)
         self.assertEqual(b"Test Content", response.body)
 
+    @tornado.testing.gen_test
     def test_invalid_component_request(self):
         """Test request failure when invalid component name is provided."""
 
@@ -73,6 +75,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(404, response.code)
         self.assertEqual(b"not found", response.body)
 
+    @tornado.testing.gen_test
     def test_invalid_content_request(self):
         """Test request failure when invalid content (file) is provided."""
 
@@ -91,6 +94,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             response.body,
         )
 
+    @tornado.testing.gen_test
     def test_support_binary_files_request(self):
         """Test support for binary files reads."""
 
