@@ -331,7 +331,7 @@ class Server:
 
     @property
     async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
-        if self._state not in (RuntimeState.INITIAL, RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._runtime.state not in (RuntimeState.INITIAL, RuntimeState.STOPPING, RuntimeState.STOPPED):
             return True, "ok"
 
         return False, "unavailable"
@@ -377,7 +377,7 @@ class Server:
 
     @property
     def browser_is_connected(self) -> bool:
-        return self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+        return self._runtime.state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
 
     @property
     def is_running_hello(self) -> bool:

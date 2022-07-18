@@ -133,6 +133,10 @@ class StreamlitRuntime:
         )
 
     @property
+    def state(self) -> RuntimeState:
+        return self._state
+
+    @property
     def config(self) -> RuntimeConfig:
         return self._config
 
