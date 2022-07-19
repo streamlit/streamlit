@@ -15,12 +15,38 @@
 from typing import cast, Optional, TYPE_CHECKING
 
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.errors import StreamlitAPIException
 from .utils import clean_text
+import re
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.type_util import SupportsStr
 
+PAGE_ICON_REGEX = re.compile(
+    "(^[\U0001F1E0-\U0001F1FF"
+    "\U0001F300-\U0001F5FF"
+    "\U0001F600-\U0001F64F"
+    "\U0001F680-\U0001F6FF"
+    "\U0001F700-\U0001F77F"
+    "\U0001F780-\U0001F7FF"
+    "\U0001F800-\U0001F8FF"
+    "\U0001F900-\U0001F9FF"
+    "\U0001FA00-\U0001FA6F"
+    "\U0001FA70-\U0001FAFF"
+    "\U00002702-\U000027B0"
+    "\U000024C2-\U0001F251])[_-]*"
+)
+
+# Function to check the icon parameter on the alert.
+# We check if what's been added is a valid emoji,
+# and default to an empty string if not.
+def check_emoji(emoji):
+    extracted_emoji = re.search(PAGE_ICON_REGEX, emoji)
+    if extracted_emoji is not None:
+        return clean_text(str(extracted_emoji.group(1)))
+    else:
+        raise StreamlitAPIException(f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.')
 
 class AlertMixin:
     def error(
@@ -46,7 +72,7 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        alert_proto.icon = clean_text(icon)
+        alert_proto.icon = check_emoji(icon)
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
@@ -76,7 +102,7 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        alert_proto.icon = clean_text(icon)
+        alert_proto.icon = check_emoji(icon)
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
@@ -103,9 +129,10 @@ class AlertMixin:
         >>> st.info('This is a purely informational message', icon=":information_source:")
 
         """
+
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        alert_proto.icon = clean_text(icon)
+        alert_proto.icon = check_emoji(icon)
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
@@ -134,7 +161,7 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        alert_proto.icon = clean_text(icon)
+        alert_proto.icon = check_emoji(icon)
         alert_proto.format = AlertProto.SUCCESS
         return self.dg._enqueue("alert", alert_proto)
 
