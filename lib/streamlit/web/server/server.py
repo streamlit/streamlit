@@ -274,7 +274,7 @@ class Server:
                 UploadFileRequestHandler,
                 dict(
                     file_mgr=self._runtime.uploaded_file_mgr,
-                    get_session_info=self._get_session_info,
+                    is_active_session=self.is_active_session,
                 ),
             ),
             (
