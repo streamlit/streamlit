@@ -462,7 +462,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
     )
     def test_cached_st_function_replay_outer_direct(self, _, cache_decorator):
-        cont = st.container
+        cont = st.container()
 
         @cache_decorator
         def foo(i):
