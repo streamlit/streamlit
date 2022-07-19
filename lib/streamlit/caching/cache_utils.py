@@ -44,6 +44,7 @@ from streamlit.elements import NONWIDGET_ELEMENTS
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
 from .cache_errors import (
+    CacheReplayClosureError,
     CacheType,
     CachedStFunctionWarning,
     UnhashableParamError,
@@ -150,7 +151,9 @@ class CachedFunction:
         raise NotImplementedError
 
 
-def replay_result_messages(result: CachedResult) -> None:
+def replay_result_messages(
+    result: CachedResult, cache_type: CacheType, cached_func: types.FunctionType
+) -> None:
     """Replay the st element function calls that happened when executing a
     cache-decorated function.
 
@@ -174,16 +177,19 @@ def replay_result_messages(result: CachedResult) -> None:
     returned_dgs[result.main_id] = st._main
     returned_dgs[result.sidebar_id] = st.sidebar
 
-    for msg in result.messages:
-        if isinstance(msg, ElementMsgData):
-            dg = returned_dgs[msg.id_of_dg_called_on]
-            maybe_dg = dg._enqueue(msg.delta_type, msg.message)
-            if isinstance(maybe_dg, DeltaGenerator):
-                returned_dgs[msg.returned_dgs_id] = maybe_dg
-        elif isinstance(msg, BlockMsgData):
-            dg = returned_dgs[msg.id_of_dg_called_on]
-            new_dg = dg._block(msg.message)
-            returned_dgs[msg.returned_dgs_id] = new_dg
+    try:
+        for msg in result.messages:
+            if isinstance(msg, ElementMsgData):
+                dg = returned_dgs[msg.id_of_dg_called_on]
+                maybe_dg = dg._enqueue(msg.delta_type, msg.message)
+                if isinstance(maybe_dg, DeltaGenerator):
+                    returned_dgs[msg.returned_dgs_id] = maybe_dg
+            elif isinstance(msg, BlockMsgData):
+                dg = returned_dgs[msg.id_of_dg_called_on]
+                new_dg = dg._block(msg.message)
+                returned_dgs[msg.returned_dgs_id] = new_dg
+    except KeyError:
+        raise CacheReplayClosureError(cache_type, cached_func)
 
 
 def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
@@ -219,7 +225,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                 result = cache.read_result(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
 
-                replay_result_messages(result)
+                replay_result_messages(result, cached_func.cache_type, func)
 
                 return_value = result.value
 
