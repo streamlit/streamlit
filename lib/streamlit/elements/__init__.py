@@ -43,15 +43,13 @@ NONWIDGET_ELEMENTS = [
     "empty",
     "exception",
     "graphviz_chart",
-    # "iframe" ?
+    "iframe",
     "json",
-    # "layouts"?
     "legacy_altair",
     "legacy_data_frame",
     "legacy_vega_lite",
     "map",
     "markdown",
-    "media",
     "metric",
     "plotly_chart",
     "progress",
@@ -61,5 +59,7 @@ NONWIDGET_ELEMENTS = [
     "write",
 ]
 FILESYSTEM_ELEMENTS = [
-    "image",
+    "audio",
+    "imgs",
+    "video",
 ]
