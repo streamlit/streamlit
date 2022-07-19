@@ -44,7 +44,6 @@ NONWIDGET_ELEMENTS = [
     "exception",
     "graphviz_chart",
     # "iframe" ?
-    "image",
     "json",
     # "layouts"?
     "legacy_altair",
@@ -60,4 +59,7 @@ NONWIDGET_ELEMENTS = [
     "snow",
     "text",
     "write",
+]
+FILESYSTEM_ELEMENTS = [
+    "image",
 ]
