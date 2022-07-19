@@ -21,6 +21,7 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.caching.cache_errors import CacheReplayClosureError
 from streamlit.scriptrunner import script_run_context
 from streamlit.caching import (
     MEMO_CALL_STACK,
@@ -469,7 +470,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             return i
 
         # TODO make exception more specific
-        with self.assertRaises(Exception):
+        with self.assertRaises(CacheReplayClosureError):
             foo(1)
             st.text("---")
             foo(1)
