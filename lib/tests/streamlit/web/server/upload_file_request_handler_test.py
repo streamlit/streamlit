@@ -53,7 +53,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     UploadFileRequestHandler,
                     dict(
                         file_mgr=self.file_mgr,
-                        is_active_session=lambda session_id: True
+                        is_active_session=lambda session_id: True,
                     ),
                 ),
             ]
