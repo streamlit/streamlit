@@ -42,7 +42,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             The server's singleton UploadedFileManager. All file uploads
             go here.
         is_active_session:
-            A function that returns true if a session_id belong to an active
+            A function that returns true if a session_id belongs to an active
             session.
         """
         self._file_mgr = file_mgr
