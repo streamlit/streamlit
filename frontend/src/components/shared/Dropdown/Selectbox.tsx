@@ -204,8 +204,8 @@ class Selectbox extends React.PureComponent<Props, State> {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: ".5rem",
                 paddingLeft: ".5rem",
-                paddingBottom: ".5rem",
-                paddingTop: ".5rem",
+                paddingBottom: ".4rem",
+                paddingTop: ".4rem",
               }),
             },
 
