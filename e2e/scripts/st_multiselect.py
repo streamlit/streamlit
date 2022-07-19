@@ -64,4 +64,3 @@ if st._is_running_with_streamlit:
     st.multiselect("multiselect 8", options, key="multiselect8", on_change=on_change)
     st.text("value 8: %s" % st.session_state.multiselect8)
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")
-
