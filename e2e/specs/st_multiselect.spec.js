@@ -193,6 +193,9 @@ describe("st.multiselect", () => {
           cy.get('.stMultiSelect [role="button"][aria-label="Clear all"]')
             .eq(0)
             .click();
+          cy.get('.stMultiSelect [role="button"][aria-label="Clear all"]')
+            .eq(1)
+            .click();
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
@@ -205,7 +208,7 @@ describe("st.multiselect", () => {
                 "value 4: ['tea', 'water']" +
                 "value 5: []" +
                 "value 6: []" +
-                "value 7: [<Colors.yellow: 1>]" +
+                "value 7: []" +
                 "value 8: []" +
                 "multiselect changed: False"
             );
