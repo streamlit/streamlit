@@ -308,6 +308,10 @@ class Server:
         """
         return self._session_info_by_id.get(session_id, None)
 
+    def is_active_session(self, session_id: str) -> bool:
+        """True if the session_id belongs to an active session."""
+        return session_id in self._session_info_by_id
+
     def start(self, on_started: Callable[["Server"], Any]) -> None:
         """Start the server.
 
@@ -366,7 +370,7 @@ class Server:
                 UploadFileRequestHandler,
                 dict(
                     file_mgr=self._uploaded_file_mgr,
-                    get_session_info=self._get_session_info,
+                    is_active_session=self.is_active_session,
                 ),
             ),
             (
