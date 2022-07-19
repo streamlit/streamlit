@@ -451,6 +451,19 @@ class ServerTest(ServerTestCase):
 
                 write_message_mock.assert_called_once()
 
+    @tornado.testing.gen_test
+    async def test_is_active_session(self):
+        """is_active_session should return True for active session_ids."""
+        with self._patch_app_session():
+            await self.start_server_loop()
+            await self.ws_connect()
+
+            # Get our connected BrowserWebSocketHandler
+            session_info = list(self.server._session_info_by_id.values())[0]
+
+            self.assertFalse(self.server.is_active_session("not_a_session_id"))
+            self.assertTrue(self.server.is_active_session(session_info.session.id))
+
 
 class ServerUtilsTest(unittest.TestCase):
     def test_is_url_from_allowed_origins_allowed_domains(self):
