@@ -54,12 +54,17 @@ from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import (
+    Runtime,
+    RuntimeConfig,
+    SessionClient,
+    SessionClientDisconnectedError,
+    RuntimeState,
+)
 from streamlit.session_data import SessionData
 from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
-from streamlit.runtime import Runtime, RuntimeConfig, \
-    SessionClient, SessionClientDisconnectedError, RuntimeState
 from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler
 from streamlit.web.server.routes import AssetsFileHandler
@@ -194,20 +199,24 @@ class Server:
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
 
+        self._main_script_path = main_script_path
+
         self._ioloop = ioloop
 
-        runtime_config = RuntimeConfig(
-            script_path=main_script_path,
-            command_line=command_line,
+        self._runtime = Runtime(
+            ioloop.asyncio_loop,
+            RuntimeConfig(
+                script_path=main_script_path,
+                command_line=command_line,
+            ),
         )
-        self._runtime = Runtime(ioloop.asyncio_loop, runtime_config)
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @property
     def main_script_path(self) -> str:
-        return self._runtime.config.script_path
+        return self._main_script_path
 
     def start(self, on_started: Callable[["Server"], Any]) -> None:
         """Start the server.
@@ -239,7 +248,7 @@ class Server:
             (
                 make_url_path_regex(base, "stream"),
                 _BrowserWebSocketHandler,
-                dict(server=self),
+                dict(runtime=self._runtime),
             ),
             (
                 make_url_path_regex(base, "healthz"),
@@ -250,12 +259,12 @@ class Server:
             (
                 make_url_path_regex(base, "message"),
                 MessageCacheHandler,
-                dict(cache=self._message_cache),
+                dict(cache=self._runtime.message_cache),
             ),
             (
                 make_url_path_regex(base, "st-metrics"),
                 StatsRequestHandler,
-                dict(stats_manager=self._stats_mgr),
+                dict(stats_manager=self._runtime.stats_mgr),
             ),
             (
                 make_url_path_regex(
@@ -264,7 +273,7 @@ class Server:
                 ),
                 UploadFileRequestHandler,
                 dict(
-                    file_mgr=self._uploaded_file_mgr,
+                    file_mgr=self._runtime.uploaded_file_mgr,
                     get_session_info=self._get_session_info,
                 ),
             ),
@@ -331,7 +340,11 @@ class Server:
 
     @property
     async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
-        if self._runtime.state not in (RuntimeState.INITIAL, RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._runtime.state not in (
+            RuntimeState.INITIAL,
+            RuntimeState.STOPPING,
+            RuntimeState.STOPPED,
+        ):
             return True, "ok"
 
         return False, "unavailable"
@@ -349,7 +362,7 @@ class Server:
         session = AppSession(
             event_loop=self._ioloop.asyncio_loop,
             session_data=session_data,
-            uploaded_file_manager=self._uploaded_file_mgr,
+            uploaded_file_manager=self._runtime.uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=local_sources_watcher,
             user_info={"email": "test@test.com"},
@@ -402,9 +415,9 @@ class Server:
 class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     """Handles a WebSocket connection from the browser"""
 
-    def initialize(self, server: Server) -> None:
-        self._server = server
-        self._session: Optional[AppSession] = None
+    def initialize(self, runtime: Runtime) -> None:
+        self._runtime = runtime
+        self._session_id: Optional[str] = None
         # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
         # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
         # cookie as a side effect.
@@ -443,14 +456,14 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         else:
             user_info["email"] = email
 
-        self._session = self._server._create_app_session(self, user_info)
+        self._session_id = self._runtime.create_session(self, user_info)
         return None
 
     def on_close(self) -> None:
-        if not self._session:
+        if not self._session_id:
             return
-        self._server._close_app_session(self._session.id)
-        self._session = None
+        self._runtime.close_session(self._session_id)
+        self._session_id = None
 
     def get_compression_options(self) -> Optional[Dict[Any, Any]]:
         """Enable WebSocket compression.
@@ -465,7 +478,7 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         return None
 
     def on_message(self, payload: Union[str, bytes]) -> None:
-        if not self._session:
+        if not self._session_id:
             return
 
         msg = BackMsg()
@@ -486,7 +499,7 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 # "close_connection" is a special developmentMode-only
                 # message used in e2e tests to test disabling widgets.
                 if config.get_option("global.developmentMode"):
-                    self._server.stop()
+                    self._runtime.stop()
                 else:
                     LOGGER.warning(
                         "Client tried to close connection when "
@@ -494,7 +507,7 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                     )
             else:
                 # AppSession handles all other BackMsg types.
-                self._session.handle_backmsg(msg)
+                self._runtime.handle_backmsg(self._session_id, msg)
 
         except BaseException as e:
             LOGGER.error(e)

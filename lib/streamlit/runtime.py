@@ -6,10 +6,9 @@ from typing import Optional, Dict, Protocol, NamedTuple, Callable, Any
 
 from streamlit import config
 from streamlit.app_session import AppSession
-from streamlit.caching import get_memo_stats_provider, \
-    get_singleton_stats_provider
+from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
+from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import (
-    ForwardMsgCache,
     populate_hash_if_needed,
     create_reference_msg,
 )
@@ -51,9 +50,7 @@ class RuntimeConfig(NamedTuple):
 
     # The (optional) command line that Streamlit was started with
     # (e.g. "streamlit run app.py")
-    command_line: Optional[str] = None
-
-    # This will grow to contain various injectable dependencies!
+    command_line: Optional[str]
 
 
 class SessionInfo:
@@ -103,7 +100,9 @@ class Runtime:
             Config options.
         """
         self._event_loop = event_loop
-        self._config = config
+
+        self._script_path = config.script_path
+        self._command_line = config.command_line
 
         # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
@@ -116,11 +115,10 @@ class Runtime:
         self._has_connection = asyncio.Condition()
         self._need_send_data = asyncio.Event()
 
+        # Initialize managers
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
 
-        # StatsManager
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_memo_stats_provider())
         self._stats_mgr.register_provider(get_singleton_stats_provider())
@@ -137,12 +135,15 @@ class Runtime:
         return self._state
 
     @property
-    def config(self) -> RuntimeConfig:
-        return self._config
+    def message_cache(self) -> ForwardMsgCache:
+        return self._message_cache
 
     @property
-    def stats_manager(self) -> StatsManager:
-        """The runtime's StatsManager instance."""
+    def uploaded_file_mgr(self) -> UploadedFileManager:
+        return self._uploaded_file_mgr
+
+    @property
+    def stats_mgr(self) -> StatsManager:
         return self._stats_mgr
 
     def _on_files_updated(self, session_id: str) -> None:
@@ -204,6 +205,16 @@ class Runtime:
         self._set_state(RuntimeState.STOPPING)
         self._event_loop.call_soon_threadsafe(self._must_stop.set)
 
+    def is_active_session(self, session_id: str) -> bool:
+        """True if the session_id belongs to an active session.
+
+        Threading
+        ---------
+        May be called on any thread.
+        """
+        # Dictionary membership is atomic in CPython, so this is thread-safe.
+        return session_id in self._session_info_by_id
+
     def create_session(
         self,
         client: SessionClient,
@@ -226,7 +237,8 @@ class Runtime:
 
         Returns
         -------
-        The session's unique string ID.
+        str
+            The session's unique string ID.
 
         Threading
         ---------
@@ -235,9 +247,7 @@ class Runtime:
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeError(f"Can't create_session (state={self._state})")
 
-        session_data = SessionData(
-            self._config.script_path, self._config.command_line or ""
-        )
+        session_data = SessionData(self._script_path, self._command_line or "")
 
         session = AppSession(
             event_loop=self._event_loop,
@@ -302,6 +312,10 @@ class Runtime:
         msg
             The BackMsg to deliver to the session.
 
+        Returns
+        -------
+        None
+
         Threading
         ---------
         Must be called on the eventloop thread.
@@ -322,7 +336,9 @@ class Runtime:
         LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
         self._state = new_state
 
-    async def _loop_coroutine(self, on_started: Optional[Callable[[], Any]] = None) -> None:
+    async def _loop_coroutine(
+        self, on_started: Optional[Callable[[], Any]] = None
+    ) -> None:
         """The main Runtime loop.
 
         Returns
@@ -424,6 +440,10 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         msg : ForwardMsg
             The message to send to the client
 
+        Returns
+        -------
+        None
+
         Threading
         ---------
         Must be called on the eventloop thread.
@@ -470,4 +490,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session_info.client.write_forward_msg(msg_to_send)
 
     def _enqueued_some_message(self) -> None:
+        """Callback called by AppSession after the AppSession has enqueued a
+        message. Sets the "needs_send_data" event, which causes our core
+        loop to wake up and flush client message queues.
+
+        Returns
+        -------
+        None
+
+        Threading
+        ---------
+        May be called on any thread.
+        """
         self._event_loop.call_soon_threadsafe(self._need_send_data.set)

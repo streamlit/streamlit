@@ -97,7 +97,9 @@ class ServerTest(ServerTestCase):
             self.assertEqual(RuntimeState.WAITING_FOR_FIRST_SESSION, self.server._state)
 
             await self.ws_connect()
-            self.assertEqual(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.server._state)
+            self.assertEqual(
+                RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.server._state
+            )
 
             self.server.stop()
             self.assertEqual(RuntimeState.STOPPING, self.server._state)
