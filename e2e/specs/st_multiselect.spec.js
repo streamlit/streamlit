@@ -42,9 +42,9 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: []" +
-            "multiselect changed: False" +
-            "value 8: [<Colors.yellow: 1>]"
+            "value 7: [<Colors.yellow: 1>]" +
+            "value 8: []" +
+            "multiselect changed: False"
         );
     });
 
@@ -101,7 +101,7 @@ describe("st.multiselect", () => {
 
   function selectOption(idx) {
     cy.get(".stMultiSelect")
-      .should("have.length", 7)
+      .should("have.length", 8)
       .eq(1)
       .find("input")
       .click();
@@ -137,9 +137,9 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: []" +
-            "multiselect changed: False" +
-            "value 8: [<Colors.yellow: 1>]"
+            "value 7: [<Colors.yellow: 1>]" +
+            "value 8: []" +
+            "multiselect changed: False"
         );
     });
 
@@ -157,9 +157,9 @@ describe("st.multiselect", () => {
               "value 4: ['tea', 'water']" +
               "value 5: []" +
               "value 6: []" +
-              "value 7: []" +
-              "multiselect changed: False" + 
-              "value 8: [<Colors.yellow: 1>]"
+              "value 7: [<Colors.yellow: 1>]" +
+              "value 8: []" +
+              "multiselect changed: False"
           );
       });
 
@@ -181,9 +181,9 @@ describe("st.multiselect", () => {
                 "value 4: ['tea', 'water']" +
                 "value 5: []" +
                 "value 6: []" +
-                "value 7: []" +
-                "multiselect changed: False" + 
-                "value 8: [<Colors.yellow: 1>]"
+                "value 7: [<Colors.yellow: 1>]" +
+                "value 8: []" +
+                "multiselect changed: False"
             );
         });
       });
@@ -205,9 +205,9 @@ describe("st.multiselect", () => {
                 "value 4: ['tea', 'water']" +
                 "value 5: []" +
                 "value 6: []" +
-                "value 7: []" +
-                "multiselect changed: False" + 
-                "value 8: [<Colors.yellow: 1>]"
+                "value 7: [<Colors.yellow: 1>]" +
+                "value 8: []" +
+                "multiselect changed: False"
             );
         });
       });
@@ -215,7 +215,7 @@ describe("st.multiselect", () => {
 
     it("calls callback if one is registered", () => {
       cy.get(".stMultiSelect")
-        .should("have.length", 7)
+        .should("have.length", 8)
         .last()
         .find("input")
         .click();
@@ -233,9 +233,9 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: ['male']" +
-            "multiselect changed: True" + 
-            "value 8: [<Colors.yellow: 1>]"
+            "value 7: [<Colors.yellow: 1>]" +
+            "value 8: ['male']" +
+            "multiselect changed: True"
         );
     });
   });
