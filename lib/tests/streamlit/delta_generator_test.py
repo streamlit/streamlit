@@ -191,12 +191,9 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             )
 
     def test_duplicate_widget_id_error_when_user_key_specified(self):
+        """Multiple widgets with the different generated key, but same user specified
+        key should report an error.
         """
-        Multiple widgets with the different generated key, but same user specified
-        key should report an error."""
-
-        LABEL_A = "A"
-        LABEL_B = "B"
 
         widgets = {
             "button": lambda key=None, label="": st.button(label=label, key=key),
@@ -228,13 +225,13 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
         for widget_type, create_widget in widgets.items():
             user_key = widget_type
-            create_widget(label=LABEL_A, key=user_key)
+            create_widget(label="LABEL_A", key=user_key)
             with self.assertRaises(DuplicateWidgetID) as ctx:
                 # We specify different labels for widgets, so auto-generated keys
                 # (widget_ids) will be different.
                 # Test creating a widget with a different auto-generated key but same
                 # user specified key raises an exception.
-                create_widget(label=LABEL_B, key=user_key)
+                create_widget(label="LABEL_B", key=user_key)
             self.assertEqual(
                 _build_duplicate_widget_message(
                     widget_func_name=widget_type, user_key=user_key
