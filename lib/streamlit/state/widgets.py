@@ -245,8 +245,7 @@ def coalesce_widget_states(
     }
 
     for old_state in old_states.widgets:
-        if old_state.WhichOneof(
-            "value") == "trigger_value" and old_state.trigger_value:
+        if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
 
             # Ensure the corresponding new_state is also a trigger;
             # otherwise, a widget that was previously a button but no longer is
@@ -292,13 +291,11 @@ def _build_duplicate_widget_message(
             """
         )
 
-    return message.strip("\n").format(widget_type=widget_func_name,
-                                      user_key=user_key)
+    return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
 
 
 def _get_widget_id(
-    element_type: str, element_proto: WidgetProto,
-    user_key: Optional[str] = None
+    element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
 ) -> str:
     """Generate a widget id for the given widget.
 
