@@ -70,9 +70,28 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.disabled};
   }
 
-  // VegaLite Specific CSS information
+  // VegaLite-specific CSS to style tootips
+  #vg-tooltip-element {
+    font-family: ${theme.genericFonts.bodyFont};
+    color: ${theme.colors.bodyText};
+    border: 1px solid ${theme.colors.fadedText10};
+    background-color: ${transparentize(theme.colors.bgColor, 0.05)};
+    font-size: ${theme.fontSizes.sm};
+    box-shadow: rgb(0 0 0 / 16%) 0px 1px 4px;
+    padding: ${theme.spacing.xs} ${theme.spacing.md};
+    border-radius: ${theme.radii.md};
+    z-index: ${theme.zIndices.fullscreenWrapper};
+  }
+
   #vg-tooltip-element td {
     border: none;
+  }
+
+  #vg-tooltip-element table tr td.key {
+    color: ${theme.colors.fadedText60};
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   // Embedded Overflow Management

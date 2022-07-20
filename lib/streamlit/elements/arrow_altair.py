@@ -38,6 +38,15 @@ from .utils import last_index_for_melted_dataframes
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+# Create and enable streamlit theme
+STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
+
+# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
+alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
+# We don't want to activate the Streamlit theme for all Altair as default for now.
+# However, the Streamlit theme will be activated as default for our built-in charts.
+alt.themes.enable("none")
+
 
 class ChartType(Enum):
     AREA = "area"
@@ -203,7 +212,9 @@ class ArrowAltairMixin:
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
 
     def _arrow_altair_chart(
-        self, altair_chart: Chart, use_container_width: bool = False
+        self,
+        altair_chart: Chart,
+        use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -319,11 +330,14 @@ def _generate_chart(
 
     chart = (
         getattr(
-            alt.Chart(data, width=width, height=height), "mark_" + chart_type.value
+            # Built-in charts use the streamlit theme as default. So, we set usermeta explicitly here.
+            alt.Chart(data, width=width, height=height, usermeta=STREAMLIT_THEME),
+            "mark_" + chart_type.value,
         )()
         .encode(
             alt.X(index_name, title="", scale=x_scale, type=x_type),
-            alt.Y("value", title="", scale=y_scale),
+            # TODO: has to contain an empty space, otherwise the full y-axis disappears (bug in vega-lite)?
+            alt.Y("value", title=" ", scale=y_scale),
             alt.Color("variable", title="", type="nominal"),
             alt.Tooltip([index_name, "value", "variable"]),
             opacity=opacity,

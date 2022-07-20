@@ -119,11 +119,19 @@ UNIX_SOCKET_PREFIX = "unix://"
 SCRIPT_RUN_CHECK_TIMEOUT = 60
 
 
+class SessionClientDisconnectedError(Exception):
+    """Raised by operations on a disconnected SessionClient."""
+
+
 class SessionClient(Protocol):
     """Interface for sending data to a session's client."""
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Deliver a ForwardMsg to the client."""
+        """Deliver a ForwardMsg to the client.
+
+        If the SessionClient has been disconnected, it should raise a
+        SessionClientDisconnectedError.
+        """
 
 
 class SessionInfo:
@@ -516,7 +524,7 @@ class Server:
                         for msg in msg_list:
                             try:
                                 self._send_message(session_info, msg)
-                            except tornado.websocket.WebSocketClosedError:
+                            except SessionClientDisconnectedError:
                                 self._close_app_session(session_info.session.id)
                             await asyncio.sleep(0)
                         await asyncio.sleep(0)
@@ -723,7 +731,10 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Send a ForwardMsg to the browser."""
-        self.write_message(serialize_forward_msg(msg), binary=True)
+        try:
+            self.write_message(serialize_forward_msg(msg), binary=True)
+        except tornado.websocket.WebSocketClosedError as e:
+            raise SessionClientDisconnectedError from e
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
         # Extract user info from the X-Streamlit-User header
@@ -781,21 +792,11 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 )
 
             msg.ParseFromString(payload)
-            msg_type = msg.WhichOneof("type")
-
             LOGGER.debug("Received the following back message:\n%s", msg)
 
-            if msg_type == "rerun_script":
-                self._session.handle_rerun_script_request(msg.rerun_script)
-            elif msg_type == "load_git_info":
-                self._session.handle_git_information_request()
-            elif msg_type == "clear_cache":
-                self._session.handle_clear_cache_request()
-            elif msg_type == "set_run_on_save":
-                self._session.handle_set_run_on_save_request(msg.set_run_on_save)
-            elif msg_type == "stop_script":
-                self._session.handle_stop_script_request()
-            elif msg_type == "close_connection":
+            if msg.WhichOneof("type") == "close_connection":
+                # "close_connection" is a special developmentMode-only
+                # message used in e2e tests to test disabling widgets.
                 if config.get_option("global.developmentMode"):
                     self._server.stop()
                 else:
@@ -804,7 +805,8 @@ class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                         "not in development mode"
                     )
             else:
-                LOGGER.warning('No handler for "%s"', msg_type)
+                # AppSession handles all other BackMsg types.
+                self._session.handle_backmsg(msg)
 
         except BaseException as e:
             LOGGER.error(e)

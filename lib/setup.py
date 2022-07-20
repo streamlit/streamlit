@@ -19,7 +19,7 @@ import sys
 from setuptools.command.install import install
 
 
-VERSION = "1.10.0"  # PEP-440
+VERSION = "1.11.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -41,7 +41,6 @@ INSTALL_REQUIRES = [
     "blinker>=1.0.0",
     "cachetools>=4.0",
     "click>=7.0",
-    "gitpython!=3.1.19",
     # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
     "importlib-metadata>=1.4",
     "numpy",
@@ -66,6 +65,20 @@ INSTALL_REQUIRES = [
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog; platform_system != 'Darwin'",
 ]
+
+# We want to exclude some dependencies in our internal conda distribution of
+# Streamlit.
+CONDA_OPTIONAL_DEPENDENCIES = [
+    "gitpython!=3.1.19",
+]
+
+# NOTE: ST_CONDA_BUILD is used here (even though CONDA_BUILD is set
+# automatically when using the `conda build` command) because the
+# `load_setup_py_data()` conda build helper function does not have the
+# CONDA_BUILD environment variable set when it runs to generate our build
+# recipe from meta.yaml.
+if not os.getenv("ST_CONDA_BUILD"):
+    INSTALL_REQUIRES.extend(CONDA_OPTIONAL_DEPENDENCIES)
 
 
 class VerifyVersionCommand(install):

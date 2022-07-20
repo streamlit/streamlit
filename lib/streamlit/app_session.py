@@ -19,6 +19,7 @@ from asyncio import AbstractEventLoop
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
 
+from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import streamlit.elements.exception as exception_utils
@@ -215,6 +216,28 @@ class AppSession:
         self._session_data.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
+
+    def handle_backmsg(self, msg: BackMsg) -> None:
+        """Process a BackMsg."""
+        try:
+            msg_type = msg.WhichOneof("type")
+
+            if msg_type == "rerun_script":
+                self._handle_rerun_script_request(msg.rerun_script)
+            elif msg_type == "load_git_info":
+                self._handle_git_information_request()
+            elif msg_type == "clear_cache":
+                self._handle_clear_cache_request()
+            elif msg_type == "set_run_on_save":
+                self._handle_set_run_on_save_request(msg.set_run_on_save)
+            elif msg_type == "stop_script":
+                self._handle_stop_script_request()
+            else:
+                LOGGER.warning('No handler for "%s"', msg_type)
+
+        except BaseException as e:
+            LOGGER.error(e)
+            self.handle_backmsg_exception(e)
 
     def handle_backmsg_exception(self, e: BaseException) -> None:
         """Handle an Exception raised while processing a BackMsg from the browser."""
@@ -576,7 +599,7 @@ class AppSession:
         exception_utils.marshall(msg.delta.new_element.exception, e)
         return msg
 
-    def handle_git_information_request(self) -> None:
+    def _handle_git_information_request(self) -> None:
         msg = ForwardMsg()
 
         try:
@@ -610,7 +633,7 @@ class AppSession:
             # error requires no action. It can be useful for debugging.
             LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
 
-    def handle_rerun_script_request(
+    def _handle_rerun_script_request(
         self, client_state: Optional[ClientState] = None
     ) -> None:
         """Tell the ScriptRunner to re-run its script.
@@ -624,12 +647,12 @@ class AppSession:
         """
         self.request_rerun(client_state)
 
-    def handle_stop_script_request(self) -> None:
+    def _handle_stop_script_request(self) -> None:
         """Tell the ScriptRunner to stop running its script."""
         if self._scriptrunner is not None:
             self._scriptrunner.request_stop()
 
-    def handle_clear_cache_request(self) -> None:
+    def _handle_clear_cache_request(self) -> None:
         """Clear this app's cache.
 
         Because this cache is global, it will be cleared for all users.
@@ -640,7 +663,7 @@ class AppSession:
         caching.singleton.clear()
         self._session_state.clear()
 
-    def handle_set_run_on_save_request(self, new_value: bool) -> None:
+    def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
 
         The browser will be notified of the change.

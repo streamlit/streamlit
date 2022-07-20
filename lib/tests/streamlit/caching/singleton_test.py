@@ -25,7 +25,12 @@ from streamlit.caching import (
     singleton_decorator,
     get_singleton_stats_provider,
 )
+from streamlit.caching.cache_utils import CachedResult, MsgData
 from streamlit.stats import CacheStat
+
+
+def as_cached_result(value):
+    return CachedResult(value, [], st._main.id, st.sidebar.id)
 
 
 class SingletonTest(unittest.TestCase):
@@ -90,17 +95,17 @@ class SingletonStatsProviderTest(unittest.TestCase):
             CacheStat(
                 category_name="st_singleton",
                 cache_name=foo_cache_name,
-                byte_length=get_byte_length([3.14]),
+                byte_length=get_byte_length(as_cached_result([3.14])),
             ),
             CacheStat(
                 category_name="st_singleton",
                 cache_name=foo_cache_name,
-                byte_length=get_byte_length([3.14] * 53),
+                byte_length=get_byte_length(as_cached_result([3.14] * 53)),
             ),
             CacheStat(
                 category_name="st_singleton",
                 cache_name=bar_cache_name,
-                byte_length=get_byte_length(bar()),
+                byte_length=get_byte_length(as_cached_result(bar())),
             ),
         ]
 
