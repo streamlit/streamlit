@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass, field
 import threading
 from typing import Dict, Optional, List, Callable, Set
 from typing_extensions import Final, TypeAlias
-
-import attr
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -30,7 +29,7 @@ LOGGER: Final = get_logger(__name__)
 UserInfo: TypeAlias = Dict[str, Optional[str]]
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ScriptRunContext:
     """A context object that contains data for a "script run" - that is,
     data that's scoped to a single ScriptRunner execution (and therefore also
@@ -53,10 +52,12 @@ class ScriptRunContext:
 
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
-    widget_ids_this_run: Set[str] = attr.Factory(set)
-    form_ids_this_run: Set[str] = attr.Factory(set)
-    cursors: Dict[int, "streamlit.cursor.RunningCursor"] = attr.Factory(dict)
-    dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = attr.Factory(list)
+    widget_ids_this_run: Set[str] = field(default_factory=set)
+    form_ids_this_run: Set[str] = field(default_factory=set)
+    cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
+    dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = field(
+        default_factory=list
+    )
 
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
