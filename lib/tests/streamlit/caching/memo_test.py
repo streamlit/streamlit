@@ -22,8 +22,18 @@ import streamlit as st
 from streamlit import StreamlitAPIException, file_util
 from streamlit.caching import memo_decorator
 from streamlit.caching.cache_errors import CacheError
-from streamlit.caching.memo_decorator import get_cache_path, get_memo_stats_provider
+from streamlit.caching.cache_utils import CachedResult, ElementMsgData
+from streamlit.caching.memo_decorator import (
+    get_cache_path,
+    get_memo_stats_provider,
+)
+from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.stats import CacheStat
+from tests.testutil import DeltaGeneratorTestCase
+
+
+def as_cached_result(value):
+    return CachedResult(value, [], st._main.id, st.sidebar.id)
 
 
 class MemoTest(unittest.TestCase):
@@ -112,7 +122,7 @@ class MemoTest(unittest.TestCase):
         self.assertEqual([0, 0], bar_vals)
 
 
-class MemoPersistTest(unittest.TestCase):
+class MemoPersistTest(DeltaGeneratorTestCase):
     """st.memo disk persistence tests"""
 
     def tearDown(self) -> None:
@@ -147,7 +157,7 @@ class MemoPersistTest(unittest.TestCase):
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
         "streamlit.file_util.open",
-        mock_open(read_data=pickle.dumps("mock_pickled_value")),
+        mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
     @patch(
         "streamlit.caching.memo_decorator.streamlit_read",
@@ -214,7 +224,7 @@ class MemoPersistTest(unittest.TestCase):
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
         "streamlit.file_util.open",
-        wraps=mock_open(read_data=pickle.dumps("mock_pickled_value")),
+        wraps=mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
     @patch("streamlit.caching.memo_decorator.os.remove")
     def test_clear_one_disk_cache(self, mock_os_remove: Mock, mock_open: Mock):
@@ -254,6 +264,36 @@ class MemoPersistTest(unittest.TestCase):
         # The two files we removed should be the same two files we created.
         self.assertEqual(created_filenames, removed_filenames)
 
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch(
+        "streamlit.file_util.open",
+        wraps=mock_open(
+            read_data=pickle.dumps(
+                CachedResult(
+                    1,
+                    [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
+                    st._main.id,
+                    st.sidebar.id,
+                )
+            )
+        ),
+    )
+    def test_cached_st_function_replay(self, _):
+        @st.experimental_memo(persist="disk")
+        def foo(i):
+            st.text(i)
+            return i
+
+        foo(1)
+
+        deltas = self.get_all_deltas_from_queue()
+        text = [
+            element.text.body
+            for element in (delta.new_element for delta in deltas)
+            if element.WhichOneof("type") == "text"
+        ]
+        assert text == ["1"]
+
 
 class MemoStatsProviderTest(unittest.TestCase):
     def setUp(self):
@@ -288,17 +328,17 @@ class MemoStatsProviderTest(unittest.TestCase):
             CacheStat(
                 category_name="st_memo",
                 cache_name=foo_cache_name,
-                byte_length=get_byte_length([3.14]),
+                byte_length=get_byte_length(as_cached_result([3.14])),
             ),
             CacheStat(
                 category_name="st_memo",
                 cache_name=foo_cache_name,
-                byte_length=get_byte_length([3.14] * 53),
+                byte_length=get_byte_length(as_cached_result([3.14] * 53)),
             ),
             CacheStat(
                 category_name="st_memo",
                 cache_name=bar_cache_name,
-                byte_length=get_byte_length("shivermetimbers"),
+                byte_length=get_byte_length(as_cached_result("shivermetimbers")),
             ),
         ]
 
