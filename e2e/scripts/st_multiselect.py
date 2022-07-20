@@ -22,11 +22,12 @@ class Colors(Enum):
     yellow = 1
     blue = 2
 
+
 class Shake(Enum):
-    VANILLA = 'VANILLA'
-    CHOCOLATE = 'CHOCOLATE'
-    COOKIES = 'COOKIES'
-    MINT = 'MINT'
+    VANILLA = "VANILLA"
+    CHOCOLATE = "CHOCOLATE"
+    COOKIES = "COOKIES"
+    MINT = "MINT"
 
 
 options = ("male", "female")

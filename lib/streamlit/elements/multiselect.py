@@ -265,7 +265,6 @@ class MultiSelectMixin:
             serializer=serialize_multiselect,
             ctx=ctx,
         )
-        
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
