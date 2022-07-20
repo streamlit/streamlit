@@ -24,7 +24,7 @@ describe("st.multiselect", () => {
 
   describe("when first loaded", () => {
     it("should show widget correctly", () => {
-      cy.get(".stMultiSelect").should("have.length", 8);
+      cy.get(".stMultiSelect").should("have.length", 9);
 
       cy.get(".stMultiSelect").each((el, idx) => {
         return cy.wrap(el).matchThemedSnapshots("multiselect" + idx);
@@ -33,7 +33,7 @@ describe("st.multiselect", () => {
 
     it("should show the correct text", () => {
       cy.get("[data-testid='stText']")
-        .should("have.length", 9)
+        .should("have.length", 10)
         .should(
           "have.text",
           "value 1: []" +
@@ -42,8 +42,9 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: [<Colors.yellow: 1>]" +
-            "value 8: []" +
+            "value 7: ['Colors.yellow']" +
+            "value 8: ['Shake.CHOCOLATE']" +
+            "value 9: []" +
             "multiselect changed: False"
         );
     });
@@ -101,7 +102,7 @@ describe("st.multiselect", () => {
 
   function selectOption(idx) {
     cy.get(".stMultiSelect")
-      .should("have.length", 8)
+      .should("have.length", 9)
       .eq(1)
       .find("input")
       .click();
@@ -128,7 +129,7 @@ describe("st.multiselect", () => {
 
     it("outputs the correct value", () => {
       cy.get("[data-testid='stText']")
-        .should("have.length", 9)
+        .should("have.length", 10)
         .should(
           "have.text",
           "value 1: []" +
@@ -137,8 +138,9 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: [<Colors.yellow: 1>]" +
-            "value 8: []" +
+            "value 7: ['Colors.yellow']" +
+            "value 8: ['Shake.CHOCOLATE']" +
+            "value 9: []" +
             "multiselect changed: False"
         );
     });
@@ -148,7 +150,7 @@ describe("st.multiselect", () => {
 
       it("outputs the correct value", () => {
         cy.get("[data-testid='stText']")
-          .should("have.length", 9)
+          .should("have.length", 10)
           .should(
             "have.text",
             "value 1: []" +
@@ -157,8 +159,9 @@ describe("st.multiselect", () => {
               "value 4: ['tea', 'water']" +
               "value 5: []" +
               "value 6: []" +
-              "value 7: [<Colors.yellow: 1>]" +
-              "value 8: []" +
+              "value 7: ['Colors.yellow']" +
+              "value 8: ['Shake.CHOCOLATE']" +
+              "value 9: []" +
               "multiselect changed: False"
           );
       });
@@ -169,20 +172,26 @@ describe("st.multiselect", () => {
           cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
             .eq(0)
             .click();
+          
+          // this the 'close button' element for 'Shake.Vanilla'
+          cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
+            .eq(2)
+            .click();
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
-            .should("have.length", 9)
+            .should("have.length", 10)
             .should(
               "have.text",
               "value 1: []" +
                 "value 2: ['male']" +
                 "value 3: []" +
-                "value 4: ['tea', 'water']" +
+                "value 4: ['tea']" +
                 "value 5: []" +
                 "value 6: []" +
-                "value 7: [<Colors.yellow: 1>]" +
-                "value 8: []" +
+                "value 7: ['Colors.yellow']" +
+                "value 8: ['Shake.CHOCOLATE']" +
+                "value 9: []" +
                 "multiselect changed: False"
             );
         });
@@ -199,7 +208,7 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
-            .should("have.length", 9)
+            .should("have.length", 10)
             .should(
               "have.text",
               "value 1: []" +
@@ -209,7 +218,8 @@ describe("st.multiselect", () => {
                 "value 5: []" +
                 "value 6: []" +
                 "value 7: []" +
-                "value 8: []" +
+                "value 8: ['Shake.CHOCOLATE']" +
+                "value 9: []" +
                 "multiselect changed: False"
             );
         });
@@ -218,7 +228,7 @@ describe("st.multiselect", () => {
 
     it("calls callback if one is registered", () => {
       cy.get(".stMultiSelect")
-        .should("have.length", 8)
+        .should("have.length", 9)
         .last()
         .find("input")
         .click();
@@ -227,7 +237,7 @@ describe("st.multiselect", () => {
         .click();
 
       cy.get("[data-testid='stText']")
-        .should("have.length", 9)
+        .should("have.length", 10)
         .should(
           "have.text",
           "value 1: []" +
@@ -236,8 +246,9 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: [<Colors.yellow: 1>]" +
-            "value 8: ['male']" +
+            "value 7: ['Colors.yellow']" +
+            "value 8: ['Shake.CHOCOLATE']" +
+            "value 9: ['male']" +
             "multiselect changed: True"
         );
     });

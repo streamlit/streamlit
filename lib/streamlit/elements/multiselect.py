@@ -265,11 +265,7 @@ class MultiSelectMixin:
             serializer=serialize_multiselect,
             ctx=ctx,
         )
-
-        if len(widget_state.value) != 0:
-            if isinstance(widget_state.value[0], Enum):
-                list(map(lambda enum: str(enum), widget_state.value))
-
+        
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
@@ -278,6 +274,9 @@ class MultiSelectMixin:
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
+        if len(widget_state.value) != 0:
+            if isinstance(widget_state.value[0], Enum):
+                return list(map(lambda enum: str(enum), widget_state.value))
         return widget_state.value
 
     @property
