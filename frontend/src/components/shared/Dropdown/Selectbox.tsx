@@ -181,6 +181,11 @@ class Selectbox extends React.PureComponent<Props, State> {
           value={value}
           valueKey="value"
           overrides={{
+            Root: {
+              style: () => ({
+                lineHeight: 1.4,
+              }),
+            },
             Dropdown: { component: VirtualDropdown },
 
             ControlContainer: {
@@ -204,8 +209,14 @@ class Selectbox extends React.PureComponent<Props, State> {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: ".5rem",
                 paddingLeft: ".5rem",
-                paddingBottom: ".4rem",
-                paddingTop: ".4rem",
+                paddingBottom: ".5rem",
+                paddingTop: ".5rem",
+              }),
+            },
+
+            Input: {
+              style: () => ({
+                lineHeight: 1.4,
               }),
             },
 
