@@ -707,7 +707,7 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         st.checkbox("checkbox", key="checkbox")
         new_size_3 = state.get_stats()[0].byte_length
         assert new_size_3 > new_size_2
-        assert new_size_3 - new_size_2 < 1500
+        assert new_size_3 - new_size_2 < 2000
 
         state._compact_state()
         new_size_4 = state.get_stats()[0].byte_length
