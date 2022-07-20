@@ -57,6 +57,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ctx = script_run_context.get_script_run_ctx()
         if ctx is not None:
             ctx.widget_ids_this_run.clear()
+            ctx.widget_user_keys_this_run.clear()
+
         super().tearDown()
 
     @parameterized.expand([("memo", memo), ("singleton", singleton)])

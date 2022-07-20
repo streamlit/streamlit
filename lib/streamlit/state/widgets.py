@@ -191,6 +191,18 @@ def register_widget(
         # we're running as a "bare" Python script, and not via `streamlit run`).
         return RegisterWidgetResult.failure(deserializer=deserializer)
 
+    # Ensure another widget with the same user key hasn't already been registered.
+    if user_key is not None:
+        if user_key not in ctx.widget_user_keys_this_run:
+            ctx.widget_user_keys_this_run.add(user_key)
+        else:
+            raise DuplicateWidgetID(
+                _build_duplicate_widget_message(
+                    widget_func_name if widget_func_name is not None else element_type,
+                    user_key,
+                )
+            )
+
     # Ensure another widget with the same id hasn't already been registered.
     new_widget = widget_id not in ctx.widget_ids_this_run
     if new_widget:
@@ -233,7 +245,8 @@ def coalesce_widget_states(
     }
 
     for old_state in old_states.widgets:
-        if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
+        if old_state.WhichOneof(
+            "value") == "trigger_value" and old_state.trigger_value:
 
             # Ensure the corresponding new_state is also a trigger;
             # otherwise, a widget that was previously a button but no longer is
@@ -279,11 +292,13 @@ def _build_duplicate_widget_message(
             """
         )
 
-    return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
+    return message.strip("\n").format(widget_type=widget_func_name,
+                                      user_key=user_key)
 
 
 def _get_widget_id(
-    element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
+    element_type: str, element_proto: WidgetProto,
+    user_key: Optional[str] = None
 ) -> str:
     """Generate a widget id for the given widget.
 
