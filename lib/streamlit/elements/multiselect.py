@@ -216,8 +216,8 @@ class MultiSelectMixin:
                 else:
                     default_values = list(default_values)
             if len(default_values) != 0 and isinstance(default_values[0], Enum):
-                str_default_values = list(map(lambda enum: str(enum), default_values))
-                mapped_opt_keys = list(map(lambda enum: str(enum), opt))
+                str_default_values = [str(enum) for enum in default_values]
+                mapped_opt_keys = [str(enum) for enum in opt]
                 for value in str_default_values:
                     if value not in mapped_opt_keys:
                         raise StreamlitAPIException(
@@ -276,7 +276,7 @@ class MultiSelectMixin:
         self.dg._enqueue("multiselect", multiselect_proto)
         if len(widget_state.value) != 0:
             if isinstance(widget_state.value[0], Enum):
-                return list(map(lambda enum: str(enum), widget_state.value))
+                return [str(enum) for enum in widget_state.value]
         return widget_state.value
 
     @property
