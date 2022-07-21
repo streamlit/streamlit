@@ -18,8 +18,7 @@
 import React, { PureComponent, ReactElement, ReactNode } from "react"
 import { ChevronRight, Close } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
-import { Resizable } from 're-resizable'
-import { CSSTransition } from 'react-transition-group'
+import { Resizable } from "re-resizable"
 
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
@@ -75,7 +74,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     )
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
-      sidebarWidth: window.localStorage.getItem('sidebarWidth') || "336",
+      sidebarWidth: window.localStorage.getItem("sidebarWidth") || "336",
       lastInnerWidth: window ? window.innerWidth : Infinity,
       hideScrollbar: false,
     }
@@ -142,9 +141,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   setSidebarWidth = (width: number): void => {
     const newWidth = width.toString()
 
-    this.setState({ sidebarWidth: newWidth }, function() {
-      window.localStorage.setItem('sidebarWidth', newWidth)
-    })
+    this.setState({ sidebarWidth: newWidth })
+    window.localStorage.setItem("sidebarWidth", newWidth)
   }
 
   checkMobileOnResize = (): boolean => {
@@ -191,6 +189,9 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
 
+    const minWidth = collapsedSidebar ? 0 : 366
+    const maxWidth = collapsedSidebar ? 0 : 500
+
     // The tabindex is required to support scrolling by arrow keys.
     return (
       <StyledSidebar
@@ -200,25 +201,15 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       >
         <Resizable
           data-testid="resizableComponent"
-          minWidth={366}
-          maxWidth={500}
+          minWidth={minWidth}
+          maxWidth={maxWidth}
           size={{ width: sidebarWidth, height: window.innerHeight }}
-          as={StyledSidebarContent}
-          // style={{ 
-          //   borderRight: "4px solid transparent",
-          //   // marginLeft: collapsedSidebar ? `-${sidebarWidth}px` : 0,
-          //   transform: collapsedSidebar ? `translateX(-${sidebarWidth}px)` : "none",
-          //   opacity: collapsedSidebar ? 0 : 1,
-          //   transition: "opacity 500ms, transform 500ms",
-          // }}
+          style={{ borderRight: "4px solid transparent" }}
           onResizeStop={(e, direction, ref, d) => {
-            const newWidth = parseInt(sidebarWidth) + d.width
+            const newWidth = parseInt(sidebarWidth, 10) + d.width
             this.setSidebarWidth(newWidth)
           }}
-          // @ts-ignore
-          isCollapsed={collapsedSidebar}
-          hideScrollbar={hideScrollbar}
-          sidebarWidth={sidebarWidth}>
+        >
           <StyledSidebarContent
             isCollapsed={collapsedSidebar}
             hideScrollbar={hideScrollbar}
@@ -244,15 +235,15 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>
-          </Resizable>
-          <StyledSidebarCollapsedControl
-            chevronDownshift={chevronDownshift}
-            isCollapsed={collapsedSidebar}
-          >
-            <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
-              <Icon content={ChevronRight} size="lg" />
-            </Button>
-          </StyledSidebarCollapsedControl>
+        </Resizable>
+        <StyledSidebarCollapsedControl
+          chevronDownshift={chevronDownshift}
+          isCollapsed={collapsedSidebar}
+        >
+          <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
+            <Icon content={ChevronRight} size="lg" />
+          </Button>
+        </StyledSidebarCollapsedControl>
       </StyledSidebar>
     )
   }
@@ -261,7 +252,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 function SidebarWithProvider(props: SidebarProps): ReactElement {
   return (
     <IsSidebarContext.Provider value={true}>
-        <Sidebar {...props} />
+      <Sidebar {...props} />
     </IsSidebarContext.Provider>
   )
 }
