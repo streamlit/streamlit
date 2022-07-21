@@ -54,10 +54,10 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     def initialize(self, server: "Server") -> None:
         self._server = server
         self._session: Optional[AppSession] = None
-        # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
-        # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
-        # cookie as a side effect.
-        # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
+        # The XSRF cookie is normally set when xsrf_form_html is used, but in a
+        # pure-Javascript application that does not use any regular forms we just
+        # need to read the self.xsrf_token manually to set the cookie as a side
+        # effect. See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
         # for more details.
         if config.get_option("server.enableXsrfProtection"):
             _ = self.xsrf_token
