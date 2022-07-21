@@ -29,6 +29,7 @@ from typing import (
     Union,
     cast,
     overload,
+    List,
 )
 
 from typing_extensions import (
@@ -500,6 +501,15 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
+def convert_object_dtypes_to_string(
+    df: DataFrame, selected_columns: Optional[List[str]] = None
+) -> DataFrame:
+    for col in selected_columns or df.columns:
+        if df[col].dtype == "object":
+            df[col] = df[col].astype(str)
+    return df
+
+
 def data_frame_to_bytes(df: DataFrame) -> bytes:
     """Serialize pandas.DataFrame to bytes using Apache Arrow.
 
@@ -510,7 +520,12 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
 
     """
     try:
-        table = pa.Table.from_pandas(df)
+        try:
+            table = pa.Table.from_pandas(df)
+        except pa.ArrowTypeError:
+            # Fallback: Convert all object types to string
+            df = convert_object_dtypes_to_string(df)
+            table = pa.Table.from_pandas(df)
         return pyarrow_table_to_bytes(table)
     except Exception as e:
         _NUMPY_DTYPE_ERROR_MESSAGE = "Could not convert dtype"
@@ -523,7 +538,7 @@ As a temporary workaround, you can convert the DataFrame cells to strings with `
 """
             )
         else:
-            raise errors.StreamlitAPIException(e)
+            raise e
 
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:

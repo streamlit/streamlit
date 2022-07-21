@@ -351,7 +351,7 @@ def _maybe_melt(
     x: Union[str, None] = None,
     y: Union[str, Sequence[str], None] = None,
 ) -> Tuple[pd.DataFrame, str, str, str, str, Optional[str], Optional[str]]:
-    color_name: Optional[str] = "variable"
+    color_name: Optional[str]
     color_title: Optional[str] = ""
 
     y_name = "value"
@@ -385,6 +385,7 @@ def _maybe_melt(
         # Set var name to None since it should not be used
         color_name = None
     elif y and is_sequence(y):
+        color_name = "variable"
         # y is a list -> melt dataframe into value vars provided in y
         value_vars: List[str] = []
         for col in y:
@@ -406,9 +407,19 @@ def _maybe_melt(
             var_name=color_name,
             value_name=y_name,
         )
+
+        # Arrow has problems with object types after melting two different dtypes
+        # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
+        data = type_util.convert_object_dtypes_to_string(
+            data, selected_columns=[x_name, color_name, y_name]
+        )
     else:
+        color_name = "variable"
         # -> data will be melted into the value prop for y
         data = pd.melt(data, id_vars=[x_name], var_name=color_name, value_name=y_name)
+        # Arrow has problems with object types after melting two different dtypes
+        # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
+        data = type_util.convert_object_dtypes_to_string(data)
 
     return data, x_name, x_title, y_name, y_title, color_name, color_title
 
