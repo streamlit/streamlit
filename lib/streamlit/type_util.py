@@ -538,7 +538,7 @@ As a temporary workaround, you can convert the DataFrame cells to strings with `
 """
             )
         else:
-            raise e
+            raise errors.StreamlitAPIException(e)
 
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
