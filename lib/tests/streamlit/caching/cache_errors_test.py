@@ -31,37 +31,6 @@ class CacheErrorsTest(testutil.DeltaGeneratorTestCase):
     TODO: parameterize these tests for both memo + singleton
     """
 
-    def test_st_warning_text(self):
-        @st.experimental_memo
-        def st_warning_text_func():
-            st.markdown("hi")
-
-        st_warning_text_func()
-
-        el = self.get_delta_from_queue(-2).new_element
-        self.assertEqual("CachedStFunctionWarning", el.exception.type)
-
-        expected_message = """
-Your script uses `st.markdown()` or `st.write()` to write to your Streamlit app
-from within some cached code at `st_warning_text_func()`. This code will only be
-called when we detect a cache "miss", which can lead to unexpected results.
-
-How to fix this:
-* Move the `st.markdown()` or `st.write()` call outside `st_warning_text_func()`.
-* Or, if you know what you're doing, use `@st.experimental_memo(suppress_st_warning=True)`
-to suppress the warning.
-        """
-        self.assertEqual(
-            testutil.normalize_md(expected_message),
-            testutil.normalize_md(el.exception.message),
-        )
-        self.assertNotEqual(len(el.exception.stack_trace), 0)
-        self.assertEqual(el.exception.message_is_markdown, True)
-        self.assertEqual(el.exception.is_warning, True)
-
-        el = self.get_delta_from_queue(-1).new_element
-        self.assertEqual(el.markdown.body, "hi")
-
     def test_unhashable_type(self):
         @st.experimental_memo
         def unhashable_type_func(lock: threading.Lock):

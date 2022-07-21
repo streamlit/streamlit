@@ -19,12 +19,12 @@ import shutil
 import threading
 import time
 import types
-from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload
-from typing import Union
+from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload, Union
 
 import math
 from cachetools import TTLCache
 
+import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import (
@@ -41,9 +41,12 @@ from .cache_errors import (
 )
 from .cache_utils import (
     Cache,
+    CachedResult,
+    MsgData,
     create_cache_wrapper,
-    CachedFunctionCallStack,
+    CacheWarningCallStack,
     CachedFunction,
+    CacheMessagesCallStack,
 )
 
 _LOGGER = get_logger(__name__)
@@ -58,7 +61,52 @@ _TTLCACHE_TIMER = time.monotonic
 _CACHE_DIR_NAME = "cache"
 
 
-MEMO_CALL_STACK = CachedFunctionCallStack(CacheType.MEMO)
+MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
+MEMO_MESSAGES_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
+
+
+class MemoizedFunction(CachedFunction):
+    """Implements the CachedFunction protocol for @st.memo"""
+
+    def __init__(
+        self,
+        func: types.FunctionType,
+        show_spinner: bool,
+        suppress_st_warning: bool,
+        persist: Optional[str],
+        max_entries: Optional[int],
+        ttl: Optional[float],
+    ):
+        super().__init__(func, show_spinner, suppress_st_warning)
+        self.persist = persist
+        self.max_entries = max_entries
+        self.ttl = ttl
+
+    @property
+    def cache_type(self) -> CacheType:
+        return CacheType.MEMO
+
+    @property
+    def warning_call_stack(self) -> CacheWarningCallStack:
+        return MEMO_CALL_STACK
+
+    @property
+    def message_call_stack(self) -> CacheMessagesCallStack:
+        return MEMO_MESSAGES_CALL_STACK
+
+    @property
+    def display_name(self) -> str:
+        """A human-readable name for the cached function"""
+        return f"{self.func.__module__}.{self.func.__qualname__}"
+
+    def get_function_cache(self, function_key: str) -> Cache:
+        return _memo_caches.get_cache(
+            key=function_key,
+            persist=self.persist,
+            max_entries=self.max_entries,
+            ttl=self.ttl,
+            display_name=self.display_name,
+        )
 
 
 class MemoCaches(CacheStatsProvider):
@@ -145,46 +193,6 @@ _memo_caches = MemoCaches()
 def get_memo_stats_provider() -> CacheStatsProvider:
     """Return the StatsProvider for all memoized functions."""
     return _memo_caches
-
-
-class MemoizedFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.memo"""
-
-    def __init__(
-        self,
-        func: types.FunctionType,
-        show_spinner: bool,
-        suppress_st_warning: bool,
-        persist: Optional[str],
-        max_entries: Optional[int],
-        ttl: Optional[float],
-    ):
-        super().__init__(func, show_spinner, suppress_st_warning)
-        self.persist = persist
-        self.max_entries = max_entries
-        self.ttl = ttl
-
-    @property
-    def cache_type(self) -> CacheType:
-        return CacheType.MEMO
-
-    @property
-    def call_stack(self) -> CachedFunctionCallStack:
-        return MEMO_CALL_STACK
-
-    @property
-    def display_name(self) -> str:
-        """A human-readable name for the cached function"""
-        return f"{self.func.__module__}.{self.func.__qualname__}"
-
-    def get_function_cache(self, function_key: str) -> Cache:
-        return _memo_caches.get_cache(
-            key=function_key,
-            persist=self.persist,
-            max_entries=self.max_entries,
-            ttl=self.ttl,
-            display_name=self.display_name,
-        )
 
 
 class MemoAPI:
@@ -370,7 +378,9 @@ class MemoCache(Cache):
         self.key = key
         self.display_name = display_name
         self.persist = persist
-        self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
+        self._mem_cache: TTLCache[str, bytes] = TTLCache(
+            maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER
+        )
         self._mem_cache_lock = threading.Lock()
 
     @property
@@ -394,36 +404,44 @@ class MemoCache(Cache):
                 )
         return stats
 
-    def read_value(self, key: str) -> Any:
-        """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
-        value doesn't exist, and `CacheError` if the value exists but can't
+    def read_result(self, key: str) -> CachedResult:
+        """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`
+        if the value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
         """
         try:
-            pickled_value = self._read_from_mem_cache(key)
+            pickled_entry = self._read_from_mem_cache(key)
 
         except CacheKeyNotFoundError as e:
             if self.persist == "disk":
-                pickled_value = self._read_from_disk_cache(key)
-                self._write_to_mem_cache(key, pickled_value)
+                pickled_entry = self._read_from_disk_cache(key)
+                self._write_to_mem_cache(key, pickled_entry)
             else:
                 raise e
 
         try:
-            return pickle.loads(pickled_value)
+            entry = pickle.loads(pickled_entry)
+            if not isinstance(entry, CachedResult):
+                raise CacheError(f"Failed to unpickle {key}")
+            return entry
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
-    def write_value(self, key: str, value: Any) -> None:
-        """Write a value to the cache. It must be pickleable."""
+    def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
+        """Write a value and associated messages to the cache.
+        The value must be pickleable.
+        """
         try:
-            pickled_value = pickle.dumps(value)
+            main_id = st._main.id
+            sidebar_id = st.sidebar.id
+            entry = CachedResult(value, messages, main_id, sidebar_id)
+            pickled_entry = pickle.dumps(entry)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
-        self._write_to_mem_cache(key, pickled_value)
+        self._write_to_mem_cache(key, pickled_entry)
         if self.persist == "disk":
-            self._write_to_disk_cache(key, pickled_value)
+            self._write_to_disk_cache(key, pickled_entry)
 
     def clear(self) -> None:
         with self._mem_cache_lock:
@@ -451,6 +469,8 @@ class MemoCache(Cache):
             with streamlit_read(path, binary=True) as input:
                 value = input.read()
                 _LOGGER.debug("Disk cache HIT: %s", key)
+                # The value is a pickled CachedResult, but we don't unpickle it yet
+                # so we can avoid having to repickle it when writing to the mem_cache
                 return bytes(value)
         except FileNotFoundError:
             raise CacheKeyNotFoundError("Key not found in disk cache")

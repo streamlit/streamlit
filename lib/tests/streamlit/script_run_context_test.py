@@ -28,7 +28,7 @@ class ScriptRunContextTest(unittest.TestCase):
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
             session_id="TestSessionID",
-            enqueue=fake_enqueue,
+            _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
@@ -50,7 +50,7 @@ class ScriptRunContextTest(unittest.TestCase):
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
             session_id="TestSessionID",
-            enqueue=fake_enqueue,
+            _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
@@ -76,7 +76,7 @@ class ScriptRunContextTest(unittest.TestCase):
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
             session_id="TestSessionID",
-            enqueue=fake_enqueue,
+            _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
@@ -101,7 +101,7 @@ class ScriptRunContextTest(unittest.TestCase):
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
             session_id="TestSessionID",
-            enqueue=fake_enqueue,
+            _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
