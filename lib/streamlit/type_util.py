@@ -42,6 +42,7 @@ from typing_extensions import (
 )
 
 import pyarrow as pa
+from pandas.api.types import infer_dtype
 
 from streamlit import errors
 
@@ -501,12 +502,13 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def convert_object_dtypes_to_string(
+def convert_mixed_columns_to_string(
     df: DataFrame, selected_columns: Optional[List[str]] = None
 ) -> DataFrame:
     for col in selected_columns or df.columns:
-        if df[col].dtype == "object":
-            df[col] = df[col].astype(str)
+        column = df[col]
+        if column.dtype == "object" and "mixed" in infer_dtype(column):
+            df[col] = column.astype(str)
     return df
 
 
@@ -524,7 +526,7 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
             table = pa.Table.from_pandas(df)
         except pa.ArrowTypeError:
             # Fallback: Convert all object types to string
-            df = convert_object_dtypes_to_string(df)
+            df = convert_mixed_columns_to_string(df)
             table = pa.Table.from_pandas(df)
         return pyarrow_table_to_bytes(table)
     except Exception as e:

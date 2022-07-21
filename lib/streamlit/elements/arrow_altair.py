@@ -410,7 +410,7 @@ def _maybe_melt(
 
         # Arrow has problems with object types after melting two different dtypes
         # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-        data = type_util.convert_object_dtypes_to_string(
+        data = type_util.convert_mixed_columns_to_string(
             data, selected_columns=[x_name, color_name, y_name]
         )
     else:
@@ -419,7 +419,7 @@ def _maybe_melt(
         data = pd.melt(data, id_vars=[x_name], var_name=color_name, value_name=y_name)
         # Arrow has problems with object types after melting two different dtypes
         # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-        data = type_util.convert_object_dtypes_to_string(data)
+        data = type_util.convert_mixed_columns_to_string(data)
 
     return data, x_name, x_title, y_name, y_title, color_name, color_title
 
