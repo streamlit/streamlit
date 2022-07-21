@@ -437,7 +437,7 @@ def _generate_chart(
 
     opacity = None
     if chart_type == ChartType.AREA and color_name:
-        opacity = alt.Opacity(color_name, band=0.7)
+        opacity = {y_name: 0.7}
     # Set the X and Y axes' scale to "utc" if they contain date values.
     # This causes time data to be displayed in UTC, rather the user's local
     # time zone. (By default, vega-lite displays time data in the browser's
