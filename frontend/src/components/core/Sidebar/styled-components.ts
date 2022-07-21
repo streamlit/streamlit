@@ -182,10 +182,11 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 export interface StyledSidebarContentProps {
   isCollapsed: boolean
   hideScrollbar: boolean
+  sidebarWidth: string
 }
 
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
-  ({ isCollapsed, hideScrollbar, theme }) => ({
+  ({ isCollapsed, hideScrollbar, sidebarWidth, theme }) => ({
     backgroundColor: theme.colors.bgColor,
     backgroundAttachment: "fixed",
     flexShrink: 0,
@@ -194,10 +195,15 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     top: "2px",
     overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
     position: "relative",
-    transition: "margin-left 300ms, box-shadow 300ms",
-    width: theme.sizes.sidebar,
+    // transition: "margin-left 300ms, box-shadow 300ms",
+    // transition: "opacity 300ms, box-shadow 300ms, transform 300ms",
     zIndex: theme.zIndices.header + 1,
-    marginLeft: isCollapsed ? `-${theme.sizes.sidebar}` : theme.spacing.none,
+    // marginLeft: isCollapsed ? `-${theme.sizes.sidebar}` : theme.spacing.none,
+
+    borderRight: "4px solid transparent",
+    transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "none",
+    opacity: isCollapsed ? 0 : 1,
+    transition: "opacity 500ms, transform 500ms",
 
     "&:focus": {
       outline: "none",
