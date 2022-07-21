@@ -195,15 +195,11 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     top: "2px",
     overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
     position: "relative",
-    // transition: "margin-left 300ms, box-shadow 300ms",
-    // transition: "opacity 300ms, box-shadow 300ms, transform 300ms",
     zIndex: theme.zIndices.header + 1,
-    // marginLeft: isCollapsed ? `-${theme.sizes.sidebar}` : theme.spacing.none,
 
-    borderRight: "4px solid transparent",
     transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "none",
     opacity: isCollapsed ? 0 : 1,
-    transition: "opacity 500ms, transform 500ms",
+    transition: "opacity 400ms, transform 400ms",
 
     "&:focus": {
       outline: "none",
