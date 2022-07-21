@@ -32,6 +32,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
+        super().tearDown()
 
     def get_app(self):
         ComponentRegistry._instance = None
