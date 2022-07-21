@@ -13,10 +13,7 @@
 # limitations under the License.
 
 import asyncio
-import base64
-import binascii
 import errno
-import json
 import logging
 import os
 import socket
@@ -24,14 +21,10 @@ import sys
 import time
 from typing import (
     Any,
-    Dict,
     Optional,
     Tuple,
     Callable,
-    Awaitable,
-    List,
-    Union,
-)
+    List, )
 
 import click
 import tornado.concurrent
@@ -42,7 +35,6 @@ import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
 from tornado.platform.asyncio import AsyncIOLoop
-from tornado.websocket import WebSocketHandler
 
 from streamlit import config
 from streamlit import file_util
@@ -52,13 +44,9 @@ from streamlit.app_session import AppSession
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
-from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import (
     Runtime,
     RuntimeConfig,
-    SessionClient,
-    SessionClientDisconnectedError,
     RuntimeState,
 )
 from streamlit.session_data import SessionData
@@ -74,13 +62,12 @@ from streamlit.web.server.routes import MediaFileHandler
 from streamlit.web.server.routes import MessageCacheHandler
 from streamlit.web.server.routes import StaticFileHandler
 from streamlit.web.server.server_util import get_max_message_size_bytes
-from streamlit.web.server.server_util import is_url_from_allowed_origins
 from streamlit.web.server.server_util import make_url_path_regex
-from streamlit.web.server.server_util import serialize_forward_msg
 from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
 )
+from .browser_websocket_handler import BrowserWebSocketHandler
 from .component_request_handler import ComponentRequestHandler
 from .stats_request_handler import StatsRequestHandler
 
@@ -247,7 +234,7 @@ class Server:
         routes: List[Any] = [
             (
                 make_url_path_regex(base, "stream"),
-                _BrowserWebSocketHandler,
+                BrowserWebSocketHandler,
                 dict(runtime=self._runtime),
             ),
             (
@@ -410,108 +397,6 @@ class Server:
         from being shutdown.)
         """
         self._ioloop.stop()
-
-
-class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
-    """Handles a WebSocket connection from the browser"""
-
-    def initialize(self, runtime: Runtime) -> None:
-        self._runtime = runtime
-        self._session_id: Optional[str] = None
-        # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
-        # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
-        # cookie as a side effect.
-        # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
-        # for more details.
-        if config.get_option("server.enableXsrfProtection"):
-            _ = self.xsrf_token
-
-    def check_origin(self, origin: str) -> bool:
-        """Set up CORS."""
-        return super().check_origin(origin) or is_url_from_allowed_origins(origin)
-
-    def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Send a ForwardMsg to the browser."""
-        try:
-            self.write_message(serialize_forward_msg(msg), binary=True)
-        except tornado.websocket.WebSocketClosedError as e:
-            raise SessionClientDisconnectedError from e
-
-    def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
-        # Extract user info from the X-Streamlit-User header
-        is_public_cloud_app = False
-
-        try:
-            header_content = self.request.headers["X-Streamlit-User"]
-            payload = base64.b64decode(header_content)
-            user_obj = json.loads(payload)
-            email = user_obj["email"]
-            is_public_cloud_app = user_obj["isPublicCloudApp"]
-        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
-            email = "test@localhost.com"
-
-        user_info: Dict[str, Optional[str]] = dict()
-        if is_public_cloud_app:
-            user_info["email"] = None
-        else:
-            user_info["email"] = email
-
-        self._session_id = self._runtime.create_session(self, user_info)
-        return None
-
-    def on_close(self) -> None:
-        if not self._session_id:
-            return
-        self._runtime.close_session(self._session_id)
-        self._session_id = None
-
-    def get_compression_options(self) -> Optional[Dict[Any, Any]]:
-        """Enable WebSocket compression.
-
-        Returning an empty dict enables websocket compression. Returning
-        None disables it.
-
-        (See the docstring in the parent class.)
-        """
-        if config.get_option("server.enableWebsocketCompression"):
-            return {}
-        return None
-
-    def on_message(self, payload: Union[str, bytes]) -> None:
-        if not self._session_id:
-            return
-
-        msg = BackMsg()
-
-        try:
-            if isinstance(payload, str):
-                # Sanity check. (The frontend should only be sending us bytes;
-                # Protobuf.ParseFromString does not accept str input.)
-                raise RuntimeError(
-                    "WebSocket received an unexpected `str` message. "
-                    "(We expect `bytes` only.)"
-                )
-
-            msg.ParseFromString(payload)
-            LOGGER.debug("Received the following back message:\n%s", msg)
-
-            if msg.WhichOneof("type") == "close_connection":
-                # "close_connection" is a special developmentMode-only
-                # message used in e2e tests to test disabling widgets.
-                if config.get_option("global.developmentMode"):
-                    self._runtime.stop()
-                else:
-                    LOGGER.warning(
-                        "Client tried to close connection when "
-                        "not in development mode"
-                    )
-            else:
-                # AppSession handles all other BackMsg types.
-                self._runtime.handle_backmsg(self._session_id, msg)
-
-        except BaseException as e:
-            LOGGER.error(e)
-            self._session.handle_backmsg_exception(e)
 
 
 def _set_tornado_log_levels() -> None:
