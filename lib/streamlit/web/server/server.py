@@ -77,7 +77,7 @@ from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
 )
-from .browser_websocket_handler import _BrowserWebSocketHandler
+from .browser_websocket_handler import BrowserWebSocketHandler
 from .component_request_handler import ComponentRequestHandler
 from .session_client import SessionClient, SessionClientDisconnectedError
 from .stats_request_handler import StatsRequestHandler
@@ -319,7 +319,7 @@ class Server:
         routes: List[Any] = [
             (
                 make_url_path_regex(base, "stream"),
-                _BrowserWebSocketHandler,
+                BrowserWebSocketHandler,
                 dict(server=self),
             ),
             (

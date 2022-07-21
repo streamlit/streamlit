@@ -47,7 +47,7 @@ from streamlit.web.server.server import Server
 from streamlit.web.server.server import State
 from streamlit.web.server.server import StaticFileHandler
 from streamlit.web.server.server import (
-    _BrowserWebSocketHandler,
+    BrowserWebSocketHandler,
     SessionClientDisconnectedError,
 )
 from streamlit.web.server.server import start_listening
@@ -432,7 +432,7 @@ class ServerTest(ServerTestCase):
             # Get our connected BrowserWebSocketHandler
             session_info = list(self.server._session_info_by_id.values())[0]
             websocket_handler = session_info.client
-            self.assertIsInstance(websocket_handler, _BrowserWebSocketHandler)
+            self.assertIsInstance(websocket_handler, BrowserWebSocketHandler)
 
             # Patch _BrowserWebSocketHandler.write_message to raise an error
             with mock.patch.object(

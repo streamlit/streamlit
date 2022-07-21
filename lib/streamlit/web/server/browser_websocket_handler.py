@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 LOGGER: Final = get_logger(__name__)
 
 
-class _BrowserWebSocketHandler(WebSocketHandler, SessionClient):
+class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     """Handles a WebSocket connection from the browser"""
 
     def initialize(self, server: "Server") -> None:
