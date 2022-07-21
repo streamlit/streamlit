@@ -36,10 +36,9 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import Runtime
+from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
 from streamlit.web.server.server_util import is_url_from_allowed_origins
 from streamlit.web.server.server_util import serialize_forward_msg
-from .session_client import SessionClient, SessionClientDisconnectedError
 
 LOGGER: Final = get_logger(__name__)
 
@@ -50,10 +49,10 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     def initialize(self, runtime: Runtime) -> None:
         self._runtime = runtime
         self._session_id: Optional[str] = None
-        # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
-        # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
-        # cookie as a side effect.
-        # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
+        # The XSRF cookie is normally set when xsrf_form_html is used, but in a
+        # pure-Javascript application that does not use any regular forms we just
+        # need to read the self.xsrf_token manually to set the cookie as a side
+        # effect. See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
         # for more details.
         if config.get_option("server.enableXsrfProtection"):
             _ = self.xsrf_token

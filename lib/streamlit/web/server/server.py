@@ -12,17 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import errno
 import logging
 import os
 import socket
 import sys
-import time
 from typing import (
     Any,
     Optional,
-    Tuple,
     Callable,
     List,
 )
@@ -41,7 +38,6 @@ from streamlit import config
 from streamlit import file_util
 from streamlit import source_util
 from streamlit import util
-from streamlit.app_session import AppSession
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
@@ -50,11 +46,6 @@ from streamlit.runtime import (
     RuntimeConfig,
     RuntimeState,
 )
-from streamlit.session_data import SessionData
-from streamlit.state import (
-    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
-)
-from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler
 from streamlit.web.server.routes import AssetsFileHandler
 from streamlit.web.server.routes import DebugHandler
@@ -95,9 +86,6 @@ MAX_PORT_SEARCH_RETRIES = 100
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
-
-# Wait for the script run result for 60s and if no result is available give up
-SCRIPT_RUN_CHECK_TIMEOUT = 60
 
 
 class RetriesExceeded(Exception):
@@ -241,7 +229,7 @@ class Server:
             (
                 make_url_path_regex(base, "healthz"),
                 HealthHandler,
-                dict(callback=lambda: self.is_ready_for_browser_connection),
+                dict(callback=lambda: self._runtime.is_ready_for_browser_connection),
             ),
             (make_url_path_regex(base, "debugz"), DebugHandler, dict(server=self)),
             (
@@ -284,7 +272,7 @@ class Server:
                     (
                         make_url_path_regex(base, "script-health-check"),
                         HealthHandler,
-                        dict(callback=lambda: self.does_script_run_without_error()),
+                        dict(callback=lambda: self._runtime.does_script_run_without_error()),
                     )
                 ]
             )
@@ -325,56 +313,6 @@ class Server:
             websocket_max_message_size=get_max_message_size_bytes(),
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
-
-    @property
-    async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
-        if self._runtime.state not in (
-            RuntimeState.INITIAL,
-            RuntimeState.STOPPING,
-            RuntimeState.STOPPED,
-        ):
-            return True, "ok"
-
-        return False, "unavailable"
-
-    async def does_script_run_without_error(self) -> Tuple[bool, str]:
-        """Load and execute the app's script to verify it runs without an error.
-
-        Returns
-        -------
-        (True, "ok") if the script completes without error, or (False, err_msg)
-        if the script raises an exception.
-        """
-        session_data = SessionData(self._main_script_path, self._command_line)
-        local_sources_watcher = LocalSourcesWatcher(session_data)
-        session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,
-            session_data=session_data,
-            uploaded_file_manager=self._runtime.uploaded_file_mgr,
-            message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=local_sources_watcher,
-            user_info={"email": "test@test.com"},
-        )
-
-        try:
-            session.request_rerun(None)
-
-            now = time.perf_counter()
-            while (
-                SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
-                and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
-            ):
-                await asyncio.sleep(0.1)
-
-            if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state:
-                return False, "timeout"
-
-            ok = session.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
-            msg = "ok" if ok else "error"
-
-            return ok, msg
-        finally:
-            session.shutdown()
 
     @property
     def browser_is_connected(self) -> bool:

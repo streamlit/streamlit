@@ -1,8 +1,11 @@
 import asyncio
+import time
 import traceback
 from asyncio import AbstractEventLoop
 from enum import Enum
-from typing import Optional, Dict, Protocol, NamedTuple, Callable, Any
+from typing import Optional, Dict, Protocol, NamedTuple, Callable, Any, Tuple
+
+from typing_extensions import Final
 
 from streamlit import config
 from streamlit.app_session import AppSession
@@ -18,13 +21,16 @@ from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.session_data import SessionData
-from streamlit.state import SessionStateStatProvider
+from streamlit.state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.stats import StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.server_util import is_cacheable_msg
 
-LOGGER = get_logger(__name__)
+# Wait for the script run result for 60s and if no result is available give up
+SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
+
+LOGGER: Final = get_logger(__name__)
 
 
 class SessionClientDisconnectedError(Exception):
@@ -331,6 +337,56 @@ class Runtime:
             return
 
         session_info.session.handle_backmsg(msg)
+
+    @property
+    async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
+        if self._state not in (
+            RuntimeState.INITIAL,
+            RuntimeState.STOPPING,
+            RuntimeState.STOPPED,
+        ):
+            return True, "ok"
+
+        return False, "unavailable"
+
+    async def does_script_run_without_error(self) -> Tuple[bool, str]:
+        """Load and execute the app's script to verify it runs without an error.
+
+        Returns
+        -------
+        (True, "ok") if the script completes without error, or (False, err_msg)
+        if the script raises an exception.
+        """
+        session_data = SessionData(self._script_path, self._command_line)
+        local_sources_watcher = LocalSourcesWatcher(session_data)
+        session = AppSession(
+            event_loop=self._event_loop,
+            session_data=session_data,
+            uploaded_file_manager=self._uploaded_file_mgr,
+            message_enqueued_callback=self._enqueued_some_message,
+            local_sources_watcher=local_sources_watcher,
+            user_info={"email": "test@test.com"},
+        )
+
+        try:
+            session.request_rerun(None)
+
+            now = time.perf_counter()
+            while (
+                SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
+                and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
+            ):
+                await asyncio.sleep(0.1)
+
+            if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state:
+                return False, "timeout"
+
+            ok = session.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+            msg = "ok" if ok else "error"
+
+            return ok, msg
+        finally:
+            session.shutdown()
 
     def _set_state(self, new_state: RuntimeState) -> None:
         LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
