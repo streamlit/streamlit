@@ -46,7 +46,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         create a new AsyncIOLoop so that we can access its underlying
         asyncio_loop instance in our `event_loop` property.
         """
-        return AsyncIOLoop()
+        return AsyncIOLoop(make_current=False)
 
     def get_app(self) -> tornado.web.Application:
         # Create a Server, and patch its _on_stopped function
