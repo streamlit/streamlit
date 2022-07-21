@@ -24,7 +24,8 @@ from typing import (
     Optional,
     Tuple,
     Callable,
-    List, )
+    List,
+)
 
 import click
 import tornado.concurrent
