@@ -22,7 +22,6 @@ from typing import (
     Awaitable,
     Union,
     TYPE_CHECKING,
-    Final,
 )
 
 import tornado.concurrent
@@ -32,6 +31,7 @@ import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.websocket import WebSocketHandler
+from typing_extensions import Final
 
 from streamlit import config
 from streamlit.app_session import AppSession
