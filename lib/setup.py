@@ -37,7 +37,6 @@ LONG_DESCRIPTION = (
 # But include relevant lower bounds for any features we use from our dependencies.
 INSTALL_REQUIRES = [
     "altair>=3.2.0",
-    "attrs>=16.0.0",
     "blinker>=1.0.0",
     "cachetools>=4.0",
     "click>=7.0",

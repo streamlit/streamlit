@@ -556,7 +556,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # Assert that Widget registration is a no-op
         widget_state = scriptrunner._session_state.register_widget(
-            MagicMock(spec=WidgetMetadata),
+            MagicMock(),
             user_key="mock_user_key",
         )
         self.assertEqual(False, widget_state.value_changed)

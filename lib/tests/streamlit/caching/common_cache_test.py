@@ -195,7 +195,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             threading.current_thread(),
             ScriptRunContext(
                 session_id="test session id",
-                enqueue=forward_msg_queue.enqueue,
+                _enqueue=forward_msg_queue.enqueue,
                 query_string="",
                 session_state=SessionState(),
                 uploaded_file_mgr=None,

@@ -86,7 +86,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         self.orig_report_ctx = None
         self.new_script_run_ctx = ScriptRunContext(
             session_id="test session id",
-            enqueue=self.forward_msg_queue.enqueue,
+            _enqueue=self.forward_msg_queue.enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),

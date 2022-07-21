@@ -364,7 +364,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
             session_id="TestSessionID",
-            enqueue=session._session_data.enqueue,
+            _enqueue=session._session_data.enqueue,
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
