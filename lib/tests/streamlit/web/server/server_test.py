@@ -50,10 +50,12 @@ from streamlit.web.server.server import (
     _BrowserWebSocketHandler,
     SessionClientDisconnectedError,
 )
-from streamlit.web.server.server import is_cacheable_msg
-from streamlit.web.server.server import is_url_from_allowed_origins
-from streamlit.web.server.server import serialize_forward_msg
 from streamlit.web.server.server import start_listening
+from streamlit.web.server.server_util import (
+    is_cacheable_msg,
+    is_url_from_allowed_origins,
+    serialize_forward_msg,
+)
 from .server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)
