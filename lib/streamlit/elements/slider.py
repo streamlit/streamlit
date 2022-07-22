@@ -24,6 +24,7 @@ from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.state import (
+    get_session_state,
     register_widget,
     WidgetArgs,
     WidgetCallback,
@@ -186,9 +187,18 @@ class SliderMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        # Set value default.
         if value is None:
-            value = min_value if min_value is not None else 0
+            # Set value from session_state if exists.
+            session_state = get_session_state().filtered_state
+
+            # we look first to session_state value of the widget because
+            # depending on the value (single value or list/tuple) the slider should be
+            # initializing differently (either as range or single value slider)
+            if key is not None and key in session_state:
+                value = session_state[key]
+            else:
+                # Set value default.
+                value = min_value if min_value is not None else 0
 
         SUPPORTED_TYPES = {
             int: SliderProto.INT,
