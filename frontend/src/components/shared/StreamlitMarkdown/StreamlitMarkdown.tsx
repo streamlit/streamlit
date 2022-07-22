@@ -22,6 +22,7 @@ import React, {
   CSSProperties,
   HTMLProps,
   FunctionComponent,
+  useContext,
 } from "react"
 import ReactMarkdown, { PluggableList } from "react-markdown"
 import {
@@ -46,6 +47,7 @@ import {
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
+import { AnchorElement } from "src/autogen/proto"
 
 export interface Props {
   /**
@@ -90,8 +92,13 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
 interface HeadingWithAnchorProps {
   tag: string
   anchor?: string
-  children: ReactNode[]
+  children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
+}
+
+interface TestHeaderProps {
+  width: number
+  element: AnchorElement
 }
 
 export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
@@ -175,6 +182,21 @@ export const CustomHeading: FunctionComponent<HeadingProps> = ({
   )
 }
 
+const renderers: Components = {
+  pre: CodeBlock,
+  code: CodeTag,
+  a: LinkWithTargetBlank,
+  h1: CustomHeading,
+  h2: CustomHeading,
+  h3: CustomHeading,
+  h4: CustomHeading,
+  h5: CustomHeading,
+  h6: CustomHeading,
+}
+
+const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
+const rehypePlugins: PluggableList = [rehypeKatex]
+
 /**
  * Wraps the <ReactMarkdown> component to include our standard
  * renderers and AST plugins (for syntax highlighting, HTML support, etc).
@@ -196,20 +218,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
     const { source, allowHTML, style, isCaption } = this.props
     const isInSidebar = this.context
 
-    const renderers: Components = {
-      pre: CodeBlock,
-      code: CodeTag,
-      a: LinkWithTargetBlank,
-      h1: CustomHeading,
-      h2: CustomHeading,
-      h3: CustomHeading,
-      h4: CustomHeading,
-      h5: CustomHeading,
-      h6: CustomHeading,
-    }
-
-    const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
-    const rehypePlugins: PluggableList = [rehypeKatex]
     if (allowHTML) {
       rehypePlugins.push(rehypeRaw)
     }
@@ -268,6 +276,90 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     >
       {children}
     </a>
+  )
+}
+
+// export const TestHeading: FunctionComponent<HeadingWithAnchorProps> = ({
+//   tag,
+//   anchor: propsAnchor,
+//   children,
+//   tagProps,
+// }) => {
+//   const isSidebar = React.useContext(IsSidebarContext)
+//   const [elementId, setElementId] = React.useState(propsAnchor)
+//   const [target, setTarget] = React.useState<HTMLElement | null>(null)
+
+//   const {
+//     addScriptFinishedHandler,
+//     removeScriptFinishedHandler,
+//   } = React.useContext(AppContext)
+
+//   if (isSidebar) {
+//     return React.createElement(tag, tagProps, children)
+//   }
+
+//   const onScriptFinished = React.useCallback(() => {
+//     if (target !== null) {
+//       // wait a bit for everything on page to finish loading
+//       window.setTimeout(() => {
+//         scrollNodeIntoView(target)
+//       }, 300)
+//     }
+//   }, [target])
+
+//   React.useEffect(() => {
+//     addScriptFinishedHandler(onScriptFinished)
+//     return () => {
+//       removeScriptFinishedHandler(onScriptFinished)
+//     }
+//   }, [addScriptFinishedHandler, removeScriptFinishedHandler, onScriptFinished])
+
+//   const ref = React.useCallback(
+//     node => {
+//       if (node === null) {
+//         return
+//       }
+
+//       const anchor = propsAnchor || createAnchorFromText(node.textContent)
+//       setElementId(anchor)
+//       if (window.location.hash.slice(1) === anchor) {
+//         setTarget(node)
+//       }
+//     },
+//     [propsAnchor]
+//   )
+
+//   return React.createElement(
+//     tag,
+//     { ...tagProps, ref, id: elementId },
+//     <StyledLinkIconContainer>
+//       {elementId && (
+//         <StyledLinkIcon href={`#${elementId}`}>
+//           <LinkIcon size="18" />
+//         </StyledLinkIcon>
+//       )}
+//       <h1>
+//         <StyledHeaderContent>{children}</StyledHeaderContent>
+//       </h1>
+//     </StyledLinkIconContainer>
+//   )
+// }
+
+export function Header(props: TestHeaderProps): ReactElement {
+  const { width } = props
+  const { tag, anchor, body } = props.element
+  const isInSidebar = useContext(IsSidebarContext)
+
+  return (
+      <HeadingWithAnchor tag={"h2"} anchor={anchor}>    
+        <h2>
+        <StreamlitMarkdown
+          isCaption={false}
+          source={body}
+          allowHTML={false}>
+        </StreamlitMarkdown>
+        </h2>
+      </HeadingWithAnchor>
   )
 }
 

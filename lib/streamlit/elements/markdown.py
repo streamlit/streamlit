@@ -16,6 +16,7 @@ from typing import cast, Optional, TYPE_CHECKING, Union
 
 from streamlit import type_util
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from streamlit.proto.AnchorElement_pb2 import AnchorElement as AnchorElementProto
 from .utils import clean_text
 
 if TYPE_CHECKING:
@@ -78,57 +79,6 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
-    def header(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
-        """Display text in header formatting.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        anchor : str
-            The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-
-        Example
-        -------
-        >>> st.header('This is a header')
-
-        """
-        header_proto = MarkdownProto()
-        if anchor is None:
-            header_proto.body = f"## {clean_text(body)}"
-        else:
-            header_proto.body = f'<h2 data-anchor="{anchor}">{clean_text(body)}</h2>'
-            header_proto.allow_html = True
-        return self.dg._enqueue("markdown", header_proto)
-
-    def subheader(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
-        """Display text in subheader formatting.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        anchor : str
-            The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-
-        Example
-        -------
-        >>> st.subheader('This is a subheader')
-
-        """
-        subheader_proto = MarkdownProto()
-        if anchor is None:
-            subheader_proto.body = f"### {clean_text(body)}"
-        else:
-            subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
-            subheader_proto.allow_html = True
-
-        return self.dg._enqueue("markdown", subheader_proto)
-
     def code(self, body: str, language: Optional[str] = "python") -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
@@ -157,34 +107,6 @@ class MarkdownMixin:
         }
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
-
-    def title(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
-        """Display text in title formatting.
-
-        Each document should have a single `st.title()`, although this is not
-        enforced.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        anchor : str
-            The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-
-        Example
-        -------
-        >>> st.title('This is a title')
-
-        """
-        title_proto = MarkdownProto()
-        if anchor is None:
-            title_proto.body = f"# {clean_text(body)}"
-        else:
-            title_proto.body = f'<h1 data-anchor="{anchor}">{clean_text(body)}</h1>'
-            title_proto.allow_html = True
-        return self.dg._enqueue("markdown", title_proto)
 
     def caption(self, body: str, unsafe_allow_html: bool = False) -> "DeltaGenerator":
         """Display text in small font.
@@ -263,6 +185,88 @@ class MarkdownMixin:
         latex_proto.body = "$$\n%s\n$$" % clean_text(body)
         return self.dg._enqueue("markdown", latex_proto)
 
+    @property
+    def dg(self) -> "DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("DeltaGenerator", self)
+
+class AnchorElementMixin:
+    def header(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
+        """Display text in header formatting.
+
+        Parameters
+        ----------
+        body : str
+            The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
+
+        Example
+        -------
+        >>> st.header('This is a header')
+
+        """
+        header_proto = AnchorElementProto()
+        if anchor != None:
+            header_proto.anchor = anchor
+        header_proto.body = f"{clean_text(body)}"
+            # header_proto.body = f'<h2 data-anchor="{anchor}">{clean_text(body)}</h2>'
+        return self.dg._enqueue("anchor_element", header_proto)
+
+    def subheader(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
+        """Display text in subheader formatting.
+
+        Parameters
+        ----------
+        body : str
+            The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
+
+        Example
+        -------
+        >>> st.subheader('This is a subheader')
+
+        """
+        subheader_proto = AnchorElementProto()
+        if anchor != None:
+            subheader_proto.anchor = anchor
+        subheader_proto.body = f"### {clean_text(body)}"
+            # subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
+
+        return self.dg._enqueue("anchor_element", subheader_proto)
+
+    def title(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
+        """Display text in title formatting.
+
+        Each document should have a single `st.title()`, although this is not
+        enforced.
+
+        Parameters
+        ----------
+        body : str
+            The text to display.
+
+        anchor : str
+            The anchor name of the header that can be accessed with #anchor
+            in the URL. If omitted, it generates an anchor using the body.
+
+        Example
+        -------
+        >>> st.title('This is a title')
+
+        """
+        title_proto = AnchorElementProto()
+        if anchor != None:
+            title_proto.anchor = anchor
+        title_proto.body = f"### {clean_text(body)}"
+            # title_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
+
+        return self.dg._enqueue("anchor_element", title_proto)
     @property
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""

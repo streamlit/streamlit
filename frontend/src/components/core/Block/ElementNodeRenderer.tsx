@@ -49,6 +49,7 @@ import {
   Progress as ProgressProto,
   Text as TextProto,
   Video as VideoProto,
+  AnchorElement as AnchorElementProto
 } from "src/autogen/proto"
 
 import React, { ReactElement, Suspense } from "react"
@@ -83,6 +84,7 @@ import {
 } from "./utils"
 
 import { StyledElementContainer } from "./styled-components"
+import { Header } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
@@ -308,6 +310,30 @@ const RawElementNodeRenderer = (
           element={node.element.markdown as MarkdownProto}
         />
       )
+    
+    case "anchorElement":
+      return (
+        <Header
+          width={width}
+          element={node.element.anchorElement as AnchorElementProto}
+        />
+      )
+
+    // case "subheader":
+    //   return (
+    //     <Subheader
+    //       width={width}
+    //       element={node.element.subheader as SubheaderProto}
+    //     />
+    //   )
+    
+    // case "title":
+    //   return (
+    //     <Title
+    //       width={width}
+    //       element={node.element.title as TitleProto}
+    //     />
+    //   )
 
     case "plotlyChart":
       return (
