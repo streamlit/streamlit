@@ -191,8 +191,8 @@ def _on_server_start(server: Server) -> None:
 
         util.open_browser(server_util.get_url(addr))
 
-    # Schedule the browser to open using the IO Loop on the main thread, but
-    # only if no other browser connects within 1s.
+    # Schedule the browser to open on the main thread, but only if no other
+    # browser connects within 1s.
     asyncio.get_running_loop().call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
 
