@@ -190,6 +190,10 @@ class SliderMixin:
         if value is None:
             # Set value from session_state if exists.
             session_state = get_session_state().filtered_state
+
+            # we look first to session_state value of the widget because
+            # depending on the value (single value or list/tuple the slider should be
+            # initializing differently (either as range or single value slider)
             if key is not None and key in session_state:
                 value = session_state[key]
             else:
