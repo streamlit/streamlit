@@ -115,9 +115,16 @@ class Runtime:
 
         # asyncio eventloop synchronization primitives.
         # Note: these are not thread-safe!
-        self._must_stop = asyncio.Event()
-        self._has_connection = asyncio.Condition()
-        self._need_send_data = asyncio.Event()
+        # self._must_stop = asyncio.Event()
+        # self._has_connection = asyncio.Condition()
+        # self._need_send_data = asyncio.Event()
+
+        # TODO: fix the asyncio primitives. asyncio.Condition requires a lock.
+        import tornado.locks
+
+        self._must_stop = tornado.locks.Event()
+        self._has_connection = tornado.locks.Condition()
+        self._need_send_data = tornado.locks.Event()
 
         # Initialize managers
         self._message_cache = ForwardMsgCache()
@@ -479,13 +486,6 @@ class Runtime:
 Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
             )
-
-        finally:
-            self._on_stopped()
-
-    def _on_stopped(self) -> None:
-        """Called when our runloop is exiting."""
-        raise Exception("TODO")
 
     def _send_message(self, session_info: SessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
