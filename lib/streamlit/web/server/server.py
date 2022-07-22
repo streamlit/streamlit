@@ -225,9 +225,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
 
 class Server:
-    def __init__(
-        self, main_script_path: str, command_line: Optional[str]
-    ):
+    def __init__(self, main_script_path: str, command_line: Optional[str]):
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
 
@@ -434,7 +432,7 @@ class Server:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
-            event_loop=asyncio.get_event_loop(),
+            event_loop=asyncio.get_running_loop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -639,7 +637,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
         session = AppSession(
-            event_loop=asyncio.get_event_loop(),
+            event_loop=asyncio.get_running_loop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
