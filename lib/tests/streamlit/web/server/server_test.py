@@ -685,8 +685,6 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         self._server = Server(self._path, "test command line")
 
     def tearDown(self) -> None:
-        self._server.stop()
-
         if event_based_path_watcher._MultiPathWatcher._singleton is not None:
             event_based_path_watcher._MultiPathWatcher.get_singleton().close()
             event_based_path_watcher._MultiPathWatcher._singleton = None

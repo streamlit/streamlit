@@ -32,7 +32,6 @@ from typing import (
 
 import click
 import tornado.concurrent
-import tornado.ioloop
 import tornado.locks
 import tornado.netutil
 import tornado.web
@@ -262,10 +261,6 @@ class Server:
     @property
     def main_script_path(self) -> str:
         return self._main_script_path
-
-    @property
-    def _ioloop(self) -> tornado.ioloop.IOLoop:
-        return tornado.ioloop.IOLoop.current()
 
     def on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
@@ -599,15 +594,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session_info.client.write_forward_msg(msg_to_send)
 
     def _enqueued_some_message(self) -> None:
-        self._ioloop.add_callback(self._need_send_data.set)
+        asyncio.get_running_loop().call_soon_threadsafe(self._need_send_data.set)
 
     def stop(self, from_signal=False) -> None:
         click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
-        if from_signal:
-            self._ioloop.add_callback_from_signal(self._must_stop.set)
-        else:
-            self._ioloop.add_callback(self._must_stop.set)
+        asyncio.get_running_loop().call_soon_threadsafe(self._must_stop.set)
 
     def _create_app_session(
         self, client: SessionClient, user_info: Dict[str, Optional[str]]
