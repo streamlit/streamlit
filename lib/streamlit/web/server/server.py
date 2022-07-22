@@ -32,13 +32,11 @@ from typing import (
 
 import click
 import tornado.concurrent
-import tornado.ioloop
 import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
-from tornado.platform.asyncio import AsyncIOLoop
 
 from streamlit import config
 from streamlit import file_util
@@ -226,15 +224,15 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
 
 class Server:
-    def __init__(
-        self, ioloop: AsyncIOLoop, main_script_path: str, command_line: Optional[str]
-    ):
+    def __init__(self, main_script_path: str, command_line: Optional[str]):
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
 
-        self._ioloop = ioloop
         self._main_script_path = main_script_path
         self._command_line = command_line if command_line is not None else ""
+
+        # Will be set when we start.
+        self._eventloop: Optional[asyncio.AbstractEventLoop] = None
 
         # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
@@ -288,7 +286,7 @@ class Server:
         """True if the session_id belongs to an active session."""
         return session_id in self._session_info_by_id
 
-    def start(self, on_started: Callable[["Server"], Any]) -> None:
+    async def start(self, on_started: Callable[["Server"], Any]) -> None:
         """Start the server.
 
         Parameters
@@ -307,10 +305,9 @@ class Server:
         start_listening(app)
 
         port = config.get_option("server.port")
-
         LOGGER.debug("Server started on port %s", port)
 
-        self._ioloop.add_callback(self._loop_coroutine, on_started)
+        await self._loop_coroutine(on_started)
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
@@ -432,7 +429,7 @@ class Server:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,
+            event_loop=self._get_eventloop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -480,6 +477,13 @@ class Server:
                 pass
             else:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
+
+            # Store the eventloop we're running on so that we can schedule
+            # callbacks on it when necessary. (We can't just call
+            # `asyncio.get_running_loop()` whenever we like, because we have
+            # some functions, e.g. `stop`, that can be called from other
+            # threads, and `asyncio.get_running_loop()` is thread-specific.)
+            self._eventloop = asyncio.get_running_loop()
 
             if on_started is not None:
                 on_started(self)
@@ -542,9 +546,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
             )
 
-        finally:
-            self._on_stopped()
-
     def _send_message(self, session_info: SessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
 
@@ -602,24 +603,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session_info.client.write_forward_msg(msg_to_send)
 
     def _enqueued_some_message(self) -> None:
-        self._ioloop.add_callback(self._need_send_data.set)
+        self._get_eventloop().call_soon_threadsafe(self._need_send_data.set)
 
-    def stop(self, from_signal=False) -> None:
+    def stop(self) -> None:
         click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
-        if from_signal:
-            self._ioloop.add_callback_from_signal(self._must_stop.set)
-        else:
-            self._ioloop.add_callback(self._must_stop.set)
-
-    def _on_stopped(self) -> None:
-        """Called when our runloop is exiting, to shut down the ioloop.
-        This will end our process.
-
-        (Tests can patch this method out, to prevent the test's ioloop
-        from being shutdown.)
-        """
-        self._ioloop.stop()
+        self._get_eventloop().call_soon_threadsafe(self._must_stop.set)
 
     def _create_app_session(
         self, client: SessionClient, user_info: Dict[str, Optional[str]]
@@ -649,7 +638,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
         session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,
+            event_loop=self._get_eventloop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -689,6 +678,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         if len(self._session_info_by_id) == 0:
             self._set_state(State.NO_SESSIONS_CONNECTED)
+
+    def _get_eventloop(self) -> asyncio.AbstractEventLoop:
+        """Return the asyncio eventloop that the Server was started with.
+        If the Server hasn't been started, this will raise an error.
+        """
+        if self._eventloop is None:
+            raise RuntimeError("Server hasn't started yet!")
+        return self._eventloop
 
 
 def _set_tornado_log_levels() -> None:

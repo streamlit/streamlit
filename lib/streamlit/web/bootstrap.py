@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 import os
 import signal
 import sys
@@ -18,8 +19,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
-import tornado.ioloop
-from tornado.platform.asyncio import AsyncIOLoop
 
 from streamlit import config
 from streamlit import env_util
@@ -64,8 +63,8 @@ def _set_up_signal_handler(server: Server) -> None:
     LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
-        # The server will shut down its threads and stop the ioloop
-        server.stop(from_signal=True)
+        # The server will shut down its threads and exit its loop.
+        server.stop()
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -192,10 +191,9 @@ def _on_server_start(server: Server) -> None:
 
         util.open_browser(server_util.get_url(addr))
 
-    # Schedule the browser to open using the IO Loop on the main thread, but
-    # only if no other browser connects within 1s.
-    ioloop = tornado.ioloop.IOLoop.current()
-    ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
+    # Schedule the browser to open on the main thread, but only if no other
+    # browser connects within 1s.
+    asyncio.get_running_loop().call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:
@@ -351,7 +349,7 @@ def run(
 ) -> None:
     """Run a script in a separate thread and start a server for the app.
 
-    This starts a blocking ioloop.
+    This starts a blocking asyncio eventloop.
     """
     _fix_sys_path(main_script_path)
     _fix_matplotlib_crash()
@@ -361,19 +359,12 @@ def run(
     _install_config_watchers(flag_options)
     _install_pages_watcher(main_script_path)
 
-    # Create our Tornado IOLoop.
-    # (AsyncIOLoop is actually the default IOLoop type - we're just being
-    # explicit about it so that we can grab its asyncio_loop instance.)
-    ioloop = AsyncIOLoop()
-
     # Create the server. It won't start running yet.
-    server = Server(ioloop, main_script_path, command_line)
+    server = Server(main_script_path, command_line)
 
-    # Install a signal handler that will shut down the ioloop
+    # Install a signal handler that will shut down the server
     # and close all our threads
     _set_up_signal_handler(server)
 
-    # Start the server and its ioloop. This function will not return until the
-    # server is shut down.
-    server.start(_on_server_start)
-    ioloop.start()
+    # Run the server. This function will not return until the server is shut down.
+    asyncio.run(server.start(_on_server_start))

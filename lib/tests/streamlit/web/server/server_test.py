@@ -428,6 +428,21 @@ class ServerTest(ServerTestCase):
             self.assertFalse(self.server.is_active_session("not_a_session_id"))
             self.assertTrue(self.server.is_active_session(session_info.session.id))
 
+    @tornado.testing.gen_test
+    async def test_get_eventloop(self):
+        """Server._get_eventloop() will raise an error if called before the
+        Server is started, and will return the Server's eventloop otherwise.
+        """
+        with self._patch_app_session():
+            with self.assertRaises(RuntimeError):
+                # Server hasn't started yet: error!
+                _ = self.server._get_eventloop()
+
+            # Server has started: no error
+            await self.start_server_loop()
+            eventloop = self.server._get_eventloop()
+            self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
+
 
 class ServerUtilsTest(unittest.TestCase):
     def test_is_url_from_allowed_origins_allowed_domains(self):
@@ -682,11 +697,10 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         os.environ["HOME"] = self._home
 
         self._fd, self._path = tempfile.mkstemp()
-        self._server = Server(self.io_loop, self._path, "test command line")
+        self._server = Server(self._path, "test command line")
+        self._server._eventloop = self.asyncio_loop
 
     def tearDown(self) -> None:
-        self._server.stop()
-
         if event_based_path_watcher._MultiPathWatcher._singleton is not None:
             event_based_path_watcher._MultiPathWatcher.get_singleton().close()
             event_based_path_watcher._MultiPathWatcher._singleton = None
@@ -749,7 +763,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server = Server("mock/script/path", "test command line")
         server.does_script_run_without_error = self.does_script_run_without_error
         return server._create_app()
 
@@ -773,7 +787,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server = Server("mock/script/path", "test command line")
         server.does_script_run_without_error = self.does_script_run_without_error
         return server._create_app()
 
