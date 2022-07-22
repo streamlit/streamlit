@@ -428,6 +428,21 @@ class ServerTest(ServerTestCase):
             self.assertFalse(self.server.is_active_session("not_a_session_id"))
             self.assertTrue(self.server.is_active_session(session_info.session.id))
 
+    @tornado.testing.gen_test
+    async def test_get_eventloop(self):
+        """Server._get_eventloop() will raise an error if called before the
+        Server is started, and will return the Server's eventloop otherwise.
+        """
+        with self._patch_app_session():
+            with self.assertRaises(RuntimeError):
+                # Server hasn't started yet: error!
+                _ = self.server._get_eventloop()
+
+            # Server has started: no error
+            await self.start_server_loop()
+            eventloop = self.server._get_eventloop()
+            self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
+
 
 class ServerUtilsTest(unittest.TestCase):
     def test_is_url_from_allowed_origins_allowed_domains(self):
