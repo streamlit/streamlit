@@ -23,6 +23,7 @@ import React, {
   HTMLProps,
   FunctionComponent,
   useContext,
+  Fragment,
 } from "react"
 import ReactMarkdown, { PluggableList } from "react-markdown"
 import {
@@ -117,6 +118,10 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   } = React.useContext(AppContext)
 
   if (isSidebar) {
+    // WILLIAM
+    return <StyledHeading as={tag} level={tag} isCaption={} isInSidebar={ {..tagProps}>
+      {children}
+    </StyledHeading>
     return React.createElement(tag, tagProps, children)
   }
 
@@ -181,21 +186,57 @@ export const CustomHeading: FunctionComponent<HeadingProps> = ({
     </HeadingWithAnchor>
   )
 }
+export interface RenderedMarkdownProps {
+  /**
+   * The Markdown formatted text to render.
+   */
+  source: string
 
-const renderers: Components = {
-  pre: CodeBlock,
-  code: CodeTag,
-  a: LinkWithTargetBlank,
-  h1: CustomHeading,
-  h2: CustomHeading,
-  h3: CustomHeading,
-  h4: CustomHeading,
-  h5: CustomHeading,
-  h6: CustomHeading,
+  /**
+   * True if HTML is allowed in the source string. If this is false,
+   * any HTML will be escaped in the output.
+   */
+  allowHTML: boolean
+
+  overrideComponents: Components
 }
 
-const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
-const rehypePlugins: PluggableList = [rehypeKatex]
+function RenderedMarkdown({
+  allowHTML,
+  source,
+  overrideComponents,
+}: RenderedMarkdownProps): ReactElement {
+  const renderers: Components = {
+    pre: CodeBlock,
+    code: CodeTag,
+    a: LinkWithTargetBlank,
+    h1: CustomHeading,
+    h2: CustomHeading,
+    h3: CustomHeading,
+    h4: CustomHeading,
+    h5: CustomHeading,
+    h6: CustomHeading,
+    ...(overrideComponents || {}),
+  }
+
+  const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
+  const rehypePlugins: PluggableList = [rehypeKatex]
+
+  if (allowHTML) {
+    rehypePlugins.push(rehypeRaw)
+  }
+
+  return (
+    <ReactMarkdown
+      remarkPlugins={plugins}
+      rehypePlugins={rehypePlugins}
+      components={renderers}
+      transformLinkUri={transformLinkUri}
+    >
+      {source}
+    </ReactMarkdown>
+  )
+}
 
 /**
  * Wraps the <ReactMarkdown> component to include our standard
@@ -204,6 +245,7 @@ const rehypePlugins: PluggableList = [rehypeKatex]
 class StreamlitMarkdown extends PureComponent<Props> {
   static contextType = IsSidebarContext
 
+  // WILLIAM
   public componentDidCatch = (): void => {
     const { source } = this.props
 
@@ -218,21 +260,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
     const { source, allowHTML, style, isCaption } = this.props
     const isInSidebar = this.context
 
-    if (allowHTML) {
-      rehypePlugins.push(rehypeRaw)
-    }
-
-    const renderMarkdown = (): ReactElement => (
-      <ReactMarkdown
-        remarkPlugins={plugins}
-        rehypePlugins={rehypePlugins}
-        components={renderers}
-        transformLinkUri={transformLinkUri}
-      >
-        {source}
-      </ReactMarkdown>
-    )
-
     return (
       <StyledStreamlitMarkdown
         isCaption={Boolean(isCaption)}
@@ -240,7 +267,11 @@ class StreamlitMarkdown extends PureComponent<Props> {
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >
-        {renderMarkdown()}
+        <RenderedMarkdown
+          source={source}
+          allowHTML={allowHTML}
+          overrideComponents={{}}
+        />
       </StyledStreamlitMarkdown>
     )
   }
@@ -349,17 +380,27 @@ export function Header(props: TestHeaderProps): ReactElement {
   const { width } = props
   const { tag, anchor, body } = props.element
   const isInSidebar = useContext(IsSidebarContext)
+  // st.header can contain new lines which are just interpreted as new
+  // markdown to be rendered as such.
+  const [heading, ...rest] = body.split("\n")
 
   return (
-      <HeadingWithAnchor tag={"h2"} anchor={anchor}>    
-        <h2>
-        <StreamlitMarkdown
-          isCaption={false}
-          source={body}
-          allowHTML={false}>
-        </StreamlitMarkdown>
-        </h2>
+    <>
+      <HeadingWithAnchor tag={"h2"} anchor={anchor}>
+        <RenderedMarkdown
+          source={heading}
+          allowHTML={false}
+          overrideComponents={{ p: Fragment }}
+        />
       </HeadingWithAnchor>
+      {rest.length > 0 && (
+        <RenderedMarkdown
+          source={rest.join("\n")}
+          allowHTML={false}
+          overrideComponents={{}}
+        />
+      )}
+    </>
   )
 }
 

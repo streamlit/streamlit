@@ -26,6 +26,16 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
+
+export const StyledHeading = styled.h1<>(({ headingLevel, isCaption, isInSidebar } => {
+  const style = {}
+  if (isCaption) {
+    style.color = "inheriit"
+  }
+  
+  return style
+}))
+
 export const StyledStreamlitMarkdown = styled.div<
   StyledStreamlitMarkdownProps
 >(({ theme, isCaption, isInSidebar }) => ({
