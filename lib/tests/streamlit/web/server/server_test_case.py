@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import typing
+
 import urllib.parse
 from asyncio import Future
 from unittest import mock
@@ -49,15 +49,10 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         return AsyncIOLoop(make_current=False)
 
     def get_app(self) -> tornado.web.Application:
-        # Create a Server, and patch its _on_stopped function
-        # to no-op. This prevents it from shutting down the
-        # ioloop when it stops.
         self.server = Server(
-            typing.cast(AsyncIOLoop, self.io_loop),
             "/not/a/script.py",
             "test command line",
         )
-        self.server._on_stopped = mock.MagicMock()  # type: ignore[assignment]
         app = self.server._create_app()
         return app
 

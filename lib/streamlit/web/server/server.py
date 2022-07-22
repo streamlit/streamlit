@@ -544,9 +544,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
             )
 
-        finally:
-            self._on_stopped()
-
     def _send_message(self, session_info: SessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
 
@@ -613,15 +610,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             self._ioloop.add_callback_from_signal(self._must_stop.set)
         else:
             self._ioloop.add_callback(self._must_stop.set)
-
-    def _on_stopped(self) -> None:
-        """Called when our runloop is exiting, to shut down the ioloop.
-        This will end our process.
-
-        (Tests can patch this method out, to prevent the test's ioloop
-        from being shutdown.)
-        """
-        self._ioloop.stop()
 
     def _create_app_session(
         self, client: SessionClient, user_info: Dict[str, Optional[str]]

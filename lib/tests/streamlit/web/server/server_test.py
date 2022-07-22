@@ -682,7 +682,7 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         os.environ["HOME"] = self._home
 
         self._fd, self._path = tempfile.mkstemp()
-        self._server = Server(self.io_loop, self._path, "test command line")
+        self._server = Server(self._path, "test command line")
 
     def tearDown(self) -> None:
         self._server.stop()
@@ -749,7 +749,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server = Server("mock/script/path", "test command line")
         server.does_script_run_without_error = self.does_script_run_without_error
         return server._create_app()
 
@@ -773,7 +773,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server = Server("mock/script/path", "test command line")
         server.does_script_run_without_error = self.does_script_run_without_error
         return server._create_app()
 

@@ -31,7 +31,7 @@ report = SessionData("the/path", "test command line")
 
 
 class BootstrapTest(unittest.TestCase):
-    @patch("streamlit.web.bootstrap.AsyncIOLoop", Mock())
+    @patch("streamlit.web.bootstrap.asyncio.run", Mock())
     @patch("streamlit.web.bootstrap.Server", Mock())
     @patch("streamlit.web.bootstrap._install_pages_watcher", Mock())
     def test_fix_matplotlib_crash(self):
