@@ -33,7 +33,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
     """
 
     def initialize(
-        self, file_mgr: UploadedFileManager, get_session_info: Callable[[str], Any]
+        self, file_mgr: UploadedFileManager, is_active_session: Callable[[str], bool]
     ):
         """
         Parameters
@@ -41,14 +41,12 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         file_mgr : UploadedFileManager
             The server's singleton UploadedFileManager. All file uploads
             go here.
-        get_session_info: Server.get_session_info. Used to validate session IDs
+        is_active_session:
+            A function that returns true if a session_id belongs to an active
+            session.
         """
         self._file_mgr = file_mgr
-        self._get_session_info = get_session_info
-
-    def _is_valid_session_id(self, session_id: str) -> bool:
-        """True if the given session_id refers to an active session."""
-        return self._get_session_info(session_id) is not None
+        self._is_active_session = is_active_session
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -119,7 +117,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
-            if not self._is_valid_session_id(session_id):
+            if not self._is_active_session(session_id):
                 raise Exception(f"Invalid session_id: '{session_id}'")
 
         except Exception as e:

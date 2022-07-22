@@ -15,11 +15,13 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
+from typing import List
 from unittest.mock import patch
 
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.caching.cache_errors import CacheReplayClosureError
 from streamlit.scriptrunner import script_run_context
 from streamlit.caching import (
     MEMO_CALL_STACK,
@@ -37,6 +39,15 @@ from tests.testutil import DeltaGeneratorTestCase
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
+
+
+def get_text_or_block(delta):
+    if delta.WhichOneof("type") == "new_element":
+        element = delta.new_element
+        if element.WhichOneof("type") == "text":
+            return element.text.body
+    elif delta.WhichOneof("type") == "add_block":
+        return "new_block"
 
 
 class CommonCacheTest(DeltaGeneratorTestCase):
@@ -58,6 +69,16 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         if ctx is not None:
             ctx.widget_ids_this_run.clear()
         super().tearDown()
+
+    def get_text_delta_contents(self) -> List[str]:
+
+        deltas = self.get_all_deltas_from_queue()
+        text = [
+            element.text.body
+            for element in (delta.new_element for delta in deltas)
+            if element.WhichOneof("type") == "text"
+        ]
+        return text
 
     @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_simple(self, _, cache_decorator):
@@ -165,7 +186,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
     )
     def test_cached_st_function_warning(self, _, cache_decorator, call_stack):
-        """Ensure we properly warn when st.foo functions are called
+        """Ensure we properly warn when interactive st.foo functions are called
         inside a cached function.
         """
         forward_msg_queue = ForwardMsgQueue()
@@ -174,7 +195,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             threading.current_thread(),
             ScriptRunContext(
                 session_id="test session id",
-                enqueue=forward_msg_queue.enqueue,
+                _enqueue=forward_msg_queue.enqueue,
                 query_string="",
                 session_state=SessionState(),
                 uploaded_file_mgr=None,
@@ -191,7 +212,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 st.text("Inside cached func")
 
             cached_func()
-            warning.assert_called_once()
+            warning.assert_not_called()
 
             warning.reset_mock()
 
@@ -218,7 +239,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 return inner()
 
             outer()
-            warning.assert_called_once()
+            warning.assert_not_called()
 
             warning.reset_mock()
 
@@ -232,7 +253,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
                 cached_raise_error()
 
-            warning.assert_called_once()
+            warning.assert_not_called()
             warning.reset_mock()
 
             # Make sure everything got reset properly
@@ -254,6 +275,205 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             warning.assert_not_called()
 
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay(self, _, cache_decorator):
+        @cache_decorator
+        def foo(i):
+            st.text(i)
+            return i
+
+        foo(1)
+        st.text("---")
+        foo(1)
+
+        text = self.get_text_delta_contents()
+
+        assert text == ["1", "---", "1"]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_nested(self, _, cache_decorator):
+        @cache_decorator
+        def inner(i):
+            st.text(i)
+
+        @cache_decorator
+        def outer(i):
+            inner(i)
+            st.text(i + 10)
+
+        outer(1)
+        outer(1)
+        st.text("---")
+        inner(2)
+        outer(2)
+        st.text("---")
+        outer(3)
+        inner(3)
+
+        text = self.get_text_delta_contents()
+        assert text == [
+            "1",
+            "11",
+            "1",
+            "11",
+            "---",
+            "2",
+            "2",
+            "12",
+            "---",
+            "3",
+            "13",
+            "3",
+        ]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_outer_blocks(self, _, cache_decorator):
+        @cache_decorator
+        def foo(i):
+            st.text(i)
+            return i
+
+        with st.container():
+            foo(1)
+            st.text("---")
+            foo(1)
+
+        text = self.get_text_delta_contents()
+        assert text == ["1", "---", "1"]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_sidebar(self, _, cache_decorator):
+        @cache_decorator(show_spinner=False)
+        def foo(i):
+            st.sidebar.text(i)
+            return i
+
+        foo(1)  # [1,0]
+        st.text("---")  # [0,0]
+        foo(1)  # [1,1]
+
+        text = [
+            get_text_or_block(delta)
+            for delta in self.get_all_deltas_from_queue()
+            if get_text_or_block(delta) is not None
+        ]
+        assert text == ["1", "---", "1"]
+
+        paths = [
+            msg.metadata.delta_path
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+        ]
+        assert paths == [[1, 0], [0, 0], [1, 1]]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_inner_blocks(self, _, cache_decorator):
+        @cache_decorator(show_spinner=False)
+        def foo(i):
+            with st.container():
+                st.text(i)
+                return i
+
+        with st.container():  # [0,0]
+            st.text(0)  # [0,0,0]
+        st.text("---")  # [0,1]
+        with st.container():  # [0,2]
+            st.text(0)  # [0,2,0]
+
+        foo(1)  # [0,3] and [0,3,0]
+        st.text("---")  # [0,4]
+        foo(1)  # [0,5] and [0,5,0]
+
+        paths = [
+            msg.metadata.delta_path
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+        ]
+        assert paths == [
+            [0, 0],
+            [0, 0, 0],
+            [0, 1],
+            [0, 2],
+            [0, 2, 0],
+            [0, 3],
+            [0, 3, 0],
+            [0, 4],
+            [0, 5],
+            [0, 5, 0],
+        ]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_inner_direct(self, _, cache_decorator):
+        @cache_decorator(show_spinner=False)
+        def foo(i):
+            cont = st.container()
+            cont.text(i)
+            return i
+
+        foo(1)  # [0,0] and [0,0,0]
+        st.text("---")  # [0,1]
+        foo(1)  # [0,2] and [0,2,0]
+
+        text = self.get_text_delta_contents()
+        assert text == ["1", "---", "1"]
+
+        paths = [
+            msg.metadata.delta_path
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+        ]
+        assert paths == [[0, 0], [0, 0, 0], [0, 1], [0, 2], [0, 2, 0]]
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_cached_st_function_replay_outer_direct(self, _, cache_decorator):
+        cont = st.container()
+
+        @cache_decorator
+        def foo(i):
+            cont.text(i)
+            return i
+
+        # TODO make exception more specific
+        with self.assertRaises(CacheReplayClosureError):
+            foo(1)
+            st.text("---")
+            foo(1)
 
     @parameterized.expand(
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]

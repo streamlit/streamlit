@@ -13,6 +13,7 @@ max_line_length = 79
 
 [*.py]
 indent_size = 4
+max_line_length = 88
 
 # The JSON files contain newlines inconsistently
 [*.json]
