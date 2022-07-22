@@ -19,8 +19,6 @@ from unittest import mock
 import tornado.testing
 import tornado.web
 import tornado.websocket
-from tornado.ioloop import IOLoop
-from tornado.platform.asyncio import AsyncIOLoop
 from tornado.websocket import WebSocketClientConnection
 
 from streamlit.app_session import AppSession
@@ -40,13 +38,6 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
     """
 
     _next_session_id = 0
-
-    def get_new_ioloop(self) -> IOLoop:
-        """Returns the `.IOLoop` to use for this test. We explicitly
-        create a new AsyncIOLoop so that we can access its underlying
-        asyncio_loop instance in our `event_loop` property.
-        """
-        return AsyncIOLoop(make_current=False)
 
     def get_app(self) -> tornado.web.Application:
         self.server = Server(
