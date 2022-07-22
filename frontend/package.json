@@ -68,7 +68,7 @@
     "katex": "^0.13.24",
     "lodash": "^4.17.21",
     "mapbox-gl": "^1.11.1",
-    "moment": "^2.29.3",
+    "moment": "^2.29.4",
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.33",
     "node-emoji": "^1.10.0",

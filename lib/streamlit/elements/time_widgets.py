@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from datetime import datetime, date, time
 from textwrap import dedent
 from typing import Any, cast, List, Optional, Sequence, Tuple, TYPE_CHECKING, Union
 
-import attr
 from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
@@ -113,7 +113,7 @@ def _parse_max_date(
     return parsed_max_date
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class _DateInputValues:
     value: Sequence[date]
     is_range: bool
@@ -142,7 +142,7 @@ class _DateInputValues:
             ),
         )
 
-    def __attrs_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         if self.min > self.max:
             raise StreamlitAPIException(
                 f"The `min_value`, set to {self.min}, shouldn't be larger "

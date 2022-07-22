@@ -278,7 +278,7 @@ class ScriptRunner:
         # Create and attach the thread's ScriptRunContext
         ctx = ScriptRunContext(
             session_id=self._session_id,
-            enqueue=self._enqueue_forward_msg,
+            _enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
