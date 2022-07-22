@@ -683,6 +683,7 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
 
         self._fd, self._path = tempfile.mkstemp()
         self._server = Server(self._path, "test command line")
+        self._server._eventloop = self.asyncio_loop
 
     def tearDown(self) -> None:
         if event_based_path_watcher._MultiPathWatcher._singleton is not None:

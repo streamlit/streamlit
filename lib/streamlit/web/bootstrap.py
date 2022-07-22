@@ -66,7 +66,7 @@ def _set_up_signal_handler(server: Server) -> None:
 
     def signal_handler(signal_number, stack_frame):
         # The server will shut down its threads and stop the ioloop
-        server.stop(from_signal=True)
+        server.stop()
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -365,10 +365,9 @@ def run(
     # Create the server. It won't start running yet.
     server = Server(main_script_path, command_line)
 
-    # Install a signal handler that will shut down the ioloop
+    # Install a signal handler that will shut down the server
     # and close all our threads
     _set_up_signal_handler(server)
 
-    # Start the server and its ioloop. This function will not return until the
-    # server is shut down.
+    # Run the server. This function will not return until the server is shut down.
     asyncio.run(server.start(_on_server_start))

@@ -231,6 +231,9 @@ class Server:
         self._main_script_path = main_script_path
         self._command_line = command_line if command_line is not None else ""
 
+        # Will be set when we start.
+        self._eventloop: Optional[asyncio.AbstractEventLoop] = None
+
         # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
 
@@ -302,7 +305,6 @@ class Server:
         start_listening(app)
 
         port = config.get_option("server.port")
-
         LOGGER.debug("Server started on port %s", port)
 
         await self._loop_coroutine(on_started)
@@ -427,7 +429,7 @@ class Server:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
-            event_loop=asyncio.get_running_loop(),
+            event_loop=self._get_eventloop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -475,6 +477,8 @@ class Server:
                 pass
             else:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
+
+            self._eventloop = asyncio.get_running_loop()
 
             if on_started is not None:
                 on_started(self)
@@ -594,12 +598,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session_info.client.write_forward_msg(msg_to_send)
 
     def _enqueued_some_message(self) -> None:
-        asyncio.get_running_loop().call_soon_threadsafe(self._need_send_data.set)
+        self._get_eventloop().call_soon_threadsafe(self._need_send_data.set)
 
-    def stop(self, from_signal=False) -> None:
+    def stop(self) -> None:
         click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
-        asyncio.get_running_loop().call_soon_threadsafe(self._must_stop.set)
+        self._get_eventloop().call_soon_threadsafe(self._must_stop.set)
 
     def _create_app_session(
         self, client: SessionClient, user_info: Dict[str, Optional[str]]
@@ -629,7 +633,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
         session = AppSession(
-            event_loop=asyncio.get_running_loop(),
+            event_loop=self._get_eventloop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -669,6 +673,11 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         if len(self._session_info_by_id) == 0:
             self._set_state(State.NO_SESSIONS_CONNECTED)
+
+    def _get_eventloop(self) -> asyncio.AbstractEventLoop:
+        if self._eventloop is None:
+            raise RuntimeError("Server hasn't started yet!")
+        return self._eventloop
 
 
 def _set_tornado_log_levels() -> None:
