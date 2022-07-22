@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 import os
 import signal
 import sys
@@ -361,13 +362,8 @@ def run(
     _install_config_watchers(flag_options)
     _install_pages_watcher(main_script_path)
 
-    # Create our Tornado IOLoop.
-    # (AsyncIOLoop is actually the default IOLoop type - we're just being
-    # explicit about it so that we can grab its asyncio_loop instance.)
-    ioloop = AsyncIOLoop()
-
     # Create the server. It won't start running yet.
-    server = Server(ioloop, main_script_path, command_line)
+    server = Server(main_script_path, command_line)
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads
@@ -375,5 +371,4 @@ def run(
 
     # Start the server and its ioloop. This function will not return until the
     # server is shut down.
-    server.start(_on_server_start)
-    ioloop.start()
+    asyncio.run(server.start(_on_server_start))

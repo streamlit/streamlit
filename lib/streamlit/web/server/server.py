@@ -38,7 +38,6 @@ import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
-from tornado.platform.asyncio import AsyncIOLoop
 
 from streamlit import config
 from streamlit import file_util
@@ -227,12 +226,11 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
 class Server:
     def __init__(
-        self, ioloop: AsyncIOLoop, main_script_path: str, command_line: Optional[str]
+        self, main_script_path: str, command_line: Optional[str]
     ):
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
 
-        self._ioloop = ioloop
         self._main_script_path = main_script_path
         self._command_line = command_line if command_line is not None else ""
 
@@ -267,6 +265,10 @@ class Server:
     def main_script_path(self) -> str:
         return self._main_script_path
 
+    @property
+    def _ioloop(self) -> tornado.ioloop.IOLoop:
+        return tornado.ioloop.IOLoop.current()
+
     def on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
         Ensures that uploaded files from stale sessions get deleted.
@@ -288,7 +290,7 @@ class Server:
         """True if the session_id belongs to an active session."""
         return session_id in self._session_info_by_id
 
-    def start(self, on_started: Callable[["Server"], Any]) -> None:
+    async def start(self, on_started: Callable[["Server"], Any]) -> None:
         """Start the server.
 
         Parameters
@@ -310,7 +312,7 @@ class Server:
 
         LOGGER.debug("Server started on port %s", port)
 
-        self._ioloop.add_callback(self._loop_coroutine, on_started)
+        await self._loop_coroutine(on_started)
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
@@ -432,7 +434,7 @@ class Server:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,
+            event_loop=asyncio.get_event_loop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -649,7 +651,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
         session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,
+            event_loop=asyncio.get_event_loop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
