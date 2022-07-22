@@ -390,6 +390,7 @@ export function Header(props: TestHeaderProps): ReactElement {
         <RenderedMarkdown
           source={heading}
           allowHTML={false}
+          // WILLIAM overrides could be more because this is PURELY an inline string now
           overrideComponents={{ p: Fragment }}
         />
       </HeadingWithAnchor>
