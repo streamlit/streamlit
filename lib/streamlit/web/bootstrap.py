@@ -19,8 +19,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
-import tornado.ioloop
-from tornado.platform.asyncio import AsyncIOLoop
 
 from streamlit import config
 from streamlit import env_util
@@ -65,7 +63,7 @@ def _set_up_signal_handler(server: Server) -> None:
     LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
-        # The server will shut down its threads and stop the ioloop
+        # The server will shut down its threads and exit its loop.
         server.stop()
 
     signal.signal(signal.SIGTERM, signal_handler)
@@ -195,8 +193,7 @@ def _on_server_start(server: Server) -> None:
 
     # Schedule the browser to open using the IO Loop on the main thread, but
     # only if no other browser connects within 1s.
-    ioloop = tornado.ioloop.IOLoop.current()
-    ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
+    asyncio.get_running_loop().call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:
@@ -352,7 +349,7 @@ def run(
 ) -> None:
     """Run a script in a separate thread and start a server for the app.
 
-    This starts a blocking ioloop.
+    This starts a blocking asyncio eventloop.
     """
     _fix_sys_path(main_script_path)
     _fix_matplotlib_crash()
