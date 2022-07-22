@@ -1,7 +1,6 @@
 import asyncio
 import time
 import traceback
-from asyncio import AbstractEventLoop
 from enum import Enum
 from typing import Optional, Dict, Protocol, NamedTuple, Callable, Any, Tuple
 
@@ -92,7 +91,7 @@ class RuntimeState(Enum):
 
 
 class Runtime:
-    def __init__(self, event_loop: AbstractEventLoop, config: RuntimeConfig):
+    def __init__(self, config: RuntimeConfig):
         """Create a StreamlitRuntime. It won't be started yet.
 
         StreamlitRuntime is *not* thread-safe. Its public methods are only
@@ -100,12 +99,11 @@ class Runtime:
 
         Parameters
         ----------
-        event_loop
-            The asyncio event loop to run on.
         config
             Config options.
         """
-        self._event_loop = event_loop
+        # Will be set when we start.
+        self._eventloop: Optional[asyncio.AbstractEventLoop] = None
 
         self._script_path = config.script_path
         self._command_line = config.command_line
@@ -176,7 +174,7 @@ class Runtime:
         """
         return self._session_info_by_id.get(session_id, None)
 
-    def start(self, on_started: Optional[Callable[[], Any]] = None) -> None:
+    async def start(self, on_started: Optional[Callable[[], Any]] = None) -> None:
         """Start the runtime. This must be called only once, before
         any other functions are called.
 
@@ -194,7 +192,7 @@ class Runtime:
         ---------
         Must be called on the eventloop thread.
         """
-        self._event_loop.call_soon_threadsafe(self._loop_coroutine, on_started)
+        await self._loop_coroutine(on_started)
 
     def stop(self) -> None:
         """Request that Streamlit close all sessions and stop running.
@@ -209,7 +207,7 @@ class Runtime:
 
         LOGGER.debug("Runtime stopping...")
         self._set_state(RuntimeState.STOPPING)
-        self._event_loop.call_soon_threadsafe(self._must_stop.set)
+        self._get_eventloop().call_soon_threadsafe(self._must_stop.set)
 
     def is_active_session(self, session_id: str) -> bool:
         """True if the session_id belongs to an active session.
@@ -256,7 +254,7 @@ class Runtime:
         session_data = SessionData(self._script_path, self._command_line or "")
 
         session = AppSession(
-            event_loop=self._event_loop,
+            event_loop=self._get_eventloop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -360,7 +358,7 @@ class Runtime:
         session_data = SessionData(self._script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
-            event_loop=self._event_loop,
+            event_loop=self._get_eventloop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -412,6 +410,13 @@ class Runtime:
                 pass
             else:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
+
+            # Store the eventloop we're running on so that we can schedule
+            # callbacks on it when necessary. (We can't just call
+            # `asyncio.get_running_loop()` whenever we like, because we have
+            # some functions, e.g. `stop`, that can be called from other
+            # threads, and `asyncio.get_running_loop()` is thread-specific.)
+            self._eventloop = asyncio.get_running_loop()
 
             if on_started is not None:
                 on_started()
@@ -558,4 +563,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         ---------
         May be called on any thread.
         """
-        self._event_loop.call_soon_threadsafe(self._need_send_data.set)
+        self._get_eventloop().call_soon_threadsafe(self._need_send_data.set)
+
+    def _get_eventloop(self) -> asyncio.AbstractEventLoop:
+        """Return the asyncio eventloop that the Server was started with.
+        If the Server hasn't been started, this will raise an error.
+        """
+        if self._eventloop is None:
+            raise RuntimeError("Server hasn't started yet!")
+        return self._eventloop

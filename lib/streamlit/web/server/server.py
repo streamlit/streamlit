@@ -26,13 +26,11 @@ from typing import (
 
 import click
 import tornado.concurrent
-import tornado.ioloop
 import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
-from tornado.platform.asyncio import AsyncIOLoop
 
 from streamlit import config
 from streamlit import file_util
@@ -169,18 +167,13 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
 
 class Server:
-    def __init__(
-        self, ioloop: AsyncIOLoop, main_script_path: str, command_line: Optional[str]
-    ):
+    def __init__(self, main_script_path: str, command_line: Optional[str]):
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
 
         self._main_script_path = main_script_path
 
-        self._ioloop = ioloop
-
         self._runtime = Runtime(
-            ioloop.asyncio_loop,
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
@@ -194,7 +187,7 @@ class Server:
     def main_script_path(self) -> str:
         return self._main_script_path
 
-    def start(self, on_started: Callable[["Server"], Any]) -> None:
+    async def start(self, on_started: Callable[["Server"], Any]) -> None:
         """Start the server.
 
         Parameters
@@ -211,10 +204,9 @@ class Server:
         start_listening(app)
 
         port = config.get_option("server.port")
-
         LOGGER.debug("Server started on port %s", port)
 
-        self._runtime.start(on_started=lambda: on_started(self))
+        await self._runtime.start(on_started=lambda: on_started(self))
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
@@ -324,18 +316,9 @@ class Server:
 
         return self._main_script_path == Hello.__file__
 
-    def stop(self, from_signal=False) -> None:
+    def stop(self) -> None:
         click.secho("  Stopping...", fg="blue")
         self._runtime.stop()
-
-    def _on_stopped(self) -> None:
-        """Called when our runloop is exiting, to shut down the ioloop.
-        This will end our process.
-
-        (Tests can patch this method out, to prevent the test's ioloop
-        from being shutdown.)
-        """
-        self._ioloop.stop()
 
 
 def _set_tornado_log_levels() -> None:

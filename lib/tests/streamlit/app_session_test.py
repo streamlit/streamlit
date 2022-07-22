@@ -440,7 +440,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         thread.join()
 
         # _handle_scriptrunner_event_on_main_thread won't have been called
-        # yet, because we haven't yielded the ioloop.
+        # yet, because we haven't yielded the eventloop.
         mock_handle_event.assert_not_called()
 
         # Yield to let the AppSession's callbacks run.
@@ -483,7 +483,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         FAKE_EXCEPTION = RuntimeError("I am error")
         session.handle_backmsg_exception(FAKE_EXCEPTION)
 
-        # Messages get sent in an ioloop callback, which hasn't had a chance
+        # Messages get sent in an eventloop callback, which hasn't had a chance
         # to run yet. Our message queue should be empty.
         self.assertEqual([], forward_msg_queue_events)
 

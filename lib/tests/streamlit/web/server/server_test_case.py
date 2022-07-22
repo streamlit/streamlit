@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import typing
+
 import urllib.parse
 from asyncio import Future
 from unittest import mock
@@ -19,8 +19,6 @@ from unittest import mock
 import tornado.testing
 import tornado.web
 import tornado.websocket
-from tornado.ioloop import IOLoop
-from tornado.platform.asyncio import AsyncIOLoop
 from tornado.websocket import WebSocketClientConnection
 
 from streamlit.app_session import AppSession
@@ -41,23 +39,11 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
 
     _next_session_id = 0
 
-    def get_new_ioloop(self) -> IOLoop:
-        """Returns the `.IOLoop` to use for this test. We explicitly
-        create a new AsyncIOLoop so that we can access its underlying
-        asyncio_loop instance in our `event_loop` property.
-        """
-        return AsyncIOLoop(make_current=False)
-
     def get_app(self) -> tornado.web.Application:
-        # Create a Server, and patch its _on_stopped function
-        # to no-op. This prevents it from shutting down the
-        # ioloop when it stops.
         self.server = Server(
-            typing.cast(AsyncIOLoop, self.io_loop),
             "/not/a/script.py",
             "test command line",
         )
-        self.server._on_stopped = mock.MagicMock()  # type: ignore[assignment]
         app = self.server._create_app()
         return app
 

@@ -24,7 +24,6 @@ from typing import (
 )
 
 import tornado.concurrent
-import tornado.ioloop
 import tornado.locks
 import tornado.netutil
 import tornado.web
