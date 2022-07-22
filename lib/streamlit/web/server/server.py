@@ -478,6 +478,11 @@ class Server:
             else:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
 
+            # Store the eventloop we're running on so that we can schedule
+            # callbacks on it when necessary. (We can't just call
+            # `asyncio.get_running_loop()` whenever we like, because we have
+            # some functions, e.g. `stop`, that can be called from other
+            # threads, and `asyncio.get_running_loop()` is thread-specific.)
             self._eventloop = asyncio.get_running_loop()
 
             if on_started is not None:
@@ -675,6 +680,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             self._set_state(State.NO_SESSIONS_CONNECTED)
 
     def _get_eventloop(self) -> asyncio.AbstractEventLoop:
+        """Return the asyncio eventloop that the Server was started with.
+        If the Server hasn't been started, this will raise an error.
+        """
         if self._eventloop is None:
             raise RuntimeError("Server hasn't started yet!")
         return self._eventloop
