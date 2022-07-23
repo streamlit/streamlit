@@ -229,7 +229,7 @@ class WriteMixin:
                 # Cast is needed due to:
                 # https://github.com/python/mypy/issues/12933
                 self.dg.text(cast(type, arg))
-            elif hasattr(arg, "_repr_html_"):
+            elif hasattr(arg, "_repr_html_") and arg._repr_html_:
                 self.dg.markdown(
                     arg._repr_html_(),
                     unsafe_allow_html=True,
