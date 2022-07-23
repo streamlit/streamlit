@@ -1,3 +1,17 @@
+# Copyright 2018-2022 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import asyncio
 import time
 import traceback
@@ -113,18 +127,14 @@ class Runtime:
 
         self._state = RuntimeState.INITIAL
 
-        # asyncio eventloop synchronization primitives.
-        # Note: these are not thread-safe!
-        # self._must_stop = asyncio.Event()
-        # self._has_connection = asyncio.Condition()
-        # self._need_send_data = asyncio.Event()
+        # Set after Runtime.stop() is called. Never cleared.
+        self._must_stop = asyncio.Event()
 
-        # TODO: fix the asyncio primitives. asyncio.Condition requires a lock.
-        import tornado.locks
+        # Set when a client connects; cleared when we have no connected clients.
+        self._has_connection = asyncio.Event()
 
-        self._must_stop = tornado.locks.Event()
-        self._has_connection = tornado.locks.Condition()
-        self._need_send_data = tornado.locks.Event()
+        # Set after a ForwardMsg is enqueued; cleared when we flush ForwardMsgs.
+        self._need_send_data = asyncio.Event()
 
         # Initialize managers
         self._message_cache = ForwardMsgCache()
@@ -279,7 +289,7 @@ class Runtime:
 
         self._session_info_by_id[session.id] = SessionInfo(client, session)
         self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
-        self._has_connection.notify_all()
+        self._has_connection.set()
 
         return session.id
 
@@ -311,6 +321,7 @@ class Runtime:
             self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
             and len(self._session_info_by_id) == 0
         ):
+            self._has_connection.clear()
             self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
 
     def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
