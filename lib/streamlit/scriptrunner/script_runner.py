@@ -23,7 +23,6 @@ from typing import Dict, Optional, Callable
 from blinker import Signal
 
 from streamlit import config
-from streamlit import magic
 from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
@@ -99,6 +98,7 @@ class ScriptRunner:
         uploaded_file_mgr: UploadedFileManager,
         initial_rerun_data: RerunData,
         user_info: Dict[str, Optional[str]],
+        notebook_runner: 'NotebookRunner',
     ):
         """Initialize the ScriptRunner.
 
@@ -134,6 +134,7 @@ class ScriptRunner:
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_mgr
         self._user_info = user_info
+        self._notebook_runner = notebook_runner
 
         # Initialize SessionState with the latest widget states
         session_state.set_widgets_from_proto(client_state.widget_states)
@@ -328,6 +329,8 @@ class ScriptRunner:
         if not config.get_option("runner.installTracer"):
             self._maybe_handle_execution_control_request()
 
+        self._notebook_runner.record_msg(msg)
+
         # Pass the message to our associated AppSession.
         self.on_event.send(
             self, event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
@@ -479,23 +482,6 @@ class ScriptRunner:
             with source_util.open_python_file(script_path) as f:
                 filebody = f.read()
 
-            if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, script_path)
-
-            code = compile(
-                filebody,
-                # Pass in the file path so it can show up in exceptions.
-                script_path,
-                # We're compiling entire blocks of Python, so we need "exec"
-                # mode (as opposed to "eval" or "single").
-                mode="exec",
-                # Don't inherit any flags or "future" statements.
-                flags=0,
-                dont_inherit=1,
-                # Use the default optimization options.
-                optimize=-1,
-            )
-
         except BaseException as e:
             # We got a compile error. Send an error event and bail immediately.
             LOGGER.debug("Fatal script error: %s", e)
@@ -552,12 +538,11 @@ class ScriptRunner:
 
                 ctx.on_script_start()
 
-                # TODO XXX HACK: Add cell to the top of every script.
-                # This should be done in JS, but it's too hard over there.
-                exec("import streamlit as st\nst.cell()", module.__dict__)
+                self._notebook_runner.run(
+                    module.__dict__, filebody, script_path)
 
-                exec(code, module.__dict__)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
+
         except RerunException as e:
             rerun_exception_data = e.rerun_data
 

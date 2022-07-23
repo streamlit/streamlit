@@ -126,6 +126,10 @@ class AppSession:
 
         self._state = AppSessionState.APP_NOT_RUNNING
 
+        # Avoid dependency cycle by importing here.
+        from streamlit.NotebookRunner import NotebookRunner
+        self._notebook_runner = NotebookRunner('', '__no_path__', self._enqueue_forward_msg)
+
         # Need to remember the client state here because when a script reruns
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
@@ -215,6 +219,7 @@ class AppSession:
             return
 
         self._session_data.enqueue(msg)
+
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
 
@@ -304,6 +309,7 @@ class AppSession:
             uploaded_file_mgr=self._uploaded_file_mgr,
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,
+            notebook_runner=self._notebook_runner,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

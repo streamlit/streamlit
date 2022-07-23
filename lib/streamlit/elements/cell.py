@@ -31,7 +31,6 @@ class CellMixin:
         user_frame = curr_frame.f_back
 
         cell_proto = CellProto()
-        cell_proto.file_path = user_frame.f_code.co_filename
         cell_proto.cell_index = _get_next_cell_index()
         return self.dg._enqueue("cell", cell_proto)
 

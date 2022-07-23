@@ -157,6 +157,9 @@ class WStates(MutableMapping[str, Any]):
     def __delitem__(self, k: str) -> None:
         del self.states[k]
 
+    def __contains__(self, k: str) -> bool:
+        return k in self.states
+
     def __len__(self) -> int:
         return len(self.states)
 
