@@ -40,6 +40,10 @@ const DEFAULT_DATA_NAME = "source"
  * For example, in e2e/scripts/add_rows.py
  */
 const BOTTOM_PADDING = 20
+/**
+ * Prevent problem with cut off labels on y-axis
+ */
+const LEFT_PADDING = 5
 
 /** Types of dataframe-indices that are supported as x axis. */
 const SUPPORTED_INDEX_TYPES = new Set([
@@ -231,6 +235,10 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
     if (spec.padding.bottom == null) {
       spec.padding.bottom = BOTTOM_PADDING
+    }
+
+    if (spec.padding.left == null) {
+      spec.padding.left = LEFT_PADDING
     }
 
     if (spec.datasets) {
