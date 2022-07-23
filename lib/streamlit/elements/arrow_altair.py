@@ -34,6 +34,7 @@ import altair as alt
 import pandas as pd
 from altair.vegalite.v4.api import Chart
 from numpy.distutils.misc_util import is_sequence
+from pandas.api.types import infer_dtype
 
 from streamlit.errors import StreamlitAPIException
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
@@ -407,6 +408,15 @@ def _maybe_melt(
             var_name=color_name,
             value_name=y_name,
         )
+        y_column = data[y_name]
+        if (
+            y_column.dtype == "object"
+            and "mixed" in infer_dtype(y_column)
+            and len(y_column.unique()) > 100
+        ):
+            raise StreamlitAPIException(
+                "The selected columns for the y axis contain too many unique values with mixed types."
+            )
 
         # Arrow has problems with object types after melting two different dtypes
         # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
@@ -417,6 +427,17 @@ def _maybe_melt(
         color_name = "variable"
         # -> data will be melted into the value prop for y
         data = pd.melt(data, id_vars=[x_name], var_name=color_name, value_name=y_name)
+
+        y_column = data[y_name]
+        if (
+            y_column.dtype == "object"
+            and "mixed" in infer_dtype(y_column)
+            and len(y_column.unique()) > 100
+        ):
+            raise StreamlitAPIException(
+                "The selected columns for the y axis contain too many unique values with mixed types."
+            )
+
         # Arrow has problems with object types after melting two different dtypes
         # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
         data = type_util.convert_mixed_columns_to_string(data)
