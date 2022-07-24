@@ -16,7 +16,7 @@ import ast
 import sys
 
 
-def add_magic(code, script_path):
+def add_magic(code, script_path, is_root):
     """Modifies the code to support magic Streamlit commands.
 
     Parameters
@@ -34,7 +34,7 @@ def add_magic(code, script_path):
     """
     # Pass script_path so we get pretty exceptions.
     tree = ast.parse(code, script_path, "exec")
-    return _modify_ast_subtree(tree, is_root=True)
+    return _modify_ast_subtree(tree, is_root=is_root)
 
 
 def _modify_ast_subtree(tree, body_attr="body", is_root=False):
@@ -72,7 +72,8 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
 
         # Convert standalone expression nodes to st.write
         elif node_type is ast.Expr:
-            value = _get_st_write_from_expr(node, i, parent_type=type(tree))
+            value = _get_st_write_from_expr(
+                node, i, parent_type=type(tree), is_root=is_root)
             if value is not None:
                 node.value = value
 
@@ -129,14 +130,14 @@ def _build_st_write_call(nodes):
     )
 
 
-def _get_st_write_from_expr(node, i, parent_type):
+def _get_st_write_from_expr(node, i, parent_type, is_root):
     # Don't change function calls
     if type(node.value) is ast.Call:
         return None
 
     # Don't change Docstring nodes
     if (
-        i == 0
+        is_root and i == 0
         and _is_docstring_node(node.value)
         and parent_type in (ast.FunctionDef, ast.Module)
     ):

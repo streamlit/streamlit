@@ -212,7 +212,9 @@ class _CellRunner:
             code = self._body
 
             if config.get_option("runner.magicEnabled"):
-                code = magic.add_magic(code, self._script_path)
+                is_root = self._cell_index == 0
+                code = magic.add_magic(
+                    code, self._script_path, is_root=is_root)
 
             code = compile(
                 code,
