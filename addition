@@ -1,0 +1,10 @@
+import stramlit as st
+def add(a,b):
+ return a+b
+def main():
+st.title("addition")
+st.write("Its a simle adding numbers app")
+a=st.number_input("Enter a number")
+b=st.number_input("Enter another number")
+st.write(add(a,b))
+main()
