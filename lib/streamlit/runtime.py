@@ -75,7 +75,7 @@ class RuntimeConfig(NamedTuple):
 class SessionInfo:
     """Type stored in our _session_info_by_id dict.
 
-    For each AppSession, the server tracks that session's
+    For each AppSession, the Runtime tracks that session's
     script_run_count. This is used to track the age of messages in
     the ForwardMsgCache.
     """
@@ -428,7 +428,7 @@ class Runtime:
             elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
-                raise RuntimeError(f"Bad server state at start: {self._state}")
+                raise RuntimeError(f"Bad Runtime state at start: {self._state}")
 
             # Store the eventloop we're running on so that we can schedule
             # callbacks on it when necessary. (We can't just call
@@ -578,9 +578,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         self._get_eventloop().call_soon_threadsafe(self._need_send_data.set)
 
     def _get_eventloop(self) -> asyncio.AbstractEventLoop:
-        """Return the asyncio eventloop that the Server was started with.
-        If the Server hasn't been started, this will raise an error.
+        """Return the asyncio eventloop that the Runtime was started with.
+        If the Runtime hasn't been started, this will raise an error.
         """
         if self._eventloop is None:
-            raise RuntimeError("Server hasn't started yet!")
+            raise RuntimeError("Runtime hasn't started yet!")
         return self._eventloop
