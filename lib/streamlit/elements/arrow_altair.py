@@ -374,6 +374,10 @@ def _maybe_melt(
         x_title = ""
         data = data.reset_index()
 
+    if y and is_sequence(y) and len(y) == 1:
+        # Sequence is only a single element
+        y = str(y[0])
+
     if y and isinstance(y, str):
         # y is a single string -> use for y-axis
         y_name = y
