@@ -412,11 +412,11 @@ def _maybe_melt(
             var_name=color_column,
             value_name=y_column,
         )
-        y_column = data_df[y_column]
+        y_series = data_df[y_column]
         if (
-            y_column.dtype == "object"
-            and "mixed" in infer_dtype(y_column)
-            and len(y_column.unique()) > 100
+            y_series.dtype == "object"
+            and "mixed" in infer_dtype(y_series)
+            and len(y_series.unique()) > 100
         ):
             raise StreamlitAPIException(
                 "The selected columns for the y axis contain too many unique values with mixed types."
@@ -434,11 +434,11 @@ def _maybe_melt(
             data_df, id_vars=[x_column], var_name=color_column, value_name=y_column
         )
 
-        y_column = data_df[y_column]
+        y_series = data_df[y_column]
         if (
-            y_column.dtype == "object"
-            and "mixed" in infer_dtype(y_column)
-            and len(y_column.unique()) > 100
+            y_series.dtype == "object"
+            and "mixed" in infer_dtype(y_series)
+            and len(y_series.unique()) > 100
         ):
             raise StreamlitAPIException(
                 "The selected columns for the y axis contain too many unique values with mixed types."
