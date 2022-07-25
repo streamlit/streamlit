@@ -264,7 +264,9 @@ class Server:
                     (
                         make_url_path_regex(base, "script-health-check"),
                         HealthHandler,
-                        dict(callback=lambda: self._runtime.does_script_run_without_error()),
+                        dict(
+                            callback=lambda: self._runtime.does_script_run_without_error()
+                        ),
                     )
                 ]
             )
