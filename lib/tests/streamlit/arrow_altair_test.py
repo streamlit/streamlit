@@ -123,7 +123,8 @@ class ArrowChartsTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
         self.assertEqual(chart_spec["mark"], "line")
-        print(chart_spec)
+        self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
+        self.assertEqual(chart_spec["encoding"]["y"]["field"], "b")
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
