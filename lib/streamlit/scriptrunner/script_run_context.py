@@ -53,6 +53,7 @@ class ScriptRunContext:
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
     widget_ids_this_run: Set[str] = field(default_factory=set)
+    widget_user_keys_this_run: Set[str] = field(default_factory=set)
     form_ids_this_run: Set[str] = field(default_factory=set)
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = field(
@@ -62,6 +63,7 @@ class ScriptRunContext:
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
+        self.widget_user_keys_this_run = set()
         self.form_ids_this_run = set()
         self.query_string = query_string
         self.page_script_hash = page_script_hash

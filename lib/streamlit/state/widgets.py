@@ -191,6 +191,18 @@ def register_widget(
         # we're running as a "bare" Python script, and not via `streamlit run`).
         return RegisterWidgetResult.failure(deserializer=deserializer)
 
+    # Ensure another widget with the same user key hasn't already been registered.
+    if user_key is not None:
+        if user_key not in ctx.widget_user_keys_this_run:
+            ctx.widget_user_keys_this_run.add(user_key)
+        else:
+            raise DuplicateWidgetID(
+                _build_duplicate_widget_message(
+                    widget_func_name if widget_func_name is not None else element_type,
+                    user_key,
+                )
+            )
+
     # Ensure another widget with the same id hasn't already been registered.
     new_widget = widget_id not in ctx.widget_ids_this_run
     if new_widget:
