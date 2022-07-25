@@ -19,23 +19,18 @@ import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
-// export interface StyledSidebarProps {
-//   isCollapsed: boolean
-//   sidebarWidth: string
-// }
-
-// export const StyledSidebar = styled.section<StyledSidebarProps>(({ isCollapsed, sidebarWidth, theme }) => ({
-//   [`@media (max-width: ${theme.breakpoints.md})`]: {
-//     marginLeft: theme.spacing.none,
-//     // Instead of 100% width and height, we want to make sure
-//     // the sidebar takes all available space when viewports change
-//     position: "absolute",
-//     top: 0,
-//     left: 0,
-//     right: 0,
-//     bottom: 0,
-//   },
-// }))
+export const StyledSidebar = styled.section(({ theme }) => ({
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    marginLeft: theme.spacing.none,
+    // Instead of 100% width and height, we want to make sure
+    // the sidebar takes all available space when viewports change
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+}))
 
 export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   position: "relative",
@@ -295,18 +290,18 @@ export const StyledSidebarCollapsedControl = styled.div<
   },
 }))
 
-export const StyledResizer = styled.div(({ theme }) => ({
-  [`@media (max-width: ${theme.breakpoints.md})`]: {
-    marginLeft: theme.spacing.none,
-    // Instead of 100% width and height, we want to make sure
-    // the sidebar takes all available space when viewports change
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-}))
+export interface StyledResizerProps {
+  isCollapsed: boolean
+  sidebarWidth: string
+}
+
+export const StyledResizer = styled.div<StyledResizerProps>(
+  ({ isCollapsed, sidebarWidth, theme }) => ({
+    transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "none",
+    opacity: isCollapsed ? 0 : 1,
+    transition: "opacity 400ms, transform 400ms",
+  })
+)
 
 export interface StyledResizeHandleProps {
   isCollapsed: boolean
@@ -319,7 +314,6 @@ export const StyledResizeHandle = styled.div<StyledResizeHandleProps>(
     height: "100%",
     top: "0px",
     cursor: "col-resize",
-    right: "-5px",
     zIndex: theme.zIndices.sidebarMobile,
     marginTop: "2px",
 
