@@ -139,6 +139,7 @@ class Runtime:
         # Initialize managers
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
+        self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
 
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_memo_stats_provider())
