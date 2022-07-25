@@ -142,7 +142,7 @@ class MarkdownMixin:
         language : str
             The language that the code is written in, for syntax highlighting.
             If omitted, the code will be unstyled.
-            
+
             For a list of available ``language`` imports, see:
 
             https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
