@@ -26,7 +26,7 @@ import { IAppPage, PageConfig } from "src/autogen/proto"
 import { Theme } from "src/theme"
 
 import {
-  // StyledSidebar,
+  StyledSidebar,
   StyledSidebarCloseButton,
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
@@ -199,65 +199,70 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
 
-    const minWidth = collapsedSidebar ? 0 : 366
-    const maxWidth = collapsedSidebar ? 0 : 500
+    const minWidth = collapsedSidebar ? 0 : Math.min(244, window.innerWidth)
+    const maxWidth = collapsedSidebar
+      ? 0
+      : Math.min(550, window.innerWidth * 0.9)
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
-      <Resizable
-        data-testid="resizableComponent"
-        enable={{
-          top: false,
-          right: true,
-          bottom: false,
-          left: false,
-        }}
-        minWidth={minWidth}
-        maxWidth={maxWidth}
-        size={{ width: sidebarWidth, height: window.innerHeight }}
-        handleComponent={{
-          right: <StyledResizeHandle isCollapsed={collapsedSidebar} />,
-        }}
-        as={StyledResizer}
-        onResizeStop={(e, direction, ref, d) => {
-          const newWidth = parseInt(sidebarWidth, 10) + d.width
-          this.setSidebarWidth(newWidth)
-        }}
-      >
-        <StyledSidebarContent
-          isCollapsed={collapsedSidebar}
-          hideScrollbar={hideScrollbar}
-          sidebarWidth={sidebarWidth}
+      <StyledSidebar>
+        <Resizable
+          data-testid="resizableComponent"
+          enable={{
+            top: false,
+            right: true,
+            bottom: false,
+            left: false,
+          }}
+          minWidth={minWidth}
+          maxWidth={maxWidth}
+          size={{ width: sidebarWidth, height: window.innerHeight }}
+          handleComponent={{
+            right: <StyledResizeHandle isCollapsed={collapsedSidebar} />,
+          }}
+          as={StyledResizer}
+          onResizeStop={(e, direction, ref, d) => {
+            const newWidth = parseInt(sidebarWidth, 10) + d.width
+            this.setSidebarWidth(newWidth)
+          }}
         >
-          <StyledSidebarCloseButton>
+          <StyledSidebarContent
+            isCollapsed={collapsedSidebar}
+            hideScrollbar={hideScrollbar}
+            sidebarWidth={sidebarWidth}
+            className="sidebarContent"
+          >
+            <StyledSidebarCloseButton>
+              <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
+                <Icon content={Close} size="lg" />
+              </Button>
+            </StyledSidebarCloseButton>
+            {!hideSidebarNav && (
+              <SidebarNav
+                appPages={appPages}
+                collapseSidebar={this.toggleCollapse}
+                currentPageScriptHash={currentPageScriptHash}
+                hasSidebarElements={hasElements}
+                hideParentScrollbar={this.hideScrollbar}
+                onPageChange={onPageChange}
+                pageLinkBaseUrl={pageLinkBaseUrl}
+              />
+            )}
+            <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
+              {children}
+            </StyledSidebarUserContent>
+          </StyledSidebarContent>
+          <StyledSidebarCollapsedControl
+            chevronDownshift={chevronDownshift}
+            isCollapsed={collapsedSidebar}
+          >
             <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
-              <Icon content={Close} size="lg" />
+              <Icon content={ChevronRight} size="lg" />
             </Button>
-          </StyledSidebarCloseButton>
-          {!hideSidebarNav && (
-            <SidebarNav
-              appPages={appPages}
-              collapseSidebar={this.toggleCollapse}
-              currentPageScriptHash={currentPageScriptHash}
-              hasSidebarElements={hasElements}
-              hideParentScrollbar={this.hideScrollbar}
-              onPageChange={onPageChange}
-              pageLinkBaseUrl={pageLinkBaseUrl}
-            />
-          )}
-          <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
-            {children}
-          </StyledSidebarUserContent>
-        </StyledSidebarContent>
-        <StyledSidebarCollapsedControl
-          chevronDownshift={chevronDownshift}
-          isCollapsed={collapsedSidebar}
-        >
-          <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
-            <Icon content={ChevronRight} size="lg" />
-          </Button>
-        </StyledSidebarCollapsedControl>
-      </Resizable>
+          </StyledSidebarCollapsedControl>
+        </Resizable>
+      </StyledSidebar>
     )
   }
 }
