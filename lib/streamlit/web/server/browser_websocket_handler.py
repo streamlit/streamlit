@@ -36,8 +36,8 @@ from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
+from streamlit.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import is_url_from_allowed_origins
-from streamlit.web.server.server_util import serialize_forward_msg
 
 LOGGER: Final = get_logger(__name__)
 
@@ -141,4 +141,5 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         except BaseException as e:
             LOGGER.error(e)
-            self._session.handle_backmsg_exception(e)
+            raise RuntimeError("TODO")
+            # self._session.handle_backmsg_exception(e)

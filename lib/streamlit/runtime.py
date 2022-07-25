@@ -33,12 +33,12 @@ from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime_util import is_cacheable_msg
 from streamlit.session_data import SessionData
 from streamlit.state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.stats import StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
-from streamlit.web.server.server_util import is_cacheable_msg
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
@@ -120,7 +120,7 @@ class Runtime:
         self._eventloop: Optional[asyncio.AbstractEventLoop] = None
 
         self._script_path = config.script_path
-        self._command_line = config.command_line
+        self._command_line = config.command_line or ""
 
         # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
