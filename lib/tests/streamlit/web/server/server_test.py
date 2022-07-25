@@ -36,6 +36,7 @@ from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime_util import is_cacheable_msg, serialize_forward_msg
 from streamlit.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
 from streamlit.web.server.server import DebugHandler
@@ -43,15 +44,11 @@ from streamlit.web.server.server import HealthHandler
 from streamlit.web.server.server import MAX_PORT_SEARCH_RETRIES
 from streamlit.web.server.server import MessageCacheHandler
 from streamlit.web.server.server import RetriesExceeded
-from streamlit.web.server.server import Server
 from streamlit.web.server.server import RuntimeState
+from streamlit.web.server.server import Server
 from streamlit.web.server.server import StaticFileHandler
 from streamlit.web.server.server import start_listening
-from streamlit.web.server.server_util import (
-    is_cacheable_msg,
-    is_url_from_allowed_origins,
-    serialize_forward_msg,
-)
+from streamlit.web.server.server_util import is_url_from_allowed_origins
 from .server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)

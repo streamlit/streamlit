@@ -37,7 +37,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get our connected BrowserWebSocketHandler
-            session_info = list(self.server._session_info_by_id.values())[0]
+            session_info = list(self.server._runtime._session_info_by_id.values())[0]
             websocket_handler = session_info.client
             self.assertIsInstance(websocket_handler, BrowserWebSocketHandler)
 
