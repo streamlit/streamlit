@@ -19,18 +19,24 @@ import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
-export const StyledSidebar = styled.section(({ theme }) => ({
-  [`@media (max-width: ${theme.breakpoints.md})`]: {
-    marginLeft: theme.spacing.none,
-    // Instead of 100% width and height, we want to make sure
-    // the sidebar takes all available space when viewports change
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-}))
+
+// export interface StyledSidebarProps {
+//   isCollapsed: boolean
+//   sidebarWidth: string
+// }
+
+// export const StyledSidebar = styled.section<StyledSidebarProps>(({ isCollapsed, sidebarWidth, theme }) => ({
+//   [`@media (max-width: ${theme.breakpoints.md})`]: {
+//     marginLeft: theme.spacing.none,
+//     // Instead of 100% width and height, we want to make sure
+//     // the sidebar takes all available space when viewports change
+//     position: "absolute",
+//     top: 0,
+//     left: 0,
+//     right: 0,
+//     bottom: 0,
+//   },
+// }))
 
 export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   position: "relative",
@@ -271,6 +277,7 @@ export interface StyledSidebarCollapsedControlProps {
   chevronDownshift: number
   isCollapsed: boolean
 }
+
 export const StyledSidebarCollapsedControl = styled.div<
   StyledSidebarCollapsedControlProps
 >(({ chevronDownshift, isCollapsed, theme }) => ({
@@ -287,4 +294,37 @@ export const StyledSidebarCollapsedControl = styled.div<
   [`@media (max-width: ${theme.breakpoints.md})`]: {
     color: theme.colors.bodyText,
   },
+}))
+
+export const StyledResizer = styled.div(({ theme }) => ({
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    marginLeft: theme.spacing.none,
+    // Instead of 100% width and height, we want to make sure
+    // the sidebar takes all available space when viewports change
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+}))
+
+export interface StyledResizeHandleProps {
+  isCollapsed: boolean
+}
+
+export const StyledResizeHandle = styled.div<StyledResizeHandleProps>(({ isCollapsed, theme }) => ({
+  position: "absolute",
+  width: "10px",
+  height: "100%",
+  top: "0px",
+  cursor: "col-resize",
+  right: "-5px",
+  zIndex: 999995,
+  marginTop: "2px",
+
+  "&:hover" : {
+    backgroundColor: isCollapsed ? "transparent" : "blue",
+  }
+
 }))
