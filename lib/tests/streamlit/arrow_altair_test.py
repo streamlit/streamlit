@@ -98,9 +98,9 @@ class ArrowChartsTest(testutil.DeltaGeneratorTestCase):
         """Test st._arrow_line_chart."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[0, "a", 20], [0, "b", 30], [0, "c", 50]],
+            [[0, 20, "a"], [0, 30, "b"], [0, 50, "c"]],
             index=[0, 1, 2],
-            columns=["index", "variable", "value"],
+            columns=["index", "value", "variable"],
         )
 
         st._arrow_line_chart(df)
@@ -116,7 +116,7 @@ class ArrowChartsTest(testutil.DeltaGeneratorTestCase):
     def test_arrow_line_chart_with_x_y(self):
         """Test st._arrow_line_chart."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        EXPECTED_DATAFRAME = pd.DataFrame([[20, 30, 50]], columns=["a", "b"])
+        EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
 
         st._arrow_line_chart(df, x="a", y="b")
 
@@ -134,7 +134,7 @@ class ArrowChartsTest(testutil.DeltaGeneratorTestCase):
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         df.set_index("a", inplace=True)
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[20, "b", 30], [20, "c", 50]],
+            [[20, 30, "b"], [20, 50, "c"]],
             index=[0, 1],
             columns=["a", "value", "variable"],
         )
@@ -153,7 +153,7 @@ class ArrowChartsTest(testutil.DeltaGeneratorTestCase):
         """Test st._arrow_area_chart."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[0, "a", 20], [0, "b", 30], [0, "c", 50]],
+            [[0, 20, "a"], [0, 30, "b"], [0, 50, "c"]],
             index=[0, 1, 2],
             columns=["index", "value", "variable"],
         )
@@ -172,7 +172,7 @@ class ArrowChartsTest(testutil.DeltaGeneratorTestCase):
         """Test st._arrow_bar_chart."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[0, "a", 20], [0, "b", 30], [0, "c", 50]],
+            [[0, 20, "a"], [0, 30, "b"], [0, 50, "c"]],
             index=[0, 1, 2],
             columns=["index", "value", "variable"],
         )
