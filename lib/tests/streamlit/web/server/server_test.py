@@ -682,7 +682,7 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
 
         self._fd, self._path = tempfile.mkstemp()
         self._server = Server(self._path, "test command line")
-        self._server._eventloop = self.asyncio_loop
+        self._server._runtime._eventloop = self.asyncio_loop
 
     def tearDown(self) -> None:
         if event_based_path_watcher._MultiPathWatcher._singleton is not None:
@@ -714,13 +714,10 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
     @pytest.mark.slow
     @tornado.testing.gen_test(timeout=30)
     async def test_timeout_script(self):
-        try:
-            streamlit.web.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 0.1
+        with patch("streamlit.runtime.SCRIPT_RUN_CHECK_TIMEOUT", new=0.1):
             await self._check_script_loading(
                 "import time\n\ntime.sleep(5)", False, "timeout"
             )
-        finally:
-            streamlit.web.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 60
 
     async def _check_script_loading(self, script, expected_loads, expected_msg):
         with os.fdopen(self._fd, "w") as tmp:
@@ -748,7 +745,10 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
 
     def get_app(self):
         server = Server("mock/script/path", "test command line")
-        server.does_script_run_without_error = self.does_script_run_without_error
+        server._runtime.does_script_run_without_error = (
+            self.does_script_run_without_error
+        )
+        server._runtime._eventloop = self.asyncio_loop
         return server._create_app()
 
     def test_endpoint(self):
