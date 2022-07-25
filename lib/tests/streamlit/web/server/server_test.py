@@ -460,9 +460,9 @@ class ServerUtilsTest(unittest.TestCase):
     def test_should_limit_msg_size(self):
         max_message_size_mb = 50
         # Set max message size to defined value
-        from streamlit.web.server import server_util
+        from streamlit import runtime_util
 
-        server_util._max_message_size_bytes = None  # Reset cached value
+        runtime_util._max_message_size_bytes = None  # Reset cached value
         config._set_option("server.maxMessageSize", max_message_size_mb, "test")
 
         # Set up a larger than limit ForwardMsg string
