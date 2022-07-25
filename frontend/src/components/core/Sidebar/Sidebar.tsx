@@ -26,11 +26,13 @@ import { IAppPage, PageConfig } from "src/autogen/proto"
 import { Theme } from "src/theme"
 
 import {
-  StyledSidebar,
+  // StyledSidebar,
   StyledSidebarCloseButton,
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledSidebarContent,
+  StyledResizer,
+  StyledResizeHandle,
 } from "./styled-components"
 import IsSidebarContext from "./IsSidebarContext"
 import SidebarNav from "./SidebarNav"
@@ -51,6 +53,7 @@ export interface SidebarProps {
 interface State {
   collapsedSidebar: boolean
   sidebarWidth: string
+  resizeHover: boolean
   lastInnerWidth: number
 
   // When hovering the nav
@@ -75,6 +78,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth: window.localStorage.getItem("sidebarWidth") || "336",
+      resizeHover: false,
       lastInnerWidth: window ? window.innerWidth : Infinity,
       hideScrollbar: false,
     }
@@ -145,6 +149,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     window.localStorage.setItem("sidebarWidth", newWidth)
   }
 
+  toggleHover = (): void => {
+    const { resizeHover } = this.state
+
+    this.setState({ resizeHover: !resizeHover })
+  }
+
   checkMobileOnResize = (): boolean => {
     if (!window) return false
 
@@ -194,17 +204,19 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
-      <StyledSidebar
-        data-testid="stSidebar"
-        aria-expanded={!collapsedSidebar}
-        ref={this.sidebarRef}
-      >
         <Resizable
           data-testid="resizableComponent"
+          enable={{
+            top: false,
+            right: true,
+            bottom: false,
+            left: false,
+          }}
           minWidth={minWidth}
           maxWidth={maxWidth}
           size={{ width: sidebarWidth, height: window.innerHeight }}
-          style={{ borderRight: "4px solid transparent" }}
+          handleComponent={{right: <StyledResizeHandle isCollapsed={collapsedSidebar}/>}}
+          as={StyledResizer}
           onResizeStop={(e, direction, ref, d) => {
             const newWidth = parseInt(sidebarWidth, 10) + d.width
             this.setSidebarWidth(newWidth)
@@ -235,7 +247,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>
-        </Resizable>
         <StyledSidebarCollapsedControl
           chevronDownshift={chevronDownshift}
           isCollapsed={collapsedSidebar}
@@ -244,7 +255,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             <Icon content={ChevronRight} size="lg" />
           </Button>
         </StyledSidebarCollapsedControl>
-      </StyledSidebar>
+        </Resizable>
     )
   }
 }
