@@ -19,7 +19,6 @@ import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
-
 // export interface StyledSidebarProps {
 //   isCollapsed: boolean
 //   sidebarWidth: string
@@ -313,18 +312,21 @@ export interface StyledResizeHandleProps {
   isCollapsed: boolean
 }
 
-export const StyledResizeHandle = styled.div<StyledResizeHandleProps>(({ isCollapsed, theme }) => ({
-  position: "absolute",
-  width: "10px",
-  height: "100%",
-  top: "0px",
-  cursor: "col-resize",
-  right: "-5px",
-  zIndex: 999995,
-  marginTop: "2px",
+export const StyledResizeHandle = styled.div<StyledResizeHandleProps>(
+  ({ isCollapsed, theme }) => ({
+    position: "absolute",
+    width: "10px",
+    height: "100%",
+    top: "0px",
+    cursor: "col-resize",
+    right: "-5px",
+    zIndex: theme.zIndices.sidebarMobile,
+    marginTop: "2px",
 
-  "&:hover" : {
-    backgroundColor: isCollapsed ? "transparent" : "blue",
-  }
-
-}))
+    "&:hover": {
+      backgroundImage: isCollapsed
+        ? "transparent"
+        : "linear-gradient(to right, #c0c2c4 , transparent)",
+    },
+  })
+)

@@ -204,49 +204,51 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
-        <Resizable
-          data-testid="resizableComponent"
-          enable={{
-            top: false,
-            right: true,
-            bottom: false,
-            left: false,
-          }}
-          minWidth={minWidth}
-          maxWidth={maxWidth}
-          size={{ width: sidebarWidth, height: window.innerHeight }}
-          handleComponent={{right: <StyledResizeHandle isCollapsed={collapsedSidebar}/>}}
-          as={StyledResizer}
-          onResizeStop={(e, direction, ref, d) => {
-            const newWidth = parseInt(sidebarWidth, 10) + d.width
-            this.setSidebarWidth(newWidth)
-          }}
+      <Resizable
+        data-testid="resizableComponent"
+        enable={{
+          top: false,
+          right: true,
+          bottom: false,
+          left: false,
+        }}
+        minWidth={minWidth}
+        maxWidth={maxWidth}
+        size={{ width: sidebarWidth, height: window.innerHeight }}
+        handleComponent={{
+          right: <StyledResizeHandle isCollapsed={collapsedSidebar} />,
+        }}
+        as={StyledResizer}
+        onResizeStop={(e, direction, ref, d) => {
+          const newWidth = parseInt(sidebarWidth, 10) + d.width
+          this.setSidebarWidth(newWidth)
+        }}
+      >
+        <StyledSidebarContent
+          isCollapsed={collapsedSidebar}
+          hideScrollbar={hideScrollbar}
+          sidebarWidth={sidebarWidth}
         >
-          <StyledSidebarContent
-            isCollapsed={collapsedSidebar}
-            hideScrollbar={hideScrollbar}
-            sidebarWidth={sidebarWidth}
-          >
-            <StyledSidebarCloseButton>
-              <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
-                <Icon content={Close} size="lg" />
-              </Button>
-            </StyledSidebarCloseButton>
-            {!hideSidebarNav && (
-              <SidebarNav
-                appPages={appPages}
-                collapseSidebar={this.toggleCollapse}
-                currentPageScriptHash={currentPageScriptHash}
-                hasSidebarElements={hasElements}
-                hideParentScrollbar={this.hideScrollbar}
-                onPageChange={onPageChange}
-                pageLinkBaseUrl={pageLinkBaseUrl}
-              />
-            )}
-            <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
-              {children}
-            </StyledSidebarUserContent>
-          </StyledSidebarContent>
+          <StyledSidebarCloseButton>
+            <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
+              <Icon content={Close} size="lg" />
+            </Button>
+          </StyledSidebarCloseButton>
+          {!hideSidebarNav && (
+            <SidebarNav
+              appPages={appPages}
+              collapseSidebar={this.toggleCollapse}
+              currentPageScriptHash={currentPageScriptHash}
+              hasSidebarElements={hasElements}
+              hideParentScrollbar={this.hideScrollbar}
+              onPageChange={onPageChange}
+              pageLinkBaseUrl={pageLinkBaseUrl}
+            />
+          )}
+          <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
+            {children}
+          </StyledSidebarUserContent>
+        </StyledSidebarContent>
         <StyledSidebarCollapsedControl
           chevronDownshift={chevronDownshift}
           isCollapsed={collapsedSidebar}
@@ -255,7 +257,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             <Icon content={ChevronRight} size="lg" />
           </Button>
         </StyledSidebarCollapsedControl>
-        </Resizable>
+      </Resizable>
     )
   }
 }
