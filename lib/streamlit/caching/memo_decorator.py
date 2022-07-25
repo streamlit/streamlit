@@ -333,10 +333,16 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        # Support passing the params via function decorator, e.g.
-        # @st.memo(persist=True, show_spinner=False)
-        if func is None:
-            return lambda f: create_cache_wrapper(
+        def wrapper(f):
+            # We use wrapper function here instead of lambda function to be able to log
+            # warning in case both persist="disk" and ttl parameters specified
+            if persist == "disk" and ttl is not None:
+                _LOGGER.warning(
+                    'The decorator uses the persist="disk" and ttl'
+                    "parameters at the same time. Persist cache currently "
+                    "does not support the TTL cache feature."
+                )
+            return create_cache_wrapper(
                 MemoizedFunction(
                     func=f,
                     persist=persist,
@@ -346,6 +352,11 @@ class MemoAPI:
                     ttl=ttl,
                 )
             )
+
+        # Support passing the params via function decorator, e.g.
+        # @st.memo(persist=True, show_spinner=False)
+        if func is None:
+            return wrapper
 
         return create_cache_wrapper(
             MemoizedFunction(
