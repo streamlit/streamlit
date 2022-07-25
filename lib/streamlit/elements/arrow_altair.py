@@ -348,31 +348,31 @@ def _is_date_column(df: pd.DataFrame, name: str) -> bool:
 
 
 def _maybe_melt(
-    data: pd.DataFrame,
+    data_df: pd.DataFrame,
     x: Union[str, None] = None,
     y: Union[str, Sequence[str], None] = None,
 ) -> Tuple[pd.DataFrame, str, str, str, str, Optional[str], Optional[str]]:
-    color_name: Optional[str]
+    color_column: Optional[str]
     color_title: Optional[str] = ""
 
-    y_name = "value"
+    y_column = "value"
     # This has to contain an empty space, otherwise the
     # full y-axis disappears (maybe a bug in vega-lite)?
     y_title = " "
 
     if x and isinstance(x, str):
         # x is a single string -> use for x-axis
-        x_name = x
+        x_column = x
         x_title = x
-        if x_name not in data.columns:
+        if x_column not in data_df.columns:
             raise StreamlitAPIException(
-                f"{x_name} (x parameter) was not found in the data columns."
+                f"{x_column} (x parameter) was not found in the data columns."
             )
     else:
         # use index for x-axis
-        x_name = data.index.name or "index"
+        x_column = data_df.index.name or "index"
         x_title = ""
-        data = data.reset_index()
+        data_df = data_df.reset_index()
 
     if y and is_sequence(y) and len(y) == 1:
         # Sequence is only a single element
@@ -380,39 +380,39 @@ def _maybe_melt(
 
     if y and isinstance(y, str):
         # y is a single string -> use for y-axis
-        y_name = y
+        y_column = y
         y_title = y
-        if y_name not in data.columns:
+        if y_column not in data_df.columns:
             raise StreamlitAPIException(
-                f"{y_name} (y parameter) was not found in the data columns."
+                f"{y_column} (y parameter) was not found in the data columns."
             )
 
         # Set var name to None since it should not be used
-        color_name = None
+        color_column = None
     elif y and is_sequence(y):
-        color_name = "variable"
+        color_column = "variable"
         # y is a list -> melt dataframe into value vars provided in y
         value_vars: List[str] = []
         for col in y:
-            if str(col) not in data.columns:
+            if str(col) not in data_df.columns:
                 raise StreamlitAPIException(
                     f"{str(col)} in y parameter was not found in the data columns."
                 )
             value_vars.append(str(col))
 
-        if x_name in [y_name, color_name]:
+        if x_column in [y_column, color_column]:
             raise StreamlitAPIException(
                 "Unable to melt the table. Please rename the columns used for x or y."
             )
 
-        data = pd.melt(
-            data,
-            id_vars=[x_name],
+        data_df = pd.melt(
+            data_df,
+            id_vars=[x_column],
             value_vars=value_vars,
-            var_name=color_name,
-            value_name=y_name,
+            var_name=color_column,
+            value_name=y_column,
         )
-        y_column = data[y_name]
+        y_column = data_df[y_column]
         if (
             y_column.dtype == "object"
             and "mixed" in infer_dtype(y_column)
@@ -424,15 +424,17 @@ def _maybe_melt(
 
         # Arrow has problems with object types after melting two different dtypes
         # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-        data = type_util.convert_mixed_columns_to_string(
-            data, selected_columns=[x_name, color_name, y_name]
+        data_df = type_util.convert_mixed_columns_to_string(
+            data_df, selected_columns=[x_column, color_column, y_column]
         )
     else:
-        color_name = "variable"
+        color_column = "variable"
         # -> data will be melted into the value prop for y
-        data = pd.melt(data, id_vars=[x_name], var_name=color_name, value_name=y_name)
+        data_df = pd.melt(
+            data_df, id_vars=[x_column], var_name=color_column, value_name=y_column
+        )
 
-        y_column = data[y_name]
+        y_column = data_df[y_column]
         if (
             y_column.dtype == "object"
             and "mixed" in infer_dtype(y_column)
@@ -444,9 +446,15 @@ def _maybe_melt(
 
         # Arrow has problems with object types after melting two different dtypes
         # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-        data = type_util.convert_mixed_columns_to_string(data)
+        data_df = type_util.convert_mixed_columns_to_string(data_df)
 
-    return data, x_name, x_title, y_name, y_title, color_name, color_title
+    relevant_columns = [x_column, y_column]
+    if color_column:
+        relevant_columns.append(color_column)
+    # Only select the relevant columns required for the chart
+    # Other columns can be ignored
+    data_df = data_df[relevant_columns]
+    return data_df, x_column, x_title, y_column, y_title, color_column, color_title
 
 
 def _generate_chart(
@@ -467,41 +475,48 @@ def _generate_chart(
     if not isinstance(data, pd.DataFrame):
         data = type_util.convert_anything_to_df(data)
 
-    data, x_name, x_title, y_name, y_title, color_name, color_title = _maybe_melt(
+    data, x_column, x_title, y_column, y_title, color_column, color_title = _maybe_melt(
         data, x, y
     )
 
     opacity = None
-    if chart_type == ChartType.AREA and color_name:
-        opacity = {y_name: 0.7}
+    if chart_type == ChartType.AREA and color_column:
+        opacity = {y_column: 0.7}
     # Set the X and Y axes' scale to "utc" if they contain date values.
     # This causes time data to be displayed in UTC, rather the user's local
     # time zone. (By default, vega-lite displays time data in the browser's
     # local time zone, regardless of which time zone the data specifies:
     # https://vega.github.io/vega-lite/docs/timeunit.html#output).
-    x_scale = alt.Scale(type="utc") if _is_date_column(data, x_name) else alt.Undefined
-    y_scale = alt.Scale(type="utc") if _is_date_column(data, y_name) else alt.Undefined
+    x_scale = (
+        alt.Scale(type="utc") if _is_date_column(data, x_column) else alt.Undefined
+    )
+    y_scale = (
+        alt.Scale(type="utc") if _is_date_column(data, y_column) else alt.Undefined
+    )
 
     x_type = alt.Undefined
     # Bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
     # https://github.com/streamlit/streamlit/pull/2097#issuecomment-714802475
-    if chart_type == ChartType.BAR and not _is_date_column(data, x_name):
+    if chart_type == ChartType.BAR and not _is_date_column(data, x_column):
         x_type = "ordinal"
 
-    tooltips = [alt.Tooltip(x_name, title=x_name), alt.Tooltip(y_name, title=y_name)]
+    tooltips = [
+        alt.Tooltip(x_column, title=x_column),
+        alt.Tooltip(y_column, title=y_column),
+    ]
     color = None
 
-    if color_name:
-        color = alt.Color(color_name, title=color_title, type="nominal")
-        tooltips.append(alt.Tooltip(color_name, title="label"))
+    if color_column:
+        color = alt.Color(color_column, title=color_title, type="nominal")
+        tooltips.append(alt.Tooltip(color_column, title="label"))
 
     chart = getattr(
         # Built-in charts use the streamlit theme as default. So, we set usermeta explicitly here.
         alt.Chart(data, width=width, height=height, usermeta=STREAMLIT_THEME),
         "mark_" + chart_type.value,
     )().encode(
-        x=alt.X(x_name, title=x_title, scale=x_scale, type=x_type),
-        y=alt.Y(y_name, title=y_title, scale=y_scale),
+        x=alt.X(x_column, title=x_title, scale=x_scale, type=x_type),
+        y=alt.Y(y_column, title=y_title, scale=y_scale),
         tooltip=tooltips,
     )
 
