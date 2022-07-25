@@ -16,9 +16,9 @@ import asyncio
 import time
 import traceback
 from enum import Enum
-from typing import Optional, Dict, Protocol, NamedTuple, Callable, Any, Tuple
+from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple
 
-from typing_extensions import Final
+from typing_extensions import Final, Protocol
 
 from streamlit import config
 from streamlit.app_session import AppSession
