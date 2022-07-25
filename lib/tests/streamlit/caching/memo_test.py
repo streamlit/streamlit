@@ -294,6 +294,21 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         ]
         assert text == ["1"]
 
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch("streamlit.caching.memo_decorator.streamlit_write", MagicMock())
+    @patch(
+        "streamlit.file_util.open",
+        wraps=mock_open(read_data=pickle.dumps(1)),
+    )
+    def test_cached_format_migration(self, _):
+        @st.experimental_memo(persist="disk")
+        def foo(i):
+            st.text(i)
+            return i
+
+        # Executes normally, without raising any errors
+        foo(1)
+
 
 class MemoStatsProviderTest(unittest.TestCase):
     def setUp(self):
