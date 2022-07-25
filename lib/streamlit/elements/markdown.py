@@ -36,7 +36,7 @@ class MarkdownMixin:
 
             This also supports:
 
-            * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
               For a list of all supported codes,
               see https://share.streamlit.io/streamlit/emoji-shortcodes.
 
@@ -55,7 +55,7 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
-            *Also note that `unsafe_allow_html` is a temporary measure and may
+            *Also note that ``unsafe_allow_html`` is a temporary measure and may
             be removed from Streamlit at any time.*
 
             If you decide to turn on HTML anyway, we ask you to please tell us
@@ -142,6 +142,10 @@ class MarkdownMixin:
         language : str
             The language that the code is written in, for syntax highlighting.
             If omitted, the code will be unstyled.
+
+            For a list of available ``language`` imports, see:
+
+            https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
 
         Example
         -------
