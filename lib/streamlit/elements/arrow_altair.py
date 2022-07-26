@@ -353,12 +353,12 @@ def _maybe_melt(
     y: Union[str, Sequence[str], None] = None,
 ) -> Tuple[pd.DataFrame, str, str, str, str, Optional[str], Optional[str]]:
     color_column: Optional[str]
-    color_title: Optional[str] = ""
-
-    y_column = "value"
     # This has to contain an empty space, otherwise the
     # full y-axis disappears (maybe a bug in vega-lite)?
-    y_title = " "
+    color_title: Optional[str] = " "
+
+    y_column = "value"
+    y_title = ""
 
     if x and isinstance(x, str):
         # x is a single string -> use for x-axis
@@ -441,7 +441,7 @@ def _maybe_melt(
             and len(y_series.unique()) > 100
         ):
             raise StreamlitAPIException(
-                "The selected columns for the y axis contain too many unique values with mixed types."
+                "The columns used for rendering the chart contain too many values with mixed types. Please select the columns manually via the y parameter."
             )
 
         # Arrow has problems with object types after melting two different dtypes
@@ -511,7 +511,12 @@ def _generate_chart(
     color = None
 
     if color_column:
-        color = alt.Color(color_column, title=color_title, type="nominal")
+        color = alt.Color(
+            color_column,
+            title=color_title,
+            type="nominal",
+            legend=alt.Legend(titlePadding=0, offset=10),
+        )
         tooltips.append(alt.Tooltip(color_column, title="label"))
 
     chart = getattr(
