@@ -98,7 +98,7 @@ interface HeadingWithAnchorProps {
   tagProps?: HTMLProps<HTMLHeadingElement>
 }
 
-interface TestHeaderProps {
+export interface HeadingProtoProps {
   width: number
   element: HeadingProto
 }
@@ -304,7 +304,7 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   )
 }
 
-export function Heading(props: TestHeaderProps): ReactElement {
+export function Heading(props: HeadingProtoProps): ReactElement {
   const { width } = props
   const { tag, anchor, body } = props.element
   const isSidebar = React.useContext(IsSidebarContext)
