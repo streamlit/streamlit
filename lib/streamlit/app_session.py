@@ -338,7 +338,7 @@ class AppSession:
         if not self._should_rerun_on_file_change(filepath):
             return
 
-        if self._run_on_save:
+        if self._run_on_save and source_util.last_saved_hash != content_hash:
             self.request_rerun(self._client_state)
 
         self._enqueue_forward_msg(self._create_file_change_message(filepath, content_hash))

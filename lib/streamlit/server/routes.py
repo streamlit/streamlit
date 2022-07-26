@@ -439,3 +439,6 @@ class SourceCodeHandler(tornado.web.RequestHandler):
         # TODO: What if the file is being read by ScriptRunner *right now*?
         with open(file_path, 'wt') as f:
             f.write(file_body)
+
+        # Keep track of file hash to avoid run-on-save for it.
+        source_util.last_saved_hash = calc_md5(file_body)

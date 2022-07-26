@@ -190,3 +190,7 @@ def register_pages_changed_callback(
     _on_pages_changed.connect(callback, weak=False)
 
     return disconnect
+
+
+# Used to avoid run-on-save.
+last_saved_hash = ''
