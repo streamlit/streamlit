@@ -26,10 +26,10 @@ import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 
+from .arrow import Data
+
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-    from .arrow import Data
 
 
 class MapMixin:
