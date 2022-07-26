@@ -16,7 +16,7 @@
 
 import copy
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from typing import cast
 
 import pandas as pd
@@ -26,9 +26,20 @@ import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+    from .arrow import Data
+
 
 class MapMixin:
-    def map(self, data=None, zoom=None, use_container_width=True):
+    def map(self, 
+        data: "Data" = None, 
+        zoom: Optional[int] = None, 
+        radius: int = 10, 
+        color: List[int] = [200, 30, 0, 160], 
+        use_container_width: bool = True
+    ) -> "DeltaGenerator":
         """Display a map with points on it.
 
         This is a wrapper around st.pydeck_chart to quickly create scatterplot
@@ -49,9 +60,13 @@ class MapMixin:
             or None
             The data to be plotted. Must have columns called 'lat', 'lon',
             'latitude', or 'longitude'.
-        zoom : int
+        zoom : Optional[int]
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels
+        radius : int
+            The radius of marker to be display.
+        color : List[int]
+            The color for marker. This color List shape should be [Red, Green, Blue, Alpha].
 
         Example
         -------
@@ -71,7 +86,7 @@ class MapMixin:
 
         """
         map_proto = DeckGlJsonChartProto()
-        map_proto.json = to_deckgl_json(data, zoom)
+        map_proto.json = to_deckgl_json(data, zoom, radius, color)
         map_proto.use_container_width = use_container_width
         return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
@@ -86,7 +101,6 @@ _DEFAULT_MAP = dict(deck_gl_json_chart.EMPTY_MAP)  # type: Dict[str, Any]
 _DEFAULT_MAP["mapStyle"] = "mapbox://styles/mapbox/light-v10"
 
 # Other default parameters for st.map.
-_DEFAULT_COLOR = [200, 30, 0, 160]
 _DEFAULT_ZOOM_LEVEL = 12
 _ZOOM_LEVELS = [
     360,
@@ -139,7 +153,7 @@ def _get_zoom_level(distance):
             return i
 
 
-def to_deckgl_json(data, zoom):
+def to_deckgl_json(data, zoom, radius, color):
 
     if data is None or data.empty:
         return json.dumps(_DEFAULT_MAP)
@@ -200,10 +214,10 @@ def to_deckgl_json(data, zoom):
         {
             "@@type": "ScatterplotLayer",
             "getPosition": "@@=[lon, lat]",
-            "getRadius": 10,
-            "radiusScale": 10,
+            "getRadius": radius,
+            "radiusScale": 1,
             "radiusMinPixels": 3,
-            "getFillColor": _DEFAULT_COLOR,
+            "getFillColor": color,
             "data": final_data,
         }
     ]
