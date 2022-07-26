@@ -422,7 +422,10 @@ class MemoCache(Cache):
         try:
             entry = pickle.loads(pickled_entry)
             if not isinstance(entry, CachedResult):
-                raise CacheError(f"Failed to unpickle {key}")
+                # Loaded an old cache file format, remove it and let the caller
+                # rerun the function.
+                self._remove_from_disk_cache(key)
+                raise CacheKeyNotFoundError()
             return entry
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
