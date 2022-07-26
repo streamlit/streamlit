@@ -448,9 +448,13 @@ def _maybe_melt(
         # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
         data_df = type_util.convert_mixed_columns_to_string(data_df)
 
-    relevant_columns = [x_column, y_column]
+    relevant_columns = []
+    if x_column:
+        relevant_columns.append(x_column)
     if color_column:
         relevant_columns.append(color_column)
+    if y_column:
+        relevant_columns.append(y_column)
     # Only select the relevant columns required for the chart
     # Other columns can be ignored
     data_df = data_df[relevant_columns]

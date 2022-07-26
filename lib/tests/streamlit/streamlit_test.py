@@ -180,9 +180,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[0, 10, "a"], [0, 20, "b"], [0, 30, "c"]],
+            [[0, "a", 10], [0, "b", 20], [0, "c", 30]],
             index=[0, 1, 2],
-            columns=["index", "value", "variable"],
+            columns=["index", "variable", "value"],
         )
         st._arrow_area_chart(df, width=640, height=480)
 
@@ -304,9 +304,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[0, 10, "a"], [0, 20, "b"], [0, 30, "c"]],
+            [[0, "a", 10], [0, "b", 20], [0, "c", 30]],
             index=[0, 1, 2],
-            columns=["index", "value", "variable"],
+            columns=["index", "variable", "value"],
         )
 
         st._arrow_bar_chart(df, width=640, height=480)
@@ -570,9 +570,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame(
-            [[0, 10, "a"], [0, 20, "b"], [0, 30, "c"]],
+            [[0, "a", 10], [0, "b", 20], [0, "c", 30]],
             index=[0, 1, 2],
-            columns=["index", "value", "variable"],
+            columns=["index", "variable", "value"],
         )
         st._arrow_line_chart(df, width=640, height=480)
 
