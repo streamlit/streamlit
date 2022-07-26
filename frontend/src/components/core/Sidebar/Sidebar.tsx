@@ -218,12 +218,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             left: false,
           }}
           handleComponent={{
-            right: (
-              <StyledResizeHandle
-                isCollapsed={collapsedSidebar}
-                onClick={this.resetSidebarWidth}
-              />
-            ),
+            right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
           }}
           size={{ width: sidebarWidth, height: "100%" }}
           as={StyledSidebar}

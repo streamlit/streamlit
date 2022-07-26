@@ -34,17 +34,18 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       height: "calc(100vh - 2px)",
       position: "relative",
       top: "2px",
+      minWidth,
+      maxWidth,
       backgroundColor: theme.colors.bgColor,
       backgroundAttachment: "fixed",
       flexShrink: 0,
+      overflowX: "hidden",
       zIndex: theme.zIndices.header + 1,
+
       transform: isCollapsed
         ? `translateX(-${sidebarWidth}px)`
         : "translateX(0px)",
-      minWidth,
-      maxWidth,
       opacity: isCollapsed ? 0 : 1,
-
       transition:
         "opacity 300ms, transform 300ms, min-width 300ms, max-width 300ms",
 
@@ -293,24 +294,16 @@ export const StyledSidebarCollapsedControl = styled.div<
   },
 }))
 
-export interface StyledResizeHandleProps {
-  isCollapsed: boolean
-}
+export const StyledResizeHandle = styled.div(({ theme }) => ({
+  position: "absolute",
+  width: "10px",
+  height: "100%",
+  top: "0px",
+  cursor: "col-resize",
+  zIndex: theme.zIndices.sidebarMobile,
 
-export const StyledResizeHandle = styled.div<StyledResizeHandleProps>(
-  ({ isCollapsed, theme }) => ({
-    position: "absolute",
-    width: "10px",
-    height: "100%",
-    top: "0px",
-    cursor: "col-resize",
-    zIndex: theme.zIndices.sidebarMobile,
-    marginTop: "2px",
-
-    "&:hover": {
-      backgroundImage: isCollapsed
-        ? "transparent"
-        : "linear-gradient(to right, #c0c2c4 , transparent)",
-    },
-  })
-)
+  "&:hover": {
+    backgroundImage:
+      "linear-gradient(to right, transparent 50%, #c0c2c4 50%, transparent 60%)",
+  },
+}))
