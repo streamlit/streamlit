@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class HeadingMixin:
-    def header(self, body: str, anchor: Optional[str] = "") -> "DeltaGenerator":
+    def header(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
         """Display text in header formatting.
 
         Parameters
@@ -41,7 +41,8 @@ class HeadingMixin:
 
         """
         header_proto = HeadingProto()
-        header_proto.anchor = anchor
+        if anchor is not None:
+            header_proto.anchor = anchor
         header_proto.body = clean_text(body)
         header_proto.tag = "h2"
         return self.dg._enqueue("heading", header_proto)
@@ -64,7 +65,8 @@ class HeadingMixin:
 
         """
         subheader_proto = HeadingProto()
-        subheader_proto.anchor = anchor
+        if anchor is not None:
+            subheader_proto.anchor = anchor
         subheader_proto.body = clean_text(body)
         subheader_proto.tag = "h3"
 
@@ -91,7 +93,8 @@ class HeadingMixin:
 
         """
         title_proto = HeadingProto()
-        title_proto.anchor = anchor
+        if anchor is not None:
+            title_proto.anchor = anchor
         title_proto.body = clean_text(body)
         title_proto.tag = "h1"
 
