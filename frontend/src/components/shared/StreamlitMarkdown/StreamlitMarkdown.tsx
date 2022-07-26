@@ -22,7 +22,6 @@ import React, {
   CSSProperties,
   HTMLProps,
   FunctionComponent,
-  useContext,
   Fragment,
 } from "react"
 import ReactMarkdown, { PluggableList } from "react-markdown"
@@ -40,15 +39,17 @@ import remarkGfm from "remark-gfm"
 import AppContext from "src/components/core/AppContext"
 import CodeBlock, { CodeTag } from "src/components/elements/CodeBlock/"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
+import { Heading as HeadingProto } from "src/autogen/proto"
+
 import {
   StyledStreamlitMarkdown,
   StyledLinkIconContainer,
   StyledLinkIcon,
   StyledHeaderContent,
+  StyledHeading,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
-import { AnchorElement } from "src/autogen/proto"
 
 export interface Props {
   /**
@@ -99,7 +100,7 @@ interface HeadingWithAnchorProps {
 
 interface TestHeaderProps {
   width: number
-  element: AnchorElement
+  element: HeadingProto
 }
 
 export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
@@ -116,13 +117,12 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     addScriptFinishedHandler,
     removeScriptFinishedHandler,
   } = React.useContext(AppContext)
-
   if (isSidebar) {
-    // WILLIAM
-    return <StyledHeading as={tag} level={tag} isCaption={} isInSidebar={ {..tagProps}>
-      {children}
-    </StyledHeading>
-    return React.createElement(tag, tagProps, children)
+    return (
+      <StyledHeading as={tag} isCaption={false} isInSidebar={isSidebar}>
+        {children}
+      </StyledHeading>
+    )
   }
 
   const onScriptFinished = React.useCallback(() => {
@@ -198,44 +198,52 @@ export interface RenderedMarkdownProps {
    */
   allowHTML: boolean
 
-  overrideComponents: Components
+  overrideComponents?: Components
 }
 
-function RenderedMarkdown({
+export function RenderedMarkdown({
   allowHTML,
   source,
   overrideComponents,
 }: RenderedMarkdownProps): ReactElement {
-  const renderers: Components = {
-    pre: CodeBlock,
-    code: CodeTag,
-    a: LinkWithTargetBlank,
-    h1: CustomHeading,
-    h2: CustomHeading,
-    h3: CustomHeading,
-    h4: CustomHeading,
-    h5: CustomHeading,
-    h6: CustomHeading,
-    ...(overrideComponents || {}),
+  try {
+    const renderers: Components = {
+      pre: CodeBlock,
+      code: CodeTag,
+      a: LinkWithTargetBlank,
+      h1: CustomHeading,
+      h2: CustomHeading,
+      h3: CustomHeading,
+      h4: CustomHeading,
+      h5: CustomHeading,
+      h6: CustomHeading,
+      ...(overrideComponents || {}),
+    }
+
+    const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
+    const rehypePlugins: PluggableList = [rehypeKatex]
+
+    if (allowHTML) {
+      rehypePlugins.push(rehypeRaw)
+    }
+
+    return (
+      <ReactMarkdown
+        remarkPlugins={plugins}
+        rehypePlugins={rehypePlugins}
+        components={renderers}
+        transformLinkUri={transformLinkUri}
+      >
+        {source}
+      </ReactMarkdown>
+    )
+  } catch (error) {
+    throw Object.assign(new Error(), {
+      name: "Error parsing Markdown or HTML in this string",
+      message: <p>{source}</p>,
+      stack: null,
+    })
   }
-
-  const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
-  const rehypePlugins: PluggableList = [rehypeKatex]
-
-  if (allowHTML) {
-    rehypePlugins.push(rehypeRaw)
-  }
-
-  return (
-    <ReactMarkdown
-      remarkPlugins={plugins}
-      rehypePlugins={rehypePlugins}
-      components={renderers}
-      transformLinkUri={transformLinkUri}
-    >
-      {source}
-    </ReactMarkdown>
-  )
 }
 
 /**
@@ -244,17 +252,6 @@ function RenderedMarkdown({
  */
 class StreamlitMarkdown extends PureComponent<Props> {
   static contextType = IsSidebarContext
-
-  // WILLIAM
-  public componentDidCatch = (): void => {
-    const { source } = this.props
-
-    throw Object.assign(new Error(), {
-      name: "Error parsing Markdown or HTML in this string",
-      message: <p>{source}</p>,
-      stack: null,
-    })
-  }
 
   public render(): ReactNode {
     const { source, allowHTML, style, isCaption } = this.props
@@ -267,11 +264,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >
-        <RenderedMarkdown
-          source={source}
-          allowHTML={allowHTML}
-          overrideComponents={{}}
-        />
+        <RenderedMarkdown source={source} allowHTML={allowHTML} />
       </StyledStreamlitMarkdown>
     )
   }
@@ -310,98 +303,43 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   )
 }
 
-// export const TestHeading: FunctionComponent<HeadingWithAnchorProps> = ({
-//   tag,
-//   anchor: propsAnchor,
-//   children,
-//   tagProps,
-// }) => {
-//   const isSidebar = React.useContext(IsSidebarContext)
-//   const [elementId, setElementId] = React.useState(propsAnchor)
-//   const [target, setTarget] = React.useState<HTMLElement | null>(null)
-
-//   const {
-//     addScriptFinishedHandler,
-//     removeScriptFinishedHandler,
-//   } = React.useContext(AppContext)
-
-//   if (isSidebar) {
-//     return React.createElement(tag, tagProps, children)
-//   }
-
-//   const onScriptFinished = React.useCallback(() => {
-//     if (target !== null) {
-//       // wait a bit for everything on page to finish loading
-//       window.setTimeout(() => {
-//         scrollNodeIntoView(target)
-//       }, 300)
-//     }
-//   }, [target])
-
-//   React.useEffect(() => {
-//     addScriptFinishedHandler(onScriptFinished)
-//     return () => {
-//       removeScriptFinishedHandler(onScriptFinished)
-//     }
-//   }, [addScriptFinishedHandler, removeScriptFinishedHandler, onScriptFinished])
-
-//   const ref = React.useCallback(
-//     node => {
-//       if (node === null) {
-//         return
-//       }
-
-//       const anchor = propsAnchor || createAnchorFromText(node.textContent)
-//       setElementId(anchor)
-//       if (window.location.hash.slice(1) === anchor) {
-//         setTarget(node)
-//       }
-//     },
-//     [propsAnchor]
-//   )
-
-//   return React.createElement(
-//     tag,
-//     { ...tagProps, ref, id: elementId },
-//     <StyledLinkIconContainer>
-//       {elementId && (
-//         <StyledLinkIcon href={`#${elementId}`}>
-//           <LinkIcon size="18" />
-//         </StyledLinkIcon>
-//       )}
-//       <h1>
-//         <StyledHeaderContent>{children}</StyledHeaderContent>
-//       </h1>
-//     </StyledLinkIconContainer>
-//   )
-// }
-
-export function Header(props: TestHeaderProps): ReactElement {
+export function Heading(props: TestHeaderProps): ReactElement {
   const { width } = props
   const { tag, anchor, body } = props.element
-  const isInSidebar = useContext(IsSidebarContext)
+  const isSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
 
   return (
-    <>
-      <HeadingWithAnchor tag={"h2"} anchor={anchor}>
+    <div className="stMarkdown" style={{ width }}>
+      <HeadingWithAnchor tag={tag} anchor={anchor}>
         <RenderedMarkdown
           source={heading}
           allowHTML={false}
-          // WILLIAM overrides could be more because this is PURELY an inline string now
-          overrideComponents={{ p: Fragment }}
+          // this is purely an inline string
+          overrideComponents={{
+            p: Fragment,
+            h1: Fragment,
+            h2: Fragment,
+            h3: Fragment,
+            h4: Fragment,
+            h5: Fragment,
+            h6: Fragment,
+          }}
         />
       </HeadingWithAnchor>
       {rest.length > 0 && (
-        <RenderedMarkdown
-          source={rest.join("\n")}
-          allowHTML={false}
-          overrideComponents={{}}
-        />
+        <StyledStreamlitMarkdown
+          isCaption={Boolean(false)}
+          isInSidebar={isSidebar}
+          style={{ width }}
+          data-testid="stMarkdownContainer"
+        >
+          <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
+        </StyledStreamlitMarkdown>
       )}
-    </>
+    </div>
   )
 }
 

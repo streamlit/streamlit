@@ -57,7 +57,7 @@ import "streamlit/proto/TextInput.proto";
 import "streamlit/proto/TimeInput.proto";
 import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
-import "streamlit/proto/AnchorElement.proto";
+import "streamlit/proto/Heading.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -107,7 +107,7 @@ message Element {
     TimeInput time_input = 26;
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
-    AnchorElement anchor_element = 47;
+    Heading heading = 47;
 
     // Next ID: 47
   }

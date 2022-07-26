@@ -22,19 +22,62 @@ export interface StyledStreamlitMarkdownProps {
   isInSidebar: boolean
 }
 
+export interface StyledHeadingProps {
+  as: string
+  isCaption: boolean
+  isInSidebar: boolean
+}
+
 function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
+export const StyledHeading = styled.h1<StyledHeadingProps>(
+  ({ as, theme, isInSidebar }) => {
+    const style: {
+      color: string
+      fontFamily: string
+      marginBottom: string
+      fontSize: string
+    } = {
+      color: "",
+      fontFamily: theme.genericFonts.bodyFont,
+      marginBottom: `-${theme.spacing.lg}`,
+      fontSize: "",
+    }
+    style.fontFamily = theme.genericFonts.bodyFont
+    if (isInSidebar) {
+      style.color = "inherit"
+    }
+    switch (as) {
+      case "h1":
+        style.fontSize = isInSidebar
+          ? convertRemToEm(theme.fontSizes.xl)
+          : "2.25em"
+        break
+      case "h2":
+        style.fontSize = isInSidebar
+          ? convertRemToEm(theme.fontSizes.lg)
+          : "1.75em"
+        break
+      case "h3":
+        style.fontSize = isInSidebar ? "1.125em" : "1.25em"
+        break
 
-export const StyledHeading = styled.h1<>(({ headingLevel, isCaption, isInSidebar } => {
-  const style = {}
-  if (isCaption) {
-    style.color = "inheriit"
+      // these are normally shrunk further to 0.8rem, but since we're already
+      // inside a small, just make them 1em.
+      case "h4":
+      case "h5":
+      case "h6":
+        style.fontSize = "1em"
+        break
+      default:
+        break
+    }
+
+    return style
   }
-  
-  return style
-}))
+)
 
 export const StyledStreamlitMarkdown = styled.div<
   StyledStreamlitMarkdownProps

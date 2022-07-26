@@ -49,7 +49,7 @@ import {
   Progress as ProgressProto,
   Text as TextProto,
   Video as VideoProto,
-  AnchorElement as AnchorElementProto
+  Heading as HeadingProto,
 } from "src/autogen/proto"
 
 import React, { ReactElement, Suspense } from "react"
@@ -76,6 +76,7 @@ import { getAlertKind } from "src/components/elements/Alert/Alert"
 
 import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
+import { Heading } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 import {
   BaseBlockProps,
@@ -84,7 +85,6 @@ import {
 } from "./utils"
 
 import { StyledElementContainer } from "./styled-components"
-import { Header } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
@@ -310,30 +310,14 @@ const RawElementNodeRenderer = (
           element={node.element.markdown as MarkdownProto}
         />
       )
-    
-    case "anchorElement":
+
+    case "heading":
       return (
-        <Header
+        <Heading
           width={width}
-          element={node.element.anchorElement as AnchorElementProto}
+          element={node.element.heading as HeadingProto}
         />
       )
-
-    // case "subheader":
-    //   return (
-    //     <Subheader
-    //       width={width}
-    //       element={node.element.subheader as SubheaderProto}
-    //     />
-    //   )
-    
-    // case "title":
-    //   return (
-    //     <Title
-    //       width={width}
-    //       element={node.element.title as TitleProto}
-    //     />
-    //   )
 
     case "plotlyChart":
       return (

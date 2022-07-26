@@ -48,7 +48,8 @@ from streamlit.logger import get_logger
 
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
-from streamlit.elements.markdown import MarkdownMixin, AnchorElementMixin
+from streamlit.elements.markdown import MarkdownMixin
+from streamlit.elements.heading import HeadingMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
@@ -135,12 +136,12 @@ class DeltaGenerator(
     FileUploaderMixin,
     FormMixin,
     GraphvizMixin,
+    HeadingMixin,
     HelpMixin,
     IframeMixin,
     ImageMixin,
     LayoutsMixin,
     MarkdownMixin,
-    AnchorElementMixin,
     MapMixin,
     MediaMixin,
     MetricMixin,
