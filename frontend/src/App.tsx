@@ -194,8 +194,9 @@ export class App extends PureComponent<Props, State> {
 
   private readonly componentRegistry: ComponentRegistry
 
-  private appContextValue: any
-  private callbacksContextValue: any // TODO
+  private appContextValue: any // TODO XXX: Typing
+
+  private callbacksContextValue: any // TODO XXX: Typing
 
   constructor(props: Props) {
     super(props)
@@ -1008,12 +1009,11 @@ export class App extends PureComponent<Props, State> {
           const existingCell = this.state.notebookModel.get(i, null)
           if (existingCell) {
             return existingCell.set("body", body)
-          } else {
-            return new CellModel({
-              body,
-              visible: this.state.allCellsAreVisible,
-            })
           }
+          return new CellModel({
+            body,
+            visible: this.state.allCellsAreVisible,
+          })
         }
       )
     )

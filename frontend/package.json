@@ -30,7 +30,9 @@
     }
   },
   "dependencies": {
+    "@codemirror/commands": "^6.0.1",
     "@codemirror/lang-python": "^6.0.0",
+    "@codemirror/view": "^6.1.1",
     "@emotion-icons/emotion-icon": "^4.1.0",
     "@emotion-icons/material-outlined": "^3.14.0",
     "@emotion-icons/material-rounded": "^3.14.0",
@@ -42,10 +44,12 @@
     "@emotion/styled": "^11.8.1",
     "@glideapps/glide-data-grid": "4.1.0",
     "@glideapps/glide-data-grid-source": "4.1.0",
+    "@lezer/highlight": "^1.0.0",
     "@loaders.gl/core": "^2.2.8",
     "@loaders.gl/csv": "^2.2.8",
     "@loaders.gl/gltf": "^2.2.8",
     "@uiw/codemirror-theme-dracula": "^4.9.4",
+    "@uiw/codemirror-themes": "^4.11.4",
     "@uiw/react-codemirror": "^4.9.4",
     "apache-arrow": "^8.0.0",
     "axios": "^0.21.4",

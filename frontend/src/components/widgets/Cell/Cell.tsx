@@ -19,11 +19,10 @@ import React, { useContext, useCallback, useRef } from "react"
 import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror"
 import { createTheme } from "@uiw/codemirror-themes"
 import { tags as t } from "@lezer/highlight"
-import { ViewUpdate } from "@codemirror/view"
+import { ViewUpdate, keymap } from "@codemirror/view"
 import { defaultKeymap } from "@codemirror/commands"
 import { python } from "@codemirror/lang-python"
-import { dracula } from "@uiw/codemirror-theme-dracula"
-import { keymap } from "@codemirror/view"
+// import { dracula } from "@uiw/codemirror-theme-dracula"
 import { Close } from "@emotion-icons/material-outlined"
 
 import { Cell as CellProto } from "src/autogen/proto"
@@ -69,7 +68,7 @@ export interface Props {
   cellIndex: number
 }
 
-function Cell({ element, cellIndex }: Props) {
+function Cell({ element, cellIndex }: Props): React.ReactElement {
   const ref = useRef<ReactCodeMirrorRef>({})
   const { notebookModel } = useContext(NotebookContext)
   const {
@@ -100,15 +99,13 @@ function Cell({ element, cellIndex }: Props) {
     // TODO: Move cursor to the end of next cell.
     insertCell(cellIndex + 1)
     return true
-  }, [insertCell, cellIndex])
+  }, [ref, insertCell, cellIndex])
 
   const backspaceEmptyCell = useCallback((): boolean => {
     if (cellModel?.body.length === 0) {
       deleteCell(cellIndex)
       // TODO: Move cursor to previous cell.
     }
-
-    console.log("XXX", ref.current.state?.selection.main.head)
 
     return true
   }, [cellModel, cellIndex, deleteCell])
@@ -181,7 +178,7 @@ function Cell({ element, cellIndex }: Props) {
         value={cellModel.body}
         extensions={[python(), keymap.of(KEYMAPS)]}
         placeholder="# Type Python here!"
-        theme={myTheme /*dracula*/}
+        theme={myTheme /* dracula */}
         basicSetup={{
           foldGutter: false,
           highlightActiveLine: false,

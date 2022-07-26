@@ -15,9 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
 import styled from "@emotion/styled"
-import { Theme } from "src/theme"
 
 // TODO: Merge this with components/core/Block/styled-components/StyledEditButton
 export const StyledCloseButton = styled.div(({ theme }) => {
