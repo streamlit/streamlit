@@ -118,7 +118,6 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     removeScriptFinishedHandler,
   } = React.useContext(AppContext)
   if (isSidebar) {
-    
     return (
       // @ts-ignore
       <StyledHeading as={tag} isCaption={false} isInSidebar={isSidebar}>
