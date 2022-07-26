@@ -20,13 +20,12 @@ import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
 export interface StyledSidebarProps {
-  hideScrollbar: boolean
   isCollapsed: boolean
   sidebarWidth: string
 }
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
-  ({ theme, hideScrollbar, isCollapsed, sidebarWidth }) => {
+  ({ theme, isCollapsed, sidebarWidth }) => {
     const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
     const maxWidth = isCollapsed ? 0 : Math.min(550, window.innerWidth * 0.9)
 

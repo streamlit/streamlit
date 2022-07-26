@@ -170,9 +170,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     return true
   }
 
-  resetSidebar = (): void => {
-    this.setState({ sidebarWidth: "336" })
-    window.localStorage.setItem("sidebarWidth", "336")
+  resetSidebar = ( event: any ): void => {
+    if (event.detail === 2) {
+      this.setState({ sidebarWidth: "336" })
+      window.localStorage.setItem("sidebarWidth", "336")
+    }
   }
 
   toggleCollapse = (): void => {
@@ -224,7 +226,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             left: false,
           }}
           handleComponent={{
-            right: <StyledResizeHandle isCollapsed={collapsedSidebar} />,
+            right: <StyledResizeHandle isCollapsed={collapsedSidebar} onClick={this.resetSidebar}/>,
           }}
           size={{ width: sidebarWidth, height: "100%" }}
           as={StyledSidebar}
@@ -235,7 +237,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           // @ts-ignore
           isCollapsed={collapsedSidebar}
           sidebarWidth={sidebarWidth}
-          hideScrollbar={hideScrollbar}
         >
           <div
             style={{
