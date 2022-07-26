@@ -358,6 +358,17 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
+def is_sequence(seq: Any) -> bool:
+    """True if input looks like a sequence."""
+    if isinstance(seq, str):
+        return False
+    try:
+        len(seq)
+    except Exception:
+        return False
+    return True
+
+
 def convert_anything_to_df(df: Any) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 

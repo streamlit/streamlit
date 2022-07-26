@@ -33,7 +33,6 @@ from typing import (
 import altair as alt
 import pandas as pd
 from altair.vegalite.v4.api import Chart
-from numpy.distutils.misc_util import is_sequence
 from pandas.api.types import infer_dtype
 
 from streamlit.errors import StreamlitAPIException
@@ -344,6 +343,7 @@ def _is_date_column(df: pd.DataFrame, name: str) -> bool:
     column = df[name]
     if column.size == 0:
         return False
+
     return isinstance(column[0], date)
 
 
@@ -366,7 +366,7 @@ def _maybe_melt(
         x_title = x
         if x_column not in data_df.columns:
             raise StreamlitAPIException(
-                f"{x_column} (x parameter) was not found in the data columns."
+                f"{x_column} (x parameter) was not found in the data columns or keys”."
             )
     else:
         # use index for x-axis
@@ -374,7 +374,7 @@ def _maybe_melt(
         x_title = ""
         data_df = data_df.reset_index()
 
-    if y and is_sequence(y) and len(y) == 1:
+    if y and type_util.is_sequence(y) and len(y) == 1:
         # Sequence is only a single element
         y = str(y[0])
 
@@ -384,19 +384,19 @@ def _maybe_melt(
         y_title = y
         if y_column not in data_df.columns:
             raise StreamlitAPIException(
-                f"{y_column} (y parameter) was not found in the data columns."
+                f"{y_column} (y parameter) was not found in the data columns or keys”."
             )
 
         # Set var name to None since it should not be used
         color_column = None
-    elif y and is_sequence(y):
+    elif y and type_util.is_sequence(y):
         color_column = "variable"
         # y is a list -> melt dataframe into value vars provided in y
         value_vars: List[str] = []
         for col in y:
             if str(col) not in data_df.columns:
                 raise StreamlitAPIException(
-                    f"{str(col)} in y parameter was not found in the data columns."
+                    f"{str(col)} in y parameter was not found in the data columns or keys”."
                 )
             value_vars.append(str(col))
 
@@ -449,11 +449,11 @@ def _maybe_melt(
         data_df = type_util.convert_mixed_columns_to_string(data_df)
 
     relevant_columns = []
-    if x_column:
+    if x_column and x_column not in relevant_columns:
         relevant_columns.append(x_column)
-    if color_column:
+    if color_column and color_column not in relevant_columns:
         relevant_columns.append(color_column)
-    if y_column:
+    if y_column and y_column not in relevant_columns:
         relevant_columns.append(y_column)
     # Only select the relevant columns required for the chart
     # Other columns can be ignored
