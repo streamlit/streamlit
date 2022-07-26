@@ -295,7 +295,6 @@ export const StyledSidebarCollapsedControl = styled.div<
 
 export interface StyledResizeHandleProps {
   isCollapsed: boolean
-  // ondblclick: void
 }
 
 export const StyledResizeHandle = styled.div<StyledResizeHandleProps>(

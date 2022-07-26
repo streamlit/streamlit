@@ -51,7 +51,6 @@ export interface SidebarProps {
 interface State {
   collapsedSidebar: boolean
   sidebarWidth: string
-  resizeHover: boolean
   lastInnerWidth: number
 
   // When hovering the nav
@@ -76,7 +75,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth: window.localStorage.getItem("sidebarWidth") || "336",
-      resizeHover: false,
       lastInnerWidth: window ? window.innerWidth : Infinity,
       hideScrollbar: false,
     }
@@ -147,10 +145,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     window.localStorage.setItem("sidebarWidth", newWidth)
   }
 
-  toggleHover = (): void => {
-    const { resizeHover } = this.state
-
-    this.setState({ resizeHover: !resizeHover })
+  resetSidebarWidth = (event: any): void => {
+    if (event.detail === 2) {
+      this.setState({ sidebarWidth: "336" })
+      window.localStorage.setItem("sidebarWidth", "336")
+    }
   }
 
   checkMobileOnResize = (): boolean => {
@@ -168,13 +167,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ lastInnerWidth: innerWidth })
 
     return true
-  }
-
-  resetSidebar = ( event: any ): void => {
-    if (event.detail === 2) {
-      this.setState({ sidebarWidth: "336" })
-      window.localStorage.setItem("sidebarWidth", "336")
-    }
   }
 
   toggleCollapse = (): void => {
@@ -226,7 +218,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             left: false,
           }}
           handleComponent={{
-            right: <StyledResizeHandle isCollapsed={collapsedSidebar} onClick={this.resetSidebar}/>,
+            right: (
+              <StyledResizeHandle
+                isCollapsed={collapsedSidebar}
+                onClick={this.resetSidebarWidth}
+              />
+            ),
           }}
           size={{ width: sidebarWidth, height: "100%" }}
           as={StyledSidebar}
