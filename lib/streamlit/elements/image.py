@@ -416,7 +416,7 @@ def marshall_images(
                     image = textfile.read()
 
             # Following regex allows svg image files to start either via a "<?xml...>" tag eventually followed by a "<svg...>" tag or directly starting with a "<svg>" tag
-            if re.search(r"(^\s?(<\?xml[\s\S]*<svg )|^\s?<svg )", image):
+            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s)", image):
                 proto_img.markup = f"data:image/svg+xml,{image}"
                 is_svg = True
         if not is_svg:
