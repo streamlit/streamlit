@@ -58,6 +58,14 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
       },
       overflow: "visible",
     },
+
+    [`@media (max-width: ${theme.breakpoints.md})`]: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
   })
 )
 

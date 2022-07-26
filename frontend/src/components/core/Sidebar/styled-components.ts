@@ -19,18 +19,57 @@ import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
-export const StyledSidebar = styled.section(({ theme }) => ({
-  [`@media (max-width: ${theme.breakpoints.md})`]: {
-    marginLeft: theme.spacing.none,
-    // Instead of 100% width and height, we want to make sure
-    // the sidebar takes all available space when viewports change
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-}))
+export interface StyledSidebarProps {
+  hideScrollbar: boolean
+  isCollapsed: boolean
+  sidebarWidth: string
+}
+
+export const StyledSidebar = styled.section<StyledSidebarProps>(
+  ({ theme, hideScrollbar, isCollapsed, sidebarWidth }) => {
+    const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
+    const maxWidth = isCollapsed ? 0 : Math.min(550, window.innerWidth * 0.9)
+
+    return {
+      // Nudge the sidebar by 2px so the header decoration doesn't go below it
+      height: "calc(100vh - 2px)",
+      position: "relative",
+      top: "2px",
+      backgroundColor: theme.colors.bgColor,
+      backgroundAttachment: "fixed",
+      flexShrink: 0,
+      zIndex: theme.zIndices.header + 1,
+      transform: isCollapsed
+        ? `translateX(-${sidebarWidth}px)`
+        : "translateX(0px)",
+      minWidth,
+      maxWidth,
+      opacity: isCollapsed ? 0 : 1,
+
+      transition:
+        "opacity 300ms, transform 300ms, min-width 300ms, max-width 300ms",
+
+      "&:focus": {
+        outline: "none",
+      },
+
+      [`@media (max-width: ${theme.breakpoints.md})`]: {
+        marginLeft: theme.spacing.none,
+        // Instead of 100% width and height, we want to make sure
+        // the sidebar takes all available space when viewports change
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        boxShadow: `-2rem 0 2rem 2rem ${
+          isCollapsed ? "transparent" : "#00000029"
+        }`,
+        zIndex: theme.zIndices.sidebarMobile,
+      },
+    }
+  }
+)
 
 export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   position: "relative",
@@ -179,41 +218,6 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   }
 )
 
-export interface StyledSidebarContentProps {
-  isCollapsed: boolean
-  hideScrollbar: boolean
-  sidebarWidth: string
-}
-
-export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
-  ({ isCollapsed, hideScrollbar, sidebarWidth, theme }) => ({
-    backgroundColor: theme.colors.bgColor,
-    backgroundAttachment: "fixed",
-    flexShrink: 0,
-    // Nudge the sidebar by 2px so the header decoration doesn't go below it
-    height: "calc(100vh - 2px)",
-    top: "2px",
-    overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
-    position: "relative",
-    zIndex: theme.zIndices.header + 1,
-
-    // transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "translateX(0px)",
-    // opacity: isCollapsed ? 0 : 1,
-    // transition: "opacity 1000ms, transform 1000ms",
-
-    "&:focus": {
-      outline: "none",
-    },
-
-    [`@media (max-width: ${theme.breakpoints.md})`]: {
-      boxShadow: `-2rem 0 2rem 2rem ${
-        isCollapsed ? "transparent" : "#00000029"
-      }`,
-      zIndex: theme.zIndices.sidebarMobile,
-    },
-  })
-)
-
 export interface StyledSidebarUserContentProps {
   hasPageNavAbove: boolean
 }
@@ -289,19 +293,6 @@ export const StyledSidebarCollapsedControl = styled.div<
     color: theme.colors.bodyText,
   },
 }))
-
-export interface StyledResizerProps {
-  isCollapsed: boolean
-  sidebarWidth: string
-}
-
-export const StyledResizer = styled.div<StyledResizerProps>(
-  ({ isCollapsed, sidebarWidth, theme }) => ({
-    transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "translateX(0px)",
-    opacity: isCollapsed ? 0 : 1,
-    transition: "opacity 1000ms, transform 1000ms",
-  })
-)
 
 export interface StyledResizeHandleProps {
   isCollapsed: boolean
