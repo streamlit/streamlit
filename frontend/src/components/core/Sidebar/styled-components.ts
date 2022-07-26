@@ -260,6 +260,19 @@ export const StyledSidebarUserContent = styled.div<
   },
 }))
 
+export interface StyledSidebarContentProps {
+  hideScrollbar: boolean
+}
+
+export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
+  ({ hideScrollbar, theme }) => ({
+    position: "relative",
+    height: "100%",
+    width: "100%",
+    overflow: hideScrollbar ? "hidden" : "overlay",
+  })
+)
+
 export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
   position: "absolute",
   top: theme.spacing.xs,

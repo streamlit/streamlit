@@ -28,6 +28,7 @@ import { Theme } from "src/theme"
 import {
   StyledSidebar,
   StyledSidebarCloseButton,
+  StyledSidebarContent,
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledResizeHandle,
@@ -230,13 +231,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           isCollapsed={collapsedSidebar}
           sidebarWidth={sidebarWidth}
         >
-          <div
-            style={{
-              height: "100%",
-              width: "100%",
-              overflow: hideScrollbar ? "hidden" : "overlay",
-            }}
-          >
+          <StyledSidebarContent hideScrollbar={hideScrollbar}>
             <StyledSidebarCloseButton>
               <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
                 <Icon content={Close} size="lg" />
@@ -256,7 +251,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
               {children}
             </StyledSidebarUserContent>
-          </div>
+          </StyledSidebarContent>
         </Resizable>
       </>
     )
