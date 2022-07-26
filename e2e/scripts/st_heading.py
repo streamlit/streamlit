@@ -22,5 +22,8 @@ st.title("`Code` - Title with Anchor", anchor="title")
 
 
 st.subheader("`Code` - Subheader with Anchor")
-st.subheader("""`Code` - Subheader with Anchor
-            This <b>HTML tag</b> is escaped!""", anchor="subheader")
+st.subheader(
+    """`Code` - Subheader with Anchor
+        [link](href)""",
+    anchor="subheader",
+)

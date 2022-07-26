@@ -159,23 +159,23 @@ describe("StreamlitMarkdown", () => {
   })
 })
 
-const getHeadingProps = (elementProps: Partial<HeadingProto> = {}): HeadingProtoProps => ({
+const getHeadingProps = (
+  elementProps: Partial<HeadingProto> = {}
+): HeadingProtoProps => ({
   width: 5,
   element: HeadingProto.create({
     anchor: "some-anchor",
     tag: "h1",
     body: `hello world
           this is a new line`,
-    ...elementProps
+    ...elementProps,
   }),
 })
 
 describe("Heading", () => {
   it("renders properly after a new line", () => {
     const props = getHeadingProps()
-    const wrapper = mount(
-      <Heading {...props} />
-    )
+    const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello world")
     expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
       "this is a new line"
@@ -184,9 +184,7 @@ describe("Heading", () => {
 
   it("renders properly without a new line", () => {
     const props = getHeadingProps({ body: "hello" })
-    const wrapper = mount(
-      <Heading {...props} />
-    )
+    const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello")
     expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(0)
   })
