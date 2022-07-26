@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
+from dataclasses import dataclass, field, replace
 import json
 
 from streamlit.stats import CacheStat, CacheStatsProvider
@@ -33,7 +34,6 @@ from typing import (
     cast,
 )
 
-import attr
 from pympler.asizeof import asizeof
 from typing_extensions import Final, TypeAlias
 
@@ -71,14 +71,14 @@ SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
 )
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
 
     value: WidgetStateProto
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class Value:
     """A widget value that's not serialized. Immutable."""
 
@@ -88,13 +88,13 @@ class Value:
 WState: TypeAlias = Union[Value, Serialized]
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class WidgetMetadata(Generic[T]):
     """Metadata associated with a single widget. Immutable."""
 
     id: str
-    deserializer: WidgetDeserializer[T] = attr.ib(repr=False)
-    serializer: WidgetSerializer[T] = attr.ib(repr=False)
+    deserializer: WidgetDeserializer[T] = field(repr=False)
+    serializer: WidgetSerializer[T] = field(repr=False)
     value_type: ValueFieldName
 
     # An optional user-code callback invoked when the widget's value changes.
@@ -105,15 +105,15 @@ class WidgetMetadata(Generic[T]):
     callback_kwargs: Optional[WidgetKwargs] = None
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class WStates(MutableMapping[str, Any]):
     """A mapping of widget IDs to values. Widget values can be stored in
     serialized or deserialized form, but when values are retrieved from the
     mapping, they'll always be deserialized.
     """
 
-    states: Dict[str, WState] = attr.Factory(dict)
-    widget_metadata: Dict[str, WidgetMetadata[Any]] = attr.Factory(dict)
+    states: Dict[str, WState] = field(default_factory=dict)
+    widget_metadata: Dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
 
     def __getitem__(self, k: str) -> Any:
         """Return the value of the widget with the given key.
@@ -153,7 +153,7 @@ class WStates(MutableMapping[str, Any]):
 
         # Update metadata to reflect information from WidgetState proto
         self.set_widget_metadata(
-            attr.evolve(
+            replace(
                 metadata,
                 value_type=value_field_name,
             )
@@ -285,7 +285,7 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-@attr.s(auto_attribs=True, frozen=True, slots=True)
+@dataclass(frozen=True)
 class RegisterWidgetResult(Generic[T_co]):
     """Result returned by the `register_widget` family of functions/methods.
 
@@ -319,7 +319,7 @@ class RegisterWidgetResult(Generic[T_co]):
         return cls(value=deserializer(None, ""), value_changed=False)
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
@@ -338,17 +338,17 @@ class SessionState:
     """
 
     # All the values from previous script runs, squished together to save memory
-    _old_state: Dict[str, Any] = attr.Factory(dict)
+    _old_state: Dict[str, Any] = field(default_factory=dict)
 
     # Values set in session state during the current script run, possibly for
     # setting a widget's value. Keyed by a user provided string.
-    _new_session_state: Dict[str, Any] = attr.Factory(dict)
+    _new_session_state: Dict[str, Any] = field(default_factory=dict)
 
     # Widget values from the frontend, usually one changing prompted the script rerun
-    _new_widget_state: WStates = attr.Factory(WStates)
+    _new_widget_state: WStates = field(default_factory=WStates)
 
     # Keys used for widgets will be eagerly converted to the matching widget id
-    _key_id_mapping: Dict[str, str] = attr.Factory(dict)
+    _key_id_mapping: Dict[str, str] = field(default_factory=dict)
 
     # is it possible for a value to get through this without being deserialized?
     def _compact_state(self) -> None:
@@ -690,7 +690,7 @@ def require_valid_user_key(key: str) -> None:
         )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SessionStateStatProvider(CacheStatsProvider):
     _session_info_by_id: Dict[str, "SessionInfo"]
 

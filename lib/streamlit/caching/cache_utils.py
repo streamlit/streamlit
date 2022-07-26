@@ -21,13 +21,30 @@ import inspect
 import threading
 import types
 from abc import abstractmethod
-from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
+from dataclasses import dataclass
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    List,
+    Iterator,
+    Set,
+    Tuple,
+    Optional,
+    Any,
+    Union,
+)
+
+from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import util
 from streamlit.caching.cache_errors import CacheKeyNotFoundError
+from streamlit.elements import NONWIDGET_ELEMENTS
 from streamlit.logger import get_logger
+from streamlit.proto.Block_pb2 import Block
 from .cache_errors import (
+    CacheReplayClosureError,
     CacheType,
     CachedStFunctionWarning,
     UnhashableParamError,
@@ -35,15 +52,52 @@ from .cache_errors import (
 )
 from .hashing import update_hash
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 _LOGGER = get_logger(__name__)
+
+
+@dataclass
+class ElementMsgData:
+    """A non-interactive element's message and related metadata for
+    replaying that element's function call.
+    """
+
+    delta_type: str
+    message: Message
+    id_of_dg_called_on: str
+    returned_dgs_id: str
+
+
+@dataclass
+class BlockMsgData:
+    message: Block
+    id_of_dg_called_on: str
+    returned_dgs_id: str
+
+
+MsgData = Union[ElementMsgData, BlockMsgData]
+
+
+@dataclass
+class CachedResult:
+    """The full results of calling a cache-decorated function, enough to
+    replay the st functions called while executing it.
+    """
+
+    value: Any
+    messages: List[MsgData]
+    main_id: str
+    sidebar_id: str
 
 
 class Cache:
     """Function cache interface. Caches persist across script runs."""
 
     @abstractmethod
-    def read_value(self, value_key: str) -> Any:
-        """Read a value from the cache.
+    def read_result(self, value_key: str) -> CachedResult:
+        """Read a value and associated messages from the cache.
 
         Raises
         ------
@@ -54,9 +108,9 @@ class Cache:
         raise NotImplementedError
 
     @abstractmethod
-    def write_value(self, value_key: str, value: Any) -> None:
-        """Write a value to the cache, overwriting any existing value that
-        uses the value_key.
+    def write_result(self, value_key: str, value: Any, messages: List[MsgData]) -> None:
+        """Write a value and associated messages to the cache, overwriting any existing
+        result that uses the value_key.
         """
         raise NotImplementedError
 
@@ -85,12 +139,57 @@ class CachedFunction:
         raise NotImplementedError
 
     @property
-    def call_stack(self) -> "CachedFunctionCallStack":
+    def warning_call_stack(self) -> "CacheWarningCallStack":
+        raise NotImplementedError
+
+    @property
+    def message_call_stack(self) -> "CacheMessagesCallStack":
         raise NotImplementedError
 
     def get_function_cache(self, function_key: str) -> Cache:
         """Get or create the function cache for the given key."""
         raise NotImplementedError
+
+
+def replay_result_messages(
+    result: CachedResult, cache_type: CacheType, cached_func: types.FunctionType
+) -> None:
+    """Replay the st element function calls that happened when executing a
+    cache-decorated function.
+
+    When a cache function is executed, we record the element and block messages
+    produced, and use those to reproduce the DeltaGenerator calls, so the elements
+    will appear in the web app even when execution of the function is skipped
+    because the result was cached.
+
+    To make this work, for each st function call we record an identifier for the
+    DG it was effectively called on (see Note [DeltaGenerator method invocation]).
+    We also record the identifier for each DG returned by an st function call, if
+    it returns one. Then, for each recorded message, we get the current DG instance
+    corresponding to the DG the message was originally called on, and enqueue the
+    message using that, recording any new DGs produced in case a later st function
+    call is on one of them.
+    """
+    from streamlit.delta_generator import DeltaGenerator
+
+    # Maps originally recorded dg ids to this script run's version of that dg
+    returned_dgs: Dict[str, DeltaGenerator] = {}
+    returned_dgs[result.main_id] = st._main
+    returned_dgs[result.sidebar_id] = st.sidebar
+
+    try:
+        for msg in result.messages:
+            if isinstance(msg, ElementMsgData):
+                dg = returned_dgs[msg.id_of_dg_called_on]
+                maybe_dg = dg._enqueue(msg.delta_type, msg.message)
+                if isinstance(maybe_dg, DeltaGenerator):
+                    returned_dgs[msg.returned_dgs_id] = maybe_dg
+            elif isinstance(msg, BlockMsgData):
+                dg = returned_dgs[msg.id_of_dg_called_on]
+                new_dg = dg._block(msg.message)
+                returned_dgs[msg.returned_dgs_id] = new_dg
+    except KeyError:
+        raise CacheReplayClosureError(cache_type, cached_func)
 
 
 def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
@@ -123,20 +222,27 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
 
             try:
-                return_value = cache.read_value(value_key)
+                result = cache.read_result(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
+
+                replay_result_messages(result, cached_func.cache_type, func)
+
+                return_value = result.value
 
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with cached_func.call_stack.calling_cached_function(func):
+                with cached_func.warning_call_stack.calling_cached_function(
+                    func
+                ), cached_func.message_call_stack.calling_cached_function():
                     if cached_func.suppress_st_warning:
-                        with cached_func.call_stack.suppress_cached_st_function_warning():
+                        with cached_func.warning_call_stack.suppress_cached_st_function_warning():
                             return_value = func(*args, **kwargs)
                     else:
                         return_value = func(*args, **kwargs)
 
-                cache.write_value(value_key, return_value)
+                messages = cached_func.message_call_stack._most_recent_messages
+                cache.write_result(value_key, return_value, messages)
 
             return return_value
 
@@ -159,7 +265,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
     return wrapper
 
 
-class CachedFunctionCallStack(threading.local):
+class CacheWarningCallStack(threading.local):
     """A utility for warning users when they call `st` commands inside
     a cached function. Internally, this is just a counter that's incremented
     when we enter a cache function, and decremented when we exit.
@@ -194,7 +300,9 @@ class CachedFunctionCallStack(threading.local):
             assert self._suppress_st_function_warning >= 0
 
     def maybe_show_cached_st_function_warning(
-        self, dg: "st.delta_generator.DeltaGenerator", st_func_name: str
+        self,
+        dg: "st.delta_generator.DeltaGenerator",
+        st_func_name: str,
     ) -> None:
         """If appropriate, warn about calling st.foo inside @memo.
 
@@ -211,6 +319,8 @@ class CachedFunctionCallStack(threading.local):
             The name of the Streamlit function that was called.
 
         """
+        if st_func_name in NONWIDGET_ELEMENTS:
+            return
         if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
             cached_func = self._cached_func_stack[-1]
             self._show_cached_st_function_warning(dg, st_func_name, cached_func)
@@ -226,6 +336,113 @@ class CachedFunctionCallStack(threading.local):
         with self.suppress_cached_st_function_warning():
             e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
             dg.exception(e)
+
+
+"""
+Note [DeltaGenerator method invocation]
+There are two top level DG instances defined for all apps:
+`main`, which is for putting elements in the main part of the app
+`sidebar`, for the sidebar
+
+There are 3 different ways an st function can be invoked:
+1. Implicitly on the main DG instance (plain `st.foo` calls)
+2. Implicitly in an active contextmanager block (`st.foo` within a `with st.container` context)
+3. Explicitly on a DG instance (`st.sidebar.foo`, `my_column_1.foo`)
+
+To simplify replaying messages from a cached function result, we convert all of these
+to explicit invocations. How they get rewritten depends on if the invocation was
+implicit vs explicit, and if the target DG has been seen/produced during replay.
+
+Implicit invocation on a known DG -> Explicit invocation on that DG
+Implicit invocation on an unknown DG -> Rewrite as explicit invocation on main
+    with st.container():
+        my_cache_decorated_function()
+
+    This is situation 2 above, and the DG is a block entirely outside our function call,
+    so we interpret it as "put this element in the enclosing contextmanager block"
+    (or main if there isn't one), which is achieved by invoking on main.
+Explicit invocation on a known DG -> No change needed
+Explicit invocation on an unknown DG -> Raise an error
+    We have no way to identify the target DG, and it may not even be present in the
+    current script run, so the least surprising thing to do is raise an error.
+
+"""
+
+
+class CacheMessagesCallStack(threading.local):
+    """A utility for storing messages generated by `st` commands called inside
+    a cached function.
+
+    Data is stored in a thread-local object, so it's safe to use an instance
+    of this class across multiple threads.
+    """
+
+    def __init__(self, cache_type: CacheType):
+        self._cached_message_stack: List[List[MsgData]] = []
+        self._seen_dg_stack: List[Set[str]] = []
+        self._most_recent_messages: List[MsgData] = []
+        self._cache_type = cache_type
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    @contextlib.contextmanager
+    def calling_cached_function(self) -> Iterator[None]:
+        self._cached_message_stack.append([])
+        self._seen_dg_stack.append(set())
+        try:
+            yield
+        finally:
+            self._most_recent_messages = self._cached_message_stack.pop()
+            self._seen_dg_stack.pop()
+
+    def save_element_message(
+        self,
+        delta_type: str,
+        element_proto: Message,
+        invoked_dg_id: str,
+        used_dg_id: str,
+        returned_dg_id: str,
+    ) -> None:
+        """Record the element protobuf as having been produced during any currently
+        executing cached functions, so they can be replayed any time the function's
+        execution is skipped because they're in the cache.
+        """
+        id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
+        for msgs in self._cached_message_stack:
+            msgs.append(
+                ElementMsgData(delta_type, element_proto, id_to_save, returned_dg_id)
+            )
+        for s in self._seen_dg_stack:
+            s.add(returned_dg_id)
+
+    def save_block_message(
+        self,
+        block_proto: Block,
+        invoked_dg_id: str,
+        used_dg_id: str,
+        returned_dg_id: str,
+    ) -> None:
+        id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
+        for msgs in self._cached_message_stack:
+            msgs.append(BlockMsgData(block_proto, id_to_save, returned_dg_id))
+        for s in self._seen_dg_stack:
+            s.add(returned_dg_id)
+
+    def select_dg_to_save(self, invoked_id: str, acting_on_id: str) -> str:
+        """Select the id of the DG that this message should be invoked on
+        during message replay.
+
+        See Note [DeltaGenerator method invocation]
+
+        invoked_id is the DG the st function was called on, usually `st._main`.
+        acting_on_id is the DG the st function ultimately runs on, which may be different
+        if the invoked DG delegated to another one because it was in a `with` block.
+        """
+        if len(self._seen_dg_stack) > 0 and acting_on_id in self._seen_dg_stack[-1]:
+            return acting_on_id
+        else:
+            return invoked_id
 
 
 def _make_value_key(

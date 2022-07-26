@@ -15,6 +15,7 @@
 """A library of caching utilities."""
 
 import contextlib
+from dataclasses import dataclass
 import functools
 import hashlib
 import inspect
@@ -37,8 +38,6 @@ from typing import (
     Union,
     cast,
 )
-
-import attr
 
 from cachetools import TTLCache
 
@@ -67,7 +66,7 @@ _CacheEntry = namedtuple("_CacheEntry", ["value", "hash"])
 _DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class MemCache:
     cache: TTLCache
     display_name: str

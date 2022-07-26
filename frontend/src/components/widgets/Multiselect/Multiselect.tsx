@@ -249,8 +249,11 @@ class Multiselect extends React.PureComponent<Props, State> {
 
                     Issue related: https://github.com/streamlit/streamlit/issues/590
                   */
-                  minHeight: "40px",
+                  minHeight: "38.4px",
                   paddingLeft: ".5rem",
+                  paddingTop: 0,
+                  paddingBottom: 0,
+                  paddingRight: 0,
                 }),
               },
               ClearIcon: {

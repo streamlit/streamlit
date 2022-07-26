@@ -181,6 +181,11 @@ class Selectbox extends React.PureComponent<Props, State> {
           value={value}
           valueKey="value"
           overrides={{
+            Root: {
+              style: () => ({
+                lineHeight: 1.4,
+              }),
+            },
             Dropdown: { component: VirtualDropdown },
 
             ControlContainer: {
@@ -206,6 +211,12 @@ class Selectbox extends React.PureComponent<Props, State> {
                 paddingLeft: ".5rem",
                 paddingBottom: ".5rem",
                 paddingTop: ".5rem",
+              }),
+            },
+
+            Input: {
+              style: () => ({
+                lineHeight: 1.4,
               }),
             },
 

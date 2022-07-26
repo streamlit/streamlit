@@ -260,7 +260,7 @@ class AppSession:
         )
 
         # Send an Exception message to the frontend.
-        # Because _on_scriptrunner_event does its work in an ioloop callback,
+        # Because _on_scriptrunner_event does its work in an eventloop callback,
         # this exception ForwardMsg *must* also be enqueued in a callback,
         # so that it will be enqueued *after* the various ForwardMsgs that
         # _on_scriptrunner_event sends.

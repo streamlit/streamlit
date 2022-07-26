@@ -20,20 +20,25 @@ from typing import Optional, Any, Dict, List, TypeVar, Callable, overload, cast
 
 from pympler import asizeof
 
+import streamlit as st
 from streamlit.logger import get_logger
 from streamlit.stats import CacheStatsProvider, CacheStat
 from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import (
     Cache,
+    CacheMessagesCallStack,
+    CachedResult,
+    MsgData,
     create_cache_wrapper,
-    CachedFunctionCallStack,
+    CacheWarningCallStack,
     CachedFunction,
 )
 
 _LOGGER = get_logger(__name__)
 
 
-SINGLETON_CALL_STACK = CachedFunctionCallStack(CacheType.SINGLETON)
+SINGLETON_CALL_STACK = CacheWarningCallStack(CacheType.SINGLETON)
+SINGLETON_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.SINGLETON)
 
 
 class SingletonCaches(CacheStatsProvider):
@@ -96,8 +101,12 @@ class SingletonFunction(CachedFunction):
         return CacheType.SINGLETON
 
     @property
-    def call_stack(self) -> CachedFunctionCallStack:
+    def warning_call_stack(self) -> CacheWarningCallStack:
         return SINGLETON_CALL_STACK
+
+    @property
+    def message_call_stack(self) -> CacheMessagesCallStack:
+        return SINGLETON_MESSAGE_CALL_STACK
 
     @property
     def display_name(self) -> str:
@@ -248,25 +257,26 @@ class SingletonCache(Cache):
     def __init__(self, key: str, display_name: str):
         self.key = key
         self.display_name = display_name
-        self._mem_cache: Dict[str, Any] = {}
+        self._mem_cache: Dict[str, CachedResult] = {}
         self._mem_cache_lock = threading.Lock()
 
-    def read_value(self, key: str) -> Any:
-        """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
-        value doesn't exist.
+    def read_result(self, key: str) -> CachedResult:
+        """Read a value and associated messages from the cache.
+        Raise `CacheKeyNotFoundError` if the value doesn't exist.
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
-                entry = self._mem_cache[key]
-                return entry
+                return self._mem_cache[key]
 
             else:
                 raise CacheKeyNotFoundError()
 
-    def write_value(self, key: str, value: Any) -> None:
-        """Write a value to the cache."""
+    def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
+        """Write a value and associated messages to the cache."""
+        main_id = st._main.id
+        sidebar_id = st.sidebar.id
         with self._mem_cache_lock:
-            self._mem_cache[key] = value
+            self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
 
     def clear(self) -> None:
         with self._mem_cache_lock:

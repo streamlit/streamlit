@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import cast, TYPE_CHECKING, Union, Optional
 from typing_extensions import TypeAlias, Literal
 
-import attr
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 
@@ -33,7 +33,7 @@ Delta: TypeAlias = Union[float, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class MetricColorAndDirection:
     color: "MetricProto.MetricColor.ValueType"
     direction: "MetricProto.MetricDirection.ValueType"

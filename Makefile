@@ -153,7 +153,7 @@ cli-smoke-tests:
 
 .PHONY: cli-regression-tests
 # Verify that CLI boots as expected when called with `python -m streamlit`
-cli-regression-tests:
+cli-regression-tests: install
 	pytest scripts/cli_regression_tests.py
 
 .PHONY: install
@@ -176,7 +176,7 @@ distribution:
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
-package: mini-devel frontend install distribution
+package: mini-devel frontend distribution
 
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
@@ -186,11 +186,11 @@ conda-distribution:
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
 	# NOTE: Running the following command requires both conda and conda-build to
 	# be installed.
-	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
+	ST_CONDA_BUILD=1 GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: mini-devel frontend install conda-distribution
+conda-package: mini-devel frontend conda-distribution
 
 
 .PHONY: clean

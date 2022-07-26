@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import os
 from typing import List
-
-import attr
 
 from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.logger import get_logger
@@ -24,7 +23,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 LOGGER = get_logger(__name__)
 
 
-@attr.s(auto_attribs=True, slots=True, init=False)
+@dataclass(init=False)
 class SessionData:
     """
     Contains parameters related to running a script, and also houses
