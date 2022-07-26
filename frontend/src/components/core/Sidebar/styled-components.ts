@@ -197,9 +197,9 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     position: "relative",
     zIndex: theme.zIndices.header + 1,
 
-    transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "none",
-    opacity: isCollapsed ? 0 : 1,
-    transition: "opacity 400ms, transform 400ms",
+    // transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "translateX(0px)",
+    // opacity: isCollapsed ? 0 : 1,
+    // transition: "opacity 1000ms, transform 1000ms",
 
     "&:focus": {
       outline: "none",
@@ -297,14 +297,15 @@ export interface StyledResizerProps {
 
 export const StyledResizer = styled.div<StyledResizerProps>(
   ({ isCollapsed, sidebarWidth, theme }) => ({
-    transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "none",
+    transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "translateX(0px)",
     opacity: isCollapsed ? 0 : 1,
-    transition: "opacity 400ms, transform 400ms",
+    transition: "opacity 1000ms, transform 1000ms",
   })
 )
 
 export interface StyledResizeHandleProps {
   isCollapsed: boolean
+  // ondblclick: void
 }
 
 export const StyledResizeHandle = styled.div<StyledResizeHandleProps>(

@@ -172,6 +172,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     return true
   }
 
+  resetSidebar = (): void => {
+    this.setState({ sidebarWidth: "336" })
+    window.localStorage.setItem("sidebarWidth", "336")
+  }
+
   toggleCollapse = (): void => {
     const { collapsedSidebar } = this.state
 
@@ -199,10 +204,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
 
-    const minWidth = collapsedSidebar ? 0 : Math.min(244, window.innerWidth)
-    const maxWidth = collapsedSidebar
-      ? 0
-      : Math.min(550, window.innerWidth * 0.9)
+    const minWidth = Math.min(244, window.innerWidth)
+    const maxWidth = Math.min(550, window.innerWidth * 0.9)
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
@@ -226,6 +229,9 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             const newWidth = parseInt(sidebarWidth, 10) + d.width
             this.setSidebarWidth(newWidth)
           }}
+          // @ts-ignore
+          isCollapsed={collapsedSidebar}
+          sidebarWidth={sidebarWidth}
         >
           <StyledSidebarContent
             isCollapsed={collapsedSidebar}
@@ -253,15 +259,15 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>
-          <StyledSidebarCollapsedControl
+        </Resizable>
+        {collapsedSidebar && (<StyledSidebarCollapsedControl
             chevronDownshift={chevronDownshift}
             isCollapsed={collapsedSidebar}
           >
             <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
               <Icon content={ChevronRight} size="lg" />
             </Button>
-          </StyledSidebarCollapsedControl>
-        </Resizable>
+          </StyledSidebarCollapsedControl>)}
       </StyledSidebar>
     )
   }
