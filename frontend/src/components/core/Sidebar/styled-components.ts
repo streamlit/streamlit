@@ -39,7 +39,6 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       backgroundColor: theme.colors.bgColor,
       backgroundAttachment: "fixed",
       flexShrink: 0,
-      overflowX: "hidden",
       zIndex: theme.zIndices.header + 1,
 
       transform: isCollapsed
@@ -228,6 +227,7 @@ export const StyledSidebarUserContent = styled.div<
   paddingTop: hasPageNavAbove ? theme.spacing.lg : theme.sizes.sidebarTopSpace,
   paddingLeft: theme.spacing.lg,
   paddingRight: theme.spacing.lg,
+  overflowX: "hidden",
 
   "& h1": {
     fontSize: theme.fontSizes.xl,
