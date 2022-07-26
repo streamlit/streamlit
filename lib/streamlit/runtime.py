@@ -108,9 +108,8 @@ class Runtime:
     def __init__(self, config: RuntimeConfig):
         """Create a StreamlitRuntime. It won't be started yet.
 
-        StreamlitRuntime is *not* thread-safe. Its public methods are
-        generally safe to call only on the same thread that its event loop runs
-        on.
+        StreamlitRuntime is *not* thread-safe. Its public methods are generally
+        safe to call only on the same thread that its event loop runs on.
 
         Parameters
         ----------
@@ -189,7 +188,8 @@ class Runtime:
 
         Threading
         ---------
-        UNSAFE. Must be called on the eventloop thread.
+        SAFE. May be called on any thread. (But note that SessionInfo mutations
+        are not thread-safe!)
         """
         return self._session_info_by_id.get(session_id, None)
 
@@ -219,14 +219,14 @@ class Runtime:
 
         Threading
         ---------
-        SAFE. May be called on any thread.
+        UNSAFE. May be called on any thread.
         """
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             return
 
         LOGGER.debug("Runtime stopping...")
         self._set_state(RuntimeState.STOPPING)
-        self._get_eventloop().call_soon_threadsafe(self._must_stop.set)
+        self._must_stop.set()
 
     def is_active_session(self, session_id: str) -> bool:
         """True if the session_id belongs to an active session.
