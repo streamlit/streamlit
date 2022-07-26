@@ -152,7 +152,7 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
                 "page_script_hash": main_page_script_hash,
                 "page_name": main_page_name,
                 "icon": main_page_icon,
-                "script_path": str(main_script_path),
+                "script_path": str(main_script_path.resolve()),
             }
         }
 
@@ -163,7 +163,7 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
         )
 
         for script_path in page_scripts:
-            script_path_str = str(script_path)
+            script_path_str = str(script_path.resolve())
             pn, pi = page_name_and_icon(script_path)
             psh = calc_md5(script_path_str)
 
