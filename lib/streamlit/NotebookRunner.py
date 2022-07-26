@@ -20,8 +20,7 @@ from streamlit import magic
 from streamlit.cursor import get_container_cursor
 from streamlit.scriptrunner.script_run_context import get_script_run_ctx
 
-WIDGETS = [
-    'button',
+STATEFUL_WIDGETS = [
     'camera_input',
     'checkbox',
     'color_picker',
@@ -38,6 +37,14 @@ WIDGETS = [
     'time_input',
 ]
 
+STATELESS_WIDGETS = [
+    'button',
+]
+
+
+class RANDOM_VALUE:
+    pass
+
 class NotebookRunner:
     def __init__(self, body, script_path, enqueue_forward_msg):
         self._script_path = script_path
@@ -50,7 +57,7 @@ class NotebookRunner:
         else:
             self._cell_runners = [
                 _CellRunner(i, cb, script_path, enqueue_forward_msg)
-                for (i, cb) in enumerate(_split_cells(body))
+                for (i, cb) in enumerate(_split_cells_at_ellipses(body))
             ]
 
     def __len__(self):
@@ -174,7 +181,7 @@ class _CellRunner:
         ctx = get_script_run_ctx()
         curr_widget_states = ctx.session_state._state._new_widget_state
 
-        for widget_name in WIDGETS:
+        for widget_name in STATEFUL_WIDGETS:
             if el.HasField(widget_name):
                 widget = getattr(el, widget_name)
                 if widget.id in curr_widget_states:
@@ -182,6 +189,11 @@ class _CellRunner:
                 else:
                     self._recorded_widget_states[widget.id] = widget.default
                 break
+
+        for widget_name in STATELESS_WIDGETS:
+            if el.HasField(widget_name):
+                widget = getattr(el, widget_name)
+                self._recorded_widget_states[widget.id] = RANDOM_VALUE
 
     def _widget_value_changed(self):
         ctx = get_script_run_ctx()
@@ -258,7 +270,7 @@ class _CellRunner:
             ctx.current_cell_index = self._cell_index
 
 
-def _split_cells(body):
+def _split_cells_at_ellipses(body):
     lines = body.split('\n')
     current_cell = []
     cells = []
@@ -273,5 +285,22 @@ def _split_cells(body):
             current_cell.append(line)
 
     cells.append('\n'.join(current_cell))
+
+    return cells
+
+
+def _split_cells_at_expressions(body):
+    import ast
+    tree = ast.parse(body)
+
+    lines = body.split('\n')
+    current_cell = []
+
+    cells = []
+
+    for node in tree.body:
+        cell_lines = lines[node.lineno - 1:node.end_lineno] # Lines are 1-indexed!
+        cell_body = '\n'.join(cell_lines)
+        cells.append(cell_body)
 
     return cells
