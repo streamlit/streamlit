@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 
 import { Alert as AlertProto } from "src/autogen/proto"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import { EmojiIcon } from "src/components/shared/Icon"
 import AlertContainer, { Kind } from "src/components/shared/AlertContainer"
 
 export function getAlertKind(format: AlertProto.Format): Kind {
@@ -55,7 +56,7 @@ export default function Alert({
   return (
     <div className="stAlert">
       <AlertContainer width={width} kind={kind}>
-        {icon && <StreamlitMarkdown source={icon} allowHTML={false} />}
+        {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
         <StreamlitMarkdown source={body} allowHTML={false} />
       </AlertContainer>
     </div>
