@@ -296,16 +296,26 @@ export const StyledSidebarCollapsedControl = styled.div<
   },
 }))
 
+export const StyledResizeHandleMargin = styled.div(({ theme }) => ({
+  position: "absolute",
+  width: "20px",
+  height: "100%",
+  top: "0px",
+  right: "5px",
+  cursor: "default",
+  overflow: "hidden",
+}))
+
 export const StyledResizeHandle = styled.div(({ theme }) => ({
   position: "absolute",
   width: "10px",
   height: "100%",
   top: "0px",
+  right: "0px",
   cursor: "col-resize",
   zIndex: theme.zIndices.sidebarMobile,
 
   "&:hover": {
-    backgroundImage:
-      "linear-gradient(to right, transparent 50%, #c0c2c4 50%, transparent 60%)",
+    backgroundImage: `linear-gradient(to right, transparent 50%, ${theme.colors.fadedText10} 50%, transparent 60%)`,
   },
 }))

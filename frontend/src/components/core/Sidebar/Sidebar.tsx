@@ -32,6 +32,7 @@ import {
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledResizeHandle,
+  StyledResizeHandleMargin,
 } from "./styled-components"
 import IsSidebarContext from "./IsSidebarContext"
 import SidebarNav from "./SidebarNav"
@@ -220,7 +221,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             left: false,
           }}
           handleComponent={{
-            right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
+            right: (
+              <>
+                <StyledResizeHandleMargin />
+                <StyledResizeHandle onClick={this.resetSidebarWidth} />
+              </>
+            ),
           }}
           size={{ width: sidebarWidth, height: "100%" }}
           as={StyledSidebar}
