@@ -28,18 +28,18 @@ if TYPE_CHECKING:
 # We check if what's been added is a valid emoji,
 # and default to an empty string if not.
 def check_emoji(emoji):
-    # If there's no emoji, carry on
-    if emoji == "":
+    # If the user didn't add an emoji, carry on without it
+    if emoji == None:
         return clean_text(str(""))
-    
-    # Check if 
+
+    # Check if the provided character is a valid emoji
     extracted_emoji = is_emoji_valid(emoji)
 
-    # If the regex threw a valid result
+    # If it is, return it
     if extracted_emoji is not None:
         return clean_text(str(extracted_emoji.group()))
     
-    # If the regex threw an invalid result
+    # If not, throw an error
     else:
         raise StreamlitAPIException(f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.')
 
