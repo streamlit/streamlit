@@ -434,6 +434,55 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(200, response.code)
         self.assertEqual(b"Test Content", response.body)
 
+    def test_outside_component_root_request(self):
+        """Tests to ensure a path based on the root directory (and therefore
+        outside of the component root) is disallowed."""
+
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+            # We don't need the return value in this case.
+            declare_component("test", path=PATH)
+
+        response = self._request_component(
+            "components_test.test//etc/hosts"
+        )
+
+        self.assertEqual(403, response.code)
+        self.assertEqual(b"forbidden", response.body)
+
+    def test_relative_outside_component_root_request(self):
+        """Tests to ensure a path relative to the component root directory
+        (and specifically outside of the component root) is disallowed."""
+
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+            # We don't need the return value in this case.
+            declare_component("test", path=PATH)
+
+        response = self._request_component(
+            "components_test.test/../foo"
+        )
+
+        self.assertEqual(403, response.code)
+        self.assertEqual(b"forbidden", response.body)
+
+    def test_symlink_outside_component_root_request(self):
+        """Tests to ensure a path symlinked to a file outside the component
+        root directory is disallowed."""
+
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+            # We don't need the return value in this case.
+            declare_component("test", path=PATH)
+
+        with mock.patch(
+            "streamlit.components.v1.components.os.path.realpath",
+            side_effect=[PATH, "/etc/hosts"],
+        ):
+            response = self._request_component(
+                "components_test.test"
+            )
+
+        self.assertEqual(403, response.code)
+        self.assertEqual(b"forbidden", response.body)
+
     def test_invalid_component_request(self):
         """Test request failure when invalid component name is provided."""
 
