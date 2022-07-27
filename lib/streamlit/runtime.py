@@ -172,9 +172,9 @@ class Runtime:
         """Event handler for UploadedFileManager.on_file_added.
         Ensures that uploaded files from stale sessions get deleted.
 
-        Threading
-        ---------
-        SAFE. May be called on any thread.
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
         """
         session_info = self._get_session_info(session_id)
         if session_info is None:
@@ -186,10 +186,10 @@ class Runtime:
         """Return the SessionInfo with the given id, or None if no such
         session exists.
 
-        Threading
-        ---------
-        SAFE. May be called on any thread. (But note that SessionInfo mutations
-        are not thread-safe!)
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread. (But note that SessionInfo
+        mutations are not thread-safe!)
         """
         return self._session_info_by_id.get(session_id, None)
 
@@ -207,9 +207,9 @@ class Runtime:
         -------
         None
 
-        Threading
-        ---------
-        UNSAFE. Must be called on the eventloop thread.
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
         """
         await self._loop_coroutine(on_started)
 
@@ -217,9 +217,9 @@ class Runtime:
         """Request that Streamlit close all sessions and stop running.
         Note that Streamlit won't stop running immediately.
 
-        Threading
-        ---------
-        UNSAFE. May be called on any thread.
+        Notes
+        -----
+        Threading: UNSAFE. May be called on any thread.
         """
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             return
@@ -231,9 +231,9 @@ class Runtime:
     def is_active_session(self, session_id: str) -> bool:
         """True if the session_id belongs to an active session.
 
-        Threading
-        ---------
-        SAFE. May be called on any thread.
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
         """
         # Dictionary membership is atomic in CPython, so this is thread-safe.
         return session_id in self._session_info_by_id
@@ -263,9 +263,9 @@ class Runtime:
         str
             The session's unique string ID.
 
-        Threading
-        ---------
-        UNSAFE. Must be called on the eventloop thread.
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
         """
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeError(f"Can't create_session (state={self._state})")
@@ -310,9 +310,9 @@ class Runtime:
         -------
         None
 
-        Threading
-        ---------
-        UNSAFE. Must be called on the eventloop thread.
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
         """
         if session_id in self._session_info_by_id:
             session_info = self._session_info_by_id[session_id]
@@ -340,9 +340,9 @@ class Runtime:
         -------
         None
 
-        Threading
-        ---------
-        UNSAFE. Must be called on the eventloop thread.
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
         """
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeError(f"Can't handle_backmsg (state={self._state})")
@@ -375,9 +375,9 @@ class Runtime:
         (True, "ok") if the script completes without error, or (False, err_msg)
         if the script raises an exception.
 
-        Threading
-        ---------
-        UNSAFE. Must be called on the eventloop thread.
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
@@ -423,9 +423,9 @@ class Runtime:
         -------
         None
 
-        Threading
-        ---------
-        UNSAFE. Must be called on the eventloop thread.
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
         """
         try:
             if self._state == RuntimeState.INITIAL:
@@ -522,9 +522,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         -------
         None
 
-        Threading
-        ---------
-        UNSAFE. Must be called on the eventloop thread.
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
         """
         msg.metadata.cacheable = is_cacheable_msg(msg)
         msg_to_send = msg
@@ -576,9 +576,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         -------
         None
 
-        Threading
-        ---------
-        SAFE. May be called on any thread.
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
         """
         self._get_eventloop().call_soon_threadsafe(self._need_send_data.set)
 
