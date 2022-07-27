@@ -49,8 +49,6 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media (max-width: ${theme.breakpoints.md})`]: {
-        // Move sidebar up to cover header decoration
-        top: 0,
         boxShadow: `-2rem 0 2rem 2rem ${
           isCollapsed ? "transparent" : "#00000029"
         }`,
