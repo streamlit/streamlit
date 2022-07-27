@@ -203,10 +203,6 @@ class Runtime:
             An optional callback that will be called when the runtime's loop
             has started. It will be called on the eventloop thread.
 
-        Returns
-        -------
-        None
-
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
@@ -306,10 +302,6 @@ class Runtime:
         session_id
             The session's unique ID.
 
-        Returns
-        -------
-        None
-
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
@@ -335,10 +327,6 @@ class Runtime:
             The session's unique ID.
         msg
             The BackMsg to deliver to the session.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
@@ -418,10 +406,6 @@ class Runtime:
         self, on_started: Optional[Callable[[], Any]] = None
     ) -> None:
         """The main Runtime loop.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
@@ -518,10 +502,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         msg : ForwardMsg
             The message to send to the client
 
-        Returns
-        -------
-        None
-
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
@@ -571,10 +551,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """Callback called by AppSession after the AppSession has enqueued a
         message. Sets the "needs_send_data" event, which causes our core
         loop to wake up and flush client message queues.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
