@@ -442,9 +442,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
-        response = self._request_component(
-            "components_test.test//etc/hosts"
-        )
+        response = self._request_component("components_test.test//etc/hosts")
 
         self.assertEqual(403, response.code)
         self.assertEqual(b"forbidden", response.body)
@@ -457,9 +455,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
-        response = self._request_component(
-            "components_test.test/../foo"
-        )
+        response = self._request_component("components_test.test/../foo")
 
         self.assertEqual(403, response.code)
         self.assertEqual(b"forbidden", response.body)
@@ -476,9 +472,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             "streamlit.components.v1.components.os.path.realpath",
             side_effect=[PATH, "/etc/hosts"],
         ):
-            response = self._request_component(
-                "components_test.test"
-            )
+            response = self._request_component("components_test.test")
 
         self.assertEqual(403, response.code)
         self.assertEqual(b"forbidden", response.body)
