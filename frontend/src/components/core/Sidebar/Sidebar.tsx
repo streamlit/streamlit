@@ -147,6 +147,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   resetSidebarWidth = (event: any): void => {
+    // Double clicking on the resize handle resets sidebar to default width
     if (event.detail === 2) {
       this.setState({ sidebarWidth: "336" })
       window.localStorage.setItem("sidebarWidth", "336")

@@ -91,6 +91,14 @@ describe("Sidebar Component", () => {
     expect(wrapper.find("Resizable").prop("isCollapsed")).toBe(false)
   })
 
+  it("chevron does not render if sidebar expanded", () => {
+    const wrapper = renderSideBar({
+      initialSidebarState: PageConfig.SidebarState.EXPANDED,
+    })
+
+    expect(wrapper.find("StyledSidebarCollapsedControl").exists()).toBe(false)
+  })
+
   it("hides scrollbar when hideScrollbar is called", () => {
     const wrapper = renderSideBar({})
 

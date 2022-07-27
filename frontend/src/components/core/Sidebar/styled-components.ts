@@ -34,37 +34,26 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       height: "calc(100vh - 2px)",
       position: "relative",
       top: "2px",
-      minWidth,
-      maxWidth,
       backgroundColor: theme.colors.bgColor,
-      backgroundAttachment: "fixed",
-      flexShrink: 0,
       zIndex: theme.zIndices.header + 1,
 
+      minWidth,
+      maxWidth,
       transform: isCollapsed
         ? `translateX(-${sidebarWidth}px)`
         : "translateX(0px)",
-      opacity: isCollapsed ? 0 : 1,
-      transition:
-        "opacity 300ms, transform 300ms, min-width 300ms, max-width 300ms",
+      transition: "transform 300ms, min-width 300ms, max-width 300ms",
 
       "&:focus": {
         outline: "none",
       },
 
       [`@media (max-width: ${theme.breakpoints.md})`]: {
-        marginLeft: theme.spacing.none,
-        // Instead of 100% width and height, we want to make sure
-        // the sidebar takes all available space when viewports change
-        position: "absolute",
+        // Move sidebar up to cover header decoration
         top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
         boxShadow: `-2rem 0 2rem 2rem ${
           isCollapsed ? "transparent" : "#00000029"
         }`,
-        zIndex: theme.zIndices.sidebarMobile,
       },
     }
   }
