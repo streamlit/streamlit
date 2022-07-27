@@ -153,7 +153,7 @@ cli-smoke-tests:
 
 .PHONY: cli-regression-tests
 # Verify that CLI boots as expected when called with `python -m streamlit`
-cli-regression-tests:
+cli-regression-tests: install
 	pytest scripts/cli_regression_tests.py
 
 .PHONY: install
@@ -176,7 +176,7 @@ distribution:
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
-package: mini-devel frontend install distribution
+package: mini-devel frontend distribution
 
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
@@ -190,7 +190,7 @@ conda-distribution:
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: mini-devel frontend install conda-distribution
+conda-package: mini-devel frontend conda-distribution
 
 
 .PHONY: clean
