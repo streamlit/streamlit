@@ -16,6 +16,7 @@ from typing import cast, Optional, TYPE_CHECKING
 
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.errors import StreamlitAPIException
+from streamlit.string_util import is_emoji_valid
 from .utils import clean_text
 import re
 
@@ -23,42 +24,19 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.type_util import SupportsStr
 
-MATCH_EMOJI = re.compile(
-    "["
-    u"\U0001F600-\U0001F64F"  # emoticons
-    u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-    u"\U0001F680-\U0001F6FF"  # transport & map symbols
-    u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-    u"\U00002500-\U00002BEF"  # chinese char
-    u"\U00002702-\U000027B0"
-    u"\U00002702-\U000027B0"
-    u"\U000024C2-\U0001F251"
-    u"\U0001f926-\U0001f937"
-    u"\U00010000-\U0010ffff"
-    u"\u2640-\u2642"
-    u"\u2600-\u2B55"
-    u"\u200d"
-    u"\u23cf"
-    u"\u23e9"
-    u"\u231a"
-    u"\ufe0f"  # dingbats
-    u"\u3030"
-    "]+",
-    flags=re.UNICODE,
-)
-
 # Function to check the icon parameter on the alert.
 # We check if what's been added is a valid emoji,
 # and default to an empty string if not.
 def check_emoji(emoji):
-    extracted_emoji = MATCH_EMOJI.match(emoji)
-
     # If there's no emoji, carry on
     if emoji == "":
         return clean_text(str(""))
     
+    # Check if 
+    extracted_emoji = is_emoji_valid(emoji)
+
     # If the regex threw a valid result
-    elif extracted_emoji is not None:
+    if extracted_emoji is not None:
         return clean_text(str(extracted_emoji.group()))
     
     # If the regex threw an invalid result

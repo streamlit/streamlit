@@ -111,3 +111,33 @@ def generate_download_filename_from_title(title_string: str) -> str:
     file_name_string = clean_filename(title_string)
     title_string = snake_case_to_camel_case(file_name_string)
     return append_date_time_to_string(title_string)
+
+
+def is_emoji_valid(emoji: str) -> str:
+    """Check if the provided character is a valid emoji."""
+
+    MATCH_EMOJI = re.compile(
+        "["
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        u"\U00002500-\U00002BEF"  # chinese char
+        u"\U00002702-\U000027B0"
+        u"\U00002702-\U000027B0"
+        u"\U000024C2-\U0001F251"
+        u"\U0001f926-\U0001f937"
+        u"\U00010000-\U0010ffff"
+        u"\u2640-\u2642"
+        u"\u2600-\u2B55"
+        u"\u200d"
+        u"\u23cf"
+        u"\u23e9"
+        u"\u231a"
+        u"\ufe0f"  # dingbats
+        u"\u3030"
+        "]+",
+        flags=re.UNICODE,
+    )
+
+    return MATCH_EMOJI.match(emoji)
