@@ -41,6 +41,12 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         filename = "/".join(parts[1:])
         abspath = os.path.join(component_root, filename)
 
+        # Do NOT expose anything outside of the component root.
+        if os.path.commonprefix([component_root, abspath]) != component_root:
+            self.write("not found")
+            self.set_status(404)
+            return
+
         LOGGER.debug("ComponentRequestHandler: GET: %s -> %s", path, abspath)
 
         try:
