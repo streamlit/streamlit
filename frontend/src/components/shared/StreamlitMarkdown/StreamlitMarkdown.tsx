@@ -46,7 +46,9 @@ import {
   StyledLinkIconContainer,
   StyledLinkIcon,
   StyledHeaderContent,
-  StyledHeading,
+  StyledHeadingOne,
+  StyledHeadingTwo,
+  StyledHeadingThree,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -118,12 +120,28 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     removeScriptFinishedHandler,
   } = React.useContext(AppContext)
   if (isSidebar) {
-    return (
-      // @ts-ignore
-      <StyledHeading as={tag} isCaption={false} isInSidebar={isSidebar}>
-        {children}
-      </StyledHeading>
-    )
+    switch (tag) {
+      case "h1":
+        return (
+          <StyledHeadingOne isInSidebar={isSidebar}>
+            {children}
+          </StyledHeadingOne>
+        )
+      case "h2":
+        return (
+          <StyledHeadingTwo isInSidebar={isSidebar}>
+            {children}
+          </StyledHeadingTwo>
+        )
+      case "h3":
+        return (
+          <StyledHeadingThree isInSidebar={isSidebar}>
+            {children}
+          </StyledHeadingThree>
+        )
+      default:
+        return React.createElement(tag, tagProps, children)
+    }
   }
 
   const onScriptFinished = React.useCallback(() => {
@@ -330,6 +348,7 @@ export function Heading(props: HeadingProtoProps): ReactElement {
           }}
         />
       </HeadingWithAnchor>
+      {/* Anything after new line is regular markdown */}
       {rest.length > 0 && (
         <StyledStreamlitMarkdown
           isCaption={Boolean(false)}
