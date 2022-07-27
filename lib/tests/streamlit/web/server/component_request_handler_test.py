@@ -66,7 +66,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(200, response.code)
         self.assertEqual(b"Test Content", response.body)
-    
+
     def test_outside_component_root_request(self):
         """Tests to ensure anything outside of the component root is disallowed."""
 
@@ -74,7 +74,6 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
-        
         response = self._request_component(
             "web.server.component_request_handler_test.test//etc/hosts"
         )
