@@ -81,6 +81,24 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(404, response.code)
         self.assertEqual(b"not found", response.body)
 
+    def test_symlink_outside_component_root_request(self):
+        """Tests to ensure anything outside of the component root is disallowed."""
+
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+            # We don't need the return value in this case.
+            declare_component("test", path=PATH)
+
+        with mock.patch(
+            "streamlit.web.server.component_request_handler.os.path.realpath",
+            return_value="/etc/hosts",
+        ):
+            response = self._request_component(
+                "web.server.component_request_handler_test.test"
+            )
+
+        self.assertEqual(404, response.code)
+        self.assertEqual(b"not found", response.body)
+
     def test_invalid_component_request(self):
         """Test request failure when invalid component name is provided."""
 

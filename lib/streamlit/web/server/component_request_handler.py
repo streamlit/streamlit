@@ -39,7 +39,8 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             return
 
         filename = "/".join(parts[1:])
-        abspath = os.path.join(component_root, filename)
+        # follow symlinks to get an accurate path
+        abspath = os.path.realpath(os.path.join(component_root, filename))
 
         # Do NOT expose anything outside of the component root.
         if os.path.commonprefix([component_root, abspath]) != component_root:
