@@ -316,6 +316,6 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.sidebarMobile,
 
   "&:hover": {
-    backgroundImage: `linear-gradient(to right, transparent 50%, ${theme.colors.fadedText10} 50%, transparent 60%)`,
+    backgroundImage: `linear-gradient(to right, transparent 40%, ${theme.colors.fadedText10} 45%, transparent 60%)`,
   },
 }))
