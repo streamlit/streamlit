@@ -23,8 +23,8 @@ from typing_extensions import Final, Protocol
 from streamlit import config
 from streamlit.app_session import AppSession
 from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
-from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import (
+    ForwardMsgCache,
     populate_hash_if_needed,
     create_reference_msg,
 )
