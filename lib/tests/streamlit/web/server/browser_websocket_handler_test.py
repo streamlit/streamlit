@@ -20,10 +20,8 @@ import tornado.web
 import tornado.websocket
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.web.server.server import (
-    BrowserWebSocketHandler,
-    SessionClientDisconnectedError,
-)
+from streamlit.runtime import SessionClientDisconnectedError
+from streamlit.web.server.server import BrowserWebSocketHandler
 from .server_test_case import ServerTestCase
 
 
@@ -39,7 +37,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get our connected BrowserWebSocketHandler
-            session_info = list(self.server._session_info_by_id.values())[0]
+            session_info = list(self.server._runtime._session_info_by_id.values())[0]
             websocket_handler = session_info.client
             self.assertIsInstance(websocket_handler, BrowserWebSocketHandler)
 
