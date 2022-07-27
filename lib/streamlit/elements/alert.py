@@ -48,15 +48,15 @@ class AlertMixin:
         self,
         body: "SupportsStr",
         *, # keyword-only args: 
-        icon: Optional[str] = "",
+        icon: Optional = None,
         ) -> "DeltaGenerator":
         """Display error message.
 
         Parameters
         ----------
-        icon : str
-            An optional string, that adds an emoji to the alert.
-            The default is an empty string.
+        icon : None
+            An optional parameter, that adds an emoji to the alert.
+            The default is None.
             This argument can only be supplied by keyword.
         body : str
             The error text to display.
@@ -76,15 +76,15 @@ class AlertMixin:
         self,
         body: "SupportsStr",
         *, # keyword-only args:
-        icon: Optional[str] = ""
+        icon: Optional = None,
         ) -> "DeltaGenerator":
         """Display warning message.
 
         Parameters
         ----------
-        icon : str
-            An optional string, that adds an emoji to the alert.
-            The default is an empty string.
+        icon : None
+            An optional parameter, that adds an emoji to the alert.
+            The default is None.
             This argument can only be supplied by keyword.
 
         body : str
@@ -105,15 +105,15 @@ class AlertMixin:
         self,
         body: "SupportsStr",
         *, # keyword-only args:
-        icon: Optional[str] = ""
+        icon: Optional = None,
         ) -> "DeltaGenerator":
         """Display an informational message.
 
         Parameters
         ----------
-        icon : str
-            An optional string, that adds an emoji to the alert.
-            The default is an empty string.
+        icon : None
+            An optional parameter, that adds an emoji to the alert.
+            The default is None.
             This argument can only be supplied by keyword.
 
         body : str
@@ -135,15 +135,15 @@ class AlertMixin:
         self,
         body: "SupportsStr",
         *, # keyword-only args:
-        icon: Optional[str] = ""
+        icon: Optional = None,
         ) -> "DeltaGenerator":
         """Display a success message.
 
         Parameters
         ----------
-        icon : str
-            An optional string, that adds an emoji to the alert.
-            The default is an empty string.
+        icon : None
+            An optional parameter, that adds an emoji to the alert.
+            The default is None.
             This argument can only be supplied by keyword.
 
         body : str
