@@ -119,7 +119,7 @@ class Runtime:
         # Will be set when we start.
         self._eventloop: Optional[asyncio.AbstractEventLoop] = None
 
-        self._script_path = config.script_path
+        self._main_script_path = config.script_path
         self._command_line = config.command_line or ""
 
         # Mapping of AppSession.id -> SessionInfo.
@@ -270,7 +270,7 @@ class Runtime:
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeError(f"Can't create_session (state={self._state})")
 
-        session_data = SessionData(self._script_path, self._command_line or "")
+        session_data = SessionData(self._main_script_path, self._command_line or "")
 
         session = AppSession(
             event_loop=self._get_eventloop(),
@@ -379,7 +379,7 @@ class Runtime:
         ---------
         UNSAFE. Must be called on the eventloop thread.
         """
-        session_data = SessionData(self._script_path, self._command_line)
+        session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
             event_loop=self._get_eventloop(),
