@@ -34,7 +34,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       position: "relative",
       top: "2px",
       backgroundColor: theme.colors.bgColor,
-      zIndex: theme.zIndices.header + 1,
+      zIndex: theme.zIndices.header,
 
       minWidth,
       maxWidth,
