@@ -209,6 +209,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           <StyledSidebarCollapsedControl
             chevronDownshift={chevronDownshift}
             isCollapsed={collapsedSidebar}
+            data-testid="collapsedControl"
           >
             <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
               <Icon content={ChevronRight} size="lg" />
