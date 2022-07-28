@@ -34,7 +34,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       position: "relative",
       top: "2px",
       backgroundColor: theme.colors.bgColor,
-      zIndex: theme.zIndices.header,
+      zIndex: theme.zIndices.header + 1,
 
       minWidth,
       maxWidth,
@@ -210,6 +210,7 @@ export interface StyledSidebarUserContentProps {
 export const StyledSidebarUserContent = styled.div<
   StyledSidebarUserContentProps
 >(({ hasPageNavAbove, theme }) => ({
+  flexGrow: 1,
   paddingTop: hasPageNavAbove ? theme.spacing.lg : theme.sizes.sidebarTopSpace,
   paddingLeft: theme.spacing.lg,
   paddingRight: theme.spacing.lg,
@@ -256,6 +257,8 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     height: "100%",
     width: "100%",
     overflow: hideScrollbar ? "hidden" : "overlay",
+    display: "flex",
+    flexDirection: "column",
   })
 )
 

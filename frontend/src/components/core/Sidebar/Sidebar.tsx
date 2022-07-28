@@ -243,7 +243,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           isCollapsed={collapsedSidebar}
           sidebarWidth={sidebarWidth}
         >
-          <StyledSidebarContent hideScrollbar={hideScrollbar}>
+          <StyledSidebarContent
+            hideScrollbar={hideScrollbar}
+            ref={this.sidebarRef}
+          >
             <StyledSidebarCloseButton>
               <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
                 <Icon content={Close} size="lg" />
