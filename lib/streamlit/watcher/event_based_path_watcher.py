@@ -166,6 +166,10 @@ class _MultiPathWatcher(object):
             if folder_handler is None:
                 folder_handler = _FolderEventHandler()
                 self._folder_handlers[folder_path] = folder_handler
+                print("FOLDER PATH")
+                print(folder_path)
+                print("JUST PATH")
+                print(path)
 
                 folder_handler.watch = self._observer.schedule(
                     folder_handler, folder_path, recursive=True
