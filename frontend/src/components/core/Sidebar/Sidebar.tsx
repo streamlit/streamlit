@@ -62,7 +62,7 @@ interface State {
 class Sidebar extends PureComponent<SidebarProps, State> {
   private mediumBreakpointPx: number
 
-  private minWidth: string
+  static readonly minWidth = "336"
 
   public static calculateMaxBreakpoint(value: string): number {
     // We subtract a margin of 0.02 to use as a max-width
@@ -76,11 +76,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
       props.theme.breakpoints.md
     )
-    this.minWidth = "336"
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth:
-        window.localStorage.getItem("sidebarWidth") || this.minWidth,
+        window.localStorage.getItem("sidebarWidth") || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
       hideScrollbar: false,
     }
@@ -154,8 +153,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   resetSidebarWidth = (event: any): void => {
     // Double clicking on the resize handle resets sidebar to default width
     if (event.detail === 2) {
-      this.setState({ sidebarWidth: this.minWidth })
-      window.localStorage.setItem("sidebarWidth", this.minWidth)
+      this.setState({ sidebarWidth: Sidebar.minWidth })
+      window.localStorage.setItem("sidebarWidth", Sidebar.minWidth)
     }
   }
 
