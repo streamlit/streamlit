@@ -202,39 +202,39 @@ export function RenderedMarkdown({
   source,
   overrideComponents,
 }: RenderedMarkdownProps): ReactElement {
-    const renderers: Components = {
-      pre: CodeBlock,
-      code: CodeTag,
-      a: LinkWithTargetBlank,
-      h1: CustomHeading,
-      h2: CustomHeading,
-      h3: CustomHeading,
-      h4: CustomHeading,
-      h5: CustomHeading,
-      h6: CustomHeading,
-      ...(overrideComponents || {}),
-    }
-
-    const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
-    const rehypePlugins: PluggableList = [rehypeKatex]
-
-    if (allowHTML) {
-      rehypePlugins.push(rehypeRaw)
-    }
-
-    return (
-      <ErrorBoundary>
-        <ReactMarkdown
-          remarkPlugins={plugins}
-          rehypePlugins={rehypePlugins}
-          components={renderers}
-          transformLinkUri={transformLinkUri}
-        >
-          {source}
-        </ReactMarkdown>
-      </ErrorBoundary>
-    )
+  const renderers: Components = {
+    pre: CodeBlock,
+    code: CodeTag,
+    a: LinkWithTargetBlank,
+    h1: CustomHeading,
+    h2: CustomHeading,
+    h3: CustomHeading,
+    h4: CustomHeading,
+    h5: CustomHeading,
+    h6: CustomHeading,
+    ...(overrideComponents || {}),
   }
+
+  const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
+  const rehypePlugins: PluggableList = [rehypeKatex]
+
+  if (allowHTML) {
+    rehypePlugins.push(rehypeRaw)
+  }
+
+  return (
+    <ErrorBoundary>
+      <ReactMarkdown
+        remarkPlugins={plugins}
+        rehypePlugins={rehypePlugins}
+        components={renderers}
+        transformLinkUri={transformLinkUri}
+      >
+        {source}
+      </ReactMarkdown>
+    </ErrorBoundary>
+  )
+}
 
 /**
  * Wraps the <ReactMarkdown> component to include our standard
