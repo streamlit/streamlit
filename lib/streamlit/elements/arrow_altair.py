@@ -347,11 +347,52 @@ def _is_date_column(df: pd.DataFrame, name: str) -> bool:
     return isinstance(column[0], date)
 
 
+def _melt_data(
+    data_df: pd.DataFrame,
+    x_column: str,
+    y_column: str,
+    color_column: str,
+    value_columns: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    """Converts a wide-format dataframe to a long-format dataframe."""
+
+    data_df = pd.melt(
+        data_df,
+        id_vars=[x_column],
+        value_vars=value_columns,
+        var_name=color_column,
+        value_name=y_column,
+    )
+
+    y_series = data_df[y_column]
+    if (
+        y_series.dtype == "object"
+        and "mixed" in infer_dtype(y_series)
+        and len(y_series.unique()) > 100
+    ):
+        raise StreamlitAPIException(
+            "The columns used for rendering the chart contain too many values with mixed types. Please select the columns manually via the y parameter."
+        )
+
+    # Arrow has problems with object types after melting two different dtypes
+    # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
+    data_df = type_util.convert_mixed_columns_to_string(
+        data_df, selected_columns=[x_column, color_column, y_column]
+    )
+
+    return data_df
+
+
 def _maybe_melt(
     data_df: pd.DataFrame,
     x: Union[str, None] = None,
     y: Union[str, Sequence[str], None] = None,
 ) -> Tuple[pd.DataFrame, str, str, str, str, Optional[str], Optional[str]]:
+    """Determines based on the selected x & y parameter, if the data needs to
+    be converted to a long-format dataframe. If so, it returns the melted dataframe
+    and the x, y, and color columns used for rendering the chart.
+    """
+
     color_column: Optional[str]
     # This has to contain an empty space, otherwise the
     # full y-axis disappears (maybe a bug in vega-lite)?
@@ -392,61 +433,24 @@ def _maybe_melt(
     elif y and type_util.is_sequence(y):
         color_column = "variable"
         # y is a list -> melt dataframe into value vars provided in y
-        value_vars: List[str] = []
+        value_columns: List[str] = []
         for col in y:
             if str(col) not in data_df.columns:
                 raise StreamlitAPIException(
                     f"{str(col)} in y parameter was not found in the data columns or keys”."
                 )
-            value_vars.append(str(col))
+            value_columns.append(str(col))
 
         if x_column in [y_column, color_column]:
             raise StreamlitAPIException(
-                "Unable to melt the table. Please rename the columns used for x or y."
+                f"Unable to melt the table. Please rename the columns used for x ({x_column}) or y ({y_column})."
             )
 
-        data_df = pd.melt(
-            data_df,
-            id_vars=[x_column],
-            value_vars=value_vars,
-            var_name=color_column,
-            value_name=y_column,
-        )
-        y_series = data_df[y_column]
-        if (
-            y_series.dtype == "object"
-            and "mixed" in infer_dtype(y_series)
-            and len(y_series.unique()) > 100
-        ):
-            raise StreamlitAPIException(
-                "The selected columns for the y axis contain too many unique values with mixed types."
-            )
-
-        # Arrow has problems with object types after melting two different dtypes
-        # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-        data_df = type_util.convert_mixed_columns_to_string(
-            data_df, selected_columns=[x_column, color_column, y_column]
-        )
+        data_df = _melt_data(data_df, x_column, y_column, color_column, value_columns)
     else:
         color_column = "variable"
         # -> data will be melted into the value prop for y
-        data_df = pd.melt(
-            data_df, id_vars=[x_column], var_name=color_column, value_name=y_column
-        )
-
-        y_series = data_df[y_column]
-        if (
-            y_series.dtype == "object"
-            and "mixed" in infer_dtype(y_series)
-            and len(y_series.unique()) > 100
-        ):
-            raise StreamlitAPIException(
-                "The columns used for rendering the chart contain too many values with mixed types. Please select the columns manually via the y parameter."
-            )
-
-        # Arrow has problems with object types after melting two different dtypes
-        # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-        data_df = type_util.convert_mixed_columns_to_string(data_df)
+        data_df = _melt_data(data_df, x_column, y_column, color_column)
 
     relevant_columns = []
     if x_column and x_column not in relevant_columns:
