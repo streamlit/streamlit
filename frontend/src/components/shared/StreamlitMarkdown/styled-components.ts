@@ -22,86 +22,9 @@ export interface StyledStreamlitMarkdownProps {
   isInSidebar: boolean
 }
 
-export interface StyledHeadingProps {
-  isInSidebar: boolean
-}
-
 function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
-
-export const StyledHeadingOne = styled.h1<StyledHeadingProps>(
-  ({ theme, isInSidebar }) => {
-    const style: {
-      color: string
-      fontFamily: string
-      marginBottom: string
-      fontSize: string
-    } = {
-      color: "",
-      fontFamily: theme.genericFonts.bodyFont,
-      marginBottom: `-${theme.spacing.lg}`,
-      fontSize: "",
-    }
-    style.fontFamily = theme.genericFonts.bodyFont
-    if (isInSidebar) {
-      style.color = "inherit"
-    }
-    style.fontSize = isInSidebar
-      ? convertRemToEm(theme.fontSizes.xl)
-      : "2.25em"
-
-    return style
-  }
-)
-
-export const StyledHeadingTwo = styled.h2<StyledHeadingProps>(
-  ({ theme, isInSidebar }) => {
-    const style: {
-      color: string
-      fontFamily: string
-      marginBottom: string
-      fontSize: string
-    } = {
-      color: "",
-      fontFamily: theme.genericFonts.bodyFont,
-      marginBottom: `-${theme.spacing.lg}`,
-      fontSize: "",
-    }
-    style.fontFamily = theme.genericFonts.bodyFont
-    if (isInSidebar) {
-      style.color = "inherit"
-    }
-    style.fontSize = isInSidebar
-      ? convertRemToEm(theme.fontSizes.lg)
-      : "1.75em"
-
-    return style
-  }
-)
-
-export const StyledHeadingThree = styled.h3<StyledHeadingProps>(
-  ({ theme, isInSidebar }) => {
-    const style: {
-      color: string
-      fontFamily: string
-      marginBottom: string
-      fontSize: string
-    } = {
-      color: "",
-      fontFamily: theme.genericFonts.bodyFont,
-      marginBottom: `-${theme.spacing.lg}`,
-      fontSize: "",
-    }
-    style.fontFamily = theme.genericFonts.bodyFont
-    if (isInSidebar) {
-      style.color = "inherit"
-    }
-    style.fontSize = isInSidebar ? "1.125em" : "1.25em"
-
-    return style
-  }
-)
 
 export const StyledStreamlitMarkdown = styled.div<
   StyledStreamlitMarkdownProps

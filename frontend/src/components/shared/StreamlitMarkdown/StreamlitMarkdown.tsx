@@ -46,9 +46,6 @@ import {
   StyledLinkIconContainer,
   StyledLinkIcon,
   StyledHeaderContent,
-  StyledHeadingOne,
-  StyledHeadingTwo,
-  StyledHeadingThree,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -120,28 +117,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     removeScriptFinishedHandler,
   } = React.useContext(AppContext)
   if (isSidebar) {
-    switch (tag) {
-      case "h1":
-        return (
-          <StyledHeadingOne isInSidebar={isSidebar}>
-            {children}
-          </StyledHeadingOne>
-        )
-      case "h2":
-        return (
-          <StyledHeadingTwo isInSidebar={isSidebar}>
-            {children}
-          </StyledHeadingTwo>
-        )
-      case "h3":
-        return (
-          <StyledHeadingThree isInSidebar={isSidebar}>
-            {children}
-          </StyledHeadingThree>
-        )
-      default:
-        return React.createElement(tag, tagProps, children)
-    }
+    React.createElement(tag, tagProps, children)
   }
 
   const onScriptFinished = React.useCallback(() => {
