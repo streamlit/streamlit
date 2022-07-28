@@ -239,6 +239,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             const newWidth = parseInt(sidebarWidth, 10) + d.width
             this.setSidebarWidth(newWidth)
           }}
+          // Props part of StyledSidebar, but not Resizable component
           // @ts-ignore
           isCollapsed={collapsedSidebar}
           sidebarWidth={sidebarWidth}
