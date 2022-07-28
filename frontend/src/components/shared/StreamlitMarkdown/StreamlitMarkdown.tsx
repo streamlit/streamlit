@@ -40,6 +40,7 @@ import AppContext from "src/components/core/AppContext"
 import CodeBlock, { CodeTag } from "src/components/elements/CodeBlock/"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
+import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 
 import {
   StyledStreamlitMarkdown,
@@ -201,7 +202,6 @@ export function RenderedMarkdown({
   source,
   overrideComponents,
 }: RenderedMarkdownProps): ReactElement {
-  try {
     const renderers: Components = {
       pre: CodeBlock,
       code: CodeTag,
@@ -223,23 +223,18 @@ export function RenderedMarkdown({
     }
 
     return (
-      <ReactMarkdown
-        remarkPlugins={plugins}
-        rehypePlugins={rehypePlugins}
-        components={renderers}
-        transformLinkUri={transformLinkUri}
-      >
-        {source}
-      </ReactMarkdown>
+      <ErrorBoundary>
+        <ReactMarkdown
+          remarkPlugins={plugins}
+          rehypePlugins={rehypePlugins}
+          components={renderers}
+          transformLinkUri={transformLinkUri}
+        >
+          {source}
+        </ReactMarkdown>
+      </ErrorBoundary>
     )
-  } catch (error) {
-    throw Object.assign(new Error(), {
-      name: "Error parsing Markdown or HTML in this string",
-      message: <p>{source}</p>,
-      stack: null,
-    })
   }
-}
 
 /**
  * Wraps the <ReactMarkdown> component to include our standard
@@ -247,6 +242,16 @@ export function RenderedMarkdown({
  */
 class StreamlitMarkdown extends PureComponent<Props> {
   static contextType = IsSidebarContext
+
+  public componentDidCatch = (): void => {
+    const { source } = this.props
+
+    throw Object.assign(new Error(), {
+      name: "Error parsing Markdown or HTML in this string",
+      message: <p>{source}</p>,
+      stack: null,
+    })
+  }
 
   public render(): ReactNode {
     const { source, allowHTML, style, isCaption } = this.props
