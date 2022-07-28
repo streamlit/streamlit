@@ -117,7 +117,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     removeScriptFinishedHandler,
   } = React.useContext(AppContext)
   if (isSidebar) {
-    React.createElement(tag, tagProps, children)
+    return React.createElement(tag, tagProps, children)
   }
 
   const onScriptFinished = React.useCallback(() => {
