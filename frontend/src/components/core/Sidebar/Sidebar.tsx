@@ -213,7 +213,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           </StyledSidebarCollapsedControl>
         )}
         <Resizable
-          data-testid="resizableComponent"
+          data-testid="stSidebar"
           enable={{
             top: false,
             right: true,
