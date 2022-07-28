@@ -47,7 +47,7 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv "typing-extensions < 3.10" ;
+	pip install pip-tools pipenv ;
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install py-test-install
@@ -153,7 +153,7 @@ cli-smoke-tests:
 
 .PHONY: cli-regression-tests
 # Verify that CLI boots as expected when called with `python -m streamlit`
-cli-regression-tests:
+cli-regression-tests: install
 	pytest scripts/cli_regression_tests.py
 
 .PHONY: install
@@ -164,7 +164,8 @@ install:
 .PHONY: develop
 # Install Streamlit as links in your Python environment, pointing to local workspace.
 develop:
-	cd lib ; python setup.py develop
+	cd lib; \
+		pipenv install --skip-lock --sequential
 
 .PHONY: distribution
 # Create Python distribution files in dist/.
@@ -175,13 +176,28 @@ distribution:
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
-package: mini-devel frontend install distribution
+package: mini-devel frontend distribution
+
+.PHONY: conda-distribution
+# Create conda distribution files in lib/conda-recipe/dist.
+conda-distribution:
+	rm -rf lib/conda-recipe/dist
+	mkdir lib/conda-recipe/dist
+	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
+	# NOTE: Running the following command requires both conda and conda-build to
+	# be installed.
+	ST_CONDA_BUILD=1 GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
+
+.PHONY: conda-package
+# Build lib and frontend, and then run 'conda-distribution'
+conda-package: mini-devel frontend conda-distribution
 
 
 .PHONY: clean
 # Remove all generated files.
 clean:
 	cd lib; rm -rf build dist  .eggs *.egg-info
+	rm -rf lib/conda-recipe/dist
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true

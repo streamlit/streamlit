@@ -21,24 +21,20 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
-import tornado.testing
-import tornado.web
 
+import streamlit as st
+import streamlit.components.v1 as components
 from streamlit import StreamlitAPIException
 from streamlit.components.v1 import component_arrow
 from streamlit.components.v1.components import (
     ComponentRegistry,
-    ComponentRequestHandler,
     CustomComponent,
-    declare_component,
 )
-import streamlit.components.v1 as components
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
-import streamlit as st
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
@@ -395,104 +391,6 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
             1
         ).new_element.component_instance
         self.assertEqual(component_instance_proto.form_id, form_proto.form.form_id)
-
-
-class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """Test /component endpoint."""
-
-    def tearDown(self) -> None:
-        ComponentRegistry._instance = None
-
-    def get_app(self):
-        self.registry = ComponentRegistry()
-        return tornado.web.Application(
-            [
-                (
-                    "/component/(.*)",
-                    ComponentRequestHandler,
-                    dict(registry=self.registry.instance()),
-                )
-            ]
-        )
-
-    def _request_component(self, path):
-        return self.fetch("/component/%s" % path, method="GET")
-
-    def test_success_request(self):
-        """Test request success when valid parameters are provided."""
-
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
-            # We don't need the return value in this case.
-            declare_component("test", path=PATH)
-
-        with mock.patch(
-            "streamlit.components.v1.components.open",
-            mock.mock_open(read_data="Test Content"),
-        ):
-            response = self._request_component("components_test.test")
-
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"Test Content", response.body)
-
-    def test_invalid_component_request(self):
-        """Test request failure when invalid component name is provided."""
-
-        response = self._request_component("invalid_component")
-        self.assertEqual(404, response.code)
-        self.assertEqual(b"not found", response.body)
-
-    def test_invalid_content_request(self):
-        """Test request failure when invalid content (file) is provided."""
-
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
-            declare_component("test", path=PATH)
-
-        with mock.patch("streamlit.components.v1.components.open") as m:
-            m.side_effect = OSError("Invalid content")
-            response = self._request_component("components_test.test")
-
-        self.assertEqual(404, response.code)
-        self.assertEqual(
-            b"read error",
-            response.body,
-        )
-
-    def test_support_binary_files_request(self):
-        """Test support for binary files reads."""
-
-        def _open_read(m, payload):
-            is_binary = False
-            args, kwargs = m.call_args
-            if len(args) > 1:
-                if "b" in args[1]:
-                    is_binary = True
-            encoding = "utf-8"
-            if "encoding" in kwargs:
-                encoding = kwargs["encoding"]
-
-            if is_binary:
-                from io import BytesIO
-
-                return BytesIO(payload)
-            else:
-                from io import TextIOWrapper
-
-                return TextIOWrapper(str(payload, encoding=encoding))
-
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
-            declare_component("test", path=PATH)
-
-        payload = b"\x00\x01\x00\x00\x00\x0D\x00\x80"  # binary non utf-8 payload
-
-        with mock.patch("streamlit.components.v1.components.open") as m:
-            m.return_value.__enter__ = lambda _: _open_read(m, payload)
-            response = self._request_component("components_test.test")
-
-        self.assertEqual(200, response.code)
-        self.assertEqual(
-            payload,
-            response.body,
-        )
 
 
 class IFrameTest(testutil.DeltaGeneratorTestCase):

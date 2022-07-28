@@ -169,9 +169,9 @@ class RadioMixin:
             return opt[idx] if len(opt) > 0 and opt[idx] is not None else None
 
         def serialize_radio(v):
-            if len(options) == 0:
+            if len(opt) == 0:
                 return 0
-            return index_(options, v)
+            return index_(opt, v)
 
         widget_state = register_widget(
             "radio",

@@ -475,7 +475,8 @@ export class WebsocketConnection {
 
     PerformanceEvents.record({ name: "BeginHandleMessage", messageIndex })
 
-    const msg = ForwardMsg.decode(new Uint8Array(data))
+    const encodedMsg = new Uint8Array(data)
+    const msg = ForwardMsg.decode(encodedMsg)
 
     PerformanceEvents.record({
       name: "DecodedMessage",
@@ -485,7 +486,8 @@ export class WebsocketConnection {
     })
 
     this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
-      msg
+      msg,
+      encodedMsg
     )
 
     PerformanceEvents.record({ name: "GotCachedPayload", messageIndex })

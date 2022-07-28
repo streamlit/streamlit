@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Any, cast
 
 import streamlit as st
 import pandas as pd
@@ -22,7 +23,12 @@ st.map()
 
 # Simple map.
 
-coords = np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4]
+# Cast is needed due to mypy not understanding the outcome of dividing
+# an array by a list of numbers.
+coords: "np.typing.NDArray[np.float_]" = cast(
+    Any,
+    np.random.randn(1000, 2) / [50, 50],
+) + [37.76, -122.4]
 df = pd.DataFrame(coords, columns=["lat", "lon"])
 
 st.map(df)

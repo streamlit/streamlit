@@ -226,9 +226,7 @@ class WriteMixin:
                 self.dg.pydeck_chart(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
-                # Cast is needed due to:
-                # https://github.com/python/mypy/issues/12933
-                self.dg.text(cast(type, arg))
+                self.dg.text(arg)
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),
