@@ -22,7 +22,7 @@ describe("st._arrow_area_chart", () => {
     cy.prepForElementSnapshots();
   });
 
-  it("displays a area chart", () => {
+  it("displays an area chart", () => {
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
       .find("canvas")
       .first()
