@@ -97,9 +97,8 @@ class SessionInfo:
 
 class RuntimeState(Enum):
     INITIAL = "INITIAL"
-    WAITING_FOR_FIRST_SESSION = "WAITING_FOR_FIRST_SESSION"
-    ONE_OR_MORE_SESSIONS_CONNECTED = "ONE_OR_MORE_SESSIONS_CONNECTED"
     NO_SESSIONS_CONNECTED = "NO_SESSIONS_CONNECTED"
+    ONE_OR_MORE_SESSIONS_CONNECTED = "ONE_OR_MORE_SESSIONS_CONNECTED"
     STOPPING = "STOPPING"
     STOPPED = "STOPPED"
 
@@ -413,7 +412,7 @@ class Runtime:
         """
         try:
             if self._state == RuntimeState.INITIAL:
-                self._set_state(RuntimeState.WAITING_FOR_FIRST_SESSION)
+                self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
             elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
@@ -430,7 +429,7 @@ class Runtime:
                 on_started()
 
             while not self._must_stop.is_set():
-                if self._state == RuntimeState.WAITING_FOR_FIRST_SESSION:
+                if self._state == RuntimeState.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
@@ -458,12 +457,6 @@ class Runtime:
                     # Yield for a few milliseconds between session message
                     # flushing.
                     await asyncio.sleep(0.01)
-
-                elif self._state == RuntimeState.NO_SESSIONS_CONNECTED:
-                    await asyncio.wait(
-                        [self._must_stop.wait(), self._has_connection.wait()],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
 
                 else:
                     # Break out of the thread loop if we encounter any other state.
