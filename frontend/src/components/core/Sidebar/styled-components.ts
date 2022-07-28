@@ -214,7 +214,6 @@ export const StyledSidebarUserContent = styled.div<
   paddingTop: hasPageNavAbove ? theme.spacing.lg : theme.sizes.sidebarTopSpace,
   paddingLeft: theme.spacing.lg,
   paddingRight: theme.spacing.lg,
-  overflowX: "hidden",
 
   "& h1": {
     fontSize: theme.fontSizes.xl,
