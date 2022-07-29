@@ -192,14 +192,16 @@ class Runtime:
         """
         return self._session_info_by_id.get(session_id, None)
 
-    async def start(self, on_started: Optional[Callable[[], Any]] = None) -> None:
+    async def run(self, on_started: Optional[Callable[[], Any]] = None) -> None:
         """Start the runtime. This must be called only once, before
         any other functions are called.
+
+        This coroutine will return when the Runtime has stopped.
 
         Parameters
         ----------
         on_started
-            An optional callback that will be called when the runtime's loop
+            An optional callback that will be called when the Runtime's loop
             has started. It will be called on the eventloop thread.
 
         Notes

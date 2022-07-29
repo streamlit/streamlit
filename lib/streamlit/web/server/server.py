@@ -206,7 +206,7 @@ class Server:
         port = config.get_option("server.port")
         LOGGER.debug("Server started on port %s", port)
 
-        await self._runtime.start(on_started=lambda: on_started(self))
+        await self._runtime.run(on_started=lambda: on_started(self))
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""

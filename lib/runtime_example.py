@@ -54,7 +54,7 @@ async def main():
     # down the Runtime. This demonstrates how to we run and communicate with
     # the Streamlit Runtime without needing to create an additional thread.
     await asyncio.wait(
-        [asyncio.create_task(runtime.start()), asyncio.create_task(example_app())],
+        [asyncio.create_task(runtime.run()), asyncio.create_task(example_app())],
         return_when=asyncio.FIRST_EXCEPTION,
     )
 

@@ -97,6 +97,7 @@ class ServerTest(ServerTestCase):
             )
 
             self.server.stop()
+            await asyncio.sleep(0)  # Wait a tick for the stop to be acknowledged
             self.assertEqual(RuntimeState.STOPPING, self.server._runtime._state)
 
             await asyncio.sleep(0.1)
