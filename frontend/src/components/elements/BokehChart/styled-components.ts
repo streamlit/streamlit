@@ -17,16 +17,6 @@
 
 import styled from "@emotion/styled"
 
-export interface StyledDeckGlChartProps {
-  width: number
-  height: number
-}
-
-export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ width, height, theme }) => ({
-    marginTop: theme.spacing.xl,
-    position: "relative",
-    height,
-    width,
-  })
-)
+export const StyledBokehChartContainer = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.xl,
+}))

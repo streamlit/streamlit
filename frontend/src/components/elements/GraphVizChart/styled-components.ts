@@ -18,6 +18,8 @@
 import styled from "@emotion/styled"
 
 export const StyledGraphVizChart = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.xl,
+
   "& *": {
     fontFamily: theme.genericFonts.bodyFont,
     // Font sizes inside the SVG element are getting huge for some reason.
