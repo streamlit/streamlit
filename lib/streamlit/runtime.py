@@ -227,7 +227,7 @@ class Runtime:
             self._set_state(RuntimeState.STOPPING)
             self._must_stop.set()
 
-        self._eventloop.call_soon_threadsafe(stop_on_eventloop)
+        self._get_eventloop().call_soon_threadsafe(stop_on_eventloop)
 
     def is_active_session(self, session_id: str) -> bool:
         """True if the session_id belongs to an active session.
