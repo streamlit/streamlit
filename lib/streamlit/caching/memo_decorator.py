@@ -338,7 +338,7 @@ class MemoAPI:
             # warning in case both persist="disk" and ttl parameters specified
             if persist == "disk" and ttl is not None:
                 _LOGGER.warning(
-                    'The decorator uses the persist="disk" and ttl'
+                    'The decorator uses the persist="disk" and ttl '
                     "parameters at the same time. Persist cache currently "
                     "does not support the TTL cache feature."
                 )
