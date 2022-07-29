@@ -38,9 +38,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
 
       minWidth,
       maxWidth,
-      transform: isCollapsed
-        ? `translateX(-${sidebarWidth}px)`
-        : "translateX(0px)",
+      transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "none",
       transition: "transform 300ms, min-width 300ms, max-width 300ms",
 
       "&:focus": {
