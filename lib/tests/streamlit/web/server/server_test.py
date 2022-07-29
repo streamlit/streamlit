@@ -88,7 +88,7 @@ class ServerTest(ServerTestCase):
         with patch("streamlit.runtime.LocalSourcesWatcher"), self._patch_app_session():
             await self.start_server_loop()
             self.assertEqual(
-                RuntimeState.WAITING_FOR_FIRST_SESSION, self.server._runtime._state
+                RuntimeState.NO_SESSIONS_CONNECTED, self.server._runtime._state
             )
 
             await self.ws_connect()
@@ -97,6 +97,7 @@ class ServerTest(ServerTestCase):
             )
 
             self.server.stop()
+            await asyncio.sleep(0)  # Wait a tick for the stop to be acknowledged
             self.assertEqual(RuntimeState.STOPPING, self.server._runtime._state)
 
             await asyncio.sleep(0.1)

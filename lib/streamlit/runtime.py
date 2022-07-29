@@ -97,9 +97,8 @@ class SessionInfo:
 
 class RuntimeState(Enum):
     INITIAL = "INITIAL"
-    WAITING_FOR_FIRST_SESSION = "WAITING_FOR_FIRST_SESSION"
-    ONE_OR_MORE_SESSIONS_CONNECTED = "ONE_OR_MORE_SESSIONS_CONNECTED"
     NO_SESSIONS_CONNECTED = "NO_SESSIONS_CONNECTED"
+    ONE_OR_MORE_SESSIONS_CONNECTED = "ONE_OR_MORE_SESSIONS_CONNECTED"
     STOPPING = "STOPPING"
     STOPPED = "STOPPED"
 
@@ -193,14 +192,16 @@ class Runtime:
         """
         return self._session_info_by_id.get(session_id, None)
 
-    async def start(self, on_started: Optional[Callable[[], Any]] = None) -> None:
+    async def run(self, on_started: Optional[Callable[[], Any]] = None) -> None:
         """Start the runtime. This must be called only once, before
         any other functions are called.
+
+        This coroutine will return when the Runtime has stopped.
 
         Parameters
         ----------
         on_started
-            An optional callback that will be called when the runtime's loop
+            An optional callback that will be called when the Runtime's loop
             has started. It will be called on the eventloop thread.
 
         Notes
@@ -215,14 +216,18 @@ class Runtime:
 
         Notes
         -----
-        Threading: UNSAFE. May be called on any thread.
+        Threading: SAFE. May be called from any thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
-            return
 
-        LOGGER.debug("Runtime stopping...")
-        self._set_state(RuntimeState.STOPPING)
-        self._must_stop.set()
+        def stop_on_eventloop():
+            if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+                return
+
+            LOGGER.debug("Runtime stopping...")
+            self._set_state(RuntimeState.STOPPING)
+            self._must_stop.set()
+
+        self._get_eventloop().call_soon_threadsafe(stop_on_eventloop)
 
     def is_active_session(self, session_id: str) -> bool:
         """True if the session_id belongs to an active session.
@@ -413,7 +418,7 @@ class Runtime:
         """
         try:
             if self._state == RuntimeState.INITIAL:
-                self._set_state(RuntimeState.WAITING_FOR_FIRST_SESSION)
+                self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
             elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
@@ -430,7 +435,7 @@ class Runtime:
                 on_started()
 
             while not self._must_stop.is_set():
-                if self._state == RuntimeState.WAITING_FOR_FIRST_SESSION:
+                if self._state == RuntimeState.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
@@ -458,12 +463,6 @@ class Runtime:
                     # Yield for a few milliseconds between session message
                     # flushing.
                     await asyncio.sleep(0.01)
-
-                elif self._state == RuntimeState.NO_SESSIONS_CONNECTED:
-                    await asyncio.wait(
-                        [self._must_stop.wait(), self._has_connection.wait()],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
 
                 else:
                     # Break out of the thread loop if we encounter any other state.
