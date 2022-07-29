@@ -196,6 +196,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     def test_bad_persist_value(self):
         """Throw an error if an invalid value is passed to 'persist'."""
         with self.assertRaises(StreamlitAPIException) as e:
+
             @st.experimental_memo(persist="yesplz")
             def foo():
                 pass
@@ -312,8 +313,9 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     @patch("streamlit.caching.memo_decorator.streamlit_write")
     def test_warning_memo_ttl_persist(self, _):
         """Using @st.experimental_memo with ttl and persist produces a warning."""
-        with self.assertLogs('streamlit.caching.memo_decorator',
-                             level=logging.WARNING) as logs:
+        with self.assertLogs(
+            "streamlit.caching.memo_decorator", level=logging.WARNING
+        ) as logs:
 
             @st.experimental_memo(ttl=60, persist="disk")
             def user_function():
@@ -323,8 +325,9 @@ class MemoPersistTest(DeltaGeneratorTestCase):
 
             output = "".join(logs.output)
             self.assertIn(
-                "The decorator uses the persist=\"disk\" and ttl parameters at the same time.",
-                output)
+                'The decorator uses the persist="disk" and ttl parameters at the same time',
+                output,
+            )
 
 
 class MemoStatsProviderTest(unittest.TestCase):
