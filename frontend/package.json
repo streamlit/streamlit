@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -101,6 +101,7 @@
     "remark-emoji": "^2.2.0",
     "remark-gfm": "^1.0.0",
     "remark-math": "^4.0.0",
+    "re-resizable": "^6.9.9",
     "sass": "^1.43.4",
     "sprintf-js": "^1.1.2",
     "styled-components": "^5.3.3",

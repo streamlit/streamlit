@@ -69,49 +69,61 @@ class DataFrameSelectorTest(unittest.TestCase):
     @patch.object(DeltaGenerator, "_arrow_line_chart")
     @patch_config_options({"global.dataFrameSerialization": "legacy"})
     def test_legacy_line_chart(self, arrow_line_chart, legacy_line_chart):
-        streamlit.line_chart(DATAFRAME, 100, 200, True)
-        legacy_line_chart.assert_called_once_with(DATAFRAME, 100, 200, True)
+        streamlit.line_chart(DATAFRAME, width=100, height=200, use_container_width=True)
+        legacy_line_chart.assert_called_once_with(
+            DATAFRAME, width=100, height=200, use_container_width=True
+        )
         arrow_line_chart.assert_not_called()
 
     @patch.object(DeltaGenerator, "_legacy_line_chart")
     @patch.object(DeltaGenerator, "_arrow_line_chart")
     @patch_config_options({"global.dataFrameSerialization": "arrow"})
     def test_arrow_line_chart(self, arrow_line_chart, legacy_line_chart):
-        streamlit.line_chart(DATAFRAME, 100, 200, True)
+        streamlit.line_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_line_chart.assert_not_called()
-        arrow_line_chart.assert_called_once_with(DATAFRAME, 100, 200, True)
+        arrow_line_chart.assert_called_once_with(
+            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+        )
 
     @patch.object(DeltaGenerator, "_legacy_area_chart")
     @patch.object(DeltaGenerator, "_arrow_area_chart")
     @patch_config_options({"global.dataFrameSerialization": "legacy"})
     def test_legacy_area_chart(self, arrow_area_chart, legacy_area_chart):
-        streamlit.area_chart(DATAFRAME, 100, 200, True)
-        legacy_area_chart.assert_called_once_with(DATAFRAME, 100, 200, True)
+        streamlit.area_chart(DATAFRAME, width=100, height=200, use_container_width=True)
+        legacy_area_chart.assert_called_once_with(
+            DATAFRAME, width=100, height=200, use_container_width=True
+        )
         arrow_area_chart.assert_not_called()
 
     @patch.object(DeltaGenerator, "_legacy_area_chart")
     @patch.object(DeltaGenerator, "_arrow_area_chart")
     @patch_config_options({"global.dataFrameSerialization": "arrow"})
     def test_arrow_area_chart(self, arrow_area_chart, legacy_area_chart):
-        streamlit.area_chart(DATAFRAME, 100, 200, True)
+        streamlit.area_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_area_chart.assert_not_called()
-        arrow_area_chart.assert_called_once_with(DATAFRAME, 100, 200, True)
+        arrow_area_chart.assert_called_once_with(
+            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+        )
 
     @patch.object(DeltaGenerator, "_legacy_bar_chart")
     @patch.object(DeltaGenerator, "_arrow_bar_chart")
     @patch_config_options({"global.dataFrameSerialization": "legacy"})
     def test_legacy_bar_chart(self, arrow_bar_chart, legacy_bar_chart):
-        streamlit.bar_chart(DATAFRAME, 100, 200, True)
-        legacy_bar_chart.assert_called_once_with(DATAFRAME, 100, 200, True)
+        streamlit.bar_chart(DATAFRAME, width=100, height=200, use_container_width=True)
+        legacy_bar_chart.assert_called_once_with(
+            DATAFRAME, width=100, height=200, use_container_width=True
+        )
         arrow_bar_chart.assert_not_called()
 
     @patch.object(DeltaGenerator, "_legacy_bar_chart")
     @patch.object(DeltaGenerator, "_arrow_bar_chart")
     @patch_config_options({"global.dataFrameSerialization": "arrow"})
     def test_arrow_bar_chart(self, arrow_bar_chart, legacy_bar_chart):
-        streamlit.bar_chart(DATAFRAME, 100, 200, True)
+        streamlit.bar_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_bar_chart.assert_not_called()
-        arrow_bar_chart.assert_called_once_with(DATAFRAME, 100, 200, True)
+        arrow_bar_chart.assert_called_once_with(
+            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+        )
 
     @patch.object(DeltaGenerator, "_legacy_altair_chart")
     @patch.object(DeltaGenerator, "_arrow_altair_chart")
@@ -136,10 +148,20 @@ class DataFrameSelectorTest(unittest.TestCase):
         self, arrow_vega_lite_chart, legacy_vega_lite_chart
     ):
         streamlit.vega_lite_chart(
-            DATAFRAME, None, True, x="foo", boink_boop=100, baz={"boz": "booz"}
+            DATAFRAME,
+            None,
+            True,
+            x="foo",
+            boink_boop=100,
+            baz={"boz": "booz"},
         )
         legacy_vega_lite_chart.assert_called_once_with(
-            DATAFRAME, None, True, x="foo", boink_boop=100, baz={"boz": "booz"}
+            DATAFRAME,
+            None,
+            True,
+            x="foo",
+            boink_boop=100,
+            baz={"boz": "booz"},
         )
         arrow_vega_lite_chart.assert_not_called()
 
@@ -148,7 +170,12 @@ class DataFrameSelectorTest(unittest.TestCase):
     @patch_config_options({"global.dataFrameSerialization": "arrow"})
     def test_arrow_vega_lite_chart(self, arrow_vega_lite_chart, legacy_vega_lite_chart):
         streamlit.vega_lite_chart(
-            DATAFRAME, None, True, x="foo", boink_boop=100, baz={"boz": "booz"}
+            DATAFRAME,
+            None,
+            True,
+            x="foo",
+            boink_boop=100,
+            baz={"boz": "booz"},
         )
         legacy_vega_lite_chart.assert_not_called()
         arrow_vega_lite_chart.assert_called_once_with(

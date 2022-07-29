@@ -31,7 +31,7 @@ report = SessionData("the/path", "test command line")
 
 
 class BootstrapTest(unittest.TestCase):
-    @patch("streamlit.web.bootstrap.AsyncIOLoop", Mock())
+    @patch("streamlit.web.bootstrap.asyncio.run", Mock())
     @patch("streamlit.web.bootstrap.Server", Mock())
     @patch("streamlit.web.bootstrap._install_pages_watcher", Mock())
     def test_fix_matplotlib_crash(self):
@@ -323,12 +323,14 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             },
         )
 
+    @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
         bootstrap._on_server_start(Mock())
         mock_load_secrets.assert_called_once()
 
+    @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.LOGGER.error")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):

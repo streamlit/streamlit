@@ -172,7 +172,7 @@ describe("st.multiselect", () => {
           cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
             .eq(0)
             .click();
-          
+
           // this the 'close button' element for 'Shake.Vanilla'
           cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
             .eq(2)

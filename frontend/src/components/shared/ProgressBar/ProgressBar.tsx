@@ -43,13 +43,13 @@ export interface ProgressBarProps {
 function ProgressBar({
   value,
   width,
-  size = Size.MEDIUM,
+  size = Size.SMALL,
   overrides,
 }: ProgressBarProps): ReactElement {
   const theme: Theme = useTheme()
   const heightMap = {
     xs: theme.spacing.twoXS,
-    sm: theme.fontSizes.sm,
+    sm: theme.spacing.sm,
     md: theme.spacing.lg,
     lg: theme.spacing.xl,
     xl: theme.spacing.twoXL,
@@ -72,12 +72,20 @@ function ProgressBar({
         marginLeft: theme.spacing.none,
         height: heightMap[size],
         backgroundColor: $theme.colors.progressbarTrackFill,
+        borderTopLeftRadius: theme.spacing.twoXS,
+        borderTopRightRadius: theme.spacing.twoXS,
+        borderBottomLeftRadius: theme.spacing.twoXS,
+        borderBottomRightRadius: theme.spacing.twoXS,
       }),
     },
     BarProgress: {
-      style: {
-        backgroundColor: theme.colors.primary,
-      },
+      style: ({ $theme }: { $theme: any }) => ({
+        backgroundColor: theme.colors.blue70,
+        borderTopLeftRadius: theme.spacing.twoXS,
+        borderTopRightRadius: theme.spacing.twoXS,
+        borderBottomLeftRadius: theme.spacing.twoXS,
+        borderBottomRightRadius: theme.spacing.twoXS,
+      }),
     },
   }
 

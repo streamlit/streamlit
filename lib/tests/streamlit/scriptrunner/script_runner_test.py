@@ -1033,6 +1033,13 @@ class ScriptRunnerTest(AsyncTestCase):
 class TestScriptRunner(ScriptRunner):
     """Subclasses ScriptRunner to provide some testing features."""
 
+    # PyTest is unable to collect Test classes with __init__,
+    # and issues PytestCollectionWarning: cannot collect test class
+    # Since class TestScriptRunner is a helper class,
+    # there is no need for class TestScriptRunner to be collected by PyTest
+    # To prevent PytestCollectionWarning we set __test__ property to False
+    __test__ = False
+
     def __init__(self, script_name: str):
         """Initializes the ScriptRunner for the given script_name"""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
