@@ -31,7 +31,17 @@ async def main():
     config = RuntimeConfig(SCRIPT_PATH, "")
     runtime = Runtime(config)
 
+    # Create a Future that will be resolved when the Runtime is ready
+    # to receive new sessions.
+    runtime_started = asyncio.get_running_loop().create_future()
+
+    def on_runtime_started():
+        runtime_started.set_result(None)
+
     async def example_app():
+        # Wait for the Runtime to be ready for new sessions
+        await runtime_started
+
         # Add a session
         session_id = runtime.create_session(ExampleClient(), {})
 
@@ -40,8 +50,8 @@ async def main():
         # session)
         runtime.handle_backmsg(session_id, create_rerun_msg())
 
-        print("Sleeping for 10...")
-        await asyncio.sleep(10)
+        print("Sleeping for a few seconds...")
+        await asyncio.sleep(3)
 
         # Close the session
         runtime.close_session(session_id)
@@ -49,12 +59,15 @@ async def main():
         print("stopping...")
         runtime.stop()
 
-    # Run two tasks in parallel: the first task runs the Runtime,
+    # Run two coroutines in parallel: the first task runs the Runtime,
     # and the second creates a session, waits a few seconds, and then shuts
     # down the Runtime. This demonstrates how to we run and communicate with
     # the Streamlit Runtime without needing to create an additional thread.
     await asyncio.wait(
-        [asyncio.create_task(runtime.run()), asyncio.create_task(example_app())],
+        [
+            asyncio.create_task(runtime.run(on_runtime_started)),
+            asyncio.create_task(example_app()),
+        ],
         return_when=asyncio.FIRST_EXCEPTION,
     )
 
