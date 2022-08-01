@@ -47,30 +47,6 @@ describe("st.error and friends", () => {
       .contains("This is a success message");
   });
 
-  it("displays an error message with icon correctly", () => {
-    cy.getIndexed(".element-container .stAlert", 4)
-      .get("[data-testid='stMarkdownContainer']")
-      .contains("⛔️");
-  });
-
-  it("displays a warning message with icon correctly", () => {
-    cy.getIndexed(".element-container .stAlert", 5)
-      .get("[data-testid='stMarkdownContainer']")
-      .contains("⚠️");
-  });
-
-  it("displays an info message with icon correctly", () => {
-    cy.getIndexed(".element-container .stAlert", 6)
-      .get("[data-testid='stMarkdownContainer']")
-      .contains("👉🏻");
-  });
-
-  it("displays a success message with icon correctly", () => {
-    cy.getIndexed(".element-container .stAlert", 7)
-      .get("[data-testid='stMarkdownContainer']")
-      .contains("✅");
-  });
-
   it("matches the snapshot", () => {
     cy.get(".main > .block-container").matchThemedSnapshots("alerts");
   });
