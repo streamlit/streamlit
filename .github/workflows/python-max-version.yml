@@ -9,4 +9,4 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - run: ./.github/actions/update_submodules
+      - uses: ./.github/actions/update_submodules
