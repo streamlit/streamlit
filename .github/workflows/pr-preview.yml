@@ -1,12 +1,26 @@
 name: pr-preview
-on: [push]
+on: 
+  push:
+  pull_request:
+
+
 jobs:
-  check-bats-version:
+  setup-docker:
     runs-on: ubuntu-latest
+    image: circleci/python:3.9.7
+
     steps:
+      - add_ssh_keys:
+          name: Add the read/write Github deploy key
+          fingerprints:
+            - "98:67:1f:37:d6:4d:21:f3:46:5d:e2:c9:a3:58:52:39"
+
+      working_directory: ~/repo
+
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '14'
+          # should be --lts=gallium
+          node-version: '16.16.0'
       - run: npm install -g bats
       - run: bats -v
