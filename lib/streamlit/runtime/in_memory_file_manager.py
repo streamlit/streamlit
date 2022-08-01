@@ -14,14 +14,14 @@
 
 """Provides global InMemoryFileManager object as `in_memory_file_manager`."""
 
-from typing import Dict, Set, Optional, List
 import collections
 import hashlib
 import mimetypes
+from typing import Dict, Set, Optional, List
 
-from streamlit.logger import get_logger
 from streamlit import util
-from streamlit.stats import CacheStatsProvider, CacheStat
+from streamlit.logger import get_logger
+from .stats import CacheStatsProvider, CacheStat
 
 LOGGER = get_logger(__name__)
 

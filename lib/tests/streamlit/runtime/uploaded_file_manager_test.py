@@ -16,7 +16,7 @@
 
 import unittest
 
-from streamlit.stats import CacheStat
+from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 

@@ -15,7 +15,7 @@
 import unittest
 from typing import List
 
-from streamlit.stats import CacheStat, CacheStatsProvider, StatsManager
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, StatsManager
 
 
 class MockStatsProvider(CacheStatsProvider):

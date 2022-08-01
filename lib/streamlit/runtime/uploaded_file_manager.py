@@ -15,10 +15,12 @@
 import io
 import threading
 from typing import Dict, NamedTuple, List, Tuple
+
 from blinker import Signal
+
 from streamlit import util
 from streamlit.logger import get_logger
-from streamlit.stats import CacheStatsProvider, CacheStat
+from .stats import CacheStatsProvider, CacheStat
 
 LOGGER = get_logger(__name__)
 

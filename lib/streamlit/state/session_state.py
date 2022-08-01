@@ -15,7 +15,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field, replace
 import json
 
-from streamlit.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from typing import (
     TYPE_CHECKING,
     Any,

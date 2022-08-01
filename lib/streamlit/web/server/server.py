@@ -58,7 +58,7 @@ from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
-from streamlit.stats import StatsManager
+from streamlit.runtime.stats import StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler

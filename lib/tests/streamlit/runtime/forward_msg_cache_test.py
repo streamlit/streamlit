@@ -24,7 +24,7 @@ from streamlit.runtime.forward_msg_cache import create_reference_msg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import legacy_data_frame as data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.stats import CacheStat
+from streamlit.runtime.stats import CacheStat
 
 
 def _create_dataframe_msg(df, id=1):

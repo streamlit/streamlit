@@ -28,7 +28,7 @@ from streamlit.caching.memo_decorator import (
     get_memo_stats_provider,
 )
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.stats import CacheStat
+from streamlit.runtime.stats import CacheStat
 from tests.testutil import DeltaGeneratorTestCase
 
 

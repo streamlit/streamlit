@@ -33,7 +33,7 @@ from streamlit.file_util import (
     get_streamlit_file_path,
 )
 from streamlit.logger import get_logger
-from streamlit.stats import CacheStatsProvider, CacheStat
+from streamlit.runtime.stats import CacheStatsProvider, CacheStat
 from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,

@@ -20,7 +20,7 @@ from streamlit.proto.openmetrics_data_model_pb2 import (
     MetricSet as MetricSetProto,
     GAUGE,
 )
-from streamlit.stats import StatsManager, CacheStat
+from streamlit.runtime.stats import StatsManager, CacheStat
 
 
 class StatsRequestHandler(tornado.web.RequestHandler):
