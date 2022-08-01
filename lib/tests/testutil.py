@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 from unittest.mock import patch
 
 from streamlit import config
-from streamlit.app_session import AppSession
+from streamlit.runtime.app_session import AppSession
 from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg

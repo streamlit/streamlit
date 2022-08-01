@@ -23,7 +23,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.stats import CacheStatsProvider, CacheStat
 
 if TYPE_CHECKING:
-    from streamlit.app_session import AppSession
+    from streamlit.runtime.app_session import AppSession
 
 LOGGER = get_logger(__name__)
 

@@ -33,7 +33,7 @@ from tornado.websocket import WebSocketHandler
 from typing_extensions import Final
 
 from streamlit import config
-from streamlit.app_session import AppSession
+from streamlit.runtime.app_session import AppSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
