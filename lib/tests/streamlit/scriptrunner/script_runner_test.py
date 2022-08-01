@@ -36,7 +36,6 @@ from streamlit.scriptrunner.script_requests import (
     ScriptRequestType,
     ScriptRequests,
 )
-from streamlit.session_data import SessionData
 from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.scriptrunner import (
     ScriptRunner,
@@ -255,7 +254,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # files contained in the directory of __main__.__file__, which we
         # assume is the main script directory.
         self.assertEqual(
-            scriptrunner._session_data.main_script_path,
+            scriptrunner._main_script_path,
             sys.modules["__main__"].__file__,
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
@@ -929,7 +928,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(page_not_found_msg.page_name, "")
 
         self.assertEqual(
-            scriptrunner._session_data.main_script_path,
+            scriptrunner._main_script_path,
             sys.modules["__main__"].__file__,
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
@@ -969,7 +968,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(page_not_found_msg.page_name, "nonexistent")
 
         self.assertEqual(
-            scriptrunner._session_data.main_script_path,
+            scriptrunner._main_script_path,
             sys.modules["__main__"].__file__,
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
@@ -1051,7 +1050,7 @@ class TestScriptRunner(ScriptRunner):
 
         super().__init__(
             session_id="test session id",
-            session_data=SessionData(main_script_path, "test command line"),
+            main_script_path=main_script_path,
             client_state=ClientState(),
             session_state=SessionState(),
             uploaded_file_mgr=UploadedFileManager(),
