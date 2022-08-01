@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 from toml import TomlDecodeError
 
-from streamlit.secrets import SECRETS_FILE_LOC, Secrets
+from streamlit.runtime.secrets import SECRETS_FILE_LOC, Secrets
 
 MOCK_TOML = """
 # Everything in this section will be available as an environment variable
@@ -64,7 +64,8 @@ class SecretsTest(unittest.TestCase):
 
     def test_secrets_file_location(self):
         """Verify that we're looking for secrets.toml in the right place."""
-        self.assertEqual(os.path.abspath("./.streamlit/secrets.toml"), SECRETS_FILE_LOC)
+        expected = os.path.abspath("./.streamlit/secrets.toml")
+        self.assertEqual(expected, SECRETS_FILE_LOC)
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_os_environ(self, _):
