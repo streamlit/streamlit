@@ -49,7 +49,7 @@ from streamlit.config_option import ConfigOption
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache
 from streamlit.runtime.forward_msg_cache import create_reference_msg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
-from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg

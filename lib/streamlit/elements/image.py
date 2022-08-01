@@ -32,7 +32,7 @@ from PIL import Image, ImageFile
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 if TYPE_CHECKING:

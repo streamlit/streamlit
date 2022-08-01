@@ -22,9 +22,9 @@ from streamlit import config, file_util
 from streamlit.logger import get_logger
 from streamlit.web.server.server_util import serialize_forward_msg
 from streamlit.string_util import generate_download_filename_from_title
-from streamlit.in_memory_file_manager import _get_extension_for_mimetype
-from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.in_memory_file_manager import FILE_TYPE_DOWNLOADABLE
+from streamlit.runtime.in_memory_file_manager import _get_extension_for_mimetype
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.in_memory_file_manager import FILE_TYPE_DOWNLOADABLE
 
 LOGGER = get_logger(__name__)
 

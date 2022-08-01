@@ -27,7 +27,7 @@ from streamlit import magic
 from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg

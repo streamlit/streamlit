@@ -23,7 +23,6 @@ import streamlit.elements.exception as exception_utils
 from streamlit import __version__, caching, config, legacy_caching, secrets, source_util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
-from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.logger import get_logger
 from streamlit.metrics_util import Installation
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -38,6 +37,7 @@ from streamlit.proto.NewSession_pb2 import (
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.watcher import LocalSourcesWatcher
+from .in_memory_file_manager import in_memory_file_manager
 from .scriptrunner import (
     RerunData,
     ScriptRunner,
