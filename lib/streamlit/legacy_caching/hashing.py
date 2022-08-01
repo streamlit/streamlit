@@ -40,7 +40,7 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
-from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 _LOGGER = get_logger(__name__)
 

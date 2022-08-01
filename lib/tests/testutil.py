@@ -30,7 +30,7 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
 )
 from streamlit.state import SafeSessionState, SessionState
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 @contextmanager

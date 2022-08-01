@@ -32,7 +32,7 @@ from ..proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
     UploadedFileInfo as UploadedFileInfoProto,
 )
-from ..uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules

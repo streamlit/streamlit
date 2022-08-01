@@ -36,7 +36,7 @@ from streamlit.state.session_state import (
     WidgetMetadata,
     WStates,
 )
-from streamlit.uploaded_file_manager import UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from tests import testutil
 import tests.streamlit.state.strategies as stst
 

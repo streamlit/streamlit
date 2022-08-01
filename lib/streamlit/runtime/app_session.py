@@ -37,7 +37,6 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
-from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
 from .scriptrunner import (
     RerunData,
@@ -45,6 +44,7 @@ from .scriptrunner import (
     ScriptRunnerEvent,
 )
 from .session_data import SessionData
+from .uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:

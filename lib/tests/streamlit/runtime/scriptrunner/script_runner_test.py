@@ -46,7 +46,7 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequest,
 )
 from streamlit.state.session_state import SessionState
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"

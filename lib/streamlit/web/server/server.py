@@ -59,7 +59,7 @@ from streamlit.state import (
     SessionStateStatProvider,
 )
 from streamlit.stats import StatsManager
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler
 from streamlit.web.server.routes import AssetsFileHandler

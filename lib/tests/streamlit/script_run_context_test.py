@@ -18,7 +18,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.state import SafeSessionState, SessionState
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 class ScriptRunContextTest(unittest.TestCase):

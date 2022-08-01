@@ -36,7 +36,7 @@ from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
 )
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
 from .script_requests import (
     ScriptRequests,
