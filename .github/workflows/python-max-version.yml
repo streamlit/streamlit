@@ -3,7 +3,7 @@ on: [push]
 jobs:
   setup:
     runs-on: ubuntu-latest
-    # container: circleci/python:3.10.0
+    container: circleci/python:3.10.0
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
