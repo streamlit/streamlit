@@ -1,0 +1,9 @@
+name: Update submodules
+author: willhuang1997
+description: "`git submodule update --remote` checks out the submodule repo's
+          HEAD (as opposed to whatever commit is specified in the
+          submodule). We want to ensure we're always testing against
+          the most recent commit in our component-template repo."
+steps:
+  - name: submodules-init
+  uses: snickerbockers/submodules-init@v4
