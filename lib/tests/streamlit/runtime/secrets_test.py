@@ -64,8 +64,7 @@ class SecretsTest(unittest.TestCase):
 
     def test_secrets_file_location(self):
         """Verify that we're looking for secrets.toml in the right place."""
-        expected = os.path.abspath("./.streamlit/secrets.toml")
-        self.assertEqual(expected, SECRETS_FILE_LOC)
+        self.assertEqual(os.path.abspath("./.streamlit/secrets.toml"), SECRETS_FILE_LOC)
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_os_environ(self, _):
