@@ -14,16 +14,18 @@
 
 """Unit tests for MessageCache"""
 
-from unittest.mock import MagicMock
 import unittest
+from unittest.mock import MagicMock
 
 from streamlit import config, RootContainer
-from streamlit.runtime import app_session
-from streamlit.runtime.forward_msg_cache import ForwardMsgCache
-from streamlit.runtime.forward_msg_cache import create_reference_msg
-from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import legacy_data_frame as data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import app_session
+from streamlit.runtime.forward_msg_cache import (
+    ForwardMsgCache,
+    create_reference_msg,
+    populate_hash_if_needed,
+)
 from streamlit.runtime.stats import CacheStat
 
 

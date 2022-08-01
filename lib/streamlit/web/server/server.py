@@ -42,17 +42,19 @@ from streamlit import config
 from streamlit import file_util
 from streamlit import source_util
 from streamlit import util
-from streamlit.runtime.app_session import AppSession
 from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
-from streamlit.runtime.forward_msg_cache import ForwardMsgCache
-from streamlit.runtime.forward_msg_cache import create_reference_msg
-from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.forward_msg_cache import (
+    ForwardMsgCache,
+    create_reference_msg,
+    populate_hash_if_needed,
+)
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
