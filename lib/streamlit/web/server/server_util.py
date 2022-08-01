@@ -19,7 +19,7 @@ from typing import Optional, Any
 from streamlit import config
 from streamlit import net_util
 from streamlit import url_util
-from streamlit.forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.errors import MarkdownFormattedException
 

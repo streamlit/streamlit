@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import os
 from typing import List
 
-from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 

@@ -27,7 +27,7 @@ from streamlit.caching import (
     MEMO_CALL_STACK,
     SINGLETON_CALL_STACK,
 )
-from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 
 from streamlit.scriptrunner import (
     add_script_run_ctx,

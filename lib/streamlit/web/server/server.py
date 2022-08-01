@@ -46,9 +46,9 @@ from streamlit.runtime.app_session import AppSession
 from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
-from streamlit.forward_msg_cache import ForwardMsgCache
-from streamlit.forward_msg_cache import create_reference_msg
-from streamlit.forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.forward_msg_cache import ForwardMsgCache
+from streamlit.runtime.forward_msg_cache import create_reference_msg
+from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger

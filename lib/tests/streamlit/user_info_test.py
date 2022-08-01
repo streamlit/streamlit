@@ -2,7 +2,7 @@ import threading
 
 import streamlit as st
 
-from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.errors import StreamlitAPIException
 from streamlit.scriptrunner import (
     add_script_run_ctx,

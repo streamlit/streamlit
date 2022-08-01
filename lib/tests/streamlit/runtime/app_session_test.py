@@ -23,7 +23,7 @@ import pytest
 import streamlit.runtime.app_session as app_session
 from streamlit import config
 from streamlit.runtime.app_session import AppSession, AppSessionState
-from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
