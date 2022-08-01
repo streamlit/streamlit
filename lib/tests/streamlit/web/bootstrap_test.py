@@ -21,7 +21,7 @@ import matplotlib
 
 from streamlit import SECRETS_FILE_LOC
 from streamlit import config
-from streamlit.session_data import SessionData
+from streamlit.runtime.session_data import SessionData
 from streamlit.web import bootstrap
 from streamlit.web.bootstrap import NEW_VERSION_TEXT
 from tests import testutil

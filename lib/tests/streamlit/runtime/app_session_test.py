@@ -35,7 +35,7 @@ from streamlit.runtime.scriptrunner import (
     RerunData,
 )
 from streamlit.runtime.scriptrunner import ScriptRunnerEvent
-from streamlit.session_data import SessionData
+from streamlit.runtime.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
