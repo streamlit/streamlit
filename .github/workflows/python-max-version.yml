@@ -5,6 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     container: circleci/python:3.10.0
     steps:
+      # This Docker file changes sets USER to circleci instead of using the default user, so we need to update file permissions for this image to work on GH Actions.
+      # See https://docs.github.com/actions/reference/virtual-environments-for-github-hosted-runners#docker-container-filesystem
+      - name: Setup file system permissions
+        run: sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
