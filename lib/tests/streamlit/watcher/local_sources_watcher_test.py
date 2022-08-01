@@ -20,7 +20,6 @@ import sys
 import unittest
 
 from streamlit import config
-from streamlit.session_data import SessionData
 from streamlit.watcher import local_sources_watcher
 from streamlit.watcher.path_watcher import NoOpPathWatcher, watchdog_available
 
@@ -31,7 +30,6 @@ import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_P
 import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
 
 SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
-SESSION_DATA = SessionData(SCRIPT_PATH, "test command line")
 
 DUMMY_MODULE_1_FILE = os.path.abspath(DUMMY_MODULE_1.__file__)
 DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
