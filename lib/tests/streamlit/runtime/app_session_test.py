@@ -27,14 +27,14 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunner,
     RerunData,
 )
-from streamlit.scriptrunner import ScriptRunnerEvent
+from streamlit.runtime.scriptrunner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager

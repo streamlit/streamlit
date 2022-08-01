@@ -41,7 +41,7 @@ def get_session_state() -> SafeSessionState:
     st.session_state.
     """
     global _state_use_warning_already_displayed
-    from streamlit.scriptrunner import get_script_run_ctx
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
 
     ctx = get_script_run_ctx()
 

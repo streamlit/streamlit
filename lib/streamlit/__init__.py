@@ -68,7 +68,7 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     add_script_run_ctx as _add_script_run_ctx,
     get_script_run_ctx as _get_script_run_ctx,
     StopException,

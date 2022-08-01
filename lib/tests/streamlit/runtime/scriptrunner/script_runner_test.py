@@ -24,27 +24,27 @@ import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit.legacy_caching import caching
+from streamlit import source_util
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.legacy_caching import caching
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
-from streamlit.scriptrunner.script_requests import (
-    ScriptRequest,
-    ScriptRequestType,
-    ScriptRequests,
-)
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
     RerunData,
     RerunException,
     StopException,
 )
-from streamlit import source_util
+from streamlit.runtime.scriptrunner.script_requests import (
+    ScriptRequestType,
+    ScriptRequests,
+    ScriptRequest,
+)
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil

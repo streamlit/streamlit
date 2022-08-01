@@ -22,14 +22,14 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.caching.cache_errors import CacheReplayClosureError
-from streamlit.scriptrunner import script_run_context
+from streamlit.runtime.scriptrunner import script_run_context
 from streamlit.caching import (
     MEMO_CALL_STACK,
     SINGLETON_CALL_STACK,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,

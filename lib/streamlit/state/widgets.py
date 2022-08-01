@@ -53,7 +53,7 @@ from .session_state import (
 )
 
 if TYPE_CHECKING:
-    from streamlit.scriptrunner import ScriptRunContext
+    from streamlit.runtime.scriptrunner import ScriptRunContext
 
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[

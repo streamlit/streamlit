@@ -18,7 +18,7 @@ from typing import Any, Callable, Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.state import (
     register_widget,
     WidgetArgs,

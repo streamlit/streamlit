@@ -4,7 +4,7 @@ import streamlit as st
 
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.errors import StreamlitAPIException
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,

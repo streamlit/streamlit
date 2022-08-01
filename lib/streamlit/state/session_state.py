@@ -487,7 +487,7 @@ class SessionState:
         If the key corresponds to a widget or form that's been instantiated
         during the current script run, raise a StreamlitAPIException instead.
         """
-        from streamlit.scriptrunner import get_script_run_ctx
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
 
         ctx = get_script_run_ctx()
 
@@ -546,7 +546,7 @@ class SessionState:
         """Call any callback associated with each widget whose value
         changed between the previous and current script runs.
         """
-        from streamlit.scriptrunner import RerunException
+        from streamlit.runtime.scriptrunner import RerunException
 
         changed_widget_ids = [
             wid for wid in self._new_widget_state if self._widget_changed(wid)

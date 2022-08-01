@@ -40,7 +40,7 @@ from streamlit.proto.NewSession_pb2 import (
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.session_data import SessionData
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunner,
     ScriptRunnerEvent,

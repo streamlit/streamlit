@@ -38,7 +38,7 @@ from streamlit import legacy_caching
 from streamlit import type_util
 from streamlit import util
 from streamlit.cursor import Cursor
-from streamlit.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
 from streamlit.proto import Block_pb2
@@ -98,7 +98,6 @@ if TYPE_CHECKING:
     from numpy import typing as npt
     from pandas import DataFrame, Series
     from google.protobuf.message import Message
-    from streamlit.type_util import DataFrameCompatible
     from streamlit.elements.arrow import Data
 
 
@@ -818,7 +817,7 @@ class DeltaGenerator(
         return self
 
 
-DFT = TypeVar("DFT", bound="DataFrameCompatible")
+DFT = TypeVar("DFT", bound=type_util.DataFrameCompatible)
 
 
 def _maybe_melt_data_for_add_rows(
