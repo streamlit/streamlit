@@ -29,6 +29,7 @@ from typing import (
     Union,
     cast,
     overload,
+    List,
 )
 
 from typing_extensions import (
@@ -41,6 +42,7 @@ from typing_extensions import (
 )
 
 import pyarrow as pa
+from pandas.api.types import infer_dtype
 
 from streamlit import errors
 
@@ -356,6 +358,17 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
+def is_sequence(seq: Any) -> bool:
+    """True if input looks like a sequence."""
+    if isinstance(seq, str):
+        return False
+    try:
+        len(seq)
+    except Exception:
+        return False
+    return True
+
+
 def convert_anything_to_df(df: Any) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
@@ -500,6 +513,16 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
+def convert_mixed_columns_to_string(
+    df: DataFrame, selected_columns: Optional[List[str]] = None
+) -> DataFrame:
+    for col in selected_columns or df.columns:
+        column = df[col]
+        if column.dtype == "object" and "mixed" in infer_dtype(column):
+            df[col] = column.astype(str)
+    return df
+
+
 def data_frame_to_bytes(df: DataFrame) -> bytes:
     """Serialize pandas.DataFrame to bytes using Apache Arrow.
 
@@ -510,7 +533,12 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
 
     """
     try:
-        table = pa.Table.from_pandas(df)
+        try:
+            table = pa.Table.from_pandas(df)
+        except pa.ArrowTypeError:
+            # Fallback: Convert all object types to string
+            df = convert_mixed_columns_to_string(df)
+            table = pa.Table.from_pandas(df)
         return pyarrow_table_to_bytes(table)
     except Exception as e:
         _NUMPY_DTYPE_ERROR_MESSAGE = "Could not convert dtype"

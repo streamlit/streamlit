@@ -12,10 +12,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import contextlib
-from typing import Iterator
+from typing import TYPE_CHECKING, Iterator
 
-from .memo_decorator import MEMO_CALL_STACK, _memo_caches, MemoAPI
-from .singleton_decorator import SINGLETON_CALL_STACK, _singleton_caches, SingletonAPI
+from google.protobuf.message import Message
+
+from streamlit.proto.Block_pb2 import Block
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+from .memo_decorator import (
+    MEMO_CALL_STACK,
+    MEMO_MESSAGES_CALL_STACK,
+    _memo_caches,
+    MemoAPI,
+)
+from .singleton_decorator import (
+    SINGLETON_CALL_STACK,
+    SINGLETON_MESSAGE_CALL_STACK,
+    _singleton_caches,
+    SingletonAPI,
+)
+
+
+def save_element_message(
+    delta_type: str,
+    element_proto: Message,
+    invoked_dg_id: str,
+    used_dg_id: str,
+    returned_dg_id: str,
+) -> None:
+    MEMO_MESSAGES_CALL_STACK.save_element_message(
+        delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
+    )
+    SINGLETON_MESSAGE_CALL_STACK.save_element_message(
+        delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
+    )
+
+
+def save_block_message(
+    block_proto: Block,
+    invoked_dg_id: str,
+    used_dg_id: str,
+    returned_dg_id: str,
+) -> None:
+    MEMO_MESSAGES_CALL_STACK.save_block_message(
+        block_proto, invoked_dg_id, used_dg_id, returned_dg_id
+    )
+    SINGLETON_MESSAGE_CALL_STACK.save_block_message(
+        block_proto, invoked_dg_id, used_dg_id, returned_dg_id
+    )
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:

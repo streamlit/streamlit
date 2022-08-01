@@ -556,7 +556,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # Assert that Widget registration is a no-op
         widget_state = scriptrunner._session_state.register_widget(
-            MagicMock(spec=WidgetMetadata),
+            MagicMock(),
             user_key="mock_user_key",
         )
         self.assertEqual(False, widget_state.value_changed)
@@ -1032,6 +1032,13 @@ class ScriptRunnerTest(AsyncTestCase):
 
 class TestScriptRunner(ScriptRunner):
     """Subclasses ScriptRunner to provide some testing features."""
+
+    # PyTest is unable to collect Test classes with __init__,
+    # and issues PytestCollectionWarning: cannot collect test class
+    # Since class TestScriptRunner is a helper class,
+    # there is no need for class TestScriptRunner to be collected by PyTest
+    # To prevent PytestCollectionWarning we set __test__ property to False
+    __test__ = False
 
     def __init__(self, script_name: str):
         """Initializes the ScriptRunner for the given script_name"""

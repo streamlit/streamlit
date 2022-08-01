@@ -108,7 +108,7 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
 
     @patch(
         "streamlit.state.session_state_proxy.get_session_state",
-        return_value=SessionState(new_session_state={"foo": "bar"}),
+        return_value=SessionState(_new_session_state={"foo": "bar"}),
     )
     def test_delattr(self, _):
         del self.session_state_proxy.foo
@@ -116,14 +116,14 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
 
     @patch(
         "streamlit.state.session_state_proxy.get_session_state",
-        return_value=SessionState(new_session_state={"foo": "bar"}),
+        return_value=SessionState(_new_session_state={"foo": "bar"}),
     )
     def test_getattr(self, _):
         assert self.session_state_proxy.foo == "bar"
 
     @patch(
         "streamlit.state.session_state_proxy.get_session_state",
-        return_value=SessionState(new_session_state={"foo": "bar"}),
+        return_value=SessionState(_new_session_state={"foo": "bar"}),
     )
     def test_getattr_error(self, _):
         with pytest.raises(AttributeError):
@@ -131,7 +131,7 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
 
     @patch(
         "streamlit.state.session_state_proxy.get_session_state",
-        return_value=SessionState(new_session_state={"foo": "bar"}),
+        return_value=SessionState(_new_session_state={"foo": "bar"}),
     )
     def test_setattr(self, _):
         self.session_state_proxy.corge = "grault2"

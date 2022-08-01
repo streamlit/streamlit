@@ -46,11 +46,12 @@ from streamlit.web.server.server import RetriesExceeded
 from streamlit.web.server.server import Server
 from streamlit.web.server.server import State
 from streamlit.web.server.server import StaticFileHandler
-from streamlit.web.server.server import is_cacheable_msg
-from streamlit.web.server.server import is_url_from_allowed_origins
-from streamlit.web.server.server import serialize_forward_msg
 from streamlit.web.server.server import start_listening
-
+from streamlit.web.server.server_util import (
+    is_cacheable_msg,
+    is_url_from_allowed_origins,
+    serialize_forward_msg,
+)
 from .server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)
@@ -91,10 +92,10 @@ class ServerTest(ServerTestCase):
             "streamlit.web.server.server.LocalSourcesWatcher"
         ), self._patch_app_session():
             await self.start_server_loop()
-            self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
+            self.assertEqual(State.WAITING_FOR_FIRST_SESSION, self.server._state)
 
             await self.ws_connect()
-            self.assertEqual(State.ONE_OR_MORE_BROWSERS_CONNECTED, self.server._state)
+            self.assertEqual(State.ONE_OR_MORE_SESSIONS_CONNECTED, self.server._state)
 
             self.server.stop()
             self.assertEqual(State.STOPPING, self.server._state)
@@ -224,27 +225,6 @@ class ServerTest(ServerTestCase):
 
             received = await self.read_forward_msg(ws_client)
             self.assertEqual(populate_hash_if_needed(msg), received.hash)
-
-    @tornado.testing.gen_test
-    async def test_get_session_by_id_nonexistent_session(self):
-        """Test getting a nonexistent session returns None."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
-            await self.start_server_loop()
-            self.assertEqual(self.server.get_session_by_id("abc123"), None)
-
-    @tornado.testing.gen_test
-    async def test_get_session_by_id(self):
-        """Test getting sessions by id produces the correct AppSession."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
-            await self.start_server_loop()
-            ws_client = await self.ws_connect()
-
-            session = list(self.server._session_info_by_id.values())[0].session
-            self.assertEqual(self.server.get_session_by_id(session.id), session)
 
     @tornado.testing.gen_test
     async def test_forwardmsg_cacheable_flag(self):
@@ -392,6 +372,76 @@ class ServerTest(ServerTestCase):
                 ),
                 [],
             )
+
+    @tornado.testing.gen_test
+    async def test_send_message_to_disconnected_websocket(self):
+        """Sending a message to a disconnected SessionClient raises an error.
+        We should gracefully handle the error by cleaning up the session.
+        """
+        with patch(
+            "streamlit.web.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
+            await self.start_server_loop()
+            await self.ws_connect()
+
+            # Get the server's socket and session for this client
+            session_info = list(self.server._session_info_by_id.values())[0]
+
+            with patch.object(
+                session_info.session, "flush_browser_queue"
+            ) as flush_browser_queue, patch.object(
+                session_info.client, "write_message"
+            ) as ws_write_message:
+                # Patch flush_browser_queue to simulate a pending message.
+                flush_browser_queue.return_value = [_create_dataframe_msg([1, 2, 3])]
+
+                # Patch the session's WebsocketHandler to raise a
+                # WebSocketClosedError when we write to it.
+                ws_write_message.side_effect = tornado.websocket.WebSocketClosedError()
+
+                # Tick the server. Our session's browser_queue will be flushed,
+                # and the Websocket client's write_message will be called,
+                # raising our WebSocketClosedError.
+                while not flush_browser_queue.called:
+                    self.server._need_send_data.set()
+                    await asyncio.sleep(0)
+
+                flush_browser_queue.assert_called_once()
+                ws_write_message.assert_called_once()
+
+                # Our session should have been removed from the server as
+                # a result of the WebSocketClosedError.
+                self.assertIsNone(
+                    self.server._get_session_info(session_info.session.id)
+                )
+
+    @tornado.testing.gen_test
+    async def test_is_active_session(self):
+        """is_active_session should return True for active session_ids."""
+        with self._patch_app_session():
+            await self.start_server_loop()
+            await self.ws_connect()
+
+            # Get our connected BrowserWebSocketHandler
+            session_info = list(self.server._session_info_by_id.values())[0]
+
+            self.assertFalse(self.server.is_active_session("not_a_session_id"))
+            self.assertTrue(self.server.is_active_session(session_info.session.id))
+
+    @tornado.testing.gen_test
+    async def test_get_eventloop(self):
+        """Server._get_eventloop() will raise an error if called before the
+        Server is started, and will return the Server's eventloop otherwise.
+        """
+        with self._patch_app_session():
+            with self.assertRaises(RuntimeError):
+                # Server hasn't started yet: error!
+                _ = self.server._get_eventloop()
+
+            # Server has started: no error
+            await self.start_server_loop()
+            eventloop = self.server._get_eventloop()
+            self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
 
 
 class ServerUtilsTest(unittest.TestCase):
@@ -647,12 +697,10 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         os.environ["HOME"] = self._home
 
         self._fd, self._path = tempfile.mkstemp()
-        self._server = Server(self.io_loop, self._path, "test command line")
+        self._server = Server(self._path, "test command line")
+        self._server._eventloop = self.asyncio_loop
 
     def tearDown(self) -> None:
-        self._server.stop()
-        Server._singleton = None
-
         if event_based_path_watcher._MultiPathWatcher._singleton is not None:
             event_based_path_watcher._MultiPathWatcher.get_singleton().close()
             event_based_path_watcher._MultiPathWatcher._singleton = None
@@ -712,11 +760,10 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
-        Server._singleton = None
         super().tearDown()
 
     def get_app(self):
-        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server = Server("mock/script/path", "test command line")
         server.does_script_run_without_error = self.does_script_run_without_error
         return server._create_app()
 
@@ -737,11 +784,10 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
-        Server._singleton = None
         super().tearDown()
 
     def get_app(self):
-        server = Server(self.io_loop, "mock/script/path", "test command line")
+        server = Server("mock/script/path", "test command line")
         server.does_script_run_without_error = self.does_script_run_without_error
         return server._create_app()
 

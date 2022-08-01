@@ -62,7 +62,7 @@ describe("st.sidebar", () => {
   it("does not collapse on text input on mobile", () => {
     cy.viewport(400, 800);
     // Expand the sidebar on mobile, with a manual click
-    cy.getIndexed("[data-testid='stSidebar'] button", 1).click();
+    cy.get("[data-testid='collapsedControl'] button").click();
 
     cy.get("[data-testid='stSidebar'] .stTextInput input").click();
 

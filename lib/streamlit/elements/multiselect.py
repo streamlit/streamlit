@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from textwrap import dedent
 from typing import (
     Any,
@@ -23,6 +24,7 @@ from typing import (
     List,
     Sequence,
     Union,
+    TypeVar,
 )
 
 import streamlit
@@ -40,13 +42,49 @@ from streamlit.state import (
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
+T = TypeVar("T")
+
 
 class MultiSelectMixin:
+    @overload
+    def multiselect(
+        self,
+        label: str,
+        options: Sequence[T],
+        default: Optional[Any] = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+    ) -> List[T]:
+        ...
+
+    @overload
     def multiselect(
         self,
         label: str,
         options: OptionSequence,
-        default: Union[Iterable[Any], Any, None] = None,
+        default: Optional[Any] = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+    ) -> List[Any]:
+        ...
+
+    def multiselect(
+        self,
+        label: str,
+        options: OptionSequence,
+        default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -177,6 +215,15 @@ class MultiSelectMixin:
                     default_values = [default_values]
                 else:
                     default_values = list(default_values)
+            if len(default_values) != 0 and isinstance(default_values[0], Enum):
+                str_default_values = [str(enum) for enum in default_values]
+                mapped_opt_keys = [str(enum) for enum in opt]
+                for value in str_default_values:
+                    if value not in mapped_opt_keys:
+                        raise StreamlitAPIException(
+                            "Every Multiselect default value must exist in options"
+                        )
+                return [mapped_opt_keys.index(value) for value in str_default_values]
 
             for value in default_values:
                 if value not in opt:
@@ -218,7 +265,6 @@ class MultiSelectMixin:
             serializer=serialize_multiselect,
             ctx=ctx,
         )
-
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
@@ -227,6 +273,9 @@ class MultiSelectMixin:
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
+        if len(widget_state.value) != 0:
+            if isinstance(widget_state.value[0], Enum):
+                return [str(enum) for enum in widget_state.value]
         return widget_state.value
 
     @property

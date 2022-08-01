@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import threading
 from enum import Enum
 from typing import Optional, cast
-
-import attr
 
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state import coalesce_widget_states
@@ -36,7 +35,7 @@ class ScriptRequestType(Enum):
     RERUN = "RERUN"
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class RerunData:
     """Data attached to RERUN requests. Immutable."""
 
@@ -46,7 +45,7 @@ class RerunData:
     page_name: str = ""
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class ScriptRequest:
     """A STOP or RERUN request and associated data."""
 

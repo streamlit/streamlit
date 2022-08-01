@@ -153,3 +153,40 @@ def make_url_path_regex(*path, **kwargs) -> str:
     path = [x.strip("/") for x in path if x]  # Filter out falsy components.
     path_format = r"^/%s/?$" if kwargs.get("trailing_slash", True) else r"^/%s$"
     return path_format % "/".join(path)
+
+
+def get_url(host_ip: str) -> str:
+    """Get the URL for any app served at the given host_ip.
+
+    Parameters
+    ----------
+    host_ip : str
+        The IP address of the machine that is running the Streamlit Server.
+
+    Returns
+    -------
+    str
+        The URL.
+    """
+    port = _get_browser_address_bar_port()
+    base_path = config.get_option("server.baseUrlPath").strip("/")
+
+    if base_path:
+        base_path = "/" + base_path
+
+    host_ip = host_ip.strip("/")
+
+    return f"http://{host_ip}:{port}{base_path}"
+
+
+def _get_browser_address_bar_port() -> int:
+    """Get the app URL that will be shown in the browser's address bar.
+
+    That is, this is the port where static assets will be served from. In dev,
+    this is different from the URL that will be used to connect to the
+    server-browser websocket.
+
+    """
+    if config.get_option("global.developmentMode"):
+        return 3000
+    return int(config.get_option("browser.serverPort"))

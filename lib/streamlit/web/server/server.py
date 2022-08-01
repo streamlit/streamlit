@@ -13,17 +13,13 @@
 # limitations under the License.
 
 import asyncio
-import base64
-import binascii
+import errno
 import logging
 import os
 import socket
 import sys
-import errno
-import json
 import time
 import traceback
-import click
 from enum import Enum
 from typing import (
     Any,
@@ -31,51 +27,40 @@ from typing import (
     Optional,
     Tuple,
     Callable,
-    Awaitable,
     List,
-    Union,
 )
 
+import click
 import tornado.concurrent
-import tornado.ioloop
 import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
-from tornado.platform.asyncio import AsyncIOLoop
-from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
 
 from streamlit import config
 from streamlit import file_util
 from streamlit import source_util
 from streamlit import util
+from streamlit.app_session import AppSession
 from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
+from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
-from streamlit.app_session import AppSession
-from streamlit.stats import StatsManager
-from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
-from streamlit.components.v1.components import ComponentRegistry
-from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from .stats_request_handler import StatsRequestHandler
-from .component_request_handler import ComponentRequestHandler
-from streamlit.web.server.upload_file_request_handler import (
-    UploadFileRequestHandler,
-    UPLOAD_FILE_ROUTE,
-)
-
 from streamlit.session_data import SessionData
 from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
+from streamlit.stats import StatsManager
+from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler
 from streamlit.web.server.routes import AssetsFileHandler
 from streamlit.web.server.routes import DebugHandler
@@ -83,13 +68,17 @@ from streamlit.web.server.routes import HealthHandler
 from streamlit.web.server.routes import MediaFileHandler
 from streamlit.web.server.routes import MessageCacheHandler
 from streamlit.web.server.routes import StaticFileHandler
-from streamlit.web.server.server_util import is_cacheable_msg
-from streamlit.web.server.server_util import is_url_from_allowed_origins
-from streamlit.web.server.server_util import make_url_path_regex
-from streamlit.web.server.server_util import serialize_forward_msg
 from streamlit.web.server.server_util import get_max_message_size_bytes
-from streamlit.watcher import LocalSourcesWatcher
-
+from streamlit.web.server.server_util import is_cacheable_msg
+from streamlit.web.server.server_util import make_url_path_regex
+from streamlit.web.server.upload_file_request_handler import (
+    UploadFileRequestHandler,
+    UPLOAD_FILE_ROUTE,
+)
+from .browser_websocket_handler import BrowserWebSocketHandler
+from .component_request_handler import ComponentRequestHandler
+from .session_client import SessionClient, SessionClientDisconnectedError
+from .stats_request_handler import StatsRequestHandler
 
 LOGGER = get_logger(__name__)
 
@@ -127,18 +116,18 @@ class SessionInfo:
     the ForwardMsgCache.
     """
 
-    def __init__(self, ws: WebSocketHandler, session: AppSession):
+    def __init__(self, client: SessionClient, session: AppSession):
         """Initialize a SessionInfo instance.
 
         Parameters
         ----------
         session : AppSession
             The AppSession object.
-        ws : _BrowserWebSocketHandler
-            The websocket corresponding to this session.
+        client : SessionClient
+            The concrete SessionClient for this session.
         """
         self.session = session
-        self.ws = ws
+        self.client = client
         self.script_run_count = 0
 
     def __repr__(self) -> str:
@@ -147,9 +136,9 @@ class SessionInfo:
 
 class State(Enum):
     INITIAL = "INITIAL"
-    WAITING_FOR_FIRST_BROWSER = "WAITING_FOR_FIRST_BROWSER"
-    ONE_OR_MORE_BROWSERS_CONNECTED = "ONE_OR_MORE_BROWSERS_CONNECTED"
-    NO_BROWSERS_CONNECTED = "NO_BROWSERS_CONNECTED"
+    WAITING_FOR_FIRST_SESSION = "WAITING_FOR_FIRST_SESSION"
+    ONE_OR_MORE_SESSIONS_CONNECTED = "ONE_OR_MORE_SESSIONS_CONNECTED"
+    NO_SESSIONS_CONNECTED = "NO_SESSIONS_CONNECTED"
     STOPPING = "STOPPING"
     STOPPED = "STOPPED"
 
@@ -235,35 +224,15 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
 
 class Server:
-    _singleton: Optional["Server"] = None
-
-    @classmethod
-    def get_current(cls) -> "Server":
-        """
-        Returns
-        -------
-        Server
-            The singleton Server object.
-        """
-        if Server._singleton is None:
-            raise RuntimeError("Server has not been initialized yet")
-
-        return Server._singleton
-
-    def __init__(
-        self, ioloop: AsyncIOLoop, main_script_path: str, command_line: Optional[str]
-    ):
+    def __init__(self, main_script_path: str, command_line: Optional[str]):
         """Create the server. It won't be started yet."""
-        if Server._singleton is not None:
-            raise RuntimeError("Server already initialized. Use .get_current() instead")
-
-        Server._singleton = self
-
         _set_tornado_log_levels()
 
-        self._ioloop = ioloop
         self._main_script_path = main_script_path
         self._command_line = command_line if command_line is not None else ""
+
+        # Will be set when we start.
+        self._eventloop: Optional[asyncio.AbstractEventLoop] = None
 
         # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
@@ -296,15 +265,6 @@ class Server:
     def main_script_path(self) -> str:
         return self._main_script_path
 
-    def get_session_by_id(self, session_id: str) -> Optional[AppSession]:
-        """Return the AppSession corresponding to the given id, or None if
-        no such session exists."""
-        session_info = self._get_session_info(session_id)
-        if session_info is None:
-            return None
-
-        return session_info.session
-
     def on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
         Ensures that uploaded files from stale sessions get deleted.
@@ -322,7 +282,11 @@ class Server:
         """
         return self._session_info_by_id.get(session_id, None)
 
-    def start(self, on_started: Callable[["Server"], Any]) -> None:
+    def is_active_session(self, session_id: str) -> bool:
+        """True if the session_id belongs to an active session."""
+        return session_id in self._session_info_by_id
+
+    async def start(self, on_started: Callable[["Server"], Any]) -> None:
         """Start the server.
 
         Parameters
@@ -341,10 +305,9 @@ class Server:
         start_listening(app)
 
         port = config.get_option("server.port")
-
         LOGGER.debug("Server started on port %s", port)
 
-        self._ioloop.add_callback(self._loop_coroutine, on_started)
+        await self._loop_coroutine(on_started)
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
@@ -353,7 +316,7 @@ class Server:
         routes: List[Any] = [
             (
                 make_url_path_regex(base, "stream"),
-                _BrowserWebSocketHandler,
+                BrowserWebSocketHandler,
                 dict(server=self),
             ),
             (
@@ -380,7 +343,7 @@ class Server:
                 UploadFileRequestHandler,
                 dict(
                     file_mgr=self._uploaded_file_mgr,
-                    get_session_info=self._get_session_info,
+                    is_active_session=self.is_active_session,
                 ),
             ),
             (
@@ -466,7 +429,7 @@ class Server:
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,
+            event_loop=self._get_eventloop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -496,7 +459,7 @@ class Server:
 
     @property
     def browser_is_connected(self) -> bool:
-        return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
+        return self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED
 
     @property
     def is_running_hello(self) -> bool:
@@ -509,23 +472,30 @@ class Server:
     ) -> None:
         try:
             if self._state == State.INITIAL:
-                self._set_state(State.WAITING_FOR_FIRST_BROWSER)
-            elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+                self._set_state(State.WAITING_FOR_FIRST_SESSION)
+            elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
                 pass
             else:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
+
+            # Store the eventloop we're running on so that we can schedule
+            # callbacks on it when necessary. (We can't just call
+            # `asyncio.get_running_loop()` whenever we like, because we have
+            # some functions, e.g. `stop`, that can be called from other
+            # threads, and `asyncio.get_running_loop()` is thread-specific.)
+            self._eventloop = asyncio.get_running_loop()
 
             if on_started is not None:
                 on_started(self)
 
             while not self._must_stop.is_set():
-                if self._state == State.WAITING_FOR_FIRST_BROWSER:
+                if self._state == State.WAITING_FOR_FIRST_SESSION:
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
                     )
 
-                elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+                elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
                     self._need_send_data.clear()
 
                     # Shallow-clone our sessions into a list, so we can iterate
@@ -538,13 +508,13 @@ class Server:
                         for msg in msg_list:
                             try:
                                 self._send_message(session_info, msg)
-                            except tornado.websocket.WebSocketClosedError:
+                            except SessionClientDisconnectedError:
                                 self._close_app_session(session_info.session.id)
                             await asyncio.sleep(0)
                         await asyncio.sleep(0)
                     await asyncio.sleep(0.01)
 
-                elif self._state == State.NO_BROWSERS_CONNECTED:
+                elif self._state == State.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
@@ -575,9 +545,6 @@ class Server:
 Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
             )
-
-        finally:
-            self._on_stopped()
 
     def _send_message(self, session_info: SessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
@@ -633,35 +600,33 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         # Ship it off!
-        session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
+        session_info.client.write_forward_msg(msg_to_send)
 
     def _enqueued_some_message(self) -> None:
-        self._ioloop.add_callback(self._need_send_data.set)
+        self._get_eventloop().call_soon_threadsafe(self._need_send_data.set)
 
-    def stop(self, from_signal=False) -> None:
+    def stop(self) -> None:
         click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
-        if from_signal:
-            self._ioloop.add_callback_from_signal(self._must_stop.set)
-        else:
-            self._ioloop.add_callback(self._must_stop.set)
+        self._get_eventloop().call_soon_threadsafe(self._must_stop.set)
 
-    def _on_stopped(self) -> None:
-        """Called when our runloop is exiting, to shut down the ioloop.
-        This will end our process.
-
-        (Tests can patch this method out, to prevent the test's ioloop
-        from being shutdown.)
-        """
-        self._ioloop.stop()
-
-    def _create_app_session(self, ws: WebSocketHandler) -> AppSession:
+    def _create_app_session(
+        self, client: SessionClient, user_info: Dict[str, Optional[str]]
+    ) -> AppSession:
         """Register a connected browser with the server.
 
         Parameters
         ----------
-        ws : _BrowserWebSocketHandler
-            The newly-connected websocket handler.
+        client : SessionClient
+            The SessionClient for sending data to the session's client.
+
+        user_info: Dict
+            A dict that contains information about the current user. For now,
+            it only contains the user's email address.
+
+            {
+                "email": "example@example.com"
+            }
 
         Returns
         -------
@@ -672,25 +637,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
 
-        is_public_cloud_app = False
-
-        try:
-            header_content = ws.request.headers["X-Streamlit-User"]
-            payload = base64.b64decode(header_content)
-            user_obj = json.loads(payload)
-            email = user_obj["email"]
-            is_public_cloud_app = user_obj["isPublicCloudApp"]
-        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
-            email = "test@localhost.com"
-
-        user_info: Dict[str, Optional[str]] = dict()
-        if is_public_cloud_app:
-            user_info["email"] = None
-        else:
-            user_info["email"] = email
-
         session = AppSession(
-            event_loop=self._ioloop.asyncio_loop,
+            event_loop=self._get_eventloop(),
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -699,15 +647,15 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         )
 
         LOGGER.debug(
-            "Created new session for ws %s. Session ID: %s", id(ws), session.id
+            "Created new session for client %s. Session ID: %s", id(client), session.id
         )
 
         assert (
             session.id not in self._session_info_by_id
         ), f"session.id '{session.id}' registered multiple times!"
 
-        self._session_info_by_id[session.id] = SessionInfo(ws, session)
-        self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
+        self._session_info_by_id[session.id] = SessionInfo(client, session)
+        self._set_state(State.ONE_OR_MORE_SESSIONS_CONNECTED)
         self._has_connection.notify_all()
 
         return session
@@ -729,93 +677,15 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             session_info.session.shutdown()
 
         if len(self._session_info_by_id) == 0:
-            self._set_state(State.NO_BROWSERS_CONNECTED)
+            self._set_state(State.NO_SESSIONS_CONNECTED)
 
-
-class _BrowserWebSocketHandler(WebSocketHandler):
-    """Handles a WebSocket connection from the browser"""
-
-    def initialize(self, server: Server) -> None:
-        self._server = server
-        self._session: Optional[AppSession] = None
-        # The XSRF cookie is normally set when xsrf_form_html is used, but in a pure-Javascript application
-        # that does not use any regular forms we just need to read the self.xsrf_token manually to set the
-        # cookie as a side effect.
-        # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
-        # for more details.
-        if config.get_option("server.enableXsrfProtection"):
-            _ = self.xsrf_token
-
-    def check_origin(self, origin: str) -> bool:
-        """Set up CORS."""
-        return super().check_origin(origin) or is_url_from_allowed_origins(origin)
-
-    def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
-        self._session = self._server._create_app_session(self)
-        return None
-
-    def on_close(self) -> None:
-        if not self._session:
-            return
-        self._server._close_app_session(self._session.id)
-        self._session = None
-
-    def get_compression_options(self) -> Optional[Dict[Any, Any]]:
-        """Enable WebSocket compression.
-
-        Returning an empty dict enables websocket compression. Returning
-        None disables it.
-
-        (See the docstring in the parent class.)
+    def _get_eventloop(self) -> asyncio.AbstractEventLoop:
+        """Return the asyncio eventloop that the Server was started with.
+        If the Server hasn't been started, this will raise an error.
         """
-        if config.get_option("server.enableWebsocketCompression"):
-            return {}
-        return None
-
-    def on_message(self, payload: Union[str, bytes]) -> None:
-        if not self._session:
-            return
-
-        msg = BackMsg()
-
-        try:
-            if isinstance(payload, str):
-                # Sanity check. (The frontend should only be sending us bytes;
-                # Protobuf.ParseFromString does not accept str input.)
-                raise RuntimeError(
-                    "WebSocket received an unexpected `str` message. "
-                    "(We expect `bytes` only.)"
-                )
-
-            msg.ParseFromString(payload)
-            msg_type = msg.WhichOneof("type")
-
-            LOGGER.debug("Received the following back message:\n%s", msg)
-
-            if msg_type == "rerun_script":
-                self._session.handle_rerun_script_request(msg.rerun_script)
-            elif msg_type == "load_git_info":
-                self._session.handle_git_information_request()
-            elif msg_type == "clear_cache":
-                self._session.handle_clear_cache_request()
-            elif msg_type == "set_run_on_save":
-                self._session.handle_set_run_on_save_request(msg.set_run_on_save)
-            elif msg_type == "stop_script":
-                self._session.handle_stop_script_request()
-            elif msg_type == "close_connection":
-                if config.get_option("global.developmentMode"):
-                    Server.get_current().stop()
-                else:
-                    LOGGER.warning(
-                        "Client tried to close connection when "
-                        "not in development mode"
-                    )
-            else:
-                LOGGER.warning('No handler for "%s"', msg_type)
-
-        except BaseException as e:
-            LOGGER.error(e)
-            self._session.handle_backmsg_exception(e)
+        if self._eventloop is None:
+            raise RuntimeError("Server hasn't started yet!")
+        return self._eventloop
 
 
 def _set_tornado_log_levels() -> None:

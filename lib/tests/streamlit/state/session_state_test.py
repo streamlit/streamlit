@@ -693,12 +693,12 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         assert stat.category_name == "st_session_state"
 
         init_size = stat.byte_length
-        assert init_size < 1500
+        assert init_size < 2500
 
         state["foo"] = 2
         new_size = state.get_stats()[0].byte_length
         assert new_size > init_size
-        assert new_size < 1500
+        assert new_size < 2500
 
         state["foo"] = 1
         new_size_2 = state.get_stats()[0].byte_length
@@ -707,7 +707,7 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         st.checkbox("checkbox", key="checkbox")
         new_size_3 = state.get_stats()[0].byte_length
         assert new_size_3 > new_size_2
-        assert new_size_3 - new_size_2 < 1500
+        assert new_size_3 - new_size_2 < 2500
 
         state._compact_state()
         new_size_4 = state.get_stats()[0].byte_length

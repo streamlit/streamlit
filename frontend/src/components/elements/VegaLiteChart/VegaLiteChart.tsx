@@ -433,7 +433,7 @@ function getDataArray(
 /**
  * Checks if data looks like it's just prevData plus some appended rows.
  */
-function dataIsAnAppendOfPrev(
+export function dataIsAnAppendOfPrev(
   prevData: ImmutableMap<string, number>,
   prevNumRows: number,
   prevNumCols: number,
@@ -504,6 +504,10 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
     },
     header: {
       labelColor: colors.bodyText,
+    },
+    view: {
+      continuousHeight: 300,
+      continuousWidth: 400,
     },
   }
 

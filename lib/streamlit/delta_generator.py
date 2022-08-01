@@ -355,6 +355,10 @@ class DeltaGenerator(
     def _is_top_level(self) -> bool:
         return self._provided_cursor is None
 
+    @property
+    def id(self) -> str:
+        return str(id(self))
+
     def _get_delta_path_str(self) -> str:
         """Returns the element's delta path as a string like "[0, 2, 3, 1]".
 
@@ -523,6 +527,15 @@ class DeltaGenerator(
             # no-op from the point of view of the app.
             output_dg = dg
 
+        # Save message for replay if we're called from within @st.memo or @st.singleton
+        caching.save_element_message(
+            delta_type,
+            element_proto,
+            invoked_dg_id=self.id,
+            used_dg_id=dg.id,
+            returned_dg_id=output_dg.id,
+        )
+
         return _value_or_dg(return_value, output_dg)
 
     def _block(
@@ -572,6 +585,13 @@ class DeltaGenerator(
         # Must be called to increment this cursor's index.
         dg._cursor.get_locked_cursor(last_index=None)
         _enqueue_message(msg)
+
+        caching.save_block_message(
+            block_proto,
+            invoked_dg_id=self.id,
+            used_dg_id=dg.id,
+            returned_dg_id=block_dg.id,
+        )
 
         return block_dg
 

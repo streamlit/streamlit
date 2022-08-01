@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 import os
 import signal
 import sys
@@ -18,14 +19,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
-import tornado.ioloop
-from tornado.platform.asyncio import AsyncIOLoop
 
 from streamlit import config
 from streamlit import env_util
 from streamlit import net_util
 from streamlit import secrets
-from streamlit import session_data
 from streamlit import url_util
 from streamlit import util
 from streamlit import version
@@ -36,6 +34,7 @@ from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket
+from streamlit.web.server import server_util
 
 LOGGER = get_logger(__name__)
 
@@ -60,12 +59,12 @@ NEW_VERSION_TEXT = """
 }
 
 
-def _set_up_signal_handler() -> None:
+def _set_up_signal_handler(server: Server) -> None:
     LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
-        # The server will shut down its threads and stop the ioloop
-        Server.get_current().stop(from_signal=True)
+        # The server will shut down its threads and exit its loop.
+        server.stop()
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -190,12 +189,11 @@ def _on_server_start(server: Server) -> None:
         else:
             addr = "localhost"
 
-        util.open_browser(session_data.get_url(addr))
+        util.open_browser(server_util.get_url(addr))
 
-    # Schedule the browser to open using the IO Loop on the main thread, but
-    # only if no other browser connects within 1s.
-    ioloop = tornado.ioloop.IOLoop.current()
-    ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
+    # Schedule the browser to open on the main thread, but only if no other
+    # browser connects within 1s.
+    asyncio.get_running_loop().call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:
@@ -219,33 +217,33 @@ def _print_url(is_running_hello: bool) -> None:
 
     if config.is_manually_set("browser.serverAddress"):
         named_urls = [
-            ("URL", session_data.get_url(config.get_option("browser.serverAddress")))
+            ("URL", server_util.get_url(config.get_option("browser.serverAddress")))
         ]
 
     elif (
         config.is_manually_set("server.address") and not server_address_is_unix_socket()
     ):
         named_urls = [
-            ("URL", session_data.get_url(config.get_option("server.address"))),
+            ("URL", server_util.get_url(config.get_option("server.address"))),
         ]
 
     elif config.get_option("server.headless"):
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
-            named_urls.append(("Network URL", session_data.get_url(internal_ip)))
+            named_urls.append(("Network URL", server_util.get_url(internal_ip)))
 
         external_ip = net_util.get_external_ip()
         if external_ip:
-            named_urls.append(("External URL", session_data.get_url(external_ip)))
+            named_urls.append(("External URL", server_util.get_url(external_ip)))
 
     else:
         named_urls = [
-            ("Local URL", session_data.get_url("localhost")),
+            ("Local URL", server_util.get_url("localhost")),
         ]
 
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
-            named_urls.append(("Network URL", session_data.get_url(internal_ip)))
+            named_urls.append(("Network URL", server_util.get_url(internal_ip)))
 
     click.secho("")
     click.secho("  %s" % title_message, fg="blue", bold=True)
@@ -351,7 +349,7 @@ def run(
 ) -> None:
     """Run a script in a separate thread and start a server for the app.
 
-    This starts a blocking ioloop.
+    This starts a blocking asyncio eventloop.
     """
     _fix_sys_path(main_script_path)
     _fix_matplotlib_crash()
@@ -361,19 +359,12 @@ def run(
     _install_config_watchers(flag_options)
     _install_pages_watcher(main_script_path)
 
-    # Install a signal handler that will shut down the ioloop
+    # Create the server. It won't start running yet.
+    server = Server(main_script_path, command_line)
+
+    # Install a signal handler that will shut down the server
     # and close all our threads
-    _set_up_signal_handler()
+    _set_up_signal_handler(server)
 
-    # Create our Tornado IOLoop.
-    # (AsyncIOLoop is actually the default IOLoop type - we're just being
-    # explicit about it so that we can grab its asyncio_loop instance.)
-    ioloop = AsyncIOLoop()
-
-    # Create and start the server.
-    server = Server(ioloop, main_script_path, command_line)
-    server.start(_on_server_start)
-
-    # Start the ioloop. This function will not return until the
-    # server is shut down.
-    ioloop.start()
+    # Run the server. This function will not return until the server is shut down.
+    asyncio.run(server.start(_on_server_start))
