@@ -17,7 +17,7 @@
 import unittest
 import ast
 
-import streamlit.magic as magic
+import streamlit.runtime.scriptrunner.magic as magic
 
 
 class MagicTest(unittest.TestCase):
@@ -28,7 +28,7 @@ class MagicTest(unittest.TestCase):
     """
 
     def _testCode(self, code, expected_count):
-        tree = magic.add_magic(code, "./")
+        tree = magic.add_magic(code, "../../../../streamlit/")
         count = 0
         for node in ast.walk(tree):
             # count the nodes where a substitution has been made, i.e.

@@ -23,26 +23,26 @@ from typing import Dict, Optional, Callable
 from blinker import Signal
 
 from streamlit import config
-from streamlit import magic
 from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
+from . import magic
 from .script_requests import (
     ScriptRequests,
     RerunData,
     ScriptRequestType,
 )
+from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
 
 LOGGER = get_logger(__name__)
 
