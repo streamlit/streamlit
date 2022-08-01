@@ -36,11 +36,7 @@ def check_emoji(emoji):
     extracted_emoji = is_emoji_valid(emoji)
 
     if extracted_emoji is not None:
-        return clean_text(str(extracted_emoji.group()))
-    else:
-        raise StreamlitAPIException(
-            f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
-        )
+        return extracted_emoji
 
 
 class AlertMixin:
@@ -48,7 +44,7 @@ class AlertMixin:
         self,
         body: "SupportsStr",
         *,  # keyword-only args:
-        icon: Optional = None,
+        icon: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display error message.
 
@@ -76,7 +72,7 @@ class AlertMixin:
         self,
         body: "SupportsStr",
         *,  # keyword-only args:
-        icon: Optional = None,
+        icon: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display warning message.
 
@@ -105,7 +101,7 @@ class AlertMixin:
         self,
         body: "SupportsStr",
         *,  # keyword-only args:
-        icon: Optional = None,
+        icon: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display an informational message.
 
@@ -135,7 +131,7 @@ class AlertMixin:
         self,
         body: "SupportsStr",
         *,  # keyword-only args:
-        icon: Optional = None,
+        icon: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display a success message.
 

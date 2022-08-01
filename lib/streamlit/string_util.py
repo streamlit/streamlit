@@ -15,6 +15,7 @@
 import re
 import textwrap
 
+from typing import cast, Any
 from datetime import datetime
 from streamlit.errors import StreamlitAPIException
 
@@ -118,26 +119,38 @@ def is_emoji_valid(emoji: str) -> str:
 
     MATCH_EMOJI = re.compile(
         "["
-        "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
-        "\U0001F680-\U0001F6FF"  # transport & map symbols
-        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
-        "\U00002500-\U00002BEF"  # chinese char
-        "\U00002702-\U000027B0"
-        "\U00002702-\U000027B0"
-        "\U000024C2-\U0001F251"
-        "\U0001f926-\U0001f937"
-        "\U00010000-\U0010ffff"
-        "\u2640-\u2642"
-        "\u2600-\u2B55"
-        "\u200d"
-        "\u23cf"
-        "\u23e9"
-        "\u231a"
-        "\ufe0f"  # dingbats
-        "\u3030"
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        u"\U00002500-\U00002BEF"  # chinese char
+        u"\U00002702-\U000027B0"
+        u"\U00002702-\U000027B0"
+        u"\U000024C2-\U0001F251"
+        u"\U0001f926-\U0001f937"
+        u"\U00010000-\U0010ffff"
+        u"\u2640-\u2642"
+        u"\u2600-\u2B55"
+        u"\u200d"
+        u"\u23cf"
+        u"\u23e9"
+        u"\u231a"
+        u"\ufe0f"  # dingbats
+        u"\u3030"
         "]+",
         flags=re.UNICODE,
     )
 
-    return MATCH_EMOJI.match(emoji)
+    result = MATCH_EMOJI.match(emoji)
+    
+    # This cast to Any+type annotation weirdness is done because
+    # cast(re.Match[str], ...) explodes at runtime since Python interprets it
+    # as an attempt to index into re.Match instead of as a type annotation.
+    result: re.Match[str] = cast(Any, result)
+
+    if result is None:
+        raise StreamlitAPIException(
+            f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
+        )
+    else:
+        return clean_text(str(result.group()))
