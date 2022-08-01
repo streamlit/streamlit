@@ -18,15 +18,17 @@ import logging
 import sys
 from typing import Dict, Union
 
+from typing_extensions import Final
+
 from streamlit import config
 
+DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
+
 # Loggers for each name are saved here.
-LOGGERS: Dict[str, logging.Logger] = {}
+_loggers: Dict[str, logging.Logger] = {}
 
 # The global log level is set here across all names.
-LOG_LEVEL = logging.INFO
-
-DEFAULT_LOG_MESSAGE = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
+_global_log_level = logging.INFO
 
 
 def set_log_level(level: Union[str, int]) -> None:
@@ -50,11 +52,11 @@ def set_log_level(level: Union[str, int]) -> None:
         logger.critical(msg)
         sys.exit(1)
 
-    for log in LOGGERS.values():
+    for log in _loggers.values():
         log.setLevel(log_level)
 
-    global LOG_LEVEL
-    LOG_LEVEL = log_level
+    global _global_log_level
+    _global_log_level = log_level
 
 
 def setup_formatter(logger: logging.Logger) -> None:
@@ -82,22 +84,20 @@ def setup_formatter(logger: logging.Logger) -> None:
 
 
 def update_formatter() -> None:
-    for log in LOGGERS.values():
+    for log in _loggers.values():
         setup_formatter(log)
 
 
 def init_tornado_logs() -> None:
-    """Initialize tornado logs."""
-    global LOGGER
+    """Set Tornado log levels.
 
+    This function does not import any Tornado code, so it's safe to call even
+    when Server is not running.
+    """
     # http://www.tornadoweb.org/en/stable/log.html
-    logs = ["access", "application", "general"]
-    for log in logs:
-        name = "tornado.%s" % log
-        get_logger(name)
-
-    logger = get_logger(__name__)
-    logger.debug("Initialized tornado logs")
+    for log in ("access", "application", "general"):
+        # get_logger will set the log level for the logger with the given name.
+        get_logger(f"tornado.{log}")
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -113,18 +113,18 @@ def get_logger(name: str) -> logging.Logger:
     Logger
 
     """
-    if name in LOGGERS.keys():
-        return LOGGERS[name]
+    if name in _loggers.keys():
+        return _loggers[name]
 
     if name == "root":
         logger = logging.getLogger()
     else:
         logger = logging.getLogger(name)
 
-    logger.setLevel(LOG_LEVEL)
+    logger.setLevel(_global_log_level)
     logger.propagate = False
     setup_formatter(logger)
 
-    LOGGERS[name] = logger
+    _loggers[name] = logger
 
     return logger
