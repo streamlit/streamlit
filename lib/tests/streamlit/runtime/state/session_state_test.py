@@ -23,7 +23,7 @@ import pytest
 from hypothesis import given, strategies as hst
 
 import streamlit as st
-import tests.streamlit.state.strategies as stst
+import tests.streamlit.runtime.state.strategies as stst
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
