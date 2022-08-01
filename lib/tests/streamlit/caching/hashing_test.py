@@ -50,7 +50,7 @@ except ImportError:
     pass
 
 from streamlit.type_util import is_type
-from streamlit.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 

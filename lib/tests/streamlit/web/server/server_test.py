@@ -32,11 +32,11 @@ import streamlit.web.server.server
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.elements import legacy_data_frame as data_frame
-from streamlit.forward_msg_cache import ForwardMsgCache
-from streamlit.forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.forward_msg_cache import ForwardMsgCache
+from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.uploaded_file_manager import UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
 from streamlit.web.server.server import DebugHandler
 from streamlit.web.server.server import HealthHandler

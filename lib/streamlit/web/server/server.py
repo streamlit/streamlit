@@ -42,24 +42,26 @@ from streamlit import config
 from streamlit import file_util
 from streamlit import source_util
 from streamlit import util
-from streamlit.app_session import AppSession
 from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
-from streamlit.forward_msg_cache import ForwardMsgCache
-from streamlit.forward_msg_cache import create_reference_msg
-from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.session_data import SessionData
-from streamlit.state import (
+from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.forward_msg_cache import (
+    ForwardMsgCache,
+    create_reference_msg,
+    populate_hash_if_needed,
+)
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
-from streamlit.stats import StatsManager
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.stats import StatsManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
 from streamlit.web.server.routes import AddSlashHandler
 from streamlit.web.server.routes import AssetsFileHandler

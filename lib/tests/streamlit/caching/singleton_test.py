@@ -25,8 +25,8 @@ from streamlit.caching import (
     singleton_decorator,
     get_singleton_stats_provider,
 )
-from streamlit.caching.cache_utils import CachedResult, MsgData
-from streamlit.stats import CacheStat
+from streamlit.caching.cache_utils import CachedResult
+from streamlit.runtime.stats import CacheStat
 
 
 def as_cached_result(value):

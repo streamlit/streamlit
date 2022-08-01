@@ -14,11 +14,11 @@
 from typing import Mapping
 from urllib.parse import urlparse
 from textwrap import dedent
-from typing import cast, Dict, Optional, TYPE_CHECKING, Union
+from typing import cast, Optional, TYPE_CHECKING, Union
 
 from typing_extensions import Final, Literal, TypeAlias
 
-from streamlit.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.elements import image

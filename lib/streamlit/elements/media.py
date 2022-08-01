@@ -20,7 +20,7 @@ from typing_extensions import Final, TypeAlias
 from validators import url
 
 from streamlit import type_util
-from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 

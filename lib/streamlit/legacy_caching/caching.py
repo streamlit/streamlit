@@ -52,7 +52,7 @@ from streamlit.legacy_caching.hashing import update_hash, HashFuncsDict
 from streamlit.legacy_caching.hashing import HashReason
 from streamlit.logger import get_logger
 import streamlit as st
-from streamlit.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 
 _LOGGER = get_logger(__name__)

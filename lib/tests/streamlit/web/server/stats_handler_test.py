@@ -20,7 +20,7 @@ from google.protobuf.json_format import MessageToDict
 from tornado.httputil import HTTPHeaders
 
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
-from streamlit.stats import CacheStat
+from streamlit.runtime.stats import CacheStat
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
 

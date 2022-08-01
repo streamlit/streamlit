@@ -15,7 +15,7 @@
 from typing import Optional, Tuple, Any, List
 
 from streamlit import util
-from streamlit.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
 def make_delta_path(
