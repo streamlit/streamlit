@@ -15,7 +15,7 @@ jobs:
           fingerprints:
             - "98:67:1f:37:d6:4d:21:f3:46:5d:e2:c9:a3:58:52:39"
 
-      working_directory: ~/repo
+      - working_directory: ~/repo
 
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
