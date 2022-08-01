@@ -209,7 +209,7 @@ class AppSessionTest(unittest.TestCase):
         # Assert that the ScriptRunner constructor was called.
         mock_scriptrunner.assert_called_once_with(
             session_id=session.id,
-            session_data=session._session_data,
+            main_script_path=session._session_data.main_script_path,
             client_state=session._client_state,
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,

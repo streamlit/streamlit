@@ -31,7 +31,6 @@ from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.session_data import SessionData
 from streamlit.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
@@ -96,7 +95,7 @@ class ScriptRunner:
     def __init__(
         self,
         session_id: str,
-        session_data: SessionData,
+        main_script_path: str,
         client_state: ClientState,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
@@ -112,8 +111,8 @@ class ScriptRunner:
         session_id : str
             The AppSession's id.
 
-        session_data : SessionData
-            The AppSession's session data.
+        main_script_path : str
+            Path to our main app script.
 
         client_state : ClientState
             The current state from the client (widgets and query params).
@@ -134,7 +133,7 @@ class ScriptRunner:
 
         """
         self._session_id = session_id
-        self._session_data = session_data
+        self._main_script_path = main_script_path
         self._uploaded_file_mgr = uploaded_file_mgr
         self._user_info = user_info
 
@@ -412,7 +411,7 @@ class ScriptRunner:
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
-        main_script_path = self._session_data.main_script_path
+        main_script_path = self._main_script_path
         pages = source_util.get_pages(main_script_path)
         # Safe because pages will at least contain the app's main page.
         main_page_info = list(pages.values())[0]
@@ -548,7 +547,7 @@ class ScriptRunner:
             # assume is the main script directory.
             module.__dict__["__file__"] = script_path
 
-            with modified_sys_path(self._session_data), self._set_execing_flag():
+            with modified_sys_path(self._main_script_path), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
                 if rerun_data.widget_states is not None:
                     self._session_state.on_script_will_rerun(rerun_data.widget_states)
@@ -662,22 +661,22 @@ def _new_module(name: str) -> types.ModuleType:
 class modified_sys_path:
     """A context for prepending a directory to sys.path for a second."""
 
-    def __init__(self, session_data: SessionData):
-        self._session_data = session_data
+    def __init__(self, main_script_path: str):
+        self._main_script_path = main_script_path
         self._added_path = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def __enter__(self):
-        if self._session_data.main_script_path not in sys.path:
-            sys.path.insert(0, self._session_data.main_script_path)
+        if self._main_script_path not in sys.path:
+            sys.path.insert(0, self._main_script_path)
             self._added_path = True
 
     def __exit__(self, type, value, traceback):
         if self._added_path:
             try:
-                sys.path.remove(self._session_data.main_script_path)
+                sys.path.remove(self._main_script_path)
             except ValueError:
                 pass
 

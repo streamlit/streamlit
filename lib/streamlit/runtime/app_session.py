@@ -319,7 +319,7 @@ class AppSession:
         """Create and run a new ScriptRunner with the given RerunData."""
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
-            session_data=self._session_data,
+            main_script_path=self._session_data.main_script_path,
             client_state=self._client_state,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
