@@ -426,14 +426,12 @@ class Server:
         (True, "ok") if the script completes without error, or (False, err_msg)
         if the script raises an exception.
         """
-        session_data = SessionData(self._main_script_path, self._command_line)
-        local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
             event_loop=self._get_eventloop(),
-            session_data=session_data,
+            session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=local_sources_watcher,
+            local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info={"email": "test@test.com"},
         )
 
@@ -634,15 +632,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created AppSession for this browser connection.
 
         """
-        session_data = SessionData(self._main_script_path, self._command_line)
-        local_sources_watcher = LocalSourcesWatcher(session_data)
-
         session = AppSession(
             event_loop=self._get_eventloop(),
-            session_data=session_data,
+            session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=local_sources_watcher,
+            local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info=user_info,
         )
 
