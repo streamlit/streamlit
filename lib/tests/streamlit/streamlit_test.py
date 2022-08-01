@@ -75,9 +75,13 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to off
         self.assertEqual(True, st.get_option("client.displayEnabled"))
 
-        # client.displayEnabled and client.caching can be set after run starts.
-        st.set_option("client.displayEnabled", False)
-        self.assertEqual(False, st.get_option("client.displayEnabled"))
+        try:
+            # client.displayEnabled and client.caching can be set after run starts.
+            st.set_option("client.displayEnabled", False)
+            self.assertEqual(False, st.get_option("client.displayEnabled"))
+        finally:
+            # Restore original value
+            st.set_option("client.displayEnabled", True)
 
     def test_set_option_unscriptable(self):
         """Test that unscriptable options cannot be set with st.set_option."""
