@@ -23,12 +23,13 @@ import streamlit as st
 from streamlit import errors
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.state.session_state import GENERATED_WIDGET_KEY_PREFIX
-from streamlit.state.widgets import (
-    _get_widget_id,
-    coalesce_widget_states,
+from streamlit.runtime.state import coalesce_widget_states
+from streamlit.runtime.state.session_state import (
+    WidgetMetadata,
+    SessionState,
+    GENERATED_WIDGET_KEY_PREFIX,
 )
-from streamlit.state.session_state import SessionState, WidgetMetadata
+from streamlit.runtime.state.widgets import _get_widget_id
 
 from tests import testutil
 

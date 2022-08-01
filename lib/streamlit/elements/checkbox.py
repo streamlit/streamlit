@@ -18,7 +18,7 @@ from textwrap import dedent
 from typing import cast, Optional, TYPE_CHECKING
 
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
-from streamlit.state import (
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,

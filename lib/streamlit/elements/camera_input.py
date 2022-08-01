@@ -21,7 +21,7 @@ from streamlit.proto.CameraInput_pb2 import (
 )
 
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,

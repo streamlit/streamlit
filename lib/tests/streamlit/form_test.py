@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.state.session_state import RegisterWidgetResult
+from streamlit.runtime.state.session_state import RegisterWidgetResult
 from tests import testutil
 
 NO_FORM_ID = ""

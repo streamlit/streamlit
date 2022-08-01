@@ -31,7 +31,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.state import (
+from streamlit.runtime.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,

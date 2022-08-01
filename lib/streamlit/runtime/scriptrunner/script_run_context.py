@@ -20,7 +20,7 @@ from typing_extensions import Final, TypeAlias
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.state import SafeSessionState
+from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 LOGGER: Final = get_logger(__name__)

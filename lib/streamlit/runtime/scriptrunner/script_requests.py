@@ -18,7 +18,7 @@ from enum import Enum
 from typing import Optional, cast
 
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.state import coalesce_widget_states
+from streamlit.runtime.state import coalesce_widget_states
 
 
 class ScriptRequestType(Enum):

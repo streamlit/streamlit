@@ -23,7 +23,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.state import (
+from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     WidgetArgs,

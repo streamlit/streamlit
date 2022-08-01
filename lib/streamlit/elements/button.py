@@ -23,7 +23,7 @@ from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,

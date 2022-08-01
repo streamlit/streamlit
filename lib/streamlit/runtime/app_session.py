@@ -48,7 +48,7 @@ from .uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
-    from streamlit.state import SessionState
+    from .state import SessionState
 
 
 class AppSessionState(Enum):
@@ -147,7 +147,7 @@ class AppSession:
         self._scriptrunner: Optional[ScriptRunner] = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
-        from streamlit.state import SessionState
+        from streamlit.runtime.state import SessionState
 
         self._session_state = SessionState()
         self._user_info = user_info

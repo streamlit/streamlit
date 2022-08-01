@@ -10,7 +10,7 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
 )
 
-from streamlit.state import SafeSessionState, SessionState
+from streamlit.runtime.state import SafeSessionState, SessionState
 from tests.testutil import DeltaGeneratorTestCase
 
 

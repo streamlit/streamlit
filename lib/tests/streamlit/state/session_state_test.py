@@ -13,33 +13,31 @@
 # limitations under the License.
 
 """Session state unit tests."""
-from copy import deepcopy
-from typing import Any, List, Tuple
 import unittest
-from unittest.mock import patch, MagicMock
+from copy import deepcopy
 from datetime import datetime, timedelta, date
+from typing import Any, List, Tuple
+from unittest.mock import patch, MagicMock
 
 import pytest
 from hypothesis import given, strategies as hst
 
 import streamlit as st
+import tests.streamlit.state.strategies as stst
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.state.session_state_proxy import get_session_state
-from streamlit.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
-    SessionState,
+from streamlit.runtime.state import SessionState, get_session_state
+from streamlit.runtime.state.session_state import (
+    WStates,
+    WidgetMetadata,
     Serialized,
     Value,
-    WidgetMetadata,
-    WStates,
+    GENERATED_WIDGET_KEY_PREFIX,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from tests import testutil
-import tests.streamlit.state.strategies as stst
-
 
 identity = lambda x: x
 

@@ -54,7 +54,7 @@ from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.session_data import SessionData
-from streamlit.state import (
+from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )

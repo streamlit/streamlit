@@ -34,7 +34,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
     ScriptRunContext,
 )
-from streamlit.state.session_state import SessionState
+from streamlit.runtime.state import SessionState
 from tests.testutil import DeltaGeneratorTestCase
 
 memo = st.experimental_memo

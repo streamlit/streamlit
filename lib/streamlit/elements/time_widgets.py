@@ -25,7 +25,7 @@ from streamlit.type_util import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.state import (
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,

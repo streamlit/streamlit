@@ -45,7 +45,7 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequests,
     ScriptRequest,
 )
-from streamlit.state.session_state import SessionState
+from streamlit.runtime.state.session_state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
@@ -277,7 +277,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    @patch("streamlit.runtime.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks(self, patched_call_callbacks):
         """Before a script is rerun, we call callbacks for any widgets
         whose value has changed.
@@ -322,7 +322,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.request_stop()
         scriptrunner.join()
 
-    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    @patch("streamlit.runtime.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_on_new_scriptrunner_instance(
         self, patched_call_callbacks
     ):
@@ -358,7 +358,7 @@ class ScriptRunnerTest(AsyncTestCase):
         patched_call_callbacks.assert_called_once()
 
     @patch("streamlit.exception")
-    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    @patch("streamlit.runtime.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_error(
         self, patched_call_callbacks, patched_st_exception
     ):

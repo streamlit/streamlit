@@ -29,7 +29,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
     ScriptRunContext,
 )
-from streamlit.state import SafeSessionState, SessionState
+from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 

@@ -22,7 +22,7 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,
