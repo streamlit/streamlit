@@ -141,3 +141,4 @@ def is_emoji_valid(emoji: str) -> str:
     )
 
     return MATCH_EMOJI.match(emoji)
+    
