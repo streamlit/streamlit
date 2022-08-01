@@ -3,10 +3,10 @@ on: [push]
 jobs:
   check-bats-version:
     runs-on: ubuntu-latest
+    container: circleci/python:3.10.0
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '14'
-      - run: npm install -g bats
-      - run: bats -v
+          node-version: '16.16.1'
+      - run: ./.github/actions/update_submodules
