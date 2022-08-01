@@ -29,6 +29,7 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
 export const StyledTable = styled.table(({ theme }) => ({
   width: theme.sizes.full,
   marginBottom: theme.spacing.lg,
+  marginTop: theme.spacing.lg,
   color: theme.colors.bodyText,
   borderCollapse: "collapse",
   border: `1px solid ${theme.colors.fadedText05}`,

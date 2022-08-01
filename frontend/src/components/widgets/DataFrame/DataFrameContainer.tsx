@@ -95,6 +95,7 @@ export const ResizableContainer = styled.div<ResizableContainerProps>`
   max-width: ${p => p.maxWidth}px;
   height: ${p => p.height}px;
   border: 1px solid ${p => p.theme.colors.fadedText05};
+  margin-top: ${p => p.theme.spacing.xl};
 
   > :first-child {
     height: 100%;
