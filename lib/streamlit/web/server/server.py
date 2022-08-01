@@ -42,7 +42,10 @@ from streamlit import config
 from streamlit import file_util
 from streamlit import source_util
 from streamlit import util
-from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
+from streamlit.runtime.caching import (
+    get_memo_stats_provider,
+    get_singleton_stats_provider,
+)
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.legacy_caching.caching import _mem_caches

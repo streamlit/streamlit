@@ -21,11 +21,11 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.caching import (
+from streamlit.runtime.caching import (
     MEMO_CALL_STACK,
     SINGLETON_CALL_STACK,
 )
-from streamlit.caching.cache_errors import CacheReplayClosureError
+from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,

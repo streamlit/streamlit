@@ -39,7 +39,7 @@ from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import util
-from streamlit.caching.cache_errors import CacheKeyNotFoundError
+from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.elements import NONWIDGET_ELEMENTS
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
