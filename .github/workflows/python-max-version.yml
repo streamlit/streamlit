@@ -3,10 +3,11 @@ on: [push]
 jobs:
   setup:
     runs-on: ubuntu-latest
-    container: circleci/python:3.10.0
     steps:
       # - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: lts/gallium
       - run: ./.github/actions/update_submodules
+
+    container: circleci/python:3.10.0
