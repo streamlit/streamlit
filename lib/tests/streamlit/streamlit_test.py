@@ -373,7 +373,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.alert.body, "some error")
         self.assertEqual(el.alert.format, Alert.ERROR)
-    
+
     def test_st_error_with_icon(self):
         """Test st.error with icon."""
         st.error("some error", icon="😱")
@@ -774,7 +774,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.alert.body, "some success")
         self.assertEqual(el.alert.format, Alert.SUCCESS)
-    
+
     def test_st_success_with_icon(self):
         """Test st.success with icon."""
         st.success("some success", icon="✅")
@@ -915,7 +915,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.alert.body, "some warning")
         self.assertEqual(el.alert.format, Alert.WARNING)
-    
+
     def test_st_warning_with_icon(self):
         """Test st.warning with icon."""
         st.warning("some warning", icon="⚠️")
