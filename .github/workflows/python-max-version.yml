@@ -1,11 +1,11 @@
 name: python-max-version
 on: [push]
 jobs:
-  check-bats-version:
+  setup:
     runs-on: ubuntu-latest
     container: circleci/python:3.10.0
     steps:
-      - uses: actions/checkout@v3
+      # - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: '16.16.1'
