@@ -63,7 +63,10 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
     )
 
 
-@patch("streamlit.runtime.app_session.LocalSourcesWatcher", MagicMock(spec=LocalSourcesWatcher))
+@patch(
+    "streamlit.runtime.app_session.LocalSourcesWatcher",
+    MagicMock(spec=LocalSourcesWatcher),
+)
 class AppSessionTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.secrets._file_change_listener.disconnect")
     def test_shutdown(self, patched_disconnect):
