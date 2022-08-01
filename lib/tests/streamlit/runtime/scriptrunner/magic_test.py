@@ -28,7 +28,7 @@ class MagicTest(unittest.TestCase):
     """
 
     def _testCode(self, code, expected_count):
-        tree = magic.add_magic(code, "../../../../streamlit/")
+        tree = magic.add_magic(code, "./")
         count = 0
         for node in ast.walk(tree):
             # count the nodes where a substitution has been made, i.e.
