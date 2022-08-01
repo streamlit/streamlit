@@ -35,21 +35,21 @@ def check_emoji(emoji):
     # Check if the provided character is a valid emoji
     extracted_emoji = is_emoji_valid(emoji)
 
-    # If it is, return it
     if extracted_emoji is not None:
         return clean_text(str(extracted_emoji.group()))
-    
-    # If not, throw an error
     else:
-        raise StreamlitAPIException(f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.')
+        raise StreamlitAPIException(
+            f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
+        )
+
 
 class AlertMixin:
     def error(
         self,
         body: "SupportsStr",
-        *, # keyword-only args: 
+        *,  # keyword-only args:
         icon: Optional = None,
-        ) -> "DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display error message.
 
         Parameters
@@ -75,9 +75,9 @@ class AlertMixin:
     def warning(
         self,
         body: "SupportsStr",
-        *, # keyword-only args:
+        *,  # keyword-only args:
         icon: Optional = None,
-        ) -> "DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display warning message.
 
         Parameters
@@ -104,9 +104,9 @@ class AlertMixin:
     def info(
         self,
         body: "SupportsStr",
-        *, # keyword-only args:
+        *,  # keyword-only args:
         icon: Optional = None,
-        ) -> "DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display an informational message.
 
         Parameters
@@ -134,9 +134,9 @@ class AlertMixin:
     def success(
         self,
         body: "SupportsStr",
-        *, # keyword-only args:
+        *,  # keyword-only args:
         icon: Optional = None,
-        ) -> "DeltaGenerator":
+    ) -> "DeltaGenerator":
         """Display a success message.
 
         Parameters
