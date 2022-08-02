@@ -26,6 +26,9 @@ runs:
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
       shell: bash
+    - name: cd lib
+      run: ls | cd ./lib
+      shell: bash
     - name: restore or create a python virtualenv
       uses: syphar/restore-virtualenv@v1.2
     - name: generate_protobufs
@@ -40,9 +43,6 @@ runs:
 
         # Generate protobufs
         make protobuf
-      shell: bash
-    - name: cd lib
-      run: ls | cd ./lib
       shell: bash
     - name: Test virtual env
       run: activate venv
