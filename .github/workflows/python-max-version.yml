@@ -12,12 +12,6 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
       # cache: 'yarn'
-  setup_python:
-    
-    name: restore-from-cache
-    runs-on: ubuntu-latest
-    needs: checkout
-    steps:
       - name: change to lib dir
         run: cd lib
         shell: bash
