@@ -16,8 +16,8 @@ runs:
           source "$HOME/.nvm/nvm.sh"
           make react-init
         fi
-        echo 'export NVM_DIR="$HOME/.nvm"' >> "$BASH_ENV"
-        echo 'source "$NVM_DIR/nvm.sh"' >> "$BASH_ENV"
+        echo 'export NVM_DIR="$HOME/.nvm"' >> "${BASH_ENV}"
+        echo 'source "$NVM_DIR/nvm.sh"' >> "${BASH_ENV}"
       shell: bash
     - name: Install pyodbc dependencies
       run: |
