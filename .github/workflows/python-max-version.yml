@@ -39,6 +39,7 @@ jobs:
             source "$HOME/.nvm/nvm.sh"
             make react-init
           fi
+        shell: bash
       - name: Install pyodbc dependencies
         run: |
           ${SUDO} apt-get install -y unixodbc-dev
