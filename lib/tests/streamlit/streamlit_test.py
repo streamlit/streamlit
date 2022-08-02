@@ -13,23 +13,22 @@
 # limitations under the License.
 
 """Streamlit Unit test."""
-from io import BytesIO
-
-from unittest.mock import patch
-import json
-import os
 import io
+import json
+import logging
+import os
 import re
 import sys
-import time
 import textwrap
+import time
 import unittest
-import logging
+from io import BytesIO
+from unittest.mock import patch
 
-from google.protobuf import json_format
 import PIL.Image as Image
 import numpy as np
 import pandas as pd
+from google.protobuf import json_format
 from parameterized import parameterized
 from scipy.io import wavfile
 
@@ -37,13 +36,13 @@ import streamlit as st
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.Alert_pb2 import Alert
-
-from streamlit.in_memory_file_manager import _calculate_file_id
-from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.in_memory_file_manager import STATIC_MEDIA_ENDPOINT
-
+from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+from streamlit.runtime.in_memory_file_manager import (
+    _calculate_file_id,
+    in_memory_file_manager,
+    STATIC_MEDIA_ENDPOINT,
+)
 from tests import testutil
 
 
@@ -75,9 +74,13 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to off
         self.assertEqual(True, st.get_option("client.displayEnabled"))
 
-        # client.displayEnabled and client.caching can be set after run starts.
-        st.set_option("client.displayEnabled", False)
-        self.assertEqual(False, st.get_option("client.displayEnabled"))
+        try:
+            # client.displayEnabled and client.caching can be set after run starts.
+            st.set_option("client.displayEnabled", False)
+            self.assertEqual(False, st.get_option("client.displayEnabled"))
+        finally:
+            # Restore original value
+            st.set_option("client.displayEnabled", True)
 
     def test_set_option_unscriptable(self):
         """Test that unscriptable options cannot be set with st.set_option."""
@@ -261,7 +264,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
-        from streamlit.in_memory_file_manager import _calculate_file_id
+        from streamlit.runtime.in_memory_file_manager import _calculate_file_id
 
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
@@ -869,7 +872,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_video_options(self):
         """Test st.video with options."""
 
-        from streamlit.in_memory_file_manager import _calculate_file_id
+        from streamlit.runtime.in_memory_file_manager import _calculate_file_id
 
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.video(fake_video_data, format="video/mp4", start_time=10)

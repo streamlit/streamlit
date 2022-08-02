@@ -128,7 +128,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
-        from streamlit.in_memory_file_manager import _calculate_file_id
+        from streamlit.runtime.in_memory_file_manager import _calculate_file_id
         from streamlit.elements.image import _np_array_to_bytes
 
         file_id = _calculate_file_id(
@@ -230,8 +230,16 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 "data:image/svg+xml,<svg fake></svg>",
             ),
             (
+                "<svg\nfake></svg>",
+                "data:image/svg+xml,<svg\nfake></svg>",
+            ),
+            (
                 "\n<svg fake></svg>",
                 "data:image/svg+xml,\n<svg fake></svg>",
+            ),
+            (
+                '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
+                'data:image/svg+xml,<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
             ),
             (
                 '<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',

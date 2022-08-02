@@ -19,8 +19,8 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit import config
-from streamlit.scriptrunner import get_script_run_ctx
-from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
 
@@ -130,7 +130,9 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(b"3", file1.read())
         self.assertEqual(b"123", file2.read())
 
-    @patch("streamlit.uploaded_file_manager.UploadedFileManager.remove_orphaned_files")
+    @patch(
+        "streamlit.runtime.uploaded_file_manager.UploadedFileManager.remove_orphaned_files"
+    )
     @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
     def test_remove_orphaned_files(
         self, get_file_recs_patch, remove_orphaned_files_patch

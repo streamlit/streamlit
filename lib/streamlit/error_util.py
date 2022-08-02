@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import traceback
-
 import streamlit as st
 from streamlit import config
 from streamlit.logger import get_logger
@@ -50,7 +48,7 @@ def _print_rich_exception(e: BaseException):
         tab_size=8,
     )
 
-    import streamlit.scriptrunner.script_runner as script_runner
+    import streamlit.runtime.scriptrunner.script_runner as script_runner
 
     # Print exception via rich
     console.print(

@@ -21,24 +21,24 @@ from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple
 from typing_extensions import Final, Protocol
 
 from streamlit import config
-from streamlit.app_session import AppSession
-from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
-from streamlit.forward_msg_cache import (
-    ForwardMsgCache,
-    populate_hash_if_needed,
-    create_reference_msg,
-)
-from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.runtime_util import is_cacheable_msg
-from streamlit.session_data import SessionData
-from streamlit.state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
-from streamlit.stats import StatsManager
-from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
+from .app_session import AppSession
+from .caching import get_memo_stats_provider, get_singleton_stats_provider
+from .forward_msg_cache import (
+    ForwardMsgCache,
+    populate_hash_if_needed,
+    create_reference_msg,
+)
+from .in_memory_file_manager import in_memory_file_manager
+from .legacy_caching.caching import _mem_caches
+from .session_data import SessionData
+from .state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
+from .stats import StatsManager
+from .uploaded_file_manager import UploadedFileManager
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
@@ -271,14 +271,12 @@ class Runtime:
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeError(f"Can't create_session (state={self._state})")
 
-        session_data = SessionData(self._main_script_path, self._command_line or "")
-
         session = AppSession(
             event_loop=self._get_eventloop(),
-            session_data=session_data,
+            session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=LocalSourcesWatcher(session_data),
+            local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info=user_info,
         )
 
@@ -372,14 +370,12 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        session_data = SessionData(self._main_script_path, self._command_line)
-        local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
             event_loop=self._get_eventloop(),
-            session_data=session_data,
+            session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=local_sources_watcher,
+            local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info={"email": "test@test.com"},
         )
 
