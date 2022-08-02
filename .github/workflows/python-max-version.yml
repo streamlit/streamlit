@@ -20,7 +20,9 @@ jobs:
         shell: bash
       - name: "Install NVM, Node.js, and Yarn"
         run: |
+          sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
           if [ ! -d ~/.nvm ] ; then
+            cd ..
             echo "{$HOME}" >> $GITHUB_PATH
             touch $HOME/.bash_profile
             echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_PATH
