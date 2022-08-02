@@ -19,6 +19,9 @@ import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
 import isEqual from "lodash/isEqual"
 import { StaticMap } from "react-map-gl"
+import { withTheme } from "@emotion/react"
+import { Theme } from "src/theme"
+import { getLuminance } from "color2k"
 // We don't have Typescript defs for these imports, which makes ESLint unhappy
 /* eslint-disable import/no-extraneous-dependencies */
 import * as layers from "@deck.gl/layers"
@@ -36,11 +39,6 @@ import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import withMapboxToken from "src/hocs/withMapboxToken"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
-
-import { withTheme } from "@emotion/react"
-import { Theme } from "src/theme"
-import { getLuminance } from "color2k"
-
 import { StyledDeckGlChart } from "./styled-components"
 
 import "mapbox-gl/dist/mapbox-gl.css"
