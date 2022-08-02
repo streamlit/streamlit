@@ -82,7 +82,7 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 # syntax pass mypy checking with implicit_reexport disabled.
 
 from streamlit.echo import echo as echo
-from streamlit.legacy_caching import cache as cache
+from streamlit.runtime.legacy_caching import cache as cache
 from streamlit.runtime.caching import singleton as experimental_singleton
 from streamlit.runtime.caching import memo as experimental_memo
 
@@ -405,7 +405,7 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
     >>> st.success('Done!')
 
     """
-    import streamlit.legacy_caching.caching as legacy_caching
+    import streamlit.runtime.legacy_caching.caching as legacy_caching
     import streamlit.runtime.caching as caching
     from streamlit.elements.utils import clean_text
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto

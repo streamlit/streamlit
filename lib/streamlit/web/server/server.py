@@ -48,7 +48,7 @@ from streamlit.runtime.caching import (
 )
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
-from streamlit.legacy_caching.caching import _mem_caches
+from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession

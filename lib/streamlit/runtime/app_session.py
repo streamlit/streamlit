@@ -20,8 +20,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
 
 import streamlit.elements.exception as exception_utils
-from streamlit import __version__, config, legacy_caching, source_util, secrets
-from . import caching
+from streamlit import __version__, config, source_util, secrets
+from . import caching, legacy_caching
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger

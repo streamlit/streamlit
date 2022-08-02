@@ -15,7 +15,6 @@
 """A library of caching utilities."""
 
 import contextlib
-from dataclasses import dataclass
 import functools
 import hashlib
 import inspect
@@ -26,6 +25,7 @@ import shutil
 import threading
 import time
 from collections import namedtuple
+from dataclasses import dataclass
 from typing import (
     Dict,
     Optional,
@@ -40,20 +40,17 @@ from typing import (
 )
 
 from cachetools import TTLCache
-
 from pympler.asizeof import asizeof
 
+import streamlit as st
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
-from streamlit.legacy_caching.hashing import update_hash, HashFuncsDict
-from streamlit.legacy_caching.hashing import HashReason
 from streamlit.logger import get_logger
-import streamlit as st
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
-
+from .hashing import update_hash, HashFuncsDict, HashReason
 
 _LOGGER = get_logger(__name__)
 
