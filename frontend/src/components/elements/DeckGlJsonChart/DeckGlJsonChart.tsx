@@ -38,6 +38,10 @@ import withMapboxToken from "src/hocs/withMapboxToken"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import { StyledDeckGlChart } from "./styled-components"
 
+import { withTheme } from "@emotion/react"
+import { Theme } from "src/theme"
+import { getLuminance } from "color2k"
+
 import "mapbox-gl/dist/mapbox-gl.css"
 
 interface PickingInfo {
@@ -65,6 +69,7 @@ const jsonConverter = new JSONConverter({ configuration })
 
 interface Props {
   width: number
+  theme: Theme
   mapboxToken: string
   element: DeckGlJsonChartProto
 }
@@ -135,20 +140,13 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 
   static getDeckObject = (props: PropsWithHeight): DeckObject => {
-    const { element, width, height } = props
+    const { element, width, height, theme } = props
     const json = JSON.parse(element.json)
-    let theme
-    let mapTheme
 
     // Use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-    if ("stActiveTheme-/-v1" in localStorage) {
-      theme = JSON.parse(localStorage["stActiveTheme-/-v1"]).name.toLowerCase()
-      mapTheme = theme === ("dark" || "light") ? theme : localStorage.theme
-    } else {
-      mapTheme = localStorage.theme
-    }
-
+    const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
+    const mapTheme = hasLightBg ? "light" : "dark"
     json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v10`
 
     // The graph dimensions could be set from props ( like withFullscreen ) or
@@ -244,6 +242,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 }
 
-export default withMapboxToken("st.pydeck_chart")(
-  withFullScreenWrapper(DeckGlJsonChart)
+export default withTheme(
+  withMapboxToken("st.pydeck_chart")(withFullScreenWrapper(DeckGlJsonChart))
 )
