@@ -87,7 +87,7 @@ runs:
           nvm install
         fi
         # install yarn
-        npm install -g yarn
+        npm install --location=global yarn
         if [ ! -d frontend/node_modules ] ; then
           source "$HOME/.nvm/nvm.sh"
           make react-init
