@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { transparentize } from "color2k"
 import { colors } from "../primitives/colors"
 
 export default {
@@ -31,4 +32,12 @@ export default {
   blue: colors.blue80,
   green: colors.green80,
   yellow: colors.yellow80,
+  warning: colors.orange100,
+  warningBg: transparentize(colors.orange10, 0.6),
+  success: colors.green100,
+  successBg: transparentize(colors.green10, 0.6),
+  info: colors.blue100,
+  infoBg: transparentize(colors.blue10, 0.6),
+  danger: colors.red100,
+  dangerBg: transparentize(colors.red10, 0.6),
 }
