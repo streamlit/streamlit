@@ -23,7 +23,6 @@ import streamlit.elements.exception as exception_utils
 from streamlit import __version__, config, source_util, secrets
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
-from streamlit.metrics_util import Installation
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -39,6 +38,7 @@ from streamlit.watcher import LocalSourcesWatcher
 from . import caching, legacy_caching
 from .credentials import Credentials
 from .in_memory_file_manager import in_memory_file_manager
+from .metrics_util import Installation
 from .scriptrunner import (
     RerunData,
     ScriptRunner,
