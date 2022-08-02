@@ -18,7 +18,4 @@ jobs:
       - uses: ./.github/actions/make_init
         env:
           SUDO: 'sudo'
-      - name: change back dir
-        run: cd ..
-        shell: bash
     
