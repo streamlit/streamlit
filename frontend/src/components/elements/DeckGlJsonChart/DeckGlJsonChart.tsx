@@ -149,7 +149,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
       mapTheme = localStorage.theme
     }
 
-    json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
+    json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v10`
 
     // The graph dimensions could be set from props ( like withFullscreen ) or
     // from the generated element object
