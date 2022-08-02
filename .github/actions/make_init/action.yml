@@ -41,6 +41,9 @@ runs:
         # Generate protobufs
         make protobuf
       shell: bash
+    - name: cd lib
+      run: ls | cd ./lib
+      shell: bash
     - name: Test virtual env
       run: activate venv
       shell: bash
