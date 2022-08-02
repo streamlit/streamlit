@@ -36,11 +36,12 @@ import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import withMapboxToken from "src/hocs/withMapboxToken"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
-import { StyledDeckGlChart } from "./styled-components"
 
 import { withTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import { getLuminance } from "color2k"
+
+import { StyledDeckGlChart } from "./styled-components"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 
