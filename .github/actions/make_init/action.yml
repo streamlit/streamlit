@@ -26,16 +26,16 @@ runs:
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
       shell: bash
-    - name: change to lib dir
-      run: cd lib; ls
-      shell: bash
-    - name: restore or create a python virtualenv
-      uses: syphar/restore-virtualenv@v1.2
-      with:
-        requirement_files: Pipfile
-    - name: cd back
-      run: cd ..
-      shell: bash
+    # - name: change to lib dir
+    #   run: cd lib; ls
+    #   shell: bash
+    # - name: restore or create a python virtualenv
+    #   uses: syphar/restore-virtualenv@v1.2
+    #   with:
+    #     requirement_files: Pipfile
+    # - name: cd back
+    #   run: cd ..
+    #   shell: bash
     - name: generate_protobufs
       run: |
         # install protobuf v3
@@ -49,6 +49,6 @@ runs:
         # Generate protobufs
         make protobuf
       shell: bash
-    - name: Test virtual env
-      run: activate venv
-      shell: bash
+    # - name: Test virtual env
+    #   run: activate venv
+    #   shell: bash
