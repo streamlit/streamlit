@@ -15,7 +15,7 @@
 import re
 import textwrap
 
-from typing import cast, Any
+from typing import cast, Optional, Any
 from datetime import datetime
 from streamlit.errors import StreamlitAPIException
 
@@ -114,8 +114,11 @@ def generate_download_filename_from_title(title_string: str) -> str:
     return append_date_time_to_string(title_string)
 
 
-def is_emoji_valid(emoji: str) -> str:
+def validate_emoji(emoji: Optional[str]) -> str:
     """Check if the provided character is a valid emoji."""
+
+    if emoji == None:
+        return clean_text(str(""))
 
     MATCH_EMOJI = re.compile(
         "["

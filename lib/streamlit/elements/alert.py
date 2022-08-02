@@ -18,26 +18,12 @@ from typing import cast, Optional, TYPE_CHECKING
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from streamlit.string_util import is_emoji_valid
+from streamlit.string_util import validate_emoji
 from .utils import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.type_util import SupportsStr
-
-# Function to check the icon parameter on the alert.
-# We check if what's been added is a valid emoji,
-# and default to an empty string if not.
-def check_emoji(emoji):
-    # If the user didn't add an emoji, carry on without it
-    if emoji == None:
-        return clean_text(str(""))
-
-    # Check if the provided character is a valid emoji
-    extracted_emoji = is_emoji_valid(emoji)
-
-    if extracted_emoji is not None:
-        return extracted_emoji
 
 
 class AlertMixin:
@@ -64,7 +50,7 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        alert_proto.icon = check_emoji(icon)
+        alert_proto.icon = validate_emoji(icon)
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
@@ -94,7 +80,7 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        alert_proto.icon = check_emoji(icon)
+        alert_proto.icon = validate_emoji(icon)
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
@@ -124,7 +110,7 @@ class AlertMixin:
 
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        alert_proto.icon = check_emoji(icon)
+        alert_proto.icon = validate_emoji(icon)
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
@@ -153,7 +139,7 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        alert_proto.icon = check_emoji(icon)
+        alert_proto.icon = validate_emoji(icon)
         alert_proto.format = AlertProto.SUCCESS
         return self.dg._enqueue("alert", alert_proto)
 
