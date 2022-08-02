@@ -88,7 +88,7 @@ describe("hello", () => {
           .should("have.css", "height", "500px");
 
         // Wait for Mapbox to build the canvas.
-        cy.wait(5000);
+        cy.wait(10000);
 
         cy.get(".appview-container").matchThemedSnapshots("mapping-demo");
       });
