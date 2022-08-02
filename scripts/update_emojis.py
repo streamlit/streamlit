@@ -40,6 +40,5 @@ with open(EMOJIS_SCRIPT_PATH, "r") as file:
 
 updated_script_content = re.sub(EMOJI_SET_REGEX, generated_code, script_content)
 
-print(updated_script_content)
 with open(EMOJIS_SCRIPT_PATH, "w") as file:
     file.write(updated_script_content)
