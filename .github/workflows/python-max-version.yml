@@ -12,9 +12,6 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
       # cache: 'yarn'
-      - name: change to lib dir
-        run: cd lib
-        shell: bash
       - uses: ./.github/actions/update_submodules
         env:
           SUDO: 'sudo'
