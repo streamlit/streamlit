@@ -18,7 +18,7 @@
 describe("hello", () => {
   beforeEach(() => {
     // Increasing timeout since we're waiting for the animation and map to load.
-    Cypress.config("defaultCommandTimeout", 35000);
+    Cypress.config("defaultCommandTimeout", 30000);
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
   });
@@ -88,7 +88,7 @@ describe("hello", () => {
           .should("have.css", "height", "500px");
 
         // Wait for Mapbox to build the canvas.
-        cy.wait(10000);
+        cy.wait(5000);
 
         cy.get(".appview-container").matchThemedSnapshots("mapping-demo");
       });
