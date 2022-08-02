@@ -13,14 +13,31 @@
 # limitations under the License.
 
 import unittest
+from parameterized import parameterized
 
 from streamlit import string_util
 
 
 class StringUtilTest(unittest.TestCase):
     def test_decode_ascii(self):
-        """Test streamlit.util.decode_ascii."""
+        """Test streamlit.string_.decode_ascii."""
         self.assertEqual("test string.", string_util.decode_ascii(b"test string."))
+
+    @parameterized.expand(
+        [
+            ("", False),
+            ("A", False),
+            ("%", False),
+            ("😃", True),
+            ("👨‍👨‍👧‍👦", True),
+            ("😃😃", False),
+            ("😃X", False),
+            ("X😃", False),
+        ]
+    )
+    def test_is_emoji(self, text: str, expected: bool):
+        """Test streamlit.util.is_emoji."""
+        self.assertEqual(string_util.is_emoji(text), expected)
 
     def test_snake_case_to_camel_case(self):
         """Test streamlit.util.snake_case_to_camel_case."""
