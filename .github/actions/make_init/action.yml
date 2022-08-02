@@ -27,7 +27,7 @@ runs:
         ${SUDO} apt-get install -y libgvc6
       shell: bash
     - name: change to lib dir
-      run: cd lib
+      run: cd lib; ls
       shell: bash
     - name: restore or create a python virtualenv
       uses: syphar/restore-virtualenv@v1.2
