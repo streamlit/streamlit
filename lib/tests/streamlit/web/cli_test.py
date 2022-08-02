@@ -30,7 +30,7 @@ import streamlit
 import streamlit.web.bootstrap
 from streamlit import config
 from streamlit.config_option import ConfigOption
-from streamlit.credentials import Credentials
+from streamlit.runtime.credentials import Credentials
 from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
 
@@ -199,7 +199,7 @@ class CliTest(unittest.TestCase):
         """
         self.assertFalse(streamlit._is_running_with_streamlit)
         with patch("streamlit.web.cli.bootstrap.run"), mock.patch(
-            "streamlit.credentials.Credentials._check_activated"
+            "streamlit.runtime.credentials.Credentials._check_activated"
         ), patch("streamlit.web.cli._get_command_line_as_string"):
 
             cli._main_run("/not/a/file", None)
@@ -253,10 +253,10 @@ class CliTest(unittest.TestCase):
         with patch("validators.url", return_value=False), patch(
             "streamlit.web.bootstrap.run"
         ), patch("os.path.exists", return_value=True), patch(
-            "streamlit.credentials._check_credential_file_exists", return_value=False
+            "streamlit.runtime.credentials._check_credential_file_exists", return_value=False
         ):
             result = self.runner.invoke(cli, ["run", "some script.py"])
-        from streamlit.credentials import Credentials
+        from streamlit.runtime.credentials import Credentials
 
         credentials = Credentials.get_current()
         self.assertIsNone(credentials.activation)
@@ -275,9 +275,9 @@ class CliTest(unittest.TestCase):
         with patch("validators.url", return_value=False), patch(
             "streamlit.web.bootstrap.run"
         ), patch("os.path.exists", return_value=True), mock.patch(
-            "streamlit.credentials.Credentials._check_activated"
+            "streamlit.runtime.credentials.Credentials._check_activated"
         ) as mock_check, patch(
-            "streamlit.credentials._check_credential_file_exists", return_value=True
+            "streamlit.runtime.credentials._check_credential_file_exists", return_value=True
         ):
             result = self.runner.invoke(cli, ["run", "some script.py"])
         self.assertTrue(mock_check.called)
@@ -394,7 +394,7 @@ class CliTest(unittest.TestCase):
         """Tests activating a credential"""
         mock_credential = MagicMock()
         with mock.patch(
-            "streamlit.credentials.Credentials.get_current",
+            "streamlit.runtime.credentials.Credentials.get_current",
             return_value=mock_credential,
         ):
             self.runner.invoke(cli, ["activate"])
@@ -404,7 +404,7 @@ class CliTest(unittest.TestCase):
         """Tests that it doesn't activate the credential when not specified"""
         mock_credential = MagicMock()
         with mock.patch(
-            "streamlit.credentials.Credentials.get_current",
+            "streamlit.runtime.credentials.Credentials.get_current",
             return_value=mock_credential,
         ):
             self.runner.invoke(cli)
@@ -414,7 +414,7 @@ class CliTest(unittest.TestCase):
         """Tests resetting a credential"""
         mock_credential = MagicMock()
         with mock.patch(
-            "streamlit.credentials.Credentials.get_current",
+            "streamlit.runtime.credentials.Credentials.get_current",
             return_value=mock_credential,
         ):
             self.runner.invoke(cli, ["activate", "reset"])

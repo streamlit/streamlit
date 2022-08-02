@@ -23,7 +23,7 @@ from typing import Optional
 import click
 
 import streamlit
-from streamlit.credentials import Credentials, check_credentials
+from streamlit.runtime.credentials import Credentials, check_credentials
 import streamlit.web.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
 
