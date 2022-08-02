@@ -31,6 +31,8 @@ runs:
       shell: bash
     - name: restore or create a python virtualenv
       uses: syphar/restore-virtualenv@v1.2
+      with:
+        requirement_files: Pipfile
     - name: cd back
       run: cd ..
       shell: bash
