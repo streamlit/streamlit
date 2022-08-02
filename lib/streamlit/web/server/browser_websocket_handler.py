@@ -35,8 +35,12 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
-from streamlit.runtime_util import serialize_forward_msg
+from streamlit.runtime.runtime import (
+    Runtime,
+    SessionClient,
+    SessionClientDisconnectedError,
+)
+from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import is_url_from_allowed_origins
 
 LOGGER: Final = get_logger(__name__)

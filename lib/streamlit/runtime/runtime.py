@@ -33,7 +33,7 @@ from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime_util import is_cacheable_msg
+from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.session_data import SessionData
 from streamlit.state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.stats import StatsManager

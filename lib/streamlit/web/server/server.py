@@ -39,7 +39,7 @@ from streamlit import util
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
-from streamlit.runtime import (
+from streamlit.runtime.runtime import (
     Runtime,
     RuntimeConfig,
     RuntimeState,
@@ -59,7 +59,7 @@ from streamlit.web.server.upload_file_request_handler import (
 from .browser_websocket_handler import BrowserWebSocketHandler
 from .component_request_handler import ComponentRequestHandler
 from .stats_request_handler import StatsRequestHandler
-from ...runtime_util import get_max_message_size_bytes
+from streamlit.runtime.runtime_util import get_max_message_size_bytes
 
 LOGGER = get_logger(__name__)
 
