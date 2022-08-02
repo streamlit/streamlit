@@ -16,8 +16,8 @@ import re
 
 from typing import cast, Optional, TYPE_CHECKING
 
-from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.string_util import is_emoji_valid
 from .utils import clean_text
 
