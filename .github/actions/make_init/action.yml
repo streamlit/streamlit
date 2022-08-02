@@ -42,9 +42,9 @@ runs:
           echo 'Virtualenv already exists, not creating'
         fi
 
-        # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
-        # for the remainder of the job ($BASH_ENV is evaluated at each step).
-        echo 'source venv/bin/activate' >> $BASH_ENV
+        # Add 'activate venv' to $GITHUB_PATH. This means that our venv will be active
+        # for the remainder of the job ($GITHUB_PATH is evaluated at each step).
+        echo 'source venv/bin/activate' >> $GITHUB_PATH
       shell: bash
     - name: generate_protobufs
       run: |
