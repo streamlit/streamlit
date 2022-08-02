@@ -26,26 +26,8 @@ runs:
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
       shell: bash
-    - name: activate virtualenv
-      run: |
-        echo 'Checking for virtualenv'
-        if [ ! -d venv ] ; then
-          # The virtualenv was NOT restored from cache. Create a new one.
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          make setup
-          make pipenv-install
-          deactivate
-        else
-          # The virtualenv WAS restored from cache. Don't create a new one.
-          echo 'Virtualenv already exists, not creating'
-        fi
-
-        # Add 'activate venv' to $GITHUB_PATH. This means that our venv will be active
-        # for the remainder of the job ($GITHUB_PATH is evaluated at each step).
-        echo '${SUDO} source venv/bin/activate' >> $GITHUB_PATH
-      shell: bash
+    - name: restore or create a python virtualenv
+      uses: syphar/restore-virtualenv@v1.2
     - name: generate_protobufs
       run: |
         # install protobuf v3
@@ -58,4 +40,7 @@ runs:
 
         # Generate protobufs
         make protobuf
+      shell: bash
+    - name: Test virtual env
+      run: activate venv
       shell: bash
