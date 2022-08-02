@@ -33,8 +33,8 @@ from typing import (
 from typing_extensions import Final, Literal
 
 import streamlit as st
-from streamlit import cursor, caching
-from streamlit import legacy_caching
+from streamlit import cursor
+from streamlit.runtime import caching, legacy_caching
 from streamlit import type_util
 from streamlit import util
 from streamlit.cursor import Cursor

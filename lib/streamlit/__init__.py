@@ -82,9 +82,11 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 # syntax pass mypy checking with implicit_reexport disabled.
 
 from streamlit.echo import echo as echo
-from streamlit.legacy_caching import cache as cache
-from streamlit.caching import singleton as experimental_singleton
-from streamlit.caching import memo as experimental_memo
+from streamlit.runtime.legacy_caching import cache as cache
+from streamlit.runtime.caching import (
+    singleton as experimental_singleton,
+    memo as experimental_memo,
+)
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -405,8 +407,8 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
     >>> st.success('Done!')
 
     """
-    import streamlit.legacy_caching.caching as legacy_caching
-    import streamlit.caching as caching
+    import streamlit.runtime.legacy_caching.caching as legacy_caching
+    import streamlit.runtime.caching as caching
     from streamlit.elements.utils import clean_text
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
 
