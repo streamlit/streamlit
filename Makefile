@@ -222,7 +222,7 @@ protobuf:
 		exit 1; \
 	fi
 	protoc_version=$$(protoc --version | cut -d ' ' -f 2); \
-	protobuf_version=$$(python -c "import importlib.metadata; print(importlib.metadata.version('protobuf'))"); \
+	protobuf_version=$$(pip show protobuf | grep Version | cut -d " " -f 2-); \
 	if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
 		echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
 		echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
