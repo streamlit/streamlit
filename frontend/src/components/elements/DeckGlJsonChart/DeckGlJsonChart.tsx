@@ -140,12 +140,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     let theme
     let mapTheme
 
-    // const mapTheme =
-    //   JSON.parse(localStorage["stActiveTheme-/-v1"]).name.toLowerCase() ===
-    //   ("dark" || "light")
-    //     ? JSON.parse(localStorage["stActiveTheme-/-v1"]).name.toLowerCase()
-    //     : localStorage.theme
-
+    // Use either the Mapbox light or dark style based on Streamlit's theme
+    // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
     if ("stActiveTheme-/-v1" in localStorage) {
       theme = JSON.parse(localStorage["stActiveTheme-/-v1"]).name.toLowerCase()
       mapTheme = theme === ("dark" || "light") ? theme : localStorage.theme
