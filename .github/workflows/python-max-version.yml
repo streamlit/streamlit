@@ -12,6 +12,10 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         # cache: 'yarn'
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip' # caching pip dependencies
       - uses: ./.github/actions/update_submodules
         env:
           SUDO: 'sudo'
