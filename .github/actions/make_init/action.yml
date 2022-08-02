@@ -1,9 +1,6 @@
 # https://docs.github.com/en/actions/learn-github-actions/finding-and-customizing-actions#adding-an-action-from-the-same-repository
 runs:
   using: composite
-  name: make_init
-  description: "install dependencies, create virtualenv, and generate protobufs"
-  author: willhuang1997
   steps:
     - name: "Install NVM, Node.js, and Yarn"
       run: |
@@ -25,7 +22,9 @@ runs:
     - name: Install pyodbc dependencies
       run: |
         ${SUDO} apt-get install -y unixodbc-dev
+      shell: bash
     - name: Install graphviz dependencies
       run: |
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
+      shell: bash
