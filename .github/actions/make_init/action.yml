@@ -78,7 +78,7 @@ runs:
           cd ..
           # echo "{$HOME}" >> $GITHUB_PATH
           touch $HOME/.bash_profile
-          echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_PATH
+          echo "NVM_DIR=$HOME/.nvm" >> $HOME/.bash_profile
           mkdir $NVM_DIR
           # install nodejs via nvm
           curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.2/install.sh | bash
