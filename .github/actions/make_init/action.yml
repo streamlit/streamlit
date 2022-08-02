@@ -82,7 +82,6 @@ runs:
           echo "source $NVM_DIR/nvm.sh --install" >> "$HOME/.bash_profile"
           cd -
           source $HOME/.bash_profile
-          nvm install
           nvm install --lts=fermium
         fi
         # install yarn
