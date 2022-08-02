@@ -77,12 +77,14 @@ runs:
         if [ ! -d ~/.nvm ] ; then
           cd ..
           echo $HOME
-          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
           export NVM_DIR="$HOME/.nvm"
+          mkdir $NVM_DIR
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
           echo "source $NVM_DIR/nvm.sh --install" >> "$HOME/.bash_profile"
           cd -
           source $HOME/.bash_profile
-          nvm install --lts=fermium
+          echo "lts/*" > .nvmrc
+          nvm install
         fi
         # install yarn
         npm install -g yarn
@@ -100,21 +102,21 @@ runs:
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
       shell: bash
-    - name: create virtualenv
+    - name: Cache Venv
+      id: cache-venv
+      uses: actions/cache@v3
+      with:
+        path: venv
+        key: ${{ runner.os }}-venv
+    - name: Create Virtualenv
+      if: steps.cache-venv.outputs.cache-hit != 'true'
       run: |
-        echo 'Checking for virtualenv'
-        if [ ! -d venv ] ; then
-          # The virtualenv was NOT restored from cache. Create a new one.
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          make setup
-          make pipenv-install
-          deactivate
-        else
-          # The virtualenv WAS restored from cache. Don't create a new one.
-          echo 'Virtualenv already exists, not creating'
-        fi
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        make setup
+        make pipenv-install
+        deactivate
       shell: bash
     - name: generate_protobufs
       run: |
