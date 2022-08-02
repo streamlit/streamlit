@@ -60,7 +60,7 @@ class AlertMixin:
 
         Example
         -------
-        >>> st.error('This is an error', icon=":rotating_light:")
+        >>> st.error('This is an error', icon="🚨")
 
         """
         alert_proto = AlertProto()
@@ -89,7 +89,7 @@ class AlertMixin:
 
         Example
         -------
-        >>> st.warning('This is a warning', icon=":warning:")
+        >>> st.warning('This is a warning', icon="⚠️")
 
         """
         alert_proto = AlertProto()
@@ -118,7 +118,7 @@ class AlertMixin:
 
         Example
         -------
-        >>> st.info('This is a purely informational message', icon=":information_source:")
+        >>> st.info('This is a purely informational message', icon="ℹ️")
 
         """
 
@@ -148,7 +148,7 @@ class AlertMixin:
 
         Example
         -------
-        >>> st.success('This is a success message!', icon:":white_check_mark:")
+        >>> st.success('This is a success message!', icon:"✅")
 
         """
         alert_proto = AlertProto()
