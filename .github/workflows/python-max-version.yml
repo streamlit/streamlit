@@ -9,7 +9,8 @@ jobs:
       # See https://docs.github.com/actions/reference/virtual-environments-for-github-hosted-runners#docker-container-filesystem
       # - name: Setup file system permissions
       #   run: sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
-      - uses: actions/checkout@v3
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
         # cache: 'yarn'
       - uses: ./.github/actions/update_submodules
       - uses: ./.github/actions/make_init
