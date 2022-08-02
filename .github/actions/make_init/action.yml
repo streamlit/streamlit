@@ -32,7 +32,7 @@ runs:
     - name: restore or create a python virtualenv
       uses: syphar/restore-virtualenv@v1.2
     - name: cd back
-      uses: cd ..
+      run: cd ..
       shell: bash
     - name: generate_protobufs
       run: |
