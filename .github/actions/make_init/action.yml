@@ -76,7 +76,7 @@ runs:
       run: |
         if [ ! -d ~/.nvm ] ; then
           cd ..
-          echo "{$HOME}" >> $GITHUB_PATH
+          # echo "{$HOME}" >> $GITHUB_PATH
           touch $HOME/.bash_profile
           echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_PATH
           mkdir $NVM_DIR
