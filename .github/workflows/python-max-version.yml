@@ -1,7 +1,7 @@
 name: python-max-version
 on: [push]
 jobs:
-  setup:
+  checkout:
     runs-on: ubuntu-latest
     container: circleci/python:3.10.0
     steps:
@@ -11,8 +11,15 @@ jobs:
         run: sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        # cache: 'yarn'
-      - uses: actions/setup-python@v4
+      # cache: 'yarn'
+  setup_python:
+    name: restore-from-cache
+    runs-on: ubuntu-latest
+    container: circleci/python:3.10.0
+    needs: checkout
+    steps:
+      - name: setup python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pipenv' # caching pipenv dependencies
@@ -22,3 +29,4 @@ jobs:
       - uses: ./.github/actions/make_init
         env:
           SUDO: 'sudo'
+    
