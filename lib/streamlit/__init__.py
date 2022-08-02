@@ -83,8 +83,10 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 from streamlit.echo import echo as echo
 from streamlit.runtime.legacy_caching import cache as cache
-from streamlit.runtime.caching import singleton as experimental_singleton
-from streamlit.runtime.caching import memo as experimental_memo
+from streamlit.runtime.caching import (
+    singleton as experimental_singleton,
+    memo as experimental_memo,
+)
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
