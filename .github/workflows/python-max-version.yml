@@ -15,11 +15,6 @@ jobs:
       - name: change to lib dir
         run: cd lib
         shell: bash
-      - name: setup python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-          cache: 'pipenv' # caching pipenv dependencies
       - uses: ./.github/actions/update_submodules
         env:
           SUDO: 'sudo'
