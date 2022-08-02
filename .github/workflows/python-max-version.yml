@@ -15,7 +15,59 @@ jobs:
       - uses: ./.github/actions/update_submodules
         env:
           SUDO: 'sudo'
-      - uses: ./.github/actions/make_init
-        env:
-          SUDO: 'sudo'
+      - name: "update submodules"
+        run: |
+          git submodule init
+          git submodule update --remote
+        shell: bash
+      - name: "Install NVM, Node.js, and Yarn"
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/gallium
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install pyodbc dependencies
+        run: |
+          ${SUDO} apt-get install -y unixodbc-dev
+        shell: bash
+      - name: Install graphviz dependencies
+        run: |
+          ${SUDO} apt update
+          ${SUDO} apt-get install -y libgvc6
+        shell: bash
+      - name: create virtualenv
+        run: |
+          echo 'Checking for virtualenv'
+          if [ ! -d venv ] ; then
+            # The virtualenv was NOT restored from cache. Create a new one.
+            python -m venv venv
+            source venv/bin/activate
+            pip install --upgrade pip
+            make setup
+            make pipenv-install
+            deactivate
+          else
+            # The virtualenv WAS restored from cache. Don't create a new one.
+            echo 'Virtualenv already exists, not creating'
+          fi
+
+        shell: bash
+      - name: generate_protobufs
+        run: |
+          # install protobuf v3
+          ${SUDO} apt update
+          ${SUDO} apt-get install -y gnupg
+          ${SUDO} pip install mypy-protobuf
+          echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
+          ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+          ${SUDO} apt update
+          ${SUDO} apt-get install -y protobuf-compiler
+
+          # Generate protobufs
+          make protobuf
+        shell: bash
+      - name: Test virtual env
+        run: activate venv
+        shell: bash
+          
     
