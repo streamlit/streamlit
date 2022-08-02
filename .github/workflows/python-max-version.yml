@@ -15,7 +15,6 @@ jobs:
   setup_python:
     name: restore-from-cache
     runs-on: ubuntu-latest
-    container: circleci/python:3.10.0
     needs: checkout
     steps:
       - name: setup python
