@@ -386,4 +386,5 @@ connect-test-env:
 pre-commit-install:
 ifndef CIRCLECI
 	pre-commit install
+	pre-commit autoupdate
 endif #CIRCLECI
