@@ -261,7 +261,7 @@ class LayoutsMixin:
         """
         if not tabs:
             raise StreamlitAPIException(
-                "The input argument to st.tabs must contain atleast one tab label."
+                "The input argument to st.tabs must contain at least one tab label."
             )
 
         if any(isinstance(tab, str) == False for tab in tabs):

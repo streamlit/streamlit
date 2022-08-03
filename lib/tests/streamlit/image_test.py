@@ -120,7 +120,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * if list
         * if not list (is rgb vs is bgr)
         * if captions is not list but image is
-        * if captions length doesnt match image length
+        * if captions length doesn't match image length
         * if the caption is set.
         * PIL Images
         * Numpy Arrays

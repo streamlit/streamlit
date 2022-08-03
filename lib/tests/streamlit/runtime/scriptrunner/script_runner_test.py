@@ -687,7 +687,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # culled it. Ensure widget cache no longer holds our widget ID.
         self.assertRaises(KeyError, lambda: scriptrunner._session_state[widget_id])
 
-    # TODO re-enable after flakyness is fixed
+    # TODO re-enable after flakiness is fixed
     def off_test_multiple_scriptrunners(self):
         """Tests that multiple scriptrunners can run simultaneously."""
         # This scriptrunner will run before the other 3. It's used to retrieve
@@ -789,7 +789,7 @@ class ScriptRunnerTest(AsyncTestCase):
         runner.join()
 
         # The script has 5 cached functions, each of which writes out
-        # som text.
+        # some text.
         self._assert_text_deltas(
             runner,
             [

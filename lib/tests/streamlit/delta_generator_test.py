@@ -102,7 +102,7 @@ class FakeDeltaGenerator(object):
 
         The real DeltaGenerator exception is more complicated.  We use
         this so _with_element can find the exception method.  The real
-        exception method wil be tested later on.
+        exception method will be tested later on.
         """
         self._exception_msg = str(e)
 

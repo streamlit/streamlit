@@ -36,7 +36,7 @@ class ForwardMsgQueue:
         self._queue: List[ForwardMsg] = []
         # A mapping of (delta_path -> _queue.indexof(msg)) for each
         # Delta message in the queue. We use this for coalescing
-        # redundant outgoing Deltas (where a newer Delta supercedes
+        # redundant outgoing Deltas (where a newer Delta supersedes
         # an older Delta, with the same delta_path, that's still in the
         # queue).
         self._delta_index_map: Dict[Tuple[int, ...], int] = dict()
@@ -75,7 +75,7 @@ class ForwardMsgQueue:
                 self._queue[index] = new_msg
                 return
 
-        # No composition occured. Append this message to the queue, and
+        # No composition occurred. Append this message to the queue, and
         # store its index for potential future composition.
         self._delta_index_map[delta_key] = len(self._queue)
         self._queue.append(msg)

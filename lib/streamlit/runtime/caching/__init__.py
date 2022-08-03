@@ -75,7 +75,7 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
         yield
 
 
-# Explicitly export public symobls
+# Explicitly export public symbols
 from .memo_decorator import (
     get_memo_stats_provider as get_memo_stats_provider,
 )
