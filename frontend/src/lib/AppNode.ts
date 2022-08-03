@@ -45,6 +45,7 @@ import {
 } from "./utils"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
+const NO_HASH = "NO_HASH"
 
 /**
  * An immutable node of the "App Data Tree".
@@ -90,8 +91,15 @@ export interface AppNode {
   /**
    * The ID of the script run this node was generated in. When a script finishes
    * running, the app prunes all stale nodes.
+   * IMPORTANT: This should be treated as immutable! The only exception is in reuseElementNode(),
+   * which is there to avoid redraws, for performance reasons.
    */
-  readonly scriptRunId: string
+  scriptRunId: string
+
+  /**
+   * A hash of the
+   */
+  readonly hash: string
 
   /**
    * Return the AppNode for the given index path, or undefined if the path
@@ -127,7 +135,9 @@ export class ElementNode implements AppNode {
 
   public readonly metadata: ForwardMsgMetadata
 
-  public readonly scriptRunId: string
+  public scriptRunId: string
+
+  public readonly hash: string
 
   /**
    * A lazily-created immutableJS version of our element.
@@ -150,11 +160,13 @@ export class ElementNode implements AppNode {
   public constructor(
     element: Element,
     metadata: ForwardMsgMetadata,
-    scriptRunId: string
+    scriptRunId: string,
+    hash: string
   ) {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
+    this.hash = hash
   }
 
   public get immutableElement(): ImmutableMap<string, any> {
@@ -240,7 +252,12 @@ export class ElementNode implements AppNode {
     namedDataSet: NamedDataSet,
     scriptRunId: string
   ): ElementNode {
-    const newNode = new ElementNode(this.element, this.metadata, scriptRunId)
+    const newNode = new ElementNode(
+      this.element,
+      this.metadata,
+      scriptRunId,
+      this.hash
+    )
     newNode.lazyImmutableElement = addRows(
       this.immutableElement,
       toImmutableProto(NamedDataSet, namedDataSet)
@@ -253,7 +270,12 @@ export class ElementNode implements AppNode {
     scriptRunId: string
   ): ElementNode {
     const elementType = this.element.type
-    const newNode = new ElementNode(this.element, this.metadata, scriptRunId)
+    const newNode = new ElementNode(
+      this.element,
+      this.metadata,
+      scriptRunId,
+      this.hash
+    )
 
     switch (elementType) {
       case "arrowTable":
@@ -342,16 +364,20 @@ export class BlockNode implements AppNode {
 
   public readonly deltaBlock: BlockProto
 
-  public readonly scriptRunId: string
+  public scriptRunId: string
+
+  public readonly hash: string
 
   public constructor(
     children?: AppNode[],
     deltaBlock?: BlockProto,
-    scriptRunId?: string
+    scriptRunId?: string,
+    hash?: string
   ) {
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
+    this.hash = hash ?? NO_HASH
   }
 
   /** True if this Block has no children. */
@@ -451,7 +477,8 @@ export class AppRoot {
       const waitNode = new ElementNode(
         makeElementWithInfoText(placeholderText),
         ForwardMsgMetadata.create({}),
-        NO_SCRIPT_RUN_ID
+        NO_SCRIPT_RUN_ID,
+        NO_HASH
       )
       mainNodes = [waitNode]
     } else {
@@ -498,7 +525,8 @@ export class AppRoot {
   public applyDelta(
     scriptRunId: string,
     delta: Delta,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    hash: string
   ): AppRoot {
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
@@ -516,6 +544,15 @@ export class AppRoot {
           MetricsManager.current.incrementDeltaCounter(element.type)
         }
 
+        const existingNode = this.root.getIn(deltaPath)
+        if (existingNode && existingNode.hash === hash) {
+          return this.reuseElementNode(
+            deltaPath,
+            scriptRunId,
+            existingNode as ElementNode
+          )
+        }
+
         // Track component instance name.
         if (element.type === "componentInstance") {
           const componentName = element.componentInstance?.componentName
@@ -526,7 +563,7 @@ export class AppRoot {
           }
         }
 
-        return this.addElement(deltaPath, scriptRunId, element, metadata)
+        return this.addElement(deltaPath, scriptRunId, element, metadata, hash)
       }
 
       case "addBlock": {
@@ -534,7 +571,8 @@ export class AppRoot {
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
-          scriptRunId
+          scriptRunId,
+          hash
         )
       }
 
@@ -563,7 +601,8 @@ export class AppRoot {
             deltaPath,
             scriptRunId,
             errorElement,
-            metadata
+            metadata,
+            hash
           )
         }
       }
@@ -597,20 +636,31 @@ export class AppRoot {
     return elements
   }
 
+  private reuseElementNode(
+    deltaPath: number[],
+    scriptRunId: string,
+    existingNode: ElementNode
+  ): AppRoot {
+    existingNode.scriptRunId = scriptRunId
+    return new AppRoot(this.root.setIn(deltaPath, existingNode, scriptRunId))
+  }
+
   private addElement(
     deltaPath: number[],
     scriptRunId: string,
     element: Element,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    hash: string
   ): AppRoot {
-    const elementNode = new ElementNode(element, metadata, scriptRunId)
+    const elementNode = new ElementNode(element, metadata, scriptRunId, hash)
     return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private addBlock(
     deltaPath: number[],
     block: BlockProto,
-    scriptRunId: string
+    scriptRunId: string,
+    hash: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -620,7 +670,7 @@ export class AppRoot {
     const children: AppNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const blockNode = new BlockNode(children, block, scriptRunId)
+    const blockNode = new BlockNode(children, block, scriptRunId, hash)
     return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
   }
 
