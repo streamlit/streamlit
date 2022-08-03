@@ -14,7 +14,7 @@
 
 """
 This example was failing due to an issue (#3653) in st._arrow_add_rows.
-In the previos implementation of Quiver, we were mutating the Quiver element
+In the previous implementation of Quiver, we were mutating the Quiver element
 in the addRows function, which prevented re-rendering of the line chart.
 This example reproduces the issue, so that we don't repeat the same mistake
 in the future.

@@ -36,7 +36,7 @@ class ConfigOption:
             description = 'Connect to the proxy at this port.',
             default_val = 8501)
 
-    More complex config options resolve thier values at runtime as follows:
+    More complex config options resolve their values at runtime as follows:
 
         @ConfigOption('browser.serverPort')
         def _proxy_port():
@@ -138,7 +138,7 @@ class ConfigOption:
             # Capture a group called "section"
             r"(?P<section>"
             # Matching text comprised of letters and numbers that begins
-            # with a lowercase letter with an optional "_" preceeding it.
+            # with a lowercase letter with an optional "_" preceding it.
             # Examples: "_section", "section1"
             r"\_?[a-z][a-zA-Z0-9]*"
             r")"

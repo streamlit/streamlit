@@ -103,7 +103,7 @@ def is_url_from_allowed_origins(url: str) -> bool:
         "localhost",
         "0.0.0.0",
         "127.0.0.1",
-        # Try to avoid making unecessary HTTP requests by checking if the user
+        # Try to avoid making unnecessary HTTP requests by checking if the user
         # manually specified a server address.
         _get_server_address_if_manually_set,
         # Then try the options that depend on HTTP requests or opening sockets.
@@ -150,7 +150,7 @@ def _get_server_address_if_manually_set() -> Optional[str]:
 
 def make_url_path_regex(*path, **kwargs) -> str:
     """Get a regex of the form ^/foo/bar/baz/?$ for a path (foo, bar, baz)."""
-    path = [x.strip("/") for x in path if x]  # Filter out falsy components.
+    path = [x.strip("/") for x in path if x]  # Filter out falsely components.
     path_format = r"^/%s/?$" if kwargs.get("trailing_slash", True) else r"^/%s$"
     return path_format % "/".join(path)
 

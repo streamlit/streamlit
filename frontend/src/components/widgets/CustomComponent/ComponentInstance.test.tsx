@@ -545,7 +545,7 @@ describe("ComponentInstance", () => {
         expect(mc.frameHeight).toEqual("100")
         // We check that the instance's height prop has *not* updated -
         // if this expect() call fails, that means that a re-render has
-        // occured.
+        // occurred.
         expect(iframe.prop("height")).toEqual(0)
 
         // Force a re-render. NOW the iframe element's height should be updated.

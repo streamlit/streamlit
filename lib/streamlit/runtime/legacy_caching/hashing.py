@@ -261,7 +261,7 @@ class _Cells:
                     self._set(var, cell.cell_contents)
             else:
                 # List comprehension code objects also have freevars, but they
-                # don't have a surrouding closure. In these cases we just use the name.
+                # don't have a surrounding closure. In these cases we just use the name.
                 for var in code.co_freevars:
                     self._set(var, var)
 
@@ -509,7 +509,7 @@ class _CodeHasher:
         elif isinstance(obj, UploadedFile):
             # UploadedFile is a BytesIO (thus IOBase) but has a name.
             # It does not have a timestamp so this must come before
-            # temproary files
+            # temporary files
             h = hashlib.new("md5")
             self.update(h, obj.name)
             self.update(h, obj.tell())

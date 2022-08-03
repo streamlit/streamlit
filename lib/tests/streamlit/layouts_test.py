@@ -140,7 +140,7 @@ class ExpanderTest(testutil.DeltaGeneratorTestCase):
 
 class TabsTest(testutil.DeltaGeneratorTestCase):
     def test_tab_required(self):
-        """Test that atleast one tab is required."""
+        """Test that at least one tab is required."""
         with self.assertRaises(TypeError):
             tabs = st.tabs()
 
