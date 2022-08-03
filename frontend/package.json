@@ -24,11 +24,6 @@
       "html"
     ]
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "sh ../scripts/format.sh"
-    }
-  },
   "dependencies": {
     "@emotion-icons/emotion-icon": "^4.1.0",
     "@emotion-icons/material-outlined": "^3.14.0",
@@ -77,6 +72,7 @@
     "prismjs": "^1.27.0",
     "protobufjs": "^6.11.2",
     "query-string": "^6.13.1",
+    "re-resizable": "^6.9.9",
     "react": "^17.0.2",
     "react-color": "^2.18.1",
     "react-debounce-render": "^7.0.0",
@@ -101,7 +97,6 @@
     "remark-emoji": "^2.2.0",
     "remark-gfm": "^1.0.0",
     "remark-math": "^4.0.0",
-    "re-resizable": "^6.9.9",
     "sass": "^1.43.4",
     "sprintf-js": "^1.1.2",
     "styled-components": "^5.3.3",
@@ -171,7 +166,6 @@
     "eslint-plugin-react": "^7.29.4",
     "fetch-mock": "^9.11.0",
     "hard-source-webpack-plugin": "^0.13.1",
-    "husky": "^3.0.5",
     "jest-canvas-mock": "^2.2.0",
     "jest-websocket-mock": "^2.2.0",
     "marked": "^4.0.12",
