@@ -25,8 +25,10 @@ jobs:
         run: |
           # reactivate bash profile. TODO: Might have to look why this needs to be reactivated.
           source $HOME/.bash_profile
+          pip install black
           # make jslint > lint0.txt
           # echo "$(<lint0.txt )"
+          black --target-version=py36 --diff --check examples
           make pylint &> lint.txt
           echo "$(<lint.txt )"
         shell: bash
