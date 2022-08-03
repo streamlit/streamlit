@@ -35,6 +35,7 @@ export interface Props {
   onChange: (selectedIndex: number) => any
   options: any[]
   label?: string
+  labelVisibility?: "collapsed" | "visible" | "hidden" | string
   help?: string
 }
 
@@ -69,7 +70,14 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { theme, width, help, label, horizontal } = this.props
+    const {
+      theme,
+      width,
+      help,
+      label,
+      horizontal,
+      labelVisibility,
+    } = this.props
     let { disabled } = this.props
     const { colors, radii } = theme
     const style = { width }
@@ -82,7 +90,11 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stRadio" style={style}>
-        <WidgetLabel label={label} disabled={disabled}>
+        <WidgetLabel
+          label={label}
+          disabled={disabled}
+          labelVisibility={labelVisibility}
+        >
           {help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
@@ -94,6 +106,7 @@ class Radio extends React.PureComponent<Props, State> {
           value={this.state.value.toString()}
           disabled={disabled}
           align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
+          aria-label={label}
         >
           {options.map((option: string, index: number) => (
             <UIRadio

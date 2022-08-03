@@ -17,6 +17,7 @@ from typing import Any, Callable, Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
+from streamlit import logger as _logger
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.state import (
@@ -25,10 +26,13 @@ from streamlit.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import Key, LabelVisibility, OptionSequence, ensure_indexable,\
+    to_key
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+_LOGGER = _logger.get_logger("root")
 
 
 class RadioMixin:
@@ -46,6 +50,7 @@ class RadioMixin:
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> Any:
         """Display a radio button widget.
 
@@ -85,6 +90,9 @@ class RadioMixin:
             The default is false (vertical buttons). This argument can only
             be supplied by keyword.
 
+        label_visibility : str
+            AAABBBB
+
         Returns
         -------
         any
@@ -120,6 +128,7 @@ class RadioMixin:
             disabled=disabled,
             horizontal=horizontal,
             ctx=ctx,
+            label_visibility=label_visibility
         )
 
     def _radio(
@@ -136,11 +145,20 @@ class RadioMixin:
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext],
     ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         opt = ensure_indexable(options)
 
@@ -188,6 +206,8 @@ class RadioMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         radio_proto.disabled = disabled
+        radio_proto.label_visibility = label_visibility
+
         if widget_state.value_changed:
             radio_proto.value = serialize_radio(widget_state.value)
             radio_proto.set_value = True

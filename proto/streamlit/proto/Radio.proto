@@ -27,4 +27,5 @@ message Radio {
   bool set_value = 8;
   bool disabled = 9;
   bool horizontal = 10;
+  string label_visibility = 11;
 }

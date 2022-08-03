@@ -110,6 +110,7 @@ Key: TypeAlias = Union[str, int]
 
 T = TypeVar("T")
 
+LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
 # This should really be a Protocol, but can't be, due to:
 # https://github.com/python/mypy/issues/12933
