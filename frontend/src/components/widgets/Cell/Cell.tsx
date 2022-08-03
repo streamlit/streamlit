@@ -35,31 +35,31 @@ import { StyledCloseButton } from "./styled-components"
 const myTheme = createTheme({
   theme: "light",
   settings: {
-    background: "#fafafa",
-    foreground: "#31333f",
-    caret: "#262730",
-    selection: "#ffc7c7",
-    selectionMatch: "#e6eaf1",
+    background: "#fff",
+    foreground: "#555867",
+    caret: "#ff4b4b",
+    selection: "#d5dae5",
+    selectionMatch: "#f0f2f6",
     lineHighlight: "#9af8ff",
-    gutterBackground: "#fafafa",
-    gutterForeground: "#808495",
+    gutterBackground: "#fff",
+    gutterForeground: "#a3a8b8",
   },
   styles: [
-    { tag: [t.comment, t.bracket], color: "#6a737d" },
-    { tag: [t.className, t.propertyName], color: "#6f42c1" },
-    {
-      tag: [t.variableName, t.attributeName, t.number, t.operator],
-      color: "#005cc5",
-    },
+    { tag: [t.comment], color: "#a3a8b8" },
+    { tag: [t.className], color: "#1c83e1" },
+    { tag: [t.propertyName], color: "#1c83e1" },
+    { tag: [t.variableName], color: "#555867" },
+    { tag: [t.operator], color: "#bd4043" },
+    { tag: [t.bracket], color: "#ff8700" },
     {
       tag: [t.keyword, t.typeName, t.typeOperator, t.typeName],
-      color: "#d73a49",
+      color: "#0054a3",
     },
-    { tag: [t.string, t.meta, t.regexp], color: "#032f62" },
-    { tag: [t.name, t.quote], color: "#22863a" },
-    { tag: [t.heading], color: "#24292e", fontWeight: "bold" },
-    { tag: [t.emphasis], color: "#24292e", fontStyle: "italic" },
-    { tag: [t.deleted], color: "#b31d28", backgroundColor: "ffeef0" },
+    { tag: [t.string], color: "#00a4d4" },
+    { tag: [t.number], color: "#09ab3b" },
+    //{ tag: [t.meta, t.regexp], color: "#ff0" },
+    //{ tag: [t.attributeName], color: "#ff0" },
+    //{ tag: [t.name, t.quote], color: "#ff0" },
   ],
 })
 
@@ -186,15 +186,15 @@ function Cell({ element, cellIndex }: Props): React.ReactElement {
           defaultKeymap: false,
         }}
         style={{
-          background: "#fafafa",
+          background: "#fff",
           overflow: "hidden",
           fontFamily: "Source Code Pro, monospace",
           fontSize: "14px",
-          border: "none",
-          borderRadius: "0 0.25rem 0.25rem 0",
-          padding: "1rem 1rem 1rem calc(1rem + 2px)",
-          margin: "0 0 0 -3px",
-          borderLeft: "3px solid #e6eaf1",
+          borderRadius: "0.25rem",
+          padding: "1rem 1rem 1rem calc(1rem - 3px)",
+          margin: "0",
+          boxShadow:
+            "inset 1px 1px 3px rgba(0, 0, 100, 0.10), inset 1px 1px 20px rgba(0, 0, 100, 0.05)",
         }}
         onChange={onChange}
       />
