@@ -13,7 +13,7 @@ runs:
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
           echo "source $NVM_DIR/nvm.sh --install" >> "$HOME/.bash_profile"
           cd -
-          # source $HOME/.bash_profile
+          source $HOME/.bash_profile
           echo "lts/*" > .nvmrc
           nvm install
         fi
@@ -23,16 +23,16 @@ runs:
           source "$HOME/.nvm/nvm.sh"
           make react-init
         fi
-      shell: bash -l {0}
+      shell: bash
     - name: Install pyodbc dependencies
       run: |
         ${SUDO} apt-get install -y unixodbc-dev
-      shell: bash -l {0}
+      shell: bash
     - name: Install graphviz dependencies
       run: |
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
-      shell: bash -l {0}
+      shell: bash
     - name: Cache Venv
       id: cache-venv
       uses: actions/cache@v3
@@ -52,10 +52,10 @@ runs:
         # Add 'activate venv' to $HOME/.bash_profile. This means that our venv will be active
         # for the remainder of the job ($HOME/.bash_profile is evaluated at each step).
         echo 'source venv/bin/activate' >> $HOME/.bash_profile
-      shell: bash -l {0}
+      shell: bash
     - name: generate_protobufs
       run: |
-        # source $HOME/.bash_profile
+        source $HOME/.bash_profile
         # install protobuf v3
         ${SUDO} apt update
         ${SUDO} apt-get install -y gnupg
@@ -66,4 +66,4 @@ runs:
         ${SUDO} apt-get install -y protobuf-compiler
         # Generate protobufs
         make protobuf
-      shell: bash -l {0}
+      shell: bash

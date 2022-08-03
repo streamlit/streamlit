@@ -24,7 +24,7 @@ jobs:
         shell: bash -l {0}
       - name: Run linters
         run: |
-          # source $HOME/.bash_profile
+          source $HOME/.bash_profile
           make jslint &> jslint_error.txt
           echo "$(<jslint_error.txt )"
           # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
@@ -35,16 +35,16 @@ jobs:
         shell: bash -l {0}
       - name: Run make pycoverage
         run: |
-          # source $HOME/.bash_profile
+          source $HOME/.bash_profile
           make pycoverage
         shell: bash -l {0}
       - name: Run make integration tests
         run: |
-          # source $HOME/.bash_profile
+          source $HOME/.bash_profile
           make integration-tests
         shell: bash -l {0}
       - name: Run make CLI smoke tests
         run: |
-          # source $HOME/.bash_profile
+          source $HOME/.bash_profile
           make cli-smoke-tests
         shell: bash -l {0}
