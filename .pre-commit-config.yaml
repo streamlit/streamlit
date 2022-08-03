@@ -8,3 +8,10 @@ repos:
     rev: v2.7.1
     hooks:
       - id: prettier
+  - repo: local
+    hooks:
+      - id: run-typecheck
+        name: Run typecheck
+        entry: yarn --cwd frontend tsc --noEmit
+        language: node
+        pass_filenames: false
