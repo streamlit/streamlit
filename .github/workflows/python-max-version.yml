@@ -34,14 +34,12 @@ jobs:
           echo "$(<pylint_error.txt )"
           # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
         shell: bash
-      - name: pip install pytest
-        run: |
-          pip install pytest
       - name: Run make pycoverage
         run: |
-          make pycoverage
+          pip install -U pytest
           export PATH="/github/home/.local/bin:$PATH" >> $HOME/.bash_profile
           source $HOME/.bash_profile
+          make pycoverage
         shell: bash
       - name: Run make integration tests
         run: |
