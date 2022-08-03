@@ -20,6 +20,7 @@ jobs:
       - uses: ./.github/actions/make_init
       - name: Run make develop
         run: |
+          cat $HOME/.bash_profile
           cd $HOME
           source venv/bin/activate
           pytest
