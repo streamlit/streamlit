@@ -23,6 +23,8 @@ jobs:
         shell: bash
       - name: Run linters
         run: |
+          # reactivate bash profile. TODO: Might have to look why this needs to be reactivated.
+          source $HOME/.bash_profile
           make jslint
           make pylint
         shell: bash

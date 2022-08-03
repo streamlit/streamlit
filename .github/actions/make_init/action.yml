@@ -74,11 +74,12 @@ runs:
   steps:
     - name: "Install NVM, Node.js, and Yarn"
       run: |
-        pwd
         if [ ! -d ~/.nvm ] ; then
+          touch $HOME/.bash_profile
           cd ..
           echo $HOME
           export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
           mkdir $NVM_DIR
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
           echo "source $NVM_DIR/nvm.sh --install" >> "$HOME/.bash_profile"
@@ -93,7 +94,6 @@ runs:
           source "$HOME/.nvm/nvm.sh"
           make react-init
         fi
-        pwd
       shell: bash
     - name: Install pyodbc dependencies
       run: |
@@ -122,7 +122,6 @@ runs:
       shell: bash
     - name: generate_protobufs
       run: |
-        # reactivate bash profile. TODO: Might have to look why this needs to be reactivated.
         source $HOME/.bash_profile
         # install protobuf v3
         ${SUDO} apt update
