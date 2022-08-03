@@ -122,6 +122,8 @@ runs:
       shell: bash
     - name: generate_protobufs
       run: |
+        echo $HOME/.bash_profile
+        cat $HOME/.bash_profile
         pwd
         nvm --version
         yarn --version
