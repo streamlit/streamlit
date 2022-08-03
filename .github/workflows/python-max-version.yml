@@ -4,6 +4,7 @@ jobs:
   checkout:
     env:
       SUDO: 'sudo'
+      BASH_ENV: $HOME/.bash_profile
     runs-on: ubuntu-latest
     container: circleci/python:3.10.0
     steps:
