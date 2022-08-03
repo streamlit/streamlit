@@ -122,13 +122,7 @@ runs:
       shell: bash
     - name: generate_protobufs
       run: |
-        echo $HOME/.bash_profile
-        cat $HOME/.bash_profile
         source $HOME/.bash_profile
-        pwd
-        nvm --version
-        yarn --version
-        cd frontend; yarn --version
         # install protobuf v3
         ${SUDO} apt update
         ${SUDO} apt-get install -y gnupg
@@ -138,8 +132,6 @@ runs:
         ${SUDO} apt update
         ${SUDO} apt-get install -y protobuf-compiler
         # Generate protobufs
-        pwd
-        ls
         make protobuf
       shell: bash
     - name: Test virtual env
