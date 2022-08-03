@@ -21,8 +21,9 @@ from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import Key, to_key, LabelVisibility
 from streamlit.errors import StreamlitAPIException
+from streamlit import logger as _logger
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.state import (
@@ -37,6 +38,7 @@ from .utils import check_callback_rules, check_session_state_rules
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+_LOGGER = _logger.get_logger("root")
 
 TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
@@ -173,6 +175,7 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> time:
         """Display a time input widget.
 
@@ -199,6 +202,8 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the time input if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : str
+            AAAA
 
         Returns
         -------
@@ -225,6 +230,7 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -239,11 +245,20 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> time:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         parsed_time: time
         if value is None:
@@ -295,6 +310,7 @@ class TimeWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         time_input_proto.disabled = disabled
+        time_input_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             time_input_proto.value = serialize_time_input(widget_state.value)
             time_input_proto.set_value = True
@@ -315,6 +331,7 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> DateWidgetReturn:
         """Display a date input widget.
 
@@ -348,6 +365,8 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the date input if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility: str
+            AAAABB
 
         Returns
         -------
@@ -378,6 +397,7 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -394,11 +414,20 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,
@@ -457,6 +486,7 @@ class TimeWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         date_input_proto.disabled = disabled
+        date_input_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             date_input_proto.value[:] = serialize_date_input(widget_state.value)
             date_input_proto.set_value = True

@@ -203,7 +203,11 @@ class TimeInput extends PureComponent<Props, State> {
 
     return (
       <div className="stTimeInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -219,6 +223,7 @@ class TimeInput extends PureComponent<Props, State> {
           onChange={this.handleChange}
           overrides={selectOverrides}
           creatable
+          aria-label={element.label}
         />
       </div>
     )

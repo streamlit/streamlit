@@ -25,4 +25,5 @@ message TimeInput {
   string value = 6;
   bool set_value = 7;
   bool disabled = 8;
+  string label_visibility = 9;
 }

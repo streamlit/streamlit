@@ -192,7 +192,11 @@ class DateInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stDateInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -207,6 +211,7 @@ class DateInput extends React.PureComponent<Props, State> {
           disabled={disabled}
           onChange={this.handleChange}
           onClose={this.handleClose}
+          aria-label={element.label}
           overrides={{
             Popover: {
               props: {
