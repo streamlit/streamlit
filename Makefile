@@ -85,6 +85,8 @@ pylint:
 	# status if anything is not properly formatted. (This isn't really
 	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
+		black --version \
+		echo "IM HERE" \
 		$(BLACK) --diff --check examples/ && \
 		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
 		$(BLACK) --diff --check lib/tests/ && \
