@@ -5,17 +5,17 @@ runs:
       shell: bash
       env:
         SUDO: 'sudo'
-        run: |
-            if [ -s make.bin ] ; then
-              echo "make.bin exists; not installing"
-            else
-              echo "/usr/bin/make doesn't exist; installing"
-              ${SUDO} apt-get update
-              ${SUDO} apt-get install -y make
-              ${SUDO} chmod -R 777 /usr/bin/make
-              ${SUDO} cp -f /usr/bin/make make.bin
-            fi
-            ${SUDO} cp -f make.bin /usr/bin/make
+      run: |
+          if [ -s make.bin ] ; then
+            echo "make.bin exists; not installing"
+          else
+            echo "/usr/bin/make doesn't exist; installing"
+            ${SUDO} apt-get update
+            ${SUDO} apt-get install -y make
+            ${SUDO} chmod -R 777 /usr/bin/make
+            ${SUDO} cp -f /usr/bin/make make.bin
+          fi
+          ${SUDO} cp -f make.bin /usr/bin/make
     - name: Install dot
       shell: bash
       env:
