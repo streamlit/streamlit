@@ -384,4 +384,6 @@ connect-test-env:
 
 .PHONY: pre-commit-install
 pre-commit-install:
+ifndef CIRCLECI
 	pre-commit install
+endif #CIRCLECI
