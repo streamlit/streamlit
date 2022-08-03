@@ -48,6 +48,11 @@ runs:
         make setup
         make pipenv-install
         deactivate
+
+        echo 'source venv/bin/activate' >> $BASH_ENV
+        # Add 'activate venv' to $HOME/.bash_profile. This means that our venv will be active
+        # for the remainder of the job ($HOME/.bash_profile is evaluated at each step).
+        echo 'source venv/bin/activate' >> $HOME/.bash_profile
       shell: bash
     - name: generate_protobufs
       run: |
