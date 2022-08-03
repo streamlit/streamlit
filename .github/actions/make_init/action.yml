@@ -123,6 +123,9 @@ runs:
     - name: generate_protobufs
       run: |
         pwd
+        nvm --version
+        yarn --version
+        cd frontend; yarn --version
         # install protobuf v3
         ${SUDO} apt update
         ${SUDO} apt-get install -y gnupg
