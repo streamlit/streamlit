@@ -42,3 +42,7 @@ jobs:
         run: |
           make integration-tests
         shell: bash
+      - name: Run make CLI smoke tests
+        run: |
+          make cli-smoke-tests
+        shell: bash
