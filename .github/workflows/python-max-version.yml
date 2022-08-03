@@ -26,5 +26,6 @@ jobs:
           # reactivate bash profile. TODO: Might have to look why this needs to be reactivated.
           source $HOME/.bash_profile
           make jslint
-          make pylint
+          make pylint > lint.txt
+          cat lint.txt
         shell: bash
