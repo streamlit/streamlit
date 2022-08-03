@@ -1,0 +1,33 @@
+runs:
+using: composite
+steps:
+  - name: Install make
+    shell: bash
+    env:
+      SUDO: 'sudo'
+      run: |
+          if [ -s make.bin ] ; then
+            echo "make.bin exists; not installing"
+          else
+            echo "/usr/bin/make doesn't exist; installing"
+            ${SUDO} apt-get update
+            ${SUDO} apt-get install -y make
+            ${SUDO} chmod -R 777 /usr/bin/make
+            ${SUDO} cp -f /usr/bin/make make.bin
+          fi
+          ${SUDO} cp -f make.bin /usr/bin/make
+  - name: Install dot
+    shell: bash
+    env:
+      SUDO: 'sudo'
+    run: |
+        if [ -s dot.bin ] ; then
+          echo "dot.bin exists and is non zero"
+        else
+          echo "/usr/bin/dot doesn't exist, installing"
+          ${SUDO} apt-get update
+          ${SUDO} apt-get install -y graphviz
+          ${SUDO} chmod -R 777 /usr/bin/dot
+          ${SUDO} cp -f /usr/bin/dot dot.bin
+        fi
+        ${SUDO} cp -f dot.bin /usr/bin/dot
