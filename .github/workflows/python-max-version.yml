@@ -38,4 +38,7 @@ jobs:
         run: |
           make pycoverage
         shell: bash
-        
+      - name: Run make integration tests
+        run: |
+          make integration-tests
+        shell: bash
