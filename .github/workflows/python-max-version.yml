@@ -27,9 +27,8 @@ jobs:
           pip install black
           export PATH="/github/home/.local/bin:$PATH" >> $HOME/.bash_profile
           source $HOME/.bash_profile
-          # make jslint > lint0.txt
-          # echo "$(<lint0.txt )"
-          black --target-version=py36 --diff --check examples
-          make pylint &> lint.txt
-          echo "$(<lint.txt )"
+          make jslint > jslint_error.txt
+          echo "$(<jslint_error.txt )"
+          make pylint &> pylint_error.txt
+          echo "$(<pylint_error.txt )"
         shell: bash
