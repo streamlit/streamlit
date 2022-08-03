@@ -2,7 +2,7 @@ runs:
   using: composite
   steps:
     - name: Install make
-      shell: bash
+      shell: bash -l {0}
       env:
         SUDO: 'sudo'
       run: |
@@ -17,7 +17,7 @@ runs:
           fi
           ${SUDO} cp -f make.bin /usr/bin/make
     - name: Install dot
-      shell: bash
+      shell: bash -l {0}
       env:
         SUDO: 'sudo'
       run: |
