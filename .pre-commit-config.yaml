@@ -3,25 +3,30 @@ repos:
     rev: 22.6.0
     hooks:
       - id: black
+        files: \.py$|\.pyi$
         language_version: python3.8
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v2.7.1
     hooks:
       - id: prettier
+        files: \.js$|\.jsx$|\.ts$|\.tsx$
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1
     hooks:
       - id: isort
         name: isort (python)
+        files: \.py$|\.pyi$
   - repo: local
     hooks:
       - id: run-typecheck
         name: Run typecheck
         entry: yarn --cwd frontend tsc --noEmit
+        files: \.js$|\.jsx$|\.ts$|\.tsx$
         language: node
         pass_filenames: false
       - id: run-eslint
         name: Run run eslint
         entry: cd frontend && ./frontend/node_modules/.bin/eslint --ext .js --ext .jsx --ext .ts --ext .tsx --ignore-pattern './frontend/src/autogen/*' --max-warnings 0 ./frontend/src
+        files: \.js$|\.jsx$|\.ts$|\.tsx$
         language: node
         pass_filenames: false
