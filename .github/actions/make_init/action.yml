@@ -40,7 +40,7 @@ runs:
         path: venv
         key: ${{ runner.os }}-venv
     - name: Create Virtualenv
-      if: steps.cache-venv.outputs.cache-hit != 'true'
+      # if: steps.cache-venv.outputs.cache-hit != 'true'
       run: |
         python -m venv venv
         source venv/bin/activate
