@@ -23,8 +23,6 @@ jobs:
         shell: bash
       - name: Run linters
         run: |
-          pip install black
-          export PATH="/github/home/.local/bin:$PATH" >> $HOME/.bash_profile
           source $HOME/.bash_profile
           make jslint &> jslint_error.txt
           echo "$(<jslint_error.txt )"
@@ -36,16 +34,16 @@ jobs:
         shell: bash
       - name: Run make pycoverage
         run: |
-          pip install -U pytest
-          export PATH="/github/home/.local/bin:$PATH" >> $HOME/.bash_profile
           source $HOME/.bash_profile
           make pycoverage
         shell: bash
       - name: Run make integration tests
         run: |
+          source $HOME/.bash_profile
           make integration-tests
         shell: bash
       - name: Run make CLI smoke tests
         run: |
+          source $HOME/.bash_profile
           make cli-smoke-tests
         shell: bash
