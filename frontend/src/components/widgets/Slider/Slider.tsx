@@ -38,6 +38,7 @@ import {
   StyledTickBar,
   StyledTickBarItem,
 } from "./styled-components"
+import { element } from "prop-types"
 
 const DEBOUNCE_TIME_MS = 200
 
@@ -47,6 +48,7 @@ export interface Props {
   theme: Theme
   widgetMgr: WidgetStateManager
   width: number
+  labelVisibility?: "visible" | "collapsed" | "hidden" | string | null
 }
 
 interface State {
@@ -244,6 +246,7 @@ class Slider extends React.PureComponent<Props, State> {
           disabled={props.$disabled}
           ref={ref}
           aria-valuetext={formattedValue}
+          aria-label={this.props.element.label}
         >
           <StyledThumbValue
             className="StyledThumbValue"
@@ -288,7 +291,11 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

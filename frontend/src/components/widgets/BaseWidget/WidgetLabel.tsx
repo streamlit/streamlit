@@ -27,19 +27,28 @@ export interface LabelProps {
 
   // Used to specify whether widget disabled or enabled.
   disabled?: boolean | null
-}
 
+  // Used to specify whether widget is visible or not.
+  labelVisibility?: "visible" | "collapsed" | "hidden" | string | null
+}
+;``
 export function WidgetLabel({
   label,
   children,
   disabled,
+  labelVisibility,
 }: LabelProps): React.ReactElement {
   if (label == null) {
     return <></>
   }
 
   return (
-    <StyledWidgetLabel disabled={disabled}>
+    // TODO ADD comment about aria-hidden (we use aria-label on each widget)
+    <StyledWidgetLabel
+      aria-hidden="true"
+      disabled={disabled}
+      labelVisibility={labelVisibility}
+    >
       {label}
       {children}
     </StyledWidgetLabel>

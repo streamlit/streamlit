@@ -18,17 +18,19 @@ import styled from "@emotion/styled"
 
 export interface StyledWidgetProps {
   disabled?: boolean | null
+  labelVisibility?: "hidden" | "visible" | "collapsed" | string | null
 }
 
 export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
-  ({ disabled, theme }) => ({
+  ({ disabled, labelVisibility, theme }) => ({
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+    display: labelVisibility === "collapsed" ? "none" : "flex",
+    visibility: labelVisibility === "hidden" ? "hidden" : "visible",
     marginBottom: theme.spacing.sm,
     height: "auto",
     minHeight: theme.fontSizes.xl,
     verticalAlign: "middle",
-    display: "flex",
     flexDirection: "row",
     alignItems: "center",
   })

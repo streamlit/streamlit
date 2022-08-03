@@ -19,6 +19,7 @@ from typing import Any, List, cast, Optional
 from textwrap import dedent
 
 import streamlit
+from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
@@ -32,6 +33,8 @@ from streamlit.state import (
 )
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+_LOGGER = _logger.get_logger("root")
 
 
 class SliderMixin:
@@ -50,6 +53,7 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: str = "visible",
     ):
         """Display a slider widget.
 
@@ -108,6 +112,9 @@ class SliderMixin:
         disabled : bool
             An optional boolean, which disables the slider if set to True. The
             default is False. This argument can only be supplied by keyword.
+        label_visibility : str
+            AAABBBB
+
 
         Returns
         -------
@@ -163,6 +170,7 @@ class SliderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -181,11 +189,20 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: str = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ):
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         if value is None:
             # Set value from session_state if exists.
@@ -501,6 +518,8 @@ class SliderMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
+        slider_proto.label_visibility = label_visibility
+
         if widget_state.value_changed:
             slider_proto.value[:] = serialize_slider(widget_state.value)
             slider_proto.set_value = True
