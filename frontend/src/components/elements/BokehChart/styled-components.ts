@@ -18,5 +18,5 @@
 import styled from "@emotion/styled"
 
 export const StyledBokehChartContainer = styled.div(({ theme }) => ({
-  paddingTop: theme.spacing.xl,
+  paddingTop: theme.spacing.sm,
 }))
