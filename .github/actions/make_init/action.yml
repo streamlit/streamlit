@@ -138,6 +138,8 @@ runs:
         ${SUDO} apt update
         ${SUDO} apt-get install -y protobuf-compiler
         # Generate protobufs
+        pwd
+        ls
         make protobuf
       shell: bash
     - name: Test virtual env
