@@ -25,7 +25,7 @@ jobs:
         run: |
           # reactivate bash profile. TODO: Might have to look why this needs to be reactivated.
           pip install black
-          export PATH="/usr/local/bin:$PATH" >> $HOME/.bash_profile
+          export PATH="/github/home/.local/bin:$PATH" >> $HOME/.bash_profile
           source $HOME/.bash_profile
           # make jslint > lint0.txt
           # echo "$(<lint0.txt )"
