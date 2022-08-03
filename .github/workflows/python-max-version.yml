@@ -17,3 +17,12 @@ jobs:
       - uses: ./.github/actions/update_submodules
       - uses: ./.github/actions/premake
       - uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: |
+          make develop
+        shell: bash
+      - name: Run linters
+        run: |
+          make jslint
+          make pylint
+        shell: bash
