@@ -23,13 +23,14 @@ jobs:
         shell: bash
       - name: Run linters
         run: |
-          # reactivate bash profile. TODO: Might have to look why this needs to be reactivated.
           pip install black
           export PATH="/github/home/.local/bin:$PATH" >> $HOME/.bash_profile
           source $HOME/.bash_profile
           make jslint &> jslint_error.txt
           echo "$(<jslint_error.txt )"
+          # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
           echo "Please run make pyformat if this job fails"
           make pylint &> pylint_error.txt
           echo "$(<pylint_error.txt )"
+          # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
         shell: bash
