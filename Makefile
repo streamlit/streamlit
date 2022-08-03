@@ -21,7 +21,7 @@ all: init frontend install
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init develop
+all-devel: init develop pre-commit-install
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file or test S3 sharing, run:"
@@ -31,11 +31,11 @@ all-devel: init develop
 
 .PHONY: mini-devel
 # Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
-mini-devel: mini-init develop
+mini-devel: mini-init develop pre-commit-install
 
 .PHONY: init
 # Install all Python and JS dependencies.
-init: setup pipenv-install react-init protobuf
+init: setup pipenv-install react-init protobuf pre-commit-install
 
 .PHONY: mini-init
 # Install minimal Python and JS dependencies for development.
@@ -381,3 +381,7 @@ run-test-env:
 # Connect to an already-running test env container
 connect-test-env:
 	docker exec -it streamlit_e2e_tests /bin/bash
+
+.PHONY: pre-commit-install
+pre-commit-install:
+	pre-commit install
