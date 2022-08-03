@@ -10,12 +10,6 @@ repos:
     hooks:
       - id: prettier
         files: \.js$|\.jsx$|\.ts$|\.tsx$
-  - repo: https://github.com/pycqa/isort
-    rev: 5.10.1
-    hooks:
-      - id: isort
-        name: isort (python)
-        files: \.py$|\.pyi$
   - repo: local
     hooks:
       - id: run-typecheck
