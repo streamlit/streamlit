@@ -15,3 +15,7 @@ repos:
         entry: yarn --cwd frontend tsc --noEmit
         language: node
         pass_filenames: false
+      - id: run-eslint
+        name: Run run eslint
+        entry: cd frontend && ./frontend/node_modules/.bin/eslint --ext .js --ext .jsx --ext .ts --ext .tsx --ignore-pattern './frontend/src/autogen/*' --max-warnings 0 ./frontend/src
+        language: node
