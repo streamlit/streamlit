@@ -3,7 +3,8 @@ runs:
   steps:
     - name: Get 'make' checksum
       run: |
-        ls -lAB $HOME
+        env
+        ls -l $HOME
         ${SUDO} touch $BASH_ENV
         echo $BASH_ENV
         echo $HOME/.bash_profile
