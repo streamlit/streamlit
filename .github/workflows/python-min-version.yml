@@ -1,4 +1,4 @@
-name: python-max-version
+name: python-min-version
 on: [push]
 jobs:
   checkout:
