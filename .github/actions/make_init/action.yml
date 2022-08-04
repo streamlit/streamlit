@@ -4,9 +4,7 @@ runs:
     - name: "Install NVM, Node.js, and Yarn"
       run: |
         if [ ! -d ~/.nvm ] ; then
-          touch $HOME/.bash_profile
           cd ..
-          echo $HOME
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
           mkdir $NVM_DIR

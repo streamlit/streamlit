@@ -1,6 +1,10 @@
 runs:
   using: composite
   steps:
+    - name: create bash profile
+      run: |
+        touch $HOME/.bash_profile
+      shell: bash
     - name: Get 'make' checksum
       run: |
         echo 'export SUDO="sudo"' >> $BASH_ENV
