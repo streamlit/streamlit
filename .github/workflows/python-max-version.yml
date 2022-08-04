@@ -1,5 +1,5 @@
 name: python-max-version
-on: [pull_request]
+on: [push]
 jobs:
   checkout:
     env:
