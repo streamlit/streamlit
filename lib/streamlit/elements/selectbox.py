@@ -16,6 +16,7 @@ from textwrap import dedent
 from typing import Any, Callable, Optional, cast
 
 import streamlit
+import streamlit.logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -25,10 +26,13 @@ from streamlit.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import Key, LabelVisibility, OptionSequence, ensure_indexable,\
+    to_key
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+_LOGGER = _logger.get_logger("root")
 
 
 class SelectboxMixin:
@@ -45,6 +49,7 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> Any:
         """Display a select widget.
 
@@ -76,6 +81,8 @@ class SelectboxMixin:
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility: str
+            AAAABB
 
         Returns
         -------
@@ -107,6 +114,7 @@ class SelectboxMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -123,11 +131,20 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         opt = ensure_indexable(options)
 
@@ -174,6 +191,7 @@ class SelectboxMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         selectbox_proto.disabled = disabled
+        selectbox_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             selectbox_proto.value = serialize_select_box(widget_state.value)
             selectbox_proto.set_value = True

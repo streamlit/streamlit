@@ -28,10 +28,12 @@ from typing import (
 )
 
 import streamlit
+from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, to_key
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, \
+    to_key, LabelVisibility
 
 from streamlit.state import (
     register_widget,
@@ -43,6 +45,7 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 T = TypeVar("T")
+_LOGGER = _logger.get_logger("root")
 
 
 class MultiSelectMixin:
@@ -60,6 +63,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> List[T]:
         ...
 
@@ -77,6 +81,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> List[Any]:
         ...
 
@@ -93,6 +98,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> List[Any]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -128,6 +134,8 @@ class MultiSelectMixin:
             An optional boolean, which disables the multiselect widget if set
             to True. The default is False. This argument can only be supplied
             by keyword.
+        label_visibility: str
+            AAABB
 
         Returns
         -------
@@ -160,6 +168,7 @@ class MultiSelectMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -176,6 +185,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> List[Any]:
         key = to_key(key)
@@ -183,6 +193,14 @@ class MultiSelectMixin:
         check_session_state_rules(default_value=default, key=key)
 
         opt = ensure_indexable(options)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         @overload
         def _check_and_convert_to_indices(  # type: ignore[misc]
@@ -268,6 +286,7 @@ class MultiSelectMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
+        multiselect_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             multiselect_proto.value[:] = serialize_multiselect(widget_state.value)
             multiselect_proto.set_value = True

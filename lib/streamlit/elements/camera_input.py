@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from streamlit.type_util import Key, to_key, LabelVisibility
+from streamlit import logger as _logger
 from textwrap import dedent
 from typing import Optional, cast, List, TYPE_CHECKING
 
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
 
 SomeUploadedSnapshotFile = Optional[UploadedFile]
 
+_LOGGER = _logger.get_logger("root")
 
 class CameraInputMixin:
     def camera_input(
@@ -135,6 +137,14 @@ class CameraInputMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         camera_input_proto = CameraInputProto()
         camera_input_proto.label = label

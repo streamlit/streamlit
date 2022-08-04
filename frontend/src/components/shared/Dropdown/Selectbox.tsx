@@ -35,6 +35,7 @@ export interface Props {
   onChange: (value: number) => void
   options: any[]
   label?: string | null
+  labelVisibility?: "collapsed" | "visible" | "hidden" | string
   help?: string
 }
 
@@ -131,7 +132,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const style = { width: this.props.width }
-    const { label, help } = this.props
+    const { label, labelVisibility, help } = this.props
     let { disabled, options } = this.props
 
     let value = [
@@ -162,7 +163,11 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <WidgetLabel label={label} disabled={disabled}>
+        <WidgetLabel
+          label={label}
+          labelVisibility={labelVisibility}
+          disabled={disabled}
+        >
           {help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
@@ -173,6 +178,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           clearable={false}
           disabled={disabled}
           labelKey="label"
+          aria-label={label?.toString()} // TODO [Karen] Find more elegant solution to avoid type error
           onChange={this.onChange}
           onInputChange={this.onInputChange}
           onClose={this.onClose}

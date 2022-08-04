@@ -198,7 +198,11 @@ class Multiselect extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stMultiSelect" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -213,6 +217,7 @@ class Multiselect extends React.PureComponent<Props, State> {
             options={selectOptions}
             labelKey="label"
             valueKey="value"
+            aria-label={element.label}
             placeholder={placeholder}
             type={TYPE.select}
             multi
