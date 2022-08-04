@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import numbers
+from streamlit import logger as _logger
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import LabelVisibility, Key, to_key
 from textwrap import dedent
 from typing import Optional, Union, cast
 
@@ -34,6 +35,8 @@ from .utils import check_callback_rules, check_session_state_rules
 
 Number = Union[int, float]
 
+_LOGGER = _logger.get_logger("root")
+
 
 class NumberInputMixin:
     def number_input(
@@ -51,6 +54,7 @@ class NumberInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> Number:
         """Display a numeric input widget.
 
@@ -92,6 +96,8 @@ class NumberInputMixin:
             An optional boolean, which disables the number input if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility: str
+            AAAABB
 
         Returns
         -------
@@ -123,6 +129,7 @@ class NumberInputMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -141,6 +148,7 @@ class NumberInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> Number:
         key = to_key(key)
@@ -148,6 +156,14 @@ class NumberInputMixin:
         check_session_state_rules(
             default_value=None if isinstance(value, NoValue) else value, key=key
         )
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
@@ -295,6 +311,7 @@ class NumberInputMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         number_input_proto.disabled = disabled
+        number_input_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             number_input_proto.value = widget_state.value
             number_input_proto.set_value = True

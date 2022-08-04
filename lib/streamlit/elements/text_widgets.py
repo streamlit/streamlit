@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import Key, to_key, LabelVisibility
 from textwrap import dedent
 from typing import Optional, cast
 
 import streamlit
+from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -31,6 +32,8 @@ from streamlit.state import (
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 from ..type_util import SupportsStr
+
+_LOGGER = _logger.get_logger("root")
 
 
 class TextWidgetsMixin:
@@ -49,6 +52,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> str:
         """Display a single-line text input widget.
 
@@ -89,6 +93,8 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the text input if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility: str
+            AAABB
 
         Returns
         -------
@@ -119,6 +125,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -137,11 +144,20 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         text_input_proto = TextInputProto()
         text_input_proto.label = label
@@ -191,6 +207,7 @@ class TextWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_input_proto.disabled = disabled
+        text_input_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
@@ -212,6 +229,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> str:
         """Display a multi-line text input widget.
 
@@ -246,6 +264,8 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the text area if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility: str
+            ABBBBBBB
 
         Returns
         -------
@@ -277,6 +297,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -294,11 +315,20 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
@@ -335,6 +365,7 @@ class TextWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_area_proto.disabled = disabled
+        text_area_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             text_area_proto.value = widget_state.value
             text_area_proto.set_value = True

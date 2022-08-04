@@ -186,7 +186,11 @@ class TextArea extends React.PureComponent<Props, State> {
 
     return (
       <div className="stTextArea" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -204,6 +208,7 @@ class TextArea extends React.PureComponent<Props, State> {
             onBlur={this.onBlur}
             onChange={this.onChange}
             onKeyDown={this.onKeyDown}
+            aria-label={element.label}
             disabled={disabled}
             overrides={{
               Input: {

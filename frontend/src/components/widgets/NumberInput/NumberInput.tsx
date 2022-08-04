@@ -313,7 +313,11 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stNumberInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -333,6 +337,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             onKeyPress={this.onKeyPress}
             onKeyDown={this.onKeyDown}
             disabled={disabled}
+            aria-label={element.label}
             overrides={{
               Input: {
                 props: {

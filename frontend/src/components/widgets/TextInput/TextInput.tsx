@@ -175,7 +175,11 @@ class TextInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledTextInput className="row-widget stTextInput" width={width}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -191,6 +195,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
+          aria-label={element.label}
           disabled={disabled}
           type={this.getTypeString()}
           autoComplete={element.autocomplete}
