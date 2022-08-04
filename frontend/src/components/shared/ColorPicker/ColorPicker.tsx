@@ -39,6 +39,7 @@ export interface Props {
   value: string
   showValue?: boolean
   label: string
+  labelVisibility?: "collapsed" | "visible" | "hidden" | string
   onChange: (value: string) => any
   help?: string
 }
@@ -97,7 +98,14 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { width, showValue, label, help, disabled } = this.props
+    const {
+      width,
+      showValue,
+      label,
+      labelVisibility,
+      help,
+      disabled,
+    } = this.props
     const { value } = this.state
     const cursor = disabled ? "not-allowed" : "default"
     const style = { width, cursor }
@@ -112,7 +120,11 @@ class ColorPicker extends React.PureComponent<Props, State> {
 
     return (
       <StyledColorPicker data-testid="stColorPicker" style={style}>
-        <WidgetLabel label={label} disabled={disabled}>
+        <WidgetLabel
+          label={label}
+          disabled={disabled}
+          labelVisibility={labelVisibility}
+        >
           {help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />

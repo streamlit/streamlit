@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import Key, to_key, LabelVisibility
 from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
 from typing_extensions import Literal
@@ -67,6 +67,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible"
     ) -> Optional[List[UploadedFile]]:
         ...
 
@@ -85,6 +86,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible"
     ) -> Optional[UploadedFile]:
         ...
 
@@ -108,6 +110,7 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible"
     ) -> Optional[List[UploadedFile]]:
         ...
 
@@ -126,6 +129,7 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible"
     ) -> Optional[UploadedFile]:
         ...
 
@@ -141,6 +145,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible"
     ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
@@ -185,6 +190,8 @@ class FileUploaderMixin:
             An optional boolean, which disables the file uploader if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility: str
+            AAAABB
 
         Returns
         -------
@@ -245,6 +252,7 @@ class FileUploaderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -259,12 +267,21 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ):
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
+        if label == "":
+            LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         if type:
             if isinstance(type, str):
@@ -344,6 +361,7 @@ class FileUploaderMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         file_uploader_proto.disabled = disabled
+        file_uploader_proto.label_visibility = label_visibility
 
         file_uploader_state = serialize_file_uploader(widget_state.value)
         uploaded_file_info = file_uploader_state.uploaded_file_info

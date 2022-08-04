@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import Key, to_key, LabelVisibility
 from textwrap import dedent
 from typing import Optional, cast, List, TYPE_CHECKING
 
@@ -54,6 +54,7 @@ class CameraInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible"
     ) -> SomeUploadedSnapshotFile:
         """Display a widget that returns pictures from the user's webcam.
 
@@ -85,6 +86,8 @@ class CameraInputMixin:
             An optional boolean, which disables the camera input if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility : str
+            AAABB
 
         Returns
         -------
@@ -112,6 +115,7 @@ class CameraInputMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -125,6 +129,7 @@ class CameraInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> SomeUploadedSnapshotFile:
         key = to_key(key)
@@ -188,6 +193,7 @@ class CameraInputMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         camera_input_proto.disabled = disabled
+        camera_input_proto.label_visibility = label_visibility
 
         ctx = get_script_run_ctx()
         camera_image_input_state = serialize_camera_image_input(

@@ -363,7 +363,11 @@ class CameraInput extends React.PureComponent<Props, State> {
         className="row-widget"
         data-testid="stCameraInput"
       >
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

@@ -502,7 +502,11 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     return (
       <StyledFileUploader data-testid="stFileUploader">
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={element.labelVisibility}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -517,6 +521,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           multiple={element.multipleFiles}
           acceptedExtensions={acceptedExtensions}
           maxSizeBytes={this.maxUploadSizeInBytes}
+          label={element.label}
           disabled={disabled}
         />
         {newestToOldestFiles.length > 0 && (

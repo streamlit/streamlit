@@ -14,11 +14,12 @@
 
 import re
 from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import Key, to_key, LabelVisibility
 from textwrap import dedent
 from typing import Optional, cast
 
 import streamlit
+from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.state import register_widget
@@ -29,6 +30,8 @@ from streamlit.state import (
 )
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+_LOGGER = _logger.get_logger("root")
 
 
 class ColorPickerMixin:
@@ -43,6 +46,7 @@ class ColorPickerMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> str:
         """Display a color picker widget.
 
@@ -71,6 +75,8 @@ class ColorPickerMixin:
             An optional boolean, which disables the color picker if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility: str
+            AAABB
 
         Returns
         -------
@@ -97,6 +103,7 @@ class ColorPickerMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -111,11 +118,20 @@ class ColorPickerMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+
+        if label == "":
+            _LOGGER.warning(
+                "`label` got an empty string. This is discouraged for accessibility "
+                "reasons and may be disallowed in the future by raising an exception. "
+                "Please provide a non-empty label and hide it with label_visibility "
+                "if needed."
+            )
 
         # set value default
         if value is None:
@@ -170,6 +186,7 @@ class ColorPickerMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         color_picker_proto.disabled = disabled
+        color_picker_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True
