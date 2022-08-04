@@ -29,7 +29,7 @@ from streamlit.web.server.server_util import (
     serialize_forward_msg,
 )
 from tests import testutil
-from testutil import patch_config_options
+from tests.testutil import patch_config_options
 from .message_mocks import create_dataframe_msg
 
 
