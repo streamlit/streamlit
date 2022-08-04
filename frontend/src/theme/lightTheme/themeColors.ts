@@ -32,7 +32,10 @@ export default {
   blue: colors.blue80,
   green: colors.green80,
   yellow: colors.yellow80,
-  warning: colors.orange100,
+  // For this one, we use a specific color,
+  // outside our standard color palette,
+  // to ensure contrast is good enough for accessibility
+  warning: "#C05103",
   warningBg: transparentize(colors.orange10, 0.6),
   success: colors.green100,
   successBg: transparentize(colors.green10, 0.6),
