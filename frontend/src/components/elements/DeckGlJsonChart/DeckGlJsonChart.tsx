@@ -38,6 +38,8 @@ import { registerLoaders } from "@loaders.gl/core"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import withMapboxToken from "src/hocs/withMapboxToken"
 
+import { notNullOrUndefined } from "src/lib/utils"
+
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import { StyledDeckGlChart } from "./styled-components"
 
@@ -144,7 +146,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-    if (typeof json.mapStyle === "undefined") {
+    if (!notNullOrUndefined(json.mapStyle)) {
       const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
       const mapTheme = hasLightBg ? "light" : "dark"
       json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
