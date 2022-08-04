@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Server.py unit tests"""
+
 import asyncio
 import errno
 import os
@@ -60,6 +61,11 @@ def _create_script_finished_msg(status) -> ForwardMsg:
     return msg
 
 
+def _patch_local_sources_watcher():
+    """Return a mock.patch for LocalSourcesWatcher"""
+    return patch("streamlit.web.server.server.LocalSourcesWatcher")
+
+
 class ServerTest(ServerTestCase):
     def setUp(self) -> None:
         self.original_ws_compression = config.get_option(
@@ -76,9 +82,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_start_stop(self):
         """Test that we can start and stop the server."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             await self.start_server_loop()
             self.assertEqual(State.WAITING_FOR_FIRST_SESSION, self.server._state)
 
@@ -94,10 +98,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
-
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             await self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -123,10 +124,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_multiple_connections(self):
         """Test multiple websockets can connect simultaneously."""
-
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             await self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -159,9 +157,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     async def test_websocket_compression(self):
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", True, "test")
             await self.start_server_loop()
 
@@ -177,9 +173,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     async def test_websocket_compression_disabled(self):
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", False, "test")
             await self.start_server_loop()
 
@@ -195,9 +189,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             await self.start_server_loop()
 
             ws_client = await self.ws_connect()
@@ -218,9 +210,7 @@ class ServerTest(ServerTestCase):
     async def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             await self.start_server_loop()
 
             ws_client = await self.ws_connect()
@@ -245,9 +235,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_duplicate_forwardmsg_caching(self):
         """Test that duplicate ForwardMsgs are sent only once."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
 
             await self.start_server_loop()
@@ -281,9 +269,7 @@ class ServerTest(ServerTestCase):
         """Test that report_run_count is incremented when a report
         finishes running.
         """
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
             config._set_option("global.maxCachedMessageAge", 1, "test")
 
@@ -341,9 +327,7 @@ class ServerTest(ServerTestCase):
     async def test_orphaned_upload_file_deletion(self):
         """An uploaded file with no associated AppSession should be
         deleted."""
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             await self.start_server_loop()
             await self.ws_connect()
 
@@ -366,9 +350,7 @@ class ServerTest(ServerTestCase):
         """Sending a message to a disconnected SessionClient raises an error.
         We should gracefully handle the error by cleaning up the session.
         """
-        with patch(
-            "streamlit.web.server.server.LocalSourcesWatcher"
-        ), self._patch_app_session():
+        with _patch_local_sources_watcher(), self._patch_app_session():
             await self.start_server_loop()
             await self.ws_connect()
 
