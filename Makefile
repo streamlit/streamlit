@@ -251,7 +251,16 @@ react-build:
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	pre-commit run eslint --all-files
+	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
+ifndef CIRCLECI
+	cd frontend; yarn lint;
+else \
+	cd frontend; \
+		yarn lint \
+			--format junit \
+			--output-file test-reports/eslint/eslint.xml \
+			./src
+endif #CIRCLECI
 
 .PHONY: tstypecheck
 # Type check the JS/TS code
@@ -356,7 +365,4 @@ connect-test-env:
 
 .PHONY: pre-commit-install
 pre-commit-install:
-ifndef CIRCLECI
 	pre-commit install
-	pre-commit autoupdate
-endif #CIRCLECI

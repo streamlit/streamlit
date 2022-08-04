@@ -25,7 +25,8 @@ repos:
         pass_filenames: false
       - id: eslint
         name: Eslint
-        entry: ./scripts/run_in_subdirectory.py frontend/ yarn eslint --fix --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0
+        entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint -- --fix
         files: ^frontend/src/.*(.js|\.jsx|\.ts|\.tsx)$
         language: node
         pass_filenames: true
+

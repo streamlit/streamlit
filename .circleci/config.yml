@@ -495,7 +495,6 @@ jobs:
       - run:
           name: Run type checkers
           command: |
-            make tstypecheck
             scripts/mypy --report
 
       - store_test_results:
@@ -537,7 +536,7 @@ jobs:
             - venv
 
       - save_cache:
-          name: Save nvm, pre-commit and node_modules to cache
+          name: Save nvm, pre-commit cache and node_modules to cache
           key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}-{{ checksum "~/.pre-commit-config.yaml" }}
           paths:
             - ~/.nvm
