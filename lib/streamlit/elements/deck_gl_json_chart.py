@@ -104,12 +104,6 @@ EMPTY_MAP: Dict[str, Any] = {
     "initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1},
 }
 
-# Override the default value of map_style from 'dark' to None
-defaults = list(pdk.Deck.__init__.__defaults__)
-if defaults[2] == "dark":
-    defaults[2] = None
-    pdk.Deck.__init__.__defaults__ = tuple(defaults)
-
 
 def marshall(pydeck_proto, pydeck_obj, use_container_width):
     if pydeck_obj is None:
