@@ -5,10 +5,6 @@ SHELL=/bin/bash
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
-# Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
-BLACK=black --target-version=py36
-
-
 .PHONY: help
 help:
 	@# Magic line used to create self-documenting makefiles.
@@ -255,7 +251,7 @@ jslint:
 ifndef CIRCLECI
 	cd frontend; \
 		yarn lint;
-else \
+else
 	cd frontend; \
 		yarn lint \
 			--format junit \

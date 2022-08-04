@@ -3,6 +3,9 @@ repos:
     rev: 22.6.0
     hooks:
       - id: black
+        args:
+          # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
+          - --target-version=py36
         files: \.py$|\.pyi$
   - repo: local
     hooks:
