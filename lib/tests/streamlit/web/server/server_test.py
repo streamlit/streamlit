@@ -61,8 +61,6 @@ def _create_script_finished_msg(status) -> ForwardMsg:
 
 
 class ServerTest(ServerTestCase):
-    _next_session_id = 0
-
     def setUp(self) -> None:
         self.original_ws_compression = config.get_option(
             "server.enableWebsocketCompression"
