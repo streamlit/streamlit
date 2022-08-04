@@ -14,4 +14,4 @@
 
 import streamlit as st
 
-st.text("This text is awesom")
+st.text("This text is awesome!")
