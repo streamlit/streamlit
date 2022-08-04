@@ -20,7 +20,7 @@ from streamlit import string_util
 
 class StringUtilTest(unittest.TestCase):
     def test_decode_ascii(self):
-        """Test streamlit.string_.decode_ascii."""
+        """Test streamlit.string_util.decode_ascii."""
         self.assertEqual("test string.", string_util.decode_ascii(b"test string."))
 
     @parameterized.expand(
@@ -36,11 +36,11 @@ class StringUtilTest(unittest.TestCase):
         ]
     )
     def test_is_emoji(self, text: str, expected: bool):
-        """Test streamlit.util.is_emoji."""
+        """Test streamlit.string_util.is_emoji."""
         self.assertEqual(string_util.is_emoji(text), expected)
 
     def test_snake_case_to_camel_case(self):
-        """Test streamlit.util.snake_case_to_camel_case."""
+        """Test streamlit.string_util.snake_case_to_camel_case."""
         self.assertEqual(
             "TestString.", string_util.snake_case_to_camel_case("test_string.")
         )
@@ -48,11 +48,11 @@ class StringUtilTest(unittest.TestCase):
         self.assertEqual("Init", string_util.snake_case_to_camel_case("__init__"))
 
     def test_clean_filename(self):
-        """Test streamlit.util.clean_filename."""
+        """Test streamlit.string_util.clean_filename."""
         self.assertEqual("test_result", string_util.clean_filename("test re*su/lt;"))
 
     def test_generate_download_filename_from_title(self):
-        """Test streamlit.util.generate_download_filename_from_title."""
+        """Test streamlit.string_util.generate_download_filename_from_title."""
 
         self.assertTrue(
             string_util.generate_download_filename_from_title(
