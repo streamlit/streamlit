@@ -253,7 +253,8 @@ react-build:
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
 ifndef CIRCLECI
-	cd frontend; yarn lint;
+	cd frontend; \
+		yarn lint;
 else \
 	cd frontend; \
 		yarn lint \
