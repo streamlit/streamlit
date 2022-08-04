@@ -1,50 +1,50 @@
-name: python-min-version
-on: [pull_request]
-jobs:
-  checkout:
-    env:
-      SUDO: 'sudo'
-      BASH_ENV: $HOME/.bash_profile
-    runs-on: ubuntu-latest
-    container: circleci/python:3.7.12
-    steps:
-      # This Docker file changes sets USER to circleci instead of using the default user, so we need to update file permissions for this image to work on GH Actions.
-      # See https://docs.github.com/actions/reference/virtual-environments-for-github-hosted-runners#docker-container-filesystem
-      - name: Setup file system permissions
-        run: sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
-      - name: Checkout Streamlit code
-        uses: actions/checkout@v3
-      # cache: 'yarn'
-      - uses: ./.github/actions/update_submodules
-      - uses: ./.github/actions/premake
-      - uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: |
-          make develop
-        shell: bash -l {0}
-      - name: Run linters
-        run: |
-          source $HOME/.bash_profile
-          make jslint &> jslint_error.txt
-          echo "$(<jslint_error.txt )"
-          # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
-          echo "Please run make pyformat if this job fails"
-          make pylint &> pylint_error.txt
-          echo "$(<pylint_error.txt )"
-          # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
-        shell: bash -l {0}
-      - name: Run make pycoverage
-        run: |
-          source $HOME/.bash_profile
-          make pycoverage
-        shell: bash -l {0}
-      - name: Run make integration tests
-        run: |
-          source $HOME/.bash_profile
-          make integration-tests
-        shell: bash -l {0}
-      - name: Run make CLI smoke tests
-        run: |
-          source $HOME/.bash_profile
-          make cli-smoke-tests
-        shell: bash -l {0}
+# name: python-min-version
+# on: [pull_request]
+# jobs:
+#   checkout:
+#     env:
+#       SUDO: 'sudo'
+#       BASH_ENV: $HOME/.bash_profile
+#     runs-on: ubuntu-latest
+#     container: circleci/python:3.7.12
+#     steps:
+#       # This Docker file changes sets USER to circleci instead of using the default user, so we need to update file permissions for this image to work on GH Actions.
+#       # See https://docs.github.com/actions/reference/virtual-environments-for-github-hosted-runners#docker-container-filesystem
+#       - name: Setup file system permissions
+#         run: sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
+#       - name: Checkout Streamlit code
+#         uses: actions/checkout@v3
+#       # cache: 'yarn'
+#       - uses: ./.github/actions/update_submodules
+#       - uses: ./.github/actions/premake
+#       - uses: ./.github/actions/make_init
+#       - name: Run make develop
+#         run: |
+#           make develop
+#         shell: bash -l {0}
+#       - name: Run linters
+#         run: |
+#           source $HOME/.bash_profile
+#           make jslint &> jslint_error.txt
+#           echo "$(<jslint_error.txt )"
+#           # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
+#           echo "Please run make pyformat if this job fails"
+#           make pylint &> pylint_error.txt
+#           echo "$(<pylint_error.txt )"
+#           # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
+#         shell: bash -l {0}
+#       - name: Run make pycoverage
+#         run: |
+#           source $HOME/.bash_profile
+#           make pycoverage
+#         shell: bash -l {0}
+#       - name: Run make integration tests
+#         run: |
+#           source $HOME/.bash_profile
+#           make integration-tests
+#         shell: bash -l {0}
+#       - name: Run make CLI smoke tests
+#         run: |
+#           source $HOME/.bash_profile
+#           make cli-smoke-tests
+#         shell: bash -l {0}
