@@ -12,6 +12,18 @@ if __name__ not in ("__main__", "__mp_main__"):
     )
 
 
+def is_relative_to(path: Path, *other):
+    """Return True if the path is relative to another path or False.
+
+    This function is backported from Python 3.9 - Path.relativeto.
+    """
+    try:
+        path.relative_to(*other)
+        return True
+    except ValueError:
+        return False
+
+
 def display_usage():
     prog = Path(__file__).name
     print(
@@ -54,9 +66,10 @@ def parse_args() -> Tuple[str, List[str]]:
 
 
 def fix_arg(subdirectory: str, arg: str) -> str:
-    if not (Path(arg).exists() and Path(arg).is_relative_to(subdirectory)):
+    arg_path = Path(arg)
+    if not (arg_path.exists() and is_relative_to(arg_path, subdirectory)):
         return arg
-    return str(Path(arg).relative_to(subdirectory))
+    return str(arg_path.relative_to(subdirectory))
 
 
 def main():

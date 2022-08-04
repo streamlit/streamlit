@@ -487,7 +487,7 @@ jobs:
           name: Run linters
           command: |
             # Run eslint as a standalone command to generate the test report.
-            DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+            PRE_COMMIT_NO_CONCURRENCY=true DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
             make jslint
 
       - store_test_results:
