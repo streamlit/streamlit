@@ -4,19 +4,19 @@ runs:
     - name: Get 'make' checksum
       run: |
         cp -f /usr/bin/make make.bin
-        md5sum make.bin > ~/make.md5
-      shell: bash -l -e -u -o pipefail {0}
+        md5sum make.bin > $GITHUB_WORKSPACE/make.md5
+      shell: bash -l -v -e -u -o pipefail {0}
     - name: Get 'dot' checksum
       run: |
         if [ -f /usr/bin/dot ] ; then
           cp -f /usr/bin/dot dot.bin
-          md5sum dot.bin > ~/dot.md5
+          md5sum dot.bin > $GITHUB_WORKSPACE/dot.md5
         else
           touch dot.bin
-          md5sum dot.bin > ~/dot.md5
+          md5sum dot.bin > $GITHUB_WORKSPACE/dot.md5
           rm -f dot.bin
         fi
-      shell: bash -l -e -u -o pipefail {0}
+      shell: bash -l -v -e -u -o pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose checksum will key the Python virtualenv.
     #
@@ -29,14 +29,14 @@ runs:
     # with what a fresh Streamlit installation would look like.
     - name: Create Python environment cache key
       run: |
-        md5sum $(which python) > ~/python_cache_key.md5
-        md5sum lib/Pipfile >> ~/python_cache_key.md5
-        md5sum lib/test-requirements.txt >> ~/python_cache_key.md5
-        md5sum lib/test-requirements-with-tensorflow.txt >> ~/python_cache_key.md5
-        md5sum lib/setup.py >> ~/python_cache_key.md5
-        date +%F >> ~/python_cache_key.md5
-      shell: bash -l -e -u -o pipefail {0}
+        md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/Pipfile >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/test-requirements-with-tensorflow.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
+        date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
+      shell: bash -l -v -e -u -o pipefail {0}
     - name: Create Yarn cache key
       run: |
-        md5sum frontend/yarn.lock > ~/yarn.lock.md5
-      shell: bash -l -e -u -o pipefail {0}
+        md5sum frontend/yarn.lock > $GITHUB_WORKSPACE/yarn.lock.md5
+      shell: bash -l -v -e -u -o pipefail {0}
