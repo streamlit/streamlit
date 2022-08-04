@@ -1,0 +1,43 @@
+runs:
+  using: composite
+  steps:
+    - name: Get 'make' checksum
+      run: |
+        echo 'export SUDO="sudo"' >> $BASH_ENV
+        cp -f /usr/bin/make make.bin
+        md5sum make.bin > ~/make.md5
+      shell: bash
+    - name: Get 'dot' checksum
+      run: |
+        if [ -f /usr/bin/dot ] ; then
+          cp -f /usr/bin/dot dot.bin
+          md5sum dot.bin > ~/dot.md5
+        else
+          touch dot.bin
+          md5sum dot.bin > ~/dot.md5
+          rm -f dot.bin
+        fi
+      shell: bash
+    # Combine hashes of the Python interpreter, Pipfile, and today's
+    # date into a file whose checksum will key the Python virtualenv.
+    #
+    # This means that our virtualenv cache will expire each day. We do
+    # this because we are not using a lockfile to pin dependencies -
+    # instead, each time CircleCI rebuilds the virtualenv, it uses the
+    # latest compatible version of each dependency (which mirrors what
+    # happens when a user installs Streamlit locally). So we expire our
+    # virtualenv cache daily to prevent it from getting far out of sync
+    # with what a fresh Streamlit installation would look like.
+    - name: Create Python environment cache key
+      run: |
+        md5sum $(which python) > ~/python_cache_key.md5
+        md5sum lib/Pipfile >> ~/python_cache_key.md5
+        md5sum lib/test-requirements.txt >> ~/python_cache_key.md5
+        md5sum lib/test-requirements-with-tensorflow.txt >> ~/python_cache_key.md5
+        md5sum lib/setup.py >> ~/python_cache_key.md5
+        date +%F >> ~/python_cache_key.md5
+      shell: bash
+    - name: Create Yarn cache key
+      run: |
+        md5sum frontend/yarn.lock > ~/yarn.lock.md5
+      shell: bash
