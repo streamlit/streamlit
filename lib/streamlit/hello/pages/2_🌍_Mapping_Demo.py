@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import inspect
 import textwrap
+from urllib.error import URLError
+
 import pandas as pd
 import pydeck as pdk
+
+import streamlit as st
 from streamlit.hello.utils import show_code
-
-
-from urllib.error import URLError
 
 
 def mapping_demo():
@@ -83,7 +83,6 @@ def mapping_demo():
         if selected_layers:
             st.pydeck_chart(
                 pdk.Deck(
-                    map_style="mapbox://styles/mapbox/light-v9",
                     initial_view_state={
                         "latitude": 37.76,
                         "longitude": -122.4,
