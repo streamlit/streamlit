@@ -486,7 +486,9 @@ jobs:
       - run:
           name: Run linters
           command: |
-            pre-commit run --show-diff-on-failure --color=always --all-files
+            # Run eslint as a standalone command to generate the test report.
+            DISABLE=eslint pre-commit run --show-diff-on-failure --color=always --all-files
+            make jslint
 
       - store_test_results:
           path: frontend/test-reports
