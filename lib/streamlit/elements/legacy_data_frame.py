@@ -59,7 +59,7 @@ class LegacyDataFrameMixin:
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
-            underyling DataFrame. Streamlit supports custom cell
+            underlying DataFrame. Streamlit supports custom cell
             values and colors. (It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!

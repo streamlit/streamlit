@@ -23,7 +23,7 @@ from typing import Optional
 import click
 
 import streamlit
-from streamlit.credentials import Credentials, check_credentials
+from streamlit.runtime.credentials import Credentials, check_credentials
 import streamlit.web.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
 
@@ -252,15 +252,15 @@ def cache():
 @cache.command("clear")
 def cache_clear():
     """Clear st.cache, st.memo, and st.singleton caches."""
-    result = streamlit.legacy_caching.clear_cache()
-    cache_path = streamlit.legacy_caching.get_cache_path()
+    result = streamlit.runtime.legacy_caching.clear_cache()
+    cache_path = streamlit.runtime.legacy_caching.get_cache_path()
     if result:
         print("Cleared directory %s." % cache_path)
     else:
         print("Nothing to clear at %s." % cache_path)
 
-    streamlit.caching.memo.clear()
-    streamlit.caching.singleton.clear()
+    streamlit.runtime.caching.memo.clear()
+    streamlit.runtime.caching.singleton.clear()
 
 
 # SUBCOMMAND: config

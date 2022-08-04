@@ -88,7 +88,7 @@ class ConfigTest(unittest.TestCase):
     def test_complex_config_option_must_have_doc_strings(self):
         """Test that complex config options use funcs with doc stringsself.
 
-        This is becuase the doc string forms the option's description.
+        This is because the doc string forms the option's description.
         """
         with self.assertRaises(AssertionError):
 

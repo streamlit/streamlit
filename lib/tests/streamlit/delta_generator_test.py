@@ -31,8 +31,8 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.state.widgets import _build_duplicate_widget_message
-import streamlit.state.widgets as w
+from streamlit.runtime.state.widgets import _build_duplicate_widget_message
+import streamlit.runtime.state.widgets as w
 from tests import testutil
 
 
@@ -102,7 +102,7 @@ class FakeDeltaGenerator(object):
 
         The real DeltaGenerator exception is more complicated.  We use
         this so _with_element can find the exception method.  The real
-        exception method wil be tested later on.
+        exception method will be tested later on.
         """
         self._exception_msg = str(e)
 

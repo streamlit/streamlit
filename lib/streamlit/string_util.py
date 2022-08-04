@@ -18,6 +18,7 @@ import textwrap
 from typing import cast, Optional, Any
 from datetime import datetime
 from streamlit.errors import StreamlitAPIException
+from streamlit.emojis import ALL_EMOJIS
 
 
 def decode_ascii(string):
@@ -27,6 +28,11 @@ def decode_ascii(string):
 
 def clean_text(text: str) -> str:
     return textwrap.dedent(str(text)).strip()
+
+
+def is_emoji(text: str) -> bool:
+    """Check if input string is a valid emoji."""
+    return text in ALL_EMOJIS
 
 
 def escape_markdown(raw_string: str) -> str:
