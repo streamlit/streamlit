@@ -3,8 +3,8 @@ runs:
   steps:
     - name: Get 'make' checksum
       run: |
-        ls -lAB $BASH_ENV
-        touch $BASH_ENV
+        ls -lAB $HOME
+        ${SUDO} touch $BASH_ENV
         echo $BASH_ENV
         echo $HOME/.bash_profile
         echo 'export SUDO="sudo"' >> $BASH_ENV
