@@ -5,30 +5,26 @@ runs:
       uses: actions/cache@v3
       with:
         path: ~/
-        keys:
-          - v13-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
+        keys: v13-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
         restore-keys: v13-python-venv-
 
     - name: Restore nvm and node_modules from cache
       uses: actions/cache@v3
       with:
         path: ~/
-        keys:
-          - v13-nvm_node_modules-${{ hashFiles('**/yarn.lock.md5') }}
+        keys: v13-nvm_node_modules-${{ hashFiles('**/yarn.lock.md5') }}
         restore-keys: v13-nvm_node_modules-
     
     - name: Restore make from cache
       uses: actions/cache@v3
       with:
         path: ~/
-        keys:
-          - v13_make.bin-${{ hashFiles('**/make.md5') }}
+        keys: v13_make.bin-${{ hashFiles('**/make.md5') }}
         restore-keys: v13_make.bin-
 
     - name: Restore dot from cache
       uses: actions/cache@v3
       with:
         path: ~/
-        keys:
-          - v13_dot.bin-${{ hashFiles('**/dot.md5') }}
+        keys: v13_dot.bin-${{ hashFiles('**/dot.md5') }}
         restore-keys: v13_dot.bin-
