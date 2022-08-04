@@ -64,31 +64,33 @@ class DeclareComponentTest(unittest.TestCase):
         """Test component name generation"""
         # Test a component defined in a module with no package
         component = components.declare_component("foo", url=URL)
-        self.assertEqual("components_test.foo", component.name)
+        self.assertEqual("tests.streamlit.components_test.foo", component.name)
 
         # Test a component defined in __init__.py
-        from component_test_data import component as init_component
+        from tests.streamlit.component_test_data import component as init_component
 
         self.assertEqual(
-            "component_test_data.foo",
+            "tests.streamlit.component_test_data.foo",
             init_component.name,
         )
 
         # Test a component defined in a module within a package
-        from component_test_data.outer_module import component as outer_module_component
+        from tests.streamlit.component_test_data.outer_module import (
+            component as outer_module_component,
+        )
 
         self.assertEqual(
-            "component_test_data.outer_module.foo",
+            "tests.streamlit.component_test_data.outer_module.foo",
             outer_module_component.name,
         )
 
         # Test a component defined in module within a nested package
-        from component_test_data.nested.inner_module import (
+        from tests.streamlit.component_test_data.nested.inner_module import (
             component as inner_module_component,
         )
 
         self.assertEqual(
-            "component_test_data.nested.inner_module.foo",
+            "tests.streamlit.component_test_data.nested.inner_module.foo",
             inner_module_component.name,
         )
 
