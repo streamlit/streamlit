@@ -3,11 +3,13 @@ runs:
   steps:
     - name: Get 'make' checksum
       run: |
-        touch $HOME/.bash_profile
+        touch $BASH_ENV
+        echo $BASH_ENV
+        echo $HOME/.bash_profile
         echo 'export SUDO="sudo"' >> $BASH_ENV
         cp -f /usr/bin/make make.bin
         md5sum make.bin > ~/make.md5
-      shell: bash -l {0}
+      shell: bash -l -e -u -o pipefail {0}
     - name: Get 'dot' checksum
       run: |
         if [ -f /usr/bin/dot ] ; then
@@ -18,7 +20,7 @@ runs:
           md5sum dot.bin > ~/dot.md5
           rm -f dot.bin
         fi
-      shell: bash -l {0}
+      shell: bash -l -e -u -o pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose checksum will key the Python virtualenv.
     #
@@ -37,8 +39,8 @@ runs:
         md5sum lib/test-requirements-with-tensorflow.txt >> ~/python_cache_key.md5
         md5sum lib/setup.py >> ~/python_cache_key.md5
         date +%F >> ~/python_cache_key.md5
-      shell: bash -l {0}
+      shell: bash -l -e -u -o pipefail {0}
     - name: Create Yarn cache key
       run: |
         md5sum frontend/yarn.lock > ~/yarn.lock.md5
-      shell: bash -l {0}
+      shell: bash -l -e -u -o pipefail {0}
