@@ -1,6 +1,9 @@
 runs:
   using: composite
   steps:
+    - name: debug root directory
+      run: ls ~
+      shell: bash -l -v -e -u -o pipefail {0}
     - name: Restore virtualenv from cache
       uses: actions/cache@v3
       with:
