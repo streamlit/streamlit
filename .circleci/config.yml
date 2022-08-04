@@ -487,7 +487,7 @@ jobs:
           name: Run linters
           command: |
             make jslint
-            make pylint
+            pre-commit run --show-diff-on-failure --color=always --all-files
 
       - store_test_results:
           path: frontend/test-reports
@@ -538,8 +538,8 @@ jobs:
             - venv
 
       - save_cache:
-          name: Save nvm and node_modules to cache
-          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          name: Save nvm, pre-commit and node_modules to cache
+          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}-{{ checksum "~/.pre-commit-config.yaml" }}
           paths:
             - ~/.nvm
             - ~/.cache

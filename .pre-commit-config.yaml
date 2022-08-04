@@ -7,9 +7,13 @@ repos:
         language_version: python3.8
   - repo: local
     hooks:
+      # Script ./scripts/run_in_subdirectory.py was used to work around a
+      # known problem with hooks in subdirectories when pass_filenames option
+      # is set to true
+      # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier
         name: Prettier
-        entry: ./frontend/node_modules/.bin/prettier --write --config ./frontend/.prettierrc
+        entry: ./scripts/run_in_subdirectory.py frontend/ yarn prettier --write
         files: ^frontend/.*(.js|\.jsx|\.ts|\.tsx)$
         language: node
         pass_filenames: true
@@ -21,7 +25,7 @@ repos:
         pass_filenames: false
       - id: eslint
         name: Eslint
-        entry: ./frontend/node_modules/.bin/eslint --fix --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 --config ./frontend/.eslintrc.js
-        files: ^frontend/.*(.js|\.jsx|\.ts|\.tsx)$
+        entry: ./scripts/run_in_subdirectory.py frontend/ yarn eslint --fix --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0
+        files: ^frontend/src/.*(.js|\.jsx|\.ts|\.tsx)$
         language: node
         pass_filenames: true

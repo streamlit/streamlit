@@ -94,12 +94,7 @@ pylint:
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
 pyformat:
-	if command -v "black" > /dev/null; then \
-		$(BLACK) examples/ ; \
-		$(BLACK) lib/streamlit/ --exclude=/*_pb2.py$/ ; \
-		$(BLACK) lib/tests/ ; \
-		$(BLACK) e2e/scripts/ ; \
-	fi
+	pre-commit run black --all-files
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -210,6 +205,7 @@ clean:
 	rm -f frontend/src/autogen/proto.js
 	rm -f frontend/src/autogen/proto.d.ts
 	rm -rf frontend/public/reports
+	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
@@ -253,43 +249,19 @@ react-build:
 		frontend/build/ lib/streamlit/static/
 
 .PHONY: jslint
-# Lint the JS code. Saves results to test-reports/eslint/eslint.xml.
+# Lint the JS code
 jslint:
-	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-ifndef CIRCLECI
-	cd frontend; \
-		./node_modules/.bin/eslint \
-			--ext .js \
-			--ext .jsx \
-			--ext .ts \
-			--ext .tsx \
-			--ignore-pattern 'src/autogen/*' \
-			--max-warnings 0 \
-			./src
-else
-	cd frontend; \
-		./node_modules/.bin/eslint \
-			--ext .js \
-			--ext .jsx \
-			--ext .ts \
-			--ext .tsx \
-			--ignore-pattern 'src/autogen/*' \
-			--max-warnings 0 \
-			--format junit \
-			--output-file test-reports/eslint/eslint.xml \
-			./src
-endif #CIRCLECI
+	pre-commit run eslint --all-files
 
 .PHONY: tstypecheck
 # Type check the JS/TS code
 tstypecheck:
-	yarn --cwd "frontend" typecheck
+	pre-commit run typecheck --all-files
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
 jsformat:
-		yarn --cwd "frontend" pretty-quick \
-			--pattern "**/*.*(js|jsx|ts|tsx)"
+	pre-commit run prettier --all-files
 
 .PHONY: jstest
 # Run JS unit tests.
