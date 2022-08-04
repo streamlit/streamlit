@@ -24,18 +24,14 @@ if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
 
 
-def validate_emoji(emoji: Optional[str]) -> str:
-    # If there's no emoji, carry on without checking
-    if emoji is None:
+def validate_emoji(maybe_emoji: Optional[str]) -> str:
+    if maybe_emoji is None:
         return ""
-
-    # Function to check if the provided string is valid
-    is_emoji_valid = is_emoji(emoji)
-    if is_emoji_valid is True:
-        return emoji
+    elif is_emoji(maybe_emoji):
+        return maybe_emoji
     else:
         raise StreamlitAPIException(
-            f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
+            f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
         )
 
 
