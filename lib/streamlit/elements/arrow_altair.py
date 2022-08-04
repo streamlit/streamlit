@@ -97,7 +97,7 @@ class ArrowAltairMixin:
         y : str, sequence of str, or None
             Column name(s) to use for the y-axis. If a sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all columns as data series.
+            the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
         width : int
@@ -165,7 +165,7 @@ class ArrowAltairMixin:
         y : str, sequence of str, or None
             Column name(s) to use for the y-axis. If a sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all columns as data series.
+            the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
         width : int
@@ -232,7 +232,7 @@ class ArrowAltairMixin:
         y : str, sequence of str, or None
             Column name(s) to use for the y-axis. If a sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all columns as data series.
+            the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
         width : int
