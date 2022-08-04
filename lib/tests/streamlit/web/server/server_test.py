@@ -20,44 +20,38 @@ import shutil
 import tempfile
 import unittest
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import tornado.httpserver
+import tornado.httpserver
+import tornado.httpserver
+import tornado.testing
+import tornado.testing
 import tornado.testing
 import tornado.web
+import tornado.web
+import tornado.web
+import tornado.websocket
+import tornado.websocket
 import tornado.websocket
 
 import streamlit.web.server.server
-from streamlit import config, RootContainer
-from streamlit.cursor import make_delta_path
-from streamlit.elements import legacy_data_frame as data_frame
+from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.forward_msg_cache import ForwardMsgCache
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
-from streamlit.web.server.server import DebugHandler
-from streamlit.web.server.server import HealthHandler
 from streamlit.web.server.server import MAX_PORT_SEARCH_RETRIES
-from streamlit.web.server.server import MessageCacheHandler
 from streamlit.web.server.server import RetriesExceeded
 from streamlit.web.server.server import Server
 from streamlit.web.server.server import State
-from streamlit.web.server.server import StaticFileHandler
 from streamlit.web.server.server import start_listening
-from streamlit.web.server.server_util import serialize_forward_msg
+from .message_mocks import create_dataframe_msg
 from .server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)
-
-
-def _create_dataframe_msg(df, id=1) -> ForwardMsg:
-    msg = ForwardMsg()
-    msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
-    data_frame.marshall_data_frame(df, msg.delta.new_element.data_frame)
-    return msg
 
 
 def _create_script_finished_msg(status) -> ForwardMsg:
@@ -215,7 +209,7 @@ class ServerTest(ServerTestCase):
 
             # Create a message and ensure its hash is unset; we're testing
             # that _send_message adds the hash before it goes out.
-            msg = _create_dataframe_msg([1, 2, 3])
+            msg = create_dataframe_msg([1, 2, 3])
             msg.ClearField("hash")
             self.server._send_message(session_info, msg)
 
@@ -237,14 +231,14 @@ class ServerTest(ServerTestCase):
             session_info = list(self.server._session_info_by_id.values())[0]
 
             config._set_option("global.minCachedMessageSize", 0, "test")
-            cacheable_msg = _create_dataframe_msg([1, 2, 3])
+            cacheable_msg = create_dataframe_msg([1, 2, 3])
             self.server._send_message(session_info, cacheable_msg)
             received = await self.read_forward_msg(ws_client)
             self.assertTrue(cacheable_msg.metadata.cacheable)
             self.assertTrue(received.metadata.cacheable)
 
             config._set_option("global.minCachedMessageSize", 1000, "test")
-            cacheable_msg = _create_dataframe_msg([4, 5, 6])
+            cacheable_msg = create_dataframe_msg([4, 5, 6])
             self.server._send_message(session_info, cacheable_msg)
             received = await self.read_forward_msg(ws_client)
             self.assertFalse(cacheable_msg.metadata.cacheable)
@@ -264,14 +258,14 @@ class ServerTest(ServerTestCase):
             # Get the server's socket and session for this client
             session_info = list(self.server._session_info_by_id.values())[0]
 
-            msg1 = _create_dataframe_msg([1, 2, 3], 1)
+            msg1 = create_dataframe_msg([1, 2, 3], 1)
 
             # Send the message, and read it back. It will not have been cached.
             self.server._send_message(session_info, msg1)
             uncached = await self.read_forward_msg(ws_client)
             self.assertEqual("delta", uncached.WhichOneof("type"))
 
-            msg2 = _create_dataframe_msg([1, 2, 3], 123)
+            msg2 = create_dataframe_msg([1, 2, 3], 123)
 
             # Send an equivalent message. This time, it should be cached,
             # and a "hash_reference" message should be received instead.
@@ -300,7 +294,7 @@ class ServerTest(ServerTestCase):
 
             session = list(self.server._session_info_by_id.values())[0]
 
-            data_msg = _create_dataframe_msg([1, 2, 3])
+            data_msg = create_dataframe_msg([1, 2, 3])
 
             def finish_report(success):
                 status = (
@@ -389,7 +383,7 @@ class ServerTest(ServerTestCase):
                 session_info.client, "write_message"
             ) as ws_write_message:
                 # Patch flush_browser_queue to simulate a pending message.
-                flush_browser_queue.return_value = [_create_dataframe_msg([1, 2, 3])]
+                flush_browser_queue.return_value = [create_dataframe_msg([1, 2, 3])]
 
                 # Patch the session's WebsocketHandler to raise a
                 # WebSocketClosedError when we write to it.
@@ -438,45 +432,6 @@ class ServerTest(ServerTestCase):
             await self.start_server_loop()
             eventloop = self.server._get_eventloop()
             self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
-
-
-class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """Tests the /healthz endpoint"""
-
-    def setUp(self):
-        super(HealthHandlerTest, self).setUp()
-        self._is_healthy = True
-
-    async def is_healthy(self):
-        return self._is_healthy, "ok"
-
-    def get_app(self):
-        return tornado.web.Application(
-            [(r"/healthz", HealthHandler, dict(callback=self.is_healthy))]
-        )
-
-    def test_healthz(self):
-        response = self.fetch("/healthz")
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"ok", response.body)
-
-        self._is_healthy = False
-        response = self.fetch("/healthz")
-        self.assertEqual(503, response.code)
-
-    def test_healthz_without_csrf(self):
-        config._set_option("server.enableXsrfProtection", False, "test")
-        response = self.fetch("/healthz")
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"ok", response.body)
-        self.assertNotIn("Set-Cookie", response.headers)
-
-    def test_healthz_with_csrf(self):
-        config._set_option("server.enableXsrfProtection", True, "test")
-        response = self.fetch("/healthz")
-        self.assertEqual(200, response.code)
-        self.assertEqual(b"ok", response.body)
-        self.assertIn("Set-Cookie", response.headers)
 
 
 class PortRotateAHundredTest(unittest.TestCase):
@@ -592,40 +547,6 @@ class UnixSocketTest(unittest.TestCase):
             mock_server.add_socket.assert_called_with(some_socket)
 
 
-class DebugHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """Tests the /debugz endpoint"""
-
-    def get_app(self):
-        return tornado.web.Application([(r"/debugz", DebugHandler)])
-
-    def test_debug(self):
-        # TODO - debugz is currently broken
-        pass
-
-
-class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    def get_app(self):
-        self._cache = ForwardMsgCache()
-        return tornado.web.Application(
-            [(r"/message", MessageCacheHandler, dict(cache=self._cache))]
-        )
-
-    def test_message_cache(self):
-        # Create a new ForwardMsg and cache it
-        msg = _create_dataframe_msg([1, 2, 3])
-        msg_hash = populate_hash_if_needed(msg)
-        self._cache.add_message(msg, MagicMock(), 0)
-
-        # Cache hit
-        response = self.fetch("/message?hash=%s" % msg_hash)
-        self.assertEqual(200, response.code)
-        self.assertEqual(serialize_forward_msg(msg), response.body)
-
-        # Cache misses
-        self.assertEqual(404, self.fetch("/message").code)
-        self.assertEqual(404, self.fetch("/message?id=non_existent").code)
-
-
 @patch("streamlit.source_util._cached_pages", new=None)
 class ScriptCheckTest(tornado.testing.AsyncTestCase):
     def setUp(self) -> None:
@@ -733,58 +654,3 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
         self.assertEqual(404, response.code)
-
-
-class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    def setUp(self) -> None:
-        self._tmpdir = tempfile.TemporaryDirectory()
-        self._tmpfile = tempfile.NamedTemporaryFile(dir=self._tmpdir.name, delete=False)
-        self._filename = os.path.basename(self._tmpfile.name)
-
-        super().setUp()
-
-    def tearDown(self) -> None:
-        super().tearDown()
-
-        self._tmpdir.cleanup()
-
-    def get_pages(self):
-        return {"page1": "page_info1", "page2": "page_info2"}
-
-    def get_app(self):
-        return tornado.web.Application(
-            [
-                (
-                    r"/(.*)",
-                    StaticFileHandler,
-                    {
-                        "path": self._tmpdir.name,
-                        "default_filename": self._filename,
-                        "get_pages": self.get_pages,
-                    },
-                )
-            ]
-        )
-
-    def test_parse_url_path_200(self):
-        responses = [
-            self.fetch("/"),
-            self.fetch(f"/{self._filename}"),
-            self.fetch("/page1/"),
-            self.fetch(f"/page1/{self._filename}"),
-            self.fetch("/page2/"),
-            self.fetch(f"/page2/{self._filename}"),
-        ]
-
-        for r in responses:
-            assert r.code == 200
-
-    def test_parse_url_path_404(self):
-        responses = [
-            self.fetch("/nonexistent"),
-            self.fetch("/page2/nonexistent"),
-            self.fetch(f"/page3/{self._filename}"),
-        ]
-
-        for r in responses:
-            assert r.code == 404

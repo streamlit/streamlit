@@ -20,10 +20,7 @@ from unittest.mock import patch
 
 from parameterized import parameterized
 
-from streamlit import config, RootContainer
-from streamlit.cursor import make_delta_path
-from streamlit.elements import legacy_data_frame
-from streamlit.elements.arrow import Data as ArrowData
+from streamlit import config
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.web.server.server_util import (
     get_url,
@@ -33,13 +30,7 @@ from streamlit.web.server.server_util import (
 )
 from tests import testutil
 from testutil import patch_config_options
-
-
-def _create_dataframe_msg(df: ArrowData, id: int = 1) -> ForwardMsg:
-    msg = ForwardMsg()
-    msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
-    legacy_data_frame.marshall_data_frame(df, msg.delta.new_element.data_frame)
-    return msg
+from .message_mocks import create_dataframe_msg
 
 
 class ServerUtilTest(unittest.TestCase):
@@ -66,10 +57,10 @@ class ServerUtilTest(unittest.TestCase):
     def test_should_cache_msg(self):
         """Test server_util.should_cache_msg"""
         with patch_config_options({"global.minCachedMessageSize": 0}):
-            self.assertTrue(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
+            self.assertTrue(is_cacheable_msg(create_dataframe_msg([1, 2, 3])))
 
         with patch_config_options({"global.minCachedMessageSize": 1000}):
-            self.assertFalse(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
+            self.assertFalse(is_cacheable_msg(create_dataframe_msg([1, 2, 3])))
 
     def test_should_limit_msg_size(self):
         max_message_size_mb = 50
@@ -80,7 +71,7 @@ class ServerUtilTest(unittest.TestCase):
         config._set_option("server.maxMessageSize", max_message_size_mb, "test")
 
         # Set up a larger than limit ForwardMsg string
-        large_msg = _create_dataframe_msg([1, 2, 3])
+        large_msg = create_dataframe_msg([1, 2, 3])
         large_msg.delta.new_element.markdown.body = (
             "X" * (max_message_size_mb + 10) * 1000 * 1000
         )
