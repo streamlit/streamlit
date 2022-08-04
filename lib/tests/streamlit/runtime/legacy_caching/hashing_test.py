@@ -14,7 +14,6 @@
 
 """st.hashing unit tests."""
 
-import cffi
 import functools
 import hashlib
 import os
@@ -30,6 +29,7 @@ from io import StringIO
 from unittest.mock import patch, Mock, MagicMock
 
 import altair.vegalite.v3
+import cffi
 import numpy as np
 import pandas as pd
 import sqlalchemy as db
@@ -46,12 +46,15 @@ except ImportError:
     HAS_TENSORFLOW = False
 
 
-from streamlit.legacy_caching.hashing import InternalHashError, _FFI_TYPE_NAMES
-from streamlit.legacy_caching.hashing import UnhashableTypeError
-from streamlit.legacy_caching.hashing import UserHashError
-from streamlit.legacy_caching.hashing import _CodeHasher
-from streamlit.legacy_caching.hashing import _NP_SIZE_LARGE
-from streamlit.legacy_caching.hashing import _PANDAS_ROWS_LARGE
+from streamlit.runtime.legacy_caching.hashing import (
+    InternalHashError,
+    _FFI_TYPE_NAMES,
+    UnhashableTypeError,
+    UserHashError,
+    _CodeHasher,
+    _NP_SIZE_LARGE,
+    _PANDAS_ROWS_LARGE,
+)
 from streamlit.type_util import is_type, get_fqn_type
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 import streamlit as st
@@ -255,7 +258,7 @@ class HashTest(unittest.TestCase):
 
         with self.assertRaises(InternalHashError):
             with patch(
-                "streamlit.legacy_caching.hashing._int_to_bytes",
+                "streamlit.runtime.legacy_caching.hashing._int_to_bytes",
                 side_effect=side_effect,
             ):
                 get_hash(123456789)

@@ -45,7 +45,7 @@ class ArrowMixin:
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
-            underyling DataFrame.
+            underlying DataFrame.
         width : int or None
             Desired width of the UI element expressed in pixels. If None, a
             default width based on the page width is used.

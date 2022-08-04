@@ -213,7 +213,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
       spec.usermeta.embedOptions.theme = undefined
     } else {
-      // Apply minor theming improvments to work better with Streamlit
+      // Apply minor theming improvements to work better with Streamlit
       spec.config = applyThemeDefaults(spec.config, theme)
     }
 

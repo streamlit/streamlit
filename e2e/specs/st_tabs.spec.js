@@ -56,7 +56,7 @@ describe("st.tabs", () => {
     });
   });
 
-  it("containes all tabs when overflowing", () => {
+  it("contains all tabs when overflowing", () => {
     cy.get("[data-testid='stExpander'] .stTabs [data-baseweb='tab']").should(
       "have.length",
       25

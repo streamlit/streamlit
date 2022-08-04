@@ -31,7 +31,7 @@ export type ThemeConfig = {
   // Unfortunately Theme is required.
   baseweb: typeof LightTheme
   // For use with Baseweb's ThemeProvider. This is required in order for us to
-  // create separate themes for in the children. Currently required to accomodate
+  // create separate themes for in the children. Currently required to accommodate
   // sidebar theming.
   basewebTheme: typeof lightBaseUITheme
   primitives: typeof lightThemePrimitives

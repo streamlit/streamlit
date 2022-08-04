@@ -85,7 +85,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
         except Exception:
             # Rich is not installed or not compatible to our config
             # -> Use normal traceback formatting as fallback
-            # Catching all exceptions because we don't want to leave any possiblity of breaking here.
+            # Catching all exceptions because we don't want to leave any possibility of breaking here.
             error_logged = False
 
     if config.get_option("client.showErrorDetails"):

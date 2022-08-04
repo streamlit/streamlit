@@ -20,7 +20,7 @@ from unittest.mock import patch, Mock
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.legacy_caching import hashing, caching
+from streamlit.runtime.legacy_caching import hashing, caching
 from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
@@ -112,7 +112,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
         exception.assert_not_called()
 
-    @patch("streamlit.legacy_caching.caching._show_cached_st_function_warning")
+    @patch("streamlit.runtime.legacy_caching.caching._show_cached_st_function_warning")
     def test_cached_st_function_warning(self, warning):
         st.text("foo")
         warning.assert_not_called()
@@ -261,8 +261,8 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual([0, 1, 2], bar_vals)
 
     # Reduce the huge amount of logspam we get from hashing/caching
-    @patch("streamlit.legacy_caching.hashing._LOGGER.debug")
-    @patch("streamlit.legacy_caching.caching._LOGGER.debug")
+    @patch("streamlit.runtime.legacy_caching.hashing._LOGGER.debug")
+    @patch("streamlit.runtime.legacy_caching.caching._LOGGER.debug")
     def test_no_max_size(self, _1, _2):
         """If max_size is None, the cache is unbounded."""
         called_values = []
@@ -283,7 +283,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
             f(ii)
         self.assertEqual([], called_values)
 
-    @patch("streamlit.legacy_caching.caching._TTLCACHE_TIMER")
+    @patch("streamlit.runtime.legacy_caching.caching._TTLCACHE_TIMER")
     def test_ttl(self, timer_patch):
         """Entries should expire after the given ttl."""
         # Create 2 cached functions to test that they don't interfere
@@ -521,27 +521,27 @@ documentation.](https://docs.streamlit.io/library/advanced-features/caching)
             normalize_md(ep.message).startswith(
                 normalize_md(
                     """
-Cannot hash object of type `legacy_caching.caching_test.NotHashable`, found in the return value of
+Cannot hash object of type `runtime.legacy_caching.caching_test.NotHashable`, found in the return value of
 `unhashable_type_func()`.
 
 While caching the return value of `unhashable_type_func()`, Streamlit encountered an
-object of type `legacy_caching.caching_test.NotHashable`, which it does not know how to hash.
+object of type `runtime.legacy_caching.caching_test.NotHashable`, which it does not know how to hash.
 
 To address this, please try helping Streamlit understand how to hash that type
 by passing the `hash_funcs` argument into `@st.cache`. For example:
 
 ```
-@st.cache(hash_funcs={legacy_caching.caching_test.NotHashable: my_hash_func})
+@st.cache(hash_funcs={runtime.legacy_caching.caching_test.NotHashable: my_hash_func})
 def my_func(...):
     ...
 ```
 
-If you don't know where the object of type `legacy_caching.caching_test.NotHashable` is coming
+If you don't know where the object of type `runtime.legacy_caching.caching_test.NotHashable` is coming
 from, try looking at the hash chain below for an object that you do recognize,
 then pass that to `hash_funcs` instead:
 
 ```
-Object of type legacy_caching.caching_test.NotHashable:
+Object of type runtime.legacy_caching.caching_test.NotHashable:
                     """
                 )
             )
@@ -600,13 +600,13 @@ This error is likely due to a bug in `bad_hash_func()`, which is a user-defined
 hash function that was passed into the `@st.cache` decorator of `user_hash_error_func()`.
 
 `bad_hash_func()` failed when hashing an object of type
-`legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj`.  If you
+`runtime.legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj`.  If you
 don't know where that object is coming from, try looking at the hash chain below
 for an object that you do recognize, then pass that to `hash_funcs` instead:
 
 ```
-Object of type legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj:
-<legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj object at
+Object of type runtime.legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj:
+<runtime.legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj object at
                     """
                 )
             )

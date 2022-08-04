@@ -20,14 +20,14 @@ from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import streamlit as st
 from streamlit import StreamlitAPIException, file_util
-from streamlit.caching import memo_decorator
-from streamlit.caching.cache_errors import CacheError
-from streamlit.caching.cache_utils import CachedResult, ElementMsgData
-from streamlit.caching.memo_decorator import (
+from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.runtime.caching import memo_decorator
+from streamlit.runtime.caching.cache_errors import CacheError
+from streamlit.runtime.caching.cache_utils import CachedResult, ElementMsgData
+from streamlit.runtime.caching.memo_decorator import (
     get_cache_path,
     get_memo_stats_provider,
 )
-from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.stats import CacheStat
 from tests.testutil import DeltaGeneratorTestCase
 
@@ -64,7 +64,7 @@ class MemoTest(unittest.TestCase):
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [0, 1])
 
-    @patch("streamlit.caching.memo_decorator._TTLCACHE_TIMER")
+    @patch("streamlit.runtime.caching.memo_decorator._TTLCACHE_TIMER")
     def test_ttl(self, timer_patch):
         """Entries should expire after the given ttl."""
         one_day = 60 * 60 * 24
@@ -128,7 +128,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     def tearDown(self) -> None:
         st.experimental_memo.clear()
 
-    @patch("streamlit.caching.memo_decorator.streamlit_write")
+    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
     def test_dont_persist_by_default(self, mock_write):
         @st.experimental_memo
         def foo():
@@ -137,7 +137,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         foo()
         mock_write.assert_not_called()
 
-    @patch("streamlit.caching.memo_decorator.streamlit_write")
+    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
     def test_persist_path(self, mock_write):
         """Ensure we're writing to ~/.streamlit/cache/*.memo"""
 
@@ -160,7 +160,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
     @patch(
-        "streamlit.caching.memo_decorator.streamlit_read",
+        "streamlit.runtime.caching.memo_decorator.streamlit_read",
         wraps=file_util.streamlit_read,
     )
     def test_read_persisted_data(self, mock_read):
@@ -177,7 +177,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
     @patch(
-        "streamlit.caching.memo_decorator.streamlit_read",
+        "streamlit.runtime.caching.memo_decorator.streamlit_read",
         wraps=file_util.streamlit_read,
     )
     def test_read_bad_persisted_data(self, mock_read):
@@ -226,7 +226,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         "streamlit.file_util.open",
         wraps=mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
-    @patch("streamlit.caching.memo_decorator.os.remove")
+    @patch("streamlit.runtime.caching.memo_decorator.os.remove")
     def test_clear_one_disk_cache(self, mock_os_remove: Mock, mock_open: Mock):
         """A memoized function's clear_cache() property should just clear
         that function's cache."""
@@ -295,7 +295,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         assert text == ["1"]
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch("streamlit.caching.memo_decorator.streamlit_write", MagicMock())
+    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write", MagicMock())
     @patch(
         "streamlit.file_util.open",
         wraps=mock_open(read_data=pickle.dumps(1)),

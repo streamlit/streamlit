@@ -42,10 +42,13 @@ from streamlit import config
 from streamlit import file_util
 from streamlit import source_util
 from streamlit import util
-from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
+from streamlit.runtime.caching import (
+    get_memo_stats_provider,
+    get_singleton_stats_provider,
+)
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
-from streamlit.legacy_caching.caching import _mem_caches
+from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
