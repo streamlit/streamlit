@@ -39,7 +39,7 @@ const getMarkdownElement = (body: string): ReactElement => {
 describe("createAnchorFromText", () => {
   it("generates slugs correctly", () => {
     const cases = [
-      ["some headera", "some-header"],
+      ["some header", "some-header"],
       ["some -24$35-9824  header", "some-24-35-9824-header"],
       ["blah___blah___blah", "blah-blah-blah"],
     ]
