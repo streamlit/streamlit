@@ -25,6 +25,19 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.type_util import SupportsStr
 
+def validate_emoji(emoji: str) -> str:
+    # If there's no emoji, carry on without checking
+    if emoji is None:
+        return ""
+
+    # Function to check if the provided string is valid
+    is_emoji_valid = is_emoji(emoji)
+    if is_emoji_valid is True:
+        return emoji
+    else:
+        raise StreamlitAPIException(
+            f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
+        )
 
 class AlertMixin:
     def error(
@@ -50,13 +63,7 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        extracted_emoji = is_emoji(icon)
-        if extracted_emoji is True:
-            alert_proto.icon = clean_text(icon)
-        else:
-            raise StreamlitAPIException(
-                f'The value "{icon}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
-            )
+        alert_proto.icon = validate_emoji(icon)
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
@@ -86,13 +93,7 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        extracted_emoji = is_emoji(icon)
-        if extracted_emoji is True:
-            alert_proto.icon = clean_text(icon)
-        else:
-            raise StreamlitAPIException(
-                f'The value "{icon}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
-            )
+        alert_proto.icon = validate_emoji(icon)
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
@@ -122,13 +123,7 @@ class AlertMixin:
 
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        extracted_emoji = is_emoji(icon)
-        if extracted_emoji is True:
-            alert_proto.icon = clean_text(icon)
-        else:
-            raise StreamlitAPIException(
-                f'The value "{icon}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
-            )
+        alert_proto.icon = validate_emoji(icon)
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
@@ -158,12 +153,7 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
         extracted_emoji = is_emoji(icon)
-        if extracted_emoji is True:
-            alert_proto.icon = clean_text(icon)
-        else:
-            raise StreamlitAPIException(
-                f'The value "{icon}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
-            )
+        alert_proto.icon = validate_emoji(icon)
         alert_proto.format = AlertProto.SUCCESS
         return self.dg._enqueue("alert", alert_proto)
 
