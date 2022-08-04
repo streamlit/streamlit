@@ -32,10 +32,10 @@ import streamlit.web.server.server
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.elements import legacy_data_frame as data_frame
-from streamlit.runtime.forward_msg_cache import ForwardMsgCache
-from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.forward_msg_cache import ForwardMsgCache
+from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
 from streamlit.web.server.server import DebugHandler
@@ -47,11 +47,7 @@ from streamlit.web.server.server import Server
 from streamlit.web.server.server import State
 from streamlit.web.server.server import StaticFileHandler
 from streamlit.web.server.server import start_listening
-from streamlit.web.server.server_util import (
-    is_cacheable_msg,
-    is_url_from_allowed_origins,
-    serialize_forward_msg,
-)
+from streamlit.web.server.server_util import serialize_forward_msg
 from .server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)
@@ -442,63 +438,6 @@ class ServerTest(ServerTestCase):
             await self.start_server_loop()
             eventloop = self.server._get_eventloop()
             self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
-
-
-class ServerUtilsTest(unittest.TestCase):
-    def test_is_url_from_allowed_origins_allowed_domains(self):
-        self.assertTrue(is_url_from_allowed_origins("localhost"))
-        self.assertTrue(is_url_from_allowed_origins("127.0.0.1"))
-
-    def test_is_url_from_allowed_origins_CORS_off(self):
-        with patch(
-            "streamlit.web.server.server_util.config.get_option", side_effect=[False]
-        ):
-            self.assertTrue(is_url_from_allowed_origins("does not matter"))
-
-    def test_is_url_from_allowed_origins_browser_serverAddress(self):
-        with patch(
-            "streamlit.web.server.server_util.config.is_manually_set",
-            side_effect=[True],
-        ), patch(
-            "streamlit.web.server.server_util.config.get_option",
-            side_effect=[True, "browser.server.address"],
-        ):
-            self.assertTrue(is_url_from_allowed_origins("browser.server.address"))
-
-    def test_should_cache_msg(self):
-        """Test server_util.should_cache_msg"""
-        config._set_option("global.minCachedMessageSize", 0, "test")
-        self.assertTrue(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
-
-        config._set_option("global.minCachedMessageSize", 1000, "test")
-        self.assertFalse(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
-
-    def test_should_limit_msg_size(self):
-        max_message_size_mb = 50
-        # Set max message size to defined value
-        from streamlit.web.server import server_util
-
-        server_util._max_message_size_bytes = None  # Reset cached value
-        config._set_option("server.maxMessageSize", max_message_size_mb, "test")
-
-        # Set up a larger than limit ForwardMsg string
-        large_msg = _create_dataframe_msg([1, 2, 3])
-        large_msg.delta.new_element.markdown.body = (
-            "X" * (max_message_size_mb + 10) * 1000 * 1000
-        )
-        # Create a copy, since serialize_forward_msg modifies the original proto
-        large_msg_copy = ForwardMsg()
-        large_msg_copy.CopyFrom(large_msg)
-        deserialized_msg = ForwardMsg()
-        deserialized_msg.ParseFromString(serialize_forward_msg(large_msg_copy))
-
-        # The metadata should be the same, but contents should be replaced
-        self.assertEqual(deserialized_msg.metadata, large_msg.metadata)
-        self.assertNotEqual(deserialized_msg, large_msg)
-        self.assertTrue(
-            "exceeds the message size limit"
-            in deserialized_msg.delta.new_element.exception.message
-        )
 
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
