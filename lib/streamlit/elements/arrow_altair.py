@@ -344,7 +344,7 @@ def _is_date_column(df: pd.DataFrame, name: str) -> bool:
     if column.size == 0:
         return False
 
-    return isinstance(column[0], date)
+    return isinstance(column.iloc[0], date)
 
 
 def _melt_data(
