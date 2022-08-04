@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
 
 
-def validate_emoji(emoji: str) -> str:
+def validate_emoji(emoji: Optional[str]) -> str:
     # If there's no emoji, carry on without checking
     if emoji is None:
         return ""
@@ -154,7 +154,6 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        extracted_emoji = is_emoji(icon)
         alert_proto.icon = validate_emoji(icon)
         alert_proto.format = AlertProto.SUCCESS
         return self.dg._enqueue("alert", alert_proto)
