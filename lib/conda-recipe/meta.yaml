@@ -39,6 +39,7 @@ build:
     {% endfor %}
   script_env:
    - GIT_HASH
+   - ST_CONDA_BUILD
 
 requirements:
   host:
@@ -55,23 +56,18 @@ requirements:
       # by default in our conda distribution due to this.
       {% elif 'watchdog' in req %}
         - watchdog
-      # TODO(vdonato): Possibly remove this check if gitpython and pydeck are
-      # moved to extras_require.
-      {% elif 'gitpython' not in req and 'pydeck' not in req %}
+      {% else %}
         - {{ req }}
       {% endif %}
     {% endfor %}
 
-# TODO(vdonato): Uncomment this section once we've figured out what to do with
-# optional dependencies (pip check will currently fail due to gitpython and
-# pydeck being uninstalled).
-# test:
-#   imports:
-#     - streamlit
-#   commands:
-#     - pip check
-#   requires:
-#     - pip
+test:
+  imports:
+    - streamlit
+  commands:
+    - pip check
+  requires:
+    - pip
 
 about:
   home: https://streamlit.io

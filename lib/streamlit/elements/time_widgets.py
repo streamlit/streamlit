@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from datetime import datetime, date, time
 from textwrap import dedent
 from typing import Any, cast, List, Optional, Sequence, Tuple, TYPE_CHECKING, Union
 
-import attr
 from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.state import (
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,
@@ -113,7 +113,7 @@ def _parse_max_date(
     return parsed_max_date
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class _DateInputValues:
     value: Sequence[date]
     is_range: bool
@@ -142,7 +142,7 @@ class _DateInputValues:
             ),
         )
 
-    def __attrs_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         if self.min > self.max:
             raise StreamlitAPIException(
                 f"The `min_value`, set to {self.min}, shouldn't be larger "

@@ -26,7 +26,7 @@ from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
 )
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
 
@@ -46,7 +46,6 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def get_app(self):
         self.file_mgr = UploadedFileManager()
-        self._get_session_info = lambda x: True
         return tornado.web.Application(
             [
                 (
@@ -54,7 +53,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     UploadFileRequestHandler,
                     dict(
                         file_mgr=self.file_mgr,
-                        get_session_info=self._get_session_info,
+                        is_active_session=lambda session_id: True,
                     ),
                 ),
             ]
@@ -138,7 +137,6 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
 
     def get_app(self):
         self.file_mgr = UploadedFileManager()
-        self._get_session_info = lambda x: None
         return tornado.web.Application(
             [
                 (
@@ -146,7 +144,7 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
                     UploadFileRequestHandler,
                     dict(
                         file_mgr=self.file_mgr,
-                        get_session_info=self._get_session_info,
+                        is_active_session=lambda session_id: False,
                     ),
                 ),
             ]

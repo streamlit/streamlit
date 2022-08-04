@@ -127,7 +127,7 @@ def get_header_bounds(lines, comment_style):
             break
         end_line += 1
 
-    # Remove unecessary newlines.
+    # Remove unnecessary newlines.
     while has_more_lines(end_line) and len(lines[end_line].strip()) == 0:
         end_line += 1
 

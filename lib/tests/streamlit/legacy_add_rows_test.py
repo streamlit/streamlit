@@ -21,7 +21,7 @@ import pyarrow as pa
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DataFrame_pb2 import DataFrame
 from streamlit.proto.Delta_pb2 import Delta
-from streamlit.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 import streamlit as st
 from tests import testutil
 

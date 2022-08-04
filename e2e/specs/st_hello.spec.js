@@ -20,6 +20,7 @@ describe("hello", () => {
     // Increasing timeout since we're waiting for the animation and map to load.
     Cypress.config("defaultCommandTimeout", 30000);
     cy.loadApp("http://localhost:3000/");
+    cy.prepForElementSnapshots();
   });
 
   it("displays the welcome message on initial page load", () => {
@@ -69,7 +70,7 @@ describe("hello", () => {
 
         cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
           .find("canvas")
-          .should("have.css", "height", "300px");
+          .should("have.css", "height", "350px");
       });
   });
 
@@ -108,7 +109,7 @@ describe("hello", () => {
 
         cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
           .find("canvas")
-          .should("have.css", "height", "300px");
+          .should("have.css", "height", "350px");
 
         cy.get(".appview-container").matchThemedSnapshots("dataframe-demo");
       });
