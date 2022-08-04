@@ -44,7 +44,7 @@ def main():
 
 def _can_run_streamlit(command_list):
     result = subprocess.run(command_list, stdout=subprocess.DEVNULL)
-    return False
+    return result.returncode == 0
 
 
 if __name__ == "__main__":
