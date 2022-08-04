@@ -5,22 +5,23 @@ repos:
       - id: black
         files: \.py$|\.pyi$
         language_version: python3.8
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v2.7.1
-    hooks:
-      - id: prettier
-        files: \.js$|\.jsx$|\.ts$|\.tsx$
   - repo: local
     hooks:
-      - id: run-typecheck
-        name: Run typecheck
+      - id: prettier
+        name: Prettier
+        entry: ./frontend/node_modules/.bin/prettier --write --config ./frontend/.prettierrc
+        files: ^frontend/.*(.js|\.jsx|\.ts|\.tsx)$
+        language: node
+        pass_filenames: true
+      - id: typecheck
+        name: Typecheck
         entry: yarn --cwd frontend tsc --noEmit
         files: \.js$|\.jsx$|\.ts$|\.tsx$
         language: node
         pass_filenames: false
-      - id: run-eslint
-        name: Run run eslint
-        entry: cd frontend && ./frontend/node_modules/.bin/eslint --ext .js --ext .jsx --ext .ts --ext .tsx --ignore-pattern './frontend/src/autogen/*' --max-warnings 0 ./frontend/src
-        files: \.js$|\.jsx$|\.ts$|\.tsx$
+      - id: eslint
+        name: Eslint
+        entry: ./frontend/node_modules/.bin/eslint --fix --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 --config ./frontend/.eslintrc.js
+        files: ^frontend/.*(.js|\.jsx|\.ts|\.tsx)$
         language: node
-        pass_filenames: false
+        pass_filenames: true
