@@ -142,11 +142,13 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     const { element, width, height, theme } = props
     const json = JSON.parse(element.json)
 
-    // Use either the Mapbox light or dark style based on Streamlit's theme
+    // If unset, use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-    const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
-    const mapTheme = hasLightBg ? "light" : "dark"
-    json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v10`
+    if (typeof json.mapStyle === "undefined") {
+      const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
+      const mapTheme = hasLightBg ? "light" : "dark"
+      json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
+    }
 
     // The graph dimensions could be set from props ( like withFullscreen ) or
     // from the generated element object
