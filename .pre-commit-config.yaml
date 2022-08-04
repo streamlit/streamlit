@@ -4,7 +4,6 @@ repos:
     hooks:
       - id: black
         files: \.py$|\.pyi$
-        language_version: python3.8
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
