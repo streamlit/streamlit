@@ -19,7 +19,7 @@ st.warning("This is a warning")
 st.info("This is an info message")
 st.success("This is a success message")
 
-st.error("This is an error", icon="⛔️")
+st.error("This is an error", icon="🚨")
 st.warning("This is a warning", icon="⚠️")
 st.info("This is an info message", icon="👉🏻")
 st.success("This is a success message", icon="✅")
