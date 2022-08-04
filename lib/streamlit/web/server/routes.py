@@ -69,7 +69,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         maybe_page_name = url_parts[0]
         if maybe_page_name in self._pages:
             # If we're trying to navigate to a page, we return "index.html"
-            # directly here instead of defering to the superclass below after
+            # directly here instead of deferring to the superclass below after
             # modifying the url_path. The reason why is that tornado handles
             # requests to "directories" (which is what navigating to a page
             # looks like) by appending a trailing '/' if there is none and

@@ -120,7 +120,7 @@ def _fix_tornado_crash() -> None:
     if the known-incompatible default policy is in use.
 
     This has to happen as early as possible to make it a low priority and
-    overrideable
+    overridable
 
     See: https://github.com/tornadoweb/tornado/issues/2608
 

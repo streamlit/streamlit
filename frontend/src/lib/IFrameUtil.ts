@@ -148,7 +148,7 @@ export const DEFAULT_IFRAME_FEATURE_POLICY = [
   // Controls whether the current document is allowed to play a video in a Picture-in-Picture mode via the corresponding API.
   "picture-in-picture",
 
-  // Controls whether the current document is allowed to use the Web Authentication API to retreive already stored public-key credentials, i.e. via navigator.credentials.get({publicKey: ..., ...}).
+  // Controls whether the current document is allowed to use the Web Authentication API to retrieve already stored public-key credentials, i.e. via navigator.credentials.get({publicKey: ..., ...}).
   "publickey-credentials-get",
 
   // Controls whether the current document is allowed to make synchronous XMLHttpRequest requests.

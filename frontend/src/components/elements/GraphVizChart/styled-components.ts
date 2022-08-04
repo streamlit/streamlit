@@ -18,7 +18,7 @@
 import styled from "@emotion/styled"
 
 export const StyledGraphVizChart = styled.div(({ theme }) => ({
-  paddingTop: theme.spacing.xl,
+  paddingTop: theme.spacing.sm,
 
   "& *": {
     fontFamily: theme.genericFonts.bodyFont,

@@ -315,7 +315,7 @@ st._arrow_dataframe(
 )
 
 st.header("Input Data: 1-d set")
-# Set does not have a stable order accross different Python version.
+# Set does not have a stable order across different Python version.
 # Therefore, we are only testing this with one item.
 st._arrow_dataframe({"apple", "apple"})
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Explicitly export public symobls
+# Explicitly export public symbols
 from .script_runner import (
     ScriptRunner as ScriptRunner,
     ScriptRunnerEvent as ScriptRunnerEvent,
