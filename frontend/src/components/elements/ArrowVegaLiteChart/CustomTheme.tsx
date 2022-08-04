@@ -62,6 +62,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       titlePadding: 16,
       labelPadding: 16,
       labelSeparation: 4,
+      labelOverlap: true,
     },
     legend: {
       labelFontSize: theme.fontSizes.smPx,
