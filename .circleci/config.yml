@@ -486,7 +486,6 @@ jobs:
       - run:
           name: Run linters
           command: |
-            make jslint
             pre-commit run --show-diff-on-failure --color=always --all-files
 
       - store_test_results:
