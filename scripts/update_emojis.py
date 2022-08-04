@@ -24,16 +24,13 @@ import re
 from emoji.unicode_codes.data_dict import EMOJI_DATA  # type: ignore
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-EMOJI_SET_REGEX = re.compile(r"ALL_EMOJIS.+?\)", re.DOTALL)
+EMOJI_SET_REGEX = re.compile(r"ALL_EMOJIS.+?}", re.DOTALL)
 EMOJIS_SCRIPT_PATH = os.path.join(BASE_DIR, "lib", "streamlit", "emojis.py")
-TAB = "    "
 
 emoji_unicodes = set(EMOJI_DATA.keys())
 
-generated_code = f"ALL_EMOJIS = set(\n{TAB}" + "{\n"
-for emoji in sorted(emoji_unicodes):
-    generated_code += (2 * TAB) + f'"{emoji}",\n'
-generated_code += TAB + "}\n)"
+
+generated_code = 'ALL_EMOJIS = {"' + '","'.join(sorted(emoji_unicodes)) + '"}'
 
 with open(EMOJIS_SCRIPT_PATH, "r") as file:
     script_content = file.read()
