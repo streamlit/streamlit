@@ -718,7 +718,7 @@ class _CodeHasher:
 
         # This works because we set __main__.__file__ to the
         # script path in ScriptRunner.
-        abs_main_path = pathlib.Path(__main__.__file__).absolute()
+        abs_main_path = pathlib.Path(__main__.__file__).resolve()
         return str(abs_main_path.parent)
 
 
