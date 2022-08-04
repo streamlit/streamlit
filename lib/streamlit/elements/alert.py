@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.type_util import SupportsStr
 
+
 def validate_emoji(emoji: str) -> str:
     # If there's no emoji, carry on without checking
     if emoji is None:
@@ -38,6 +39,7 @@ def validate_emoji(emoji: str) -> str:
         raise StreamlitAPIException(
             f'The value "{emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
         )
+
 
 class AlertMixin:
     def error(
