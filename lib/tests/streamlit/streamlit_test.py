@@ -377,6 +377,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.body, "some error")
         self.assertEqual(el.alert.format, Alert.ERROR)
 
+    def test_st_error_with_icon(self):
+        """Test st.error with icon."""
+        st.error("some error", icon="😱")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.alert.body, "some error")
+        self.assertEqual(el.alert.icon, "😱")
+        self.assertEqual(el.alert.format, Alert.ERROR)
+
     @parameterized.expand([(True,), (False,)])
     def test_st_exception(self, show_error_details: bool):
         """Test st.exception."""
@@ -527,6 +536,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.alert.body, "some info")
+        self.assertEqual(el.alert.format, Alert.INFO)
+
+    def test_st_info_with_icon(self):
+        """Test st.info with icon."""
+        st.info("some info", icon="👉🏻")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.alert.body, "some info")
+        self.assertEqual(el.alert.icon, "👉🏻")
         self.assertEqual(el.alert.format, Alert.INFO)
 
     def test_st_json(self):
@@ -760,6 +778,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.body, "some success")
         self.assertEqual(el.alert.format, Alert.SUCCESS)
 
+    def test_st_success_with_icon(self):
+        """Test st.success with icon."""
+        st.success("some success", icon="✅")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.alert.body, "some success")
+        self.assertEqual(el.alert.icon, "✅")
+        self.assertEqual(el.alert.format, Alert.SUCCESS)
+
     def test_st_legacy_table(self):
         """Test st._legacy_table."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
@@ -891,3 +918,18 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.alert.body, "some warning")
         self.assertEqual(el.alert.format, Alert.WARNING)
+
+    def test_st_warning_with_icon(self):
+        """Test st.warning with icon."""
+        st.warning("some warning", icon="⚠️")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.alert.body, "some warning")
+        self.assertEqual(el.alert.icon, "⚠️")
+        self.assertEqual(el.alert.format, Alert.WARNING)
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_st_alert_exceptions(self, alert_func):
+        """Test that alert functions throw an exception when a non-emoji is given as an icon."""
+        with self.assertRaises(StreamlitAPIException):
+            alert_func("some alert", icon="hello world")
