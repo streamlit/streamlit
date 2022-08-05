@@ -45,7 +45,7 @@ class ScriptRunContext:
     """
 
     session_id: str
-    _enqueue: Callable[[ForwardMsg], None]
+    _enqueue: Callable[[ForwardMsg, bool], None]
     query_string: str
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
@@ -74,7 +74,7 @@ class ScriptRunContext:
     def on_script_start(self) -> None:
         self._has_script_started = True
 
-    def enqueue(self, msg: ForwardMsg) -> None:
+    def enqueue(self, msg: ForwardMsg, allow_recording: bool=True) -> None:
         """Enqueue a ForwardMsg for this context's session."""
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
@@ -93,7 +93,7 @@ class ScriptRunContext:
             self._set_page_config_allowed = False
 
         # Pass the message up to our associated ScriptRunner.
-        self._enqueue(msg)
+        self._enqueue(msg, allow_recording)
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"

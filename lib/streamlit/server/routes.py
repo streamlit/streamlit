@@ -441,4 +441,4 @@ class SourceCodeHandler(tornado.web.RequestHandler):
             f.write(file_body)
 
         # Keep track of file hash to avoid run-on-save for it.
-        source_util.last_saved_hash = calc_md5(file_body)
+        source_util.last_saved_hashes[file_path] = calc_md5(file_body)

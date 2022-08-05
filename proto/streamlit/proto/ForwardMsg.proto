@@ -51,11 +51,11 @@ message ForwardMsg {
     PageInfo page_info_changed = 12;
     PageConfig page_config_changed = 13;
     ScriptFinishedStatus script_finished = 6;
-    GitInfo git_info_changed = 14;
 
     // State change and event messages.
     SessionState session_state_changed = 9;
     SessionEvent session_event = 10;
+    GitInfo git_info_changed = 14;
 
     // Other messages.
     PageNotFound page_not_found = 15;

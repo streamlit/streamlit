@@ -18,6 +18,7 @@ import ast
 from streamlit import config
 from streamlit import magic
 from streamlit.cursor import get_container_cursor
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.scriptrunner.script_run_context import get_script_run_ctx
 
 STATEFUL_WIDGETS = [
@@ -46,9 +47,8 @@ class RANDOM_VALUE:
     pass
 
 class NotebookRunner:
-    def __init__(self, body, script_path, enqueue_forward_msg):
+    def __init__(self, body, script_path):
         self._script_path = script_path
-        self._enqueue_forward_msg = enqueue_forward_msg
 
         self._current_running_cell_runner = None
 
@@ -56,7 +56,7 @@ class NotebookRunner:
             self._cell_runners = []
         else:
             self._cell_runners = [
-                _CellRunner(i, cb, script_path, enqueue_forward_msg)
+                _CellRunner(i, cb, script_path)
                 for (i, cb) in enumerate(_split_cells_at_ellipses(body))
             ]
 
@@ -75,15 +75,14 @@ class NotebookRunner:
         self._cell_runners[i] = item
 
     def _update_cells(self, new_body, new_script_path):
-        new_runner = NotebookRunner(
-            new_body, new_script_path, self._enqueue_forward_msg)
+        new_runner = NotebookRunner(new_body, new_script_path)
 
         if new_script_path == self._script_path:
-            cell_diffs = new_runner._get_cells_to_rerun(self)
+            cells_to_rerun = new_runner._get_cells_to_rerun(self)
         else:
-            cell_diffs = (True for _ in new_runner)
+            cells_to_rerun = (True for _ in new_runner)
 
-        for i, cell_is_diff in enumerate(cell_diffs):
+        for i, cell_is_diff in enumerate(cells_to_rerun):
             if not cell_is_diff:
                 new_runner[i] = self[i]
 
@@ -91,24 +90,18 @@ class NotebookRunner:
         self._cell_runners = new_runner._cell_runners
 
     def run(self, locals, new_body, new_script_path):
-        error = None
-
         try:
             self._update_cells(new_body, new_script_path)
+
+            for cr in self:
+                self._current_running_cell_runner = cr
+                locals = cr.run(locals)
+
         except BaseException as e:
-            error = e
+            raise
 
-        for cr in self:
-            self._current_running_cell_runner = cr
-            locals, e = cr.run(locals)
-            if e:
-                error = e
-                break
-
-        self._current_running_cell_runner = None
-
-        if error:
-            raise error
+        finally:
+            self._current_running_cell_runner = None
 
     def _get_cells_to_rerun(self, other):
         diff = []
@@ -147,23 +140,21 @@ class NotebookRunner:
 
 
 class _CellRunner:
-    def __init__(self, cell_index, body, script_path, enqueue_forward_msg):
+    def __init__(self, cell_index, body, script_path):
         self._cell_index = cell_index
         self._body = body
         self._script_path = script_path
-        self._already_ran = False
-
-        self._enqueue_forward_msg = enqueue_forward_msg
+        self._successfully_ran = False
 
         self._recorded_msgs = []
         self._locals = {}
         self._recorded_widget_states = {}
 
     def __eq__(self, other):
-        return self._body == other._body
+        return self._body.strip() == other._body.strip()
 
     # TODO HACK XXX: The way cells remember their output is very hacky right now. It dives deep into
-    # protos, session state, locals, etc. There must be a cleaner way!
+    # protos, session state, locals, etc. Need a cleaner way.
     def record_msg(self, msg):
         if not msg.HasField('delta'):
             # Only record deltas.
@@ -172,6 +163,8 @@ class _CellRunner:
         self._recorded_msgs.append(msg)
         self._record_widget(msg)
 
+    # TODO HACK XXX: This is super hacky! I think there are clean ways to do this, but they'd
+    # require a little refactor around how widgets are kept in state and in protos.
     def _record_widget(self, msg):
         if not msg.delta.HasField('new_element'):
             return
@@ -204,14 +197,13 @@ class _CellRunner:
                 curr_value = curr_widget_states[id]
                 if curr_value != stored_value:
                     return True
+
         return False
 
     def run(self, locals):
-        error = None
-
-        if self._already_ran:
+        if self._successfully_ran:
             self._replay_recorded_msgs()
-            return self._locals, error
+            return self._locals
 
         self._recorded_msgs.clear()
         self._recorded_widget_states.clear()
@@ -224,9 +216,8 @@ class _CellRunner:
             code = self._body
 
             if config.get_option("runner.magicEnabled"):
-                is_root = self._cell_index == 0
                 code = magic.add_magic(
-                    code, self._script_path, is_root=is_root)
+                    code, self._script_path, is_root=(self._cell_index == 0))
 
             code = compile(
                 code,
@@ -244,13 +235,13 @@ class _CellRunner:
 
             exec(code, locals)
 
+            self._locals = dict(locals)  # TODO XXX Handle refs properly!
+            self._successfully_ran = True
+
         except BaseException as e:
-            error = e
+            raise
 
-        self._locals = dict(locals)  # TODO XXX Handle refs properly!
-        self._already_ran = True
-
-        return locals, error
+        return locals
 
     # TODO XXX: Stop accessing internal APIs.
     def _replay_recorded_msgs(self):
@@ -266,7 +257,8 @@ class _CellRunner:
                 cursor = get_container_cursor(root_container)
                 cursor._index = index + 1
 
-            self._enqueue_forward_msg(msg)
+
+            ctx.enqueue(msg, allow_recording=False)
             ctx.current_cell_index = self._cell_index
 
 

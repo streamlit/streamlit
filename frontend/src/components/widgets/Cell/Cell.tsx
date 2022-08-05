@@ -1,4 +1,4 @@
-/**
+/*tyled
  * @license
  * Copyright 2018-2022 Streamlit Inc.
  *
@@ -30,12 +30,13 @@ import NotebookContext from "src/components/core/NotebookContext"
 import CallbacksContext from "src/components/core/CallbacksContext"
 import Icon from "src/components/shared/Icon"
 
-import { StyledCloseButton } from "./styled-components"
+import { StyledCell, StyledCloseButton } from "./styled-components"
 
+// TODO: Read values from Streamlit theme
 const myTheme = createTheme({
   theme: "light",
   settings: {
-    background: "#fff",
+    background: "transparent",
     foreground: "#555867",
     caret: "#ff4b4b",
     selection: "#d5dae5",
@@ -99,7 +100,7 @@ function Cell({ element, cellIndex }: Props): React.ReactElement {
     // TODO: Move cursor to the end of next cell.
     insertCell(cellIndex + 1)
     return true
-  }, [ref, insertCell, cellIndex])
+  }, [insertCell, cellIndex])
 
   const backspaceEmptyCell = useCallback((): boolean => {
     if (cellModel?.body.length === 0) {
@@ -132,10 +133,7 @@ function Cell({ element, cellIndex }: Props): React.ReactElement {
   // - Cell navigation with up/down
   // - Cell merging with backspace
   // - Cell splitting with shift-enter
-  // - Delete Cell (even if full) with mod-shift-backspace
   // - Duplicate cell
-  // - Better theme
-  // - Better edit / close button
   // NOTE: Mod == Command on Mac and Ctrl on Win/Linux
   const KEYMAPS = [
     {
@@ -168,7 +166,7 @@ function Cell({ element, cellIndex }: Props): React.ReactElement {
   }
 
   return (
-    <div style={{ position: "relative" }}>
+    <StyledCell>
       <StyledCloseButton onClick={toggleCell}>
         <Icon content={Close} size="lg" />
       </StyledCloseButton>
@@ -185,20 +183,9 @@ function Cell({ element, cellIndex }: Props): React.ReactElement {
           lineNumbers: false,
           defaultKeymap: false,
         }}
-        style={{
-          background: "#fff",
-          overflow: "hidden",
-          fontFamily: "Source Code Pro, monospace",
-          fontSize: "14px",
-          borderRadius: "0.25rem",
-          padding: "1rem 1rem 1rem calc(1rem - 3px)",
-          margin: "0",
-          boxShadow:
-            "inset 1px 1px 3px rgba(0, 0, 100, 0.10), inset 1px 1px 20px rgba(0, 0, 100, 0.05)",
-        }}
         onChange={onChange}
       />
-    </div>
+    </StyledCell>
   )
 }
 

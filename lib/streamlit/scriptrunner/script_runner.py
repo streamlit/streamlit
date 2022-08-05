@@ -313,7 +313,7 @@ class ScriptRunner:
         """True if the calling function is running in the script thread"""
         return self._script_thread == threading.current_thread()
 
-    def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
+    def _enqueue_forward_msg(self, msg: ForwardMsg, allow_recording: bool=True) -> None:
         """Enqueue a ForwardMsg to our browser queue.
         This private function is called by ScriptRunContext only.
 
@@ -329,11 +329,14 @@ class ScriptRunner:
         if not config.get_option("runner.installTracer"):
             self._maybe_handle_execution_control_request()
 
-        self._notebook_runner.record_msg(msg)
+        if allow_recording:
+            self._notebook_runner.record_msg(msg)
 
         # Pass the message to our associated AppSession.
         self.on_event.send(
-            self, event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
+            self,
+            event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+            forward_msg=msg
         )
 
     def _maybe_handle_execution_control_request(self) -> None:
@@ -477,7 +480,7 @@ class ScriptRunner:
                 # message to the frontend.
                 msg = ForwardMsg()
                 msg.page_not_found.page_name = rerun_data.page_name
-                ctx.enqueue(msg)
+                self._enqueue_forward_msg(msg)
 
             with source_util.open_python_file(script_path) as f:
                 filebody = f.read()

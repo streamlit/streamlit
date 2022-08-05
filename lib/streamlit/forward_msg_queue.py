@@ -80,6 +80,15 @@ class ForwardMsgQueue:
         self._delta_index_map[delta_key] = len(self._queue)
         self._queue.append(msg)
 
+    def clear_run_msgs(self) -> None:
+        """Clear only the messages related to this run."""
+        old_queue = self._queue
+        self.clear()
+
+        for m in old_queue:
+            if _is_event_msg(m):
+                self.enqueue(m)
+
     def clear(self) -> None:
         """Clear the queue."""
         self._queue = []
@@ -140,3 +149,11 @@ def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Optional[Delta]
         return new_delta
 
     return None
+
+
+def _is_event_msg(m: ForwardMsg) -> bool:
+    return m.WhichOneof('type') in {
+        'session_state_changed',
+        'session_event',
+        'git_info_changed'
+    }

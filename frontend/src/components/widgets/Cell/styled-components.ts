@@ -16,6 +16,7 @@
  */
 
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
 
 // TODO: Merge this with components/core/Block/styled-components/StyledEditButton
 export const StyledCloseButton = styled.div(({ theme }) => {
@@ -26,16 +27,15 @@ export const StyledCloseButton = styled.div(({ theme }) => {
     justifyContent: "center",
 
     left: "-3rem",
-    top: "-1rem",
+    top: "0.625rem",
     opacity: 0,
-    backgroundColor: theme.colors.lightenedBg05,
 
     zIndex: theme.zIndices.sidebar + 1,
     height: "2.5rem",
     width: "2.5rem",
     transition: "opacity 300ms 150ms",
     border: "none",
-    color: theme.colors.fadedText60,
+    color: theme.colors.bodyText,
     borderRadius: "50%",
     cursor: "pointer",
 
@@ -44,10 +44,38 @@ export const StyledCloseButton = styled.div(({ theme }) => {
     },
 
     "&:active, &:focus-visible, &:hover": {
-      opacity: 1,
+      opacity: "1 !important",
       outline: "none",
-      color: theme.colors.bodyText,
       transition: "none",
     },
   }
 })
+
+export const StyledCell = styled.div(({ theme }) => ({
+  position: "relative",
+  padding: "1rem 0",
+  fontSize: theme.fontSizes.sm,
+
+  "&::before": {
+    content: '" "',
+    background: transparentize(theme.colors.secondaryBg, 0.5),
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: "calc(-50vw + 50%)", // TODO: Handle sidebar and scrollbar.
+    width: "100vw",
+    zIndex: 0,
+  },
+
+  ".cm-theme": {
+    width: "calc(100vw - (50vw - 50%))", // TODO: Handle sidebar.
+  },
+
+  ".cm-editor.cm-focused": {
+    outline: "none",
+  },
+
+  "&:hover > :first-child": {
+    opacity: 0.5,
+  },
+}))

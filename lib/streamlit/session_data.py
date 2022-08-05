@@ -91,9 +91,9 @@ class SessionData:
     def enqueue(self, msg: ForwardMsg) -> None:
         self._browser_queue.enqueue(msg)
 
-    def clear_browser_queue(self) -> None:
+    def clear_run_msg_queue(self) -> None:
         """Clear all pending ForwardMsgs from our browser queue."""
-        self._browser_queue.clear()
+        self._browser_queue.clear_run_msgs()
 
     def flush_browser_queue(self) -> List[ForwardMsg]:
         """Clear our browser queue and return the messages it contained.

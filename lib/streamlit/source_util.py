@@ -15,6 +15,7 @@
 import re
 import threading
 from pathlib import Path
+from collections import defaultdict
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple
 
 from blinker import Signal
@@ -193,4 +194,5 @@ def register_pages_changed_callback(
 
 
 # Used to avoid run-on-save.
-last_saved_hash = ''
+# Mapping of filepath (str) -> file contents hash (str)
+last_saved_hashes = defaultdict(str)

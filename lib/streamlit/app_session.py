@@ -127,8 +127,10 @@ class AppSession:
         self._state = AppSessionState.APP_NOT_RUNNING
 
         # Avoid dependency cycle by importing here.
+        # This lives in app_session because it needs to live longer than script_runner...
+        # TODO: Figure out where to properly put this.
         from streamlit.NotebookRunner import NotebookRunner
-        self._notebook_runner = NotebookRunner('', '__no_path__', self._enqueue_forward_msg)
+        self._notebook_runner = NotebookRunner('', '__no_path__')
 
         # Need to remember the client state here because when a script reruns
         # due to the source code changing we need to pass in the previous client state.
@@ -338,7 +340,9 @@ class AppSession:
         if not self._should_rerun_on_file_change(filepath):
             return
 
-        if self._run_on_save and source_util.last_saved_hash != content_hash:
+        last_saved_file_hash = source_util.last_saved_hashes[filepath]
+
+        if self._run_on_save and last_saved_file_hash != content_hash:
             self.request_rerun(self._client_state)
 
         self._enqueue_forward_msg(self._create_file_change_message(filepath, content_hash))
@@ -364,9 +368,6 @@ class AppSession:
         msg = ForwardMsg()
         _populate_app_pages(msg.pages_changed, self._session_data.main_script_path)
         self._enqueue_forward_msg(msg)
-
-    def _clear_queue(self) -> None:
-        self._session_data.clear_browser_queue()
 
     def _on_scriptrunner_event(
         self,
@@ -452,8 +453,14 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
-            # HACK: Don't clear queue, or the script_contents_changed_on_disk message won't go through.
-            #self._clear_queue()
+            # XXX HACK: Don't clear queue, or the script_contents_changed_on_disk message won't go through.
+            self._session_data.clear_run_msg_queue()
+
+            # THIS IS CAUSING THE DISAPPEARING CONTENT BUG! Though, actually, it seems to me
+            # like this is only masking the real bug in normal streamlit, and would keep the bug
+            # happening in this streamlit.
+
+            # XXX BUG: This is being sent when other (important) messages were already sent.
             self._enqueue_forward_msg(
                 self._create_new_session_message(page_script_hash)
             )
