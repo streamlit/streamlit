@@ -31,14 +31,14 @@ jobs:
         run: |
           make develop
         shell: bash -l -v -e -u -o pipefail {0}
-      # - name: Install Cypress dependencies
-      #   run: |
-      #     ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
-      #   shell: bash -l -v -e -u -o pipefail {0}
       - name: Install Cypress dependencies
-        uses: cypress-io/github-action@v2
-        with:
-          runTests: false
+        run: |
+          ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
+        shell: bash -l -v -e -u -o pipefail {0}
+      # - name: Install Cypress dependencies
+      #   uses: cypress-io/github-action@v2
+      #   with:
+      #     runTests: false
       # Revisit artifact saving
       # - name: Save Cypress artifacts
       #   uses: actions/upload-artifact@v2
@@ -67,7 +67,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        containers: [homepage, contact-form, seo]
+        ci_index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        ci_total: [10]
   
     steps:
       - name: Checkout
@@ -84,3 +85,5 @@ jobs:
           start: yarn start
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI_TOTAL: ${{ matrix.ci_total }}
+          CI_INDEX: ${{ matrix.ci_index }}
