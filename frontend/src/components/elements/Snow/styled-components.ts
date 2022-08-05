@@ -54,6 +54,7 @@ export const StyledFlake = styled.img(({ theme }) => ({
   animationDelay: `${rand(DELAY_MAX_MS)}ms`,
   height: `${IMAGE_HEIGHT}px`,
   width: `${IMAGE_WIDTH}px`,
+  pointerEvents: "none",
 
   animationDuration: "3000ms",
   animationName: moveDown(),
