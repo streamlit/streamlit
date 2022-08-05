@@ -81,5 +81,5 @@ jobs:
       - name: Cypress Tests
         run: |
           cd frontend
-          ../scripts/run_e2e_tests.py -a 'e2e/specs/${{ matrix.specs }}/*.spec.js'
+          ../scripts/run_e2e_tests.py -a '../e2e/specs/${{ matrix.specs }}/*.spec.js'
         shell: bash -l -v -e -u -o pipefail {0}
