@@ -268,17 +268,6 @@ class HealthHandler(_SpecialRequestHandler):
             self.write(msg)
 
 
-class DebugHandler(_SpecialRequestHandler):
-    def initialize(self, server):
-        self._server = server
-
-    def get(self):
-        self.add_header("Cache-Control", "no-cache")
-        self.write(
-            "<code><pre>%s</pre><code>" % json.dumps(self._server.get_debug(), indent=2)
-        )
-
-
 class MessageCacheHandler(tornado.web.RequestHandler):
     """Returns ForwardMsgs from our MessageCache"""
 
