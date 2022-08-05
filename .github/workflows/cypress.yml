@@ -3,6 +3,18 @@ name: Cypress Tests
 on: [push]
 
 jobs:
+  list-spec-files:
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-matrix
+        run: echo "::set-output name=matrix::$(ls e2e/specs/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
+
   build:
 
     runs-on: ubuntu-latest
@@ -62,28 +74,27 @@ jobs:
   e2e_tests:
 
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, list-spec-files]
 
     strategy:
       fail-fast: false
       matrix:
-        ci_index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-        ci_total: [10]
+        specs: ${{ fromJson(needs.list-spec-files.outputs.matrix) }}
   
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - name: Cypress Tests
-        uses: cypress-io/github-action@v4
-        # run: |
-        #   cd frontend
-        #   ../scripts/run_e2e_tests.py -a
-        # shell: bash -l -v -e -u -o pipefail {0}
-        with:
-          project: ./e2e/specs
-          browser: chrome
-          start: yarn start
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CI_TOTAL: ${{ matrix.ci_total }}
-          CI_INDEX: ${{ matrix.ci_index }}
+        run: |
+          cd frontend
+          ../scripts/run_e2e_tests.py -a ${{ martix.manifest }}
+        shell: bash -l -v -e -u -o pipefail {0}
+
+        # uses: cypress-io/github-action@v4
+        # with:
+        #   project: ./e2e/specs
+        #   browser: chrome
+        #   start: yarn start
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        #   CI_TOTAL: ${{ matrix.ci_total }}
+        #   CI_INDEX: ${{ matrix.ci_index }}

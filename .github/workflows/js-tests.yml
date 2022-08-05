@@ -1,29 +1,29 @@
-name: Javascript Tests
+# name: Javascript Tests
 
-on: [push]
+# on: [push]
 
-jobs:
-  build:
+# jobs:
+#   build:
 
-    runs-on: ubuntu-latest
+#     runs-on: ubuntu-latest
 
-    env:
-      SUDO: 'sudo'
-      BASH_ENV: $HOME/.bash_profile
+#     env:
+#       SUDO: 'sudo'
+#       BASH_ENV: $HOME/.bash_profile
 
-    steps:
-      - name: Checkout Streamlit code
-        uses: actions/checkout@v3
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-      - name: Update Submodules
-        uses: ./.github/actions/update_submodules
-      - name: Run pre-make
-        uses: ./.github/actions/pre_make
-      - name: Run make init
-        uses: ./.github/actions/make_init
-      - name: Run make jstest
-        run: |
-          make jstest
+#     steps:
+#       - name: Checkout Streamlit code
+#         uses: actions/checkout@v3
+#       - name: Set up Python 3.10
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.10"
+#       - name: Update Submodules
+#         uses: ./.github/actions/update_submodules
+#       - name: Run pre-make
+#         uses: ./.github/actions/pre_make
+#       - name: Run make init
+#         uses: ./.github/actions/make_init
+#       - name: Run make jstest
+#         run: |
+#           make jstest
