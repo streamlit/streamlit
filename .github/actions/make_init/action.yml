@@ -7,12 +7,12 @@ runs:
       with:
         path: ~/
         key: v13-nvm_node_modules-${{ hashFiles('**/yarn.lock.md5') }}
-    - if: ${{ steps.cache-nvm-node-yarn.outputs.cache-hit == 'false' }}
-      name: "Install NVM, Node.js, and Yarn"
+    - name: Install NVM, Node.js, and Yarn
+      if: steps.cache-nvm-node-yarn.outputs.cache-hit != 'true'
       run: |
         echo "INSTALLING"
         if [ ! -d ~/.nvm ] ; then
-          echo "IN THE NODE IF STATEMENT"
+          echo "IN THE INSTALL IF STATEMENT"
           cd ..
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -46,8 +46,8 @@ runs:
       with:
         path: ~/
         key: v13-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
-    - if: ${{ steps.cache-virtualenv.outputs.cache-hit == 'false' }}
-      name: Create Virtualenv
+    - name: Create Virtual Env
+      if: steps.cache-virtualenv.outputs.cache-hit != 'true'
       run: |
         python -m venv venv
         source venv/bin/activate
