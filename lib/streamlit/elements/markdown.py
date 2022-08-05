@@ -17,6 +17,7 @@ from typing import cast, Optional, TYPE_CHECKING, Union
 from streamlit import type_util
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.string_util import clean_text
+from ..type_util import SupportsStr
 
 if TYPE_CHECKING:
     import sympy
@@ -25,7 +26,9 @@ if TYPE_CHECKING:
 
 
 class MarkdownMixin:
-    def markdown(self, body: str, unsafe_allow_html: bool = False) -> "DeltaGenerator":
+    def markdown(
+        self, body: SupportsStr, unsafe_allow_html: bool = False
+    ) -> "DeltaGenerator":
         """Display string formatted as Markdown.
 
         Parameters
@@ -78,7 +81,7 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
-    def code(self, body: str, language: Optional[str] = "python") -> "DeltaGenerator":
+    def code(self, body: SupportsStr, language: Optional[str] = "python") -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -104,14 +107,11 @@ class MarkdownMixin:
 
         """
         code_proto = MarkdownProto()
-        markdown = "```%(language)s\n%(body)s\n```" % {
-            "language": language or "",
-            "body": body,
-        }
+        markdown = f'```{language or ""}\n{body}\n```'
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
-    def caption(self, body: str, unsafe_allow_html: bool = False) -> "DeltaGenerator":
+    def caption(self, body: SupportsStr, unsafe_allow_html: bool = False) -> "DeltaGenerator":
         """Display text in small font.
 
         This should be used for captions, asides, footnotes, sidenotes, and
@@ -154,7 +154,7 @@ class MarkdownMixin:
         caption_proto.is_caption = True
         return self.dg._enqueue("markdown", caption_proto)
 
-    def latex(self, body: Union[str, "sympy.Expr"]) -> "DeltaGenerator":
+    def latex(self, body: Union[SupportsStr, "sympy.Expr"]) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.

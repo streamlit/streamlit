@@ -13,14 +13,12 @@
 # limitations under the License.
 
 import streamlit as st
-import inspect
-import textwrap
 import numpy as np
-from typing import Any
+from typing import Any, cast
 from streamlit.hello.utils import show_code
 
 
-def animation_demo():
+def animation_demo() -> None:
 
     # Interactive Streamlit elements, like these sliders, return their value.
     # This gives you an extremely simple interaction model.
@@ -52,7 +50,7 @@ def animation_demo():
         M: Any = np.full((n, m), True, dtype=bool)
         N = np.zeros((n, m))
 
-        for i in range(iterations):
+        for i in range(cast(int, iterations)):
             Z[M] = Z[M] * Z[M] + C[M]
             M[np.abs(Z) > 2] = False
             N[M] = i

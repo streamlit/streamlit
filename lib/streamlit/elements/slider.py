@@ -13,12 +13,17 @@
 # limitations under the License.
 
 from datetime import date, time, datetime, timedelta, timezone
+from typing import Sequence
+from typing import Tuple
+from typing import TypeVar
+from typing import Union
+
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
-from typing import Any, List, cast, Optional
+from typing import Any, List, cast, Optional, TYPE_CHECKING
+from typing_extensions import TypeAlias
 from textwrap import dedent
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
@@ -34,14 +39,48 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+SliderScalarT = TypeVar("SliderScalarT", int, float, date, time, datetime)
+
+Step: TypeAlias = Union[int, float, timedelta]
+SliderScalar: TypeAlias = Union[int, float, date, time, datetime]
+
+SliderValueGeneric: TypeAlias = Union[
+    SliderScalarT,
+    Sequence[SliderScalarT],
+]
+SliderValue: TypeAlias = Union[
+    SliderValueGeneric[int],
+    SliderValueGeneric[float],
+    SliderValueGeneric[date],
+    SliderValueGeneric[time],
+    SliderValueGeneric[datetime],
+]
+
+SliderReturnGeneric: TypeAlias = Union[
+    SliderScalarT,
+    Tuple[SliderScalarT],
+    Tuple[SliderScalarT, SliderScalarT],
+]
+SliderReturn: TypeAlias = Union[
+    SliderReturnGeneric[int],
+    SliderReturnGeneric[float],
+    SliderReturnGeneric[date],
+    SliderReturnGeneric[time],
+    SliderReturnGeneric[datetime],
+]
+
+
 class SliderMixin:
     def slider(
         self,
         label: str,
-        min_value=None,
-        max_value=None,
-        value=None,
-        step=None,
+        min_value: Optional[SliderScalar] = None,
+        max_value: Optional[SliderScalar] = None,
+        value: Optional[SliderValue] = None,
+        step: Optional[Step] = None,
         format: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -50,7 +89,7 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ):
+    ) -> SliderReturn:
         """Display a slider widget.
 
         This supports int, float, date, time, and datetime types.
@@ -172,8 +211,8 @@ class SliderMixin:
         min_value=None,
         max_value=None,
         value=None,
-        step=None,
-        format=None,
+        step: Optional[Step] = None,
+        format: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -182,7 +221,7 @@ class SliderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ):
+    ) -> SliderReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -283,14 +322,14 @@ class SliderMixin:
         if max_value is None:
             max_value = DEFAULTS[data_type]["max_value"]
         if step is None:
-            step = DEFAULTS[data_type]["step"]
+            step = cast(Step, DEFAULTS[data_type]["step"])
             if data_type in (
                 SliderProto.DATETIME,
                 SliderProto.DATE,
             ) and max_value - min_value < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
-            format = DEFAULTS[data_type]["format"]
+            format = cast(str, DEFAULTS[data_type]["format"])
 
         if step == 0:
             raise StreamlitAPIException(
@@ -447,14 +486,14 @@ class SliderMixin:
         slider_proto.default[:] = value
         slider_proto.min = min_value
         slider_proto.max = max_value
-        slider_proto.step = step
+        slider_proto.step = cast(float, step)
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
         slider_proto.form_id = current_form_id(self.dg)
         if help is not None:
             slider_proto.help = dedent(help)
 
-        def deserialize_slider(ui_value: Optional[List[float]], widget_id=""):
+        def deserialize_slider(ui_value: Optional[List[float]], widget_id: str = ""):
             if ui_value is not None:
                 val = ui_value
             else:
@@ -506,9 +545,9 @@ class SliderMixin:
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
-        return widget_state.value
+        return cast(SliderReturn, widget_state.value)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
