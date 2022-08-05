@@ -927,3 +927,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.body, "some warning")
         self.assertEqual(el.alert.icon, "⚠️")
         self.assertEqual(el.alert.format, Alert.WARNING)
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_st_alert_exceptions(self, alert_func):
+        """Test that alert functions throw an exception when a non-emoji is given as an icon."""
+        with self.assertRaises(StreamlitAPIException):
+            alert_func("some alert", icon="hello world")
