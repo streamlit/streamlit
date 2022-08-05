@@ -64,7 +64,7 @@ jobs:
   e2e_tests:
 
     runs-on: ubuntu-latest
-    needs: [build, list-spec-files]
+    needs: [build]
 
     strategy:
       fail-fast: false
