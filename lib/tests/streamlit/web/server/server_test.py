@@ -25,16 +25,8 @@ from unittest.mock import patch
 
 import pytest
 import tornado.httpserver
-import tornado.httpserver
-import tornado.httpserver
-import tornado.testing
-import tornado.testing
 import tornado.testing
 import tornado.web
-import tornado.web
-import tornado.web
-import tornado.websocket
-import tornado.websocket
 import tornado.websocket
 
 import streamlit.web.server.server
@@ -44,11 +36,13 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
-from streamlit.web.server.server import MAX_PORT_SEARCH_RETRIES
-from streamlit.web.server.server import RetriesExceeded
-from streamlit.web.server.server import Server
-from streamlit.web.server.server import State
-from streamlit.web.server.server import start_listening
+from streamlit.web.server.server import (
+    MAX_PORT_SEARCH_RETRIES,
+    RetriesExceeded,
+    Server,
+    State,
+    start_listening,
+)
 from .message_mocks import create_dataframe_msg
 from .server_test_case import ServerTestCase
 

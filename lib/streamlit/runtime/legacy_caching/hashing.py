@@ -712,14 +712,14 @@ class _CodeHasher:
 
     @staticmethod
     def _get_main_script_directory() -> str:
-        """Get the directory of the main script."""
+        """Get the absolute path to directory of the main script."""
         import __main__
-        import os
+        import pathlib
 
         # This works because we set __main__.__file__ to the
         # script path in ScriptRunner.
-        main_path = __main__.__file__
-        return str(os.path.dirname(main_path))
+        abs_main_path = pathlib.Path(__main__.__file__).resolve()
+        return str(abs_main_path.parent)
 
 
 def get_referenced_objects(code, context: Context) -> List[Any]:
