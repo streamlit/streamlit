@@ -12,6 +12,7 @@ jobs:
     # container: circleci/python:3.10.0
     
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
     
@@ -47,6 +48,7 @@ jobs:
         shell: bash -l -v -e -u -o pipefail {0}
       - name: Run type checkers
         run: |
+          source $HOME/.bash_profile
           make tstypecheck
           scripts/mypy --report
         shell: bash -l -v -e -u -o pipefail {0}
