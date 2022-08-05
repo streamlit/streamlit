@@ -9,7 +9,7 @@ runs:
         key: v13_make.bin-${{ hashFiles('**/make.md5') }}
     - if: ${{ steps.cache-make.outputs.cache-hit == 'false' }}
       name: Install make
-      shell: bash
+      shell: bash -l -v -e -u -o pipefail {0}
       env:
         SUDO: 'sudo'
       run: |
@@ -31,7 +31,7 @@ runs:
         key: v13_dot.bin-${{ hashFiles('**/dot.md5') }}
     - if: ${{ steps.cache-dot.outputs.cache-hit == 'false' }}
       name: Install dot
-      shell: bash
+      shell: bash -l -v -e -u -o pipefail {0}
       env:
         SUDO: 'sudo'
       run: |

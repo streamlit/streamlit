@@ -28,16 +28,16 @@ runs:
           source "$HOME/.nvm/nvm.sh"
           make react-init
         fi
-      shell: bash
+      shell: bash -l -v -e -u -o pipefail {0}
     - name: Install pyodbc dependencies
       run: |
         ${SUDO} apt-get install -y unixodbc-dev
-      shell: bash
+      shell: bash -l -v -e -u -o pipefail {0}
     - name: Install graphviz dependencies
       run: |
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
-      shell: bash
+      shell: bash -l -v -e -u -o pipefail {0}
     - name: Restore virtualenv from cache
       id: cache-virtualenv
       uses: actions/cache@v3
@@ -57,7 +57,7 @@ runs:
         # Add 'activate venv' to $HOME/.bash_profile. This means that our venv will be active
         # for the remainder of the job ($HOME/.bash_profile is evaluated at each step).
         echo 'source venv/bin/activate' >> $HOME/.bash_profile
-      shell: bash
+      shell: bash -l -v -e -u -o pipefail {0}
     - name: generate_protobufs
       run: |
         source $HOME/.bash_profile
@@ -71,4 +71,4 @@ runs:
         ${SUDO} apt-get install -y protobuf-compiler
         # Generate protobufs
         make protobuf
-      shell: bash
+      shell: bash -l -v -e -u -o pipefail {0}
