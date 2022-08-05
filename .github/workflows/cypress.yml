@@ -18,8 +18,7 @@ jobs:
       - name: List all
         id: set-matrix
         run: | 
-          echo "::set-output name=spec::$(ls e2e/specs/${{ matrix.specs }}/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
-          echo spec
+          echo ../e2e/specs/${{ matrix.specs }}/**/*.spec.js
 
 
   # build:
