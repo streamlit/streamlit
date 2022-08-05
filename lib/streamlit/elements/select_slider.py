@@ -26,8 +26,13 @@ from streamlit.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key, \
-    LabelVisibility
+from streamlit.type_util import (
+    Key,
+    OptionSequence,
+    ensure_indexable,
+    to_key,
+    LabelVisibility,
+)
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
