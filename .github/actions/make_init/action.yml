@@ -60,7 +60,6 @@ runs:
       shell: bash -l -v -e -u -o pipefail {0}
     - name: generate_protobufs
       run: |
-        source $HOME/.bash_profile
         # install protobuf v3
         ${SUDO} apt update
         ${SUDO} apt-get install -y gnupg
