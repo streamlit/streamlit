@@ -1,14 +1,14 @@
 runs:
   using: composite
   steps:
-    - name: Restore make from cache
-      id: cache-make
-      uses: actions/cache@v3
-      with:
-        path: ~/
-        key: v13_make.bin-${{ hashFiles('**/make.md5') }}
+    # - name: Restore make from cache
+    #   id: cache-make
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: ~/
+    #     key: v13_make.bin-${{ hashFiles('**/make.md5') }}
     - name: Install make
-      if: steps.cache-make.outputs.cache-hit != 'true'
+      # if: steps.cache-make.outputs.cache-hit != 'true'
       run: |
           if [ -s make.bin ] ; then
             echo "make.bin exists; not installing"
@@ -21,14 +21,14 @@ runs:
           fi
           ${SUDO} cp -f make.bin /usr/bin/make
       shell: bash -l -v -e -u -o pipefail {0}
-    - name: Restore dot from cache
-      id: cache-dot
-      uses: actions/cache@v3
-      with:
-        path: ~/
-        key: v13_dot.bin-${{ hashFiles('**/dot.md5') }}
+    # - name: Restore dot from cache
+    #   id: cache-dot
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: ~/
+    #     key: v13_dot.bin-${{ hashFiles('**/dot.md5') }}
     - name: Install dot
-      if: steps.cache-dot.outputs.cache-hit != 'true'
+      # if: steps.cache-dot.outputs.cache-hit != 'true'
       run: |
           if [ -s dot.bin ] ; then
             echo "dot.bin exists and is non zero"

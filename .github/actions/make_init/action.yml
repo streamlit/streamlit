@@ -1,14 +1,14 @@
 runs:
   using: composite
   steps:
-    - name: Restore nvm and node_modules from cache
-      id: cache-nvm-node-yarn
-      uses: actions/cache@v3
-      with:
-        path: ~/
-        key: v13-nvm_node_modules-${{ hashFiles('**/yarn.lock.md5') }}
+    # - name: Restore nvm and node_modules from cache
+    #   id: cache-nvm-node-yarn
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: ~/
+    #     key: v13-nvm_node_modules-${{ hashFiles('**/yarn.lock.md5') }}
     - name: Install NVM, Node.js, and Yarn
-      if: steps.cache-nvm-node-yarn.outputs.cache-hit != 'true'
+      # if: steps.cache-nvm-node-yarn.outputs.cache-hit != 'true'
       run: |
         if [ ! -d ~/.nvm ] ; then
           cd ..
