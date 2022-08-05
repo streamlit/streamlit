@@ -18,7 +18,7 @@ jobs:
       - name: List all
         id: set-matrix
         run: | 
-          echo ../e2e/specs/${{ matrix.specs }}/**/*.spec.js
+          echo ls ./e2e/specs/${{ matrix.specs }}/**/*.spec.js
 
 
   # build:
