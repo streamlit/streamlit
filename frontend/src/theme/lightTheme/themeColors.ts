@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { transparentize, desaturate } from "color2k"
+import { transparentize } from "color2k"
 import { colors } from "../primitives/colors"
 
 export default {
