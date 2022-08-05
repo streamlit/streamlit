@@ -272,6 +272,7 @@ type DerivedColors = {
   linkText: string
   fadedText05: string
   fadedText10: string
+  fadedText20: string
   fadedText40: string
   fadedText60: string
 
@@ -297,6 +298,7 @@ const computeDerivedColors = (
 
   const fadedText05 = transparentize(bodyText, 0.9) // Mostly used for very faint 1px lines.
   const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
+  const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
 
@@ -314,6 +316,7 @@ const computeDerivedColors = (
     linkText,
     fadedText05,
     fadedText10,
+    fadedText20,
     fadedText40,
     fadedText60,
 
