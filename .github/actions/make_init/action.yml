@@ -28,6 +28,8 @@ runs:
           source "$HOME/.nvm/nvm.sh"
           make react-init
         fi
+        node -v
+        yarn version
       shell: bash -l -v -e -u -o pipefail {0}
     - name: Install pyodbc dependencies
       run: |
