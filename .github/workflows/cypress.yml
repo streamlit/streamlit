@@ -40,5 +40,5 @@ jobs:
       - name: Cypress Tests
         run: |
           cd frontend
-          ../scripts/run_e2e_tests.py -a -f
+          ../scripts/run_e2e_tests.py -a
         shell: bash -l -v -e -u -o pipefail {0}
