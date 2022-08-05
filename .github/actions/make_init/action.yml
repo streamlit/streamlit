@@ -10,7 +10,9 @@ runs:
     - if: ${{ steps.cache-nvm-node-yarn.outputs.cache-hit == 'false' }}
       name: "Install NVM, Node.js, and Yarn"
       run: |
+        echo "INSTALLING"
         if [ ! -d ~/.nvm ] ; then
+          echo "IN THE NODE IF STATEMENT"
           cd ..
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -28,8 +30,6 @@ runs:
           source "$HOME/.nvm/nvm.sh"
           make react-init
         fi
-        node -v
-        yarn version
       shell: bash -l -v -e -u -o pipefail {0}
     - name: Install pyodbc dependencies
       run: |
