@@ -26,7 +26,6 @@ from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server import (
-    DebugHandler,
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
@@ -73,17 +72,6 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
         self.assertIn("Set-Cookie", response.headers)
-
-
-class DebugHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """Tests the /debugz endpoint"""
-
-    def get_app(self):
-        return tornado.web.Application([(r"/debugz", DebugHandler)])
-
-    def test_debug(self):
-        # TODO - debugz is currently broken
-        pass
 
 
 class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
