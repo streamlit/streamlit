@@ -3,17 +3,17 @@ name: Cypress Tests
 on: [push]
 
 jobs:
-  list-spec-files:
+  # list-spec-files:
 
-    runs-on: ubuntu-latest
+  #   runs-on: ubuntu-latest
 
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+  #   outputs:
+  #     matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-    steps:
-      - uses: actions/checkout@v2
-      - id: set-matrix
-        run: echo "::set-output name=matrix::$(ls e2e/specs/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - id: set-matrix
+  #       run: echo "::set-output name=matrix::$(ls e2e/specs/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
 
   build:
 
@@ -23,13 +23,7 @@ jobs:
       SUDO: 'sudo'
       BASH_ENV: $HOME/.bash_profile
 
-    # container: circleci/python:3.7.11
-
     steps:
-      # This Docker file changes sets USER to circleci instead of using the default user, so we need to update file permissions for this image to work on GH Actions.
-      # See https://docs.github.com/actions/reference/virtual-environments-for-github-hosted-runners#docker-container-filesystem
-      # - name: Setup file system permissions
-      #   run: sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
       - name: Set up Python 3.7.11
@@ -47,10 +41,6 @@ jobs:
         run: |
           ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
         shell: bash -l -v -e -u -o pipefail {0}
-      # - name: Install Cypress dependencies
-      #   uses: cypress-io/github-action@v2
-      #   with:
-      #     runTests: false
       # Revisit artifact saving
       # - name: Save Cypress artifacts
       #   uses: actions/upload-artifact@v2
@@ -79,22 +69,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        specs: ${{ fromJson(needs.list-spec-files.outputs.matrix) }}
+        # specs: ${{ fromJson(needs.list-spec-files.outputs.matrix) }}
+        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   
     steps:
       - uses: actions/checkout@v2
       - name: Cypress Tests
         run: |
           cd frontend
-          ../scripts/run_e2e_tests.py -a ${{ matrix.manifest }}
-        shell: bash -l -v -e -u -o pipefail {0}
 
-        # uses: cypress-io/github-action@v4
-        # with:
-        #   project: ./e2e/specs
-        #   browser: chrome
-        #   start: yarn start
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        #   CI_TOTAL: ${{ matrix.ci_total }}
-        #   CI_INDEX: ${{ matrix.ci_index }}
+          ../scripts/run_e2e_tests.py -a e2e/specs/${{ matrix.specs }}
+        shell: bash -l -v -e -u -o pipefail {0}
