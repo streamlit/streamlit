@@ -10,9 +10,7 @@ runs:
     - name: Install NVM, Node.js, and Yarn
       if: steps.cache-nvm-node-yarn.outputs.cache-hit != 'true'
       run: |
-        echo "INSTALLING"
         if [ ! -d ~/.nvm ] ; then
-          echo "IN THE INSTALL IF STATEMENT"
           cd ..
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm

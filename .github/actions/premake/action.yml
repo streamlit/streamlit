@@ -7,11 +7,8 @@ runs:
       with:
         path: ~/
         key: v13_make.bin-${{ hashFiles('**/make.md5') }}
-    - if: ${{ steps.cache-make.outputs.cache-hit == 'false' }}
-      name: Install make
-      shell: bash -l -v -e -u -o pipefail {0}
-      env:
-        SUDO: 'sudo'
+    - name: Install make
+      if: steps.cache-make.outputs.cache-hit != 'true'
       run: |
           if [ -s make.bin ] ; then
             echo "make.bin exists; not installing"
@@ -23,17 +20,15 @@ runs:
             ${SUDO} cp -f /usr/bin/make make.bin
           fi
           ${SUDO} cp -f make.bin /usr/bin/make
+      shell: bash -l -v -e -u -o pipefail {0}
     - name: Restore dot from cache
       id: cache-dot
       uses: actions/cache@v3
       with:
         path: ~/
         key: v13_dot.bin-${{ hashFiles('**/dot.md5') }}
-    - if: ${{ steps.cache-dot.outputs.cache-hit == 'false' }}
-      name: Install dot
-      shell: bash -l -v -e -u -o pipefail {0}
-      env:
-        SUDO: 'sudo'
+    - name: Install dot
+      if: steps.cache-dot.outputs.cache-hit != 'true'
       run: |
           if [ -s dot.bin ] ; then
             echo "dot.bin exists and is non zero"
@@ -45,3 +40,4 @@ runs:
             ${SUDO} cp -f /usr/bin/dot dot.bin
           fi
           ${SUDO} cp -f dot.bin /usr/bin/dot
+      shell: bash -l -v -e -u -o pipefail {0}

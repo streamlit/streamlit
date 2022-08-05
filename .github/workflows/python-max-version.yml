@@ -16,36 +16,40 @@ jobs:
         uses: actions/checkout@v3
       - uses: ./.github/actions/update_submodules
       - uses: ./.github/actions/pre_cache
-      # - uses: ./.github/actions/restore_cache
       - uses: ./.github/actions/premake
       - uses: ./.github/actions/make_init
-      # - name: Run make develop
-      #   run: |
-      #     make develop
-      #   shell: bash -l -v -e -u -o pipefail {0}
-      # - name: Run linters
-      #   run: |
-      #     source $HOME/.bash_profile
-      #     make jslint &> jslint_error.txt
-      #     echo "$(<jslint_error.txt )"
-      #     # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
-      #     echo "Please run make pyformat if this job fails"
-      #     make pylint &> pylint_error.txt
-      #     echo "$(<pylint_error.txt )"
-      #     # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
-      #   shell: bash -l -v -e -u -o pipefail {0}
-      # - name: Run make pycoverage
-      #   run: |
-      #     source $HOME/.bash_profile
-      #     make pycoverage
-      #   shell: bash -l -v -e -u -o pipefail {0}
-      # - name: Run make integration tests
-      #   run: |
-      #     source $HOME/.bash_profile
-      #     make integration-tests
-      #   shell: bash -l -v -e -u -o pipefail {0}
-      # - name: Run make CLI smoke tests
-      #   run: |
-      #     source $HOME/.bash_profile
-      #     make cli-smoke-tests
-      #   shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run make develop
+        run: |
+          make develop
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run linters
+        run: |
+          # source $HOME/.bash_profile
+          make jslint &> jslint_error.txt
+          echo "$(<jslint_error.txt )"
+          # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
+          echo "Please run make pyformat if this job fails"
+          make pylint &> pylint_error.txt
+          echo "$(<pylint_error.txt )"
+          # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run type checkers
+        run: |
+          make tstypecheck
+          scripts/mypy --report
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run python tests
+        run: |
+          # source $HOME/.bash_profile
+          make pycoverage
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run integration tests
+        run: |
+          # source $HOME/.bash_profile
+          make integration-tests
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: CLI smoke tests
+        run: |
+          # source $HOME/.bash_profile
+          make cli-smoke-tests
+        shell: bash -l -v -e -u -o pipefail {0}
