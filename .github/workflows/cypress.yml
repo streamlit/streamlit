@@ -77,10 +77,10 @@ jobs:
         # run: |
         #   cd frontend
         #   ../scripts/run_e2e_tests.py -a
+        # shell: bash -l -v -e -u -o pipefail {0}
         with:
           project: ./e2e/specs
           browser: chrome
           start: yarn start
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash -l -v -e -u -o pipefail {0}
