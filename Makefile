@@ -31,7 +31,7 @@ mini-devel: mini-init develop pre-commit-install
 
 .PHONY: init
 # Install all Python and JS dependencies.
-init: setup pipenv-install react-init protobuf pre-commit-install
+init: setup pipenv-install react-init protobuf
 
 .PHONY: mini-init
 # Install minimal Python and JS dependencies for development.
