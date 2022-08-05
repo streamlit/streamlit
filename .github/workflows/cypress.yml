@@ -86,7 +86,7 @@ jobs:
       - name: Cypress Tests
         run: |
           cd frontend
-          ../scripts/run_e2e_tests.py -a ${{ martix.manifest }}
+          ../scripts/run_e2e_tests.py -a ${{ matrix.manifest }}
         shell: bash -l -v -e -u -o pipefail {0}
 
         # uses: cypress-io/github-action@v4
