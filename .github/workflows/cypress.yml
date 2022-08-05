@@ -25,7 +25,7 @@
 #         with:
 #             python-version: "3.7.11"
 #       - uses: ./.github/actions/update_submodules
-#       - uses: ./.github/actions/premake
+#       - uses: ./.github/actions/pre_make
 #       - uses: ./.github/actions/make_init
 #       - name: Run make develop
 #         run: |

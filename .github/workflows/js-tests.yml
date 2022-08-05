@@ -18,9 +18,12 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - uses: ./.github/actions/update_submodules
-      - uses: ./.github/actions/premake
-      - uses: ./.github/actions/make_init
+      - name: Update Submodules
+        uses: ./.github/actions/update_submodules
+      - name: Run pre-make
+        uses: ./.github/actions/pre_make
+      - name: Run make init
+        uses: ./.github/actions/make_init
       - name: Run make jstest
         run: |
           make jstest
