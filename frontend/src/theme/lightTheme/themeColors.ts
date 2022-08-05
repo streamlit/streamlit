@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
+import { transparentize, desaturate } from "color2k"
 import { colors } from "../primitives/colors"
 
 export default {
@@ -35,12 +35,12 @@ export default {
   // For this one, we use a specific color,
   // outside our standard color palette,
   // to ensure contrast is good enough for accessibility
-  warning: "#C05103",
-  warningBg: transparentize(colors.orange10, 0.6),
+  warning: "#926C05",
+  warningBg: transparentize(colors.yellow70, 0.9),
   success: colors.green100,
-  successBg: transparentize(colors.green10, 0.6),
+  successBg: transparentize(colors.green70, 0.9),
   info: colors.blue100,
-  infoBg: transparentize(colors.blue10, 0.6),
+  infoBg: transparentize(colors.blue70, 0.9),
   danger: colors.red100,
-  dangerBg: transparentize(colors.red10, 0.6),
+  dangerBg: transparentize(colors.red80, 0.91),
 }
