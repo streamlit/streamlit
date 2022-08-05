@@ -41,3 +41,4 @@ jobs:
         run: |
           cd frontend
           ../scripts/run_e2e_tests.py -a -f
+        shell: bash -l -v -e -u -o pipefail {0}

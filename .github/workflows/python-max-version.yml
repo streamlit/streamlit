@@ -1,12 +1,20 @@
 # name: python-max-version
+
 # on: [push]
+
 # jobs:
 #   checkout:
+
 #     env:
 #       SUDO: 'sudo'
 #       BASH_ENV: $HOME/.bash_profile
 #     runs-on: ubuntu-latest
 #     container: circleci/python:3.10.0
+#     
+#     strategy:
+#       matrix:
+#         python-version: ["3.7", "3.8", "3.9", "3.10"]
+#     
 #     steps:
 #       # This Docker file changes sets USER to circleci instead of using the default user, so we need to update file permissions for this image to work on GH Actions.
 #       # See https://docs.github.com/actions/reference/virtual-environments-for-github-hosted-runners#docker-container-filesystem
@@ -14,6 +22,10 @@
 #         run: sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
 #       - name: Checkout Streamlit code
 #         uses: actions/checkout@v3
+#       - name: Set up Python ${{ matrix.python-version }}
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: ${{ matrix.python-version }}
 #       - uses: ./.github/actions/update_submodules
 #       - uses: ./.github/actions/pre_cache
 #       - uses: ./.github/actions/premake
