@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: List all
         id: set-matrix
-        run: echo "e2e/specs/${{ matrix.specs }}/*.spec.js"
+        run: echo "e2e/specs/${{ matrix.specs }}/**"
 
   # build:
 
