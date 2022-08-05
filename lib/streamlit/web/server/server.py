@@ -66,16 +66,19 @@ from streamlit.runtime.state import (
 from streamlit.runtime.stats import StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
-from streamlit.web.server.routes import AddSlashHandler
-from streamlit.web.server.routes import AssetsFileHandler
-from streamlit.web.server.routes import DebugHandler
-from streamlit.web.server.routes import HealthHandler
-from streamlit.web.server.routes import MediaFileHandler
-from streamlit.web.server.routes import MessageCacheHandler
-from streamlit.web.server.routes import StaticFileHandler
-from streamlit.web.server.server_util import get_max_message_size_bytes
-from streamlit.web.server.server_util import is_cacheable_msg
-from streamlit.web.server.server_util import make_url_path_regex
+from streamlit.web.server.routes import (
+    AddSlashHandler,
+    AssetsFileHandler,
+    HealthHandler,
+    MediaFileHandler,
+    MessageCacheHandler,
+    StaticFileHandler,
+)
+from streamlit.web.server.server_util import (
+    get_max_message_size_bytes,
+    is_cacheable_msg,
+    make_url_path_regex,
+)
 from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
@@ -329,7 +332,6 @@ class Server:
                 HealthHandler,
                 dict(callback=lambda: self.is_ready_for_browser_connection),
             ),
-            (make_url_path_regex(base, "debugz"), DebugHandler, dict(server=self)),
             (
                 make_url_path_regex(base, "message"),
                 MessageCacheHandler,
