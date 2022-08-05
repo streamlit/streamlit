@@ -1,7 +1,14 @@
 runs:
   using: composite
   steps:
-    - name: "Install NVM, Node.js, and Yarn"
+    - name: Restore nvm and node_modules from cache
+      id: cache-nvm-node-yarn
+      uses: actions/cache@v3
+      with:
+        path: ~/
+        key: v13-nvm_node_modules-${{ hashFiles('**/yarn.lock.md5') }}
+    - if: ${{ steps.cache-nvm-node-yarn.outputs.cache-hit == 'false' }}
+      name: "Install NVM, Node.js, and Yarn"
       run: |
         if [ ! -d ~/.nvm ] ; then
           cd ..
@@ -31,14 +38,14 @@ runs:
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
       shell: bash
-    - name: Cache Venv
-      id: cache-venv
+    - name: Restore virtualenv from cache
+      id: cache-virtualenv
       uses: actions/cache@v3
       with:
-        path: venv
-        key: ${{ runner.os }}-venv
-    - name: Create Virtualenv
-      # if: steps.cache-venv.outputs.cache-hit != 'true'
+        path: ~/
+        key: v13-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
+    - if: ${{ steps.cache-virtualenv.outputs.cache-hit == 'false' }}
+      name: Create Virtualenv
       run: |
         python -m venv venv
         source venv/bin/activate

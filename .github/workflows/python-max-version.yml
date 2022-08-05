@@ -14,12 +14,11 @@ jobs:
         run: sudo chmod -R 777 $GITHUB_WORKSPACE /github /__w/_temp
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-      # cache: 'yarn'
       - uses: ./.github/actions/update_submodules
       - uses: ./.github/actions/pre_cache
-      - uses: ./.github/actions/restore_cache
-      # - uses: ./.github/actions/premake
-      # - uses: ./.github/actions/make_init
+      # - uses: ./.github/actions/restore_cache
+      - uses: ./.github/actions/premake
+      - uses: ./.github/actions/make_init
       # - name: Run make develop
       #   run: |
       #     make develop

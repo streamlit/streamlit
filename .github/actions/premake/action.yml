@@ -1,7 +1,14 @@
 runs:
   using: composite
   steps:
-    - name: Install make
+    - name: Restore make from cache
+      id: cache-make
+      uses: actions/cache@v3
+      with:
+        path: ~/
+        key: v13_make.bin-${{ hashFiles('**/make.md5') }}
+    - if: ${{ steps.cache-make.outputs.cache-hit == 'false' }}
+      name: Install make
       shell: bash
       env:
         SUDO: 'sudo'
@@ -16,7 +23,14 @@ runs:
             ${SUDO} cp -f /usr/bin/make make.bin
           fi
           ${SUDO} cp -f make.bin /usr/bin/make
-    - name: Install dot
+    - name: Restore dot from cache
+      id: cache-dot
+      uses: actions/cache@v3
+      with:
+        path: ~/
+        key: v13_dot.bin-${{ hashFiles('**/dot.md5') }}
+    - if: ${{ steps.cache-dot.outputs.cache-hit == 'false' }}
+      name: Install dot
       shell: bash
       env:
         SUDO: 'sudo'
