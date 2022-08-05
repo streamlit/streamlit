@@ -38,14 +38,14 @@ runs:
         ${SUDO} apt update
         ${SUDO} apt-get install -y libgvc6
       shell: bash -l -v -e -u -o pipefail {0}
-    - name: Restore virtualenv from cache
-      id: cache-virtualenv
-      uses: actions/cache@v3
-      with:
-        path: ~/
-        key: v13-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
+    # - name: Restore virtualenv from cache
+    #   id: cache-virtualenv
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: ~/
+    #     key: v13-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
     - name: Create Virtual Env
-      if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+      # if: steps.cache-virtualenv.outputs.cache-hit != 'true'
       run: |
         python -m venv venv
         source venv/bin/activate
