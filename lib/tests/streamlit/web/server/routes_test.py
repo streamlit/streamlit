@@ -17,23 +17,20 @@ import tempfile
 from unittest.mock import MagicMock
 
 import tornado.httpserver
-import tornado.httpserver
-import tornado.testing
 import tornado.testing
 import tornado.web
-import tornado.web
-import tornado.websocket
 import tornado.websocket
 
 from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.runtime.forward_msg_cache import ForwardMsgCache
-from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.server import DebugHandler
-from streamlit.web.server.server import HealthHandler
-from streamlit.web.server.server import MessageCacheHandler
-from streamlit.web.server.server import StaticFileHandler
+from streamlit.web.server.server import (
+    DebugHandler,
+    HealthHandler,
+    MessageCacheHandler,
+    StaticFileHandler,
+)
 from .message_mocks import create_dataframe_msg
 
 LOGGER = get_logger(__name__)

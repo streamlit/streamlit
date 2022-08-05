@@ -61,7 +61,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             mock.mock_open(read_data="Test Content"),
         ):
             response = self._request_component(
-                "web.server.component_request_handler_test.test"
+                "tests.streamlit.web.server.component_request_handler_test.test"
             )
 
         self.assertEqual(200, response.code)
@@ -76,7 +76,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             declare_component("test", path=PATH)
 
         response = self._request_component(
-            "web.server.component_request_handler_test.test//etc/hosts"
+            "tests.streamlit.web.server.component_request_handler_test.test//etc/hosts"
         )
 
         self.assertEqual(403, response.code)
@@ -91,7 +91,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             declare_component("test", path=PATH)
 
         response = self._request_component(
-            "web.server.component_request_handler_test.test/../foo"
+            "tests.streamlit.web.server.component_request_handler_test.test/../foo"
         )
 
         self.assertEqual(403, response.code)
@@ -110,7 +110,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             side_effect=[PATH, "/etc/hosts"],
         ):
             response = self._request_component(
-                "web.server.component_request_handler_test.test"
+                "tests.streamlit.web.server.component_request_handler_test.test"
             )
 
         self.assertEqual(403, response.code)
@@ -132,7 +132,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         with mock.patch("streamlit.web.server.component_request_handler.open") as m:
             m.side_effect = OSError("Invalid content")
             response = self._request_component(
-                "web.server.component_request_handler_test.test"
+                "tests.streamlit.web.server.component_request_handler_test.test"
             )
 
         self.assertEqual(404, response.code)
@@ -171,7 +171,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         with mock.patch("streamlit.web.server.component_request_handler.open") as m:
             m.return_value.__enter__ = lambda _: _open_read(m, payload)
             response = self._request_component(
-                "web.server.component_request_handler_test.test"
+                "tests.streamlit.web.server.component_request_handler_test.test"
             )
 
         self.assertEqual(200, response.code)
