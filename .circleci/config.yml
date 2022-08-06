@@ -495,7 +495,7 @@ jobs:
           when: always
 
       - run:
-          name: Run type checkers
+          name: Run type checkers # tsc is run by pre-commit, thus in this step we only run mypy
           command: |
             scripts/mypy --report
 
