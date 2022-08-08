@@ -15,8 +15,9 @@
 import asyncio
 import time
 import traceback
+from asyncio import Future
 from enum import Enum
-from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple
+from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple, Awaitable
 
 from typing_extensions import Final, Protocol
 
@@ -135,6 +136,10 @@ class Runtime:
         # Set after a ForwardMsg is enqueued; cleared when we flush ForwardMsgs.
         self._need_send_data = asyncio.Event()
 
+        # Completed when the Runtime has stopped.
+        # (`Future` is not generic in Python 3.8, so we need to use quote-typing.)
+        self._stopped: "Future[None]" = asyncio.Future()
+
         # Initialize managers
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
@@ -166,6 +171,11 @@ class Runtime:
     @property
     def stats_mgr(self) -> StatsManager:
         return self._stats_mgr
+
+    @property
+    def stopped(self) -> Awaitable[None]:
+        """A Future that completes when the Runtime's run loop has exited."""
+        return self._stopped
 
     def _on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
@@ -474,8 +484,10 @@ class Runtime:
                 session_info.session.shutdown()
 
             self._set_state(RuntimeState.STOPPED)
+            self._stopped.set_result(None)
 
-        except Exception:
+        except Exception as e:
+            self._stopped.set_exception(e)
             traceback.print_exc()
             LOGGER.info(
                 """

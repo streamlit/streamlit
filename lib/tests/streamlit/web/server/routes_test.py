@@ -30,7 +30,7 @@ from streamlit.web.server.server import (
     MessageCacheHandler,
     StaticFileHandler,
 )
-from .message_mocks import create_dataframe_msg
+from tests.streamlit.message_mocks import create_dataframe_msg
 
 LOGGER = get_logger(__name__)
 
