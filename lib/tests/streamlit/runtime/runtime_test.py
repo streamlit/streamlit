@@ -88,3 +88,33 @@ class RuntimeTest(RuntimeTestCase):
         )
         self.runtime.close_session(session_id)
         self.runtime.close_session(session_id)
+
+    async def test_is_active_session(self):
+        """`is_active_session` should work as we expect."""
+        await self.start_runtime_loop()
+        session_id = self.runtime.create_session(
+            client=MagicMock(spec=SessionClient), user_info=MagicMock()
+        )
+        self.assertTrue(self.runtime.is_active_session(session_id))
+        self.assertFalse(self.runtime.is_active_session("not_a_session_id"))
+
+    async def test_handle_backmsg(self):
+        """BackMsgs should be delivered to the appropriate AppSession."""
+        with self.patch_app_session():
+            await self.start_runtime_loop()
+            session_id = self.runtime.create_session(
+                client=MagicMock(spec=SessionClient), user_info=MagicMock()
+            )
+
+            back_msg = MagicMock()
+            self.runtime.handle_backmsg(session_id, back_msg)
+
+            app_session = self.runtime._get_session_info(session_id).session
+            app_session.handle_backmsg.assert_called_once_with(back_msg)
+
+    async def test_handle_backmsg_invalid_session(self):
+        """A BackMsg for an invalid session gets dropped, and we don't
+        raise an error.
+        """
+        await self.start_runtime_loop()
+        self.runtime.handle_backmsg("not_a_session_id", MagicMock())
