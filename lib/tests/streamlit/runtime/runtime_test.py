@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import asyncio
+from unittest.mock import MagicMock
 
-from streamlit.runtime.runtime import RuntimeState
+from streamlit.runtime.runtime import RuntimeState, SessionClient
 from .runtime_test_case import RuntimeTestCase
 
 
@@ -32,3 +33,14 @@ class RuntimeTest(RuntimeTestCase):
 
         await self.runtime.stopped
         self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
+
+    async def test_create_session(self):
+        """Test that we can create and remove a single session."""
+        await self.start_runtime_loop()
+
+        session_id = self.runtime.create_session(client=MagicMock(spec=SessionClient), user_info=MagicMock())
+        self.assertEqual(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.runtime.state)
+
+        self.runtime.close_session(session_id)
+        self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
+
