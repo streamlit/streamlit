@@ -34,6 +34,12 @@ class CellMixin:
         cell_proto.cell_index = _get_next_cell_index()
         return self.dg._enqueue("cell", cell_proto)
 
+    # TODO: Support for same args as timedelta, to expire cell every X.
+    def _expire(self) -> None:
+        ctx = get_script_run_ctx()
+        if ctx:
+            ctx.bust_current_cell_recording = True
+
     @property
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""

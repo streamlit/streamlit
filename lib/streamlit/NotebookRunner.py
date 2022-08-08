@@ -120,11 +120,13 @@ class NotebookRunner:
 
             # If the user changed a widget that exists in this cell, it's different.
             elif other[i]._widget_value_changed():
+                print('widget value changed:', i)
                 last_differing_cell = i
                 diff.append(True)
 
             # If item changed, it's different.
             elif not self[i] == other[i]:
+                print('code changed:', i)
                 last_differing_cell = i
                 diff.append(True)
 
@@ -202,9 +204,11 @@ class _CellRunner:
 
     def run(self, locals):
         if self._successfully_ran:
+            print(f'XXX replaying {self._cell_index} ------------------------------')
             self._replay_recorded_msgs()
             return self._locals
 
+        print(f'XXX running {self._cell_index} ------------------------------')
         self._recorded_msgs.clear()
         self._recorded_widget_states.clear()
 
@@ -235,8 +239,10 @@ class _CellRunner:
 
             exec(code, locals)
 
-            self._locals = dict(locals)  # TODO XXX Handle refs properly!
-            self._successfully_ran = True
+            ctx = get_script_run_ctx()
+            if not ctx.bust_current_cell_recording:
+                self._locals = dict(locals)  # TODO XXX Handle refs properly!
+                self._successfully_ran = True
 
         except BaseException as e:
             raise
@@ -257,6 +263,8 @@ class _CellRunner:
                 cursor = get_container_cursor(root_container)
                 cursor._index = index + 1
 
+            print('XXX msg', msg.metadata.delta_path, msg.delta.new_element.WhichOneof('type'))
+            print('XXX cursor', index + 1)
 
             ctx.enqueue(msg, allow_recording=False)
             ctx.current_cell_index = self._cell_index

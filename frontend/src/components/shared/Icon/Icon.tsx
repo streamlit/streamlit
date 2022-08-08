@@ -50,16 +50,22 @@ interface IconProps {
   padding?: string
 }
 
-const Icon = React.memo(
-  ({ content, color, size, margin, padding }: IconProps): ReactElement => (
-    <StyledIcon
-      as={content}
-      color={color || "inherit"}
-      aria-hidden="true"
-      {...getDefaultProps({ size, margin, padding })}
-    />
-  )
+const RawIcon = ({
+  content,
+  color,
+  size,
+  margin,
+  padding,
+}: IconProps): ReactElement => (
+  <StyledIcon
+    as={content}
+    color={color || "inherit"}
+    aria-hidden="true"
+    {...getDefaultProps({ size, margin, padding })}
+  />
 )
+
+export const Icon = React.memo(RawIcon)
 
 interface EmojiIconProps {
   size?: IconSize
@@ -68,15 +74,20 @@ interface EmojiIconProps {
   children: ReactNode
 }
 
-export const EmojiIcon = React.memo(
-  ({ size, margin, padding, children }: EmojiIconProps): ReactElement => (
-    <StyledEmojiIcon
-      aria-hidden="true"
-      {...getDefaultProps({ size, margin, padding })}
-    >
-      {children}
-    </StyledEmojiIcon>
-  )
+const RawEmojiIcon = ({
+  size,
+  margin,
+  padding,
+  children,
+}: EmojiIconProps): ReactElement => (
+  <StyledEmojiIcon
+    aria-hidden="true"
+    {...getDefaultProps({ size, margin, padding })}
+  >
+    {children}
+  </StyledEmojiIcon>
 )
+
+export const EmojiIcon = React.memo(RawEmojiIcon)
 
 export default Icon

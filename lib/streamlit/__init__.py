@@ -172,6 +172,7 @@ color_picker = _main.color_picker
 
 # TODO XXX Is this the best way to do this?
 cell = _main._cell
+expire = _main._expire
 
 # Legacy
 _legacy_dataframe = _main._legacy_dataframe

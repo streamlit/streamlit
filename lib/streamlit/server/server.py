@@ -648,6 +648,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         # Ship it off!
+        print('XXX sending',
+              msg_to_send.WhichOneof('type'),
+              msg_to_send.delta.new_element.WhichOneof('type'),
+              msg_to_send.metadata.delta_path,
+              msg_to_send.metadata.current_cell_index,
+        )
         session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
     def _enqueued_some_message(self) -> None:

@@ -17,8 +17,6 @@
 
 import React from "react"
 
-import { CellModel, INotebookModel } from "src/lib/NotebookModel"
-
 export interface Props {
   toggleCellVisible: (cellIndex: number) => Promise<void>
   updateCellModel: (cellIndex: number, body: string) => void

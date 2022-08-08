@@ -465,7 +465,7 @@ export class App extends PureComponent<Props, State> {
           this.handleDeltaMsg(
             deltaMsg,
             msgProto.metadata as ForwardMsgMetadata,
-            msgProto.hash,
+            msgProto.hash
           ),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),

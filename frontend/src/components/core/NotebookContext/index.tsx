@@ -17,11 +17,7 @@
 
 import React from "react"
 
-import {
-  CellModel,
-  NotebookModel,
-  INotebookModel,
-} from "src/lib/NotebookModel"
+import { NotebookModel, INotebookModel } from "src/lib/NotebookModel"
 
 export interface Props {
   notebookModel: INotebookModel

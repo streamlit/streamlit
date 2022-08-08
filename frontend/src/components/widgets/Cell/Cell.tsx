@@ -1,4 +1,4 @@
-/*tyled
+/**
  * @license
  * Copyright 2018-2022 Streamlit Inc.
  *
@@ -23,7 +23,7 @@ import { ViewUpdate, keymap } from "@codemirror/view"
 import { defaultKeymap } from "@codemirror/commands"
 import { python } from "@codemirror/lang-python"
 // import { dracula } from "@uiw/codemirror-theme-dracula"
-import { Close } from "@emotion-icons/material-outlined"
+import { UnfoldLess } from "@emotion-icons/material-outlined"
 
 import { Cell as CellProto } from "src/autogen/proto"
 import NotebookContext from "src/components/core/NotebookContext"
@@ -58,9 +58,6 @@ const myTheme = createTheme({
     },
     { tag: [t.string], color: "#00a4d4" },
     { tag: [t.number], color: "#09ab3b" },
-    //{ tag: [t.meta, t.regexp], color: "#ff0" },
-    //{ tag: [t.attributeName], color: "#ff0" },
-    //{ tag: [t.name, t.quote], color: "#ff0" },
   ],
 })
 
@@ -168,7 +165,7 @@ function Cell({ element, cellIndex }: Props): React.ReactElement {
   return (
     <StyledCell>
       <StyledCloseButton onClick={toggleCell}>
-        <Icon content={Close} size="lg" />
+        <Icon content={UnfoldLess} size="lg" />
       </StyledCloseButton>
       <CodeMirror
         key={`cell-${cellIndex}`}

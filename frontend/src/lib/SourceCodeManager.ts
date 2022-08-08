@@ -17,100 +17,11 @@
 
 import HttpClient from "src/lib/HttpClient"
 import { SourceCode } from "src/autogen/proto"
-import { BaseUriParts } from "./UriUtil"
+
 import Resolver from "src/lib/Resolver"
+import { BaseUriParts } from "./UriUtil"
 
 type DataCallbackFunc<T> = (data: T) => void
-
-interface Props {
-  getServerUri: () => BaseUriParts | undefined
-  csrfEnabled: boolean
-  onSourceCodeChanged: DataCallbackFunc<SourceCode>
-}
-
-// This represents what we know about what the server knows.
-// (i.e. code that was modified but not yet saved to the server isn't represented here.)
-export class SourceCodeManager extends HttpClient {
-  // A token indicating which file we have in memory.
-  private filenameHash: string = ""
-
-  private syncer: Syncer<SourceCode>
-
-  public constructor(props: Props) {
-    super(props.getServerUri, props.csrfEnabled)
-
-    this.syncer = new Syncer(this.fetchSourceCode, props.onSourceCodeChanged)
-  }
-
-  public async getSourceCode(): Promise<SourceCode> {
-    return this.syncer.getData({ fetchIfOutOfSync: true })
-  }
-
-  public async contentChangedRemotely(
-    filenameHash: string,
-    contentSyncToken: string
-  ): Promise<void> {
-    if (filenameHash !== this.filenameHash) {
-      return
-    }
-
-    await this.syncer.setSyncTokenAndMaybeSync(contentSyncToken)
-  }
-
-  public async setCurrentFileAndSync(
-    filenameHash: string,
-    contentSyncToken: string
-  ): Promise<void> {
-    if (filenameHash === this.filenameHash) {
-      return
-    }
-
-    this.filenameHash = filenameHash
-    this.syncer.reset()
-
-    await this.syncer.setSyncTokenAndMaybeSync(contentSyncToken)
-  }
-
-  private fetchSourceCode = async (): Promise<FetchResult<SourceCode>> => {
-    const response = await this.request<Uint8Array>("source", {
-      method: "GET",
-      params: { filenameHash: this.filenameHash },
-      responseType: "arraybuffer",
-    })
-
-    const sourceCode: SourceCode = SourceCode.decode(
-      new Uint8Array(response.data)
-    )
-
-    if (sourceCode.filenameHash !== this.filenameHash) {
-      throw new Error("Bad response. 'filenameHash' does not match.")
-    }
-
-    return {
-      data: sourceCode,
-      syncToken: "TODO",
-    }
-  }
-
-  public async storeSourceCode(cells: string[]): Promise<void> {
-    const sourceCode = await this.syncer.getData({ fetchIfOutOfSync: false })
-    sourceCode.cells = cells
-
-    await this.request<number>("source", {
-      method: "PUT",
-      //data: SourceCode.encode(sourceCode).finish(),
-      data: {
-        filenameHash: sourceCode.filenameHash,
-        contentSyncToken: sourceCode.contentSyncToken,
-        cells: sourceCode.cells,
-      },
-      headers: {
-        //"Content-Type": "application/octet-stream",
-        "Content-Type": "application/json",
-      },
-    })
-  }
-}
 
 interface FetchResult<T> {
   data: T
@@ -129,6 +40,7 @@ type FetchFunc<T> = () => Promise<FetchResult<T>>
  */
 class Syncer<T> {
   private syncState: SyncState = "NO_DATA"
+
   private data: T | null = null
 
   // An opaque token that basically works lika a hash of the data. If the outside world tells us
@@ -229,5 +141,93 @@ class Syncer<T> {
       resolver.reject()
       throw e
     }
+  }
+}
+
+interface Props {
+  getServerUri: () => BaseUriParts | undefined
+  csrfEnabled: boolean
+  onSourceCodeChanged: DataCallbackFunc<SourceCode>
+}
+
+// This represents what we know about what the server knows.
+// (i.e. code that was modified but not yet saved to the server isn't represented here.)
+export class SourceCodeManager extends HttpClient {
+  // A token indicating which file we have in memory.
+  private filenameHash: string = ""
+
+  private syncer: Syncer<SourceCode>
+
+  public constructor(props: Props) {
+    super(props.getServerUri, props.csrfEnabled)
+
+    this.syncer = new Syncer(this.fetchSourceCode, props.onSourceCodeChanged)
+  }
+
+  public async getSourceCode(): Promise<SourceCode> {
+    return this.syncer.getData({ fetchIfOutOfSync: true })
+  }
+
+  public async contentChangedRemotely(
+    filenameHash: string,
+    contentSyncToken: string
+  ): Promise<void> {
+    if (filenameHash !== this.filenameHash) {
+      return
+    }
+
+    await this.syncer.setSyncTokenAndMaybeSync(contentSyncToken)
+  }
+
+  public async setCurrentFileAndSync(
+    filenameHash: string,
+    contentSyncToken: string
+  ): Promise<void> {
+    if (filenameHash === this.filenameHash) {
+      return
+    }
+
+    this.filenameHash = filenameHash
+    this.syncer.reset()
+
+    await this.syncer.setSyncTokenAndMaybeSync(contentSyncToken)
+  }
+
+  private fetchSourceCode = async (): Promise<FetchResult<SourceCode>> => {
+    const response = await this.request<Uint8Array>("source", {
+      method: "GET",
+      params: { filenameHash: this.filenameHash },
+      responseType: "arraybuffer",
+    })
+
+    const sourceCode: SourceCode = SourceCode.decode(
+      new Uint8Array(response.data)
+    )
+
+    if (sourceCode.filenameHash !== this.filenameHash) {
+      throw new Error("Bad response. 'filenameHash' does not match.")
+    }
+
+    return {
+      data: sourceCode,
+      syncToken: "TODO",
+    }
+  }
+
+  public async storeSourceCode(cells: string[]): Promise<void> {
+    const sourceCode = await this.syncer.getData({ fetchIfOutOfSync: false })
+    sourceCode.cells = cells
+
+    await this.request<number>("source", {
+      method: "PUT",
+      data: {
+        filenameHash: sourceCode.filenameHash,
+        contentSyncToken: sourceCode.contentSyncToken,
+        cells: sourceCode.cells,
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
   }
 }
