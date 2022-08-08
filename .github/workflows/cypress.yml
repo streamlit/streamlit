@@ -1,86 +1,101 @@
-# name: Cypress Tests
+name: Cypress Tests
 
-# on: [push]
+on: [push]
 
-# jobs:
-#   # list-spec-files:
+jobs:
+  list-spec-files:
 
-#   #   runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-#   #   strategy:
-#   #     # matrix: ${{ steps.set-matrix.outputs.matrix }}
-#   #     matrix:
-#   #       specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-
-
-#   #   steps:
-#   #     - uses: actions/checkout@v2
-#   #     - name: List all
-#   #       id: set-matrix
-#   #       run: | 
-#   #         echo ./e2e/specs/${{ matrix.specs }}/*.spec.js
+    strategy:
+      # matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix:
+        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
 
 
-#   build:
+    steps:
+      - uses: actions/checkout@v2
+      - name: List all
+        id: set-matrix
+        run: | 
+          TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
+          ECHO $TEMP
+          echo ./e2e/specs/${{ matrix.specs }}/*.spec.js
+          echo "ls ./e2e/specs/${{ matrix.specs }}/*.spec.js"
 
-#     runs-on: ubuntu-latest
 
-#     env:
-#       SUDO: 'sudo'
-#       BASH_ENV: $HOME/.bash_profile
+  # build:
 
-#     steps:
-#       - name: Checkout Streamlit code
-#         uses: actions/checkout@v3
-#       - name: Set up Python 3.7.12
-#         uses: actions/setup-python@v4
-#         with:
-#             python-version: "3.7.12"
-#       - uses: ./.github/actions/update_submodules
-#       - uses: ./.github/actions/pre_make
-#       - uses: ./.github/actions/make_init
-#       - name: Run make develop
-#         run: |
-#           make develop
-#         shell: bash -l -v -e -u -o pipefail {0}
-#       - name: Install Cypress dependencies
-#         run: |
-#           ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
-#         shell: bash -l -v -e -u -o pipefail {0}
-#       # Revisit artifact saving
-#       # - name: Save Cypress artifacts
-#       #   uses: actions/upload-artifact@v2
-#       #   with:
-#       #     name: build
-#       #     if-no-files-found: error
-#       #     path: build
-#       - name: Init config
-#         run: |
-#           mkdir ~/.streamlit
-#           MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]')
-#           echo '[mapbox]' >  ~/.streamlit/config.toml
-#           echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
-#         shell: bash -l -v -e -u -o pipefail {0}
-#       - name: Init credentials
-#         run: |
-#           echo '[general]' >  ~/.streamlit/credentials.toml
-#           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-#         shell: bash -l -v -e -u -o pipefail {0}
+  #   runs-on: ubuntu-latest
 
-#   e2e_tests:
+  #   env:
+  #     SUDO: 'sudo'
+  #     BASH_ENV: $HOME/.bash_profile
 
-#     runs-on: ubuntu-latest
-#     needs: [build]
+  #   steps:
+  #     - name: Checkout Streamlit code
+  #       uses: actions/checkout@v3
+  #     - name: Set up Python 3.7.12
+  #       uses: actions/setup-python@v4
+  #       with:
+  #           python-version: "3.7.12"
+  #     - uses: ./.github/actions/update_submodules
+  #     - uses: ./.github/actions/pre_make
+  #     - uses: ./.github/actions/make_init
+  #     - name: Run make develop
+  #       run: |
+  #         make develop
+  #       shell: bash -l -v -e -u -o pipefail {0}
+  #     - name: Install Cypress dependencies
+  #       run: |
+  #         ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
+  #       shell: bash -l -v -e -u -o pipefail {0}
+  #     # Revisit artifact saving
+  #     # - name: Save Cypress artifacts
+  #     #   uses: actions/upload-artifact@v2
+  #     #   with:
+  #     #     name: build
+  #     #     if-no-files-found: error
+  #     #     path: build
+  #     - name: Init config
+  #       run: |
+  #         mkdir ~/.streamlit
+  #         MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]')
+  #         echo '[mapbox]' >  ~/.streamlit/config.toml
+  #         echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
+  #       shell: bash -l -v -e -u -o pipefail {0}
+  #     - name: Init credentials
+  #       run: |
+  #         echo '[general]' >  ~/.streamlit/credentials.toml
+  #         echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
+  #       shell: bash -l -v -e -u -o pipefail {0}
 
-#     strategy:
-#       fail-fast: false
-#       matrix:
-#         # specs: ${{ fromJson(needs.list-spec-files.outputs.matrix) }}
-#         specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  # e2e_tests:
+
+  #   runs-on: ubuntu-latest
+  #   needs: [build]
+
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       # specs: ${{ fromJson(needs.list-spec-files.outputs.matrix) }}
+  #       specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
   
-#     steps:
-#       - uses: actions/checkout@v2
-#       - name: Cypress Tests
-#         run: |
-#           scripts/run_e2e_tests.py -a ./e2e/specs/${{ matrix.specs }}/*.spec.js
-#         shell: bash -l -v -e -u -o pipefail {0}
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Cypress Tests
+  #       run: |
+          
+  #         scripts/run_e2e_tests.py -a ./e2e/specs/${{ matrix.specs }}/*.spec.js
+  #       shell: bash -l -v -e -u -o pipefail {0}
+  #     # - name: store videos
+  #     #   uses: actions/upload-artifact@v3
+  #     #   with:
+  #     #     name: cypress_videos
+  #     #     path: frontend/cypress/videos
+  #     # - name: store snapshots
+  #     #   uses: actions/upload-artifact@v3
+  #     #   with:
+  #     #     name: cypress_snapshots
+  #     #     path: frontend/cypress/snapshots
+
