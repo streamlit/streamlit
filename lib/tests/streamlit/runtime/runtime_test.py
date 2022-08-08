@@ -269,22 +269,22 @@ class RuntimeTest(RuntimeTestCase):
             send_data_msg()
             self.assertTrue(is_data_msg_cached())
 
-            # End the report with a compile error. Nothing should change;
+            # End the script with a compile error. Nothing should change;
             # compile errors don't increase the age of items in the cache.
             finish_script(False)
             self.assertTrue(is_data_msg_cached())
 
-            # End the report successfully. Nothing should change, because
+            # End the script successfully. Nothing should change, because
             # the age of the cached message is now 1.
             finish_script(True)
             self.assertTrue(is_data_msg_cached())
 
             # Send the message again. This should reset its age to 0 in the
-            # cache, so it won't be evicted when the report next finishes.
+            # cache, so it won't be evicted when the script next finishes.
             send_data_msg()
             self.assertTrue(is_data_msg_cached())
 
-            # Finish the report. The cached message age is now 1.
+            # Finish the script. The cached message age is now 1.
             finish_script(True)
             self.assertTrue(is_data_msg_cached())
 
