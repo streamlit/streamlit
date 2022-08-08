@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for server_util.py."""
+"""Unit tests for runtime_util.py."""
 
 import unittest
 
@@ -25,7 +25,7 @@ from tests.testutil import patch_config_options
 
 class RuntimeUtilTest(unittest.TestCase):
     def test_should_cache_msg(self):
-        """Test server_util.should_cache_msg"""
+        """Test runtime_util.should_cache_msg"""
         with patch_config_options({"global.minCachedMessageSize": 0}):
             self.assertTrue(is_cacheable_msg(create_dataframe_msg([1, 2, 3])))
 
