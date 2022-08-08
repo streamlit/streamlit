@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 
 import { Alert as AlertProto } from "src/autogen/proto"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import { EmojiIcon } from "src/components/shared/Icon"
 import AlertContainer, { Kind } from "src/components/shared/AlertContainer"
 
 export function getAlertKind(format: AlertProto.Format): Kind {
@@ -38,6 +39,7 @@ export function getAlertKind(format: AlertProto.Format): Kind {
 
 export interface AlertProps {
   body: string
+  icon?: string
   kind: Kind
   width: number
 }
@@ -46,6 +48,7 @@ export interface AlertProps {
  * Display an (error|warning|info|success) box with a Markdown-formatted body.
  */
 export default function Alert({
+  icon,
   body,
   kind,
   width,
@@ -53,6 +56,7 @@ export default function Alert({
   return (
     <div className="stAlert">
       <AlertContainer width={width} kind={kind}>
+        {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
         <StreamlitMarkdown source={body} allowHTML={false} />
       </AlertContainer>
     </div>

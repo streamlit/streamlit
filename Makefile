@@ -5,10 +5,6 @@ SHELL=/bin/bash
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
-# Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
-BLACK=black --target-version=py36
-
-
 .PHONY: help
 help:
 	@# Magic line used to create self-documenting makefiles.
@@ -21,7 +17,7 @@ all: init frontend install
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init develop
+all-devel: init develop pre-commit-install
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file or test S3 sharing, run:"
@@ -31,7 +27,7 @@ all-devel: init develop
 
 .PHONY: mini-devel
 # Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
-mini-devel: mini-init develop
+mini-devel: mini-init develop pre-commit-install
 
 .PHONY: init
 # Install all Python and JS dependencies.
@@ -94,12 +90,7 @@ pylint:
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
 pyformat:
-	if command -v "black" > /dev/null; then \
-		$(BLACK) examples/ ; \
-		$(BLACK) lib/streamlit/ --exclude=/*_pb2.py$/ ; \
-		$(BLACK) lib/tests/ ; \
-		$(BLACK) e2e/scripts/ ; \
-	fi
+	pre-commit run black --all-files
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -210,6 +201,7 @@ clean:
 	rm -f frontend/src/autogen/proto.js
 	rm -f frontend/src/autogen/proto.d.ts
 	rm -rf frontend/public/reports
+	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
@@ -266,28 +258,15 @@ react-build:
 		frontend/build/ lib/streamlit/static/
 
 .PHONY: jslint
-# Lint the JS code. Saves results to test-reports/eslint/eslint.xml.
+# Lint the JS code
 jslint:
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
 ifndef CIRCLECI
 	cd frontend; \
-		./node_modules/.bin/eslint \
-			--ext .js \
-			--ext .jsx \
-			--ext .ts \
-			--ext .tsx \
-			--ignore-pattern 'src/autogen/*' \
-			--max-warnings 0 \
-			./src
+		yarn lint;
 else
 	cd frontend; \
-		./node_modules/.bin/eslint \
-			--ext .js \
-			--ext .jsx \
-			--ext .ts \
-			--ext .tsx \
-			--ignore-pattern 'src/autogen/*' \
-			--max-warnings 0 \
+		yarn lint \
 			--format junit \
 			--output-file test-reports/eslint/eslint.xml \
 			./src
@@ -296,13 +275,12 @@ endif #CIRCLECI
 .PHONY: tstypecheck
 # Type check the JS/TS code
 tstypecheck:
-	yarn --cwd "frontend" typecheck
+	pre-commit run typecheck --all-files
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
 jsformat:
-		yarn --cwd "frontend" pretty-quick \
-			--pattern "**/*.*(js|jsx|ts|tsx)"
+	pre-commit run prettier --all-files
 
 .PHONY: jstest
 # Run JS unit tests.
@@ -394,3 +372,7 @@ run-test-env:
 # Connect to an already-running test env container
 connect-test-env:
 	docker exec -it streamlit_e2e_tests /bin/bash
+
+.PHONY: pre-commit-install
+pre-commit-install:
+	pre-commit install

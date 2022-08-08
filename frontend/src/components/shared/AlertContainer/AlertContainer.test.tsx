@@ -17,7 +17,6 @@
 
 import React from "react"
 import { mount } from "src/lib/test_util"
-import { lightTheme } from "src/theme"
 
 import AlertContainer, { AlertContainerProps, Kind } from "./AlertContainer"
 
@@ -54,55 +53,5 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.width).toEqual(100)
-  })
-
-  it("sets border color correctly for info", () => {
-    const wrapper = mount(<AlertContainer {...getProps()} />)
-
-    const overrides = wrapper.find("Notification").prop("overrides")
-
-    // @ts-ignore
-    expect(overrides.Body.style.border).toContain(
-      lightTheme.emotion.colors.alertInfoBorderColor
-    )
-  })
-
-  it("sets border color correctly for positive", () => {
-    const wrapper = mount(
-      <AlertContainer {...getProps({ kind: Kind.SUCCESS })} />
-    )
-
-    const overrides = wrapper.find("Notification").prop("overrides")
-
-    // @ts-ignore
-    expect(overrides.Body.style.border).toContain(
-      lightTheme.emotion.colors.alertSuccessBorderColor
-    )
-  })
-
-  it("sets border color correctly for warning", () => {
-    const wrapper = mount(
-      <AlertContainer {...getProps({ kind: Kind.WARNING })} />
-    )
-
-    const overrides = wrapper.find("Notification").prop("overrides")
-
-    // @ts-ignore
-    expect(overrides.Body.style.border).toContain(
-      lightTheme.emotion.colors.alertWarningBorderColor
-    )
-  })
-
-  it("sets border color correctly for negative", () => {
-    const wrapper = mount(
-      <AlertContainer {...getProps({ kind: Kind.ERROR })} />
-    )
-
-    const overrides = wrapper.find("Notification").prop("overrides")
-
-    // @ts-ignore
-    expect(overrides.Body.style.border).toContain(
-      lightTheme.emotion.colors.alertErrorBorderColor
-    )
   })
 })

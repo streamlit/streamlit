@@ -27,8 +27,8 @@ export default {
   warningBg: transparentize(colors.yellow80, 0.8),
   success: colors.green100,
   successBg: transparentize(colors.green80, 0.8),
-  info: colors.blue100,
   infoBg: transparentize(colors.blue70, 0.9),
+  info: colors.blue100,
   danger: colors.red100,
   dangerBg: transparentize(colors.red70, 0.8),
 
