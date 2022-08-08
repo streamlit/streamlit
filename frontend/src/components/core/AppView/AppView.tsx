@@ -105,6 +105,7 @@ function AppView(props: AppViewProps): ReactElement {
     <StyledAppViewBlockContainer
       className="block-container"
       isWideMode={wideMode}
+      isEmbedded={embedded}
     >
       <VerticalBlock
         node={node}
