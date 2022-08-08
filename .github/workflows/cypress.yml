@@ -82,20 +82,21 @@ jobs:
   
     steps:
       - uses: actions/checkout@v2
-      - name: Cypress Tests
+      - name: give tmp permissions
         run: |
+          ls -lah /tmp
           # TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
-          cd frontend
-          ../scripts/run_e2e_tests.py -a
+          # cd frontend
+          # ../scripts/run_e2e_tests.py -a
         shell: bash -l -v -e -u -o pipefail {0}
-      - name: store videos
-        uses: actions/upload-artifact@v3
-        with:
-          name: cypress_videos
-          path: frontend/cypress/videos
-      - name: store snapshots
-        uses: actions/upload-artifact@v3
-        with:
-          name: cypress_snapshots
-          path: frontend/cypress/snapshots
+      # - name: store videos
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: cypress_videos
+      #     path: frontend/cypress/videos
+      # - name: store snapshots
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: cypress_snapshots
+      #     path: frontend/cypress/snapshots
 
