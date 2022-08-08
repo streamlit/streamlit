@@ -16,9 +16,9 @@ import asyncio
 from asyncio import Future
 from unittest import mock
 
-from isolated_asyncio_test_case import IsolatedAsyncioTestCase
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
+from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 
 class RuntimeTestCase(IsolatedAsyncioTestCase):
