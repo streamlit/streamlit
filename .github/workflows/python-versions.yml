@@ -1,69 +1,81 @@
-# name: Test Python Versions
+name: Test Python Versions
 
-# on: [push]
+on: [push]
 
-# jobs:
-#   build:
+jobs:
+  build:
 
-#     runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-#     env:
-#       SUDO: 'sudo'
-#       BASH_ENV: $HOME/.bash_profile
+    env:
+      SUDO: 'sudo'
+      BASH_ENV: $HOME/.bash_profile
     
-#     strategy:
-#       fail-fast: false
-#       matrix:
-#         python-version: ["3.7.12", "3.10.0"]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7.12", "3.10.0"]
     
-#     steps:
-#       - name: Checkout Streamlit code
-#         uses: actions/checkout@v3
-#       - name: Set up Python ${{ matrix.python-version }}
-#         uses: actions/setup-python@v4
-#         with:
-#           python-version: ${{ matrix.python-version }}
-#       - name: Update Submodules
-#         uses: ./.github/actions/update_submodules
-#       - name: Run pre-cache
-#         uses: ./.github/actions/pre_cache
-#       - name: Run pre-make
-#         uses: ./.github/actions/pre_make
-#       - name: Run make init
-#         uses: ./.github/actions/make_init
-#       - name: Run make develop
-#         run: |
-#           make develop
-#         shell: bash -l -v -e -u -o pipefail {0}
-#       - name: Run linters
-#         run: |
-#           source $HOME/.bash_profile
-#           make jslint &> jslint_error.txt
-#           echo "$(<jslint_error.txt )"
-#           # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
-#           echo "Please run make pyformat if this job fails"
-#           make pylint &> pylint_error.txt
-#           echo "$(<pylint_error.txt )"
-#           # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
-#         shell: bash -l -v -e -u -o pipefail {0}
-#       - name: Run type checkers
-#         run: |
-#           source $HOME/.bash_profile
-#           make tstypecheck
-#           scripts/mypy --report
-#         shell: bash -l -v -e -u -o pipefail {0}
-#       - name: Run python tests
-#         run: |
-#           source $HOME/.bash_profile
-#           make pycoverage
-#         shell: bash -l -v -e -u -o pipefail {0}
-#       - name: Run integration tests
-#         run: |
-#           source $HOME/.bash_profile
-#           make integration-tests
-#         shell: bash -l -v -e -u -o pipefail {0}
-#       - name: CLI smoke tests
-#         run: |
-#           source $HOME/.bash_profile
-#           make cli-smoke-tests
-#         shell: bash -l -v -e -u -o pipefail {0}
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Update Submodules
+        uses: ./.github/actions/update_submodules
+      - name: Run pre-cache
+        uses: ./.github/actions/pre_cache
+      - name: Run pre-make
+        uses: ./.github/actions/pre_make
+      - name: Run make init
+        uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: |
+          make develop
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: register streamlit user
+        run: |
+          mkdir $HOME/.streamlit
+          && echo '[general]' >  $HOME/.streamlit/credentials.toml
+          && echo 'email = "test@streamlit.io"' >> $HOME/.streamlit/credentials.toml
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: register mapbox token
+        run: |
+          MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]')
+          && echo '[mapbox]' >  ~/.streamlit/config.toml
+          && echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run linters
+        run: |
+          source $HOME/.bash_profile
+          make jslint &> jslint_error.txt
+          echo "$(<jslint_error.txt )"
+          # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
+          echo "Please run make pyformat if this job fails"
+          make pylint &> pylint_error.txt
+          echo "$(<pylint_error.txt )"
+          # TODO: ADD ABILITY TO ACTUALLY SEE WHAT THE LINT PROBLEM IS
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run type checkers
+        run: |
+          source $HOME/.bash_profile
+          make tstypecheck
+          scripts/mypy --report
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run python tests
+        run: |
+          source $HOME/.bash_profile
+          make pycoverage
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: Run integration tests
+        run: |
+          source $HOME/.bash_profile
+          make integration-tests
+        shell: bash -l -v -e -u -o pipefail {0}
+      - name: CLI smoke tests
+        run: |
+          source $HOME/.bash_profile
+          make cli-smoke-tests
+        shell: bash -l -v -e -u -o pipefail {0}
