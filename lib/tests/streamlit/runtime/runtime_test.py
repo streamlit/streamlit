@@ -113,8 +113,6 @@ class RuntimeTest(RuntimeTestCase):
             app_session.handle_backmsg.assert_called_once_with(back_msg)
 
     async def test_handle_backmsg_invalid_session(self):
-        """A BackMsg for an invalid session gets dropped, and doesn't
-        raise an error.
-        """
+        """A BackMsg for an invalid session should get dropped without an error."""
         await self.start_runtime_loop()
         self.runtime.handle_backmsg("not_a_session_id", MagicMock())

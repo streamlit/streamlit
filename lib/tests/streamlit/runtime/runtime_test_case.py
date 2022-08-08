@@ -23,6 +23,7 @@ from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
 
 class RuntimeTestCase(IsolatedAsyncioTestCase):
     """Base class for tests that use streamlit.Runtime directly."""
+
     _next_session_id = 0
 
     async def asyncSetUp(self):
