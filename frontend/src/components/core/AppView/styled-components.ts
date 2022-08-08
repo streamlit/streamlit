@@ -72,12 +72,13 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
 )
 
 export interface StyledAppViewBlockContainerProps {
-  isWideMode: boolean
+  isWideMode: boolean,
+  isEmbedded: boolean
 }
 
 export const StyledAppViewBlockContainer = styled.div<
   StyledAppViewBlockContainerProps
->(({ isWideMode, theme }) => {
+>(({ isWideMode, isEmbedded, theme }) => {
   const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
   return {
     flex: 1,
@@ -89,8 +90,8 @@ export const StyledAppViewBlockContainer = styled.div<
       paddingLeft: theme.inSidebar ? theme.spacing.none : wideSidePadding,
       paddingRight: theme.inSidebar ? theme.spacing.none : wideSidePadding,
     },
-    paddingTop: theme.inSidebar ? theme.spacing.none : "6rem",
-    paddingBottom: theme.inSidebar ? theme.spacing.none : "10rem",
+    paddingTop: theme.inSidebar ? theme.spacing.none : isEmbedded ? '1rem' : '6rem',
+    paddingBottom: theme.inSidebar ? theme.spacing.none : isEmbedded ? '1rem' : '10rem',
     minWidth: isWideMode ? "auto" : undefined,
     maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
   }
