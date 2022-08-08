@@ -16,10 +16,13 @@ import asyncio
 import os
 import shutil
 import tempfile
+from typing import List
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.runtime import (
     RuntimeState,
     SessionClient,
@@ -27,7 +30,18 @@ from streamlit.runtime.runtime import (
     RuntimeConfig,
 )
 from streamlit.watcher import event_based_path_watcher
+from tests.streamlit.message_mocks import create_dataframe_msg
+from testutil import patch_config_options
 from .runtime_test_case import RuntimeTestCase
+
+
+class MockSessionClient(SessionClient):
+    """A SessionClient that captures all its ForwardMsgs into a list."""
+    def __init__(self):
+        self.forward_msgs: List[ForwardMsg] = []
+
+    def write_forward_msg(self, msg: ForwardMsg) -> None:
+        self.forward_msgs.append(msg)
 
 
 class RuntimeTest(RuntimeTestCase):
@@ -50,7 +64,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.start_runtime_loop()
 
         session_id = self.runtime.create_session(
-            client=MagicMock(spec=SessionClient), user_info=MagicMock()
+            client=MockSessionClient(), user_info=MagicMock()
         )
         self.assertEqual(
             RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.runtime.state
@@ -66,7 +80,7 @@ class RuntimeTest(RuntimeTestCase):
         session_ids = []
         for ii in range(3):
             session_id = self.runtime.create_session(
-                client=MagicMock(spec=SessionClient),
+                client=MockSessionClient(),
                 user_info=MagicMock(),
             )
 
@@ -95,7 +109,7 @@ class RuntimeTest(RuntimeTestCase):
 
         # Close a valid session twice
         session_id = self.runtime.create_session(
-            client=MagicMock(spec=SessionClient), user_info=MagicMock()
+            client=MockSessionClient(), user_info=MagicMock()
         )
         self.runtime.close_session(session_id)
         self.runtime.close_session(session_id)
@@ -104,7 +118,7 @@ class RuntimeTest(RuntimeTestCase):
         """`is_active_session` should work as expected."""
         await self.start_runtime_loop()
         session_id = self.runtime.create_session(
-            client=MagicMock(spec=SessionClient), user_info=MagicMock()
+            client=MockSessionClient(), user_info=MagicMock()
         )
         self.assertTrue(self.runtime.is_active_session(session_id))
         self.assertFalse(self.runtime.is_active_session("not_a_session_id"))
@@ -114,7 +128,7 @@ class RuntimeTest(RuntimeTestCase):
         with self.patch_app_session():
             await self.start_runtime_loop()
             session_id = self.runtime.create_session(
-                client=MagicMock(spec=SessionClient), user_info=MagicMock()
+                client=MockSessionClient(), user_info=MagicMock()
             )
 
             back_msg = MagicMock()
@@ -127,6 +141,83 @@ class RuntimeTest(RuntimeTestCase):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.start_runtime_loop()
         self.runtime.handle_backmsg("not_a_session_id", MagicMock())
+
+    async def test_forwardmsg_hashing(self):
+        """Test that outgoing ForwardMsgs contain hashes."""
+        await self.start_runtime_loop()
+
+        client = MockSessionClient()
+        session_id = self.runtime.create_session(client=client, user_info=MagicMock())
+
+        # Get the SessionInfo for this client
+        session_info = self.runtime._get_session_info(session_id)
+
+        # Create a message and ensure its hash is unset; we're testing
+        # that _send_message adds the hash before it goes out.
+        msg = create_dataframe_msg([1, 2, 3])
+        msg.ClearField("hash")
+        self.runtime._send_message(session_info, msg)
+
+        received = client.forward_msgs.pop()
+        self.assertEqual(populate_hash_if_needed(msg), received.hash)
+
+    async def test_forwardmsg_cacheable_flag(self):
+        """Test that the metadata.cacheable flag is set properly on outgoing
+        ForwardMsgs."""
+        await self.start_runtime_loop()
+
+        client = MockSessionClient()
+        session_id = self.runtime.create_session(client=client, user_info=MagicMock())
+
+        # Get the SessionInfo for this client
+        session_info = self.runtime._get_session_info(session_id)
+
+        with patch_config_options({"global.minCachedMessageSize": 0}):
+            cacheable_msg = create_dataframe_msg([1, 2, 3])
+            self.runtime._send_message(session_info, cacheable_msg)
+
+            received = client.forward_msgs.pop()
+            self.assertTrue(cacheable_msg.metadata.cacheable)
+            self.assertTrue(received.metadata.cacheable)
+
+        with patch_config_options({"global.minCachedMessageSize": 1000}):
+            cacheable_msg = create_dataframe_msg([4, 5, 6])
+            self.runtime._send_message(session_info, cacheable_msg)
+
+            received = client.forward_msgs.pop()
+            self.assertFalse(cacheable_msg.metadata.cacheable)
+            self.assertFalse(received.metadata.cacheable)
+
+    async def test_duplicate_forwardmsg_caching(self):
+        """Test that duplicate ForwardMsgs are sent only once."""
+        with patch_config_options({"global.minCachedMessageSize": 0}):
+            await self.start_runtime_loop()
+
+            client = MockSessionClient()
+            session_id = self.runtime.create_session(client=client, user_info=MagicMock())
+
+            # Get the SessionInfo for this client
+            session_info = self.runtime._get_session_info(session_id)
+
+            msg1 = create_dataframe_msg([1, 2, 3], 1)
+
+            # Send the message, and read it back. It will not have been cached.
+            self.runtime._send_message(session_info, msg1)
+            uncached = client.forward_msgs.pop()
+            self.assertEqual("delta", uncached.WhichOneof("type"))
+
+            msg2 = create_dataframe_msg([1, 2, 3], 123)
+
+            # Send an equivalent message. This time, it should be cached,
+            # and a "hash_reference" message should be received instead.
+            self.runtime._send_message(session_info, msg2)
+            cached = client.forward_msgs.pop()
+            self.assertEqual("ref_hash", cached.WhichOneof("type"))
+            # We should have the *hash* of msg1 and msg2:
+            self.assertEqual(msg1.hash, cached.ref_hash)
+            self.assertEqual(msg2.hash, cached.ref_hash)
+            # And the same *metadata* as msg2:
+            self.assertEqual(msg2.metadata, cached.metadata)
 
 
 @patch("streamlit.source_util._cached_pages", new=None)

@@ -31,7 +31,6 @@ import streamlit.web.server.server
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.runtime import RuntimeState
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.server import (
@@ -181,84 +180,6 @@ class ServerTest(ServerTestCase):
             # Ensure that the "Sec-Websocket-Extensions" header is not
             # present in the response from the server.
             self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
-
-    @tornado.testing.gen_test
-    async def test_forwardmsg_hashing(self):
-        """Test that outgoing ForwardMsgs contain hashes."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
-
-            ws_client = await self.ws_connect()
-
-            # Get the server's socket and session for this client
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
-
-            # Create a message and ensure its hash is unset; we're testing
-            # that _send_message adds the hash before it goes out.
-            msg = create_dataframe_msg([1, 2, 3])
-            msg.ClearField("hash")
-            self.server._runtime._send_message(session_info, msg)
-
-            received = await self.read_forward_msg(ws_client)
-            self.assertEqual(populate_hash_if_needed(msg), received.hash)
-
-    @tornado.testing.gen_test
-    async def test_forwardmsg_cacheable_flag(self):
-        """Test that the metadata.cacheable flag is set properly on outgoing
-        ForwardMsgs."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
-
-            ws_client = await self.ws_connect()
-
-            # Get the server's socket and session for this client
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
-
-            config._set_option("global.minCachedMessageSize", 0, "test")
-            cacheable_msg = create_dataframe_msg([1, 2, 3])
-            self.server._runtime._send_message(session_info, cacheable_msg)
-            received = await self.read_forward_msg(ws_client)
-            self.assertTrue(cacheable_msg.metadata.cacheable)
-            self.assertTrue(received.metadata.cacheable)
-
-            config._set_option("global.minCachedMessageSize", 1000, "test")
-            cacheable_msg = create_dataframe_msg([4, 5, 6])
-            self.server._runtime._send_message(session_info, cacheable_msg)
-            received = await self.read_forward_msg(ws_client)
-            self.assertFalse(cacheable_msg.metadata.cacheable)
-            self.assertFalse(received.metadata.cacheable)
-
-    @tornado.testing.gen_test
-    async def test_duplicate_forwardmsg_caching(self):
-        """Test that duplicate ForwardMsgs are sent only once."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            config._set_option("global.minCachedMessageSize", 0, "test")
-
-            await self.start_server_loop()
-            ws_client = await self.ws_connect()
-
-            # Get the server's socket and session for this client
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
-
-            msg1 = create_dataframe_msg([1, 2, 3], 1)
-
-            # Send the message, and read it back. It will not have been cached.
-            self.server._runtime._send_message(session_info, msg1)
-            uncached = await self.read_forward_msg(ws_client)
-            self.assertEqual("delta", uncached.WhichOneof("type"))
-
-            msg2 = create_dataframe_msg([1, 2, 3], 123)
-
-            # Send an equivalent message. This time, it should be cached,
-            # and a "hash_reference" message should be received instead.
-            self.server._runtime._send_message(session_info, msg2)
-            cached = await self.read_forward_msg(ws_client)
-            self.assertEqual("ref_hash", cached.WhichOneof("type"))
-            # We should have the *hash* of msg1 and msg2:
-            self.assertEqual(msg1.hash, cached.ref_hash)
-            self.assertEqual(msg2.hash, cached.ref_hash)
-            # And the same *metadata* as msg2:
-            self.assertEqual(msg2.metadata, cached.metadata)
 
     @tornado.testing.gen_test
     async def test_cache_clearing(self):
