@@ -109,7 +109,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
 
-    // Next ID: 47
+    // Next ID: 48
   }
 
   reserved 9;

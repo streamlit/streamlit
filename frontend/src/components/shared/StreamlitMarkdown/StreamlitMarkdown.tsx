@@ -329,7 +329,7 @@ export function Heading(props: HeadingProtoProps): ReactElement {
           }}
         />
       </HeadingWithAnchor>
-      {/* Anything after new line is regular markdown */}
+      {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
       {rest.length > 0 && (
         <StyledStreamlitMarkdown
           isCaption={Boolean(false)}
