@@ -21,7 +21,7 @@ from .runtime_test_case import RuntimeTestCase
 
 class RuntimeTest(RuntimeTestCase):
     async def test_start_stop(self):
-        """Test that we can start and stop the Runtime."""
+        """starting and stopping the Runtime should work as expected."""
         self.assertEqual(RuntimeState.INITIAL, self.runtime.state)
 
         await self.start_runtime_loop()
@@ -35,7 +35,7 @@ class RuntimeTest(RuntimeTestCase):
         self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
 
     async def test_create_session(self):
-        """Test that we can create and remove a single session."""
+        """We can create and remove a single session."""
         await self.start_runtime_loop()
 
         session_id = self.runtime.create_session(
@@ -49,7 +49,7 @@ class RuntimeTest(RuntimeTestCase):
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
     async def test_multiple_sessions(self):
-        """Test that multiple sessions can be connected."""
+        """Multiple sessions can be connected."""
         await self.start_runtime_loop()
 
         session_ids = []
@@ -90,7 +90,7 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session(session_id)
 
     async def test_is_active_session(self):
-        """`is_active_session` should work as we expect."""
+        """`is_active_session` should work as expected."""
         await self.start_runtime_loop()
         session_id = self.runtime.create_session(
             client=MagicMock(spec=SessionClient), user_info=MagicMock()
@@ -113,7 +113,7 @@ class RuntimeTest(RuntimeTestCase):
             app_session.handle_backmsg.assert_called_once_with(back_msg)
 
     async def test_handle_backmsg_invalid_session(self):
-        """A BackMsg for an invalid session gets dropped, and we don't
+        """A BackMsg for an invalid session gets dropped, and doesn't
         raise an error.
         """
         await self.start_runtime_loop()
