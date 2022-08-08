@@ -19,6 +19,8 @@ syntax = "proto3";
 message Alert {
   // Content to display.
   string body = 1;
+  Format format = 2;
+  string icon = 3;
 
   // Type of Alert
   enum Format {
@@ -37,5 +39,4 @@ message Alert {
     // Shows a success message.
     SUCCESS = 4;
   }
-  Format format = 2;
 }
