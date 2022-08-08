@@ -19,7 +19,7 @@ jobs:
         id: set-matrix
         run: | 
           TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
-          ECHO $TEMP
+          echo $TEMP
           echo ./e2e/specs/${{ matrix.specs }}/*.spec.js
           echo "ls ./e2e/specs/${{ matrix.specs }}/*.spec.js"
 
