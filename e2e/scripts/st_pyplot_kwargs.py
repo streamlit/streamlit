@@ -65,6 +65,6 @@ kwargs = {
 
 # st.pyplot with kwargs
 x = st.info("Loading...")
-x.pyplot(fig, **kwargs)
+x.pyplot(fig, **kwargs)  # type: ignore[arg-type]
 
 st.success("Done!")

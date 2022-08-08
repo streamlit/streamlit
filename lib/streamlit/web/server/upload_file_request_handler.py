@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, List
 import tornado.httputil
 import tornado.web
 
-from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec, UploadedFileManager
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.web.server import routes, server_util

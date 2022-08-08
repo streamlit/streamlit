@@ -1,0 +1,40 @@
+# Pre-commit configuration file,
+# when Streamlit's pre-commit detects that one of the linters has failed,
+# it automatically lints the files and does not allow the commit to pass. 
+# Please review the changes after lint has failed and commit them again,
+# the second commit should pass,
+# because the files were linted after trying to do the first commit.
+repos:
+  - repo: https://github.com/psf/black
+    rev: 22.6.0
+    hooks:
+      - id: black
+        args:
+          # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
+          - --target-version=py37
+        files: \.py$|\.pyi$
+  - repo: local
+    hooks:
+      # Script ./scripts/run_in_subdirectory.py was used to work around a
+      # known problem with hooks in subdirectories when pass_filenames option
+      # is set to true
+      # See: https://github.com/pre-commit/pre-commit/issues/1417
+      - id: prettier
+        name: Prettier
+        entry: ./scripts/run_in_subdirectory.py frontend/ yarn prettier --write
+        files: ^frontend/.*(.js|\.jsx|\.ts|\.tsx)$
+        language: node
+        pass_filenames: true
+      - id: typecheck
+        name: Typecheck
+        entry: yarn --cwd frontend tsc --noEmit
+        files: \.js$|\.jsx$|\.ts$|\.tsx$
+        language: node
+        pass_filenames: false
+      - id: eslint
+        name: Eslint
+        entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint -- --fix
+        files: ^frontend/src/.*(.js|\.jsx|\.ts|\.tsx)$
+        language: node
+        pass_filenames: true
+

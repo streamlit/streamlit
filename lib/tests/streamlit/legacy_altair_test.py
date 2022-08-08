@@ -110,7 +110,7 @@ class LegacyChartsTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
 
     def test_legacy_line_chart_add_rows_with_generic_index(self):
-        """Test empty dg._legacy_line_chart with _legacy_add_rows funciton and a generic index."""
+        """Test empty dg._legacy_line_chart with _legacy_add_rows function and a generic index."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         data.set_index("a", inplace=True)
 

@@ -22,7 +22,7 @@ import numpy as np
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.state import SessionStateProxy
+from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:

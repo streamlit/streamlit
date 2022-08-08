@@ -34,7 +34,7 @@ describe("st.slider", () => {
       .parent()
       .click();
     // Without the wait, the next part fails because the page updating causes
-    // the element to detatch.
+    // the element to detach.
     cy.wait(1000);
 
     cy.get(".stMarkdown")

@@ -20,8 +20,8 @@ from streamlit.proto.CameraInput_pb2 import (
     CameraInput as CameraInputProto,
 )
 
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,
@@ -32,7 +32,7 @@ from ..proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
     UploadedFileInfo as UploadedFileInfoProto,
 )
-from ..uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules

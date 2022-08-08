@@ -23,7 +23,8 @@ export interface StyledDeckGlChartProps {
 }
 
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ width, height }) => ({
+  ({ width, height, theme }) => ({
+    marginTop: theme.spacing.sm,
     position: "relative",
     height,
     width,

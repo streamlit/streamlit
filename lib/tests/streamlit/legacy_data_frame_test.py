@@ -69,7 +69,7 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
         """Test streamlit.data_frame._get_css_styles.
 
         Need to test the following:
-        * cell_selector_regex isnt found
+        * cell_selector_regex isn't found
         * cell_style['props'] isn't a list
         * cell_style['props'] does not equal 2
         * style has name and value
