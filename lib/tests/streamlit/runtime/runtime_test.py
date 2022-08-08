@@ -377,26 +377,33 @@ class ScriptCheckTest(RuntimeTestCase):
 
     @pytest.mark.slow
     async def test_invalid_script(self):
-        await self._check_script_loading(
-            "import streamlit as st\n\nst.deprecatedWrite('test')",
-            False,
-            "error",
-        )
+        script = """
+import streamlit as st
+st.not_a_function('test')
+"""
+
+        await self._check_script_loading(script, False, "error")
 
     @pytest.mark.slow
     async def test_valid_script(self):
-        await self._check_script_loading(
-            "import streamlit as st\n\nst.write('test')", True, "ok"
-        )
+        script = """
+import streamlit as st
+st.write('test')
+"""
+
+        await self._check_script_loading(script, True, "ok")
 
     @pytest.mark.slow
     async def test_timeout_script(self):
-        with patch("streamlit.runtime.runtime.SCRIPT_RUN_CHECK_TIMEOUT", new=0.1):
-            await self._check_script_loading(
-                "import time\n\ntime.sleep(5)", False, "timeout"
-            )
+        script = """
+import time
+time.sleep(5)
+"""
 
-    async def _check_script_loading(self, script, expected_loads, expected_msg):
+        with patch("streamlit.runtime.runtime.SCRIPT_RUN_CHECK_TIMEOUT", new=0.1):
+            await self._check_script_loading(script, False, "timeout")
+
+    async def _check_script_loading(self, script: str, expected_loads: bool, expected_msg: str) -> None:
         with os.fdopen(self._fd, "w") as tmp:
             tmp.write(script)
 
