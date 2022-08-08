@@ -486,17 +486,17 @@ jobs:
       - run:
           name: Run linters
           command: |
+            # Run eslint as a standalone command to generate the test report.
+            PRE_COMMIT_NO_CONCURRENCY=true DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
             make jslint
-            make pylint
 
       - store_test_results:
           path: frontend/test-reports
           when: always
 
       - run:
-          name: Run type checkers
+          name: Run type checkers # tsc is run by pre-commit, thus in this step we only run mypy
           command: |
-            make tstypecheck
             scripts/mypy --report
 
       - store_test_results:
@@ -538,8 +538,8 @@ jobs:
             - venv
 
       - save_cache:
-          name: Save nvm and node_modules to cache
-          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          name: Save nvm, pre-commit cache and node_modules to cache
+          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}-{{ checksum "~/.pre-commit-config.yaml" }}
           paths:
             - ~/.nvm
             - ~/.cache
