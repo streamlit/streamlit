@@ -21,6 +21,7 @@ from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple, Awaitable
 
 from typing_extensions import Final, Protocol
 
+import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -218,6 +219,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        streamlit._is_running_with_streamlit = True
         await self._loop_coroutine(on_started)
 
     def stop(self) -> None:

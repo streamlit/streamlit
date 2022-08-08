@@ -21,6 +21,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import streamlit
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.runtime import (
@@ -149,6 +150,15 @@ class RuntimeTest(RuntimeTestCase):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.start_runtime_loop()
         self.runtime.handle_backmsg("not_a_session_id", MagicMock())
+
+    async def test_sets_is_running_with_streamlit_flag(self):
+        """Runtime should set streamlit._is_running_with_streamlit when it
+        starts.
+        """
+        # This will frequently be True from other tests
+        streamlit._is_running_with_streamlit = False
+        await self.start_runtime_loop()
+        self.assertTrue(streamlit._is_running_with_streamlit)
 
     async def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
