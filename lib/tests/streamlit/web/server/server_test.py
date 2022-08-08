@@ -182,68 +182,6 @@ class ServerTest(ServerTestCase):
             self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
 
     @tornado.testing.gen_test
-    async def test_cache_clearing(self):
-        """Test that report_run_count is incremented when a report
-        finishes running.
-        """
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            config._set_option("global.minCachedMessageSize", 0, "test")
-            config._set_option("global.maxCachedMessageAge", 1, "test")
-
-            await self.start_server_loop()
-            await self.ws_connect()
-
-            session = list(self.server._runtime._session_info_by_id.values())[0]
-
-            data_msg = create_dataframe_msg([1, 2, 3])
-
-            def finish_report(success):
-                status = (
-                    ForwardMsg.FINISHED_SUCCESSFULLY
-                    if success
-                    else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
-                )
-                finish_msg = _create_script_finished_msg(status)
-                self.server._runtime._send_message(session, finish_msg)
-
-            def is_data_msg_cached():
-                return (
-                    self.server._runtime._message_cache.get_message(data_msg.hash)
-                    is not None
-                )
-
-            def send_data_msg():
-                self.server._runtime._send_message(session, data_msg)
-
-            # Send a cacheable message. It should be cached.
-            send_data_msg()
-            self.assertTrue(is_data_msg_cached())
-
-            # End the report with a compile error. Nothing should change;
-            # compile errors don't increase the age of items in the cache.
-            finish_report(False)
-            self.assertTrue(is_data_msg_cached())
-
-            # End the report successfully. Nothing should change, because
-            # the age of the cached message is now 1.
-            finish_report(True)
-            self.assertTrue(is_data_msg_cached())
-
-            # Send the message again. This should reset its age to 0 in the
-            # cache, so it won't be evicted when the report next finishes.
-            send_data_msg()
-            self.assertTrue(is_data_msg_cached())
-
-            # Finish the report. The cached message age is now 1.
-            finish_report(True)
-            self.assertTrue(is_data_msg_cached())
-
-            # Finish again. The cached message age will be 2, and so it
-            # should be evicted from the cache.
-            finish_report(True)
-            self.assertFalse(is_data_msg_cached())
-
-    @tornado.testing.gen_test
     async def test_orphaned_upload_file_deletion(self):
         """An uploaded file with no associated AppSession should be
         deleted."""

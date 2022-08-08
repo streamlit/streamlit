@@ -30,13 +30,17 @@ from streamlit.runtime.runtime import (
     RuntimeConfig,
 )
 from streamlit.watcher import event_based_path_watcher
-from tests.streamlit.message_mocks import create_dataframe_msg
+from tests.streamlit.message_mocks import (
+    create_dataframe_msg,
+    create_script_finished_message,
+)
 from testutil import patch_config_options
 from .runtime_test_case import RuntimeTestCase
 
 
 class MockSessionClient(SessionClient):
     """A SessionClient that captures all its ForwardMsgs into a list."""
+
     def __init__(self):
         self.forward_msgs: List[ForwardMsg] = []
 
@@ -194,7 +198,9 @@ class RuntimeTest(RuntimeTestCase):
             await self.start_runtime_loop()
 
             client = MockSessionClient()
-            session_id = self.runtime.create_session(client=client, user_info=MagicMock())
+            session_id = self.runtime.create_session(
+                client=client, user_info=MagicMock()
+            )
 
             # Get the SessionInfo for this client
             session_info = self.runtime._get_session_info(session_id)
@@ -218,6 +224,70 @@ class RuntimeTest(RuntimeTestCase):
             self.assertEqual(msg2.hash, cached.ref_hash)
             # And the same *metadata* as msg2:
             self.assertEqual(msg2.metadata, cached.metadata)
+
+    async def test_forwardmsg_cache_clearing(self):
+        """Test that the ForwardMsgCache gets properly cleared when scripts
+        finish running.
+        """
+        with patch_config_options(
+            {"global.minCachedMessageSize": 0, "global.maxCachedMessageAge": 1}
+        ):
+            await self.start_runtime_loop()
+
+            client = MockSessionClient()
+            session_id = self.runtime.create_session(
+                client=client, user_info=MagicMock()
+            )
+
+            # Get the SessionInfo for this client
+            session_info = self.runtime._get_session_info(session_id)
+
+            data_msg = create_dataframe_msg([1, 2, 3])
+
+            def finish_script(success: bool) -> None:
+                status = (
+                    ForwardMsg.FINISHED_SUCCESSFULLY
+                    if success
+                    else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
+                )
+                finish_msg = create_script_finished_message(status)
+                self.runtime._send_message(session_info, finish_msg)
+
+            def is_data_msg_cached() -> bool:
+                return (
+                    self.runtime._message_cache.get_message(data_msg.hash) is not None
+                )
+
+            def send_data_msg() -> None:
+                self.runtime._send_message(session_info, data_msg)
+
+            # Send a cacheable message. It should be cached.
+            send_data_msg()
+            self.assertTrue(is_data_msg_cached())
+
+            # End the report with a compile error. Nothing should change;
+            # compile errors don't increase the age of items in the cache.
+            finish_script(False)
+            self.assertTrue(is_data_msg_cached())
+
+            # End the report successfully. Nothing should change, because
+            # the age of the cached message is now 1.
+            finish_script(True)
+            self.assertTrue(is_data_msg_cached())
+
+            # Send the message again. This should reset its age to 0 in the
+            # cache, so it won't be evicted when the report next finishes.
+            send_data_msg()
+            self.assertTrue(is_data_msg_cached())
+
+            # Finish the report. The cached message age is now 1.
+            finish_script(True)
+            self.assertTrue(is_data_msg_cached())
+
+            # Finish again. The cached message age will be 2, and so it
+            # should be evicted from the cache.
+            finish_script(True)
+            self.assertFalse(is_data_msg_cached())
 
 
 @patch("streamlit.source_util._cached_pages", new=None)
