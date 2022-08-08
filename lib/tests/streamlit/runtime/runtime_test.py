@@ -83,7 +83,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.start_runtime_loop()
 
         session_ids = []
-        for ii in range(3):
+        for _ in range(3):
             session_id = self.runtime.create_session(
                 client=MockSessionClient(),
                 user_info=MagicMock(),
@@ -94,11 +94,11 @@ class RuntimeTest(RuntimeTestCase):
             )
             session_ids.append(session_id)
 
-        for ii in range(len(session_ids)):
-            self.runtime.close_session(session_ids[ii])
+        for i in range(len(session_ids)):
+            self.runtime.close_session(session_ids[i])
             expected_state = (
                 RuntimeState.NO_SESSIONS_CONNECTED
-                if ii == len(session_ids) - 1
+                if i == len(session_ids) - 1
                 else RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
             )
             self.assertEqual(expected_state, self.runtime.state)
@@ -127,6 +127,9 @@ class RuntimeTest(RuntimeTestCase):
         )
         self.assertTrue(self.runtime.is_active_session(session_id))
         self.assertFalse(self.runtime.is_active_session("not_a_session_id"))
+
+        self.runtime.close_session(session_id)
+        self.assertFalse(self.runtime.is_active_session(session_id))
 
     async def test_handle_backmsg(self):
         """BackMsgs should be delivered to the appropriate AppSession."""
