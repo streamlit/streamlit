@@ -38,9 +38,39 @@ class RuntimeTest(RuntimeTestCase):
         """Test that we can create and remove a single session."""
         await self.start_runtime_loop()
 
-        session_id = self.runtime.create_session(client=MagicMock(spec=SessionClient), user_info=MagicMock())
-        self.assertEqual(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.runtime.state)
+        session_id = self.runtime.create_session(
+            client=MagicMock(spec=SessionClient), user_info=MagicMock()
+        )
+        self.assertEqual(
+            RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.runtime.state
+        )
 
         self.runtime.close_session(session_id)
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
+    async def test_multiple_sessions(self):
+        """Test that multiple sessions can be connected."""
+        await self.start_runtime_loop()
+
+        session_ids = []
+        for ii in range(3):
+            session_id = self.runtime.create_session(
+                client=MagicMock(spec=SessionClient),
+                user_info=MagicMock(),
+            )
+
+            self.assertEqual(
+                RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.runtime.state
+            )
+            session_ids.append(session_id)
+
+        for ii in range(len(session_ids)):
+            self.runtime.close_session(session_ids[ii])
+            expected_state = (
+                RuntimeState.NO_SESSIONS_CONNECTED
+                if ii == len(session_ids) - 1
+                else RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+            )
+            self.assertEqual(expected_state, self.runtime.state)
+
+        self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
