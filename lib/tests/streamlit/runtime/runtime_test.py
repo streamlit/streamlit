@@ -13,9 +13,20 @@
 # limitations under the License.
 
 import asyncio
-from unittest.mock import MagicMock
+import os
+import shutil
+import tempfile
+from unittest.mock import MagicMock, patch
 
-from streamlit.runtime.runtime import RuntimeState, SessionClient
+import pytest
+
+from streamlit.runtime.runtime import (
+    RuntimeState,
+    SessionClient,
+    Runtime,
+    RuntimeConfig,
+)
+from streamlit.watcher import event_based_path_watcher
 from .runtime_test_case import RuntimeTestCase
 
 
@@ -116,3 +127,64 @@ class RuntimeTest(RuntimeTestCase):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.start_runtime_loop()
         self.runtime.handle_backmsg("not_a_session_id", MagicMock())
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class ScriptCheckTest(RuntimeTestCase):
+    """Tests for Runtime.does_script_run_without_error"""
+
+    def setUp(self) -> None:
+        self._home = tempfile.mkdtemp()
+        self._old_home = os.environ["HOME"]
+        os.environ["HOME"] = self._home
+
+        self._fd, self._path = tempfile.mkstemp()
+
+        super().setUp()
+
+    async def asyncSetUp(self):
+        config = RuntimeConfig(script_path=self._path, command_line="mock command line")
+        self.runtime = Runtime(config)
+        await self.start_runtime_loop()
+
+    def tearDown(self) -> None:
+        if event_based_path_watcher._MultiPathWatcher._singleton is not None:
+            event_based_path_watcher._MultiPathWatcher.get_singleton().close()
+            event_based_path_watcher._MultiPathWatcher._singleton = None
+
+        os.environ["HOME"] = self._old_home
+        os.remove(self._path)
+        shutil.rmtree(self._home)
+
+        super().tearDown()
+
+    @pytest.mark.slow
+    async def test_invalid_script(self):
+        await self._check_script_loading(
+            "import streamlit as st\n\nst.deprecatedWrite('test')",
+            False,
+            "error",
+        )
+
+    @pytest.mark.slow
+    async def test_valid_script(self):
+        await self._check_script_loading(
+            "import streamlit as st\n\nst.write('test')", True, "ok"
+        )
+
+    @pytest.mark.slow
+    async def test_timeout_script(self):
+        with patch("streamlit.runtime.runtime.SCRIPT_RUN_CHECK_TIMEOUT", new=0.1):
+            await self._check_script_loading(
+                "import time\n\ntime.sleep(5)", False, "timeout"
+            )
+
+    async def _check_script_loading(self, script, expected_loads, expected_msg):
+        with os.fdopen(self._fd, "w") as tmp:
+            tmp.write(script)
+
+        ok, msg = await self.runtime.does_script_run_without_error()
+        event_based_path_watcher._MultiPathWatcher.get_singleton().close()
+        event_based_path_watcher._MultiPathWatcher._singleton = None
+        self.assertEqual(expected_loads, ok)
+        self.assertEqual(expected_msg, msg)
