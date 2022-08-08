@@ -79,6 +79,21 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session(session_id)
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
+    async def test_close_session_shuts_down_appsession(self):
+        """Closing a session should shutdown its associated AppSession."""
+        with self.patch_app_session():
+            await self.start_runtime_loop()
+
+            # Create a session and get its associated AppSession object.
+            session_id = self.runtime.create_session(
+                client=MockSessionClient(), user_info=MagicMock()
+            )
+            app_session = self.runtime._get_session_info(session_id).session
+
+            # Close the session. AppSession.shutdown should be called.
+            self.runtime.close_session(session_id)
+            app_session.shutdown.assert_called_once()
+
     async def test_multiple_sessions(self):
         """Multiple sessions can be connected."""
         await self.start_runtime_loop()
