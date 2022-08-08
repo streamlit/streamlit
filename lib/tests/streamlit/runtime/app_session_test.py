@@ -362,7 +362,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
     )
     async def test_enqueue_new_session_message(self):
         """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
-        session = _create_test_session(asyncio.get_event_loop())
+        session = _create_test_session(asyncio.get_running_loop())
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
@@ -422,7 +422,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
     async def test_events_handled_on_main_thread(self):
         """ScriptRunner events should be handled on the main thread only."""
-        session = _create_test_session(asyncio.get_event_loop())
+        session = _create_test_session(asyncio.get_running_loop())
 
         # Patch the session's "_handle_scriptrunner_event_on_main_thread"
         # to test that the function is called, and that it's only called
@@ -464,7 +464,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         """handle_backmsg_exception is a bit of a hack. Test that it does
         what it says.
         """
-        session = _create_test_session(asyncio.get_event_loop())
+        session = _create_test_session(asyncio.get_running_loop())
 
         # Create a mocked ForwardMsgQueue that tracks "enqueue" and "clear"
         # function calls together in a list. We'll assert the content
@@ -523,11 +523,11 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         # Assert the results!
         self.assertEqual(expected_events, forward_msg_queue_events)
 
-    def test_handle_backmsg_handles_exceptions(self):
+    async def test_handle_backmsg_handles_exceptions(self):
         """Exceptions raised in handle_backmsg should be sent to
         handle_backmsg_exception.
         """
-        session = _create_test_session(asyncio.get_event_loop())
+        session = _create_test_session(asyncio.get_running_loop())
         with patch.object(
             session, "handle_backmsg_exception"
         ) as handle_backmsg_exception, patch.object(
