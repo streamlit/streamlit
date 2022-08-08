@@ -5,6 +5,9 @@ SHELL=/bin/bash
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
+# Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
+BLACK=black --target-version=py36
+
 .PHONY: help
 help:
 	@# Magic line used to create self-documenting makefiles.
@@ -81,10 +84,10 @@ pylint:
 	# status if anything is not properly formatted. (This isn't really
 	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
-		$(BLACK) --diff --check examples/ && \
-		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
-		$(BLACK) --diff --check lib/tests/ && \
-		$(BLACK) --diff --check e2e/scripts/ ; \
+		black --diff --check examples/ && \
+		black --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
+		black --diff --check lib/tests/ && \
+		black --diff --check e2e/scripts/ ; \
 	fi
 
 .PHONY: pyformat
