@@ -85,8 +85,7 @@ jobs:
       - name: Cypress Tests
         run: |
           TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
-          echo $TEMP
-          scripts/run_e2e_tests.py -a ./e2e/specs/1/app_hotkeys.spec.js
+          scripts/run_e2e_tests.py -a echo $TEMP
         shell: bash -l -v -e -u -o pipefail {0}
       - name: store videos
         uses: actions/upload-artifact@v3
