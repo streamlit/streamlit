@@ -29,6 +29,7 @@ from streamlit.runtime.runtime import (
     Runtime,
     RuntimeConfig,
 )
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
     create_dataframe_msg,
@@ -288,6 +289,58 @@ class RuntimeTest(RuntimeTestCase):
             # should be evicted from the cache.
             finish_script(True)
             self.assertFalse(is_data_msg_cached())
+
+    async def test_orphaned_upload_file_deletion(self):
+        """An uploaded file with no associated AppSession should be
+        deleted.
+        """
+        await self.start_runtime_loop()
+
+        client = MockSessionClient()
+        session_id = self.runtime.create_session(
+            client=client, user_info=MagicMock()
+        )
+
+        file = UploadedFileRec(0, "file.txt", "type", b"123")
+
+        # Upload a file for our connected session.
+        added_file = self.runtime._uploaded_file_mgr.add_file(
+            session_id=session_id,
+            widget_id="widget_id",
+            file=UploadedFileRec(0, "file.txt", "type", b"123")
+        )
+
+        # The file should exist.
+        self.assertEqual(
+            self.runtime._uploaded_file_mgr.get_all_files(
+                session_id, "widget_id"
+            ),
+            [added_file],
+        )
+
+        # Disconnect the session. The file should be deleted.
+        self.runtime.close_session(session_id)
+        self.assertEqual(
+            self.runtime._uploaded_file_mgr.get_all_files(
+                session_id, "widget_id"
+            ),
+            [],
+        )
+
+        # Upload a file for a session that doesn't exist.
+        self.runtime._uploaded_file_mgr.add_file(
+            session_id="no_such_session",
+            widget_id="widget_id",
+            file=file
+        )
+
+        # The file should be immediately deleted.
+        self.assertEqual(
+            self.runtime._uploaded_file_mgr.get_all_files(
+                "no_such_session", "widget_id"
+            ),
+            [],
+        )
 
 
 @patch("streamlit.source_util._cached_pages", new=None)

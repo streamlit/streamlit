@@ -32,7 +32,6 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.runtime import RuntimeState
-from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.server import (
     MAX_PORT_SEARCH_RETRIES,
     RetriesExceeded,
@@ -180,28 +179,6 @@ class ServerTest(ServerTestCase):
             # Ensure that the "Sec-Websocket-Extensions" header is not
             # present in the response from the server.
             self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
-
-    @tornado.testing.gen_test
-    async def test_orphaned_upload_file_deletion(self):
-        """An uploaded file with no associated AppSession should be
-        deleted."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
-            await self.ws_connect()
-
-            # "Upload a file" for a session that doesn't exist
-            self.server._runtime._uploaded_file_mgr.add_file(
-                session_id="no_such_session",
-                widget_id="widget_id",
-                file=UploadedFileRec(0, "file.txt", "type", b"123"),
-            )
-
-            self.assertEqual(
-                self.server._runtime._uploaded_file_mgr.get_all_files(
-                    "no_such_session", "widget_id"
-                ),
-                [],
-            )
 
     @tornado.testing.gen_test
     async def test_send_message_to_disconnected_websocket(self):
