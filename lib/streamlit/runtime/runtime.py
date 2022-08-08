@@ -15,8 +15,9 @@
 import asyncio
 import time
 import traceback
+from asyncio import Future
 from enum import Enum
-from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple
+from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple, Awaitable
 
 from typing_extensions import Final, Protocol
 
@@ -136,7 +137,8 @@ class Runtime:
         self._need_send_data = asyncio.Event()
 
         # Completed when the Runtime has stopped.
-        self._stopped = asyncio.Future[None]()
+        # (`Future` is not generic in Python 3.8, so we need to use quote-typing.)
+        self._stopped: "Future[None]" = asyncio.Future()
 
         # Initialize managers
         self._message_cache = ForwardMsgCache()
@@ -171,7 +173,7 @@ class Runtime:
         return self._stats_mgr
 
     @property
-    def stopped(self) -> asyncio.Future[None]:
+    def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Runtime's run loop has exited."""
         return self._stopped
 
