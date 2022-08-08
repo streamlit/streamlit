@@ -28,7 +28,7 @@ from streamlit.runtime.runtime import (
     RuntimeState,
     SessionClient,
     Runtime,
-    RuntimeConfig,
+    RuntimeConfig, RuntimeStoppedError,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
@@ -150,6 +150,24 @@ class RuntimeTest(RuntimeTestCase):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.start_runtime_loop()
         self.runtime.handle_backmsg("not_a_session_id", MagicMock())
+
+    async def test_create_session_after_stop(self):
+        """After Runtime.stop is called, `create_session` is an error."""
+        await self.start_runtime_loop()
+        self.runtime.stop()
+        await asyncio.sleep(0)
+
+        with self.assertRaises(RuntimeStoppedError):
+            self.runtime.create_session(MagicMock(), MagicMock())
+
+    async def test_handle_backmsg_after_stop(self):
+        """After Runtime.stop is called, `handle_backmsg` is an error."""
+        await self.start_runtime_loop()
+        self.runtime.stop()
+        await asyncio.sleep(0)
+
+        with self.assertRaises(RuntimeStoppedError):
+            self.runtime.handle_backmsg("not_a_session_id", MagicMock())
 
     async def test_sets_is_running_with_streamlit_flag(self):
         """Runtime should set streamlit._is_running_with_streamlit when it
