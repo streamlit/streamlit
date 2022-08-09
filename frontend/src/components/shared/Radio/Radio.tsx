@@ -35,7 +35,7 @@ export interface Props {
   onChange: (selectedIndex: number) => any
   options: any[]
   label?: string
-  labelVisibility?: "collapsed" | "visible" | "hidden" | string
+  labelVisibility?: "collapsed" | "visible" | "hidden" | string | any
   help?: string
 }
 

@@ -24,6 +24,12 @@ message NumberInput {
     FLOAT = 1;
   }
 
+  enum LabelVisibility {
+    VISIBLE = 0;
+    HIDDEN = 1;
+    COLLAPSED = 2;
+  }
+
   string id = 1;
   string label = 2;
   string form_id = 3;
@@ -41,7 +47,7 @@ message NumberInput {
   double value = 19;
   bool set_value = 20;
   bool disabled = 21;
-  string label_visibility = 22;
+  LabelVisibility label_visibility = 22;
 
   reserved 4, 5, 6, 7, 9, 10;
 }

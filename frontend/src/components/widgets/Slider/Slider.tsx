@@ -38,7 +38,6 @@ import {
   StyledTickBar,
   StyledTickBarItem,
 } from "./styled-components"
-import { element } from "prop-types"
 
 const DEBOUNCE_TIME_MS = 200
 

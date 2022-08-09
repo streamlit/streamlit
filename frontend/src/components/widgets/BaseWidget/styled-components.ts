@@ -15,18 +15,25 @@
  * limitations under the License.
  */
 import styled from "@emotion/styled"
+import { NumberInput as NumberInputProto } from "src/autogen/proto"
 
 export interface StyledWidgetProps {
   disabled?: boolean | null
-  labelVisibility?: "hidden" | "visible" | "collapsed" | string | null
+  labelVisibility?: NumberInputProto.LabelVisibility | string
 }
 
 export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
   ({ disabled, labelVisibility, theme }) => ({
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-    display: labelVisibility === "collapsed" ? "none" : "flex",
-    visibility: labelVisibility === "hidden" ? "hidden" : "visible",
+    display:
+      labelVisibility === NumberInputProto.LabelVisibility.COLLAPSED
+        ? "none"
+        : "flex",
+    visibility:
+      labelVisibility === NumberInputProto.LabelVisibility.HIDDEN
+        ? "hidden"
+        : "visible",
     marginBottom: theme.spacing.sm,
     height: "auto",
     minHeight: theme.fontSizes.xl,

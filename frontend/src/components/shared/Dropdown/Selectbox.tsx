@@ -35,7 +35,7 @@ export interface Props {
   onChange: (value: number) => void
   options: any[]
   label?: string | null
-  labelVisibility?: "collapsed" | "visible" | "hidden" | string
+  labelVisibility?: "collapsed" | "visible" | "hidden" | string | any
   help?: string
 }
 

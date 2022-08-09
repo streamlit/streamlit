@@ -39,7 +39,7 @@ export interface Props {
   value: string
   showValue?: boolean
   label: string
-  labelVisibility?: "collapsed" | "visible" | "hidden" | string
+  labelVisibility?: "collapsed" | "visible" | "hidden" | string | any
   onChange: (value: string) => any
   help?: string
 }

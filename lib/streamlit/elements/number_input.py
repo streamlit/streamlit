@@ -311,7 +311,20 @@ class NumberInputMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         number_input_proto.disabled = disabled
-        number_input_proto.label_visibility = label_visibility
+
+        if label_visibility == "visible":
+            number_input_proto.label_visibility = (
+                NumberInputProto.LabelVisibility.VISIBLE
+            )
+        elif label_visibility == "hidden":
+            number_input_proto.label_visibility = (
+                NumberInputProto.LabelVisibility.HIDDEN
+            )
+        elif label_visibility == "collapsed":
+            number_input_proto.label_visibility = (
+                NumberInputProto.LabelVisibility.COLLAPSED
+            )
+
         if widget_state.value_changed:
             number_input_proto.value = widget_state.value
             number_input_proto.set_value = True
