@@ -38,7 +38,7 @@ from tests.streamlit.message_mocks import (
     create_dataframe_msg,
     create_script_finished_message,
 )
-from testutil import patch_config_options
+from tests.testutil import patch_config_options
 from .runtime_test_case import RuntimeTestCase
 
 
