@@ -86,7 +86,7 @@ jobs:
 
   e2e_tests:
     runs-on: ubuntu-latest
-    needs: [build, runner-indexes]
+    needs: [runner-indexes]
     name: "Runner #${{ matrix.runner-index }}: Run test suite in parallel"
     strategy:
       matrix:
