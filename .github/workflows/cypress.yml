@@ -23,6 +23,9 @@ jobs:
   #         echo "ls ./e2e/specs/${{ matrix.specs }}/*.spec.js"
   e2e_tests:
     runs-on: ubuntu-latest
+    env:
+      SUDO: 'sudo'
+      BASH_ENV: $HOME/.bash_profile
 
     strategy:
       fail-fast: false
