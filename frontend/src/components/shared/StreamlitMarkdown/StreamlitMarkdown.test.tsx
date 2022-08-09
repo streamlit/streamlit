@@ -19,11 +19,14 @@ import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
 import { mount } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
+import { Heading as HeadingProto } from "src/autogen/proto"
 
 import StreamlitMarkdown, {
   LinkWithTargetBlank,
   createAnchorFromText,
   HeadingWithAnchor,
+  Heading,
+  HeadingProtoProps,
 } from "./StreamlitMarkdown"
 
 import { StyledLinkIconContainer } from "./styled-components"
@@ -153,5 +156,36 @@ describe("StreamlitMarkdown", () => {
     expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
       "hello this is a caption"
     )
+  })
+})
+
+const getHeadingProps = (
+  elementProps: Partial<HeadingProto> = {}
+): HeadingProtoProps => ({
+  width: 5,
+  element: HeadingProto.create({
+    anchor: "some-anchor",
+    tag: "h1",
+    body: `hello world
+          this is a new line`,
+    ...elementProps,
+  }),
+})
+
+describe("Heading", () => {
+  it("renders properly after a new line", () => {
+    const props = getHeadingProps()
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual("hello world")
+    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+      "this is a new line"
+    )
+  })
+
+  it("renders properly without a new line", () => {
+    const props = getHeadingProps({ body: "hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual("hello")
+    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(0)
   })
 })
