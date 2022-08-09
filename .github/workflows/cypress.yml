@@ -2,6 +2,8 @@ name: Cypress Tests
 
 on: [push]
 
+env:
+  total-runners: 20
 jobs:
   # list-spec-files:
 
@@ -69,36 +71,34 @@ jobs:
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
         shell: bash -l -v -e -u -o pipefail {0}
 
-  e2e_tests:
-
+  runner-indexes:
     runs-on: ubuntu-latest
-    needs: [build]
-
-    # strategy:
-    #   fail-fast: false
-    #   matrix:
-    #     # specs: ${{ fromJson(needs.list-spec-files.outputs.matrix) }}
-    #     specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-  
+    name: Generate runner indexes
+    outputs:
+      json: ${{ steps.generate-index-list.outputs.json }}
     steps:
-      - uses: actions/checkout@v2
-      - name: give tmp permissions
+      - id: generate-index-list
         run: |
-          ls -lah /tmp
-          # TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
-          cd frontend
-          ../scripts/run_e2e_tests.py -a
-          echo "AFTER THE RUN"
-          ls -lah /tmp
-        shell: bash -l -v -e -u -o pipefail {0}
-      # - name: store videos
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: cypress_videos
-      #     path: frontend/cypress/videos
-      # - name: store snapshots
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: cypress_snapshots
-      #     path: frontend/cypress/snapshots
+          MAX_INDEX=$((${{ env.total-runners }}-1))
+          INDEX_LIST=$(seq 0 ${MAX_INDEX})
+          INDEX_JSON=$(jq --null-input --compact-output '. |= [inputs]' <<< ${INDEX_LIST})
+          echo "::set-output name=json::${INDEX_JSON}"
+
+  e2e_tests:
+    runs-on: ubuntu-latest
+    needs: [build, runner-indexes]
+    name: "Runner #${{ matrix.runner-index }}: Run test suite in parallel"
+    strategy:
+      matrix:
+        runner-index: ${{ fromjson(needs.runner-indexes.outputs.json) }}
+    steps:
+      - uses: chaosaffe/split-tests@v1-alpha.1
+        id: split-tests
+        name: Split tests
+        with:
+          glob: e2e/specs/**/*.js
+          split-total: ${{ env.total-runners }}
+          split-index: ${{ matrix.runner-index }}
+      - run: 'echo "This runner will execute the following tests: ${{ steps.split-tests.outputs.test-suite }}"'
+
 
