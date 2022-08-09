@@ -21,16 +21,6 @@ jobs:
   #         TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
   #         echo ./e2e/specs/${{ matrix.specs }}/*.spec.js
   #         echo "ls ./e2e/specs/${{ matrix.specs }}/*.spec.js"
-
-
-  build:
-
-    runs-on: ubuntu-latest
-
-    env:
-      SUDO: 'sudo'
-      BASH_ENV: $HOME/.bash_profile
-
   e2e_tests:
     runs-on: ubuntu-latest
 
