@@ -14,7 +14,7 @@
 
 from typing import cast, Optional, TYPE_CHECKING
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
-from .utils import clean_text
+from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     import sympy
