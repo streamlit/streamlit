@@ -22,6 +22,7 @@ import React, {
   CSSProperties,
   HTMLProps,
   FunctionComponent,
+  Fragment,
 } from "react"
 import ReactMarkdown, { PluggableList } from "react-markdown"
 import {
@@ -38,6 +39,9 @@ import remarkGfm from "remark-gfm"
 import AppContext from "src/components/core/AppContext"
 import CodeBlock, { CodeTag } from "src/components/elements/CodeBlock/"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
+import { Heading as HeadingProto } from "src/autogen/proto"
+import ErrorBoundary from "src/components/shared/ErrorBoundary/"
+
 import {
   StyledStreamlitMarkdown,
   StyledLinkIconContainer,
@@ -90,8 +94,13 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
 interface HeadingWithAnchorProps {
   tag: string
   anchor?: string
-  children: ReactNode[]
+  children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
+}
+
+export interface HeadingProtoProps {
+  width: number
+  element: HeadingProto
 }
 
 export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
@@ -108,7 +117,6 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     addScriptFinishedHandler,
     removeScriptFinishedHandler,
   } = React.useContext(AppContext)
-
   if (isSidebar) {
     return React.createElement(tag, tagProps, children)
   }
@@ -174,6 +182,59 @@ export const CustomHeading: FunctionComponent<HeadingProps> = ({
     </HeadingWithAnchor>
   )
 }
+export interface RenderedMarkdownProps {
+  /**
+   * The Markdown formatted text to render.
+   */
+  source: string
+
+  /**
+   * True if HTML is allowed in the source string. If this is false,
+   * any HTML will be escaped in the output.
+   */
+  allowHTML: boolean
+
+  overrideComponents?: Components
+}
+
+export function RenderedMarkdown({
+  allowHTML,
+  source,
+  overrideComponents,
+}: RenderedMarkdownProps): ReactElement {
+  const renderers: Components = {
+    pre: CodeBlock,
+    code: CodeTag,
+    a: LinkWithTargetBlank,
+    h1: CustomHeading,
+    h2: CustomHeading,
+    h3: CustomHeading,
+    h4: CustomHeading,
+    h5: CustomHeading,
+    h6: CustomHeading,
+    ...(overrideComponents || {}),
+  }
+
+  const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
+  const rehypePlugins: PluggableList = [rehypeKatex]
+
+  if (allowHTML) {
+    rehypePlugins.push(rehypeRaw)
+  }
+
+  return (
+    <ErrorBoundary>
+      <ReactMarkdown
+        remarkPlugins={plugins}
+        rehypePlugins={rehypePlugins}
+        components={renderers}
+        transformLinkUri={transformLinkUri}
+      >
+        {source}
+      </ReactMarkdown>
+    </ErrorBoundary>
+  )
+}
 
 /**
  * Wraps the <ReactMarkdown> component to include our standard
@@ -196,35 +257,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
     const { source, allowHTML, style, isCaption } = this.props
     const isInSidebar = this.context
 
-    const renderers: Components = {
-      pre: CodeBlock,
-      code: CodeTag,
-      a: LinkWithTargetBlank,
-      h1: CustomHeading,
-      h2: CustomHeading,
-      h3: CustomHeading,
-      h4: CustomHeading,
-      h5: CustomHeading,
-      h6: CustomHeading,
-    }
-
-    const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
-    const rehypePlugins: PluggableList = [rehypeKatex]
-    if (allowHTML) {
-      rehypePlugins.push(rehypeRaw)
-    }
-
-    const renderMarkdown = (): ReactElement => (
-      <ReactMarkdown
-        remarkPlugins={plugins}
-        rehypePlugins={rehypePlugins}
-        components={renderers}
-        transformLinkUri={transformLinkUri}
-      >
-        {source}
-      </ReactMarkdown>
-    )
-
     return (
       <StyledStreamlitMarkdown
         isCaption={Boolean(isCaption)}
@@ -232,7 +264,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >
-        {renderMarkdown()}
+        <RenderedMarkdown source={source} allowHTML={allowHTML} />
       </StyledStreamlitMarkdown>
     )
   }
@@ -268,6 +300,47 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     >
       {children}
     </a>
+  )
+}
+
+export function Heading(props: HeadingProtoProps): ReactElement {
+  const { width } = props
+  const { tag, anchor, body } = props.element
+  const isSidebar = React.useContext(IsSidebarContext)
+  // st.header can contain new lines which are just interpreted as new
+  // markdown to be rendered as such.
+  const [heading, ...rest] = body.split("\n")
+
+  return (
+    <div className="stMarkdown" style={{ width }}>
+      <HeadingWithAnchor tag={tag} anchor={anchor}>
+        <RenderedMarkdown
+          source={heading}
+          allowHTML={false}
+          // this is purely an inline string
+          overrideComponents={{
+            p: Fragment,
+            h1: Fragment,
+            h2: Fragment,
+            h3: Fragment,
+            h4: Fragment,
+            h5: Fragment,
+            h6: Fragment,
+          }}
+        />
+      </HeadingWithAnchor>
+      {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
+      {rest.length > 0 && (
+        <StyledStreamlitMarkdown
+          isCaption={Boolean(false)}
+          isInSidebar={isSidebar}
+          style={{ width }}
+          data-testid="stMarkdownContainer"
+        >
+          <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
+        </StyledStreamlitMarkdown>
+      )}
+    </div>
   )
 }
 

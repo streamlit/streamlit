@@ -410,16 +410,17 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.header("some header")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "## some header")
+        self.assertEqual(el.heading.body, "some header")
+        self.assertEqual(el.heading.tag, "h2")
 
     def test_st_header_with_anchor(self):
         """Test st.header with anchor."""
         st.header("some header", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h2 data-anchor="some-anchor">some header</h2>'
-        )
+        self.assertEqual(el.heading.body, "some header")
+        self.assertEqual(el.heading.tag, "h2")
+        self.assertEqual(el.heading.anchor, "some-anchor")
 
     def test_st_help(self):
         """Test st.help."""
@@ -759,16 +760,17 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.subheader("some subheader")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "### some subheader")
+        self.assertEqual(el.heading.body, "some subheader")
+        self.assertEqual(el.heading.tag, "h3")
 
     def test_st_subheader_with_anchor(self):
         """Test st.subheader with anchor."""
         st.subheader("some subheader", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h3 data-anchor="some-anchor">some subheader</h3>'
-        )
+        self.assertEqual(el.heading.body, "some subheader")
+        self.assertEqual(el.heading.tag, "h3")
+        self.assertEqual(el.heading.anchor, "some-anchor")
 
     def test_st_success(self):
         """Test st.success."""
@@ -823,16 +825,17 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.title("some title")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "# some title")
+        self.assertEqual(el.heading.body, "some title")
+        self.assertEqual(el.heading.tag, "h1")
 
     def test_st_title_with_anchor(self):
         """Test st.title with anchor."""
         st.title("some title", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h1 data-anchor="some-anchor">some title</h1>'
-        )
+        self.assertEqual(el.heading.body, "some title")
+        self.assertEqual(el.heading.tag, "h1")
+        self.assertEqual(el.heading.anchor, "some-anchor")
 
     def test_st_legacy_vega_lite_chart(self):
         """Test st._legacy_vega_lite_chart."""
