@@ -85,6 +85,9 @@ jobs:
           echo "::set-output name=json::${INDEX_JSON}"
 
   e2e_tests:
+    env:
+      SUDO: 'sudo'
+      BASH_ENV: $HOME/.bash_profile
     runs-on: ubuntu-latest
     needs: [runner-indexes]
     name: "Runner #${{ matrix.runner-index }}: Run test suite in parallel"
