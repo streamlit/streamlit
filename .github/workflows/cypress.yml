@@ -92,6 +92,13 @@ jobs:
       matrix:
         runner-index: ${{ fromjson(needs.runner-indexes.outputs.json) }}
     steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+      # - name: Set up Python 3.7.12
+      #   uses: actions/setup-python@v4
+      #   with:
+      #       python-version: "3.7.12"
+      - uses: ./.github/actions/update_submodules
       - uses: chaosaffe/split-tests@v1-alpha.1
         id: split-tests
         name: Split tests
