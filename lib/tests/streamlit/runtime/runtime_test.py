@@ -61,7 +61,7 @@ class RuntimeTest(RuntimeTestCase):
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
         self.runtime.stop()
-        await asyncio.sleep(0)  # Wait a tick for the stop to be acknowledged
+        await asyncio.sleep(0)  # Wait 1 tick for the stop to be acknowledged
         self.assertEqual(RuntimeState.STOPPING, self.runtime.state)
 
         await self.runtime.stopped
@@ -172,7 +172,7 @@ class RuntimeTest(RuntimeTestCase):
         """After Runtime.stop is called, `create_session` is an error."""
         await self.start_runtime_loop()
         self.runtime.stop()
-        await asyncio.sleep(0)
+        await self.tick_runtime_loop()
 
         with self.assertRaises(RuntimeStoppedError):
             self.runtime.create_session(MagicMock(), MagicMock())
@@ -181,7 +181,7 @@ class RuntimeTest(RuntimeTestCase):
         """After Runtime.stop is called, `handle_backmsg` is an error."""
         await self.start_runtime_loop()
         self.runtime.stop()
-        await asyncio.sleep(0)
+        await self.tick_runtime_loop()
 
         with self.assertRaises(RuntimeStoppedError):
             self.runtime.handle_backmsg("not_a_session_id", MagicMock())
@@ -228,14 +228,12 @@ class RuntimeTest(RuntimeTestCase):
         client = MockSessionClient()
         session_id = self.runtime.create_session(client=client, user_info=MagicMock())
 
-        # Get the SessionInfo for this client
-        session_info = self.runtime._get_session_info(session_id)
-
         # Create a message and ensure its hash is unset; we're testing
         # that _send_message adds the hash before it goes out.
         msg = create_dataframe_msg([1, 2, 3])
         msg.ClearField("hash")
-        self.runtime._send_message(session_info, msg)
+        self.enqueue_forward_msg(session_id, msg)
+        await self.tick_runtime_loop()
 
         received = client.forward_msgs.pop()
         self.assertEqual(populate_hash_if_needed(msg), received.hash)
@@ -248,12 +246,10 @@ class RuntimeTest(RuntimeTestCase):
         client = MockSessionClient()
         session_id = self.runtime.create_session(client=client, user_info=MagicMock())
 
-        # Get the SessionInfo for this client
-        session_info = self.runtime._get_session_info(session_id)
-
         with patch_config_options({"global.minCachedMessageSize": 0}):
             cacheable_msg = create_dataframe_msg([1, 2, 3])
-            self.runtime._send_message(session_info, cacheable_msg)
+            self.enqueue_forward_msg(session_id, cacheable_msg)
+            await self.tick_runtime_loop()
 
             received = client.forward_msgs.pop()
             self.assertTrue(cacheable_msg.metadata.cacheable)
@@ -261,7 +257,8 @@ class RuntimeTest(RuntimeTestCase):
 
         with patch_config_options({"global.minCachedMessageSize": 1000}):
             cacheable_msg = create_dataframe_msg([4, 5, 6])
-            self.runtime._send_message(session_info, cacheable_msg)
+            self.enqueue_forward_msg(session_id, cacheable_msg)
+            await self.tick_runtime_loop()
 
             received = client.forward_msgs.pop()
             self.assertFalse(cacheable_msg.metadata.cacheable)
@@ -277,21 +274,21 @@ class RuntimeTest(RuntimeTestCase):
                 client=client, user_info=MagicMock()
             )
 
-            # Get the SessionInfo for this client
-            session_info = self.runtime._get_session_info(session_id)
-
             msg1 = create_dataframe_msg([1, 2, 3], 1)
 
             # Send the message, and read it back. It will not have been cached.
-            self.runtime._send_message(session_info, msg1)
+            self.enqueue_forward_msg(session_id, msg1)
+            await self.tick_runtime_loop()
+
             uncached = client.forward_msgs.pop()
             self.assertEqual("delta", uncached.WhichOneof("type"))
 
-            msg2 = create_dataframe_msg([1, 2, 3], 123)
-
             # Send an equivalent message. This time, it should be cached,
             # and a "hash_reference" message should be received instead.
-            self.runtime._send_message(session_info, msg2)
+            msg2 = create_dataframe_msg([1, 2, 3], 123)
+            self.enqueue_forward_msg(session_id, msg2)
+            await self.tick_runtime_loop()
+
             cached = client.forward_msgs.pop()
             self.assertEqual("ref_hash", cached.WhichOneof("type"))
             # We should have the *hash* of msg1 and msg2:
@@ -314,54 +311,53 @@ class RuntimeTest(RuntimeTestCase):
                 client=client, user_info=MagicMock()
             )
 
-            # Get the SessionInfo for this client
-            session_info = self.runtime._get_session_info(session_id)
-
             data_msg = create_dataframe_msg([1, 2, 3])
 
-            def finish_script(success: bool) -> None:
+            async def finish_script(success: bool) -> None:
                 status = (
                     ForwardMsg.FINISHED_SUCCESSFULLY
                     if success
                     else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
                 )
                 finish_msg = create_script_finished_message(status)
-                self.runtime._send_message(session_info, finish_msg)
+                self.enqueue_forward_msg(session_id, finish_msg)
+                await self.tick_runtime_loop()
 
             def is_data_msg_cached() -> bool:
                 return (
                     self.runtime._message_cache.get_message(data_msg.hash) is not None
                 )
 
-            def send_data_msg() -> None:
-                self.runtime._send_message(session_info, data_msg)
+            async def send_data_msg() -> None:
+                self.enqueue_forward_msg(session_id, data_msg)
+                await self.tick_runtime_loop()
 
             # Send a cacheable message. It should be cached.
-            send_data_msg()
+            await send_data_msg()
             self.assertTrue(is_data_msg_cached())
 
             # End the script with a compile error. Nothing should change;
             # compile errors don't increase the age of items in the cache.
-            finish_script(False)
+            await finish_script(False)
             self.assertTrue(is_data_msg_cached())
 
             # End the script successfully. Nothing should change, because
             # the age of the cached message is now 1.
-            finish_script(True)
+            await finish_script(True)
             self.assertTrue(is_data_msg_cached())
 
             # Send the message again. This should reset its age to 0 in the
             # cache, so it won't be evicted when the script next finishes.
-            send_data_msg()
+            await send_data_msg()
             self.assertTrue(is_data_msg_cached())
 
             # Finish the script. The cached message age is now 1.
-            finish_script(True)
+            await finish_script(True)
             self.assertTrue(is_data_msg_cached())
 
             # Finish again. The cached message age will be 2, and so it
             # should be evicted from the cache.
-            finish_script(True)
+            await finish_script(True)
             self.assertFalse(is_data_msg_cached())
 
     async def test_orphaned_upload_file_deletion(self):
