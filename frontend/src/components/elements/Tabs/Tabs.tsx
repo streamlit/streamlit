@@ -62,6 +62,7 @@ function Tabs(props: Props): ReactElement {
         onChange={({ activeKey }) => {
           setActiveKey(activeKey)
         }}
+        renderAll={true}
         disabled={widgetsDisabled}
         overrides={{
           TabHighlight: {
