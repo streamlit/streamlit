@@ -31,7 +31,7 @@ LOGGER: Final = get_logger(__name__)
 CONFUSING_STREAMLIT_MODULES: Final = (
     "streamlit.echo",
     "streamlit.delta_generator",
-    "streamlit.legacy_caching.caching",
+    "streamlit.runtime.legacy_caching.caching",
 )
 
 CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)

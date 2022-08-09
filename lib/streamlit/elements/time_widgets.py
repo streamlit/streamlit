@@ -20,13 +20,13 @@ from typing import Any, cast, List, Optional, Sequence, Tuple, TYPE_CHECKING, Un
 from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key, LabelVisibility
 from streamlit.errors import StreamlitAPIException
 from streamlit import logger as _logger
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.state import (
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,

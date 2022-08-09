@@ -21,8 +21,8 @@ import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,
@@ -33,7 +33,7 @@ from ..proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
     UploadedFileInfo as UploadedFileInfoProto,
 )
-from ..uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from .utils import check_callback_rules, check_session_state_rules
 
 LOGGER = get_logger(__name__)

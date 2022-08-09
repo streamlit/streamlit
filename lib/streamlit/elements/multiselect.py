@@ -31,11 +31,11 @@ import streamlit
 from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, \
     to_key, LabelVisibility
 
-from streamlit.state import (
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,

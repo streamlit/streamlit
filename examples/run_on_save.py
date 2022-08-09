@@ -35,7 +35,7 @@ st.info(
 
 """
 1. If run-on-save is on, make sure the page changes every few seconds. Then
-   turn run-on-save off in the settigns menu and check (2).
+   turn run-on-save off in the settings menu and check (2).
 2. If run-on-save is off, make sure "Rerun"/"Always rerun" buttons appear in
    the status area. Click "Always rerun" and check (1).
 """

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests the public utility funtions in path_watcher.py"""
+"""Tests the public utility functions in path_watcher.py"""
 
 import unittest
 from unittest.mock import call, Mock, patch

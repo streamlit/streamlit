@@ -14,7 +14,7 @@
 
 import pytest
 from tests import testutil
-from streamlit.scriptrunner import StopException
+from streamlit.runtime.scriptrunner import StopException
 import streamlit as st
 
 

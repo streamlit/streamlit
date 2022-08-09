@@ -48,7 +48,7 @@ export class ForwardMsgCache {
   private readonly getServerUri: () => BaseUriParts | undefined
 
   /**
-   * A counter that tracks the number of times the underyling script
+   * A counter that tracks the number of times the underlying script
    * has been run. We use this to expire our cache entries.
    */
   private scriptRunCount = 0
@@ -63,7 +63,7 @@ export class ForwardMsgCache {
    * running.
    *
    * @param maxMessageAge Max age of a message in the cache.
-   * The "age" of a message is defined by how many times the underyling script
+   * The "age" of a message is defined by how many times the underlying script
    * has finished running (without a compile error) since the message was
    * last accessed.
    */

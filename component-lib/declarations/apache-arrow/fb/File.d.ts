@@ -161,7 +161,7 @@ export declare namespace org.apache.arrow.flatbuf {
     metaDataLength(): number;
     /**
      * Length of the data (this is aligned so there can be a gap between this and
-     * the metatdata).
+     * the metadata).
      *
      * @returns flatbuffers.Long
      */

@@ -27,7 +27,7 @@ import streamlit as st
 from streamlit import type_util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
-from streamlit.state import SessionStateProxy
+from streamlit.runtime.state import SessionStateProxy
 
 
 class StreamlitWriteTest(unittest.TestCase):

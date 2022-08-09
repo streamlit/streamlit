@@ -89,7 +89,7 @@ export interface State {
   /**
    * Represents whether the component is in clear photo mode,
    * when snapshot removed and new Webcam component is not shown yet.
-   * Time interval between `Clear Photo` button clicked and access to Webcam recived again
+   * Time interval between `Clear Photo` button clicked and access to Webcam received again
    */
   clearPhotoInProgress: boolean
 

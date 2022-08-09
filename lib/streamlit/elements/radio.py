@@ -19,8 +19,8 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit import logger as _logger
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,

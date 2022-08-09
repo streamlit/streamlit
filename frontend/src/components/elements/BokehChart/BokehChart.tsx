@@ -18,6 +18,7 @@
 import React, { ReactElement, useEffect, useCallback } from "react"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "src/autogen/proto"
+import { StyledBokehChartContainer } from "./styled-components"
 
 export interface BokehChartProps {
   width: number
@@ -123,7 +124,11 @@ export function BokehChart({
     memoizedUpdateChart(memoizedGetChartData())
   }, [width, height, element, memoizedGetChartData, memoizedUpdateChart])
 
-  return <div id={chartId} className="stBokehChart" />
+  return (
+    <StyledBokehChartContainer>
+      <div id={chartId} className="stBokehChart" />
+    </StyledBokehChartContainer>
+  )
 }
 
 export default withFullScreenWrapper(BokehChart)

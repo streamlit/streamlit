@@ -34,7 +34,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("my_func", ds.name)
-        self.assertEqual("help_test", ds.module)
+        self.assertEqual("tests.streamlit.help_test", ds.module)
         self.assertEqual("<class 'function'>", ds.type)
         self.assertEqual("(some_param, another_param=123)", ds.signature)
         self.assertEqual("This is the doc", ds.doc_string)
@@ -49,7 +49,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("my_func", ds.name)
-        self.assertEqual("help_test", ds.module)
+        self.assertEqual("tests.streamlit.help_test", ds.module)
         self.assertEqual("<class 'function'>", ds.type)
         self.assertEqual("(some_param, another_param=123)", ds.signature)
         self.assertEqual("No docs available.", ds.doc_string)
@@ -198,5 +198,5 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual(type(MyClass), type)
         self.assertEqual("MyClass", ds.name)
-        self.assertEqual("help_test", ds.module)
+        self.assertEqual("tests.streamlit.help_test", ds.module)
         self.assertEqual("No docs available.", ds.doc_string)

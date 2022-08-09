@@ -14,13 +14,14 @@
 
 """Unit tests for st.map()."""
 
-import pandas as pd
-import numpy as np
 import json
 
-from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
+import numpy as np
+import pandas as pd
 from tests import testutil
+
 import streamlit as st
+from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
@@ -43,7 +44,7 @@ class StMapTest(testutil.DeltaGeneratorTestCase):
 
         self.assertIsNotNone(c.get("initialViewState"))
         self.assertIsNotNone(c.get("layers"))
-        self.assertIsNotNone(c.get("mapStyle"))
+        self.assertIsNone(c.get("mapStyle"))
         self.assertEqual(len(c.get("layers")), 1)
         self.assertEqual(c.get("initialViewState").get("latitude"), 2.5)
         self.assertEqual(c.get("initialViewState").get("longitude"), 25)

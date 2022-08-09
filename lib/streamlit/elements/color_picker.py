@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key, LabelVisibility
 from textwrap import dedent
 from typing import Optional, cast
@@ -22,8 +22,8 @@ import streamlit
 from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from streamlit.state import register_widget
-from streamlit.state import (
+from streamlit.runtime.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,

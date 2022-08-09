@@ -30,7 +30,7 @@ from streamlit import version
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import GitRepo, MIN_GIT_VERSION
 from streamlit.logger import get_logger
-from streamlit.secrets import SECRETS_FILE_LOC
+from streamlit.runtime.secrets import SECRETS_FILE_LOC
 from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket
@@ -120,7 +120,7 @@ def _fix_tornado_crash() -> None:
     if the known-incompatible default policy is in use.
 
     This has to happen as early as possible to make it a low priority and
-    overrideable
+    overridable
 
     See: https://github.com/tornadoweb/tornado/issues/2608
 
