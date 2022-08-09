@@ -40,7 +40,7 @@ jobs:
       #   uses: actions/setup-python@v4
       #   with:
       #       python-version: "3.7.12"
-      # - uses: ./.github/actions/update_submodules
+      - uses: ./.github/actions/update_submodules
       # - uses: ./.github/actions/pre_make
       # - uses: ./.github/actions/make_init
       # - name: Run make develop
@@ -103,7 +103,7 @@ jobs:
           pwd
           ls
           cd frontend
-          ../scripts/run_e2e_tests.py -a $TEST
+          ../scripts/run_e2e_tests.py -a ${{ steps.split-tests.outputs.test-suite }}
           'echo "This runner will execute the following tests: ${{ steps.split-tests.outputs.test-suite }}"'
 
 
