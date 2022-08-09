@@ -16,6 +16,7 @@ import asyncio
 from asyncio import Future
 from unittest import mock
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
@@ -46,6 +47,27 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
         self._runtime_task = asyncio.create_task(self.runtime.run(on_started))
 
         await runtime_started
+
+    @staticmethod
+    async def tick_runtime_loop() -> None:
+        """Sleep just long enough to guarantee that the Runtime's loop
+        has a chance to run.
+        """
+        # Our sleep time needs to be longer than the longest sleep time inside the
+        # Runtime loop, which is 0.01 + (1 tick * number of connected sessions).
+        # 0.03 is near-instant, and conservative enough that the tick will happen
+        # under our test circumstances.
+        await asyncio.sleep(0.03)
+
+    def enqueue_forward_msg(self, session_id: str, msg: ForwardMsg) -> None:
+        """Enqueue a ForwardMsg to a given session_id. It will be sent
+        to the client on the next iteration through the run loop. (You can
+        use `await self.tick_runtime_loop()` to tick the run loop.)
+        """
+        session_info = self.runtime._get_session_info(session_id)
+        if session_info is None:
+            return
+        session_info.session._enqueue_forward_msg(msg)
 
     def patch_app_session(self):
         """Mock the Runtime's AppSession import. We don't want

@@ -17,8 +17,6 @@
 import asyncio
 import errno
 import os
-import shutil
-import tempfile
 import unittest
 from unittest import mock
 from unittest.mock import patch
@@ -33,10 +31,7 @@ import streamlit.web.server.server
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.runtime import RuntimeState
-from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.watcher import event_based_path_watcher
 from streamlit.web.server.server import (
     MAX_PORT_SEARCH_RETRIES,
     RetriesExceeded,
@@ -184,168 +179,6 @@ class ServerTest(ServerTestCase):
             # Ensure that the "Sec-Websocket-Extensions" header is not
             # present in the response from the server.
             self.assertIsNone(ws_client.headers.get("Sec-Websocket-Extensions"))
-
-    @tornado.testing.gen_test
-    async def test_forwardmsg_hashing(self):
-        """Test that outgoing ForwardMsgs contain hashes."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
-
-            ws_client = await self.ws_connect()
-
-            # Get the server's socket and session for this client
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
-
-            # Create a message and ensure its hash is unset; we're testing
-            # that _send_message adds the hash before it goes out.
-            msg = create_dataframe_msg([1, 2, 3])
-            msg.ClearField("hash")
-            self.server._runtime._send_message(session_info, msg)
-
-            received = await self.read_forward_msg(ws_client)
-            self.assertEqual(populate_hash_if_needed(msg), received.hash)
-
-    @tornado.testing.gen_test
-    async def test_forwardmsg_cacheable_flag(self):
-        """Test that the metadata.cacheable flag is set properly on outgoing
-        ForwardMsgs."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
-
-            ws_client = await self.ws_connect()
-
-            # Get the server's socket and session for this client
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
-
-            config._set_option("global.minCachedMessageSize", 0, "test")
-            cacheable_msg = create_dataframe_msg([1, 2, 3])
-            self.server._runtime._send_message(session_info, cacheable_msg)
-            received = await self.read_forward_msg(ws_client)
-            self.assertTrue(cacheable_msg.metadata.cacheable)
-            self.assertTrue(received.metadata.cacheable)
-
-            config._set_option("global.minCachedMessageSize", 1000, "test")
-            cacheable_msg = create_dataframe_msg([4, 5, 6])
-            self.server._runtime._send_message(session_info, cacheable_msg)
-            received = await self.read_forward_msg(ws_client)
-            self.assertFalse(cacheable_msg.metadata.cacheable)
-            self.assertFalse(received.metadata.cacheable)
-
-    @tornado.testing.gen_test
-    async def test_duplicate_forwardmsg_caching(self):
-        """Test that duplicate ForwardMsgs are sent only once."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            config._set_option("global.minCachedMessageSize", 0, "test")
-
-            await self.start_server_loop()
-            ws_client = await self.ws_connect()
-
-            # Get the server's socket and session for this client
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
-
-            msg1 = create_dataframe_msg([1, 2, 3], 1)
-
-            # Send the message, and read it back. It will not have been cached.
-            self.server._runtime._send_message(session_info, msg1)
-            uncached = await self.read_forward_msg(ws_client)
-            self.assertEqual("delta", uncached.WhichOneof("type"))
-
-            msg2 = create_dataframe_msg([1, 2, 3], 123)
-
-            # Send an equivalent message. This time, it should be cached,
-            # and a "hash_reference" message should be received instead.
-            self.server._runtime._send_message(session_info, msg2)
-            cached = await self.read_forward_msg(ws_client)
-            self.assertEqual("ref_hash", cached.WhichOneof("type"))
-            # We should have the *hash* of msg1 and msg2:
-            self.assertEqual(msg1.hash, cached.ref_hash)
-            self.assertEqual(msg2.hash, cached.ref_hash)
-            # And the same *metadata* as msg2:
-            self.assertEqual(msg2.metadata, cached.metadata)
-
-    @tornado.testing.gen_test
-    async def test_cache_clearing(self):
-        """Test that report_run_count is incremented when a report
-        finishes running.
-        """
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            config._set_option("global.minCachedMessageSize", 0, "test")
-            config._set_option("global.maxCachedMessageAge", 1, "test")
-
-            await self.start_server_loop()
-            await self.ws_connect()
-
-            session = list(self.server._runtime._session_info_by_id.values())[0]
-
-            data_msg = create_dataframe_msg([1, 2, 3])
-
-            def finish_report(success):
-                status = (
-                    ForwardMsg.FINISHED_SUCCESSFULLY
-                    if success
-                    else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
-                )
-                finish_msg = _create_script_finished_msg(status)
-                self.server._runtime._send_message(session, finish_msg)
-
-            def is_data_msg_cached():
-                return (
-                    self.server._runtime._message_cache.get_message(data_msg.hash)
-                    is not None
-                )
-
-            def send_data_msg():
-                self.server._runtime._send_message(session, data_msg)
-
-            # Send a cacheable message. It should be cached.
-            send_data_msg()
-            self.assertTrue(is_data_msg_cached())
-
-            # End the report with a compile error. Nothing should change;
-            # compile errors don't increase the age of items in the cache.
-            finish_report(False)
-            self.assertTrue(is_data_msg_cached())
-
-            # End the report successfully. Nothing should change, because
-            # the age of the cached message is now 1.
-            finish_report(True)
-            self.assertTrue(is_data_msg_cached())
-
-            # Send the message again. This should reset its age to 0 in the
-            # cache, so it won't be evicted when the report next finishes.
-            send_data_msg()
-            self.assertTrue(is_data_msg_cached())
-
-            # Finish the report. The cached message age is now 1.
-            finish_report(True)
-            self.assertTrue(is_data_msg_cached())
-
-            # Finish again. The cached message age will be 2, and so it
-            # should be evicted from the cache.
-            finish_report(True)
-            self.assertFalse(is_data_msg_cached())
-
-    @tornado.testing.gen_test
-    async def test_orphaned_upload_file_deletion(self):
-        """An uploaded file with no associated AppSession should be
-        deleted."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
-            await self.ws_connect()
-
-            # "Upload a file" for a session that doesn't exist
-            self.server._runtime._uploaded_file_mgr.add_file(
-                session_id="no_such_session",
-                widget_id="widget_id",
-                file=UploadedFileRec(0, "file.txt", "type", b"123"),
-            )
-
-            self.assertEqual(
-                self.server._runtime._uploaded_file_mgr.get_all_files(
-                    "no_such_session", "widget_id"
-                ),
-                [],
-            )
 
     @tornado.testing.gen_test
     async def test_send_message_to_disconnected_websocket(self):
@@ -529,65 +362,6 @@ class UnixSocketTest(unittest.TestCase):
                 "/home/superfakehomedir/fancy-test/testasd"
             )
             mock_server.add_socket.assert_called_with(some_socket)
-
-
-@patch("streamlit.source_util._cached_pages", new=None)
-class ScriptCheckTest(tornado.testing.AsyncTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-        self._home = tempfile.mkdtemp()
-        self._old_home = os.environ["HOME"]
-        os.environ["HOME"] = self._home
-
-        self._fd, self._path = tempfile.mkstemp()
-        self._server = Server(self._path, "test command line")
-        self._server._runtime._eventloop = self.asyncio_loop
-
-    def tearDown(self) -> None:
-        if event_based_path_watcher._MultiPathWatcher._singleton is not None:
-            event_based_path_watcher._MultiPathWatcher.get_singleton().close()
-            event_based_path_watcher._MultiPathWatcher._singleton = None
-
-        os.environ["HOME"] = self._old_home
-        os.remove(self._path)
-        shutil.rmtree(self._home)
-
-        super().tearDown()
-
-    @pytest.mark.slow
-    @tornado.testing.gen_test(timeout=30)
-    async def test_invalid_script(self):
-        await self._check_script_loading(
-            "import streamlit as st\n\nst.deprecatedWrite('test')",
-            False,
-            "error",
-        )
-
-    @pytest.mark.slow
-    @tornado.testing.gen_test(timeout=30)
-    async def test_valid_script(self):
-        await self._check_script_loading(
-            "import streamlit as st\n\nst.write('test')", True, "ok"
-        )
-
-    @pytest.mark.slow
-    @tornado.testing.gen_test(timeout=30)
-    async def test_timeout_script(self):
-        with patch("streamlit.runtime.runtime.SCRIPT_RUN_CHECK_TIMEOUT", new=0.1):
-            await self._check_script_loading(
-                "import time\n\ntime.sleep(5)", False, "timeout"
-            )
-
-    async def _check_script_loading(self, script, expected_loads, expected_msg):
-        with os.fdopen(self._fd, "w") as tmp:
-            tmp.write(script)
-
-        ok, msg = await self._server._runtime.does_script_run_without_error()
-        event_based_path_watcher._MultiPathWatcher.get_singleton().close()
-        event_based_path_watcher._MultiPathWatcher._singleton = None
-        self.assertEqual(expected_loads, ok)
-        self.assertEqual(expected_msg, msg)
 
 
 class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):

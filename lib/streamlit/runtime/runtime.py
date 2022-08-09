@@ -21,6 +21,7 @@ from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple, Awaitable
 
 from typing_extensions import Final, Protocol
 
+import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -49,6 +50,10 @@ LOGGER: Final = get_logger(__name__)
 
 class SessionClientDisconnectedError(Exception):
     """Raised by operations on a disconnected SessionClient."""
+
+
+class RuntimeStoppedError(Exception):
+    """Raised by operations on a Runtime instance that is stopped."""
 
 
 class SessionClient(Protocol):
@@ -218,6 +223,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        streamlit._is_running_with_streamlit = True
         await self._loop_coroutine(on_started)
 
     def stop(self) -> None:
@@ -279,7 +285,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
-            raise RuntimeError(f"Can't create_session (state={self._state})")
+            raise RuntimeStoppedError(f"Can't create_session (state={self._state})")
 
         session = AppSession(
             event_loop=self._get_eventloop(),
@@ -346,7 +352,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
-            raise RuntimeError(f"Can't handle_backmsg (state={self._state})")
+            raise RuntimeStoppedError(f"Can't handle_backmsg (state={self._state})")
 
         session_info = self._session_info_by_id.get(session_id)
         if session_info is None:
