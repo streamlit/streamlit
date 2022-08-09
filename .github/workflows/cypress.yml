@@ -139,8 +139,7 @@ jobs:
           split-total: ${{ env.total-runners }}
           split-index: ${{ matrix.runner-index }}
       - run: |
-          cd frontend
-          ../scripts/run_e2e_tests.py -a ${{ steps.split-tests.outputs.test-suite }}
+          scripts/run_e2e_tests.py -a ${{ steps.split-tests.outputs.test-suite }}
           'echo "This runner will execute the following tests: ${{ steps.split-tests.outputs.test-suite }}"'
 
 
