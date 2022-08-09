@@ -135,12 +135,12 @@ mypy:
 .PHONY: integration-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.
 integration-tests:
-	python scripts/run_bare_integration_tests.py
+	python3 scripts/run_bare_integration_tests.py
 
 .PHONY: cli-smoke-tests
 # Verify that CLI boots as expected when called with `python -m streamlit`
 cli-smoke-tests:
-	python scripts/cli_smoke_tests.py
+	python3 scripts/cli_smoke_tests.py
 
 .PHONY: cli-regression-tests
 # Verify that CLI boots as expected when called with `python -m streamlit`
@@ -163,7 +163,7 @@ develop:
 distribution:
 	# Get rid of the old build and dist folders to make sure that we clean old js and css.
 	rm -rfv lib/build lib/dist
-	cd lib ; python setup.py bdist_wheel --universal sdist
+	cd lib ; python3 setup.py bdist_wheel --universal sdist
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
@@ -350,6 +350,8 @@ headers:
 .PHONY: build-test-env
 # Build docker image that mirrors circleci
 build-test-env:
+
+ifndef CIRCLECI
 	docker build \
 		--build-arg UID=$$(id -u) \
 		--build-arg GID=$$(id -g) \
@@ -357,16 +359,21 @@ build-test-env:
 		-t streamlit_e2e_tests \
 		-f e2e/Dockerfile \
 		.
+else
+	docker build \
+		--build-arg UID=$$(id -u) \
+		--build-arg GID=$$(id -g) \
+		--build-arg OSTYPE=$$(uname) \
+		-t streamlit_e2e_tests \
+		-f e2e/Dockerfile \
+		--progress plain \
+		.
+endif #CIRCLECI
 
 .PHONY: run-test-env
 # Run test env image with volume mounts
 run-test-env:
-	docker-compose \
-		-f e2e/docker-compose.yml \
-		run \
-		--rm \
-		--name streamlit_e2e_tests \
-		streamlit_e2e_tests
+	./e2e/run_compose.sh
 
 .PHONY: connect-test-env
 # Connect to an already-running test env container
