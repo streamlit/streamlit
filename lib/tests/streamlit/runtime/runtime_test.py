@@ -28,7 +28,9 @@ from streamlit.runtime.runtime import (
     RuntimeState,
     SessionClient,
     Runtime,
-    RuntimeConfig, RuntimeStoppedError,
+    RuntimeConfig,
+    RuntimeStoppedError,
+    SessionClientDisconnectedError,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
@@ -343,9 +345,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.start_runtime_loop()
 
         client = MockSessionClient()
-        session_id = self.runtime.create_session(
-            client=client, user_info=MagicMock()
-        )
+        session_id = self.runtime.create_session(client=client, user_info=MagicMock())
 
         file = UploadedFileRec(0, "file.txt", "type", b"123")
 
@@ -353,31 +353,25 @@ class RuntimeTest(RuntimeTestCase):
         added_file = self.runtime._uploaded_file_mgr.add_file(
             session_id=session_id,
             widget_id="widget_id",
-            file=UploadedFileRec(0, "file.txt", "type", b"123")
+            file=UploadedFileRec(0, "file.txt", "type", b"123"),
         )
 
         # The file should exist.
         self.assertEqual(
-            self.runtime._uploaded_file_mgr.get_all_files(
-                session_id, "widget_id"
-            ),
+            self.runtime._uploaded_file_mgr.get_all_files(session_id, "widget_id"),
             [added_file],
         )
 
         # Disconnect the session. The file should be deleted.
         self.runtime.close_session(session_id)
         self.assertEqual(
-            self.runtime._uploaded_file_mgr.get_all_files(
-                session_id, "widget_id"
-            ),
+            self.runtime._uploaded_file_mgr.get_all_files(session_id, "widget_id"),
             [],
         )
 
         # Upload a file for a session that doesn't exist.
         self.runtime._uploaded_file_mgr.add_file(
-            session_id="no_such_session",
-            widget_id="widget_id",
-            file=file
+            session_id="no_such_session", widget_id="widget_id", file=file
         )
 
         # The file should be immediately deleted.
@@ -446,7 +440,9 @@ time.sleep(5)
         with patch("streamlit.runtime.runtime.SCRIPT_RUN_CHECK_TIMEOUT", new=0.1):
             await self._check_script_loading(script, False, "timeout")
 
-    async def _check_script_loading(self, script: str, expected_loads: bool, expected_msg: str) -> None:
+    async def _check_script_loading(
+        self, script: str, expected_loads: bool, expected_msg: str
+    ) -> None:
         with os.fdopen(self._fd, "w") as tmp:
             tmp.write(script)
 
