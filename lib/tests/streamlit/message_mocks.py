@@ -30,7 +30,7 @@ def create_dataframe_msg(df: Data, id: int = 1) -> ForwardMsg:
 
 
 def create_script_finished_message(
-    status: ForwardMsg.ScriptFinishedStatus.ValueType,
+    status: "ForwardMsg.ScriptFinishedStatus.ValueType",
 ) -> ForwardMsg:
     """Create a script_finished ForwardMsg."""
     msg = ForwardMsg()
