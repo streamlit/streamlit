@@ -99,6 +99,9 @@ jobs:
           glob: e2e/specs/**/*.js
           split-total: ${{ env.total-runners }}
           split-index: ${{ matrix.runner-index }}
-      - run: 'echo "This runner will execute the following tests: ${{ steps.split-tests.outputs.test-suite }}"'
+      - run: |
+          TEMP=$(ls ./e2e/specs/${{ steps.split-tests.outputs.test-suite }}/*.spec.js)
+          scripts/run_e2e_tests.py -a $TEMP
+          # 'echo "This runner will execute the following tests: ${{ steps.split-tests.outputs.test-suite }}"'
 
 
