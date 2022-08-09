@@ -90,7 +90,7 @@ jobs:
           ../scripts/run_e2e_tests.py -a
           echo "AFTER THE RUN"
           ls -lah /tmp
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -v -u -o pipefail {0}
       # - name: store videos
       #   uses: actions/upload-artifact@v3
       #   with:
