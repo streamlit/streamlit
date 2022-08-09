@@ -85,7 +85,7 @@ jobs:
       - name: give tmp permissions
         run: |
           ls -lah /tmp
-          TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
+          # TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
           cd frontend
           ../scripts/run_e2e_tests.py -a
           echo "AFTER THE RUN"
