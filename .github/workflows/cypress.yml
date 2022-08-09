@@ -107,11 +107,11 @@ jobs:
       - name: Run make develop
         run: |
           make develop
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -v -u -o pipefail {0}
       - name: Install Cypress dependencies
         run: |
           ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -v -u -o pipefail {0}
       # Revisit artifact saving
       # - name: Save Cypress artifacts
       #   uses: actions/upload-artifact@v2
@@ -125,12 +125,12 @@ jobs:
           MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]')
           echo '[mapbox]' >  ~/.streamlit/config.toml
           echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -v -u -o pipefail {0}
       - name: Init credentials
         run: |
           echo '[general]' >  ~/.streamlit/credentials.toml
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -v -u -o pipefail {0}
       - uses: chaosaffe/split-tests@v1-alpha.1
         id: split-tests
         name: Split tests
@@ -140,6 +140,5 @@ jobs:
           split-index: ${{ matrix.runner-index }}
       - run: |
           scripts/run_e2e_tests.py -a ${{ steps.split-tests.outputs.test-suite }}
-          'echo "This runner will execute the following tests: ${{ steps.split-tests.outputs.test-suite }}"'
 
 
