@@ -21,18 +21,16 @@ jobs:
   #         TEMP=$(ls ./e2e/specs/${{ matrix.specs }}/*.spec.js)
   #         echo ./e2e/specs/${{ matrix.specs }}/*.spec.js
   #         echo "ls ./e2e/specs/${{ matrix.specs }}/*.spec.js"
-  e2e_tests:
+
+
+  build:
+
     runs-on: ubuntu-latest
+
     env:
       SUDO: 'sudo'
       BASH_ENV: $HOME/.bash_profile
 
-    strategy:
-      fail-fast: false
-      matrix:
-        # specs: ${{ fromJson(needs.list-spec-files.outputs.matrix) }}
-        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-  
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
@@ -70,6 +68,20 @@ jobs:
           echo '[general]' >  ~/.streamlit/credentials.toml
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
         shell: bash -l -v -e -u -o pipefail {0}
+
+  e2e_tests:
+
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # specs: ${{ fromJson(needs.list-spec-files.outputs.matrix) }}
+        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+  
+    steps:
+      - uses: actions/checkout@v3
       - name: Cypress Tests
         run: |
           TEMP=(./e2e/specs/${{ matrix.specs }}/*.spec.js)
