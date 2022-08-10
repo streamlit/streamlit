@@ -76,9 +76,9 @@ RUN set +x  \
 ENV NODE_PATH $NVM_DIR/$NODE_VERSION/lib/node_modules
 ENV PATH $NVM_DIR/versions/node/$NODE_VERSION/bin:$PATH
 
-# copy makefile
-COPY --chown=$USER scripts/should_install_tensorflow.py scripts/
+# copy makefile and related script
 COPY --chown=$USER Makefile .
+COPY --chown=$USER scripts/should_install_tensorflow.py scripts/
 
 # install virtual env
 RUN python -m venv venv \

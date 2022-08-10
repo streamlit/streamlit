@@ -198,6 +198,7 @@ clean:
 	rm -f lib/Pipfile.lock
 	rm -rf frontend/build
 	rm -rf frontend/node_modules
+	rm -rf frontend/test_results
 	rm -f frontend/src/autogen/proto.js
 	rm -f frontend/src/autogen/proto.d.ts
 	rm -rf frontend/public/reports
