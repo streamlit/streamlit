@@ -943,7 +943,7 @@ jobs:
       - run:
           name: Install system dependencies
           command: |
-            sudo apt-get update -t
+            sudo apt-get update -y
             sudo apt-get install -y libmariadb-dev
 
       - update-submodules
