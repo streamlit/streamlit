@@ -14,7 +14,7 @@
 
 import re
 import textwrap
-from typing import TYPE_CHECKING
+from typing import Any, cast, Tuple, TYPE_CHECKING
 
 from datetime import datetime
 from streamlit.errors import StreamlitAPIException
@@ -22,6 +22,13 @@ from streamlit.emojis import ALL_EMOJIS
 
 if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
+
+
+# The ESCAPED_EMOJI list is sorted in descending order to make that longer emoji appear
+# first in the regex compiled below. This ensures that we grab the full emoji in a
+# multi-character emoji sequence that starts with a shorter emoji (emoji are weird...).
+ESCAPED_EMOJI = [re.escape(e) for e in sorted(ALL_EMOJIS, reverse=True)]
+EMOJI_EXTRACTION_REGEX = re.compile(f"^({'|'.join(ESCAPED_EMOJI)})[_ -]*(.*)")
 
 
 def decode_ascii(string):
@@ -37,6 +44,21 @@ def clean_text(text: "SupportsStr") -> str:
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
     return text in ALL_EMOJIS
+
+
+def extract_leading_emoji(text: str) -> Tuple[str, str]:
+    """Return a tuple containing the first emoji found in the given string and
+    the rest of the string (minus an optional separator between the two).
+    """
+    re_match = re.search(EMOJI_EXTRACTION_REGEX, text)
+    if re_match is None:
+        return "", text
+
+    # This cast to Any+type annotation weirdness is done because
+    # cast(re.Match[str], ...) explodes at runtime since Python interprets it
+    # as an attempt to index into re.Match instead of as a type annotation.
+    re_match: re.Match[str] = cast(Any, re_match)
+    return re_match.group(1), re_match.group(2)
 
 
 def escape_markdown(raw_string: str) -> str:
