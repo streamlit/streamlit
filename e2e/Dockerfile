@@ -66,7 +66,7 @@ ARG NODE_VERSION
 # install node and yarn
 RUN set +x  \
     && source $NVM_DIR/nvm.sh \
-    && set +x \
+    && set -x \
     && nvm install $NODE_VERSION \
     && npm install -g yarn
 
