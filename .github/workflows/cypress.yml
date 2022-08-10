@@ -89,7 +89,7 @@ jobs:
       fail-fast: false
       matrix:
         # specs: ${{ fromJson(needs.build.outputs.matrix) }}
-        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ]
     
     steps:
       - uses: actions/checkout@v3
@@ -132,8 +132,13 @@ jobs:
       - name: Cypress Tests
         run: |
           source $HOME/.bash_profile
-          yarn --version
-          scripts/run_e2e_tests.py -a e2e/specs/app_hotkeys.spec.js
+          js_specs=(e2e/specs/*)
+          # number of spec files
+          by=${#js_specs[@]} / 20
+          # get how many specs to be split up into 20 runs
+          (( interval=(${#js_specs[@]}+20-1)/20 ))
+          (( containerNum = (matrix.spec - 1) * ${interval} ))
+          scripts/run_e2e_tests.py -a "${js_specs[@]:${containerNum}:${interval}}"
         shell: bash -l -v -e -u -o pipefail {0}
       # - name: store videos
       #   uses: actions/upload-artifact@v3
