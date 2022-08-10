@@ -85,8 +85,8 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        specs: ${{ fromJson(needs.build.outputs.matrix) }}
+      # matrix:
+      #   specs: ${{ fromJson(needs.build.outputs.matrix) }}
         # specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
   
     steps:
@@ -94,7 +94,7 @@ jobs:
       - name: Cypress Tests
         run: |
           cd frontend
-          ../scripts/run_e2e_tests.py -a ${{ matrix.specs }}
+          ../scripts/run_e2e_tests.py -a ../e2e/specs/app_hotkeys.spec.js
         shell: bash -l -v -e -u -o pipefail {0}
       # - name: store videos
       #   uses: actions/upload-artifact@v3
