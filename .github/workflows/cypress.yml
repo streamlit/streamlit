@@ -72,6 +72,7 @@ jobs:
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
         shell: bash -l -v -e -u -o pipefail {0}
       - name: Create matrix
+        id: set-matrix
         run: |
           echo "::set-output name=matrix::$(ls ./e2e/specs/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
         shell: bash -l -v -e -u -o pipefail {0}
