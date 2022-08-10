@@ -383,7 +383,7 @@ endif #CIRCLECI
 .PHONY: run-test-env
 # Run test env image with volume mounts
 run-test-env:
-	./e2e/run_compose.sh
+	./e2e/run_compose.py
 
 .PHONY: connect-test-env
 # Connect to an already-running test env container
