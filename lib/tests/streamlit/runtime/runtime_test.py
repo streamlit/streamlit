@@ -168,6 +168,30 @@ class RuntimeTest(RuntimeTestCase):
         await self.start_runtime_loop()
         self.runtime.handle_backmsg("not_a_session_id", MagicMock())
 
+    async def test_handle_backmsg_deserialization_exception(self):
+        """BackMsg deserialization Exceptions should be delivered to the
+        appropriate AppSession.
+        """
+        with self.patch_app_session():
+            await self.start_runtime_loop()
+            session_id = self.runtime.create_session(
+                client=MockSessionClient(), user_info=MagicMock()
+            )
+
+            exception = MagicMock()
+            self.runtime.handle_backmsg_deserialization_exception(session_id, exception)
+
+            app_session = self.runtime._get_session_info(session_id).session
+            app_session.handle_backmsg_exception.assert_called_once_with(exception)
+
+    async def test_handle_backmsg_exception_invalid_session(self):
+        """A BackMsg exception for an invalid session should get dropped without an
+        error."""
+        await self.start_runtime_loop()
+        self.runtime.handle_backmsg_deserialization_exception(
+            "not_a_session_id", MagicMock()
+        )
+
     async def test_create_session_after_stop(self):
         """After Runtime.stop is called, `create_session` is an error."""
         await self.start_runtime_loop()
