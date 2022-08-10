@@ -449,7 +449,10 @@ class Runtime:
             while not self._must_stop.is_set():
                 if self._state == RuntimeState.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
-                        [self._must_stop.wait(), self._has_connection.wait()],
+                        (
+                            asyncio.create_task(self._must_stop.wait()),
+                            asyncio.create_task(self._has_connection.wait()),
+                        ),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
 
@@ -481,7 +484,10 @@ class Runtime:
                     break
 
                 await asyncio.wait(
-                    [self._must_stop.wait(), self._need_send_data.wait()],
+                    (
+                        asyncio.create_task(self._must_stop.wait()),
+                        asyncio.create_task(self._need_send_data.wait()),
+                    ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
 
