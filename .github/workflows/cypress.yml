@@ -47,11 +47,11 @@ jobs:
   #     - name: Run make develop
   #       run: |
   #         make develop
-  #       shell: bash -l -v -e -u -o pipefail {0}
+  #       shell: bash -l -u -o pipefail {0}
   #     - name: Install Cypress dependencies
   #       run: |
   #         ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
-  #       shell: bash -l -v -e -u -o pipefail {0}
+  #       shell: bash -l -u -o pipefail {0}
   #     # Revisit artifact saving
   #     # - name: Save Cypress artifacts
   #     #   uses: actions/upload-artifact@v2
@@ -65,18 +65,18 @@ jobs:
   #         MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]')
   #         echo '[mapbox]' >  ~/.streamlit/config.toml
   #         echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
-  #       shell: bash -l -v -e -u -o pipefail {0}
+  #       shell: bash -l -u -o pipefail {0}
   #     - name: Init credentials
   #       run: |
   #         echo '[general]' >  ~/.streamlit/credentials.toml
   #         echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-  #       shell: bash -l -v -e -u -o pipefail {0}
+  #       shell: bash -l -u -o pipefail {0}
   #     - name: Create matrix
   #       id: set-matrix
   #       run: |
   #         cd frontend
   #         echo "::set-output name=matrix::$(ls ../e2e/specs/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
-  #       shell: bash -l -v -e -u -o pipefail {0}
+  #       shell: bash -l -u -o pipefail {0}
 
   e2e_tests:
     env:
@@ -105,11 +105,11 @@ jobs:
       - name: Run make develop
         run: |
           make develop
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -u -o pipefail {0}
       - name: Install Cypress dependencies
         run: |
           ${SUDO} apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -u -o pipefail {0}
       # Revisit artifact saving
       # - name: Save Cypress artifacts
       #   uses: actions/upload-artifact@v2
@@ -123,12 +123,12 @@ jobs:
           MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]')
           echo '[mapbox]' >  ~/.streamlit/config.toml
           echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -u -o pipefail {0}
       - name: Init credentials
         run: |
           echo '[general]' >  ~/.streamlit/credentials.toml
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -u -o pipefail {0}
       - name: Cypress Tests
         run: |
           source $HOME/.bash_profile
@@ -136,8 +136,10 @@ jobs:
           # get how many specs to be split up into 20 runs
           (( interval=(${#js_specs[@]}+20-1)/20 ))
           (( startIndex = (${{matrix.specs}} - 1) * ${interval} ))
+          echo $startIndex
+          echo "${js_specs[@]:${startIndex}:${interval}}"
           scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
-        shell: bash -l -v -e -u -o pipefail {0}
+        shell: bash -l -u -o pipefail {0}
       # - name: store videos
       #   uses: actions/upload-artifact@v3
       #   with:
