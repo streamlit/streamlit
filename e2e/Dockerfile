@@ -5,10 +5,8 @@ ENV PYTHONUNBUFFERED 1
 
 # For the container running cypress to be able to write snapshots to a
 # directory mounted from the host, the UID/GID of the user in the container
-# must be UIDs/GIDs with write permissions on the host. We default to the
-# user/group IDs for the first non-root user on most linux systems, but in
-# practice these should always be explicitly set by the make targets
-# conventionally used to work with this image.
+# must be UIDs/GIDs with write permissions on the host. We set these arguments
+# by the make targets conventionally used to work with this image.
 ARG UID
 ARG GID
 
