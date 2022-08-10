@@ -107,10 +107,6 @@ RUN IS_DOCKER=true CIRCLECI=true make pipenv-install
 # copy streamlit code
 COPY --chown=$USER . .
 
-# fix permission of `yarn start` cache directory
-#RUN mkdir -p $APP/frontend/node_modules/.cache/hard-source \
-#    && chown $USER:$USER $APP/frontend/node_modules/.cache/hard-source
-
 # install streamlit
 RUN make develop
 

@@ -354,7 +354,7 @@ build-test-env:
 		echo "node not installed."; \
 		exit 1; \
 	fi
-	if [[ -f lib/streamlit/proto/Common_pb2.py ]]; then
+	if [[ -f lib/streamlit/proto/Common_pb2.py ]]; then \
 		echo "Proto files not generated."; \
 		exit 1; \
 	fi
