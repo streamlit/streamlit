@@ -220,36 +220,6 @@ class ServerTest(ServerTestCase):
                     self.server._runtime._get_session_info(session_info.session.id)
                 )
 
-    @tornado.testing.gen_test
-    async def test_is_active_session(self):
-        """is_active_session should return True for active session_ids."""
-        with self._patch_app_session():
-            await self.start_server_loop()
-            await self.ws_connect()
-
-            # Get our connected BrowserWebSocketHandler
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
-
-            self.assertFalse(self.server._runtime.is_active_session("not_a_session_id"))
-            self.assertTrue(
-                self.server._runtime.is_active_session(session_info.session.id)
-            )
-
-    @tornado.testing.gen_test
-    async def test_get_eventloop(self):
-        """Server._get_eventloop() will raise an error if called before the
-        Server is started, and will return the Server's eventloop otherwise.
-        """
-        with self._patch_app_session():
-            with self.assertRaises(RuntimeError):
-                # Server hasn't started yet: error!
-                _ = self.server._runtime._get_eventloop()
-
-            # Server has started: no error
-            await self.start_server_loop()
-            eventloop = self.server._runtime._get_eventloop()
-            self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
-
 
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""

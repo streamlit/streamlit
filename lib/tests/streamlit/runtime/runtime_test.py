@@ -404,6 +404,19 @@ class RuntimeTest(RuntimeTestCase):
             [],
         )
 
+    async def test_get_eventloop(self):
+        """Runtime._get_eventloop() will raise an error if called before the
+        Runtime is started, and will return the Runtime's eventloop otherwise.
+        """
+        with self.assertRaises(RuntimeError):
+            # Runtime hasn't started yet: error!
+            _ = self.runtime._get_eventloop()
+
+        # Runtime has started: no error
+        await self.start_runtime_loop()
+        eventloop = self.runtime._get_eventloop()
+        self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
+
 
 @patch("streamlit.source_util._cached_pages", new=None)
 class ScriptCheckTest(RuntimeTestCase):
