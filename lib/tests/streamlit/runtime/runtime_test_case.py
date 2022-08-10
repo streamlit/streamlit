@@ -70,7 +70,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
         session_info.session._enqueue_forward_msg(msg)
 
     def patch_app_session(self):
-        """Mock the Runtime's AppSession import. We don't want
+        """Mock the Runtime's AppSession import. Use this on tests where we don't want
         actual sessions to be instantiated, or scripts to be run.
         """
         return mock.patch(

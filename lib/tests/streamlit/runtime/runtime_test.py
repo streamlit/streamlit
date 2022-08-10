@@ -149,6 +149,33 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session(session_id)
         self.assertFalse(self.runtime.is_active_session(session_id))
 
+    async def test_shutdown_appsessions_on_stop(self):
+        """When the Runtime stops, it should shut down open AppSessions."""
+        with self.patch_app_session():
+            await self.start_runtime_loop()
+
+            # Create a few sessions
+            app_sessions = []
+            for _ in range(3):
+                session_id = self.runtime.create_session(
+                    MockSessionClient(), MagicMock()
+                )
+                app_session = self.runtime._get_session_info(session_id).session
+                app_sessions.append(app_session)
+
+            # Sanity check
+            for app_session in app_sessions:
+                app_session.shutdown.assert_not_called()
+
+            # Stop the Runtime
+            self.runtime.stop()
+            await self.runtime.stopped
+
+            # All sessions should be shut down
+            self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
+            for app_session in app_sessions:
+                app_session.shutdown.assert_called_once()
+
     async def test_handle_backmsg(self):
         """BackMsgs should be delivered to the appropriate AppSession."""
         with self.patch_app_session():
@@ -403,6 +430,19 @@ class RuntimeTest(RuntimeTestCase):
             ),
             [],
         )
+
+    async def test_get_eventloop(self):
+        """Runtime._get_eventloop() will raise an error if called before the
+        Runtime is started, and will return the Runtime's eventloop otherwise.
+        """
+        with self.assertRaises(RuntimeError):
+            # Runtime hasn't started yet: error!
+            _ = self.runtime._get_eventloop()
+
+        # Runtime has started: no error
+        await self.start_runtime_loop()
+        eventloop = self.runtime._get_eventloop()
+        self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
 
 
 @patch("streamlit.source_util._cached_pages", new=None)
