@@ -16,7 +16,7 @@ from typing import cast, Optional, TYPE_CHECKING, Union
 
 from streamlit import type_util
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
-from .utils import clean_text
+from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     import sympy

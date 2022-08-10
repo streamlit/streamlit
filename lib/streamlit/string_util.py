@@ -14,10 +14,14 @@
 
 import re
 import textwrap
+from typing import TYPE_CHECKING
 
 from datetime import datetime
 from streamlit.errors import StreamlitAPIException
 from streamlit.emojis import ALL_EMOJIS
+
+if TYPE_CHECKING:
+    from streamlit.type_util import SupportsStr
 
 
 def decode_ascii(string):
@@ -25,7 +29,8 @@ def decode_ascii(string):
     return string.decode("ascii")
 
 
-def clean_text(text: str) -> str:
+def clean_text(text: "SupportsStr") -> str:
+    """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
 
 
