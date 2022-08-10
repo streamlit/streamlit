@@ -74,7 +74,6 @@ jobs:
       - name: Create matrix
         run: |
           echo "::set-output name=matrix::$(ls ./e2e/specs/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
-          echo $matrix
         shell: bash -l -v -e -u -o pipefail {0}
 
   e2e_tests:
