@@ -933,6 +933,7 @@ jobs:
     # To have local Docker, use a machine executor.
     # The Docker executor provides access to a remote docker which does not
     # have support for mounting local directories as a volume
+    # This is also in line with how Github Action works.
     machine:
       image: ubuntu-2204:2022.07.1
     working_directory: ~/repo
