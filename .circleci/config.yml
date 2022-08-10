@@ -940,14 +940,11 @@ jobs:
       - checkout:
           name: Checkout Streamlit code
 
-#      - setup_remote_docker:
-#          docker_layer_caching: true # DLC will explicitly cache layers here and try to avoid rebuilding.
-#          version: 20.10.14
       - run:
           name: Install system dependencies
           command: |
-            sudo apt-get update
-            sudo apt-get install -y mysql-client
+            sudo apt-get update -t
+            sudo apt-get install -y libmariadb-dev
 
       - update-submodules
 
