@@ -74,7 +74,8 @@ jobs:
       - name: Create matrix
         id: set-matrix
         run: |
-          echo "::set-output name=matrix::$(ls ./e2e/specs/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
+          cd frontend
+          echo "::set-output name=matrix::$(ls ../e2e/specs/*.spec.js | jq -R -s -c 'split("\n")[:-1]')"
         shell: bash -l -v -e -u -o pipefail {0}
 
   e2e_tests:
@@ -92,9 +93,8 @@ jobs:
       - uses: actions/checkout@v3
       - name: Cypress Tests
         run: |
-          echo 'THIS IS THE MATRIX'
-          echo ${{ matrix.specs }}
-          scripts/run_e2e_tests.py -a ./e2e/scripts/app_hotkeys.py
+          cd frontend
+          ../scripts/run_e2e_tests.py -a ${{ matrix.specs }}
         shell: bash -l -v -e -u -o pipefail {0}
       # - name: store videos
       #   uses: actions/upload-artifact@v3
