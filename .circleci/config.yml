@@ -123,7 +123,7 @@ commands:
               # install nodejs via nvm
               curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.2/install.sh | bash
               source "$HOME/.nvm/nvm.sh"
-              nvm install --lts=fermium
+              nvm install
               # install yarn
               npm install -g yarn
             fi

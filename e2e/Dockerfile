@@ -63,13 +63,13 @@ RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.2/install.sh
 
 # node vars
 ARG NVM_DIR=$HOME/.nvm
-ARG NODE_VERSION=v14.20.0
+ARG NODE_VERSION
 
 # install node and yarn
 RUN set +x  \
     && source $NVM_DIR/nvm.sh \
     && set +x \
-    && nvm install $NODE_VERSION --lts=fermium \
+    && nvm install $NODE_VERSION \
     && npm install -g yarn
 
 # node path

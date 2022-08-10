@@ -88,15 +88,9 @@ def get_container_cwd():
     return str(IN_CONTAINER_HOME / cwd_path.relative_to(ROOT_DIR))
 
 
-def ensure_directory_exists():
-    test_result_dir = ROOT_DIR / "frontend" / "test_results"
-    if not test_result_dir.exists():
-        test_result_dir.mkdir()
-
-
 def main():
     subprocess_args = parse_args()
-    ensure_directory_exists()
+    (ROOT_DIR / "frontend" / "test_results").mkdir(parents=True, exist_ok=True)
 
     in_container_working_directory = get_container_cwd()
     compose_file = str(E2E_DIR / "docker-compose.yml")

@@ -350,12 +350,20 @@ headers:
 .PHONY: build-test-env
 # Build docker image that mirrors circleci
 build-test-env:
-
+	if ! command -v node &> /dev/null ; then \
+		echo "node not installed."; \
+		exit 1; \
+	fi
+	if [[ -f lib/streamlit/proto/Common_pb2.py ]]; then
+		echo "Proto files not generated."; \
+		exit 1; \
+	fi
 ifndef CIRCLECI
 	docker build \
 		--build-arg UID=$$(id -u) \
 		--build-arg GID=$$(id -g) \
 		--build-arg OSTYPE=$$(uname) \
+		--build-arg NODE_VERSION=$$(node --version) \
 		-t streamlit_e2e_tests \
 		-f e2e/Dockerfile \
 		.
@@ -364,6 +372,7 @@ else
 		--build-arg UID=$$(id -u) \
 		--build-arg GID=$$(id -g) \
 		--build-arg OSTYPE=$$(uname) \
+		--build-arg NODE_VERSION=$$(node --version) \
 		-t streamlit_e2e_tests \
 		-f e2e/Dockerfile \
 		--progress plain \
