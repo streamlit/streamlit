@@ -137,7 +137,7 @@ jobs:
           (( by=${#js_specs[@]} / 20 ))
           # get how many specs to be split up into 20 runs
           (( interval=(${#js_specs[@]}+20-1)/20 ))
-          (( containerNum = (matrix.spec - 1) * ${interval} ))
+          (( containerNum = (${{matrix.spec}} - 1) * ${interval} ))
           scripts/run_e2e_tests.py -a "${js_specs[@]:${containerNum}:${interval}}"
         shell: bash -l -v -e -u -o pipefail {0}
       # - name: store videos
