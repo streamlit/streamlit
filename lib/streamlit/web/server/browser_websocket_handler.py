@@ -115,8 +115,6 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         if not self._session_id:
             return
 
-        msg = BackMsg()
-
         try:
             if isinstance(payload, str):
                 # Sanity check. (The frontend should only be sending us bytes;
@@ -126,24 +124,24 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                     "(We expect `bytes` only.)"
                 )
 
+            msg = BackMsg()
             msg.ParseFromString(payload)
             LOGGER.debug("Received the following back message:\n%s", msg)
 
-            if msg.WhichOneof("type") == "close_connection":
-                # "close_connection" is a special developmentMode-only
-                # message used in e2e tests to test disabling widgets.
-                if config.get_option("global.developmentMode"):
-                    self._runtime.stop()
-                else:
-                    LOGGER.warning(
-                        "Client tried to close connection when "
-                        "not in development mode"
-                    )
-            else:
-                # AppSession handles all other BackMsg types.
-                self._runtime.handle_backmsg(self._session_id, msg)
-
         except BaseException as e:
             LOGGER.error(e)
-            raise RuntimeError("TODO")
-            # self._session.handle_backmsg_exception(e)
+            self._runtime.handle_backmsg_deserialization_exception(self._session_id, e)
+            return
+
+        if msg.WhichOneof("type") == "close_connection":
+            # "close_connection" is a special developmentMode-only
+            # message used in e2e tests to test disabling widgets.
+            if config.get_option("global.developmentMode"):
+                self._runtime.stop()
+            else:
+                LOGGER.warning(
+                    "Client tried to close connection when " "not in development mode"
+                )
+        else:
+            # AppSession handles all other BackMsg types.
+            self._runtime.handle_backmsg(self._session_id, msg)
