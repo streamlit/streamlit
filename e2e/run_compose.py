@@ -3,8 +3,6 @@ import os
 import subprocess
 import sys
 import textwrap
-from argparse import ArgumentParser
-from itertools import takewhile
 from pathlib import Path
 from typing import List
 
@@ -16,7 +14,10 @@ if __name__ not in ("__main__", "__mp_main__"):
         f"it as a module. To run this script, run the ./{PROG} command"
     )
 
+
 E2E_DIR = Path(__file__).resolve().parent
+ROOT_DIR = E2E_DIR.parent
+
 IN_CONTAINER_HOME = Path("/home/circleci/repo")
 
 
@@ -71,29 +72,32 @@ def parse_args() -> List[str]:
     return sys.argv[1:]
 
 
-def get_git_toplevel_path() -> Path:
-    command_output = subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-    return Path(command_output.decode().strip())
-
-
 def get_container_cwd():
-    git_path = get_git_toplevel_path()
+
     cwd_path = Path(os.getcwd())
-    if not is_relative_to(cwd_path, git_path):
+    if not is_relative_to(cwd_path, ROOT_DIR):
         print(
             textwrap.dedent(
                 "You must be in your repository directory to run this command.\n"
                 "To go to the repository, run command:\n"
-                f"    cd {str(git_path)}"
+                f"    cd {str(ROOT_DIR)}"
             ),
             file=sys.stderr,
         )
         sys.exit(1)
-    return str(IN_CONTAINER_HOME / cwd_path.relative_to(git_path))
+    return str(IN_CONTAINER_HOME / cwd_path.relative_to(ROOT_DIR))
+
+
+def ensure_directory_exists():
+    test_result_dir = ROOT_DIR / "frontend" / "test_results"
+    if not test_result_dir.exists():
+        test_result_dir.mkdir()
 
 
 def main():
     subprocess_args = parse_args()
+    ensure_directory_exists()
+
     in_container_working_directory = get_container_cwd()
     compose_file = str(E2E_DIR / "docker-compose.yml")
 

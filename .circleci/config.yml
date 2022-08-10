@@ -961,4 +961,4 @@ jobs:
       - run:
           name: Run single tests
           command: |
-            ./e2e/run_compose.py ./scripts/run_e2e_tests.py -u ./e2e/specs/st_code.spec.js
+            ./e2e/run_compose.py ./scripts/run_e2e_tests.py -u ./e2e/specs/st_code.spec.js || ./e2e/run_compose.py find frontend/test_results/ | xargs ./e2e/run_compose.py ls -lah
