@@ -79,7 +79,9 @@ jobs:
   #       shell: bash -l -v -e -u -o pipefail {0}
 
   e2e_tests:
-
+    env:
+      SUDO: 'sudo'
+      BASH_ENV: $HOME/.bash_profile
     runs-on: ubuntu-latest
     # needs: [build]
 
