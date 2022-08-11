@@ -17,6 +17,7 @@
 import functools
 import hashlib
 import os
+import pytest
 import re
 import socket
 import tempfile
@@ -535,6 +536,7 @@ class HashTest(unittest.TestCase):
         self.assertIn(get_fqn_type(foo), _FFI_TYPE_NAMES)
         self.assertEqual(get_hash(foo), get_hash(bar))
 
+    @pytest.mark.filterwarnings("ignore:No driver name specified")
     def test_sqlite_sqlalchemy_engine(self):
         """Separate tests for sqlite since it uses a file based
         and in memory database and has no auth
@@ -565,6 +567,7 @@ class HashTest(unittest.TestCase):
             hash_engine(foo, creator=lambda: True),
         )
 
+    @pytest.mark.filterwarnings("ignore:No driver name specified")
     def test_mssql_sqlalchemy_engine(self):
         """Specialized tests for mssql since it uses a different way of
         passing connection arguments to the engine
@@ -623,6 +626,7 @@ class HashTest(unittest.TestCase):
             ("mssql", "password"),
         ]
     )
+    @pytest.mark.filterwarnings("ignore:No driver name specified")
     def test_sqlalchemy_engine(self, dialect, password_key):
         def connect():
             pass

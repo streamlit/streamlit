@@ -39,6 +39,29 @@ class StringUtilTest(unittest.TestCase):
         """Test streamlit.string_util.is_emoji."""
         self.assertEqual(string_util.is_emoji(text), expected)
 
+    @parameterized.expand(
+        [
+            ("", ("", "")),
+            ("A", ("", "A")),
+            ("%", ("", "%")),
+            ("😃", ("😃", "")),
+            ("😃 page name", ("😃", "page name")),
+            ("😃-page name", ("😃", "page name")),
+            ("😃_page name", ("😃", "page name")),
+            ("😃 _- page name", ("😃", "page name")),
+            # Test that multi-character emoji are fully extracted.
+            ("👨‍👨‍👧‍👦_page name", ("👨‍👨‍👧‍👦", "page name")),
+            ("😃😃", ("😃", "😃")),
+            ("1️⃣X", ("1️⃣", "X")),
+            ("X😃", ("", "X😃")),
+            # Test that certain non-emoji unicode characters don't get
+            # incorrectly detected as emoji.
+            ("何_is_this", ("", "何_is_this")),
+        ]
+    )
+    def test_extract_leading_emoji(self, text, expected):
+        self.assertEqual(string_util.extract_leading_emoji(text), expected)
+
     def test_snake_case_to_camel_case(self):
         """Test streamlit.string_util.snake_case_to_camel_case."""
         self.assertEqual(
