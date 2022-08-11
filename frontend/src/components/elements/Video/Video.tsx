@@ -73,6 +73,7 @@ export default function Video({ element, width }: VideoProps): ReactElement {
     */
   if (type === VideoProto.Type.YOUTUBE_IFRAME) {
     const height = width * 0.75
+    console.info(`VideoProto.Type.YOUTUBE_IFRAME: width: ${width}, height: ${height}`)
 
     return (
       <iframe
