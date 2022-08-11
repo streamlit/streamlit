@@ -123,7 +123,7 @@ commands:
               # install nodejs via nvm
               curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.2/install.sh | bash
               source "$HOME/.nvm/nvm.sh"
-              nvm install --lts=fermium
+              nvm install
               # install yarn
               npm install -g yarn
             fi
@@ -151,7 +151,7 @@ commands:
             echo 'Checking for virtualenv'
             if [ ! -d venv ] ; then
               # The virtualenv was NOT restored from cache. Create a new one.
-              python -m venv venv
+              python3 -m venv venv
               source venv/bin/activate
               pip install --upgrade pip
               make setup
@@ -243,6 +243,12 @@ workflows:
             tags:
               only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
       - cli-regression-test:
+          filters:
+            tags:
+              only: /^(([0-9]+\.){3}dev[0-9]+)/
+            branches:
+              ignore: /^release\/([0-9]+\.){2}([0-9]+)/
+      - local-e2e-env-test:
           filters:
             tags:
               only: /^(([0-9]+\.){3}dev[0-9]+)/
@@ -588,7 +594,7 @@ jobs:
       - run:
           name: Create virtualenv
           command: |
-            python -m venv venv
+            python3 -m venv venv
             source venv/bin/activate
             pip install --upgrade pip
             pip install pipenv mypy mypy-protobuf 'protobuf<4'
@@ -922,3 +928,38 @@ jobs:
           command: |
             export SKIP_VERSION_CHECK=true
             make cli-regression-tests
+
+  local-e2e-env-test:
+    # To have local Docker, use a machine executor.
+    # The Docker executor provides access to a remote docker which does not
+    # have support for mounting local directories as a volume
+    # This is also in line with how Github Action works.
+    machine:
+      image: ubuntu-2204:2022.07.1
+    working_directory: ~/repo
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      - run:
+          name: Install system dependencies
+          command: |
+            sudo apt-get update -y
+            sudo apt-get install -y libmariadb-dev
+
+      - update-submodules
+
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+      - make-init
+
+      - run:
+          name: Build image
+          command: |
+            make build-test-env
+
+      - run:
+          name: Run single tests
+          command: |
+            ./e2e/run_compose.py ./scripts/run_e2e_tests.py -u ./e2e/specs/st_code.spec.js

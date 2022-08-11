@@ -1,16 +1,14 @@
 FROM circleci/python:3.7.11
 
-SHELL ["/bin/bash", "-c"]
+SHELL ["/bin/bash", "-o", "pipefail", "-e", "-u", "-x", "-c"]
 ENV PYTHONUNBUFFERED 1
 
 # For the container running cypress to be able to write snapshots to a
 # directory mounted from the host, the UID/GID of the user in the container
-# must be UIDs/GIDs with write permissions on the host. We default to the
-# user/group IDs for the first non-root user on most linux systems, but in
-# practice these should always be explicitly set by the make targets
-# conventionally used to work with this image.
-ARG UID=1000
-ARG GID=1000
+# must be UIDs/GIDs with write permissions on the host. We set these arguments
+# by the make targets conventionally used to work with this image.
+ARG UID
+ARG GID
 
 # MacOS handles GroupIDs differently than Linux, so we don't have to run
 # `groupadd` on non-Linux system (more precisely, on MacOS since we haven't
@@ -28,10 +26,6 @@ RUN bash -c 'if [ ${OSTYPE} == Linux ]; then groupmod -g ${GID} ${USER}; fi'
 
 USER $USER
 
-# create `yarn start` cache directory
-RUN mkdir -p $APP/frontend/node_modules/.cache/hard-source \
-    && chown $USER:$USER $APP/frontend/node_modules/.cache/hard-source
-
 WORKDIR $APP
 RUN sudo chown $USER $APP
 
@@ -41,9 +35,25 @@ RUN echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty m
     && sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 4DEA8909DC6A13A3
 
 # install dependencies
-RUN sudo apt-get update && sudo apt-get install -y \
-    make graphviz gnupg protobuf-compiler unixodbc-dev \
-    xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 \
+RUN sudo apt-get update \
+    && sudo apt-get install -y --no-install-recommends \
+        apt-transport-https \
+        apt-utils \
+    && sudo apt-get install -y \
+        gnupg \
+        graphviz \
+        libasound2 \
+        libgconf-2-4 \
+        libgtk2.0-0 \
+        libnotify-dev \
+        libnss3 \
+        libxss1 \
+        make \
+        protobuf-compiler \
+        unixodbc-dev \
+        xvfb \
+    && sudo apt-get autoremove -yqq --purge \
+    && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/*
 
 # install nvm
@@ -51,19 +61,22 @@ RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.2/install.sh
 
 # node vars
 ARG NVM_DIR=$HOME/.nvm
-ARG NODE_VERSION=v14.15.3
+ARG NODE_VERSION
 
 # install node and yarn
-RUN source $NVM_DIR/nvm.sh \
-    && nvm install $NODE_VERSION --lts=fermium \
+RUN set +x  \
+    && source $NVM_DIR/nvm.sh \
+    && set -x \
+    && nvm install $NODE_VERSION \
     && npm install -g yarn
 
 # node path
 ENV NODE_PATH $NVM_DIR/$NODE_VERSION/lib/node_modules
 ENV PATH $NVM_DIR/versions/node/$NODE_VERSION/bin:$PATH
 
-# copy makefile
+# copy makefile and related script
 COPY --chown=$USER Makefile .
+COPY --chown=$USER scripts/should_install_tensorflow.py scripts/
 
 # install virtual env
 RUN python -m venv venv \
@@ -72,6 +85,8 @@ RUN python -m venv venv \
 
 # python path
 ENV PATH $APP/venv/bin:$PATH
+# pipenv detects if the virtual environment is active based on this variable. Its settings prevent creating multiple virtual environments in the image.
+ENV VIRTUAL_ENV=$APP/venv
 
 # copy package.json
 COPY --chown=$USER frontend/package.json frontend/yarn.lock ./frontend/
@@ -82,9 +97,10 @@ RUN make react-init
 # copy Pipfile and test-requirements.txt
 COPY --chown=$USER lib/Pipfile ./lib/
 COPY --chown=$USER lib/test-requirements.txt ./lib/
+COPY --chown=$USER lib/setup.py ./lib/
 
 # install python modules
-RUN source venv/bin/activate && make pipenv-install CIRCLECI=true
+RUN IS_DOCKER=true CIRCLECI=true make pipenv-install
 
 # copy streamlit code
 COPY --chown=$USER . .
