@@ -98,6 +98,7 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
         with self.assertRaises(StreamlitAPIException):
             data_frame.marshall_data_frame(pa.Table.from_pandas(df), proto)
 
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_marshall_index(self):
         """Test streamlit.data_frame._marshall_index."""
         df = pd.DataFrame(data={"col1": [1, 2], "col2": [3, 4]})
@@ -182,6 +183,7 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
         truth = [["1", "2"], ["3", "4"]]
         self.assertEqual(ret, truth)
 
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_marshall_any_array(self):
         """Test streamlit.data_frame._marshall_any_array."""
         # list
