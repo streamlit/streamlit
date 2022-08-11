@@ -36,19 +36,26 @@ export default function Video({ element, width }: VideoProps): ReactElement {
   useEffect(() => {
     const videoNode = videoRef.current
 
-    const setStartTime: () => void = () => {
+    const onLoadedMetadata: () => void = () => {
       if (videoNode) {
+        // setStartTime
         videoNode.currentTime = element.startTime
+
+        /* height of HTML video element needs to be set to avoid scrolling issue: https://github.com/streamlit/streamlit/issues/5069
+           initially HTML video has height 0 and when tabs are switched page auto scrolls up
+           because of "lack of content" on the page, setting height of HTML video element fixes it
+         */
+        videoNode.height = videoNode.videoHeight
       }
     }
 
     if (videoNode) {
-      videoNode.addEventListener("loadedmetadata", setStartTime)
+      videoNode.addEventListener("loadedmetadata", onLoadedMetadata)
     }
 
     return () => {
       if (videoNode) {
-        videoNode.removeEventListener("loadedmetadata", setStartTime)
+        videoNode.removeEventListener("loadedmetadata", onLoadedMetadata)
       }
     }
   }, [element])
