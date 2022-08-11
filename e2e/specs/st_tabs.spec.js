@@ -36,10 +36,17 @@ describe("st.tabs", () => {
       2
     );
 
-    cy.get("[data-testid='stSidebar'] .stTabs")
+    cy.get("[data-testid='stSidebar'] .stTabs .st-cx")
       .first()
       .within(() => {
         cy.get(".stMarkdown").should("have.text", "I am in the sidebar");
+      });
+
+    // text from every tab should be here because renderAll property is set to true
+    cy.get("[data-testid='stSidebar'] .stTabs")
+      .first()
+      .within(() => {
+        cy.get(".stMarkdown").should("have.text", "I am in the sidebarI'm also in the sidebar");
       });
   });
 
