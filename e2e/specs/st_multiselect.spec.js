@@ -1,21 +1,5 @@
-/**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
- function selectForKthMultiselect(optionText, k, closeAfterSelecting) {
+function selectForKthMultiselect(optionText, k, closeAfterSelecting) {
   cy.getIndexed(".stMultiSelect", k)
     .find("input")
     .click();
@@ -82,7 +66,7 @@ describe("st.multiselect", () => {
           .should("have.text", "multiselect 1Choose an optionopen");
       });
     });
-    
+
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
         cy.getIndexed(".stMultiSelect", 2).should(
@@ -107,7 +91,7 @@ describe("st.multiselect", () => {
         });
       });
     });
-    
+
     it("should show long values correctly (with ellipses) in the dropdown menu", () => {
       cy.getIndexed(".stMultiSelect", 4)
         .find("input")
@@ -162,7 +146,7 @@ describe("st.multiselect", () => {
         beforeEach(() => {
           delFromKthMultiselect("Female", 1)
         });
-        
+
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
             .should(
@@ -271,7 +255,7 @@ describe("st.multiselect", () => {
         `Multiselect has 2 options selected but max_selections\nis set to 1.`
       );
     });
-    
+
     })
   });
 });
