@@ -350,16 +350,11 @@ notices:
 .PHONY: headers
 # Update the license header on all source files.
 headers:
-	./scripts/add_license_headers.py \
-		lib/streamlit \
-		lib/tests \
-		e2e/scripts \
-		e2e/specs \
-		frontend/src \
-		frontend/public \
-		proto \
-		examples \
-		scripts
+	# TODO(kbregula): Uncomment when all files have correct license headers
+	# pre-commit run insert-license --all-files
+	# pre-commit run license-headers --all-files
+	echo "This command is disabled. Please update license headers manually."
+	exit 1
 
 .PHONY: build-test-env
 # Build docker image that mirrors circleci
