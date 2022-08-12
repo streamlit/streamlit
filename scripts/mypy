@@ -30,7 +30,7 @@ import mypy.main as mypy_main
 
 
 PATHS = ["lib/streamlit/", "scripts/*", "e2e/scripts/*"]
-EXCLUDE_FILES = {"scripts/add_license_headers.py", "e2e/scripts/st_reuse_label.py"}
+EXCLUDE_FILES = {"scripts/add_license_headers.py", "e2e/scripts/st_reuse_label.py", "scripts/license-template.txt"}
 
 
 def shlex_join(split_command: Iterable[str]):
