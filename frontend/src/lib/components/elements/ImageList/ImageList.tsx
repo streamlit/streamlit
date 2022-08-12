@@ -16,6 +16,7 @@
 
 import React, { ReactElement } from "react"
 import ReactHtmlParser from "react-html-parser"
+import { useStliteImageList } from "@stlite/kernel"
 
 import {
   IImage,
@@ -56,6 +57,8 @@ export function ImageList({
   height,
   endpoints,
 }: ImageListProps): ReactElement {
+  const images = useStliteImageList(element.imgs)
+
   // The width field in the proto sets the image width, but has special
   // cases for -1, -2, and -3.
   let containerWidth: number | undefined
@@ -93,7 +96,7 @@ export function ImageList({
 
   return (
     <StyledImageList style={{ width }}>
-      {element.imgs.map((iimage: IImage, idx: number): ReactElement => {
+      {images.map((iimage: IImage, idx: number): ReactElement => {
         const image = iimage as ImageProto
         return (
           <StyledImageContainer key={idx} data-testid="stImage">
