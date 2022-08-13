@@ -50,7 +50,7 @@ INSTALL_REQUIRES = [
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
-    "pyarrow>=6.0",
+    # "pyarrow>=6.0", # HACK: For stlite, comment out as it's not Pyodide-compatible
     "python-dateutil>=2.7.3, <3",
     "requests>=2.18, <3",
     "rich>=10.14.0, <14",
@@ -61,7 +61,7 @@ INSTALL_REQUIRES = [
     "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
-    "watchdog>=2.1.5; platform_system != 'Darwin'",
+    # "watchdog>=2.1.5; platform_system != 'Darwin'", # HACK: For stlite, comment out as it's not Pyodide-compatible
 ]
 
 # We want to exclude some dependencies in our internal Snowpark conda distribution of
@@ -70,10 +70,10 @@ INSTALL_REQUIRES = [
 # `pip install streamlit` or `conda install -c conda-forge streamlit`)
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython>=3.0.7, <4, !=3.1.19",
-    "pydeck>=0.8.0b4, <1",
+    # "pydeck>=0.8.0b4, <1", # HACK: For stlite, comment out as it's not Pyodide-compatible
     # Tornado 6.0.3 was the current Tornado version when Python 3.8, our earliest supported Python version,
     # was released (Oct 14, 2019).
-    "tornado>=6.0.3, <7",
+    # "tornado>=6.0.3, <7", # HACK: For stlite, comment out as it's not Pyodide-compatible
 ]
 
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
