@@ -39,6 +39,7 @@ from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import util
+from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.elements import NONWIDGET_ELEMENTS
 from streamlit.logger import get_logger
@@ -60,7 +61,7 @@ _LOGGER = get_logger(__name__)
 
 @dataclass
 class ElementMsgData:
-    """A non-interactive element's message and related metadata for
+    """An element's message and related metadata for
     replaying that element's function call.
     """
 
@@ -71,6 +72,12 @@ class ElementMsgData:
 
 
 @dataclass
+class WidgetMsgData:
+    widget_id: str
+    widget_value: Any
+
+
+@dataclass
 class BlockMsgData:
     message: Block
     id_of_dg_called_on: str
@@ -78,6 +85,49 @@ class BlockMsgData:
 
 
 MsgData = Union[ElementMsgData, BlockMsgData]
+
+"""
+Note [Cache result structure]
+
+The cache for a decorated function's results is split into two parts to enable
+handling widgets invoked by the function.
+
+Widgets act as implicit additional inputs to the cached function, so they should
+be used when deriving the cache key. However, we don't know what widgets are
+involved without first calling the function! So, we use the first execution
+of the function with a particular cache key to record what widgets are used,
+and use the current values of those widgets to derive a second cache key to
+look up the function execution's results. The combination of first and second
+cache keys act as one true cache key, just split up because the second part depends
+on the first.
+
+There is a small catch to this. What widgets execute could depend on the values of
+any prior widgets. For example,
+> if st.checkbox():
+>     s = st.slider(...)
+> ...
+the first time this code runs, we would miss the slider because it wasn't called,
+so when we later execute the function with the checkbox checked, the widget cache key
+would not include the state of the slider, and would incorrectly get a cache hit
+for a different slider value.
+
+In principle the cache could be function+args key -> 1st widget key -> 2nd widget key
+... -> final widget key, with each widget dependent on the exact values of the widgets
+seen prior. But this would add complexity and both conceptual and runtime overhead.
+TODO: What if this would be worth it anyway?
+
+Instead, we can keep the widgets as one cache key, and if we encounter a new widget
+while executing the function, we just update the list of widgets to include it.
+This will cause existing cached results to be invalidated, which is bad, but to
+avoid it we would need to keep around the full list of widgets and values for each
+widget cache key so we could compute the updated key, which is probably too expensive.
+TODO: But is it?
+
+Another downside of the update approach is that there could be multiple cache
+entries that differ only in the value of a widget that can't even affect the results
+because it isn't used.
+TODO: Is there some way around this?
+"""
 
 
 @dataclass
@@ -90,6 +140,16 @@ class CachedResult:
     messages: List[MsgData]
     main_id: str
     sidebar_id: str
+
+
+@dataclass
+class InitialCachedResults:
+    """Widgets called by a cache-decorated function, and a mapping of the
+    widget-derived cache key to the final results of executing the function.
+    """
+
+    widget_ids: List[str]
+    results: Dict[str, CachedResult]
 
 
 class Cache:
@@ -558,3 +618,14 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
         return params[arg_index].name
 
     return None
+
+
+def _make_widget_key(widgets: List[Tuple[str, Any]]) -> str:
+    """
+    widget_id + widget_value pair -> hash
+    """
+    func_hasher = hashlib.new("md5")
+    for widget_id_val in widgets:
+        update_hash(widget_id_val, func_hasher, None)
+
+    return func_hasher.hexdigest()
