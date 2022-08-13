@@ -361,7 +361,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
 
         LOGGER.debug("File/dir MD5 changed: %s", changed_path)
         changed_path_info.md5 = new_md5
-        changed_path_info.on_changed.send(changed_path, new_md5)
+        changed_path_info.on_changed.send(changed_path, content_hash=new_md5)
 
     def on_created(self, event: events.FileSystemEvent) -> None:
         self.handle_path_change_event(event)
