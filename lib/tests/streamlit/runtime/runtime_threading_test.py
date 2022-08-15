@@ -24,9 +24,11 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
     """Threading-related Runtime tests."""
 
     async def test_create_runtime_on_another_thread(self):
-        """The Runtime can be created on a thread that it doesn't actually
-        run on. This test will fail if Runtime's various asyncio initialization
-        bits are performed in its constructor instead of in "start".
+        """Test that Runtime can be constructed on a thread that it doesn't actually
+        run on.
+
+        (This test will fail if Runtime's various asyncio initialization bits are
+        performed in its constructor instead of in "start".)
         """
 
         queue = Queue()
