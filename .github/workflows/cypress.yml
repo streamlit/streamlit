@@ -45,15 +45,18 @@ jobs:
           make develop
       - name: Register Mapbox Token
         run: |
+          source venv/bin/activate
           MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]') \
           && echo '[mapbox]' >  ~/.streamlit/config.toml \
           && echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
       - name: Register Streamlit User
         run: |
+          source venv/bin/activate
           echo '[general]' >  ~/.streamlit/credentials.toml
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
       - name: Install Cypress dependencies
         run: |
+          source venv/bin/activate
           sudo apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
       - name: Cypress Tests
         run: |
