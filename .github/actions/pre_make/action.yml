@@ -1,0 +1,44 @@
+name: "Pre-Make"
+runs:
+  using: composite
+  steps:
+    - name: Restore make from cache
+      id: cache-make
+      uses: actions/cache@v3
+      with:
+        path: make.bin
+        key: v13_make.bin-${{ hashFiles('**/make.md5') }}
+    - name: Install make
+      if: steps.cache-make.outputs.cache-hit != 'true'
+      run: |
+        if [ -s make.bin ] ; then
+          echo "make.bin exists; not installing"
+        else
+          echo "/usr/bin/make doesn't exist; installing"
+          sudo apt-get update
+          sudo apt-get install -y make
+          sudo chmod -R 777 /usr/bin/make
+          sudo cp -f /usr/bin/make make.bin
+        fi
+        sudo cp -f make.bin /usr/bin/make
+      shell: bash -ileo pipefail {0}
+    - name: Restore dot from cache
+      id: cache-dot
+      uses: actions/cache@v3
+      with:
+        path: dot.bin
+        key: v13_dot.bin-${{ hashFiles('**/dot.md5') }}
+    - name: Install dot
+      if: steps.cache-dot.outputs.cache-hit != 'true'
+      run: |
+        if [ -s dot.bin ] ; then
+          echo "dot.bin exists and is non zero"
+        else
+          echo "/usr/bin/dot doesn't exist, installing"
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          sudo chmod -R 777 /usr/bin/dot
+          sudo cp -f /usr/bin/dot dot.bin
+        fi
+        sudo cp -f dot.bin /usr/bin/dot
+      shell: bash -ileo pipefail {0}
