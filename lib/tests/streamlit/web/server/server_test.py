@@ -208,7 +208,7 @@ class ServerTest(ServerTestCase):
                 # and the Websocket client's write_message will be called,
                 # raising our WebSocketClosedError.
                 while not flush_browser_queue.called:
-                    self.server._runtime._need_send_data.set()
+                    self.server._runtime._get_async_objs().need_send_data.set()
                     await asyncio.sleep(0)
 
                 flush_browser_queue.assert_called_once()
