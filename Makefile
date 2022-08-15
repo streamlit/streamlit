@@ -56,7 +56,8 @@ pipenv-dev-install: lib/Pipfile
 	# (Omitting this flag is causing incorrect dependency version
 	# resolution on CircleCI.)
 	cd lib; \
-		pipenv install --dev --skip-lock --sequential
+		rm Pipfile.lock; \
+		pipenv install --dev --sequential
 
 SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
 .PHONY: py-test-install
