@@ -1,0 +1,43 @@
+name: "Pre-Cache"
+runs:
+  using: composite
+  steps:
+    - name: Get 'make' checksum
+      run: |
+        cp -f /usr/bin/make make.bin
+        md5sum make.bin > $GITHUB_WORKSPACE/make.md5
+      shell: bash -ileo pipefail {0}
+    - name: Get 'dot' checksum
+      run: |
+        if [ -f /usr/bin/dot ] ; then
+          cp -f /usr/bin/dot dot.bin
+          md5sum dot.bin > $GITHUB_WORKSPACE/dot.md5
+        else
+          touch dot.bin
+          md5sum dot.bin > $GITHUB_WORKSPACE/dot.md5
+          rm -f dot.bin
+        fi
+      shell: bash -ileo pipefail {0}
+    # Combine hashes of the Python interpreter, Pipfile, and today's
+    # date into a file whose checksum will key the Python virtualenv.
+    #
+    # This means that our virtualenv cache will expire each day. We do
+    # this because we are not using a lockfile to pin dependencies -
+    # instead, each time CircleCI rebuilds the virtualenv, it uses the
+    # latest compatible version of each dependency (which mirrors what
+    # happens when a user installs Streamlit locally). So we expire our
+    # virtualenv cache daily to prevent it from getting far out of sync
+    # with what a fresh Streamlit installation would look like.
+    - name: Create Python environment cache key
+      run: |
+        md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/Pipfile >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/test-requirements-with-tensorflow.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
+        date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
+      shell: bash -ileo pipefail {0}
+    - name: Create Yarn cache key
+      run: |
+        md5sum frontend/yarn.lock > $GITHUB_WORKSPACE/yarn.lock.md5
+      shell: bash -ileo pipefail {0}
