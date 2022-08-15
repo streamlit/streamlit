@@ -7,6 +7,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    permissions:
+      actions: read 
+
     defaults:
       run:
         shell: bash -ileo pipefail {0}
@@ -30,14 +33,10 @@ jobs:
       - name: Run make develop
         run: |
           source venv/bin/activate
-          echo "Check the venv python version"
-          python --version
           make develop
       - name: Run Linters
         run: |
           source venv/bin/activate
-          echo "Check the venv python version"
-          python --version
           # Run eslint as a standalone command to generate the test report.
           PRE_COMMIT_NO_CONCURRENCY=true DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
           make jslint
