@@ -31,6 +31,7 @@ from streamlit.runtime.runtime import (
     RuntimeConfig,
     RuntimeStoppedError,
     SessionClientDisconnectedError,
+    AsyncData,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
@@ -455,18 +456,18 @@ class RuntimeTest(RuntimeTestCase):
             [],
         )
 
-    async def test_get_eventloop(self):
-        """Runtime._get_eventloop() will raise an error if called before the
+    async def test_get_async_data(self):
+        """Runtime._get_async_data() will raise an error if called before the
         Runtime is started, and will return the Runtime's eventloop otherwise.
         """
         with self.assertRaises(RuntimeError):
             # Runtime hasn't started yet: error!
-            _ = self.runtime._get_eventloop()
+            _ = self.runtime._get_async_data()
 
         # Runtime has started: no error
         await self.start_runtime_loop()
-        eventloop = self.runtime._get_eventloop()
-        self.assertIsInstance(eventloop, asyncio.AbstractEventLoop)
+        data = self.runtime._get_async_data()
+        self.assertIsInstance(data, AsyncData)
 
 
 @patch("streamlit.source_util._cached_pages", new=None)

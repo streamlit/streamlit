@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+import threading
 import time
 import traceback
 from asyncio import Future
@@ -109,6 +110,31 @@ class RuntimeState(Enum):
     STOPPED = "STOPPED"
 
 
+class AsyncData(NamedTuple):
+    """Container for all asyncio objects that Runtime manages.
+    These cannot be initialized until the Runtime's eventloop is assigned.
+    """
+
+    # The eventloop that Runtime is running on.
+    eventloop: asyncio.AbstractEventLoop
+
+    # The eventloop's thread.
+    thread: threading.Thread
+
+    # Set after Runtime.stop() is called. Never cleared.
+    must_stop: asyncio.Event
+
+    # Set when a client connects; cleared when we have no connected clients.
+    has_connection: asyncio.Event
+
+    # Set after a ForwardMsg is enqueued; cleared when we flush ForwardMsgs.
+    need_send_data: asyncio.Event
+
+    # Completed when the Runtime has stopped.
+    # (`Future` is not generic in Python 3.8, so we need to use quote-typing.)
+    stopped: "Future[None]"
+
+
 class Runtime:
     def __init__(self, config: RuntimeConfig):
         """Create a StreamlitRuntime. It won't be started yet.
@@ -121,8 +147,8 @@ class Runtime:
         config
             Config options.
         """
-        # Will be set when we start.
-        self._eventloop: Optional[asyncio.AbstractEventLoop] = None
+        # Will be created when we start.
+        self._async_data: Optional[AsyncData] = None
 
         self._main_script_path = config.script_path
         self._command_line = config.command_line or ""
@@ -131,19 +157,6 @@ class Runtime:
         self._session_info_by_id: Dict[str, SessionInfo] = {}
 
         self._state = RuntimeState.INITIAL
-
-        # Set after Runtime.stop() is called. Never cleared.
-        self._must_stop = asyncio.Event()
-
-        # Set when a client connects; cleared when we have no connected clients.
-        self._has_connection = asyncio.Event()
-
-        # Set after a ForwardMsg is enqueued; cleared when we flush ForwardMsgs.
-        self._need_send_data = asyncio.Event()
-
-        # Completed when the Runtime has stopped.
-        # (`Future` is not generic in Python 3.8, so we need to use quote-typing.)
-        self._stopped: "Future[None]" = asyncio.Future()
 
         # Initialize managers
         self._message_cache = ForwardMsgCache()
@@ -180,7 +193,7 @@ class Runtime:
     @property
     def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Runtime's run loop has exited."""
-        return self._stopped
+        return self._get_async_data().stopped
 
     def _on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
@@ -235,15 +248,17 @@ class Runtime:
         Threading: SAFE. May be called from any thread.
         """
 
+        async_data = self._get_async_data()
+
         def stop_on_eventloop():
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 
             LOGGER.debug("Runtime stopping...")
             self._set_state(RuntimeState.STOPPING)
-            self._must_stop.set()
+            async_data.must_stop.set()
 
-        self._get_eventloop().call_soon_threadsafe(stop_on_eventloop)
+        async_data.eventloop.call_soon_threadsafe(stop_on_eventloop)
 
     def is_active_session(self, session_id: str) -> bool:
         """True if the session_id belongs to an active session.
@@ -287,8 +302,10 @@ class Runtime:
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't create_session (state={self._state})")
 
+        async_data = self._get_async_data()
+
         session = AppSession(
-            event_loop=self._get_eventloop(),
+            event_loop=async_data.eventloop,
             session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -306,7 +323,7 @@ class Runtime:
 
         self._session_info_by_id[session.id] = SessionInfo(client, session)
         self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
-        self._has_connection.set()
+        async_data.has_connection.set()
 
         return session.id
 
@@ -334,7 +351,7 @@ class Runtime:
             self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
             and len(self._session_info_by_id) == 0
         ):
-            self._has_connection.clear()
+            self._get_async_data().has_connection.clear()
             self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
 
     def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
@@ -418,7 +435,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session = AppSession(
-            event_loop=self._get_eventloop(),
+            event_loop=self._get_async_data().eventloop,
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -459,6 +476,17 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+
+        async_data = AsyncData(
+            eventloop=asyncio.get_running_loop(),
+            thread=threading.current_thread(),
+            must_stop=asyncio.Event(),
+            has_connection=asyncio.Event(),
+            need_send_data=asyncio.Event(),
+            stopped=asyncio.Future(),
+        )
+        self._async_data = async_data
+
         try:
             if self._state == RuntimeState.INITIAL:
                 self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
@@ -477,18 +505,18 @@ class Runtime:
             if on_started is not None:
                 on_started()
 
-            while not self._must_stop.is_set():
+            while not async_data.must_stop.is_set():
                 if self._state == RuntimeState.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
                         (
-                            asyncio.create_task(self._must_stop.wait()),
-                            asyncio.create_task(self._has_connection.wait()),
+                            asyncio.create_task(async_data.must_stop.wait()),
+                            asyncio.create_task(async_data.has_connection.wait()),
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
 
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
-                    self._need_send_data.clear()
+                    async_data.need_send_data.clear()
 
                     # Shallow-clone our sessions into a list, so we can iterate
                     # over it and not worry about whether it's being changed
@@ -516,8 +544,8 @@ class Runtime:
 
                 await asyncio.wait(
                     (
-                        asyncio.create_task(self._must_stop.wait()),
-                        asyncio.create_task(self._need_send_data.wait()),
+                        asyncio.create_task(async_data.must_stop.wait()),
+                        asyncio.create_task(async_data.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
@@ -527,10 +555,10 @@ class Runtime:
                 session_info.session.shutdown()
 
             self._set_state(RuntimeState.STOPPED)
-            self._stopped.set_result(None)
+            async_data.stopped.set_result(None)
 
         except Exception as e:
-            self._stopped.set_exception(e)
+            async_data.stopped.set_exception(e)
             traceback.print_exc()
             LOGGER.info(
                 """
@@ -606,12 +634,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         -----
         Threading: SAFE. May be called on any thread.
         """
-        self._get_eventloop().call_soon_threadsafe(self._need_send_data.set)
+        async_data = self._get_async_data()
+        async_data.eventloop.call_soon_threadsafe(async_data.need_send_data.set)
 
-    def _get_eventloop(self) -> asyncio.AbstractEventLoop:
-        """Return the asyncio eventloop that the Runtime was started with.
-        If the Runtime hasn't been started, this will raise an error.
+    def _get_async_data(self) -> AsyncData:
+        """Return our EventLoopData instance. If the Runtime hasn't been
+        started, this will raise an error.
         """
-        if self._eventloop is None:
+        if self._async_data is None:
             raise RuntimeError("Runtime hasn't started yet!")
-        return self._eventloop
+        return self._async_data
