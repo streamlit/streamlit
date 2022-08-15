@@ -3,7 +3,7 @@ name: Test Python Versions
 on: [push, pull_request]
 
 jobs:
-  build:
+  test:
 
     runs-on: ubuntu-latest
 
@@ -48,9 +48,9 @@ jobs:
       - name: Run Python Tests
         run: |
           source venv/bin/activate
-          if [ ${{ matrix.python-version }} == 3.7.12 ]; then
-            sudo apt-get install python3-pydot python3-pydot-ng graphviz
-          fi
+          # if [ ${{ matrix.python-version }} == 3.7.12 ]; then
+          #   sudo apt-get install python3-pydot python3-pydot-ng graphviz
+          # fi
           make pycoverage
       - name: Run Integration Tests
         run: |
