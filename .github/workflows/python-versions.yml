@@ -1,0 +1,63 @@
+name: Test Python Versions
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7.12", "3.10.0"]
+    
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: ./.github/actions/update_submodules
+      - uses: ./.github/actions/pre_cache
+      - uses: ./.github/actions/pre_make
+      - uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: |
+          source venv/bin/activate
+          echo "Check the venv python version"
+          python --version
+          make develop
+      - name: Run Linters
+        run: |
+          source venv/bin/activate
+          echo "Check the venv python version"
+          python --version
+          # Run eslint as a standalone command to generate the test report.
+          PRE_COMMIT_NO_CONCURRENCY=true DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+          make jslint
+      - name: Run Type Checkers
+        run: |
+          source venv/bin/activate
+          make tstypecheck
+          scripts/mypy --report
+      - name: Run Python Tests
+        run: |
+          source venv/bin/activate
+          if [ ${{ matrix.python-version }} == 3.7.12 ]; then
+            sudo apt-get install python3-pydot python3-pydot-ng graphviz
+          fi
+          make pycoverage
+      - name: Run Integration Tests
+        run: |
+          source venv/bin/activate
+          make integration-tests
+      - name: CLI Smoke Tests
+        run: |
+          source venv/bin/activate
+          make cli-smoke-tests
