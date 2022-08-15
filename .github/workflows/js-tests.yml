@@ -1,6 +1,6 @@
 name: Javascript Tests
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -22,6 +22,10 @@ jobs:
       - uses: ./.github/actions/pre_cache
       - uses: ./.github/actions/pre_make
       - uses: ./.github/actions/make_init
-      - name: Run make jstest
+      - name: Run make develop
+        run: |
+          source venv/bin/activate
+          make develop
+      - name: Run frontend tests
         run: |
           make jstest
