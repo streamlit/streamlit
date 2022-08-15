@@ -110,7 +110,7 @@ class RuntimeState(Enum):
     STOPPED = "STOPPED"
 
 
-class AsyncData(NamedTuple):
+class AsyncObjects(NamedTuple):
     """Container for all asyncio objects that Runtime manages.
     These cannot be initialized until the Runtime's eventloop is assigned.
     """
@@ -148,7 +148,7 @@ class Runtime:
             Config options.
         """
         # Will be created when we start.
-        self._async_data: Optional[AsyncData] = None
+        self._async_objs: Optional[AsyncObjects] = None
 
         self._main_script_path = config.script_path
         self._command_line = config.command_line or ""
@@ -193,7 +193,7 @@ class Runtime:
     @property
     def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Runtime's run loop has exited."""
-        return self._get_async_data().stopped
+        return self._get_async_objs().stopped
 
     def _on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
@@ -248,7 +248,7 @@ class Runtime:
         Threading: SAFE. May be called from any thread.
         """
 
-        async_data = self._get_async_data()
+        async_objs = self._get_async_objs()
 
         def stop_on_eventloop():
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
@@ -256,9 +256,9 @@ class Runtime:
 
             LOGGER.debug("Runtime stopping...")
             self._set_state(RuntimeState.STOPPING)
-            async_data.must_stop.set()
+            async_objs.must_stop.set()
 
-        async_data.eventloop.call_soon_threadsafe(stop_on_eventloop)
+        async_objs.eventloop.call_soon_threadsafe(stop_on_eventloop)
 
     def is_active_session(self, session_id: str) -> bool:
         """True if the session_id belongs to an active session.
@@ -302,10 +302,10 @@ class Runtime:
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't create_session (state={self._state})")
 
-        async_data = self._get_async_data()
+        async_objs = self._get_async_objs()
 
         session = AppSession(
-            event_loop=async_data.eventloop,
+            event_loop=async_objs.eventloop,
             session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -323,7 +323,7 @@ class Runtime:
 
         self._session_info_by_id[session.id] = SessionInfo(client, session)
         self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
-        async_data.has_connection.set()
+        async_objs.has_connection.set()
 
         return session.id
 
@@ -351,7 +351,7 @@ class Runtime:
             self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
             and len(self._session_info_by_id) == 0
         ):
-            self._get_async_data().has_connection.clear()
+            self._get_async_objs().has_connection.clear()
             self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
 
     def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
@@ -435,7 +435,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session = AppSession(
-            event_loop=self._get_async_data().eventloop,
+            event_loop=self._get_async_objs().eventloop,
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -477,7 +477,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
 
-        async_data = AsyncData(
+        async_objs = AsyncObjects(
             eventloop=asyncio.get_running_loop(),
             thread=threading.current_thread(),
             must_stop=asyncio.Event(),
@@ -485,7 +485,7 @@ class Runtime:
             need_send_data=asyncio.Event(),
             stopped=asyncio.Future(),
         )
-        self._async_data = async_data
+        self._async_objs = async_objs
 
         try:
             if self._state == RuntimeState.INITIAL:
@@ -505,18 +505,18 @@ class Runtime:
             if on_started is not None:
                 on_started()
 
-            while not async_data.must_stop.is_set():
+            while not async_objs.must_stop.is_set():
                 if self._state == RuntimeState.NO_SESSIONS_CONNECTED:
                     await asyncio.wait(
                         (
-                            asyncio.create_task(async_data.must_stop.wait()),
-                            asyncio.create_task(async_data.has_connection.wait()),
+                            asyncio.create_task(async_objs.must_stop.wait()),
+                            asyncio.create_task(async_objs.has_connection.wait()),
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
 
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
-                    async_data.need_send_data.clear()
+                    async_objs.need_send_data.clear()
 
                     # Shallow-clone our sessions into a list, so we can iterate
                     # over it and not worry about whether it's being changed
@@ -544,8 +544,8 @@ class Runtime:
 
                 await asyncio.wait(
                     (
-                        asyncio.create_task(async_data.must_stop.wait()),
-                        asyncio.create_task(async_data.need_send_data.wait()),
+                        asyncio.create_task(async_objs.must_stop.wait()),
+                        asyncio.create_task(async_objs.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
@@ -555,10 +555,10 @@ class Runtime:
                 session_info.session.shutdown()
 
             self._set_state(RuntimeState.STOPPED)
-            async_data.stopped.set_result(None)
+            async_objs.stopped.set_result(None)
 
         except Exception as e:
-            async_data.stopped.set_exception(e)
+            async_objs.stopped.set_exception(e)
             traceback.print_exc()
             LOGGER.info(
                 """
@@ -634,13 +634,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         -----
         Threading: SAFE. May be called on any thread.
         """
-        async_data = self._get_async_data()
-        async_data.eventloop.call_soon_threadsafe(async_data.need_send_data.set)
+        async_objs = self._get_async_objs()
+        async_objs.eventloop.call_soon_threadsafe(async_objs.need_send_data.set)
 
-    def _get_async_data(self) -> AsyncData:
-        """Return our EventLoopData instance. If the Runtime hasn't been
+    def _get_async_objs(self) -> AsyncObjects:
+        """Return our AsyncObjects instance. If the Runtime hasn't been
         started, this will raise an error.
         """
-        if self._async_data is None:
+        if self._async_objs is None:
             raise RuntimeError("Runtime hasn't started yet!")
-        return self._async_data
+        return self._async_objs
