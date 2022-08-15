@@ -34,16 +34,14 @@ jobs:
         run: |
           source venv/bin/activate
           make develop
-      - name: Run Linters
+      - name: Run Linter
         run: |
-          source venv/bin/activate
+          source venv/bin/activate          
           # Run eslint as a standalone command to generate the test report.
           PRE_COMMIT_NO_CONCURRENCY=true DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
-          make jslint
-      - name: Run Type Checkers
+      - name: Run Type Checker
         run: |
           source venv/bin/activate
-          make tstypecheck
           scripts/mypy --report
       - name: Run Python Tests
         run: |
