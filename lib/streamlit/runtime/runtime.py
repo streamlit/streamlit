@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import asyncio
-import threading
 import time
 import traceback
 from asyncio import Future
@@ -117,9 +116,6 @@ class AsyncObjects(NamedTuple):
 
     # The eventloop that Runtime is running on.
     eventloop: asyncio.AbstractEventLoop
-
-    # The eventloop's thread.
-    thread: threading.Thread
 
     # Set after Runtime.stop() is called. Never cleared.
     must_stop: asyncio.Event
@@ -479,7 +475,6 @@ class Runtime:
 
         async_objs = AsyncObjects(
             eventloop=asyncio.get_running_loop(),
-            thread=threading.current_thread(),
             must_stop=asyncio.Event(),
             has_connection=asyncio.Event(),
             need_send_data=asyncio.Event(),
