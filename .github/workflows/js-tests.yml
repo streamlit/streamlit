@@ -3,7 +3,7 @@ name: Javascript Tests
 on: [push, pull_request]
 
 jobs:
-  test:
+  js_tests:
 
     runs-on: ubuntu-latest
 
