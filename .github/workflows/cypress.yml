@@ -71,7 +71,7 @@ jobs:
           echo "Specs tested in this job:"
           echo "${js_specs[@]:${startIndex}:${interval}}"
           scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
-        shell: bash -luo pipefail {0}
+        shell: bash -l -u -o pipefail {0}
       - name: Store Videos
         uses: actions/upload-artifact@v3
         if: always()
