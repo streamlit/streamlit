@@ -63,12 +63,10 @@ runs:
       shell: bash -ileo pipefail {0}
     - name: Generate Protobufs
       run: |
-        # source $HOME/.bash_profile
         source venv/bin/activate
         # install protobuf v3
         sudo apt update
         sudo apt-get install -y gnupg
-        sudo pip install mypy-protobuf
         echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
         sudo apt update
