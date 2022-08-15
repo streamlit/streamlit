@@ -3,9 +3,12 @@ name: Javascript Tests
 on: [push, pull_request]
 
 jobs:
-  build:
+  test:
 
     runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
 
     defaults:
       run:
@@ -28,4 +31,5 @@ jobs:
           make develop
       - name: Run frontend tests
         run: |
+          source venv/bin/activate
           make jstest
