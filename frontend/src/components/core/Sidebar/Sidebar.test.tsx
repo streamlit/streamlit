@@ -104,7 +104,7 @@ describe("Sidebar Component", () => {
 
     expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
       "overflow",
-      "overlay"
+      "auto"
     )
 
     wrapper.find(SidebarNav).prop("hideParentScrollbar")(true)
