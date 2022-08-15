@@ -1,0 +1,10 @@
+name: "Update Submodules"
+runs:
+  using: composite
+  steps:
+    - name: "update submodules"
+      run: |
+        python --version
+        git submodule init
+        git submodule update --remote
+      shell: bash -ileo pipefail {0}
