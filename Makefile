@@ -55,6 +55,8 @@ pipenv-dev-install: lib/Pipfile
 	# "more deterministic", per pipenv's documentation.
 	# (Omitting this flag is causing incorrect dependency version
 	# resolution on CircleCI.)
+	# The lockfile is created to force resolution of all dependencies at once,
+	# but we don't actually want to use the lockfile.
 	cd lib; \
 		rm Pipfile.lock; \
 		pipenv install --dev --sequential
