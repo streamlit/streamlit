@@ -16,7 +16,6 @@
  */
 
 import React from "react"
-import { NumberInput as NumberInputProto } from "src/autogen/proto"
 import { StyledWidgetLabel } from "./styled-components"
 
 export interface LabelProps {
@@ -30,7 +29,7 @@ export interface LabelProps {
   disabled?: boolean | null
 
   // Used to specify whether widget is visible or not.
-  labelVisibility: NumberInputProto.LabelVisibility | any
+  labelVisibility?: "visible" | "collapsed" | "hidden" | string | null
 }
 
 export function WidgetLabel({
