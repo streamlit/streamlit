@@ -142,7 +142,7 @@ class AlertMixin:
 
         Example
         -------
-        >>> st.success('This is a success message!', icon:"✅")
+        >>> st.success('This is a success message!', icon="✅")
 
         """
         alert_proto = AlertProto()
