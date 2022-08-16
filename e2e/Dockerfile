@@ -100,7 +100,8 @@ COPY --chown=$USER lib/test-requirements.txt ./lib/
 COPY --chown=$USER lib/setup.py ./lib/
 
 # install python modules
-RUN IS_DOCKER=true CIRCLECI=true make pipenv-install
+RUN IS_DOCKER=true CIRCLECI=true cd ./lib/ && pipenv install --dev --sequential --skip-lock && cd -
+RUN IS_DOCKER=true CIRCLECI=true make py-test-install
 
 # copy streamlit code
 COPY --chown=$USER . .
