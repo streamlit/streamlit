@@ -214,15 +214,25 @@ protobuf:
 		echo "protoc not installed."; \
 		exit 1; \
 	fi
-	protoc_version=$$(protoc --version | cut -d ' ' -f 2); \
-	protobuf_version=$$(pip show protobuf | grep Version | cut -d " " -f 2-); \
-	if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
-		echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
-		echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
-		echo "protoc version: $${protoc_version}"; \
-		echo "protobuf version: $${protobuf_version}"; \
-		echo -n "Do you want to continue anyway? [y/N] " && read ans && [ $${ans:-N} = y ]; \
-	fi
+	protoc_version=$$(protoc --version | cut -d ' ' -f 2);
+	protobuf_version=$$(pip show protobuf | grep Version | cut -d " " -f 2-);
+ifndef CIRCLECI
+			if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
+				echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
+				echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
+				echo "protoc version: $${protoc_version}"; \
+				echo "protobuf version: $${protobuf_version}"; \
+				echo -n "Do you want to continue anyway? [y/N] " && read ans && [ $${ans:-N} = y ]; \
+			fi
+else
+		if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
+				echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
+				echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
+				echo "protoc version: $${protoc_version}"; \
+				echo "protobuf version: $${protobuf_version}"; \
+				echo "Since we're on CI we try to continue anyway..."; \
+		fi
+endif
 	protoc \
 		--proto_path=proto \
 		--python_out=lib \
