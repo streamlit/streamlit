@@ -153,6 +153,8 @@ class AppSession:
         self._session_state = SessionState()
         self._user_info = user_info
 
+        self._debug_last_backmsg_id: Optional[str] = None
+
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self) -> List[ForwardMsg]:
@@ -213,6 +215,9 @@ class AppSession:
         if not config.get_option("client.displayEnabled"):
             return
 
+        if self._debug_last_backmsg_id:
+            msg.debug_last_backmsg_id = self._debug_last_backmsg_id
+
         self._session_data.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
@@ -223,6 +228,9 @@ class AppSession:
             msg_type = msg.WhichOneof("type")
 
             if msg_type == "rerun_script":
+                if msg.debug_last_backmsg_id:
+                    self._debug_last_backmsg_id = msg.debug_last_backmsg_id
+
                 self._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._handle_git_information_request()
@@ -486,6 +494,8 @@ class AppSession:
                 else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
             )
             self._enqueue_forward_msg(script_finished_msg)
+
+            self._debug_last_backmsg_id = None
 
             if script_succeeded:
                 # The script completed successfully: update our

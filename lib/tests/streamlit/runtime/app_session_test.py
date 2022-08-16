@@ -255,6 +255,21 @@ class AppSessionTest(unittest.TestCase):
         )
         mock_enqueue.assert_not_called()
 
+    @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
+    @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
+    def test_resets_debug_last_backmsg_id_on_script_finished(self):
+        session = _create_test_session()
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._debug_last_backmsg_id = "some_backmsg_id"
+
+        session._handle_scriptrunner_event_on_main_thread(
+            sender=session._scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            forward_msg=ForwardMsg(),
+        )
+
+        self.assertIsNone(session._debug_last_backmsg_id)
+
     def test_passes_client_state_on_run_on_save(self):
         session = _create_test_session()
         session._run_on_save = True
@@ -314,6 +329,15 @@ class AppSessionTest(unittest.TestCase):
         patched_on_pages_changed.disconnect.assert_called_once_with(
             session._on_pages_changed
         )
+
+    def test_tags_fwd_msgs_with_last_backmsg_id_if_set(self):
+        session = _create_test_session()
+        session._debug_last_backmsg_id = "some backmsg id"
+
+        msg = ForwardMsg()
+        session._enqueue_forward_msg(msg)
+
+        self.assertEqual(msg.debug_last_backmsg_id, "some backmsg id")
 
 
 def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
@@ -543,6 +567,15 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
             handle_clear_cache_request.assert_called_once()
             handle_backmsg_exception.assert_called_once_with(error)
+
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner", MagicMock())
+    async def test_handle_backmsg_handles_debug_ids(self):
+        session = _create_test_session(asyncio.get_running_loop())
+        msg = BackMsg(
+            rerun_script=session._client_state, debug_last_backmsg_id="some backmsg"
+        )
+        session.handle_backmsg(msg)
+        self.assertEqual(session._debug_last_backmsg_id, "some backmsg")
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
