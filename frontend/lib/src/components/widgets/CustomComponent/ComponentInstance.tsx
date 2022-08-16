@@ -44,6 +44,7 @@ import {
 } from "@streamlit/lib/src/urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
+import { CustomComponentIFrame as StliteCustomComponentIFrame } from "@stlite/kernel"
 
 /**
  * The current custom component API version. If our API changes,
@@ -458,7 +459,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     return (
       <>
         {warns}
-        <iframe
+        <StliteCustomComponentIFrame
           allow={DEFAULT_IFRAME_FEATURE_POLICY}
           ref={this.iframeRef}
           src={src}
