@@ -26,8 +26,14 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, LabelVisibility, OptionSequence, ensure_indexable,\
-    to_key
+from streamlit.type_util import (
+    Key,
+    LabelVisibility,
+    OptionSequence,
+    ensure_indexable,
+    to_key,
+)
+
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -128,7 +134,7 @@ class RadioMixin:
             disabled=disabled,
             horizontal=horizontal,
             ctx=ctx,
-            label_visibility=label_visibility
+            label_visibility=label_visibility,
         )
 
     def _radio(

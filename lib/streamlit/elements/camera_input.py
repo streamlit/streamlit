@@ -45,6 +45,7 @@ SomeUploadedSnapshotFile = Optional[UploadedFile]
 
 _LOGGER = _logger.get_logger("root")
 
+
 class CameraInputMixin:
     def camera_input(
         self,
@@ -56,7 +57,7 @@ class CameraInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible"
+        label_visibility: Optional[LabelVisibility] = "visible",
     ) -> SomeUploadedSnapshotFile:
         """Display a widget that returns pictures from the user's webcam.
 
