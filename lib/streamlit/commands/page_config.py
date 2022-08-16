@@ -89,6 +89,7 @@ def set_page_config(
             A markdown string to show in the About dialog.
             If None, only shows Streamlit's default About text.
 
+        The URL may also refer to an email address e.g. ``mailto:john@example.com``.
 
     Example
     -------
@@ -241,6 +242,8 @@ def valid_url(url: str) -> bool:
     """
     try:
         result = urlparse(url)
+        if result.scheme == "mailto":
+            return all([result.scheme, result.path])
         return all([result.scheme, result.netloc])
     except:
         return False

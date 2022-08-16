@@ -409,8 +409,8 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
     """
     import streamlit.runtime.legacy_caching.caching as legacy_caching
     import streamlit.runtime.caching as caching
-    from streamlit.elements.utils import clean_text
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
+    from streamlit.string_util import clean_text
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions

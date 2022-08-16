@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from unittest import mock
+from unittest.mock import MagicMock
 
 import tornado.httpserver
 import tornado.testing
@@ -20,10 +21,8 @@ import tornado.web
 import tornado.websocket
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.web.server.server import (
-    BrowserWebSocketHandler,
-    SessionClientDisconnectedError,
-)
+from streamlit.runtime.runtime import SessionClientDisconnectedError, Runtime
+from streamlit.web.server.server import BrowserWebSocketHandler
 from .server_test_case import ServerTestCase
 
 
@@ -39,7 +38,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get our connected BrowserWebSocketHandler
-            session_info = list(self.server._session_info_by_id.values())[0]
+            session_info = list(self.server._runtime._session_info_by_id.values())[0]
             websocket_handler = session_info.client
             self.assertIsInstance(websocket_handler, BrowserWebSocketHandler)
 
@@ -61,3 +60,25 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
                     websocket_handler.write_forward_msg(msg)
 
                 write_message_mock.assert_called_once()
+
+    @tornado.testing.gen_test
+    async def test_backmsg_deserialization_exception(self):
+        """If BackMsg deserialization raises an Exception, we should call the Runtime's
+        handler.
+        """
+        with self._patch_app_session():
+            await self.start_server_loop()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            mock_runtime = MagicMock(spec=Runtime)
+            websocket_handler._runtime = mock_runtime
+
+            # Send a malformed BackMsg
+            websocket_handler.on_message(b"NotABackMsg")
+
+            mock_runtime.handle_backmsg_deserialization_exception.assert_called_once()
+            mock_runtime.handle_backmsg.assert_not_called()

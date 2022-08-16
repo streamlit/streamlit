@@ -111,6 +111,8 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
             (532, False),
             ("dkakasdkjdjakdjadjfalskdjfalk", False),
             ("https://stackoverflow.com", True),
+            ("mailto:test@example.com", True),
+            ("mailto:", False),
         ]
     )
     def test_valid_url(self, url, expected_value):

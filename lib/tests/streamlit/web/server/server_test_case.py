@@ -51,7 +51,8 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         """Starts the server's loop coroutine."""
         server_started = Future()
         self.io_loop.spawn_callback(
-            self.server._loop_coroutine, lambda _: server_started.set_result(None)
+            self.server._runtime._loop_coroutine,
+            lambda: server_started.set_result(None),
         )
         await server_started
 
@@ -103,7 +104,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         """
 
         return mock.patch(
-            "streamlit.web.server.server.AppSession",
+            "streamlit.runtime.runtime.AppSession",
             # new_callable must return a function, not an object, or else
             # there will only be a single AppSession mock. Hence the lambda.
             new_callable=lambda: self._create_mock_app_session,

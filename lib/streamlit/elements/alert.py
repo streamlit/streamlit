@@ -16,8 +16,7 @@ from typing import cast, Optional, TYPE_CHECKING
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from streamlit.string_util import is_emoji
-from .utils import clean_text
+from streamlit.string_util import clean_text, is_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

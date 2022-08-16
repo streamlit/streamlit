@@ -21,7 +21,6 @@ from typing import (
     Optional,
     Awaitable,
     Union,
-    TYPE_CHECKING,
 )
 
 import tornado.concurrent
@@ -33,16 +32,16 @@ from tornado.websocket import WebSocketHandler
 from typing_extensions import Final
 
 from streamlit import config
-from streamlit.runtime.app_session import AppSession
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.runtime import (
+    Runtime,
+    SessionClient,
+    SessionClientDisconnectedError,
+)
+from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import is_url_from_allowed_origins
-from streamlit.web.server.server_util import serialize_forward_msg
-from .session_client import SessionClient, SessionClientDisconnectedError
-
-if TYPE_CHECKING:
-    from .server import Server
 
 LOGGER: Final = get_logger(__name__)
 
@@ -50,9 +49,9 @@ LOGGER: Final = get_logger(__name__)
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     """Handles a WebSocket connection from the browser"""
 
-    def initialize(self, server: "Server") -> None:
-        self._server = server
-        self._session: Optional[AppSession] = None
+    def initialize(self, runtime: Runtime) -> None:
+        self._runtime = runtime
+        self._session_id: Optional[str] = None
         # The XSRF cookie is normally set when xsrf_form_html is used, but in a
         # pure-Javascript application that does not use any regular forms we just
         # need to read the self.xsrf_token manually to set the cookie as a side
@@ -91,14 +90,14 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         else:
             user_info["email"] = email
 
-        self._session = self._server._create_app_session(self, user_info)
+        self._session_id = self._runtime.create_session(self, user_info)
         return None
 
     def on_close(self) -> None:
-        if not self._session:
+        if not self._session_id:
             return
-        self._server._close_app_session(self._session.id)
-        self._session = None
+        self._runtime.close_session(self._session_id)
+        self._session_id = None
 
     def get_compression_options(self) -> Optional[Dict[Any, Any]]:
         """Enable WebSocket compression.
@@ -113,10 +112,8 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         return None
 
     def on_message(self, payload: Union[str, bytes]) -> None:
-        if not self._session:
+        if not self._session_id:
             return
-
-        msg = BackMsg()
 
         try:
             if isinstance(payload, str):
@@ -127,23 +124,24 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                     "(We expect `bytes` only.)"
                 )
 
+            msg = BackMsg()
             msg.ParseFromString(payload)
             LOGGER.debug("Received the following back message:\n%s", msg)
 
-            if msg.WhichOneof("type") == "close_connection":
-                # "close_connection" is a special developmentMode-only
-                # message used in e2e tests to test disabling widgets.
-                if config.get_option("global.developmentMode"):
-                    self._server.stop()
-                else:
-                    LOGGER.warning(
-                        "Client tried to close connection when "
-                        "not in development mode"
-                    )
-            else:
-                # AppSession handles all other BackMsg types.
-                self._session.handle_backmsg(msg)
-
         except BaseException as e:
             LOGGER.error(e)
-            self._session.handle_backmsg_exception(e)
+            self._runtime.handle_backmsg_deserialization_exception(self._session_id, e)
+            return
+
+        if msg.WhichOneof("type") == "close_connection":
+            # "close_connection" is a special developmentMode-only
+            # message used in e2e tests to test disabling widgets.
+            if config.get_option("global.developmentMode"):
+                self._runtime.stop()
+            else:
+                LOGGER.warning(
+                    "Client tried to close connection when " "not in development mode"
+                )
+        else:
+            # AppSession handles all other BackMsg types.
+            self._runtime.handle_backmsg(self._session_id, msg)
