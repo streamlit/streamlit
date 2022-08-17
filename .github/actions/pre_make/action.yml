@@ -21,7 +21,7 @@ runs:
           sudo cp -f /usr/bin/make make.bin
         fi
         sudo cp -f make.bin /usr/bin/make
-      shell: bash -euxo pipefail
+      shell: bash -euxo pipefail {0}
     - name: Restore dot from cache
       id: cache-dot
       uses: actions/cache@v3
@@ -41,4 +41,4 @@ runs:
           sudo cp -f /usr/bin/dot dot.bin
         fi
         sudo cp -f dot.bin /usr/bin/dot
-      shell: bash -euxo pipefail
+      shell: bash -euxo pipefail {0}
