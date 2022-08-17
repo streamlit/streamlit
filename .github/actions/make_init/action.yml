@@ -2,17 +2,17 @@ name: "Setup & Initialize Virtual Env"
 runs:
   using: composite
   steps:
-    # - name: Restore pre-commit cache
-    #   id: cache-pre-commit
-    #   uses: actions/cache@v3
-    #   with:
-    #     path: ~/.cache
-    #     key: v1-pre-commit-${{ hashFiles('**/.pre-commit-config.yaml') }}
-    # - if: steps.cache-pre-commit.outputs.cache-hit != 'true'
-    #   name: Install pre-commit
-    #   run: |
-    #     sudo pre-commit install-hooks
-    #   shell: bash -ileo pipefail {0}
+    - name: Restore pre-commit cache
+      id: cache-pre-commit
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pre-commit
+        key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
+    - if: steps.cache-pre-commit.outputs.cache-hit != 'true'
+      name: Install pre-commit
+      run: |
+        sudo pre-commit install-hooks
+      shell: bash -ileo pipefail {0}
     - name: Setup Node
       uses: actions/setup-node@v3
       with:
@@ -31,7 +31,7 @@ runs:
             graphviz \
             libgvc6 \
             python3-pydot \
-            python3-pydot-ng \
+            python3-pydot-ng
 
         echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
@@ -54,11 +54,9 @@ runs:
         make pipenv-install
         deactivate
 
-        # Add 'activate venv' to $HOME/.bash_profile.
-        echo 'source venv/bin/activate' >> $HOME/.bash_profile
+        echo "PATH=${PWD}/venv/bin:${PATH}" >> ${GITHUB_ENV}
+	      echo "VIRTUAL_ENV=${PWD}/venv" >> ${GITHUB_ENV}
       shell: bash -ileo pipefail {0}
     - name: Generate Protobufs
-      run: |
-        source venv/bin/activate
-        make protobuf
+      run: make protobuf
       shell: bash -ileo pipefail {0}
