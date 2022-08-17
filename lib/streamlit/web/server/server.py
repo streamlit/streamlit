@@ -17,12 +17,7 @@ import logging
 import os
 import socket
 import sys
-from typing import (
-    Any,
-    Optional,
-    Callable,
-    List,
-)
+from typing import Any, Optional, List, Callable
 
 import click
 import tornado.concurrent
@@ -207,7 +202,9 @@ class Server:
         port = config.get_option("server.port")
         LOGGER.debug("Server started on port %s", port)
 
-        await self._runtime.run(on_started=lambda: on_started(self))
+        await self._runtime.start()
+        on_started(self)
+        await self._runtime.stopped
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
