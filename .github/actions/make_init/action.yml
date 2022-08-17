@@ -55,15 +55,14 @@ runs:
         pip install --upgrade pip
         make setup
         make pipenv-install
-        deactivate
-
-        # Add 'activate venv' to $HOME/.bash_profile. This means that our venv will be active
-        # for the remainder of the job ($HOME/.bash_profile is evaluated at each step).
-        echo 'source venv/bin/activate' >> $HOME/.bash_profile
+      shell: bash -euxo pipefail {0}
+    - name: Activate virtualenv
+      run: |
+        echo "PATH=${PWD}/venv/bin:${PATH}" >> ${GITHUB_ENV}
+        echo "VIRTUAL_ENV=${PWD}/venv" >> ${GITHUB_ENV}
       shell: bash -euxo pipefail {0}
     - name: Generate Protobufs
       run: |
-        source venv/bin/activate
         # install protobuf v3
         sudo apt update
         sudo apt-get install -y gnupg
