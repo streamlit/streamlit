@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+import sys
 import time
 import traceback
 from asyncio import Future
@@ -247,9 +248,14 @@ class Runtime:
         )
         self._async_objs = async_objs
 
-        self._loop_coroutine_task = asyncio.create_task(
-            self._loop_coroutine(), name="Runtime.loop_coroutine"
-        )
+        if sys.version_info >= (3, 8, 0):
+            # Python 3.8+ supports a create_task `name` parameter, which can
+            # make debugging a bit easier.
+            self._loop_coroutine_task = asyncio.create_task(
+                self._loop_coroutine(), name="Runtime.loop_coroutine"
+            )
+        else:
+            self._loop_coroutine_task = asyncio.create_task(self._loop_coroutine())
 
         await async_objs.started
 
