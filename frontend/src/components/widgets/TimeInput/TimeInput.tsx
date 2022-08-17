@@ -45,6 +45,8 @@ interface State {
 class TimeInput extends PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
+  private readonly timeInputRef = React.createRef<HTMLDivElement>()
+
   public state: State = {
     value: this.initialValue,
   }
@@ -104,6 +106,54 @@ class TimeInput extends PureComponent<Props, State> {
     this.setState({ value: this.props.element.default }, () =>
       this.commitWidgetValue({ fromUi: true })
     )
+  }
+
+  private onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    // When typing XX:2X, XX:4X, XX:5X into timeInput with keyboard only
+    // and pressing enter time is not selected, see https://github.com/streamlit/streamlit/issues/4943
+    // This happens because state is not updated when user types this kind of time
+    // To avoid this, we update the state by simulating click in time helper list item
+    if (e.key === "Enter" && this.timeInputRef.current) {
+      // Look for time match only when aria-expanded is set to true
+      // on data-baseweb="select" element inside timeInputRef
+      const timeInputs = this.timeInputRef.current.querySelectorAll(
+        'div[data-baseweb="select"][aria-expanded="true"]'
+      )
+
+      // Iterate over timeInputs and look for their textContents
+      for (let i = 0; i < timeInputs.length; i++) {
+        const { textContent } = timeInputs[i]
+        if (
+          textContent &&
+          textContent.length > 0 &&
+          textContent.includes(":")
+        ) {
+          const dateAsStr = textContent.replace("open", "")
+
+          // Document listBoxes and their options are likely timeInput tooltips
+          // Iterate over them and compare if typed time and tooltip time match
+          const listBoxes = document.querySelectorAll('ul[role="listbox"]')
+          listBoxes.forEach(listbox => {
+            const options = listbox.querySelectorAll('li[role="option"]')
+            options.forEach(option => {
+              let optionAsStr = option.textContent
+              if (
+                optionAsStr &&
+                optionAsStr.length > 0 &&
+                optionAsStr[0] === "0"
+              ) {
+                optionAsStr = optionAsStr.substring(1, optionAsStr.length)
+              }
+              // Time tooltip string and time input string match, trigger click into this toolip
+              // This will force the timeInput component to update it's state
+              if (dateAsStr === optionAsStr) {
+                ;(option as HTMLDivElement).click()
+              }
+            })
+          })
+        }
+      }
+    }
   }
 
   private handleChange = (newDate: Date): void => {
@@ -202,7 +252,12 @@ class TimeInput extends PureComponent<Props, State> {
     )
 
     return (
-      <div className="stTimeInput" style={style}>
+      <div
+        className="stTimeInput"
+        style={style}
+        onKeyDown={this.onKeyDown}
+        ref={this.timeInputRef}
+      >
         <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
