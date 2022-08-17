@@ -28,7 +28,7 @@ jobs:
       - run: export > a.txt
       - uses: ./.github/actions/make_init
       - run: export > b.txt
-      - run: diff a.txt b.txt
+      - run: diff a.txt b.txt || true
       - name: Run make develop
         run: |
           make develop
