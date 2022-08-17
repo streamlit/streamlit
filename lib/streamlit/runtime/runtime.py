@@ -17,7 +17,7 @@ import time
 import traceback
 from asyncio import Future
 from enum import Enum
-from typing import Optional, Dict, NamedTuple, Callable, Any, Tuple, Awaitable
+from typing import Optional, Dict, NamedTuple, Tuple, Awaitable
 
 from typing_extensions import Final, Protocol
 
@@ -126,8 +126,11 @@ class AsyncObjects(NamedTuple):
     # Set after a ForwardMsg is enqueued; cleared when we flush ForwardMsgs.
     need_send_data: asyncio.Event
 
-    # Completed when the Runtime has stopped.
+    # Completed when the Runtime has started.
     # (`Future` is not generic in Python 3.8, so we need to use quote-typing.)
+    started: "Future[None]"
+
+    # Completed when the Runtime has stopped.
     stopped: "Future[None]"
 
 
@@ -145,6 +148,10 @@ class Runtime:
         """
         # Will be created when we start.
         self._async_objs: Optional[AsyncObjects] = None
+
+        # The task that runs our main loop. We need to save a reference
+        # to it so that the task doesn't get garbage collected while running.
+        self._loop_coroutine_task: Optional[asyncio.Task] = None
 
         self._main_script_path = config.script_path
         self._command_line = config.command_line or ""
@@ -216,24 +223,35 @@ class Runtime:
         """
         return self._session_info_by_id.get(session_id, None)
 
-    async def run(self, on_started: Optional[Callable[[], Any]] = None) -> None:
+    async def start(self) -> None:
         """Start the runtime. This must be called only once, before
         any other functions are called.
 
-        This coroutine will return when the Runtime has stopped.
-
-        Parameters
-        ----------
-        on_started
-            An optional callback that will be called when the Runtime's loop
-            has started. It will be called on the eventloop thread.
+        When this coroutine returns, Streamlit is ready to accept new sessions.
 
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         streamlit._is_running_with_streamlit = True
-        await self._loop_coroutine(on_started)
+
+        # Create our AsyncObjects. We need to have a running eventloop to
+        # instantiate our various synchronization primitives.
+        async_objs = AsyncObjects(
+            eventloop=asyncio.get_running_loop(),
+            must_stop=asyncio.Event(),
+            has_connection=asyncio.Event(),
+            need_send_data=asyncio.Event(),
+            started=asyncio.Future(),
+            stopped=asyncio.Future(),
+        )
+        self._async_objs = async_objs
+
+        self._loop_coroutine_task = asyncio.create_task(
+            self._loop_coroutine(), name="Runtime.loop_coroutine"
+        )
+
+        await async_objs.started
 
     def stop(self) -> None:
         """Request that Streamlit close all sessions and stop running.
@@ -463,24 +481,17 @@ class Runtime:
         LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
         self._state = new_state
 
-    async def _loop_coroutine(
-        self, on_started: Optional[Callable[[], Any]] = None
-    ) -> None:
+    async def _loop_coroutine(self) -> None:
         """The main Runtime loop.
+
+        This function won't exit until `stop` is called.
 
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
 
-        async_objs = AsyncObjects(
-            eventloop=asyncio.get_running_loop(),
-            must_stop=asyncio.Event(),
-            has_connection=asyncio.Event(),
-            need_send_data=asyncio.Event(),
-            stopped=asyncio.Future(),
-        )
-        self._async_objs = async_objs
+        async_objs = self._get_async_objs()
 
         try:
             if self._state == RuntimeState.INITIAL:
@@ -490,15 +501,8 @@ class Runtime:
             else:
                 raise RuntimeError(f"Bad Runtime state at start: {self._state}")
 
-            # Store the eventloop we're running on so that we can schedule
-            # callbacks on it when necessary. (We can't just call
-            # `asyncio.get_running_loop()` whenever we like, because we have
-            # some functions, e.g. `stop`, that can be called from other
-            # threads, and `asyncio.get_running_loop()` is thread-specific.)
-            self._eventloop = asyncio.get_running_loop()
-
-            if on_started is not None:
-                on_started()
+            # Signal that we're started and ready to accept sessions
+            async_objs.started.set_result(None)
 
             while not async_objs.must_stop.is_set():
                 if self._state == RuntimeState.NO_SESSIONS_CONNECTED:
