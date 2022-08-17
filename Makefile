@@ -55,8 +55,11 @@ pipenv-dev-install: lib/Pipfile
 	# "more deterministic", per pipenv's documentation.
 	# (Omitting this flag is causing incorrect dependency version
 	# resolution on CircleCI.)
+	# The lockfile is created to force resolution of all dependencies at once,
+	# but we don't actually want to use the lockfile.
 	cd lib; \
-		pipenv install --dev --skip-lock --sequential
+		rm Pipfile.lock; \
+		pipenv install --dev --sequential
 
 SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
 .PHONY: py-test-install
@@ -214,15 +217,25 @@ protobuf:
 		echo "protoc not installed."; \
 		exit 1; \
 	fi
-	protoc_version=$$(protoc --version | cut -d ' ' -f 2); \
-	protobuf_version=$$(pip show protobuf | grep Version | cut -d " " -f 2-); \
-	if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
-		echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
-		echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
-		echo "protoc version: $${protoc_version}"; \
-		echo "protobuf version: $${protobuf_version}"; \
-		echo -n "Do you want to continue anyway? [y/N] " && read ans && [ $${ans:-N} = y ]; \
-	fi
+	protoc_version=$$(protoc --version | cut -d ' ' -f 2);
+	protobuf_version=$$(pip show protobuf | grep Version | cut -d " " -f 2-);
+ifndef CIRCLECI
+			if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
+				echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
+				echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
+				echo "protoc version: $${protoc_version}"; \
+				echo "protobuf version: $${protobuf_version}"; \
+				echo -n "Do you want to continue anyway? [y/N] " && read ans && [ $${ans:-N} = y ]; \
+			fi
+else
+		if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
+				echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
+				echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
+				echo "protoc version: $${protoc_version}"; \
+				echo "protobuf version: $${protobuf_version}"; \
+				echo "Since we're on CI we try to continue anyway..."; \
+		fi
+endif
 	protoc \
 		--proto_path=proto \
 		--python_out=lib \
