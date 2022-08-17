@@ -59,9 +59,6 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
             raise runtime
 
         # Ensure we can start and stop the Runtime
-        runtime_started = asyncio.Future()
-        _ = asyncio.create_task(runtime.run(lambda: runtime_started.set_result(None)))
-
-        await runtime_started
+        await runtime.start()
         runtime.stop()
         await runtime.stopped
