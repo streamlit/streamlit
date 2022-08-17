@@ -17,7 +17,7 @@ import logging
 import os
 import socket
 import sys
-from typing import Any, Optional, List, Callable
+from typing import Any, Optional, List, Awaitable
 
 import click
 import tornado.concurrent
@@ -183,15 +183,10 @@ class Server:
     def main_script_path(self) -> str:
         return self._main_script_path
 
-    async def start(self, on_started: Callable[["Server"], Any]) -> None:
+    async def start(self) -> None:
         """Start the server.
 
-        Parameters
-        ----------
-        on_started : callable
-            A callback that will be called when the server's run-loop
-            has started, and the server is ready to begin receiving clients.
-
+        When this returns, Streamlit is ready to accept new sessions.
         """
 
         LOGGER.debug("Starting server...")
@@ -203,8 +198,11 @@ class Server:
         LOGGER.debug("Server started on port %s", port)
 
         await self._runtime.start()
-        on_started(self)
-        await self._runtime.stopped
+
+    @property
+    def stopped(self) -> Awaitable[None]:
+        """A Future that completes when the Server's run loop has exited."""
+        return self._runtime.stopped
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
