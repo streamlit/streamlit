@@ -150,8 +150,8 @@ class Runtime:
         self._async_objs: Optional[AsyncObjects] = None
 
         # The task that runs our main loop. We need to save a reference
-        # to it so that the task doesn't get garbage collected while running.
-        self._loop_coroutine_task: Optional[asyncio.Task] = None
+        # to it so that it doesn't get garbage collected while running.
+        self._loop_coroutine_task: Optional[asyncio.Task[None]] = None
 
         self._main_script_path = config.script_path
         self._command_line = config.command_line or ""
