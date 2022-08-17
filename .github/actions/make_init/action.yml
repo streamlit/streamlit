@@ -1,54 +1,51 @@
-name: "Initialize Virtual Env"
+name: "Setup & Initialize Virtual Env"
 runs:
   using: composite
   steps:
-    - name: Restore nvm, pre-commit cache, & node modules from cache
-      id: cache-nvm-node-modules
-      uses: actions/cache@v3
+    # - name: Restore pre-commit cache
+    #   id: cache-pre-commit
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: ~/.cache
+    #     key: v1-pre-commit-${{ hashFiles('**/.pre-commit-config.yaml') }}
+    # - if: steps.cache-pre-commit.outputs.cache-hit != 'true'
+    #   name: Install pre-commit
+    #   run: |
+    #     sudo pre-commit install-hooks
+    #   shell: bash -ileo pipefail {0}
+    - name: Setup Node
+      uses: actions/setup-node@v3
       with:
-        path: |
-          ~/.nvm
-          ~/.cache
-          frontend/node_modules
-        key: v13-nvm-node-modules-${{ hashFiles('**/yarn.lock.md5') }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
-    - name: Install nvm, pre-commit cache and node_modules
-      if: steps.cache-nvm-node-modules.cache-hit != 'true'
-      run: |
-        if [ ! -d ~/.nvm ] ; then
-          cd ..
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-          mkdir $NVM_DIR
-          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
-          echo "source $NVM_DIR/nvm.sh --install" >> "$HOME/.bash_profile"
-          cd -
-          source $HOME/.bash_profile
-          echo "lts/*" > .nvmrc
-          nvm install
-        fi
-        npm install --location=global yarn
-        if [ ! -d frontend/node_modules ] ; then
-          source "$HOME/.nvm/nvm.sh"
-          make react-init
-        fi
+        node-version-file: '.nvmrc'
+        cache: 'yarn'
+        cache-dependency-path: '**/yarn.lock'
+    - name: Initialize React
+      run: make react-init
       shell: bash -ileo pipefail {0}
-    - name: Install pyodbc dependencies
-      run: |
-        sudo apt-get install -y unixodbc-dev
-      shell: bash -ileo pipefail {0}
-    - name: Install graphviz dependencies
+    - name: Install Dependencies
       run: |
         sudo apt update
-        sudo apt-get install -y libgvc6
+        # protobuf, pyodbc, dot, & graphviz dependencies
+        sudo apt install -y gnupg \
+            unixodbc-dev \
+            graphviz \
+            libgvc6 \
+            python3-pydot \
+            python3-pydot-ng \
+
+        echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
+        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+        sudo apt update
+        sudo apt install -y protobuf-compiler
       shell: bash -ileo pipefail {0}
     - name: Restore virtualenv from cache
       id: cache-virtualenv
       uses: actions/cache@v3
       with:
         path: venv
-        key: v13-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
-    - name: Create Virtual Env
-      if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+        key: v1-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
+    - if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+      name: Create Virtual Env
       run: |
         python -m venv venv
         source venv/bin/activate
@@ -57,21 +54,11 @@ runs:
         make pipenv-install
         deactivate
 
-        # Add 'activate venv' to $HOME/.bash_profile. This means that our venv will be active
-        # for the remainder of the job ($HOME/.bash_profile is evaluated at each step).
+        # Add 'activate venv' to $HOME/.bash_profile.
         echo 'source venv/bin/activate' >> $HOME/.bash_profile
       shell: bash -ileo pipefail {0}
     - name: Generate Protobufs
       run: |
         source venv/bin/activate
-        # install protobuf v3
-        sudo apt update
-        sudo apt-get install -y gnupg
-        echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
-        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-        sudo apt update
-        sudo apt-get install -y protobuf-compiler
-        
-        # Generate protobufs
         make protobuf
       shell: bash -ileo pipefail {0}
