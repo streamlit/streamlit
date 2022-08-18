@@ -1,4 +1,11 @@
 name: "Setup & Initialize Virtual Env"
+
+inputs:
+  use_cached_venv:
+    description: 'Use Cached Virtual Env'
+    required: true
+    default: 'true'
+
 runs:
   using: composite
   steps:
@@ -13,7 +20,7 @@ runs:
       run: |
         pip install pre-commit
         pre-commit install-hooks
-      shell: bash -ileo pipefail {0} {0}
+      shell: bash -ileo pipefail {0}
     - name: Setup Node
       uses: actions/setup-node@v3
       with:
@@ -22,7 +29,7 @@ runs:
         cache-dependency-path: '**/yarn.lock'
     - name: Initialize React
       run: make react-init
-      shell: bash -ileo pipefail {0} {0}
+      shell: bash -ileo pipefail {0}
     - name: Install Dependencies
       run: |
         sudo apt update
@@ -36,8 +43,29 @@ runs:
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
         sudo apt update
         sudo apt install -y protobuf-compiler
-      shell: bash -ileo pipefail {0} {0}
-    - name: Restore virtualenv from cache
+      shell: bash -ileo pipefail {0}
+    # Combine hashes of the Python interpreter, Pipfile, and today's
+    # date into a file whose hash will key the Python virtualenv.
+    #
+    # This means that our virtualenv cache will expire each day. We do
+    # this because we are not using a lockfile to pin dependencies -
+    # instead, each time Github Actions rebuilds the virtualenv, it uses the
+    # latest compatible version of each dependency (which mirrors what
+    # happens when a user installs Streamlit locally). So we expire our
+    # virtualenv cache daily to prevent it from getting far out of sync
+    # with what a fresh Streamlit installation would look like.
+    - if: inputs.use_cached_venv == 'true'
+      name: Create Python environment cache key
+      run: |
+        md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/Pipfile >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/test-requirements-with-tensorflow.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
+        date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
+      shell: bash -ileo pipefail {0}
+    - if: inputs.use_cached_venv == 'true'
+      name: Restore virtualenv from cache
       id: cache-virtualenv
       uses: actions/cache@v3
       with:
@@ -52,10 +80,10 @@ runs:
         make setup
         make pipenv-install
         deactivate
-      shell: bash -ileo pipefail {0} {0}
+      shell: bash -ileo pipefail {0}
     - name: Activate virtualenv
       run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
-      shell: bash -ileo pipefail {0} {0}
+      shell: bash -ileo pipefail {0}
     - name: Generate Protobufs
       run: make protobuf
-      shell: bash -ileo pipefail {0} {0}
+      shell: bash -ileo pipefail {0}
