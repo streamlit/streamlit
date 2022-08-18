@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import sys
-import threading
 import uuid
 from asyncio import AbstractEventLoop
 from enum import Enum
@@ -89,7 +89,7 @@ class AppSession:
         Parameters
         ----------
         event_loop : AbstractEventLoop
-            The asyncio EventLoop that we're running within.
+            The asyncio EventLoop that we're running on.
 
         session_data : SessionData
             Object storing parameters related to running a script
@@ -405,12 +405,12 @@ class AppSession:
         which will be called on the main thread.
         """
         self._event_loop.call_soon_threadsafe(
-            lambda: self._handle_scriptrunner_event_on_main_thread(
+            lambda: self._handle_scriptrunner_event_on_event_loop(
                 sender, event, forward_msg, exception, client_state, page_script_hash
             )
         )
 
-    def _handle_scriptrunner_event_on_main_thread(
+    def _handle_scriptrunner_event_on_event_loop(
         self,
         sender: Optional[ScriptRunner],
         event: ScriptRunnerEvent,
@@ -421,7 +421,7 @@ class AppSession:
     ) -> None:
         """Handle a ScriptRunner event.
 
-        This function must only be called on the main thread.
+        This function must only be called on our eventloop thread.
 
         Parameters
         ----------
@@ -451,8 +451,8 @@ class AppSession:
         """
 
         assert (
-            threading.main_thread() == threading.current_thread()
-        ), "This function must only be called on the main thread"
+            self._event_loop == asyncio.get_running_loop()
+        ), "This function must only be called on the eventloop thread"
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.
