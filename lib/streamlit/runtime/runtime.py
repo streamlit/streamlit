@@ -119,9 +119,6 @@ class AsyncObjects(NamedTuple):
     # The event loop that Runtime is running on.
     event_loop: asyncio.AbstractEventLoop
 
-    # The thread that our event loop is running on.
-    event_loop_thread: threading.Thread
-
     # Set after Runtime.stop() is called. Never cleared.
     must_stop: asyncio.Event
 
@@ -244,7 +241,6 @@ class Runtime:
         # instantiate our various synchronization primitives.
         async_objs = AsyncObjects(
             event_loop=asyncio.get_running_loop(),
-            event_loop_thread=threading.current_thread(),
             must_stop=asyncio.Event(),
             has_connection=asyncio.Event(),
             need_send_data=asyncio.Event(),
@@ -331,7 +327,6 @@ class Runtime:
 
         session = AppSession(
             event_loop=async_objs.event_loop,
-            event_loop_thread=async_objs.event_loop_thread,
             session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -460,11 +455,8 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        async_objs = self._get_async_objs()
-
         session = AppSession(
-            event_loop=async_objs.event_loop,
-            event_loop_thread=async_objs.event_loop_thread,
+            event_loop=self._get_async_objs().event_loop,
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,

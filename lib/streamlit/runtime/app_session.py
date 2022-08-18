@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import sys
-import threading
 import uuid
 from asyncio import AbstractEventLoop
 from enum import Enum
@@ -78,7 +78,6 @@ class AppSession:
     def __init__(
         self,
         event_loop: AbstractEventLoop,
-        event_loop_thread: threading.Thread,
         session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
@@ -91,9 +90,6 @@ class AppSession:
         ----------
         event_loop : AbstractEventLoop
             The asyncio EventLoop that we're running on.
-
-        event_loop_thread : Thread
-            The thread that our asyncio EventLoop is running on.
 
         session_data : SessionData
             Object storing parameters related to running a script
@@ -123,7 +119,6 @@ class AppSession:
         self.id = str(uuid.uuid4())
 
         self._event_loop = event_loop
-        self._event_loop_thread = event_loop_thread
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
@@ -402,12 +397,12 @@ class AppSession:
         which will be called on the main thread.
         """
         self._event_loop.call_soon_threadsafe(
-            lambda: self._handle_scriptrunner_event_on_main_thread(
+            lambda: self._handle_scriptrunner_event_on_event_loop(
                 sender, event, forward_msg, exception, client_state, page_script_hash
             )
         )
 
-    def _handle_scriptrunner_event_on_main_thread(
+    def _handle_scriptrunner_event_on_event_loop(
         self,
         sender: Optional[ScriptRunner],
         event: ScriptRunnerEvent,
@@ -448,7 +443,7 @@ class AppSession:
         """
 
         assert (
-            self._event_loop_thread == threading.current_thread()
+            self._event_loop == asyncio.get_running_loop()
         ), "This function must only be called on the eventloop thread"
 
         if sender is not self._scriptrunner:

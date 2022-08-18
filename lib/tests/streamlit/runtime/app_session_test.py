@@ -55,7 +55,6 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
 
     return AppSession(
         event_loop=event_loop,
-        event_loop_thread=threading.current_thread(),
         session_data=SessionData("/fake/script_path.py", "fake_command_line"),
         uploaded_file_manager=MagicMock(),
         message_enqueued_callback=None,
@@ -237,24 +236,29 @@ class AppSessionTest(unittest.TestCase):
         current ScriptRunner, we should silently ignore them.
         """
         session = _create_test_session()
-        session._create_scriptrunner(initial_rerun_data=RerunData())
 
-        session._handle_scriptrunner_event_on_main_thread(
-            sender=session._scriptrunner,
-            event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
-            forward_msg=ForwardMsg(),
-        )
-        mock_enqueue.assert_called_once_with(ForwardMsg())
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._create_scriptrunner(initial_rerun_data=RerunData())
 
-        mock_enqueue.reset_mock()
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=session._scriptrunner,
+                event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+                forward_msg=ForwardMsg(),
+            )
+            mock_enqueue.assert_called_once_with(ForwardMsg())
 
-        non_current_scriptrunner = MagicMock(spec=ScriptRunner)
-        session._handle_scriptrunner_event_on_main_thread(
-            sender=non_current_scriptrunner,
-            event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
-            forward_msg=ForwardMsg(),
-        )
-        mock_enqueue.assert_not_called()
+            mock_enqueue.reset_mock()
+
+            non_current_scriptrunner = MagicMock(spec=ScriptRunner)
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=non_current_scriptrunner,
+                event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+                forward_msg=ForwardMsg(),
+            )
+            mock_enqueue.assert_not_called()
 
     def test_passes_client_state_on_run_on_save(self):
         session = _create_test_session()
@@ -421,7 +425,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         add_script_run_ctx(ctx=orig_ctx)
 
-    async def test_events_handled_on_main_thread(self):
+    async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
         session = _create_test_session(asyncio.get_running_loop())
 
@@ -432,7 +436,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             self.assertEqual(threading.main_thread(), threading.current_thread())
 
         mock_handle_event = MagicMock(side_effect=assert_is_on_main_thread)
-        session._handle_scriptrunner_event_on_main_thread = mock_handle_event
+        session._handle_scriptrunner_event_on_event_loop = mock_handle_event
 
         # Send a ScriptRunner event from another thread
         thread = threading.Thread(
