@@ -437,12 +437,12 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             # Python < 3.9 represents the signature slightly differently
             self.assertEqual(
                 el.doc_string.signature,
-                "(body: str, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'",
+                "(body: object, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'",
             )
         else:
             self.assertEqual(
                 el.doc_string.signature,
-                "(body: str, anchor: Optional[str] = None) -> 'DeltaGenerator'",
+                "(body: object, anchor: Optional[str] = None) -> 'DeltaGenerator'",
             )
 
     def test_st_image_PIL_image(self):
