@@ -115,8 +115,8 @@ class AsyncObjects(NamedTuple):
     These cannot be initialized until the Runtime's eventloop is assigned.
     """
 
-    # The event loop that Runtime is running on.
-    event_loop: asyncio.AbstractEventLoop
+    # The eventloop that Runtime is running on.
+    eventloop: asyncio.AbstractEventLoop
 
     # Set after Runtime.stop() is called. Never cleared.
     must_stop: asyncio.Event
@@ -239,7 +239,7 @@ class Runtime:
         # Create our AsyncObjects. We need to have a running eventloop to
         # instantiate our various synchronization primitives.
         async_objs = AsyncObjects(
-            event_loop=asyncio.get_running_loop(),
+            eventloop=asyncio.get_running_loop(),
             must_stop=asyncio.Event(),
             has_connection=asyncio.Event(),
             need_send_data=asyncio.Event(),
@@ -278,7 +278,7 @@ class Runtime:
             self._set_state(RuntimeState.STOPPING)
             async_objs.must_stop.set()
 
-        async_objs.event_loop.call_soon_threadsafe(stop_on_eventloop)
+        async_objs.eventloop.call_soon_threadsafe(stop_on_eventloop)
 
     def is_active_session(self, session_id: str) -> bool:
         """True if the session_id belongs to an active session.
@@ -325,7 +325,7 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         session = AppSession(
-            event_loop=async_objs.event_loop,
+            event_loop=async_objs.eventloop,
             session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -455,7 +455,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session = AppSession(
-            event_loop=self._get_async_objs().event_loop,
+            event_loop=self._get_async_objs().eventloop,
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -640,7 +640,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         Threading: SAFE. May be called on any thread.
         """
         async_objs = self._get_async_objs()
-        async_objs.event_loop.call_soon_threadsafe(async_objs.need_send_data.set)
+        async_objs.eventloop.call_soon_threadsafe(async_objs.need_send_data.set)
 
     def _get_async_objs(self) -> AsyncObjects:
         """Return our AsyncObjects instance. If the Runtime hasn't been
