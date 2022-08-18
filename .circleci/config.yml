@@ -121,7 +121,6 @@ commands:
       - run: &install_nodejs
           name: Install NVM, Node.js, and Yarn
           command: |
-            set -x
             if [ ! -d ~/.nvm ] ; then
               export NVM_DIR="$HOME/.nvm"
               # install nodejs via nvm
@@ -141,6 +140,7 @@ commands:
             fi
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+
       - run:
           name: Install pyodbc dependencies
           command: |
