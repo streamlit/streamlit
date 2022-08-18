@@ -55,6 +55,7 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
 
     return AppSession(
         event_loop=event_loop,
+        event_loop_thread=threading.current_thread(),
         session_data=SessionData("/fake/script_path.py", "fake_command_line"),
         uploaded_file_manager=MagicMock(),
         message_enqueued_callback=None,

@@ -78,6 +78,7 @@ class AppSession:
     def __init__(
         self,
         event_loop: AbstractEventLoop,
+        event_loop_thread: threading.Thread,
         session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
@@ -89,7 +90,10 @@ class AppSession:
         Parameters
         ----------
         event_loop : AbstractEventLoop
-            The asyncio EventLoop that we're running within.
+            The asyncio EventLoop that we're running on.
+
+        event_loop_thread : Thread
+            The thread that our asyncio EventLoop is running on.
 
         session_data : SessionData
             Object storing parameters related to running a script
@@ -119,6 +123,7 @@ class AppSession:
         self.id = str(uuid.uuid4())
 
         self._event_loop = event_loop
+        self._event_loop_thread = event_loop_thread
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
@@ -413,7 +418,7 @@ class AppSession:
     ) -> None:
         """Handle a ScriptRunner event.
 
-        This function must only be called on the main thread.
+        This function must only be called on our eventloop thread.
 
         Parameters
         ----------
@@ -443,8 +448,8 @@ class AppSession:
         """
 
         assert (
-            threading.main_thread() == threading.current_thread()
-        ), "This function must only be called on the main thread"
+            self._event_loop_thread == threading.current_thread()
+        ), "This function must only be called on the eventloop thread"
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.
