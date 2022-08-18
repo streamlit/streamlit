@@ -70,6 +70,8 @@ jobs:
           echo "Specs tested in this job:"
           echo "${js_specs[@]:${startIndex}:${interval}}"
           scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
+        shell: bash -iluo pipefail {0}
+        # different shell config needed - the e flag causes 1st batch to fail every time
       - name: Store Videos
         uses: actions/upload-artifact@v3
         if: always()
