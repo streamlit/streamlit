@@ -11,8 +11,9 @@ runs:
     - if: steps.cache-pre-commit.outputs.cache-hit != 'true'
       name: Install pre-commit
       run: |
-        sudo pre-commit install-hooks
-      shell: bash -ileo pipefail {0}
+        pip install pre-commit
+        pre-commit install-hooks
+      shell: bash -ileo pipefail {0} {0}
     - name: Setup Node
       uses: actions/setup-node@v3
       with:
@@ -21,7 +22,7 @@ runs:
         cache-dependency-path: '**/yarn.lock'
     - name: Initialize React
       run: make react-init
-      shell: bash -ileo pipefail {0}
+      shell: bash -ileo pipefail {0} {0}
     - name: Install Dependencies
       run: |
         sudo apt update
@@ -29,15 +30,13 @@ runs:
         sudo apt install -y gnupg \
             unixodbc-dev \
             graphviz \
-            libgvc6 \
-            python3-pydot \
-            python3-pydot-ng
+            libgvc6
 
         echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
         sudo apt update
         sudo apt install -y protobuf-compiler
-      shell: bash -ileo pipefail {0}
+      shell: bash -ileo pipefail {0} {0}
     - name: Restore virtualenv from cache
       id: cache-virtualenv
       uses: actions/cache@v3
@@ -53,10 +52,12 @@ runs:
         make setup
         make pipenv-install
         deactivate
-
+      shell: bash -ileo pipefail {0} {0}
+    - name: Activate virtualenv
+      run: |
         echo "PATH=${PWD}/venv/bin:${PATH}" >> ${GITHUB_ENV}
-	      echo "VIRTUAL_ENV=${PWD}/venv" >> ${GITHUB_ENV}
-      shell: bash -ileo pipefail {0}
+        echo "VIRTUAL_ENV=${PWD}/venv" >> ${GITHUB_ENV}
+      shell: bash -ileo pipefail {0} {0}
     - name: Generate Protobufs
       run: make protobuf
-      shell: bash -ileo pipefail {0}
+      shell: bash -ileo pipefail {0} {0}
