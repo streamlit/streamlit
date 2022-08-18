@@ -1,6 +1,11 @@
 name: Cypress Tests
 
-on: [push, pull_request]
+on:
+  pull_request:
+    types: [opened]
+  push:
+    branches:
+      - '**'
 
 jobs:
   # interval of 6 files:
@@ -31,39 +36,33 @@ jobs:
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
+        with: 
+          persist-credentials: false
+          submodules: 'recursive'
       - name: Set up Python 3.7.12
         uses: actions/setup-python@v4
         with:
             python-version: "3.7.12"
-      - uses: ./.github/actions/update_submodules
-      - uses: ./.github/actions/pre_cache
-      - uses: ./.github/actions/pre_make
-      - uses: ./.github/actions/make_init
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
       - name: Run make develop
+        run: make develop
+      - name: Register Streamlit User & Mapbox Token
         run: |
-          source venv/bin/activate
-          make develop
-      - name: Register Mapbox Token
-        run: |
-          source venv/bin/activate
           if [ ! -d $HOME/.streamlit ] ; then
             mkdir $HOME/.streamlit
           fi
           MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]') \
           && echo '[mapbox]' >  ~/.streamlit/config.toml \
           && echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
-      - name: Register Streamlit User
-        run: |
-          source venv/bin/activate
+          
           echo '[general]' >  ~/.streamlit/credentials.toml
-          echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
+          echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml 
       - name: Install Cypress dependencies
         run: |
-          source venv/bin/activate
           sudo apt-get install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 jq curl
       - name: Cypress Tests
         run: |
-          source venv/bin/activate
           js_specs=(e2e/specs/*)
           # get how many specs to be split up into 21 runs
           (( interval=(${#js_specs[@]}+21-1)/21 ))
@@ -71,7 +70,6 @@ jobs:
           echo "Specs tested in this job:"
           echo "${js_specs[@]:${startIndex}:${interval}}"
           scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
-        shell: bash -l -u -o pipefail {0}
       - name: Store Videos
         uses: actions/upload-artifact@v3
         if: always()
