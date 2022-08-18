@@ -20,14 +20,14 @@ import os
 import subprocess
 import numpy as np
 
-from typing import Any, Dict, List, Mapping, TypeVar
+from typing import Any, Dict, Iterable, List, Mapping, TypeVar
 from typing_extensions import Final
 
 from streamlit import env_util
 
 # URL of Streamlit's help page.
 HELP_DOC: Final = "https://docs.streamlit.io/"
-FLOAT_EQUALITY_EPSILON: Final = 0.000000000005
+FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 
 
 def memoize(func):
@@ -111,7 +111,10 @@ def repr_(cls) -> str:
     return f"{classname}({args})"
 
 
-def index_(iterable, x) -> int:
+_Value = TypeVar("_Value")
+
+
+def index_(iterable: Iterable[_Value], x: _Value) -> int:
     """Return zero-based index of the first item whose value is equal to x.
     Raises a ValueError if there is no such item.
 
@@ -121,6 +124,7 @@ def index_(iterable, x) -> int:
     Parameters
     ----------
     iterable : list, tuple, numpy.ndarray, pandas.Series
+    x : Any
 
     Returns
     -------
@@ -128,9 +132,7 @@ def index_(iterable, x) -> int:
     """
 
     for i, value in enumerate(iterable):
-        # https://stackoverflow.com/questions/588004/is-floating-point-math-broken
-        # https://github.com/streamlit/streamlit/issues/4663
-        if isinstance(value, np.float64) or isinstance(value, float):
+        if isinstance(value, float) and isinstance(x, float):
             if abs(x - value) < FLOAT_EQUALITY_EPSILON:
                 return i
         elif x == value:
@@ -139,7 +141,6 @@ def index_(iterable, x) -> int:
 
 
 _Key = TypeVar("_Key", bound=str)
-_Value = TypeVar("_Value")
 
 
 def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> Dict[str, _Value]:
