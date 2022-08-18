@@ -14,9 +14,16 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Any, Callable, Optional, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Optional,
+    Sequence,
+    cast,
+)
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -26,18 +33,30 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key, V_co
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 
 @dataclass
-class SelectboxSerde:
-    options: OptionSequence
+class SelectboxSerde(Generic[V_co]):
+    options: Sequence[V_co]
     index: int
 
-    def deserialize(self, ui_value, widget_id=""):
+    def serialize(self, v: object) -> int:
+        if len(self.options) == 0:
+            return 0
+        return index_(self.options, v)
+
+    def deserialize(
+        self,
+        ui_value: Optional[int],
+        widget_id: str = "",
+    ) -> Optional[V_co]:
         idx = ui_value if ui_value is not None else self.index
 
         return (
@@ -46,17 +65,12 @@ class SelectboxSerde:
             else None
         )
 
-    def serialize(self, v):
-        if len(self.options) == 0:
-            return 0
-        return index_(self.options, v)
-
 
 class SelectboxMixin:
     def selectbox(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -66,7 +80,7 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> Any:
+    ) -> Optional[V_co]:
         """Display a select widget.
 
         Parameters
@@ -134,7 +148,7 @@ class SelectboxMixin:
     def _selectbox(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -145,7 +159,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Any:
+    ) -> Optional[V_co]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
@@ -195,6 +209,6 @@ class SelectboxMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

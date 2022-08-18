@@ -26,13 +26,20 @@ from typing import (
     Sequence,
     Union,
     TypeVar,
+    TYPE_CHECKING,
 )
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, to_key
+from streamlit.type_util import (
+    Key,
+    OptionSequence,
+    ensure_indexable,
+    is_type,
+    to_key,
+    V_co,
+)
 
 from streamlit.runtime.state import (
     register_widget,
@@ -42,6 +49,10 @@ from streamlit.runtime.state import (
 )
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 
 T = TypeVar("T")
 
@@ -103,24 +114,26 @@ class MultiSelectSerde:
     options: Sequence[Any]
     default_value: List[int]
 
+    def serialize(self, value: List[Any]) -> List[int]:
+        return _check_and_convert_to_indices(self.options, value)
+
     def deserialize(
-        self, ui_value: Optional[List[int]], widget_id: str = ""
+        self,
+        ui_value: Optional[List[int]],
+        widget_id: str = "",
     ) -> List[Any]:
         current_value: List[int] = (
             ui_value if ui_value is not None else self.default_value
         )
         return [self.options[i] for i in current_value]
 
-    def serialize(self, value: List[Any]) -> List[int]:
-        return _check_and_convert_to_indices(self.options, value)
-
 
 class MultiSelectMixin:
     @overload
-    def multiselect(
+    def multiselect(  # type: ignore[misc]
         self,
         label: str,
-        options: Sequence[T],
+        options: OptionSequence[Enum],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -130,14 +143,14 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> List[T]:
+    ) -> List[str]:
         ...
 
     @overload
     def multiselect(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -147,13 +160,13 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> List[Any]:
+    ) -> List[V_co]:
         ...
 
     def multiselect(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -163,7 +176,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> List[Any]:
+    ) -> Union[List[V_co], List[str]]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -236,7 +249,7 @@ class MultiSelectMixin:
     def _multiselect(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         default: Union[Iterable[Any], Any, None] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -247,7 +260,7 @@ class MultiSelectMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> List[Any]:
+    ) -> Union[List[V_co], List[str]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
@@ -291,6 +304,6 @@ class MultiSelectMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

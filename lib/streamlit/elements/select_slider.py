@@ -14,9 +14,22 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Any, Callable, Optional, cast
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    TYPE_CHECKING,
+    Union,
+    cast,
+)
 
-import streamlit
+from typing_extensions import TypeGuard
+
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -26,57 +39,66 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key, V_co
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+
+T = TypeVar("T")
+
+
+def _is_range_value(value: Union[T, Sequence[T]]) -> TypeGuard[Sequence[T]]:
+    return isinstance(value, (list, tuple))
+
 
 @dataclass
-class SelectSliderSerde:
-    options: OptionSequence
-    value: Any
+class SelectSliderSerde(Generic[V_co]):
+    options: Sequence[V_co]
+    value: List[int]
     is_range_value: bool
 
-    def deserialize(self, ui_value, widget_id=""):
+    def serialize(self, v: object) -> List[int]:
+        return self._as_index_list(v)
+
+    def deserialize(
+        self,
+        ui_value: Optional[List[int]],
+        widget_id: str = "",
+    ) -> Union[V_co, Tuple[V_co, V_co]]:
         if not ui_value:
             # Widget has not been used; fallback to the original value,
             ui_value = self.value
 
         # The widget always returns floats, so convert to ints before indexing
-        return_value = list(map(lambda x: self.options[int(x)], ui_value))  # type: ignore[no-any-return]
+        return_value: Tuple[V_co, V_co] = cast(
+            Tuple[V_co, V_co],
+            tuple(map(lambda x: self.options[int(x)], ui_value)),
+        )
 
         # If the original value was a list/tuple, so will be the output (and vice versa)
-        return tuple(return_value) if self.is_range_value else return_value[0]
+        return return_value if self.is_range_value else return_value[0]
 
-    def serialize(self, v):
-        return self.as_index_list(v)
-
-    def as_index_list(self, v):
-        is_range_value = isinstance(v, (list, tuple))
-        if is_range_value:
+    def _as_index_list(self, v: object) -> List[int]:
+        if _is_range_value(v):
             slider_value = [index_(self.options, val) for val in v]
             start, end = slider_value
             if start > end:
                 slider_value = [end, start]
             return slider_value
         else:
-            # Simplify future logic by always making value a list
-            try:
-                return [index_(self.options, v)]
-            except ValueError:
-                if self.value is not None:
-                    raise
-
-                return [0]
+            return [index_(self.options, v)]
 
 
 class SelectSliderMixin:
     def select_slider(
         self,
         label: str,
-        options: OptionSequence = (),
-        value: Any = None,
+        options: OptionSequence[V_co] = (),
+        value: object = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -85,7 +107,7 @@ class SelectSliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> Any:
+    ) -> Union[V_co, Tuple[V_co, V_co]]:
         """
         Display a slider widget to select items from a list.
 
@@ -176,8 +198,8 @@ class SelectSliderMixin:
     def _select_slider(
         self,
         label: str,
-        options: OptionSequence = (),
-        value: Any = None,
+        options: OptionSequence[V_co] = (),
+        value: object = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -186,7 +208,7 @@ class SelectSliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Any:
+    ) -> Union[V_co, Tuple[V_co, V_co]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -196,11 +218,8 @@ class SelectSliderMixin:
         if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
-        is_range_value = isinstance(value, (list, tuple))
-
-        def as_index_list(v):
-            is_range_value = isinstance(v, (list, tuple))
-            if is_range_value:
+        def as_index_list(v: object) -> List[int]:
+            if _is_range_value(v):
                 slider_value = [index_(opt, val) for val in v]
                 start, end = slider_value
                 if start > end:
@@ -232,7 +251,7 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        serde = SelectSliderSerde(opt, slider_value, is_range_value)
+        serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
 
         widget_state = register_widget(
             "slider",
@@ -257,6 +276,6 @@ class SelectSliderMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
