@@ -132,8 +132,6 @@ def index_(iterable: Iterable[_Value], x: _Value) -> int:
     """
 
     for i, value in enumerate(iterable):
-        # https://stackoverflow.com/questions/588004/is-floating-point-math-broken
-        # https://github.com/streamlit/streamlit/issues/4663
         if isinstance(value, float) and isinstance(x, float):
             if abs(x - value) < FLOAT_EQUALITY_EPSILON:
                 return i

@@ -14,7 +14,7 @@
 
 import streamlit as st
 import numpy as np
-from typing import Any, cast
+from typing import Any
 from streamlit.hello.utils import show_code
 
 
@@ -50,7 +50,7 @@ def animation_demo() -> None:
         M: Any = np.full((n, m), True, dtype=bool)
         N = np.zeros((n, m))
 
-        for i in range(cast(int, iterations)):
+        for i in range(iterations):
             Z[M] = Z[M] * Z[M] + C[M]
             M[np.abs(Z) > 2] = False
             N[M] = i

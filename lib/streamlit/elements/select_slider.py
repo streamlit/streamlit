@@ -25,7 +25,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key, V_co
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -35,7 +35,7 @@ class SelectSliderMixin:
     def select_slider(
         self,
         label: str,
-        options: OptionSequence = (),
+        options: OptionSequence[V_co] = (),
         value: Any = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -136,7 +136,7 @@ class SelectSliderMixin:
     def _select_slider(
         self,
         label: str,
-        options: OptionSequence = (),
+        options: OptionSequence[V_co] = (),
         value: Any = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -198,7 +198,7 @@ class SelectSliderMixin:
                 ui_value = slider_value
 
             # The widget always returns floats, so convert to ints before indexing
-            return_value = list(map(lambda x: opt[int(x)], ui_value))  # type: ignore[no-any-return]
+            return_value = list(map(lambda x: opt[int(x)], ui_value))
 
             # If the original value was a list/tuple, so will be the output (and vice versa)
             return tuple(return_value) if is_range_value else return_value[0]

@@ -31,7 +31,14 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, to_key
+from streamlit.type_util import (
+    Key,
+    OptionSequence,
+    ensure_indexable,
+    is_type,
+    to_key,
+    V_co,
+)
 
 from streamlit.runtime.state import (
     register_widget,
@@ -47,10 +54,10 @@ T = TypeVar("T")
 
 class MultiSelectMixin:
     @overload
-    def multiselect(
+    def multiselect(  # type: ignore[misc]
         self,
         label: str,
-        options: Sequence[T],
+        options: OptionSequence[Enum],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -60,14 +67,14 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> List[T]:
+    ) -> List[str]:
         ...
 
     @overload
     def multiselect(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -77,13 +84,13 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> List[Any]:
+    ) -> List[V_co]:
         ...
 
     def multiselect(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -93,7 +100,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> List[Any]:
+    ) -> Union[List[V_co], List[str]]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -166,7 +173,7 @@ class MultiSelectMixin:
     def _multiselect(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         default: Union[Iterable[Any], Any, None] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -177,7 +184,7 @@ class MultiSelectMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> List[Any]:
+    ) -> Union[List[str], List[V_co]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)

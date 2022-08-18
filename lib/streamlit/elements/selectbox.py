@@ -13,8 +13,16 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, TypeVar, cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Optional,
+    Sequence,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
@@ -25,7 +33,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key, V_co
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -33,15 +41,12 @@ from .utils import check_callback_rules, check_session_state_rules
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-T = TypeVar("T")
-
 
 class SelectboxMixin:
-    @overload
     def selectbox(
         self,
         label: str,
-        options: Sequence[T],
+        options: OptionSequence[V_co],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -51,40 +56,7 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> Optional[T]:
-        ...
-
-    @overload
-    def selectbox(
-        self,
-        label: str,
-        options: OptionSequence,
-        index: int = 0,
-        format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        *,  # keyword-only arguments:
-        disabled: bool = False,
-    ) -> Optional[Any]:
-        ...
-
-    def selectbox(
-        self,
-        label: str,
-        options: OptionSequence,
-        index: int = 0,
-        format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        *,  # keyword-only arguments:
-        disabled: bool = False,
-    ) -> Optional[Any]:
+    ) -> Optional[V_co]:
         """Display a select widget.
 
         Parameters
@@ -152,7 +124,7 @@ class SelectboxMixin:
     def _selectbox(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -163,7 +135,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Optional[Any]:
+    ) -> Optional[V_co]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)

@@ -25,7 +25,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key, V_co
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -35,7 +35,7 @@ class RadioMixin:
     def radio(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -125,7 +125,7 @@ class RadioMixin:
     def _radio(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[V_co],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,

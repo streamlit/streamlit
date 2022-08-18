@@ -13,14 +13,20 @@
 # limitations under the License.
 
 from datetime import date, time, datetime, timedelta, timezone
-from typing import Sequence
-from typing import Tuple
-from typing import TypeVar
-from typing import Union
+from typing import (
+    Any,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    TYPE_CHECKING,
+    TypeVar,
+    cast,
+)
 
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
-from typing import Any, List, cast, Optional, TYPE_CHECKING
 from typing_extensions import TypeAlias
 from textwrap import dedent
 
@@ -89,7 +95,12 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> SliderReturn:
+        # TODO(harahu): Add overload definitions. The return type is
+        #  `SliderReturn`, in reality, but the return type is left as `Any`
+        #  until we have proper overload definitions in place. Otherwise the
+        #  user would have to cast the return value more often than not, which
+        #  can be annoying.
+    ) -> Any:
         """Display a slider widget.
 
         This supports int, float, date, time, and datetime types.

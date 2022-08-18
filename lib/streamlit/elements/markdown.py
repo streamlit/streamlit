@@ -14,10 +14,9 @@
 
 from typing import cast, Optional, TYPE_CHECKING, Union
 
-from streamlit import type_util
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.string_util import clean_text
-from ..type_util import SupportsStr
+from streamlit.type_util import SupportsStr, is_sympy_expession
 
 if TYPE_CHECKING:
     import sympy
@@ -81,7 +80,9 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
-    def code(self, body: SupportsStr, language: Optional[str] = "python") -> "DeltaGenerator":
+    def code(
+        self, body: SupportsStr, language: Optional[str] = "python"
+    ) -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -111,7 +112,9 @@ class MarkdownMixin:
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
-    def caption(self, body: SupportsStr, unsafe_allow_html: bool = False) -> "DeltaGenerator":
+    def caption(
+        self, body: SupportsStr, unsafe_allow_html: bool = False
+    ) -> "DeltaGenerator":
         """Display text in small font.
 
         This should be used for captions, asides, footnotes, sidenotes, and
@@ -179,7 +182,7 @@ class MarkdownMixin:
         ...     ''')
 
         """
-        if type_util.is_sympy_expession(body):
+        if is_sympy_expession(body):
             import sympy
 
             body = sympy.latex(body)
