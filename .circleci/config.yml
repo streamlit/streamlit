@@ -552,7 +552,7 @@ jobs:
 
       - save_cache:
           name: Save nvm, pre-commit cache and node_modules to cache
-          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}-{{ checksum "~/repo/.pre-commit-config.yaml" }}
+          key: v13-nvm_node_modules-{{ checksum "~/node_cache_key.md5" }}-{{ checksum "~/repo/.pre-commit-config.yaml" }}
           paths:
             - ~/.nvm
             - ~/.cache
@@ -904,7 +904,7 @@ jobs:
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          key: v13-nvm_node_modules-{{ checksum "~/node_cache_key.md5" }}
           paths:
             - ~/.nvm
             - ~/.cache
