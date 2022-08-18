@@ -14,7 +14,6 @@
 
 import asyncio
 import sys
-import threading
 import time
 import traceback
 from asyncio import Future
