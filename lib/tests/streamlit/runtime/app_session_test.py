@@ -236,13 +236,12 @@ class AppSessionTest(unittest.TestCase):
         current ScriptRunner, we should silently ignore them.
         """
         session = _create_test_session()
+        session._create_scriptrunner(initial_rerun_data=RerunData())
 
         with patch(
             "streamlit.runtime.app_session.asyncio.get_running_loop",
             return_value=session._event_loop,
         ):
-            session._create_scriptrunner(initial_rerun_data=RerunData())
-
             session._handle_scriptrunner_event_on_event_loop(
                 sender=session._scriptrunner,
                 event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
