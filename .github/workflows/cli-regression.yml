@@ -1,6 +1,11 @@
 name: CLI Regression Test
 
-on: [push, pull_request]
+on:
+  pull_request:
+    types: [opened]
+  push:
+    branches:
+      - '**'
 
 jobs:
   cli-regression-test:
@@ -17,22 +22,21 @@ jobs:
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
+        with: 
+          persist-credentials: false
+          submodules: 'recursive'
       - name: Set up Python 3.9.7
         uses: actions/setup-python@v4
         with:
           python-version: "3.9.7"
-      - uses: ./.github/actions/update_submodules
-      - uses: ./.github/actions/pre_cache
-      - uses: ./.github/actions/pre_make
-      - uses: ./.github/actions/make_init
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
       - name: Build Package - Fast
         timeout-minutes: 120
         run: |
-          source venv/bin/activate
-          sudo apt-get install rsync
+          sudo apt install rsync
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
       - name: Run CLI regression tests
         run: |
-          source venv/bin/activate
           export SKIP_VERSION_CHECK=true
           make cli-regression-tests
