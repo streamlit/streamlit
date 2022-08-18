@@ -204,6 +204,22 @@ class NumberInput extends React.PureComponent<Props, State> {
     if (this.state.dirty) {
       this.commitWidgetValue({ fromUi: true })
     }
+
+    const node = this.inputRef.current
+    const nodeContainer = node?.parentElement?.parentElement?.parentElement
+
+    if (nodeContainer) {
+      nodeContainer.classList.remove("focused")
+    }
+  }
+
+  private onFocus = (): void => {
+    const node = this.inputRef.current
+    const nodeContainer = node?.parentElement?.parentElement?.parentElement
+
+    if (nodeContainer) {
+      nodeContainer.classList.add("focused")
+    }
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -329,6 +345,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             inputRef={this.inputRef}
             value={formattedValue}
             onBlur={this.onBlur}
+            onFocus={this.onFocus}
             onChange={this.onChange}
             onKeyPress={this.onKeyPress}
             onKeyDown={this.onKeyDown}
@@ -341,7 +358,7 @@ class NumberInput extends React.PureComponent<Props, State> {
                   max: this.getMax(),
                 },
                 style: {
-                  lineHeight: "1.5",
+                  lineHeight: "1.4",
                   // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                   paddingRight: ".5rem",
                   paddingLeft: ".5rem",
