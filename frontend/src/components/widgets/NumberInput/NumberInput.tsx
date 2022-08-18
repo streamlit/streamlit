@@ -62,6 +62,11 @@ export interface State {
    * The value with applied format that is going to be shown to the user
    */
   formattedValue: string
+
+  /**
+   * True if the input is selected
+   */
+  isFocused: boolean
 }
 
 class NumberInput extends React.PureComponent<Props, State> {
@@ -76,6 +81,7 @@ class NumberInput extends React.PureComponent<Props, State> {
       dirty: false,
       value: this.initialValue,
       formattedValue: this.formatValue(this.initialValue),
+      isFocused: false,
     }
   }
 
@@ -205,21 +211,11 @@ class NumberInput extends React.PureComponent<Props, State> {
       this.commitWidgetValue({ fromUi: true })
     }
 
-    const node = this.inputRef.current
-    const nodeContainer = node?.parentElement?.parentElement?.parentElement
-
-    if (nodeContainer) {
-      nodeContainer.classList.remove("focused")
-    }
+    this.setState({ isFocused: false })
   }
 
   private onFocus = (): void => {
-    const node = this.inputRef.current
-    const nodeContainer = node?.parentElement?.parentElement?.parentElement
-
-    if (nodeContainer) {
-      nodeContainer.classList.add("focused")
-    }
+    this.setState({ isFocused: true })
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -313,7 +309,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { element, width, disabled, widgetMgr } = this.props
-    const { formattedValue, dirty } = this.state
+    const { formattedValue, dirty, isFocused } = this.state
 
     const style = { width }
 
@@ -339,7 +335,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <StyledInputContainer>
+        <StyledInputContainer className={isFocused ? "focused" : ""}>
           <UIInput
             type="number"
             inputRef={this.inputRef}
