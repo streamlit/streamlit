@@ -1,9 +1,8 @@
-name: "Setup & Initialize Virtual Env"
+name: "Setup Virtual Env"
 
 inputs:
   use_cached_venv:
     description: 'Use Cached Virtual Env'
-    required: true
     default: 'true'
 
 runs:
