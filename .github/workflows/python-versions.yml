@@ -40,8 +40,7 @@ jobs:
         run: make develop
       - name: Run Linters
         run: |
-          # Run eslint as a standalone command to generate the test report.
-          PRE_COMMIT_NO_CONCURRENCY=true DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+          PRE_COMMIT_NO_CONCURRENCY=true pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
       - name: Run Type Checkers
         run: scripts/mypy --report
       - name: Run Python Tests
