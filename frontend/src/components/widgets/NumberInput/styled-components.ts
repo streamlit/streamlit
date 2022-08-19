@@ -47,9 +47,9 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledInputControls = styled.div({
-  height: "38.39px",
   display: "flex",
   flexDirection: "row",
+  alignSelf: "stretch",
 })
 
 export const StyledInputControl = styled.button(({ theme }) => ({
