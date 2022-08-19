@@ -401,7 +401,7 @@ class AppSession:
         """Called when our ScriptRunner emits an event.
 
         This is generally called from the sender ScriptRunner's script thread.
-        We forward the event on to _handle_scriptrunner_event_on_main_thread,
+        We forward the event on to _handle_scriptrunner_event_on_event_loop,
         which will be called on the main thread.
         """
         self._event_loop.call_soon_threadsafe(

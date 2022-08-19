@@ -268,13 +268,17 @@ class AppSessionTest(unittest.TestCase):
         session._create_scriptrunner(initial_rerun_data=RerunData())
         session._debug_last_backmsg_id = "some_backmsg_id"
 
-        session._handle_scriptrunner_event_on_main_thread(
-            sender=session._scriptrunner,
-            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            forward_msg=ForwardMsg(),
-        )
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=session._scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                forward_msg=ForwardMsg(),
+            )
 
-        self.assertIsNone(session._debug_last_backmsg_id)
+            self.assertIsNone(session._debug_last_backmsg_id)
 
     def test_passes_client_state_on_run_on_save(self):
         session = _create_test_session()
