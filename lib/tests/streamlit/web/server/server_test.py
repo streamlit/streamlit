@@ -72,7 +72,7 @@ class ServerTest(ServerTestCase):
     async def test_start_stop(self):
         """Test that we can start and stop the server."""
         with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
+            await self.server.start()
             self.assertEqual(
                 RuntimeState.NO_SESSIONS_CONNECTED, self.server._runtime._state
             )
@@ -93,7 +93,7 @@ class ServerTest(ServerTestCase):
     async def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
         with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
+            await self.server.start()
 
             self.assertFalse(self.server.browser_is_connected)
 
@@ -119,7 +119,7 @@ class ServerTest(ServerTestCase):
     async def test_multiple_connections(self):
         """Test multiple websockets can connect simultaneously."""
         with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
+            await self.server.start()
 
             self.assertFalse(self.server.browser_is_connected)
 
@@ -153,7 +153,7 @@ class ServerTest(ServerTestCase):
     async def test_websocket_compression(self):
         with _patch_local_sources_watcher(), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", True, "test")
-            await self.start_server_loop()
+            await self.server.start()
 
             # Connect to the server, and explicitly request compression.
             ws_client = await tornado.websocket.websocket_connect(
@@ -169,7 +169,7 @@ class ServerTest(ServerTestCase):
     async def test_websocket_compression_disabled(self):
         with _patch_local_sources_watcher(), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", False, "test")
-            await self.start_server_loop()
+            await self.server.start()
 
             # Connect to the server, and explicitly request compression.
             ws_client = await tornado.websocket.websocket_connect(
@@ -186,7 +186,7 @@ class ServerTest(ServerTestCase):
         We should gracefully handle the error by cleaning up the session.
         """
         with _patch_local_sources_watcher(), self._patch_app_session():
-            await self.start_server_loop()
+            await self.server.start()
             await self.ws_connect()
 
             # Get the server's socket and session for this client

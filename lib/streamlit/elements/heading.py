@@ -15,15 +15,16 @@
 from typing import cast, Optional, TYPE_CHECKING
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.string_util import clean_text
+from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
-    import sympy
-
     from streamlit.delta_generator import DeltaGenerator
 
 
 class HeadingMixin:
-    def header(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
+    def header(
+        self, body: SupportsStr, anchor: Optional[str] = None
+    ) -> "DeltaGenerator":
         """Display text in header formatting.
 
         Parameters
@@ -47,7 +48,9 @@ class HeadingMixin:
         header_proto.tag = "h2"
         return self.dg._enqueue("heading", header_proto)
 
-    def subheader(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
+    def subheader(
+        self, body: SupportsStr, anchor: Optional[str] = None
+    ) -> "DeltaGenerator":
         """Display text in subheader formatting.
 
         Parameters
@@ -72,7 +75,9 @@ class HeadingMixin:
 
         return self.dg._enqueue("heading", subheader_proto)
 
-    def title(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
+    def title(
+        self, body: SupportsStr, anchor: Optional[str] = None
+    ) -> "DeltaGenerator":
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not

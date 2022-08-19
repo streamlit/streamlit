@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import urllib.parse
-from asyncio import Future
 from unittest import mock
 
 import tornado.testing
@@ -21,8 +20,8 @@ import tornado.web
 import tornado.websocket
 from tornado.websocket import WebSocketClientConnection
 
-from streamlit.runtime.app_session import AppSession
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.app_session import AppSession
 from streamlit.web.server import Server
 
 
@@ -46,15 +45,6 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         )
         app = self.server._create_app()
         return app
-
-    async def start_server_loop(self) -> None:
-        """Starts the server's loop coroutine."""
-        server_started = Future()
-        self.io_loop.spawn_callback(
-            self.server._runtime._loop_coroutine,
-            lambda: server_started.set_result(None),
-        )
-        await server_started
 
     def get_ws_url(self, path):
         """Return a ws:// URL with the given path for our test server."""

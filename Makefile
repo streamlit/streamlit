@@ -55,8 +55,11 @@ pipenv-dev-install: lib/Pipfile
 	# "more deterministic", per pipenv's documentation.
 	# (Omitting this flag is causing incorrect dependency version
 	# resolution on CircleCI.)
+	# The lockfile is created to force resolution of all dependencies at once,
+	# but we don't actually want to use the lockfile.
 	cd lib; \
-		pipenv install --dev --skip-lock --sequential
+		rm Pipfile.lock; \
+		pipenv install --dev --sequential
 
 SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
 .PHONY: py-test-install
