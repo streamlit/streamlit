@@ -1,0 +1,87 @@
+name: "Setup Virtual Env"
+
+inputs:
+  use_cached_venv:
+    description: 'Use Cached Virtual Env'
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Restore pre-commit cache
+      id: cache-pre-commit
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pre-commit
+        key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
+    - name: Install pre-commit
+      run: |
+        pip install pre-commit
+        pre-commit install-hooks
+      shell: bash -ileo pipefail {0}
+    - name: Setup Node
+      uses: actions/setup-node@v3
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'yarn'
+        cache-dependency-path: '**/yarn.lock'
+    - name: Initialize React
+      run: make react-init
+      shell: bash -ileo pipefail {0}
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        # protobuf, pyodbc, dot, & graphviz dependencies
+        sudo apt install -y gnupg \
+            unixodbc-dev \
+            graphviz \
+            libgvc6
+
+        echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
+        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
+        sudo apt update
+        sudo apt install -y protobuf-compiler
+      shell: bash -ileo pipefail {0}
+    # Combine hashes of the Python interpreter, Pipfile, and today's
+    # date into a file whose hash will key the Python virtualenv.
+    #
+    # This means that our virtualenv cache will expire each day. We do
+    # this because we are not using a lockfile to pin dependencies -
+    # instead, each time Github Actions rebuilds the virtualenv, it uses the
+    # latest compatible version of each dependency (which mirrors what
+    # happens when a user installs Streamlit locally). So we expire our
+    # virtualenv cache daily to prevent it from getting far out of sync
+    # with what a fresh Streamlit installation would look like.
+    - if: inputs.use_cached_venv == 'true'
+      name: Create Python environment cache key
+      run: |
+        md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/Pipfile >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/test-requirements-with-tensorflow.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
+        date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
+      shell: bash -ileo pipefail {0}
+    - if: inputs.use_cached_venv == 'true'
+      name: Restore virtualenv from cache
+      id: cache-virtualenv
+      uses: actions/cache@v3
+      with:
+        path: venv
+        key: v1-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
+    - if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+      name: Create Virtual Env
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        make setup
+        make pipenv-install
+        deactivate
+      shell: bash -ileo pipefail {0}
+    - name: Activate virtualenv
+      run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
+      shell: bash -ileo pipefail {0}
+    - name: Generate Protobufs
+      run: make protobuf
+      shell: bash -ileo pipefail {0}
