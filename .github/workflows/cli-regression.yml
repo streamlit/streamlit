@@ -9,7 +9,6 @@ on:
 
 jobs:
   cli-regression-test:
-
     runs-on: ubuntu-latest
 
     permissions:

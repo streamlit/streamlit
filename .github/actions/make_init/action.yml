@@ -14,8 +14,7 @@ runs:
       with:
         path: ~/.cache/pre-commit
         key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
-    - if: steps.cache-pre-commit.outputs.cache-hit != 'true'
-      name: Install pre-commit
+    - name: Install pre-commit
       run: |
         pip install pre-commit
         pre-commit install-hooks
