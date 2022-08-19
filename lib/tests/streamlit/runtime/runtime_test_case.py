@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import asyncio
-from asyncio import Future
 from unittest import mock
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -36,17 +35,6 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
         if self.runtime.state != RuntimeState.INITIAL:
             self.runtime.stop()
             await self.runtime.stopped
-
-    async def start_runtime_loop(self) -> None:
-        """Start the Runtime loop. Call this before calling any other Runtime functions."""
-        runtime_started = Future()
-        on_started = lambda: runtime_started.set_result(None)
-
-        # Per the create_task docs, we need to retain a reference to this
-        # task. https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
-        self._runtime_task = asyncio.create_task(self.runtime.run(on_started))
-
-        await runtime_started
 
     @staticmethod
     async def tick_runtime_loop() -> None:

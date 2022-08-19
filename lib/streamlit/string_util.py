@@ -31,7 +31,7 @@ ESCAPED_EMOJI = [re.escape(e) for e in sorted(ALL_EMOJIS, reverse=True)]
 EMOJI_EXTRACTION_REGEX = re.compile(f"^({'|'.join(ESCAPED_EMOJI)})[_ -]*(.*)")
 
 
-def decode_ascii(string):
+def decode_ascii(string: bytes) -> str:
     """Decodes a string as ascii."""
     return string.decode("ascii")
 

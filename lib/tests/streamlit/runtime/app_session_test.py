@@ -238,22 +238,47 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         session._create_scriptrunner(initial_rerun_data=RerunData())
 
-        session._handle_scriptrunner_event_on_main_thread(
-            sender=session._scriptrunner,
-            event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
-            forward_msg=ForwardMsg(),
-        )
-        mock_enqueue.assert_called_once_with(ForwardMsg())
+        # Our test AppSession is created with a mock EventLoop, so
+        # we pretend that this function is called on that same mock EventLoop.
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=session._scriptrunner,
+                event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+                forward_msg=ForwardMsg(),
+            )
+            mock_enqueue.assert_called_once_with(ForwardMsg())
 
-        mock_enqueue.reset_mock()
+            mock_enqueue.reset_mock()
 
-        non_current_scriptrunner = MagicMock(spec=ScriptRunner)
-        session._handle_scriptrunner_event_on_main_thread(
-            sender=non_current_scriptrunner,
-            event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
-            forward_msg=ForwardMsg(),
-        )
-        mock_enqueue.assert_not_called()
+            non_current_scriptrunner = MagicMock(spec=ScriptRunner)
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=non_current_scriptrunner,
+                event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+                forward_msg=ForwardMsg(),
+            )
+            mock_enqueue.assert_not_called()
+
+    @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
+    @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
+    def test_resets_debug_last_backmsg_id_on_script_finished(self):
+        session = _create_test_session()
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._debug_last_backmsg_id = "some_backmsg_id"
+
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=session._scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                forward_msg=ForwardMsg(),
+            )
+
+            self.assertIsNone(session._debug_last_backmsg_id)
 
     def test_passes_client_state_on_run_on_save(self):
         session = _create_test_session()
@@ -314,6 +339,15 @@ class AppSessionTest(unittest.TestCase):
         patched_on_pages_changed.disconnect.assert_called_once_with(
             session._on_pages_changed
         )
+
+    def test_tags_fwd_msgs_with_last_backmsg_id_if_set(self):
+        session = _create_test_session()
+        session._debug_last_backmsg_id = "some backmsg id"
+
+        msg = ForwardMsg()
+        session._enqueue_forward_msg(msg)
+
+        self.assertEqual(msg.debug_last_backmsg_id, "some backmsg id")
 
 
 def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
@@ -420,18 +454,15 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         add_script_run_ctx(ctx=orig_ctx)
 
-    async def test_events_handled_on_main_thread(self):
+    async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
-        session = _create_test_session(asyncio.get_running_loop())
+        event_loop = asyncio.get_running_loop()
+        session = _create_test_session(event_loop)
 
-        # Patch the session's "_handle_scriptrunner_event_on_main_thread"
-        # to test that the function is called, and that it's only called
-        # on the main thread.
-        def assert_is_on_main_thread(*args, **kwargs):
-            self.assertEqual(threading.main_thread(), threading.current_thread())
-
-        mock_handle_event = MagicMock(side_effect=assert_is_on_main_thread)
-        session._handle_scriptrunner_event_on_main_thread = mock_handle_event
+        handle_event_spy = MagicMock(
+            side_effect=session._handle_scriptrunner_event_on_event_loop
+        )
+        session._handle_scriptrunner_event_on_event_loop = handle_event_spy
 
         # Send a ScriptRunner event from another thread
         thread = threading.Thread(
@@ -442,15 +473,32 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         thread.start()
         thread.join()
 
-        # _handle_scriptrunner_event_on_main_thread won't have been called
+        # _handle_scriptrunner_event_on_event_loop won't have been called
         # yet, because we haven't yielded the eventloop.
-        mock_handle_event.assert_not_called()
+        handle_event_spy.assert_not_called()
 
         # Yield to let the AppSession's callbacks run.
-        # _handle_scriptrunner_event_on_main_thread will be called here.
+        # _handle_scriptrunner_event_on_event_loop will be called here.
         await asyncio.sleep(0)
 
-        mock_handle_event.assert_called_once()
+        handle_event_spy.assert_called_once()
+
+    async def test_event_handler_asserts_if_called_off_event_loop(self):
+        """AppSession._handle_scriptrunner_event_on_event_loop will assert
+        if it's called from another event loop (or no event loop).
+        """
+        event_loop = asyncio.get_running_loop()
+        session = _create_test_session(event_loop)
+
+        # Pretend we're calling this function from a thread with another event_loop.
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=MagicMock(),
+        ):
+            with self.assertRaises(AssertionError):
+                session._handle_scriptrunner_event_on_event_loop(
+                    sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+                )
 
     @patch(
         "streamlit.runtime.app_session.config.get_options_for_section",
@@ -543,6 +591,15 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
             handle_clear_cache_request.assert_called_once()
             handle_backmsg_exception.assert_called_once_with(error)
+
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner", MagicMock())
+    async def test_handle_backmsg_handles_debug_ids(self):
+        session = _create_test_session(asyncio.get_running_loop())
+        msg = BackMsg(
+            rerun_script=session._client_state, debug_last_backmsg_id="some backmsg"
+        )
+        session.handle_backmsg(msg)
+        self.assertEqual(session._debug_last_backmsg_id, "some backmsg")
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):

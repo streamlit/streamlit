@@ -51,6 +51,7 @@ describe("Video Element", () => {
     expect(videoWrapper.prop("className")).toContain("stVideo")
     expect(videoWrapper.prop("style")).toStrictEqual({
       width: props.width,
+      height: 528,
     })
   })
 

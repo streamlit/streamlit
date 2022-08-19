@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import sys
-import threading
 import uuid
 from asyncio import AbstractEventLoop
 from enum import Enum
@@ -89,7 +89,7 @@ class AppSession:
         Parameters
         ----------
         event_loop : AbstractEventLoop
-            The asyncio EventLoop that we're running within.
+            The asyncio EventLoop that we're running on.
 
         session_data : SessionData
             Object storing parameters related to running a script
@@ -153,6 +153,8 @@ class AppSession:
         self._session_state = SessionState()
         self._user_info = user_info
 
+        self._debug_last_backmsg_id: Optional[str] = None
+
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self) -> List[ForwardMsg]:
@@ -213,6 +215,9 @@ class AppSession:
         if not config.get_option("client.displayEnabled"):
             return
 
+        if self._debug_last_backmsg_id:
+            msg.debug_last_backmsg_id = self._debug_last_backmsg_id
+
         self._session_data.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
@@ -223,6 +228,9 @@ class AppSession:
             msg_type = msg.WhichOneof("type")
 
             if msg_type == "rerun_script":
+                if msg.debug_last_backmsg_id:
+                    self._debug_last_backmsg_id = msg.debug_last_backmsg_id
+
                 self._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._handle_git_information_request()
@@ -393,16 +401,16 @@ class AppSession:
         """Called when our ScriptRunner emits an event.
 
         This is generally called from the sender ScriptRunner's script thread.
-        We forward the event on to _handle_scriptrunner_event_on_main_thread,
+        We forward the event on to _handle_scriptrunner_event_on_event_loop,
         which will be called on the main thread.
         """
         self._event_loop.call_soon_threadsafe(
-            lambda: self._handle_scriptrunner_event_on_main_thread(
+            lambda: self._handle_scriptrunner_event_on_event_loop(
                 sender, event, forward_msg, exception, client_state, page_script_hash
             )
         )
 
-    def _handle_scriptrunner_event_on_main_thread(
+    def _handle_scriptrunner_event_on_event_loop(
         self,
         sender: Optional[ScriptRunner],
         event: ScriptRunnerEvent,
@@ -413,7 +421,7 @@ class AppSession:
     ) -> None:
         """Handle a ScriptRunner event.
 
-        This function must only be called on the main thread.
+        This function must only be called on our eventloop thread.
 
         Parameters
         ----------
@@ -443,8 +451,8 @@ class AppSession:
         """
 
         assert (
-            threading.main_thread() == threading.current_thread()
-        ), "This function must only be called on the main thread"
+            self._event_loop == asyncio.get_running_loop()
+        ), "This function must only be called on the eventloop thread"
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.
@@ -486,6 +494,8 @@ class AppSession:
                 else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
             )
             self._enqueue_forward_msg(script_finished_msg)
+
+            self._debug_last_backmsg_id = None
 
             if script_succeeded:
                 # The script completed successfully: update our
