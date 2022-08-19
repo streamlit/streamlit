@@ -27,5 +27,5 @@ export {
 export { ArrowTable } from "./ArrowTable";
 export { Streamlit } from "./streamlit";
 export type ComponentProps = ComponentProps_;
-export type RenderData = RenderData_;
+export type RenderData<ArgType=any> = RenderData_<ArgType>;
 export type Theme = Theme_;
