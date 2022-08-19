@@ -54,5 +54,10 @@ message BackMsg {
     bool load_git_info = 12;
   }
 
+  // An ID used to associate this BackMsg with the corresponding ForwardMsgs
+  // that are sent to the client due to it. As its name suggests, this field
+  // should only be used for testing.
+  string debug_last_backmsg_id = 13;
+
   reserved 1, 2, 3, 4, 8, 9;
 }

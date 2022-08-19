@@ -362,9 +362,18 @@ def run(
     # Create the server. It won't start running yet.
     server = Server(main_script_path, command_line)
 
-    # Install a signal handler that will shut down the server
-    # and close all our threads
-    _set_up_signal_handler(server)
+    async def run_server() -> None:
+        # Start the server
+        await server.start()
+        _on_server_start(server)
+
+        # Install a signal handler that will shut down the server
+        # and close all our threads
+        _set_up_signal_handler(server)
+
+        # Wait until `Server.stop` is called, either by our signal handler, or
+        # by a debug websocket session.
+        await server.stopped
 
     # Run the server. This function will not return until the server is shut down.
-    asyncio.run(server.start(_on_server_start))
+    asyncio.run(run_server())

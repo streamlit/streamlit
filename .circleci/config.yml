@@ -58,11 +58,18 @@ commands:
             md5sum lib/test-requirements-with-tensorflow.txt >> ~/python_cache_key.md5
             md5sum lib/setup.py >> ~/python_cache_key.md5
             date +%F >> ~/python_cache_key.md5
+            # Cache version that can be used to bust the cache before it
+            # naturally resets daily. We maintain the convention that the
+            # version number is always incremented by 1, but technically it can
+            # be reset each day when the previous day's cache expires.
+            echo v1 >> ~/python_cache_key.md5
 
-      - run: &create_yarn_cache_key
-          name: Create Yarn cache key
+      - run: &create_node_cache_key
+          name: Create Node cache key
           command: |
-            md5sum frontend/yarn.lock > ~/yarn.lock.md5
+            md5sum frontend/yarn.lock > ~/node_cache_key.md5
+            md5sum $(command -v node) >> ~/node_cache_key.md5
+            md5sum .nvmrc >> ~/node_cache_key.md5
 
   restore-from-cache:
     steps:
@@ -74,7 +81,7 @@ commands:
       - restore_cache: &restore_nvm
           name: Restore nvm and node_modules from cache
           keys:
-            - v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+            - v13-nvm_node_modules-{{ checksum "~/node_cache_key.md5" }}
 
       - restore_cache: &restore_make
           name: Restore make from cache
@@ -120,9 +127,14 @@ commands:
           name: Install NVM, Node.js, and Yarn
           command: |
             if [ ! -d ~/.nvm ] ; then
+              export NVM_DIR="$HOME/.nvm"
               # install nodejs via nvm
               curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.2/install.sh | bash
+              # pushd and popd is a workaround for nvm issue
+              # See: https://github.com/nvm-sh/nvm/issues/1985
+              pushd /tmp
               source "$HOME/.nvm/nvm.sh"
+              popd
               nvm install
               # install yarn
               npm install -g yarn
@@ -308,7 +320,7 @@ jobs:
   build-deploy-rc:
     resource_class: large
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.1
     working_directory: ~/repo
     steps:
       - checkout:
@@ -364,7 +376,7 @@ jobs:
   build-deploy-release:
     resource_class: large
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.1
     working_directory: ~/repo
     steps:
       - checkout:
@@ -458,7 +470,7 @@ jobs:
 
   python-max-version: &job-template
     docker:
-      - image: circleci/python:3.10.0
+      - image: circleci/python:3.10.1
 
     working_directory: ~/repo
 
@@ -545,7 +557,7 @@ jobs:
 
       - save_cache:
           name: Save nvm, pre-commit cache and node_modules to cache
-          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}-{{ checksum "~/.pre-commit-config.yaml" }}
+          key: v13-nvm_node_modules-{{ checksum "~/node_cache_key.md5" }}-{{ checksum "~/repo/.pre-commit-config.yaml" }}
           paths:
             - ~/.nvm
             - ~/.cache
@@ -567,7 +579,7 @@ jobs:
 
   python-prod-deps-smoke-test:
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.1
 
     working_directory: ~/repo
 
@@ -619,7 +631,7 @@ jobs:
 
   create-tag:
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.1
 
     working_directory: ~/repo
 
@@ -666,7 +678,7 @@ jobs:
 
   nightly-release:
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.1
 
     resource_class: large
 
@@ -712,7 +724,7 @@ jobs:
 
   pr-preview:
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.1
 
     resource_class: large
 
@@ -897,7 +909,7 @@ jobs:
 
       - save_cache:
           name: Save nvm and node_modules to cache
-          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          key: v13-nvm_node_modules-{{ checksum "~/node_cache_key.md5" }}
           paths:
             - ~/.nvm
             - ~/.cache
@@ -913,7 +925,7 @@ jobs:
   cli-regression-test:
     resource_class: large
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.1
     working_directory: ~/repo
     steps:
       - checkout:
