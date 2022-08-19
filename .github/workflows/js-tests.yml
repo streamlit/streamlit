@@ -9,7 +9,6 @@ on:
 
 jobs:
   js_tests:
-
     runs-on: ubuntu-latest
 
     permissions:
