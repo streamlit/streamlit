@@ -1,0 +1,41 @@
+name: Javascript Tests
+
+on:
+  pull_request:
+    types: [opened]
+  push:
+    branches:
+      - '**'
+
+jobs:
+  js_tests:
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: make develop
+      - name: Run linters
+        run: |
+          # Run eslint as a standalone command to generate the test report.
+          PRE_COMMIT_NO_CONCURRENCY=true DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+          make jslint
+      - name: Run frontend tests
+        run: make jstest
