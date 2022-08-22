@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
+from typing import Optional
 from urllib.parse import quote, unquote_plus
 
 import tornado.web
@@ -122,17 +122,17 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         Used for serve downloadable files, like files stored
         via st.download_button widget
         """
-        in_memory_file = media_file_manager.get(path)
+        media_file = media_file_manager.get(path)
 
-        if in_memory_file and in_memory_file.file_type == FILE_TYPE_DOWNLOADABLE:
-            file_name = in_memory_file.file_name
+        if media_file and media_file.file_type == FILE_TYPE_DOWNLOADABLE:
+            file_name = media_file.file_name
 
             if not file_name:
                 title = self.get_argument("title", "", True)
                 title = unquote_plus(title)
                 filename = generate_download_filename_from_title(title)
                 file_name = (
-                    f"{filename}{_get_extension_for_mimetype(in_memory_file.mimetype)}"
+                    f"{filename}{_get_extension_for_mimetype(media_file.mimetype)}"
                 )
 
             try:
@@ -143,68 +143,69 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
             self.set_header("Content-Disposition", f"attachment; {file_expr}")
 
-    # Overriding StaticFileHandler to use the InMemoryFileManager
+    # Overriding StaticFileHandler to use the MediaFileManager
     #
     # From the Torndado docs:
     # To replace all interaction with the filesystem (e.g. to serve
     # static content from a database), override `get_content`,
     # `get_content_size`, `get_modified_time`, `get_absolute_path`, and
     # `validate_absolute_path`.
-    def validate_absolute_path(self, root, absolute_path):
+    def validate_absolute_path(self, root: str, absolute_path: str) -> str:
         try:
             media_file_manager.get(absolute_path)
         except KeyError:
-            LOGGER.error("InMemoryFileManager: Missing file %s" % absolute_path)
+            LOGGER.error("MediaFileHandler: Missing file %s", absolute_path)
             raise tornado.web.HTTPError(404, "not found")
 
         return absolute_path
 
-    def get_content_size(self):
+    def get_content_size(self) -> int:
         abspath = self.absolute_path
         if abspath is None:
             return 0
 
-        in_memory_file = media_file_manager.get(abspath)
-        return in_memory_file.content_size
+        media_file = media_file_manager.get(abspath)
+        return media_file.content_size
 
-    def get_modified_time(self):
+    def get_modified_time(self) -> None:
         # We do not track last modified time, but this can be improved to
         # allow caching among files in the InMemoryFileManager
         return None
 
     @classmethod
-    def get_absolute_path(cls, root, path):
+    def get_absolute_path(cls, root: str, path: str) -> str:
         # All files are stored in memory, so the absolute path is just the
         # path itself. In the MediaFileHandler, it's just the filename
         return path
 
     @classmethod
-    def get_content(cls, abspath, start=None, end=None):
-        LOGGER.debug("MediaFileHandler: GET %s" % abspath)
+    def get_content(
+        cls, abspath, start: Optional[int] = None, end: Optional[int] = None
+    ):
+        LOGGER.debug("MediaFileHandler: GET %s", abspath)
 
         try:
             # abspath is the hash as used `get_absolute_path`
-            in_memory_file = media_file_manager.get(abspath)
+            media_file = media_file_manager.get(abspath)
         except:
-            LOGGER.error("InMemoryFileManager: Missing file %s" % abspath)
+            LOGGER.error("MediaFileHandler: Missing file %s", abspath)
             return
 
         LOGGER.debug(
-            "InMemoryFileManager: Sending %s file %s"
-            % (in_memory_file.mimetype, abspath)
+            "MediaFileHandler: Sending %s file %s", media_file.mimetype, abspath
         )
 
         # If there is no start and end, just return the full content
         if start is None and end is None:
-            return in_memory_file.content
+            return media_file.content
 
         if start is None:
             start = 0
         if end is None:
-            end = len(in_memory_file.content)
+            end = len(media_file.content)
 
         # content is bytes that work just by slicing supplied by start and end
-        return in_memory_file.content[start:end]
+        return media_file.content[start:end]
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
