@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for InMemoryFileManager"""
+"""Unit tests for MediaFileManager"""
 
 from unittest import mock, TestCase
 import random
@@ -325,10 +325,10 @@ class MediaFileManagerTest(TestCase):
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
     def test_media_file_url(self):
-        self.assertEqual(MediaFile("abcd", None, "audio/wav").url, "/media/abcd.wav")
-        self.assertEqual(MediaFile("abcd", None, "image/jpeg").url, "/media/abcd.jpeg")
-        self.assertEqual(MediaFile("abcd", None, "video/mp4").url, "/media/abcd.mp4")
-        self.assertEqual(MediaFile("abcd", None, "video/webm").url, "/media/abcd.webm")
+        self.assertEqual(MediaFile("abcd", b"", "audio/wav").url, "/media/abcd.wav")
+        self.assertEqual(MediaFile("abcd", b"", "image/jpeg").url, "/media/abcd.jpeg")
+        self.assertEqual(MediaFile("abcd", b"", "video/mp4").url, "/media/abcd.mp4")
+        self.assertEqual(MediaFile("abcd", b"", "video/webm").url, "/media/abcd.webm")
 
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_stats_provider(self, _get_session_id):

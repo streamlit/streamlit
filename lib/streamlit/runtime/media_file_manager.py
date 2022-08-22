@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Provides global MediaFileManager object as `in_memory_file_manager`."""
+"""Provides global MediaFileManager object as `media_file_manager`."""
 
 import collections
 import hashlib
