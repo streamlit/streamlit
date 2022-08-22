@@ -463,6 +463,29 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(json_string, element.json.body)
         self.assertEqual(False, element.json.expanded)
 
+    def test_json_not_mutates_data_containing_sets(self):
+        """Test st.json do not mutate data containing sets,
+        pass a dict-containing-a-set to st.json; ensure that it's not mutated
+        """
+        json_data = {"some_set": {"a", "b"}}
+        self.assertIsInstance(json_data["some_set"], set)
+
+        st.json(json_data)
+        self.assertIsInstance(json_data["some_set"], set)
+
+    def test_json_serializes_sets_as_lists(self):
+        """Test st.json serializes sets as lists"""
+        json_data = {"some_set": {"a", "b"}}
+
+        st.json(json_data)
+        element = self.get_delta_from_queue().new_element
+
+        parsed_element = json.loads(element.json.body)
+        set_as_list = parsed_element.get("some_set")
+
+        self.assertIsInstance(set_as_list, list)
+        self.assertSetEqual(json_data["some_set"], set(set_as_list))
+
     def test_markdown(self):
         """Test Markdown element."""
         test_string = "    data         "

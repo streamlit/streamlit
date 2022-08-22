@@ -34,7 +34,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
         """
 
         with self._patch_app_session():
-            await self.start_server_loop()
+            await self.server.start()
             await self.ws_connect()
 
             # Get our connected BrowserWebSocketHandler
@@ -67,7 +67,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
         handler.
         """
         with self._patch_app_session():
-            await self.start_server_loop()
+            await self.server.start()
             await self.ws_connect()
 
             # Get our BrowserWebSocketHandler
