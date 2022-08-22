@@ -47,7 +47,7 @@ export interface Props {
   theme: Theme
   widgetMgr: WidgetStateManager
   width: number
-  labelVisibility?: "visible" | "collapsed" | "hidden" | string | null
+  labelVisibility?: string
 }
 
 interface State {

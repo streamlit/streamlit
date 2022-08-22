@@ -29,7 +29,7 @@ export interface LabelProps {
   disabled?: boolean | null
 
   // Used to specify whether widget is visible or not.
-  labelVisibility?: "visible" | "collapsed" | "hidden" | string | null
+  labelVisibility?: string
 }
 
 export function WidgetLabel({
@@ -43,7 +43,8 @@ export function WidgetLabel({
   }
 
   return (
-    // TODO ADD comment about aria-hidden (we use aria-label on each widget)
+    // We manually disable StyeldWidgetLabel's aria-hidden,
+    // each widget should have its own aria-label and/or implement accessibility.
     <StyledWidgetLabel
       aria-hidden="true"
       disabled={disabled}
