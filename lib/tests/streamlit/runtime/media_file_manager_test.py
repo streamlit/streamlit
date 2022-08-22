@@ -88,15 +88,15 @@ ALL_FIXTURES.update(IMAGE_FIXTURES)
 ALL_FIXTURES.update(TEXT_FIXTURES)
 
 
-class InMemoryFileManagerTest(TestCase):
+class MediaFileManagerTest(TestCase):
     def setUp(self):
-        super(InMemoryFileManagerTest, self).setUp()
-        self.in_memory_file_manager = MediaFileManager()
+        super().setUp()
+        self.media_file_manager = MediaFileManager()
         random.seed(1337)
 
     def tearDown(self):
-        self.in_memory_file_manager._files_by_id.clear()
-        self.in_memory_file_manager._files_by_session_and_coord.clear()
+        self.media_file_manager._files_by_id.clear()
+        self.media_file_manager._files_by_session_and_coord.clear()
 
     def test_calculate_file_id(self):
         """Test that file_id generation from data works as expected."""
@@ -119,7 +119,7 @@ class InMemoryFileManagerTest(TestCase):
             _calculate_file_id(fake_bytes, "audio/wav", file_name="name2.wav"),
         )
 
-    @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_add_files(self, _get_session_id):
         """Test that InMemoryFileManager.add works as expected."""
         _get_session_id.return_value = "SESSION1"
@@ -128,27 +128,25 @@ class InMemoryFileManagerTest(TestCase):
 
         # Make sure we reject files containing None
         with self.assertRaises(TypeError):
-            self.in_memory_file_manager.add(None, "media/any", coord)
+            self.media_file_manager.add(None, "media/any", coord)
 
         sample_coords = set()
         while len(sample_coords) < len(ALL_FIXTURES):
             sample_coords.add(random_coordinates())
 
         for sample in ALL_FIXTURES.values():
-            f = self.in_memory_file_manager.add(
+            f = self.media_file_manager.add(
                 sample["content"], sample["mimetype"], sample_coords.pop()
             )
-            self.assertTrue(f.id in self.in_memory_file_manager)
+            self.assertTrue(f.id in self.media_file_manager)
 
         # There should be as many files in MFM as we added.
-        self.assertEqual(len(self.in_memory_file_manager), len(ALL_FIXTURES))
+        self.assertEqual(len(self.media_file_manager), len(ALL_FIXTURES))
 
         # There should only be 1 session with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 1
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     @mock.patch("time.time")
     def test_add_files_same_coord(self, _time, _get_session_id):
         """Test that InMemoryFileManager.add works as expected."""
@@ -157,208 +155,174 @@ class InMemoryFileManagerTest(TestCase):
         coord = random_coordinates()
 
         for sample in ALL_FIXTURES.values():
-            f = self.in_memory_file_manager.add(
+            f = self.media_file_manager.add(
                 sample["content"], sample["mimetype"], coord
             )
-            self.assertTrue(f.id in self.in_memory_file_manager)
+            self.assertTrue(f.id in self.media_file_manager)
 
         # There should be 6 files in MFM.
-        self.assertEqual(len(self.in_memory_file_manager), len(ALL_FIXTURES))
+        self.assertEqual(len(self.media_file_manager), len(ALL_FIXTURES))
 
         # There should only be 1 session with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 1
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
         # There should only be 1 coord in that session.
         self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord["SESSION1"]), 1
+            len(self.media_file_manager._files_by_session_and_coord["SESSION1"]), 1
         )
 
-        self.in_memory_file_manager.clear_session_files()
-        self.in_memory_file_manager.del_expired_files()
+        self.media_file_manager.clear_session_files()
+        self.media_file_manager.del_expired_files()
 
         # There should be only 0 file in MFM.
-        self.assertEqual(len(self.in_memory_file_manager), 0)
+        self.assertEqual(len(self.media_file_manager), 0)
 
         # There should only be 0 session with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 0
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
-    @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_add_file_already_exists_same_coord(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
         sample = IMAGE_FIXTURES["png"]
         coord = random_coordinates()
 
-        self.in_memory_file_manager.add(sample["content"], sample["mimetype"], coord)
+        self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
         file_id = _calculate_file_id(sample["content"], sample["mimetype"])
-        self.assertTrue(file_id in self.in_memory_file_manager)
+        self.assertTrue(file_id in self.media_file_manager)
 
-        mediafile = self.in_memory_file_manager.add(
+        mediafile = self.media_file_manager.add(
             sample["content"], sample["mimetype"], coord
         )
-        self.assertTrue(file_id in self.in_memory_file_manager)
+        self.assertTrue(file_id in self.media_file_manager)
         self.assertEqual(mediafile.id, file_id)
 
         # There should only be 1 file in MFM.
-        self.assertEqual(len(self.in_memory_file_manager), 1)
+        self.assertEqual(len(self.media_file_manager), 1)
 
         # There should only be 1 session with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 1
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_add_file_already_exists_different_coord(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
         sample = IMAGE_FIXTURES["png"]
 
         coord = random_coordinates()
-        self.in_memory_file_manager.add(sample["content"], sample["mimetype"], coord)
+        self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
         file_id = _calculate_file_id(sample["content"], sample["mimetype"])
-        self.assertTrue(file_id in self.in_memory_file_manager)
+        self.assertTrue(file_id in self.media_file_manager)
 
         coord = random_coordinates()
-        mediafile = self.in_memory_file_manager.add(
+        mediafile = self.media_file_manager.add(
             sample["content"], sample["mimetype"], coord
         )
-        self.assertTrue(file_id in self.in_memory_file_manager)
+        self.assertTrue(file_id in self.media_file_manager)
         self.assertEqual(mediafile.id, file_id)
 
         # There should only be 1 file in MFM.
-        self.assertEqual(len(self.in_memory_file_manager), 1)
+        self.assertEqual(len(self.media_file_manager), 1)
 
         # There should only be 1 session with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 1
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_add_file_different_mimetypes(self, _get_session_id):
         """Test that we create a new file if new mimetype, even with same bytes for content."""
         _get_session_id.return_value = "SESSION1"
         coord = random_coordinates()
 
         sample = AUDIO_FIXTURES["mp3"]
-        f1 = self.in_memory_file_manager.add(sample["content"], "audio/mp3", coord)
-        self.assertTrue(f1.id in self.in_memory_file_manager)
+        f1 = self.media_file_manager.add(sample["content"], "audio/mp3", coord)
+        self.assertTrue(f1.id in self.media_file_manager)
 
-        f2 = self.in_memory_file_manager.add(sample["content"], "video/mp4", coord)
+        f2 = self.media_file_manager.add(sample["content"], "video/mp4", coord)
         self.assertNotEqual(f1.id, f2.id)
-        self.assertTrue(f2.id in self.in_memory_file_manager)
+        self.assertTrue(f2.id in self.media_file_manager)
 
         # There should be only 2 files in MFM, one for each mimetye.
-        self.assertEqual(len(self.in_memory_file_manager), 2)
+        self.assertEqual(len(self.media_file_manager), 2)
 
         # There should be only 1 session with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 1
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     @mock.patch("time.time")
     def test_clear_session_files(self, _time, _get_session_id):
         """Test that InMemoryFileManager removes session maps when requested (even if empty)."""
         _get_session_id.return_value = "SESSION1"
 
-        self.assertEqual(len(self.in_memory_file_manager), 0)
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 0
-        )
+        self.assertEqual(len(self.media_file_manager), 0)
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
-        self.in_memory_file_manager.clear_session_files()
+        self.media_file_manager.clear_session_files()
 
-        self.assertEqual(len(self.in_memory_file_manager), 0)
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 0
-        )
+        self.assertEqual(len(self.media_file_manager), 0)
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
-        self.in_memory_file_manager.del_expired_files()
+        self.media_file_manager.del_expired_files()
 
-        self.assertEqual(len(self.in_memory_file_manager), 0)
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 0
-        )
+        self.assertEqual(len(self.media_file_manager), 0)
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
         for sample in VIDEO_FIXTURES.values():
             coord = random_coordinates()
-            self.in_memory_file_manager.add(
-                sample["content"], sample["mimetype"], coord
-            )
+            self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
 
-        self.assertEqual(len(self.in_memory_file_manager), len(VIDEO_FIXTURES))
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 1
-        )
+        self.assertEqual(len(self.media_file_manager), len(VIDEO_FIXTURES))
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-        self.in_memory_file_manager.clear_session_files()
+        self.media_file_manager.clear_session_files()
 
         self.assertEqual(
-            len(self.in_memory_file_manager), len(VIDEO_FIXTURES)
+            len(self.media_file_manager), len(VIDEO_FIXTURES)
         )  # Clears later
         self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 0
+            len(self.media_file_manager._files_by_session_and_coord), 0
         )  # Clears immediately
 
-        self.in_memory_file_manager.del_expired_files()
+        self.media_file_manager.del_expired_files()
 
-        self.assertEqual(
-            len(self.in_memory_file_manager), 0
-        )  # Now this is cleared too!
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 0
-        )
+        self.assertEqual(len(self.media_file_manager), 0)  # Now this is cleared too!
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
-    @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_add_file_multiple_sessions_then_clear(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
 
         sample = next(iter(ALL_FIXTURES.values()))
 
         coord = random_coordinates()
-        f = self.in_memory_file_manager.add(
-            sample["content"], sample["mimetype"], coord
-        )
-        self.assertTrue(f.id in self.in_memory_file_manager)
+        f = self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
+        self.assertTrue(f.id in self.media_file_manager)
 
         _get_session_id.return_value = "SESSION2"
 
         coord = random_coordinates()
-        f = self.in_memory_file_manager.add(
-            sample["content"], sample["mimetype"], coord
-        )
-        self.assertTrue(f.id in self.in_memory_file_manager)
+        f = self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
+        self.assertTrue(f.id in self.media_file_manager)
 
         # There should be only 1 file in MFM.
-        self.assertEqual(len(self.in_memory_file_manager), 1)
+        self.assertEqual(len(self.media_file_manager), 1)
 
         # There should be 2 sessions with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 2
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 2)
 
         # force every InMemoryFile to have a TTD of now, so we can see it get deleted w/o waiting.
-        for imf in self.in_memory_file_manager._files_by_id.values():
+        for imf in self.media_file_manager._files_by_id.values():
             imf.ttd = time.time()
 
-        self.in_memory_file_manager.clear_session_files()
+        self.media_file_manager.clear_session_files()
 
         # There should be 1 session with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 1
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
         _get_session_id.return_value = "SESSION1"
-        self.in_memory_file_manager.clear_session_files()
+        self.media_file_manager.clear_session_files()
 
         # There should be 0 session with registered files.
-        self.assertEqual(
-            len(self.in_memory_file_manager._files_by_session_and_coord), 0
-        )
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
     def test_media_file_url(self):
         self.assertEqual(MediaFile("abcd", None, "audio/wav").url, "/media/abcd.wav")
@@ -366,17 +330,15 @@ class InMemoryFileManagerTest(TestCase):
         self.assertEqual(MediaFile("abcd", None, "video/mp4").url, "/media/abcd.mp4")
         self.assertEqual(MediaFile("abcd", None, "video/webm").url, "/media/abcd.webm")
 
-    @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_stats_provider(self, _get_session_id):
         _get_session_id.return_value = "SESSION1"
-        manager = self.in_memory_file_manager
+        manager = self.media_file_manager
         assert len(manager.get_stats()) == 0
 
         for sample in VIDEO_FIXTURES.values():
             coord = random_coordinates()
-            self.in_memory_file_manager.add(
-                sample["content"], sample["mimetype"], coord
-            )
+            self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
 
         stats = manager.get_stats()
         assert len(stats) == 2
