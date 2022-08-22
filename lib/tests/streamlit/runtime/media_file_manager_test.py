@@ -342,7 +342,7 @@ class MediaFileManagerTest(TestCase):
 
         stats = manager.get_stats()
         assert len(stats) == 2
-        assert stats[0].category_name == "st_in_memory_file_manager"
+        assert stats[0].category_name == "st_media_file_manager"
         assert sum(stat.byte_length for stat in stats) == 232
 
         manager.clear_session_files("SESSION1")
