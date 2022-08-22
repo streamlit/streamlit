@@ -23,7 +23,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.media_file_manager import (
     _get_extension_for_mimetype,
     media_file_manager,
-    FILE_TYPE_DOWNLOADABLE,
+    MediaFileType,
 )
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.string_util import generate_download_filename_from_title
@@ -124,7 +124,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         """
         media_file = media_file_manager.get(path)
 
-        if media_file and media_file.file_type == FILE_TYPE_DOWNLOADABLE:
+        if media_file and media_file.file_type == MediaFileType.DOWNLOADABLE:
             file_name = media_file.file_name
 
             if not file_name:

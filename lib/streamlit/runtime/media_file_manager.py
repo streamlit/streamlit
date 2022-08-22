@@ -17,6 +17,7 @@
 import collections
 import hashlib
 import mimetypes
+from enum import Enum
 from typing import Dict, Set, Optional, List
 
 from streamlit import util
@@ -31,11 +32,13 @@ PREFERRED_MIMETYPE_EXTENSION_MAP = {
     "audio/wav": ".wav",
 }
 
-# used for images and videos in st.image() and st.video()
-FILE_TYPE_MEDIA = "media_file"
 
-# used for st.download_button files
-FILE_TYPE_DOWNLOADABLE = "downloadable_file"
+class MediaFileType(Enum):
+    # used for images and videos in st.image() and st.video()
+    MEDIA = "media"
+
+    # used for st.download_button files
+    DOWNLOADABLE = "downloadable"
 
 
 def _get_session_id() -> str:
@@ -103,7 +106,7 @@ class MediaFile:
         content: bytes,
         mimetype: str,
         file_name: Optional[str] = None,
-        file_type: str = FILE_TYPE_MEDIA,
+        file_type: MediaFileType = MediaFileType.MEDIA,
     ):
         self._file_id = file_id
         self._content = content
@@ -137,7 +140,7 @@ class MediaFile:
         return len(self._content)
 
     @property
-    def file_type(self) -> str:
+    def file_type(self) -> MediaFileType:
         return self._file_type
 
     @property
@@ -192,10 +195,10 @@ class MediaFileManager(CacheStatsProvider):
         for file_id, imf in list(self._files_by_id.items()):
             if imf.id not in active_file_ids:
 
-                if imf.file_type == FILE_TYPE_MEDIA:
+                if imf.file_type == MediaFileType.MEDIA:
                     LOGGER.debug(f"Deleting File: {file_id}")
                     del self._files_by_id[file_id]
-                elif imf.file_type == FILE_TYPE_DOWNLOADABLE:
+                elif imf.file_type == MediaFileType.DOWNLOADABLE:
                     if imf._is_marked_for_delete:
                         LOGGER.debug(f"Deleting File: {file_id}")
                         del self._files_by_id[file_id]
@@ -266,9 +269,9 @@ class MediaFileManager(CacheStatsProvider):
             LOGGER.debug("Adding media file %s", file_id)
 
             if is_for_static_download:
-                file_type = FILE_TYPE_DOWNLOADABLE
+                file_type = MediaFileType.DOWNLOADABLE
             else:
-                file_type = FILE_TYPE_MEDIA
+                file_type = MediaFileType.MEDIA
 
             imf = MediaFile(
                 file_id=file_id,
