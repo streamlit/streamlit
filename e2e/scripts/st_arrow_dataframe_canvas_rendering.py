@@ -95,14 +95,17 @@ def highlight_max(s, props=""):
     return np.where(s == np.nanmax(s.values), props, "")
 
 
-styled_df = df.style.applymap(style_negative, props="color:red;").applymap(
+# Passing style values w/ all color formats to test css-style-string parsing robustness.
+styled_df = df.style.applymap(style_negative, props="color:#FF0000;").applymap(
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
-styled_df.apply(highlight_max, props="color:white;background-color:darkblue", axis=0)
+styled_df.apply(
+    highlight_max, props="color:white;background-color:rgb(255, 0, 0)", axis=0
+)
 
 styled_df.apply(
-    highlight_max, props="color:white;background-color:pink;", axis=1
+    highlight_max, props="color:white;background-color:hsl(273, 98%, 60%);", axis=1
 ).apply(highlight_max, props="color:white;background-color:purple", axis=None)
 
 st._arrow_dataframe(styled_df)
@@ -325,22 +328,4 @@ st._arrow_dataframe(list_1)
 
 df = pd.DataFrame(
     np.random.randn(50, 36), columns=list("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-)
-
-# Generic dataframe to use with checks for types of color styling values
-generic_df: pd.DataFrame = pd.DataFrame(
-    {x: np.random.randn(2) for x in ["A", "B", "C", "D", "E"]}
-)
-
-# Render dataframe with background-color value of blue spec'd. in plaintext.
-st._arrow_dataframe(generic_df.style.set_properties(**{"background-color": "blue"}))
-# render dataframe with background-color value of blue spec'd. in hexadecimal.
-st._arrow_dataframe(generic_df.style.set_properties(**{"background-color": "#0000FF"}))
-# render dataframe with background-color value of blue spec'd in hsl
-st._arrow_dataframe(
-    generic_df.style.set_properties(**{"background-color": "hsl(240, 100%, 50%)"})
-)
-# render dataframe with background-color value of blue in spec'd in rgb.
-st._arrow_dataframe(
-    generic_df.style.set_properties(**{"background-color": "rgb(0, 0, 255)"})
 )
