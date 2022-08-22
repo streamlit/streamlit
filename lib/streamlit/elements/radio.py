@@ -56,7 +56,7 @@ class RadioMixin:
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> Any:
         """Display a radio button widget.
 

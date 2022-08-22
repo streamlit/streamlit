@@ -175,7 +175,7 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> time:
         """Display a time input widget.
 
@@ -331,7 +331,7 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> DateWidgetReturn:
         """Display a date input widget.
 

@@ -54,7 +54,7 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> Any:
         """Display a select widget.
 

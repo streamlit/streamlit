@@ -69,7 +69,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> List[T]:
         ...
 
@@ -87,7 +87,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> List[Any]:
         ...
 
@@ -104,7 +104,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> List[Any]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.

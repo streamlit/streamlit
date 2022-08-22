@@ -67,7 +67,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[List[UploadedFile]]:
         ...
 
@@ -86,7 +86,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[UploadedFile]:
         ...
 
@@ -110,7 +110,7 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[List[UploadedFile]]:
         ...
 
@@ -129,7 +129,7 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[UploadedFile]:
         ...
 
@@ -145,7 +145,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure

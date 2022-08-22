@@ -52,7 +52,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> str:
         """Display a single-line text input widget.
 
@@ -229,7 +229,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
-        label_visibility: Optional[LabelVisibility] = "visible",
+        label_visibility: LabelVisibility = "visible",
     ) -> str:
         """Display a multi-line text input widget.
 
