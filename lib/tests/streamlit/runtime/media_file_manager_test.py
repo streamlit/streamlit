@@ -121,7 +121,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_add_files(self, _get_session_id):
-        """Test that InMemoryFileManager.add works as expected."""
+        """Test that MediaFileManager.add works as expected."""
         _get_session_id.return_value = "SESSION1"
 
         coord = random_coordinates()
@@ -149,7 +149,7 @@ class MediaFileManagerTest(TestCase):
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     @mock.patch("time.time")
     def test_add_files_same_coord(self, _time, _get_session_id):
-        """Test that InMemoryFileManager.add works as expected."""
+        """Test that MediaFileManager.add works as expected."""
         _get_session_id.return_value = "SESSION1"
 
         coord = random_coordinates()
@@ -250,7 +250,7 @@ class MediaFileManagerTest(TestCase):
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     @mock.patch("time.time")
     def test_clear_session_files(self, _time, _get_session_id):
-        """Test that InMemoryFileManager removes session maps when requested (even if empty)."""
+        """Test that MediaFileManager removes session maps when requested (even if empty)."""
         _get_session_id.return_value = "SESSION1"
 
         self.assertEqual(len(self.media_file_manager), 0)
@@ -309,7 +309,7 @@ class MediaFileManagerTest(TestCase):
         # There should be 2 sessions with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 2)
 
-        # force every InMemoryFile to have a TTD of now, so we can see it get deleted w/o waiting.
+        # force every MediaFile to have a TTD of now, so we can see it get deleted w/o waiting.
         for imf in self.media_file_manager._files_by_id.values():
             imf.ttd = time.time()
 

@@ -210,7 +210,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
 
-        # locate resultant file in InMemoryFileManager and test its properties.
+        # locate resultant file in MediaFileManager and test its properties.
         file_id = _calculate_file_id(fake_audio_data, "audio/wav")
         self.assertTrue(file_id in media_file_manager)
 
@@ -852,7 +852,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
 
-        # locate resultant file in InMemoryFileManager and test its properties.
+        # locate resultant file in MediaFileManager and test its properties.
         file_id = _calculate_file_id(fake_video_data, "video/mp4")
         self.assertTrue(file_id in media_file_manager)
 

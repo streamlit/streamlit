@@ -405,7 +405,7 @@ def marshall_images(
             proto_img.caption = str(caption)
 
         # We use the index of the image in the input image list to identify this image inside
-        # InMemoryFileManager. For this, we just add the index to the image's "coordinates".
+        # MediaFileManager. For this, we just add the index to the image's "coordinates".
         image_id = "%s-%i" % (coordinates, coord_suffix)
 
         is_svg = False
