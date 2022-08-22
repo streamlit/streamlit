@@ -16,7 +16,7 @@
  */
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import { ExpandMore, ChevronRight } from "@emotion-icons/material-outlined"
 import Icon from "src/components/shared/Icon"
 import classNames from "classnames"
 import {
@@ -80,9 +80,9 @@ function withExpandable(
                 marginTop: spacing.none,
                 marginBottom: spacing.none,
                 overflow: "visible",
-                paddingLeft: spacing.lg,
-                paddingRight: spacing.lg,
-                paddingTop: 0,
+                paddingLeft: spacing.threeXL,
+                paddingRight: 0,
+                paddingTop: spacing.lg,
                 paddingBottom: $expanded ? spacing.lg : 0,
                 borderTopStyle: "none",
                 borderBottomStyle: "none",
@@ -111,15 +111,17 @@ function withExpandable(
                 marginTop: spacing.none,
                 backgroundColor: colors.transparent,
                 color: $disabled ? colors.disabled : colors.bodyText,
-                fontSize: fontSizes.sm,
+                fontSize: fontSizes.md,
                 borderTopStyle: "none",
                 borderBottomStyle: "none",
                 borderRightStyle: "none",
                 borderLeftStyle: "none",
-                paddingBottom: spacing.md,
-                paddingTop: spacing.md,
-                paddingRight: spacing.lg,
-                paddingLeft: spacing.lg,
+                paddingBottom: 0,
+                paddingTop: 0,
+                paddingRight: 0,
+                paddingLeft: 0,
+                justifyContent: "flex-start",
+                gap: spacing.sm,
                 ...(isStale
                   ? {
                       opacity: 0.33,
@@ -139,9 +141,9 @@ function withExpandable(
               // eslint-disable-next-line react/display-name
               component: () => {
                 if (expanded) {
-                  return <Icon content={ExpandLess} size="lg" />
+                  return <Icon content={ExpandMore} size="xl" />
                 }
-                return <Icon content={ExpandMore} size="lg" />
+                return <Icon content={ChevronRight} size="xl" />
               },
             },
             Root: {
@@ -150,9 +152,9 @@ function withExpandable(
                 isStale,
               },
               style: {
-                borderStyle: "solid",
-                borderWidth: "1px",
-                borderColor: colors.fadedText10,
+                // borderStyle: "solid",
+                // borderWidth: "1px",
+                // borderColor: colors.fadedText10,
                 borderRadius: radii.md,
                 ...(isStale
                   ? {

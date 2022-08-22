@@ -18,6 +18,9 @@
 import styled from "@emotion/styled"
 
 export const StyledExpandableContainer = styled.div(({ theme }) => ({
+  ".streamlit-expanderHeader svg": {
+    order: -1,
+  },
   ".streamlit-expanderHeader:hover svg": {
     fill: theme.colors.primary,
   },
