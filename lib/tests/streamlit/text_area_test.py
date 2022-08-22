@@ -16,6 +16,7 @@
 
 import re
 from unittest.mock import patch
+from parameterized import parameterized
 
 from tests import testutil
 import streamlit as st
@@ -30,6 +31,7 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.text_area
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility, "visible")
         self.assertEqual(c.default, "")
         self.assertEqual(c.disabled, False)
 
@@ -106,6 +108,19 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         text_area_proto = self.get_delta_from_queue().new_element.text_area
 
         self.assertEqual(text_area_proto.label, "foo")
+
+    @parameterized.expand(
+        [
+            ("visible", "visible"),
+            ("hidden", "hidden"),
+            ("collapsed", "collapsed"),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.text_area("the label", label_visibility=label_visibility_value)
+        c = self.get_delta_from_queue().new_element.text_area
+        self.assertEqual(c.label_visibility, proto_value)
 
     def test_help_dedents(self):
         """Test that help properly dedents"""

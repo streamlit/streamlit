@@ -127,6 +127,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility, "visible")
         self.assertEqual(c.default, 0)
         self.assertEqual(c.options, [])
 
@@ -178,3 +179,19 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(radio_proto.label, "foo")
         self.assertEqual(radio_proto.options, ["bar", "baz"])
         self.assertEqual(radio_proto.default, 0)
+
+    @parameterized.expand(
+        [
+            ("visible", "visible"),
+            ("hidden", "hidden"),
+            ("collapsed", "collapsed"),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.radio("the label", ("m", "f"), label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, 0)
+        self.assertEqual(c.label_visibility, proto_value)

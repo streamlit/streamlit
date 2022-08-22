@@ -33,6 +33,7 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.selectbox
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility, "visible")
         self.assertEqual(c.default, 0)
         self.assertEqual(c.disabled, False)
 
@@ -151,3 +152,17 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         selectbox_proto = self.get_delta_from_queue(1).new_element.selectbox
         self.assertEqual(selectbox_proto.form_id, form_proto.form.form_id)
+
+    @parameterized.expand(
+        [
+            ("visible", "visible"),
+            ("hidden", "hidden"),
+            ("collapsed", "collapsed"),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.selectbox("the label", ("m", "f"), label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        self.assertEqual(c.label_visibility, proto_value)

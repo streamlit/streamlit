@@ -35,6 +35,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility, "visible")
         self.assertEqual(c.default, [0])
         self.assertEqual(c.min, 0)
         self.assertEqual(c.max, 2)
@@ -228,3 +229,21 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         select_slider_proto = self.get_delta_from_queue(1).new_element.slider
         self.assertEqual(select_slider_proto.form_id, form_proto.form.form_id)
+
+    @parameterized.expand(
+        [
+            ("visible", "visible"),
+            ("hidden", "hidden"),
+            ("collapsed", "collapsed"),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.select_slider(
+            "the label",
+            options=["red", "orange"],
+            label_visibility=label_visibility_value,
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.label_visibility, proto_value)

@@ -40,6 +40,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility, "visible")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.disabled, False)
 
@@ -263,3 +264,17 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertEqual(multiselect_proto.label, "foo")
         self.assertEqual(multiselect_proto.options, ["bar", "baz"])
         self.assertEqual(multiselect_proto.default, [])
+
+    @parameterized.expand(
+        [
+            ("visible", "visible"),
+            ("hidden", "hidden"),
+            ("collapsed", "collapsed"),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.multiselect("the label", ("m", "f"), label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.label_visibility, proto_value)
