@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Provides global InMemoryFileManager object as `in_memory_file_manager`."""
+"""Provides global MediaFileManager object as `in_memory_file_manager`."""
 
 import collections
 import hashlib
@@ -94,7 +94,7 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
     return extension
 
 
-class InMemoryFile:
+class MediaFile:
     """Abstraction for file objects."""
 
     def __init__(
@@ -148,8 +148,8 @@ class InMemoryFile:
         self._is_marked_for_delete = True
 
 
-class InMemoryFileManager(CacheStatsProvider):
-    """In-memory file manager for InMemoryFile objects.
+class MediaFileManager(CacheStatsProvider):
+    """In-memory file manager for MediaFile objects.
 
     This keeps track of:
     - Which files exist, and what their IDs are. This is important so we can
@@ -168,12 +168,12 @@ class InMemoryFileManager(CacheStatsProvider):
     """
 
     def __init__(self):
-        # Dict of file ID to InMemoryFile.
-        self._files_by_id: Dict[str, InMemoryFile] = dict()
+        # Dict of file ID to MediaFile.
+        self._files_by_id: Dict[str, MediaFile] = dict()
 
-        # Dict[session ID][coordinates] -> InMemoryFile.
+        # Dict[session ID][coordinates] -> MediaFile.
         self._files_by_session_and_coord: Dict[
-            str, Dict[str, InMemoryFile]
+            str, Dict[str, MediaFile]
         ] = collections.defaultdict(dict)
 
     def __repr__(self) -> str:
@@ -232,8 +232,8 @@ class InMemoryFileManager(CacheStatsProvider):
         coordinates: str,
         file_name: Optional[str] = None,
         is_for_static_download: bool = False,
-    ) -> InMemoryFile:
-        """Adds new InMemoryFile with given parameters; returns the object.
+    ) -> MediaFile:
+        """Adds new MediaFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
         and registers the current session as a user.
@@ -248,7 +248,7 @@ class InMemoryFileManager(CacheStatsProvider):
         content : bytes
             Raw data to store in file object.
         mimetype : str
-            The mime type for the in-memory file. E.g. "audio/mpeg"
+            The mime type for the file. E.g. "audio/mpeg"
         coordinates : str
             Unique string identifying an element's location.
             Prevents memory leak of "forgotten" file IDs when element media
@@ -270,7 +270,7 @@ class InMemoryFileManager(CacheStatsProvider):
             else:
                 file_type = FILE_TYPE_MEDIA
 
-            imf = InMemoryFile(
+            imf = MediaFile(
                 file_id=file_id,
                 content=content,
                 mimetype=mimetype,
@@ -292,14 +292,14 @@ class InMemoryFileManager(CacheStatsProvider):
 
         return imf
 
-    def get(self, inmemory_filename: str) -> InMemoryFile:
-        """Returns InMemoryFile object for given file_id or InMemoryFile object.
+    def get(self, file_id: str) -> MediaFile:
+        """Returns MediaFile object for given file_id or MediaFile object.
 
         Raises KeyError if not found.
         """
-        # Filename is {requested_hash}.{extension} but InMemoryFileManager
+        # Filename is {requested_hash}.{extension} but MediaFileManager
         # is indexed by requested_hash.
-        hash = inmemory_filename.split(".")[0]
+        hash = file_id.split(".")[0]
         return self._files_by_id[hash]
 
     def get_stats(self) -> List[CacheStat]:
@@ -318,11 +318,11 @@ class InMemoryFileManager(CacheStatsProvider):
             )
         return stats
 
-    def __contains__(self, inmemory_file_or_id):
-        return inmemory_file_or_id in self._files_by_id
+    def __contains__(self, file_id: str) -> bool:
+        return file_id in self._files_by_id
 
     def __len__(self):
         return len(self._files_by_id)
 
 
-in_memory_file_manager = InMemoryFileManager()
+media_file_manager = MediaFileManager()

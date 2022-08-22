@@ -18,10 +18,10 @@ from unittest import mock, TestCase
 import random
 import time
 
-from streamlit.runtime.in_memory_file_manager import (
-    InMemoryFileManager,
+from streamlit.runtime.media_file_manager import (
+    MediaFileManager,
     _calculate_file_id,
-    InMemoryFile,
+    MediaFile,
 )
 
 
@@ -91,7 +91,7 @@ ALL_FIXTURES.update(TEXT_FIXTURES)
 class InMemoryFileManagerTest(TestCase):
     def setUp(self):
         super(InMemoryFileManagerTest, self).setUp()
-        self.in_memory_file_manager = InMemoryFileManager()
+        self.in_memory_file_manager = MediaFileManager()
         random.seed(1337)
 
     def tearDown(self):
@@ -361,14 +361,10 @@ class InMemoryFileManagerTest(TestCase):
         )
 
     def test_media_file_url(self):
-        self.assertEqual(InMemoryFile("abcd", None, "audio/wav").url, "/media/abcd.wav")
-        self.assertEqual(
-            InMemoryFile("abcd", None, "image/jpeg").url, "/media/abcd.jpeg"
-        )
-        self.assertEqual(InMemoryFile("abcd", None, "video/mp4").url, "/media/abcd.mp4")
-        self.assertEqual(
-            InMemoryFile("abcd", None, "video/webm").url, "/media/abcd.webm"
-        )
+        self.assertEqual(MediaFile("abcd", None, "audio/wav").url, "/media/abcd.wav")
+        self.assertEqual(MediaFile("abcd", None, "image/jpeg").url, "/media/abcd.jpeg")
+        self.assertEqual(MediaFile("abcd", None, "video/mp4").url, "/media/abcd.mp4")
+        self.assertEqual(MediaFile("abcd", None, "video/webm").url, "/media/abcd.webm")
 
     @mock.patch("streamlit.runtime.in_memory_file_manager._get_session_id")
     def test_stats_provider(self, _get_session_id):

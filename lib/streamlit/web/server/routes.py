@@ -20,9 +20,9 @@ import tornado.web
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
-from streamlit.runtime.in_memory_file_manager import (
+from streamlit.runtime.media_file_manager import (
     _get_extension_for_mimetype,
-    in_memory_file_manager,
+    media_file_manager,
     FILE_TYPE_DOWNLOADABLE,
 )
 from streamlit.runtime.runtime_util import serialize_forward_msg
@@ -122,7 +122,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         Used for serve downloadable files, like files stored
         via st.download_button widget
         """
-        in_memory_file = in_memory_file_manager.get(path)
+        in_memory_file = media_file_manager.get(path)
 
         if in_memory_file and in_memory_file.file_type == FILE_TYPE_DOWNLOADABLE:
             file_name = in_memory_file.file_name
@@ -152,7 +152,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
     # `validate_absolute_path`.
     def validate_absolute_path(self, root, absolute_path):
         try:
-            in_memory_file_manager.get(absolute_path)
+            media_file_manager.get(absolute_path)
         except KeyError:
             LOGGER.error("InMemoryFileManager: Missing file %s" % absolute_path)
             raise tornado.web.HTTPError(404, "not found")
@@ -164,7 +164,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         if abspath is None:
             return 0
 
-        in_memory_file = in_memory_file_manager.get(abspath)
+        in_memory_file = media_file_manager.get(abspath)
         return in_memory_file.content_size
 
     def get_modified_time(self):
@@ -184,7 +184,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
         try:
             # abspath is the hash as used `get_absolute_path`
-            in_memory_file = in_memory_file_manager.get(abspath)
+            in_memory_file = media_file_manager.get(abspath)
         except:
             LOGGER.error("InMemoryFileManager: Missing file %s" % abspath)
             return
