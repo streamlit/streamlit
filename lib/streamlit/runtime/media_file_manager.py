@@ -293,7 +293,7 @@ class MediaFileManager(CacheStatsProvider):
         return imf
 
     def get(self, file_id: str) -> MediaFile:
-        """Returns MediaFile object for given file_id or MediaFile object.
+        """Returns the MediaFile for the given file_id.
 
         Raises KeyError if not found.
         """
