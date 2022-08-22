@@ -18,7 +18,7 @@
 import { ShallowWrapper } from "enzyme"
 import { NumberInput as NumberInputProto } from "src/autogen/proto"
 import React from "react"
-import { mount, shallow } from "src/lib/test_util"
+import { mount, shallow, render } from "src/lib/test_util"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
@@ -86,6 +86,20 @@ describe("NumberInput widget", () => {
     const wrapper = mount(<NumberInput {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+  })
+
+  it("hides a label", () => {
+    const props = getIntProps({ labelVisibility: "hidden" })
+    const { getByText } = render(<NumberInput {...props} />)
+    const label = getByText(props.element.label)
+    expect(label).not.toBeVisible()
+  })
+
+  it("collapses a label ", () => {
+    const props = getIntProps({ labelVisibility: "collapsed" })
+    const { getByText } = render(<NumberInput {...props} />)
+    const label = getByText(props.element.label)
+    expect(label).not.toBeVisible()
   })
 
   it("sets min/max defaults", () => {
