@@ -14,8 +14,8 @@
 
 """file_uploader unit test."""
 
+from parameterized import parameterized
 from unittest.mock import patch
-
 
 import streamlit as st
 from streamlit import config
@@ -31,6 +31,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility, "visible")
         self.assertEqual(c.disabled, False)
 
     def test_just_disabled(self):
@@ -164,3 +165,17 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         st.file_uploader("foo")
         remove_orphaned_files_patch.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("visible", "visible"),
+            ("hidden", "hidden"),
+            ("collapsed", "collapsed"),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility parameter."""
+        st.file_uploader("the label", label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        self.assertEqual(c.label_visibility, proto_value)

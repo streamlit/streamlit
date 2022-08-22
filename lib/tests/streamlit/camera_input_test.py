@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""file_uploader unit test."""
+"""camera_input unit test."""
 
+from parameterized import parameterized
 
 import streamlit as st
 from tests import testutil
@@ -26,10 +27,25 @@ class CameraInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.camera_input
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility, "visible")
 
     def test_help_tooltip(self):
-        """Test that it can be called using a string for type parameter."""
+        """Test that it can be called with help parameter."""
         st.camera_input("the label", help="help_label")
 
         c = self.get_delta_from_queue().new_element.camera_input
         self.assertEqual(c.help, "help_label")
+
+    @parameterized.expand(
+        [
+            ("visible", "visible"),
+            ("hidden", "hidden"),
+            ("collapsed", "collapsed"),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility parameter."""
+        st.camera_input("the label", label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.camera_input
+        self.assertEqual(c.label_visibility, proto_value)

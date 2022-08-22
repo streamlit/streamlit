@@ -16,6 +16,7 @@
 
 from unittest.mock import MagicMock, patch
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -49,6 +50,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility, "visible")
         self.assertEqual(c.default, 0.0)
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
@@ -259,3 +261,17 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         # Assert that no warning delta is enqueued when setting the widget
         # value via st.session_state.
         self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
+
+    @parameterized.expand(
+        [
+            ("visible", "visible"),
+            ("hidden", "hidden"),
+            ("collapsed", "collapsed"),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.number_input("the label", label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.label_visibility, proto_value)
