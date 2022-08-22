@@ -326,3 +326,21 @@ st._arrow_dataframe(list_1)
 df = pd.DataFrame(
     np.random.randn(50, 36), columns=list("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 )
+
+# Generic dataframe to use with checks for types of color styling values
+generic_df: pd.DataFrame = pd.DataFrame(
+    {x: np.random.randn(2) for x in ["A", "B", "C", "D", "E"]}
+)
+
+# Render dataframe with background-color value of blue spec'd. in plaintext.
+st._arrow_dataframe(generic_df.style.set_properties(**{"background-color": "blue"}))
+# render dataframe with background-color value of blue spec'd. in hexadecimal.
+st._arrow_dataframe(generic_df.style.set_properties(**{"background-color": "#0000FF"}))
+# render dataframe with background-color value of blue spec'd in hsl
+st._arrow_dataframe(
+    generic_df.style.set_properties(**{"background-color": "hsl(240, 100%, 50%)"})
+)
+# render dataframe with background-color value of blue in spec'd in rgb.
+st._arrow_dataframe(
+    generic_df.style.set_properties(**{"background-color": "rgb(0, 0, 255)"})
+)
