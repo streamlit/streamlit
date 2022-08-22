@@ -183,6 +183,9 @@ class TimeWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this time input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : datetime.time/datetime.datetime
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to the current time.
@@ -202,8 +205,11 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the time input if set to True.
             The default is False. This argument can only be supplied by keyword.
-        label_visibility : str
-            AAAA
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -339,6 +345,9 @@ class TimeWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this date input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
             The value of this widget when it first renders. If a list/tuple with
             0 to 2 date/datetime values is provided, the datepicker will allow
@@ -365,8 +374,11 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the date input if set to True.
             The default is False. This argument can only be supplied by keyword.
-        label_visibility: str
-            AAAABB
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
