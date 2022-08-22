@@ -23,7 +23,7 @@ describe("st.number_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stNumberInput").should("have.length", 7);
+    cy.get(".stNumberInput").should("have.length", 9);
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
@@ -41,6 +41,8 @@ describe("st.number_input", () => {
         'value 5: " 0 "' +
         'value 6: " 0.0 "' +
         'value 7: " 0.0 "' +
+        'value 8: " 0.0 "' +
+        'value 9: " 0.0 "' +
         "number input changed: False"
     );
   });
@@ -73,6 +75,8 @@ describe("st.number_input", () => {
         'value 5: " 0 "' +
         'value 6: " 0.0 "' +
         'value 7: " 0.0 "' +
+        'value 8: " 0.0 "' +
+        'value 9: " 0.0 "' +
         "number input changed: False"
     );
   });
@@ -93,13 +97,15 @@ describe("st.number_input", () => {
         'value 5: " 0 "' +
         'value 6: " 0.0 "' +
         'value 7: " 0.0 "' +
+        'value 8: " 0.0 "' +
+        'value 9: " 0.0 "' +
         "number input changed: False"
     );
   });
 
   it("has the correct step value when clicked", () => {
     cy.get(".stNumberInput button.step-up")
-      .should("have.length.at.least", 7)
+      .should("have.length.at.least", 9)
       .each((el, idx) => {
         // skip disabled widget
         if (idx != 5) {
@@ -119,6 +125,8 @@ describe("st.number_input", () => {
         'value 5: " 1 "' +
         'value 6: " 0.0 "' +
         'value 7: " 0.01 "' +
+        'value 8: " 0.01 "' +
+        'value 9: " 0.01 "' +
         "number input changed: True"
     );
   });
@@ -137,6 +145,8 @@ describe("st.number_input", () => {
         'value 5: " 0 "' +
         'value 6: " 0.0 "' +
         'value 7: " 0.0 "' +
+        'value 8: " 0.0 "' +
+        'value 9: " 0.0 "' +
         "number input changed: False"
     );
   });
