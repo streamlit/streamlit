@@ -99,6 +99,8 @@ class UtilTest(unittest.TestCase):
             (np.arange(0.0, 0.25, 0.05), 0.15, 3),
             ([0, 1, 2, 3], 3, 3),
             ([0.1, 0.2, 0.3], 0.2, 1),
+            ([0.1, 0.2, None], None, 2),
+            ([0.1, 0.2, float("inf")], float("inf"), 2),
             (["He", "ello w", "orld"], "He", 0),
             (list(np.arange(0.0, 0.25, 0.05)), 0.15, 3),
         ]
@@ -113,6 +115,7 @@ class UtilTest(unittest.TestCase):
             (np.arange(0.0, 0.25, 0.05), 0.1500002),
             ([0, 1, 2, 3], 3.00001),
             ([0.1, 0.2, 0.3], 0.3000004),
+            ([0.1, 0.2, 0.3], None),
             (["He", "ello w", "orld"], "world"),
             (list(np.arange(0.0, 0.25, 0.05)), 0.150002),
         ]
