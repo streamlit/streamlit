@@ -36,7 +36,6 @@ export const StyledResizableContainer = styled.div<
   position: "relative",
   resize: "both",
   display: "inline-block",
-  // width: `${width}px`,
   minHeight: `${minHeight}px`,
   maxHeight: `${maxHeight}px`,
   minWidth: `${minWidth}px`,

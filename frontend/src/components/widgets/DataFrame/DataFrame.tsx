@@ -162,7 +162,6 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
         return getCellTemplate(columnType, true)
       },
       columnType,
-      // grow: 1,
     } as GridColumnWithCellTemplate)
   }
   return columns

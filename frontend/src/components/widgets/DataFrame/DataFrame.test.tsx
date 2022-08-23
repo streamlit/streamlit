@@ -32,7 +32,6 @@ import DataFrame, {
   useDataLoader,
   getColumns,
 } from "./DataFrame"
-
 import { StyledResizableContainer } from "./styled-components"
 
 const getProps = (data: Quiver): DataFrameProps => ({
