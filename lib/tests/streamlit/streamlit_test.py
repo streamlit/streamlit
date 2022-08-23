@@ -38,9 +38,9 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
-from streamlit.runtime.in_memory_file_manager import (
+from streamlit.runtime.media_file_manager import (
     _calculate_file_id,
-    in_memory_file_manager,
+    media_file_manager,
     STATIC_MEDIA_ENDPOINT,
 )
 from tests import testutil
@@ -210,11 +210,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
 
-        # locate resultant file in InMemoryFileManager and test its properties.
+        # locate resultant file in MediaFileManager and test its properties.
         file_id = _calculate_file_id(fake_audio_data, "audio/wav")
-        self.assertTrue(file_id in in_memory_file_manager)
+        self.assertTrue(file_id in media_file_manager)
 
-        afile = in_memory_file_manager.get(file_id)
+        afile = media_file_manager.get(file_id)
         self.assertEqual(afile.mimetype, "audio/wav")
         self.assertEqual(afile.url, el.audio.url)
 
@@ -264,7 +264,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
-        from streamlit.runtime.in_memory_file_manager import _calculate_file_id
+        from streamlit.runtime.media_file_manager import _calculate_file_id
 
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
@@ -459,9 +459,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         from streamlit.elements.image import _PIL_to_bytes
 
         file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
-        self.assertTrue(file_id in in_memory_file_manager)
+        self.assertTrue(file_id in media_file_manager)
 
-        afile = in_memory_file_manager.get(file_id)
+        afile = media_file_manager.get(file_id)
         self.assertEqual(afile.mimetype, "image/png")
         self.assertEqual(afile.url, el.imgs.imgs[0].url)
 
@@ -493,8 +493,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
                 _PIL_to_bytes(imgs[idx], format="PNG"), "image/png"
             )
             self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
-            self.assertTrue(file_id in in_memory_file_manager)
-            afile = in_memory_file_manager.get(file_id)
+            self.assertTrue(file_id in media_file_manager)
+            afile = media_file_manager.get(file_id)
             self.assertEqual(afile.mimetype, "image/png")
             self.assertEqual(afile.url, el.imgs.imgs[idx].url)
 
@@ -852,11 +852,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
 
-        # locate resultant file in InMemoryFileManager and test its properties.
+        # locate resultant file in MediaFileManager and test its properties.
         file_id = _calculate_file_id(fake_video_data, "video/mp4")
-        self.assertTrue(file_id in in_memory_file_manager)
+        self.assertTrue(file_id in media_file_manager)
 
-        afile = in_memory_file_manager.get(file_id)
+        afile = media_file_manager.get(file_id)
         self.assertEqual(afile.mimetype, "video/mp4")
         self.assertEqual(afile.url, el.video.url)
 
@@ -902,7 +902,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_video_options(self):
         """Test st.video with options."""
 
-        from streamlit.runtime.in_memory_file_manager import _calculate_file_id
+        from streamlit.runtime.media_file_manager import _calculate_file_id
 
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.video(fake_video_data, format="video/mp4", start_time=10)
