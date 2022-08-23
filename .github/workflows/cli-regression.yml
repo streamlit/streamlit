@@ -37,4 +37,4 @@ jobs:
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
       - name: Run CLI regression tests
         run: |
-          export SKIP_VERSION_CHECK=true make cli-regression-tests
+          export SKIP_VERSION_CHECK=true; make cli-regression-tests
