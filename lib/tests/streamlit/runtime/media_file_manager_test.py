@@ -310,8 +310,8 @@ class MediaFileManagerTest(TestCase):
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 2)
 
         # force every MediaFile to have a TTD of now, so we can see it get deleted w/o waiting.
-        for imf in self.media_file_manager._files_by_id.values():
-            imf.ttd = time.time()
+        for file in self.media_file_manager._files_by_id.values():
+            file.ttd = time.time()
 
         self.media_file_manager.clear_session_files()
 

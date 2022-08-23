@@ -189,21 +189,21 @@ class MediaFileManager(CacheStatsProvider):
         active_file_ids: Set[str] = set()
 
         for files_by_coord in self._files_by_session_and_coord.values():
-            file_ids = map(lambda imf: imf.id, files_by_coord.values())
+            file_ids = map(lambda file: file.id, files_by_coord.values())
             active_file_ids = active_file_ids.union(file_ids)
 
-        for file_id, imf in list(self._files_by_id.items()):
-            if imf.id not in active_file_ids:
+        for file_id, file in list(self._files_by_id.items()):
+            if file.id not in active_file_ids:
 
-                if imf.file_type == MediaFileType.MEDIA:
+                if file.file_type == MediaFileType.MEDIA:
                     LOGGER.debug(f"Deleting File: {file_id}")
                     del self._files_by_id[file_id]
-                elif imf.file_type == MediaFileType.DOWNLOADABLE:
-                    if imf._is_marked_for_delete:
+                elif file.file_type == MediaFileType.DOWNLOADABLE:
+                    if file._is_marked_for_delete:
                         LOGGER.debug(f"Deleting File: {file_id}")
                         del self._files_by_id[file_id]
                     else:
-                        imf._mark_for_delete()
+                        file._mark_for_delete()
 
     def clear_session_files(self, session_id: Optional[str] = None) -> None:
         """Removes AppSession-coordinate mapping immediately, and id-file mapping later.
@@ -263,9 +263,9 @@ class MediaFileManager(CacheStatsProvider):
             not as a media for rendering at page. [default: None]
         """
         file_id = _calculate_file_id(content, mimetype, file_name=file_name)
-        imf = self._files_by_id.get(file_id, None)
+        file = self._files_by_id.get(file_id, None)
 
-        if imf is None:
+        if file is None:
             LOGGER.debug("Adding media file %s", file_id)
 
             if is_for_static_download:
@@ -273,7 +273,7 @@ class MediaFileManager(CacheStatsProvider):
             else:
                 file_type = MediaFileType.MEDIA
 
-            imf = MediaFile(
+            file = MediaFile(
                 file_id=file_id,
                 content=content,
                 mimetype=mimetype,
@@ -284,8 +284,8 @@ class MediaFileManager(CacheStatsProvider):
             LOGGER.debug("Overwriting media file %s", file_id)
 
         session_id = _get_session_id()
-        self._files_by_id[imf.id] = imf
-        self._files_by_session_and_coord[session_id][coordinates] = imf
+        self._files_by_id[file.id] = file
+        self._files_by_session_and_coord[session_id][coordinates] = file
 
         LOGGER.debug(
             "Files: %s; Sessions with files: %s",
@@ -293,7 +293,7 @@ class MediaFileManager(CacheStatsProvider):
             len(self._files_by_session_and_coord),
         )
 
-        return imf
+        return file
 
     def get(self, file_id: str) -> MediaFile:
         """Returns the MediaFile for the given file_id.
