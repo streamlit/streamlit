@@ -36,6 +36,8 @@ class ArrowMixin:
         data: Data = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
+        *,
+        use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -46,12 +48,19 @@ class ArrowMixin:
 
             If 'data' is a pandas.Styler, it will be used to style its
             underlying DataFrame.
+
         width : int or None
             Desired width of the UI element expressed in pixels. If None, a
             default width based on the page width is used.
+
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
             default height is used.
+
+        use_container_width : bool
+            If True, set the dataframe width to the column width. This takes
+            precedence over the width argument.
+            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -80,6 +89,7 @@ class ArrowMixin:
         default_uuid = str(hash(delta_path))
 
         proto = ArrowProto()
+        proto.use_container_width = use_container_width
         marshall(proto, data, default_uuid)
         return self.dg._enqueue(
             delta_type="arrow_data_frame",

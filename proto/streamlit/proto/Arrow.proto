@@ -19,6 +19,8 @@ syntax = "proto3";
 message Arrow {
   bytes data = 1;
   Styler styler = 2;
+  // If True, will overwrite the dataframe width spec to fit to container.
+  bool use_container_width = 5;
 }
 
 message Styler {
