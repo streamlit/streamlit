@@ -32,7 +32,8 @@ import DataFrame, {
   useDataLoader,
   getColumns,
 } from "./DataFrame"
-import { ResizableContainer } from "./DataFrameContainer"
+
+import { StyledResizableContainer } from "./styled-components"
 
 const getProps = (data: Quiver): DataFrameProps => ({
   element: data,
@@ -49,13 +50,15 @@ describe("DataFrame widget", () => {
   })
 
   it("should have correct className", () => {
-    expect(wrapper.find(ResizableContainer).prop("className")).toContain(
+    expect(wrapper.find(StyledResizableContainer).prop("className")).toContain(
       "stDataFrame"
     )
   })
 
   it("grid container should render with specific size", () => {
-    const dataFrameContainer = wrapper.find(ResizableContainer).props() as any
+    const dataFrameContainer = wrapper
+      .find(StyledResizableContainer)
+      .props() as any
     expect(dataFrameContainer.width).toBe(400)
     expect(dataFrameContainer.height).toBe(400)
   })
@@ -68,21 +71,21 @@ describe("DataFrame widget", () => {
     // Resize first column to size of 123:
     act(() => {
       const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[0], 123)
+      onColumnResize?.(columns[0], 123, 0)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(123)
 
     // Resize first column to size of 321:
     act(() => {
       const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[0], 321)
+      onColumnResize?.(columns[0], 321, 0)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
 
     // First column should stay at previous value if other column is resized
     act(() => {
       const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[1], 88)
+      onColumnResize?.(columns[1], 88, 1)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
   })

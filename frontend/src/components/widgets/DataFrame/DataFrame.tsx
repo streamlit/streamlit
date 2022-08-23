@@ -25,12 +25,16 @@ import {
   GridSelection,
   CompactSelection,
   GridMouseEventArgs,
+  Theme as GlideTheme,
 } from "@glideapps/glide-data-grid"
 import { useColumnSort } from "@glideapps/glide-data-grid-source"
+import { transparentize } from "color2k"
+import { useTheme } from "@emotion/react"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
+import { Theme } from "src/theme"
 
 import {
   getCellTemplate,
@@ -39,7 +43,9 @@ import {
   determineColumnType,
   ColumnType,
 } from "./DataFrameCells"
-import ThemedDataFrameContainer from "./DataFrameContainer"
+import { StyledResizableContainer } from "./styled-components"
+
+import "@glideapps/glide-data-grid/dist/index.css"
 
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
@@ -50,6 +56,50 @@ const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
 // Min height for the resizable table container:
 // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
+
+/**
+ * Creates a glide-data-grid compatible theme based on our theme configuration.
+ *
+ * @param theme: Our theme configuration.
+ *
+ * @return a glide-data-grid compatible theme.
+ */
+export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
+  return {
+    // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
+    accentColor: theme.colors.primary,
+    accentFg: theme.colors.white,
+    accentLight: transparentize(theme.colors.primary, 0.9),
+    borderColor: theme.colors.fadedText05,
+    fontFamily: theme.genericFonts.bodyFont,
+    bgSearchResult: transparentize(theme.colors.primary, 0.9),
+    // Header styling:
+    bgIconHeader: theme.colors.fadedText60,
+    fgIconHeader: theme.colors.white,
+    bgHeader: theme.colors.bgMix,
+    bgHeaderHasFocus: theme.colors.secondaryBg,
+    bgHeaderHovered: theme.colors.bgMix, // uses same color as bgHeader to deactivate the hover effect
+    textHeader: theme.colors.fadedText60,
+    textHeaderSelected: theme.colors.white,
+    headerFontStyle: `${theme.fontSizes.sm}`,
+    // Cell styling:
+    baseFontStyle: theme.fontSizes.sm,
+    editorFontSize: theme.fontSizes.sm,
+    textDark: theme.colors.bodyText,
+    textMedium: transparentize(theme.colors.bodyText, 0.2),
+    textLight: theme.colors.fadedText60,
+    textBubble: theme.colors.fadedText60,
+    bgCell: theme.colors.bgColor,
+    bgCellMedium: theme.colors.bgColor, // uses same as bgCell to always have the same background color
+    cellHorizontalPadding: 8,
+    cellVerticalPadding: 3,
+    // Special cells:
+    bgBubble: theme.colors.secondaryBg,
+    bgBubbleSelected: theme.colors.secondaryBg,
+    linkColor: theme.colors.linkText,
+    drilldownBorder: theme.colors.darkenedBgMix25,
+  }
+}
 
 /**
  * The GridColumn type extended with a function to get a template of the given type.
@@ -112,6 +162,7 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
         return getCellTemplate(columnType, true)
       },
       columnType,
+      // grow: 1,
     } as GridColumnWithCellTemplate)
   }
   return columns
@@ -257,6 +308,7 @@ function DataFrame({
   width: propWidth,
 }: DataFrameProps): ReactElement {
   const [sort, setSort] = React.useState<ColumnSortConfig>()
+  const theme: Theme = useTheme()
 
   const {
     numRows,
@@ -314,7 +366,8 @@ function DataFrame({
   }
 
   return (
-    <ThemedDataFrameContainer
+    <StyledResizableContainer
+      className="stDataFrame"
       width={propWidth}
       height={height}
       minHeight={MIN_TABLE_HEIGHT}
@@ -341,7 +394,7 @@ function DataFrame({
         rowHeight={ROW_HEIGHT}
         headerHeight={ROW_HEIGHT}
         getCellContent={getCellContent}
-        onColumnResized={onColumnResize}
+        onColumnResize={onColumnResize}
         // Freeze all index columns:
         freezeColumns={numIndices}
         smoothScrollX={true}
@@ -365,6 +418,7 @@ function DataFrame({
         onGridSelectionChange={(newSelection: GridSelection) => {
           setGridSelection(newSelection)
         }}
+        theme={createDataFrameTheme(theme)}
         onMouseMove={(args: GridMouseEventArgs) => {
           // Determine if the dataframe is focused or not
           if (args.kind === "out-of-bounds" && isFocused) {
@@ -378,7 +432,7 @@ function DataFrame({
           scrollbarWidthOverride: 1,
         }}
       />
-    </ThemedDataFrameContainer>
+    </StyledResizableContainer>
   )
 }
 
