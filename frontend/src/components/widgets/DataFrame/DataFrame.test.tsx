@@ -40,21 +40,42 @@ const getProps = (data: Quiver): DataFrameProps => ({
   height: 400,
 })
 
+const { ResizeObserver } = window
+
 describe("DataFrame widget", () => {
   const props = getProps(new Quiver({ data: TEN_BY_TEN }))
-  const wrapper = mount(<DataFrame {...props} />)
+
+  beforeEach(() => {
+    // Mocking ResizeObserver to prevent:
+    // TypeError: window.ResizeObserver is not a constructor
+    // @ts-ignore
+    delete window.ResizeObserver
+    window.ResizeObserver = jest.fn().mockImplementation(() => ({
+      observe: jest.fn(),
+      unobserve: jest.fn(),
+      disconnect: jest.fn(),
+    }))
+  })
+
+  afterEach(() => {
+    window.ResizeObserver = ResizeObserver
+    jest.restoreAllMocks()
+  })
 
   it("renders without crashing", () => {
+    const wrapper = mount(<DataFrame {...props} />)
     expect(wrapper.find(GlideDataEditor).length).toBe(1)
   })
 
   it("should have correct className", () => {
+    const wrapper = mount(<DataFrame {...props} />)
     expect(wrapper.find(StyledResizableContainer).prop("className")).toContain(
       "stDataFrame"
     )
   })
 
   it("grid container should render with specific size", () => {
+    const wrapper = mount(<DataFrame {...props} />)
     const dataFrameContainer = wrapper
       .find(StyledResizableContainer)
       .props() as any
