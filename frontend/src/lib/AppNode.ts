@@ -182,7 +182,7 @@ export class ElementNode implements AppNode {
     }
 
     const toReturn = new Quiver(this.element[this.element.type] as ArrowProto)
-
+    // TODO: Delete element from proto object?
     this.lazyQuiverElement = toReturn
     return toReturn
   }

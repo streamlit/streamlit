@@ -19,6 +19,10 @@ syntax = "proto3";
 message Arrow {
   bytes data = 1;
   Styler styler = 2;
+  // width in CSS points
+  optional uint32 width = 3;
+  // height in CSS points
+  optional uint32 height = 4;
   // If True, will overwrite the dataframe width spec to fit to container.
   bool use_container_width = 5;
 }

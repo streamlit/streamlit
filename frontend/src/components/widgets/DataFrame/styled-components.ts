@@ -18,10 +18,10 @@
 import styled from "@emotion/styled"
 
 interface StyledResizableContainerProps {
-  width: number
+  width?: number
+  height: number
   maxWidth: number
   minWidth: number
-  height: number
   minHeight: number
   maxHeight: number
 }
@@ -31,11 +31,12 @@ interface StyledResizableContainerProps {
  */
 export const StyledResizableContainer = styled.div<
   StyledResizableContainerProps
->(({ theme, minHeight, maxHeight, minWidth, maxWidth, height }) => ({
+>(({ theme, width, height, minHeight, maxHeight, minWidth, maxWidth }) => ({
   overflow: "auto",
   position: "relative",
   resize: "both",
   display: "inline-block",
+  ...(width && { width: `${width}px` }),
   minHeight: `${minHeight}px`,
   maxHeight: `${maxHeight}px`,
   minWidth: `${minWidth}px`,

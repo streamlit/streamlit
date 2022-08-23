@@ -27,3 +27,8 @@ st._arrow_dataframe(df, 250, 150)
 st._arrow_dataframe(df, width=250)
 st._arrow_dataframe(df, height=150)
 st._arrow_dataframe(df, 5000, 5000)
+st._arrow_dataframe(df, use_container_width=True)
+
+small_df = pd.DataFrame(np.random.randn(4, 4))
+st._arrow_dataframe(small_df, width=600)
+st._arrow_dataframe(small_df, use_container_width=True)

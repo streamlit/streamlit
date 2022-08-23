@@ -90,13 +90,12 @@ class ArrowMixin:
 
         proto = ArrowProto()
         proto.use_container_width = use_container_width
+        if width:
+            proto.width = width
+        if height:
+            proto.height = height
         marshall(proto, data, default_uuid)
-        return self.dg._enqueue(
-            delta_type="arrow_data_frame",
-            element_proto=proto,
-            element_width=width,
-            element_height=height,
-        )
+        return self.dg._enqueue("arrow_data_frame", proto)
 
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.

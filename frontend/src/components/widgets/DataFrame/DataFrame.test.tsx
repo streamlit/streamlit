@@ -26,6 +26,7 @@ import { renderHook, act } from "@testing-library/react-hooks"
 import { TEN_BY_TEN } from "src/lib/mocks/arrow"
 import { mount } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
+import { Arrow as ArrowProto } from "src/autogen/proto"
 
 import DataFrame, {
   DataFrameProps,
@@ -35,7 +36,11 @@ import DataFrame, {
 import { StyledResizableContainer } from "./styled-components"
 
 const getProps = (data: Quiver): DataFrameProps => ({
-  element: data,
+  element: ArrowProto.create({
+    data: new Uint8Array(),
+    useContainerWidth: false,
+  }),
+  data,
   width: 400,
   height: 400,
 })
@@ -85,7 +90,7 @@ describe("DataFrame widget", () => {
 
   it("Test column resizing function.", () => {
     const { result } = renderHook(() =>
-      useDataLoader(new Quiver({ data: TEN_BY_TEN }))
+      useDataLoader(props.element, props.data)
     )
 
     // Resize first column to size of 123:
@@ -111,11 +116,11 @@ describe("DataFrame widget", () => {
   })
 
   it("should correctly sort the table descending order", () => {
-    const tableColumns = getColumns(new Quiver({ data: TEN_BY_TEN }))
+    const tableColumns = getColumns(props.element, props.data)
 
     // Add descending sort for first column
     const { result } = renderHook(() =>
-      useDataLoader(new Quiver({ data: TEN_BY_TEN }), {
+      useDataLoader(props.element, props.data, {
         column: tableColumns[0],
         mode: "smart",
         direction: "desc",
@@ -138,11 +143,11 @@ describe("DataFrame widget", () => {
   })
 
   it("should correctly sort the table ascending order", () => {
-    const tableColumns = getColumns(new Quiver({ data: TEN_BY_TEN }))
+    const tableColumns = getColumns(props.element, props.data)
 
     // Add ascending sort for first column
     const { result } = renderHook(() =>
-      useDataLoader(new Quiver({ data: TEN_BY_TEN }), {
+      useDataLoader(props.element, props.data, {
         column: tableColumns[0],
         mode: "smart",
         direction: "asc",
