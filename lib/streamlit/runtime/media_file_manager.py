@@ -236,31 +236,29 @@ class MediaFileManager(CacheStatsProvider):
         file_name: Optional[str] = None,
         is_for_static_download: bool = False,
     ) -> str:
-        """Adds new MediaFile with given parameters and returns its URL.
+        """Add a new MediaFile with the given parameters and return its URL.
 
-        If an identical file already exists, returns the existing object
+        If an identical file already exists, return the existing URL
         and registers the current session as a user.
-
-        mimetype must be set, as this string will be used in the
-        "Content-Type" header when the file is sent via HTTP GET.
-
-        coordinates should look like this: "1.(3.-14).5"
 
         Parameters
         ----------
         content : bytes
             Raw data to store in file object.
         mimetype : str
-            The mime type for the file. E.g. "audio/mpeg"
+            The mime type for the file. E.g. "audio/mpeg".
+            This string will be used in the "Content-Type" header when the file
+            is sent via HTTP GET.
         coordinates : str
             Unique string identifying an element's location.
             Prevents memory leak of "forgotten" file IDs when element media
             is being replaced-in-place (e.g. an st.image stream).
-        file_name : str
-            Optional file_name. Used to set filename in response header. [default: None]
+            coordinates should be of the form: "1.(3.-14).5"
+        file_name : str or None
+            Optional file_name. Used to set the filename in the response header.
         is_for_static_download: bool
             Indicate that data stored for downloading as a file,
-            not as a media for rendering at page. [default: None]
+            not as a media for rendering at page. [default: False]
 
         Returns
         -------
