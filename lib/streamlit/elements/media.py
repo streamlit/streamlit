@@ -182,8 +182,8 @@ def _marshall_av_media(
     if isinstance(data, str):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
-            this_file = media_file_manager.add(fh.read(), mimetype, coordinates)
-            proto.url = this_file.url
+            file_url = media_file_manager.add(fh.read(), mimetype, coordinates)
+            proto.url = file_url
             return
 
     data_as_bytes: bytes
@@ -207,8 +207,8 @@ def _marshall_av_media(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = media_file_manager.add(data_as_bytes, mimetype, coordinates)
-    proto.url = this_file.url
+    file_url = media_file_manager.add(data_as_bytes, mimetype, coordinates)
+    proto.url = file_url
 
 
 def marshall_video(

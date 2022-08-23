@@ -235,8 +235,8 @@ class MediaFileManager(CacheStatsProvider):
         coordinates: str,
         file_name: Optional[str] = None,
         is_for_static_download: bool = False,
-    ) -> MediaFile:
-        """Adds new MediaFile with given parameters; returns the object.
+    ) -> str:
+        """Adds new MediaFile with given parameters and returns its URL.
 
         If an identical file already exists, returns the existing object
         and registers the current session as a user.
@@ -261,6 +261,11 @@ class MediaFileManager(CacheStatsProvider):
         is_for_static_download: bool
             Indicate that data stored for downloading as a file,
             not as a media for rendering at page. [default: None]
+
+        Returns
+        -------
+        str
+            The url that the frontend can use to fetch the media.
         """
         file_id = _calculate_file_id(content, mimetype, file_name=file_name)
         file = self._files_by_id.get(file_id, None)
@@ -293,7 +298,7 @@ class MediaFileManager(CacheStatsProvider):
             len(self._files_by_session_and_coord),
         )
 
-        return file
+        return file.url
 
     def get(self, file_id: str) -> MediaFile:
         """Returns the MediaFile for the given file_id.
