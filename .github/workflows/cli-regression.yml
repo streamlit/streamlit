@@ -24,10 +24,10 @@ jobs:
         with: 
           persist-credentials: false
           submodules: 'recursive'
-      - name: Set up Python 3.9.7
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9.7"
+          python-version: "3.10"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Build Package - Fast
@@ -37,5 +37,4 @@ jobs:
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
       - name: Run CLI regression tests
         run: |
-          export SKIP_VERSION_CHECK=true
-          make cli-regression-tests
+          export SKIP_VERSION_CHECK=true make cli-regression-tests
