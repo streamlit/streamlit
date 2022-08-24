@@ -114,7 +114,6 @@
     "@deck.gl/json": "^8.2.5",
     "@emotion/jest": "^11.7.1",
     "@testing-library/dom": "^7.31.0",
-    "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^11.2.7",
     "@testing-library/react-hooks": "^7.0.2",
     "@testing-library/user-event": "^13.1.9",

@@ -18,7 +18,7 @@
 import { ShallowWrapper } from "enzyme"
 import { NumberInput as NumberInputProto } from "src/autogen/proto"
 import React from "react"
-import { mount, shallow, render } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
@@ -88,18 +88,20 @@ describe("NumberInput widget", () => {
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
-  it("hides a label", () => {
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getIntProps({ labelVisibility: "hidden" })
-    const { getByText } = render(<NumberInput {...props} />)
-    const label = getByText(props.element.label)
-    expect(label).not.toBeVisible()
+    const wrapper = mount(<NumberInput {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "hidden"
+    )
   })
 
-  it("collapses a label ", () => {
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getIntProps({ labelVisibility: "collapsed" })
-    const { getByText } = render(<NumberInput {...props} />)
-    const label = getByText(props.element.label)
-    expect(label).not.toBeVisible()
+    const wrapper = mount(<NumberInput {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "collapsed"
+    )
   })
 
   it("sets min/max defaults", () => {
