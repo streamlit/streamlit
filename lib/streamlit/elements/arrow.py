@@ -84,7 +84,7 @@ class ArrowMixin:
         """
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
-        # when the position of the ele ment is changed.
+        # when the position of the element is changed.
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
 
