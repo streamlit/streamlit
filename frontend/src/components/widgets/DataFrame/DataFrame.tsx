@@ -241,7 +241,7 @@ export function useDataLoader(
       return {
         ...column,
         width: columnSizes.get(column.id),
-        // TODO: deactivate grow: 0, -> currently not possible because of a bug:
+        // TODO (lukasmasuch): set grow: 0 -> currently not possible because of a bug:
         // https://github.com/glideapps/glide-data-grid/issues/479
       } as GridColumnWithCellTemplate
     }
