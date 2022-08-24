@@ -39,10 +39,11 @@ const getProps = (data: Quiver): DataFrameProps => ({
   element: ArrowProto.create({
     data: new Uint8Array(),
     useContainerWidth: false,
+    width: 400,
+    height: 400,
   }),
   data,
-  width: 400,
-  height: 400,
+  width: 700,
 })
 
 const { ResizeObserver } = window
