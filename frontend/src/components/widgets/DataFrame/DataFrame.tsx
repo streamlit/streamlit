@@ -50,7 +50,7 @@ import "@glideapps/glide-data-grid/dist/index.css"
 
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
-const MAX_COLUMN_WIDTH = 600
+const MAX_COLUMN_WIDTH = 650
 // Min width for the resizable table container:
 // Based on one column at minimum width + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
@@ -233,10 +233,16 @@ export function useDataLoader(
 
   const columns = getColumns(element, data).map(column => {
     // Apply column widths from state
-    if (column.id && columnSizes.has(column.id)) {
+    if (
+      column.id &&
+      columnSizes.has(column.id) &&
+      columnSizes.get(column.id) !== undefined
+    ) {
       return {
         ...column,
         width: columnSizes.get(column.id),
+        // TODO: deactivate grow: 0, -> currently not possible because of a bug:
+        // https://github.com/glideapps/glide-data-grid/issues/479
       } as GridColumnWithCellTemplate
     }
     return column
