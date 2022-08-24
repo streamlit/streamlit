@@ -35,10 +35,13 @@ import DataFrame, {
 } from "./DataFrame"
 import { StyledResizableContainer } from "./styled-components"
 
-const getProps = (data: Quiver): DataFrameProps => ({
+const getProps = (
+  data: Quiver,
+  useContainerWidth = false
+): DataFrameProps => ({
   element: ArrowProto.create({
     data: new Uint8Array(),
-    useContainerWidth: false,
+    useContainerWidth,
     width: 400,
     height: 400,
   }),
@@ -78,6 +81,17 @@ describe("DataFrame widget", () => {
     expect(wrapper.find(StyledResizableContainer).prop("className")).toContain(
       "stDataFrame"
     )
+  })
+
+  it("grid container should use full width when useContainerWidth is used", () => {
+    const wrapper = mount(
+      <DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />
+    )
+    const dataFrameContainer = wrapper
+      .find(StyledResizableContainer)
+      .props() as any
+    expect(dataFrameContainer.width).toBe(700)
+    expect(dataFrameContainer.height).toBe(400)
   })
 
   it("grid container should render with specific size", () => {
