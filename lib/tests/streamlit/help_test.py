@@ -91,7 +91,7 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
 
             self.assertEqual(
                 "(data: 'Data' = None, width: Optional[int] = None, "
-                "height: Optional[int] = None) -> 'DeltaGenerator'",
+                "height: Optional[int] = None, *, use_container_width: bool = False) -> 'DeltaGenerator'",
                 ds.signature,
             )
 

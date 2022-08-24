@@ -36,7 +36,7 @@ describe("DataFrame with different sizes", () => {
 
   it("should show as expected", () => {
     cy.get(".stDataFrame")
-      .should("have.length", 10)
+      .should("have.length", 11)
       .each(($element, index) => {
         return cy
           .wrap($element)
