@@ -68,7 +68,7 @@ class DataFrameSelectorMixin:
             default height is used.
 
         use_container_width : bool
-            If True, set the dataframe width to the column width. This takes
+            If True, set the dataframe width to the width of the parent container. This takes
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
