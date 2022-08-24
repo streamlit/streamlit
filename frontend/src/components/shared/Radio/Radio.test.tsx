@@ -50,6 +50,22 @@ describe("Radio widget", () => {
     expect(wrapper.find(UIRadio).length).toBe(3)
   })
 
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({ labelVisibility: "hidden" })
+    const wrapper = mount(<Radio {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "hidden"
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({ labelVisibility: "collapsed" })
+    const wrapper = mount(<Radio {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "collapsed"
+    )
+  })
+
   it("has correct className and style", () => {
     const props = getProps()
     const wrapper = mount(<Radio {...props} />)
