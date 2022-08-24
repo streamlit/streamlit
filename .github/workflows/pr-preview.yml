@@ -56,13 +56,13 @@ jobs:
           cd lib/dist
           export WHEELFILE="$(ls -t *.whl | head -n 1)"
 
-          if [ ${BRANCH} = "release/demo" ]
+          if [ "${BRANCH}" = "release/demo" ]
           then
-            aws s3 cp ${WHEELFILE} s3://core-previews/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl --acl public-read
-            echo -e "Here is the link to download the wheel file: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl"
+            aws s3 cp "${WHEELFILE}" s3://core-previews/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl --acl public-read
+            echo -e "Wheel file download link: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl"
           else
-            aws s3 cp ${WHEELFILE} s3://core-previews/${PREVIEW_BRANCH}/ --acl public-read
-            echo -e "Here is the link to download the wheel file: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
+            aws s3 cp "${WHEELFILE}" s3://core-previews/${PREVIEW_BRANCH}/ --acl public-read
+            echo -e "Wheel file download link: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
           fi
 
           cd ../..
