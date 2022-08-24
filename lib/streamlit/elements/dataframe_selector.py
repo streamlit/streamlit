@@ -60,16 +60,16 @@ class DataFrameSelectorMixin:
             `config.dataFrameSerialization = "arrow"`.
 
         width : int or None
-            Desired width of the UI element expressed in pixels. If None, a
-            default width based on the page width is used.
+            Desired width of the dataframe expressed in pixels. If None, the width
+            will be automatically calculated based on the column content.
 
         height : int or None
-            Desired height of the UI element expressed in pixels. If None, a
+            Desired height of the dataframe expressed in pixels. If None, a
             default height is used.
 
         use_container_width : bool
-            If True, set the dataframe width to the width of the parent container. This takes
-            precedence over the width argument.
+            If True, set the dataframe width to the width of the parent container.
+            This takes precedence over the width argument.
             This argument can only be supplied by keyword.
 
         Examples
