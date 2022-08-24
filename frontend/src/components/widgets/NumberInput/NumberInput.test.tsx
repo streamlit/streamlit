@@ -69,6 +69,36 @@ describe("NumberInput widget", () => {
     expect(wrapper).toBeDefined()
   })
 
+  it("adds a focused class when running onFocus", () => {
+    const props = getIntProps()
+    const wrapper = shallow(<NumberInput {...props} />)
+    const input = wrapper.find(UIInput)
+
+    expect(wrapper).toBeDefined()
+
+    // @ts-ignore
+    input.props().onFocus()
+
+    expect(wrapper.state("isFocused")).toBe(true)
+    expect(wrapper.find("StyledInputContainer").hasClass("focused")).toBe(true)
+  })
+
+  it("removes the focused class when running onBlur", () => {
+    const props = getIntProps()
+    const wrapper = shallow(<NumberInput {...props} />)
+    const input = wrapper.find(UIInput)
+
+    expect(wrapper).toBeDefined()
+
+    // @ts-ignore
+    input.props().onBlur()
+
+    expect(wrapper.state("isFocused")).toBe(false)
+    expect(wrapper.find("StyledInputContainer").hasClass("focused")).toBe(
+      false
+    )
+  })
+
   it("handles malformed format strings without crashing", () => {
     // This format string is malformed (it should be %0.2f)
     const props = getFloatProps({

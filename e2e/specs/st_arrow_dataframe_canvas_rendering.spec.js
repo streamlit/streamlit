@@ -26,7 +26,7 @@ describe("Interactive DataFrame canvas rendering", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDataFrame").should("have.length", 28);
+    cy.get(".stDataFrame").should("have.length", 29);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
