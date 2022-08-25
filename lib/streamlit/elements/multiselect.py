@@ -26,6 +26,7 @@ from typing import (
     Union,
     TypeVar,
 )
+from streamlit.util import likely_equivalent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -215,21 +216,25 @@ class MultiSelectMixin:
                     default_values = [default_values]
                 else:
                     default_values = list(default_values)
-            if len(default_values) != 0 and isinstance(default_values[0], Enum):
-                for value in default_values:
-                    if value not in opt:
-                        raise StreamlitAPIException(
-                            """Every Multiselect default value must exist in options. 
-                            If this looks incorrect and you're not using enums in a 
-                            separate module, we recommend you do in order to remove 
-                            this log statement and fix enums mysteriously not being equal. 
-                            This occurs because of Streamlit's built-in mechanic of rerun 
-                            thus causing the memory addresses of the variants of the enum
-                            to differ from script run to script run."""
-                        )
 
             for value in default_values:
                 if value not in opt:
+                    if isinstance(value, Enum) and all(
+                        not likely_equivalent(value, option) for option in opt
+                    ):
+                        raise StreamlitAPIException(
+                            f"""
+                            One of the default values you provided to multiselect could not be found among the options.
+
+                            If this error seems incorrect, and you are certain that the value should be present in the options, 
+                            it likely has to do with the behavior of Enums during streamlit reruns. 
+                            Unfortunately, if the Enum is defined in the main script file, 
+                            comparison breaks for its instances when re-running the script.
+                            This issue can be mitigated by moving the Enum declaration to another module.
+
+                            Offending default value: {value}.
+                            """
+                        )
                     raise StreamlitAPIException(
                         "Every Multiselect default value must exist in options"
                     )

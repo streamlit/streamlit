@@ -14,6 +14,7 @@
 
 """A bunch of useful utilities."""
 
+from enum import Enum
 import functools
 import hashlib
 import os
@@ -157,3 +158,12 @@ def calc_md5(s: str) -> str:
     h = hashlib.new("md5")
     h.update(s.encode("utf-8"))
     return h.hexdigest()
+
+
+def likely_equivalent(e1: Enum, e2: Enum) -> bool:
+    """Checks whether two enum values are likely to have been identical if it wasn't for rerunning."""
+    return (
+        type(e2).__name__ == type(e1).__name__
+        and e2.name == e1.name
+        and e2.value == e1.value
+    )

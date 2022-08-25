@@ -14,7 +14,7 @@
 
 """multiselect unit tests."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
@@ -24,6 +24,12 @@ from streamlit.errors import StreamlitAPIException
 from tests import testutil
 from enum import Enum
 from tests.streamlit.enum_test_data.drink import Drink
+
+
+class Color(Enum):
+    RED = 1
+    GREEN = 2
+    BLUE = 3
 
 
 class Multiselectbox(testutil.DeltaGeneratorTestCase):
@@ -218,6 +224,26 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         """Test that invalid default trigger the expected exception."""
         with self.assertRaises(expected):
             st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
+
+    @patch("streamlit.util.likely_equivalent", return_value=False)
+    def test_rerun_enum_exception(self, patched_util):
+        with self.assertRaises(StreamlitAPIException) as cm:
+            st.multiselect("the label", list(Color), [Drink.COFFEE])
+            patched_util.assert_called_once_with()
+        self.assertEqual(
+            str(cm.exception),
+            """
+                            One of the default values you provided to multiselect could not be found among the options.
+
+                            If this error seems incorrect, and you are certain that the value should be present in the options, 
+                            it likely has to do with the behavior of Enums during streamlit reruns. 
+                            Unfortunately, if the Enum is defined in the main script file, 
+                            comparison breaks for its instances when re-running the script.
+                            This issue can be mitigated by moving the Enum declaration to another module.
+
+                            Offending default value: Drink.COFFEE.
+                            """,
+        )
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
