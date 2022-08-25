@@ -161,7 +161,7 @@ class CheckboxMixin:
             checkbox_proto.set_value = True
 
         self.dg._enqueue("checkbox", checkbox_proto)
-        return checkbox_state.value
+        return cast(bool, checkbox_state.value)
 
     @property
     def dg(self) -> "DeltaGenerator":

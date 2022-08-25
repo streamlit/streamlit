@@ -301,7 +301,7 @@ class ButtonMixin:
         download_button_proto.disabled = disabled
 
         self.dg._enqueue("download_button", download_button_proto)
-        return button_state.value
+        return cast(bool, button_state.value)
 
     def _button(
         self,
@@ -363,7 +363,7 @@ class ButtonMixin:
 
         self.dg._enqueue("button", button_proto)
 
-        return button_state.value
+        return cast(bool, button_state.value)
 
     @property
     def dg(self) -> "DeltaGenerator":

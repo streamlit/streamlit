@@ -100,7 +100,7 @@ def _check_and_convert_to_indices(
 
 @dataclass
 class MultiSelectSerde:
-    options: Sequence
+    options: Sequence[Any]
     default_value: List[int]
 
     def deserialize(
