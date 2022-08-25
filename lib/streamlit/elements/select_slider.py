@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Callable, Optional, cast
 
@@ -29,6 +30,45 @@ from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+
+@dataclass
+class SelectSliderSerde:
+    options: OptionSequence
+    value: Any
+    is_range_value: bool
+
+    def deserialize(self, ui_value, widget_id=""):
+        if not ui_value:
+            # Widget has not been used; fallback to the original value,
+            ui_value = self.value
+
+        # The widget always returns floats, so convert to ints before indexing
+        return_value = list(map(lambda x: self.options[int(x)], ui_value))  # type: ignore[no-any-return]
+
+        # If the original value was a list/tuple, so will be the output (and vice versa)
+        return tuple(return_value) if self.is_range_value else return_value[0]
+
+    def serialize(self, v):
+        return self.as_index_list(v)
+
+    def as_index_list(self, v):
+        is_range_value = isinstance(v, (list, tuple))
+        if is_range_value:
+            slider_value = [index_(self.options, val) for val in v]
+            start, end = slider_value
+            if start > end:
+                slider_value = [end, start]
+            return slider_value
+        else:
+            # Simplify future logic by always making value a list
+            try:
+                return [index_(self.options, v)]
+            except ValueError:
+                if self.value is not None:
+                    raise
+
+                return [0]
 
 
 class SelectSliderMixin:
@@ -192,19 +232,7 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        def deserialize_select_slider(ui_value, widget_id=""):
-            if not ui_value:
-                # Widget has not been used; fallback to the original value,
-                ui_value = slider_value
-
-            # The widget always returns floats, so convert to ints before indexing
-            return_value = list(map(lambda x: opt[int(x)], ui_value))  # type: ignore[no-any-return]
-
-            # If the original value was a list/tuple, so will be the output (and vice versa)
-            return tuple(return_value) if is_range_value else return_value[0]
-
-        def serialize_select_slider(v):
-            return as_index_list(v)
+        serde = SelectSliderSerde(opt, slider_value, is_range_value)
 
         widget_state = register_widget(
             "slider",
@@ -213,8 +241,8 @@ class SelectSliderMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_select_slider,
-            serializer=serialize_select_slider,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -222,7 +250,7 @@ class SelectSliderMixin:
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
         if widget_state.value_changed:
-            slider_proto.value[:] = serialize_select_slider(widget_state.value)
+            slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)

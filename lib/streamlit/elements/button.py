@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import io
 from typing import cast, Optional, Union, BinaryIO, TextIO, TYPE_CHECKING
 from textwrap import dedent
@@ -45,6 +46,15 @@ For more information, refer to the
 """
 
 DownloadButtonDataType = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
+
+
+@dataclass
+class ButtonSerde:
+    def serialize(self, v):
+        return bool(v)
+
+    def deserialize(self, ui_value: Optional[bool], widget_id: str = "") -> bool:
+        return ui_value or False
 
 
 class ButtonMixin:
@@ -272,8 +282,7 @@ class ButtonMixin:
         if help is not None:
             download_button_proto.help = dedent(help)
 
-        def deserialize_button(ui_value: Optional[bool], widget_id: str = "") -> bool:
-            return ui_value or False
+        serde = ButtonSerde()
 
         button_state = register_widget(
             "download_button",
@@ -282,8 +291,8 @@ class ButtonMixin:
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_button,
-            serializer=bool,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -334,8 +343,7 @@ class ButtonMixin:
         if help is not None:
             button_proto.help = dedent(help)
 
-        def deserialize_button(ui_value: Optional[bool], widget_id: str = "") -> bool:
-            return ui_value or False
+        serde = ButtonSerde()
 
         button_state = register_widget(
             "button",
@@ -344,8 +352,8 @@ class ButtonMixin:
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_button,
-            serializer=bool,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
