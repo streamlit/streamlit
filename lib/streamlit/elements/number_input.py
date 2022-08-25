@@ -40,7 +40,7 @@ Number = Union[int, float]
 class NumberInputSerde:
     value: Union[int, float]
 
-    def serialize(self, v):
+    def serialize(self, v: Number) -> Number:
         return v
 
     def deserialize(self, ui_value: Optional[Number], widget_id: str = "") -> Number:
@@ -308,7 +308,7 @@ class NumberInputMixin:
             number_input_proto.set_value = True
 
         self.dg._enqueue("number_input", number_input_proto)
-        return cast(Number, widget_state.value)
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

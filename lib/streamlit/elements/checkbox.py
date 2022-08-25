@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 class CheckboxSerde:
     value: bool
 
-    def serialize(self, v):
+    def serialize(self, v: bool) -> bool:
         return bool(v)
 
     def deserialize(self, ui_value: Optional[bool], widget_id: str = "") -> bool:
@@ -161,7 +161,7 @@ class CheckboxMixin:
             checkbox_proto.set_value = True
 
         self.dg._enqueue("checkbox", checkbox_proto)
-        return cast(bool, checkbox_state.value)
+        return checkbox_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":

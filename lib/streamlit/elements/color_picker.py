@@ -36,7 +36,7 @@ from .utils import check_callback_rules, check_session_state_rules
 class ColorPickerSerde:
     value: str
 
-    def serialize(self, v):
+    def serialize(self, v: str) -> str:
         return str(v)
 
     def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
@@ -184,7 +184,7 @@ class ColorPickerMixin:
             color_picker_proto.set_value = True
 
         self.dg._enqueue("color_picker", color_picker_proto)
-        return cast(str, widget_state.value)
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

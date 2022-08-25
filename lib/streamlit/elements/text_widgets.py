@@ -41,7 +41,7 @@ class TextInputSerde:
     def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
         return str(ui_value if ui_value is not None else self.value)
 
-    def serialize(self, v):
+    def serialize(self, v: str) -> str:
         return v
 
 
@@ -52,7 +52,7 @@ class TextAreaSerde:
     def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
         return str(ui_value if ui_value is not None else self.value)
 
-    def serialize(self, v):
+    def serialize(self, v: str) -> str:
         return v
 
 
@@ -218,7 +218,7 @@ class TextWidgetsMixin:
             text_input_proto.set_value = True
 
         self.dg._enqueue("text_input", text_input_proto)
-        return cast(str, widget_state.value)
+        return widget_state.value
 
     def text_area(
         self,
@@ -360,7 +360,7 @@ class TextWidgetsMixin:
             text_area_proto.set_value = True
 
         self.dg._enqueue("text_area", text_area_proto)
-        return cast(str, widget_state.value)
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

@@ -50,7 +50,7 @@ DownloadButtonDataType = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
 
 @dataclass
 class ButtonSerde:
-    def serialize(self, v):
+    def serialize(self, v: bool) -> bool:
         return bool(v)
 
     def deserialize(self, ui_value: Optional[bool], widget_id: str = "") -> bool:
@@ -301,7 +301,7 @@ class ButtonMixin:
         download_button_proto.disabled = disabled
 
         self.dg._enqueue("download_button", download_button_proto)
-        return cast(bool, button_state.value)
+        return button_state.value
 
     def _button(
         self,
@@ -363,7 +363,7 @@ class ButtonMixin:
 
         self.dg._enqueue("button", button_proto)
 
-        return cast(bool, button_state.value)
+        return button_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":
