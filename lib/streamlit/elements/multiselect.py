@@ -219,7 +219,12 @@ class MultiSelectMixin:
                 for value in default_values:
                     if value not in opt:
                         raise StreamlitAPIException(
-                            "Every Multiselect default value must exist in options. If this looks incorrect and you're not using enums in a separate module, we recommend you do in order to remove this log statement. This occurs because of Streamlit's built in mechanic of rerun and the memory addresses of the variants of the enum differ from script run to script run."
+                            """Every Multiselect default value must exist in options. 
+                            If this looks incorrect and you're not using enums in a 
+                            separate module, we recommend you do in order to remove 
+                            this log statement. This occurs because of Streamlit's 
+                            built-in mechanic of rerun and the memory addresses of 
+                            the variants of the enum differ from script run to script run."""
                         )
 
             for value in default_values:
