@@ -211,7 +211,6 @@ class DateInput extends React.PureComponent<Props, State> {
           disabled={disabled}
           onChange={this.handleChange}
           onClose={this.handleClose}
-          aria-label={element.label}
           overrides={{
             Popover: {
               props: {
