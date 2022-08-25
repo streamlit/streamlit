@@ -397,11 +397,11 @@ def marshall_file(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = media_file_manager.add(
+    file_url = media_file_manager.add(
         data_as_bytes,
         mimetype,
         coordinates,
         file_name=file_name,
         is_for_static_download=True,
     )
-    proto_download_button.url = this_file.url
+    proto_download_button.url = file_url

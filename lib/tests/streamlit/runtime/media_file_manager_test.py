@@ -14,6 +14,7 @@
 
 """Unit tests for MediaFileManager"""
 
+from typing import Optional
 from unittest import mock, TestCase
 import random
 import time
@@ -98,6 +99,18 @@ class MediaFileManagerTest(TestCase):
         self.media_file_manager._files_by_id.clear()
         self.media_file_manager._files_by_session_and_coord.clear()
 
+    def _add_file_and_get_object(
+        self,
+        content: bytes,
+        mimetype: str,
+        coordinates: str,
+        file_name: Optional[str] = None,
+    ) -> MediaFile:
+        """Add a new file to our test manager and return its MediaFile object."""
+        file_id = _calculate_file_id(content, mimetype, file_name)
+        self.media_file_manager.add(content, mimetype, coordinates, file_name)
+        return self.media_file_manager.get(file_id)
+
     def test_calculate_file_id(self):
         """Test that file_id generation from data works as expected."""
 
@@ -135,7 +148,7 @@ class MediaFileManagerTest(TestCase):
             sample_coords.add(random_coordinates())
 
         for sample in ALL_FIXTURES.values():
-            f = self.media_file_manager.add(
+            f = self._add_file_and_get_object(
                 sample["content"], sample["mimetype"], sample_coords.pop()
             )
             self.assertTrue(f.id in self.media_file_manager)
@@ -155,7 +168,7 @@ class MediaFileManagerTest(TestCase):
         coord = random_coordinates()
 
         for sample in ALL_FIXTURES.values():
-            f = self.media_file_manager.add(
+            f = self._add_file_and_get_object(
                 sample["content"], sample["mimetype"], coord
             )
             self.assertTrue(f.id in self.media_file_manager)
@@ -191,7 +204,7 @@ class MediaFileManagerTest(TestCase):
         file_id = _calculate_file_id(sample["content"], sample["mimetype"])
         self.assertTrue(file_id in self.media_file_manager)
 
-        mediafile = self.media_file_manager.add(
+        mediafile = self._add_file_and_get_object(
             sample["content"], sample["mimetype"], coord
         )
         self.assertTrue(file_id in self.media_file_manager)
@@ -215,7 +228,7 @@ class MediaFileManagerTest(TestCase):
         self.assertTrue(file_id in self.media_file_manager)
 
         coord = random_coordinates()
-        mediafile = self.media_file_manager.add(
+        mediafile = self._add_file_and_get_object(
             sample["content"], sample["mimetype"], coord
         )
         self.assertTrue(file_id in self.media_file_manager)
@@ -234,10 +247,10 @@ class MediaFileManagerTest(TestCase):
         coord = random_coordinates()
 
         sample = AUDIO_FIXTURES["mp3"]
-        f1 = self.media_file_manager.add(sample["content"], "audio/mp3", coord)
+        f1 = self._add_file_and_get_object(sample["content"], "audio/mp3", coord)
         self.assertTrue(f1.id in self.media_file_manager)
 
-        f2 = self.media_file_manager.add(sample["content"], "video/mp4", coord)
+        f2 = self._add_file_and_get_object(sample["content"], "video/mp4", coord)
         self.assertNotEqual(f1.id, f2.id)
         self.assertTrue(f2.id in self.media_file_manager)
 
@@ -294,13 +307,13 @@ class MediaFileManagerTest(TestCase):
         sample = next(iter(ALL_FIXTURES.values()))
 
         coord = random_coordinates()
-        f = self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
+        f = self._add_file_and_get_object(sample["content"], sample["mimetype"], coord)
         self.assertTrue(f.id in self.media_file_manager)
 
         _get_session_id.return_value = "SESSION2"
 
         coord = random_coordinates()
-        f = self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
+        f = self._add_file_and_get_object(sample["content"], sample["mimetype"], coord)
         self.assertTrue(f.id in self.media_file_manager)
 
         # There should be only 1 file in MFM.

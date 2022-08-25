@@ -351,8 +351,8 @@ def image_to_url(
         data = image
 
     (data, mimetype) = _normalize_to_bytes(data, width, output_format)
-    this_file = media_file_manager.add(data, mimetype, image_id)
-    return this_file.url
+    file_url = media_file_manager.add(data, mimetype, image_id)
+    return file_url
 
 
 def marshall_images(
