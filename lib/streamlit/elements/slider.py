@@ -41,6 +41,42 @@ DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
 UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
+def _time_to_datetime(time: time) -> datetime:
+    # Note, here we pick an arbitrary date well after Unix epoch.
+    # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
+    # We're dropping the date from datetime laters, anyways.
+    return datetime.combine(date(2000, 1, 1), time)
+
+
+def _date_to_datetime(date: date) -> datetime:
+    return datetime.combine(date, time())
+
+
+def _delta_to_micros(delta: timedelta) -> int:
+    return (
+        delta.microseconds
+        + delta.seconds * SECONDS_TO_MICROS
+        + delta.days * DAYS_TO_MICROS
+    )
+
+
+def _datetime_to_micros(dt: datetime) -> int:
+    # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
+    # Since we want to show the date/time exactly as it is in the given datetime object,
+    # we just set the tzinfo to UTC and do not do any timezone conversions.
+    # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
+    utc_dt = dt.replace(tzinfo=timezone.utc)
+    return _delta_to_micros(utc_dt - UTC_EPOCH)
+
+
+# Restore times/datetimes to original timezone (dates are always naive)
+def _micros_to_datetime(micros: int, orig_tz: Optional[tzinfo]) -> datetime:
+    utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
+    # Add the original timezone. No conversion is required here,
+    # since in the serialization, we also just replace the timestamp with UTC.
+    return utc_dt.replace(tzinfo=orig_tz)
+
+
 @dataclass
 class SliderSerde:
     value: List[float]
@@ -50,7 +86,7 @@ class SliderSerde:
 
     def deserialize(self, ui_value: Optional[List[float]], widget_id=""):
         if ui_value is not None:
-            val = ui_value
+            val: Any = ui_value
         else:
             # Widget has not been used; fallback to the original value,
             val = self.value
@@ -59,12 +95,14 @@ class SliderSerde:
         if self.data_type == SliderProto.INT:
             val = [int(v) for v in val]
         if self.data_type == SliderProto.DATETIME:
-            val = [self._micros_to_datetime(int(v)) for v in val]
+            val = [_micros_to_datetime(int(v), self.orig_tz) for v in val]
         if self.data_type == SliderProto.DATE:
-            val = [self._micros_to_datetime(int(v)).date() for v in val]
+            val = [_micros_to_datetime(int(v), self.orig_tz).date() for v in val]
         if self.data_type == SliderProto.TIME:
             val = [
-                self._micros_to_datetime(int(v)).time().replace(tzinfo=self.orig_tz)
+                _micros_to_datetime(int(v), self.orig_tz)
+                .time()
+                .replace(tzinfo=self.orig_tz)
                 for v in val
             ]
         return val[0] if self.single_value else tuple(val)
@@ -73,43 +111,12 @@ class SliderSerde:
         range_value = isinstance(v, (list, tuple))
         value = list(v) if range_value else [v]
         if self.data_type == SliderProto.DATE:
-            value = [self._datetime_to_micros(self._date_to_datetime(v)) for v in value]
+            value = [_datetime_to_micros(_date_to_datetime(v)) for v in value]
         if self.data_type == SliderProto.TIME:
-            value = [self._datetime_to_micros(self._time_to_datetime(v)) for v in value]
+            value = [_datetime_to_micros(_time_to_datetime(v)) for v in value]
         if self.data_type == SliderProto.DATETIME:
-            value = [self._datetime_to_micros(v) for v in value]
+            value = [_datetime_to_micros(v) for v in value]
         return value
-
-    def _time_to_datetime(self, time):
-        # Note, here we pick an arbitrary date well after Unix epoch.
-        # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
-        # We're dropping the date from datetime laters, anyways.
-        return datetime.combine(date(2000, 1, 1), time)
-
-    def _date_to_datetime(self, date):
-        return datetime.combine(date, time())
-
-    def _datetime_to_micros(self, dt):
-        # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
-        # Since we want to show the date/time exactly as it is in the given datetime object,
-        # we just set the tzinfo to UTC and do not do any timezone conversions.
-        # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
-        utc_dt = dt.replace(tzinfo=timezone.utc)
-        return self._delta_to_micros(utc_dt - UTC_EPOCH)
-
-    def _delta_to_micros(self, delta):
-        return (
-            delta.microseconds
-            + delta.seconds * SECONDS_TO_MICROS
-            + delta.days * DAYS_TO_MICROS
-        )
-
-    # Restore times/datetimes to original timezone (dates are always naive)
-    def _micros_to_datetime(self, micros):
-        utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
-        # Add the original timezone. No conversion is required here,
-        # since in the serialization, we also just replace the timestamp with UTC.
-        return utc_dt.replace(tzinfo=self.orig_tz)
 
 
 class SliderMixin:
@@ -456,20 +463,11 @@ class SliderMixin:
         # Convert dates or times into datetimes
         if data_type == SliderProto.TIME:
 
-            def _time_to_datetime(time):
-                # Note, here we pick an arbitrary date well after Unix epoch.
-                # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
-                # We're dropping the date from datetime laters, anyways.
-                return datetime.combine(date(2000, 1, 1), time)
-
             value = list(map(_time_to_datetime, value))
             min_value = _time_to_datetime(min_value)
             max_value = _time_to_datetime(max_value)
 
         if data_type == SliderProto.DATE:
-
-            def _date_to_datetime(date):
-                return datetime.combine(date, time())
 
             value = list(map(_date_to_datetime, value))
             min_value = _date_to_datetime(min_value)
@@ -477,25 +475,6 @@ class SliderMixin:
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
-            SECONDS_TO_MICROS = 1000 * 1000
-            DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
-
-            def _delta_to_micros(delta):
-                return (
-                    delta.microseconds
-                    + delta.seconds * SECONDS_TO_MICROS
-                    + delta.days * DAYS_TO_MICROS
-                )
-
-            UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-            def _datetime_to_micros(dt):
-                # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
-                # Since we want to show the date/time exactly as it is in the given datetime object,
-                # we just set the tzinfo to UTC and do not do any timezone conversions.
-                # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
-                utc_dt = dt.replace(tzinfo=timezone.utc)
-                return _delta_to_micros(utc_dt - UTC_EPOCH)
 
             # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
@@ -503,12 +482,6 @@ class SliderMixin:
                 if data_type in (SliderProto.TIME, SliderProto.DATETIME)
                 else None
             )
-
-            def _micros_to_datetime(micros):
-                utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
-                # Add the original timezone. No conversion is required here,
-                # since in the serialization, we also just replace the timestamp with UTC.
-                return utc_dt.replace(tzinfo=orig_tz)
 
             value = list(map(_datetime_to_micros, value))
             min_value = _datetime_to_micros(min_value)
