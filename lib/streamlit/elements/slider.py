@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from datetime import date, time, datetime, timedelta, timezone
+from datetime import date, time, datetime, timedelta, timezone, tzinfo
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from typing import Any, List, cast, Optional
@@ -46,14 +46,14 @@ class SliderSerde:
     value: List[float]
     data_type: int
     single_value: bool
-    orig_tz: ...
+    orig_tz: Optional[tzinfo]
 
     def deserialize(self, ui_value: Optional[List[float]], widget_id=""):
         if ui_value is not None:
             val = ui_value
         else:
             # Widget has not been used; fallback to the original value,
-            val = cast(List[float], self.value)
+            val = self.value
 
         # The widget always returns a float array, so fix the return type if necessary
         if self.data_type == SliderProto.INT:
