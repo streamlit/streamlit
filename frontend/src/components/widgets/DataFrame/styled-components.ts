@@ -42,7 +42,6 @@ export const StyledResizableContainer = styled.div<
   maxWidth: `${maxWidth}px`,
   height: `${height}px`,
   border: `1px solid ${theme.colors.fadedText05}`,
-  marginTop: theme.spacing.md,
 
   "> div": {
     height: "100%",
