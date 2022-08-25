@@ -26,6 +26,13 @@ if TYPE_CHECKING:
 
 
 def _convert_sets_to_lists(body: Any) -> Any:
+    if isinstance(body, (list, tuple)):
+        # We could technically iterate through the elements of a list/tuple and convert
+        # any sets that we find to lists like we do below, but lists/tuples of sets
+        # seem like a strange enough use-case that it's probably not worth the
+        # additional complexity.
+        return body
+
     # Convert sets into lists, which render more nicely on the frontend
     set_found = False
     for key in body:
@@ -93,6 +100,7 @@ class JsonMixin:
             else:
                 # body is iterable, look for sets and change them to lists
                 body = _convert_sets_to_lists(body)
+
             try:
                 # Serialize body to string
                 body = json.dumps(body, default=repr)

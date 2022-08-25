@@ -215,7 +215,7 @@ class WriteMixin:
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
-            elif isinstance(arg, (dict, list, SessionStateProxy, UserInfoProxy)):
+            elif isinstance(arg, (dict, list, SessionStateProxy, tuple, UserInfoProxy)):
                 flush_buffer()
                 self.dg.json(arg)
             elif type_util.is_namedtuple(arg):
