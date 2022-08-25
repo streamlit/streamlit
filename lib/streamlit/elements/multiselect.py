@@ -216,14 +216,11 @@ class MultiSelectMixin:
                 else:
                     default_values = list(default_values)
             if len(default_values) != 0 and isinstance(default_values[0], Enum):
-                str_default_values = [str(enum) for enum in default_values]
-                mapped_opt_keys = [str(enum) for enum in opt]
-                for value in str_default_values:
-                    if value not in mapped_opt_keys:
+                for value in default_values:
+                    if value not in opt:
                         raise StreamlitAPIException(
-                            "Every Multiselect default value must exist in options"
+                            "Every Multiselect default value must exist in options. If this looks incorrect and you're not using enums in a separate module, we recommend you do in order to remove this log statement. This occurs because of Streamlit's built in mechanic of rerun and the memory addresses of the variants of the enum differ from script run to script run."
                         )
-                return [mapped_opt_keys.index(value) for value in str_default_values]
 
             for value in default_values:
                 if value not in opt:
@@ -273,9 +270,6 @@ class MultiSelectMixin:
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
-        if len(widget_state.value) != 0:
-            if isinstance(widget_state.value[0], Enum):
-                return [str(enum) for enum in widget_state.value]
         return widget_state.value
 
     @property

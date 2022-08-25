@@ -42,8 +42,8 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: ['Colors.yellow']" +
-            "value 8: ['Shake.CHOCOLATE']" +
+            "value 7: [<Colors.yellow: 1>]" +
+            "value 8: [<Shake.CHOCOLATE: 'CHOCOLATE'>]" +
             "value 9: []" +
             "multiselect changed: False"
         );
@@ -138,8 +138,8 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: ['Colors.yellow']" +
-            "value 8: ['Shake.CHOCOLATE']" +
+            "value 7: [<Colors.yellow: 1>]" +
+            "value 8: [<Shake.CHOCOLATE: 'CHOCOLATE'>]" +
             "value 9: []" +
             "multiselect changed: False"
         );
@@ -159,8 +159,8 @@ describe("st.multiselect", () => {
               "value 4: ['tea', 'water']" +
               "value 5: []" +
               "value 6: []" +
-              "value 7: ['Colors.yellow']" +
-              "value 8: ['Shake.CHOCOLATE']" +
+              "value 7: [<Colors.yellow: 1>]" +
+              "value 8: [<Shake.CHOCOLATE: 'CHOCOLATE'>]" +
               "value 9: []" +
               "multiselect changed: False"
           );
@@ -189,8 +189,8 @@ describe("st.multiselect", () => {
                 "value 4: ['tea']" +
                 "value 5: []" +
                 "value 6: []" +
-                "value 7: ['Colors.yellow']" +
-                "value 8: ['Shake.CHOCOLATE']" +
+                "value 7: [<Colors.yellow: 1>]" +
+                "value 8: [<Shake.CHOCOLATE: 'CHOCOLATE'>]" +
                 "value 9: []" +
                 "multiselect changed: False"
             );
@@ -218,7 +218,7 @@ describe("st.multiselect", () => {
                 "value 5: []" +
                 "value 6: []" +
                 "value 7: []" +
-                "value 8: ['Shake.CHOCOLATE']" +
+                "value 8: [<Shake.CHOCOLATE: 'CHOCOLATE'>]" +
                 "value 9: []" +
                 "multiselect changed: False"
             );
@@ -246,8 +246,8 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: ['Colors.yellow']" +
-            "value 8: ['Shake.CHOCOLATE']" +
+            "value 7: [<Colors.yellow: 1>]" +
+            "value 8: [<Shake.CHOCOLATE: 'CHOCOLATE'>]" +
             "value 9: ['male']" +
             "multiselect changed: True"
         );
