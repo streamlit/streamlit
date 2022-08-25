@@ -160,10 +160,11 @@ def calc_md5(s: str) -> str:
     return h.hexdigest()
 
 
-def likely_equivalent(e1: Enum, e2: Enum) -> bool:
+def likely_equivalent(e1: Enum, e2: object) -> bool:
     """Checks whether two enum values are likely to have been identical if it wasn't for rerunning."""
     return (
-        type(e2).__name__ == type(e1).__name__
+        isinstance(e2, Enum)
+        and type(e2).__name__ == type(e1).__name__
         and e2.name == e1.name
         and e2.value == e1.value
     )
