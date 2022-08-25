@@ -25,8 +25,8 @@ from streamlit.runtime.in_memory_file_manager import (
     in_memory_file_manager,
     FILE_TYPE_DOWNLOADABLE,
 )
+from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.string_util import generate_download_filename_from_title
-from streamlit.web.server.server_util import serialize_forward_msg
 
 LOGGER = get_logger(__name__)
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import copy
 from typing import Any, cast, TYPE_CHECKING
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
@@ -22,6 +23,27 @@ from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+
+def _convert_sets_to_lists(body: Any) -> Any:
+    if isinstance(body, (list, tuple)):
+        # We could technically iterate through the elements of a list/tuple and convert
+        # any sets that we find to lists like we do below, but lists/tuples of sets
+        # seem like a strange enough use-case that it's probably not worth the
+        # additional complexity.
+        return body
+
+    # Convert sets into lists, which render more nicely on the frontend
+    set_found = False
+    for key in body:
+        if isinstance(body[key], set):
+            if not set_found:
+                # When set is found to prevent mutation of input body, we need to shallow copy it once
+                # To avoid copying it multiple times we use set_found flag
+                body = copy.copy(body)
+                set_found = True
+            body[key] = list(body[key])
+    return body
 
 
 class JsonMixin:
@@ -69,7 +91,18 @@ class JsonMixin:
             body = body.to_dict()
 
         if not isinstance(body, str):
+            # Check if body is iterable, if it is convert it's sets to lists
             try:
+                iter(body)
+            except TypeError:
+                # body is not iterable, do nothing with the body
+                pass
+            else:
+                # body is iterable, look for sets and change them to lists
+                body = _convert_sets_to_lists(body)
+
+            try:
+                # Serialize body to string
                 body = json.dumps(body, default=repr)
             except TypeError as err:
                 st.warning(

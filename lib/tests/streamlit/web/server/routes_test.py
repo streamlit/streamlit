@@ -24,13 +24,13 @@ import tornado.websocket
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
+from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server import (
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
 )
-from streamlit.web.server.server_util import serialize_forward_msg
-from .message_mocks import create_dataframe_msg
+from tests.streamlit.message_mocks import create_dataframe_msg
 
 LOGGER = get_logger(__name__)
 
