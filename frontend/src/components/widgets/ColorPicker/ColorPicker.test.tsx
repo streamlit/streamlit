@@ -48,7 +48,7 @@ function getPopoverWrapper(wrapper: ReactWrapper<ColorPicker>): any {
     wrapper
       .find(UIPopover)
       // @ts-ignore
-      .renderProp("content")()
+      .renderProp("content")(null)
       .find(StyledChromePicker)
   )
 }
