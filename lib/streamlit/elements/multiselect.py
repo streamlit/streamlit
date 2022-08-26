@@ -78,15 +78,6 @@ def _check_and_convert_to_indices(
             default_values = [default_values]
         else:
             default_values = list(default_values)
-    if len(default_values) != 0 and isinstance(default_values[0], Enum):
-        str_default_values = [str(enum) for enum in default_values]
-        mapped_opt_keys = [str(enum) for enum in opt]
-        for value in str_default_values:
-            if value not in mapped_opt_keys:
-                raise StreamlitAPIException(
-                    "Every Multiselect default value must exist in options"
-                )
-        return [mapped_opt_keys.index(value) for value in str_default_values]
 
     for value in default_values:
         if value not in opt:
