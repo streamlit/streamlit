@@ -16,7 +16,12 @@ from dataclasses import dataclass
 import numbers
 from streamlit import logger as _logger
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import LabelVisibility, Key, to_key
+from streamlit.type_util import (
+    LabelVisibility,
+    Key,
+    to_key,
+    maybe_raise_label_visibility_wrong_value_warning,
+)
 from textwrap import dedent
 from typing import Optional, Union, cast
 
@@ -182,6 +187,7 @@ class NumberInputMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]

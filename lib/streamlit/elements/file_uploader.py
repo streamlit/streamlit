@@ -13,7 +13,12 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from streamlit.type_util import Key, to_key, LabelVisibility
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_visibility_wrong_value_warning,
+)
 from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
 from typing_extensions import Literal
@@ -356,6 +361,7 @@ class FileUploaderMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         if type:
             if isinstance(type, str):

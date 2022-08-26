@@ -13,7 +13,12 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from streamlit.type_util import Key, to_key, LabelVisibility
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_visibility_wrong_value_warning,
+)
 from streamlit import logger as _logger
 from textwrap import dedent
 from typing import Optional, cast, List, TYPE_CHECKING
@@ -216,6 +221,7 @@ class CameraInputMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         camera_input_proto = CameraInputProto()
         camera_input_proto.label = label

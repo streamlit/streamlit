@@ -21,7 +21,12 @@ from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key, LabelVisibility
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_visibility_wrong_value_warning,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit import logger as _logger
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
@@ -308,6 +313,7 @@ class TimeWidgetsMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         parsed_time: time
         if value is None:
@@ -470,6 +476,7 @@ class TimeWidgetsMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,

@@ -33,6 +33,7 @@ from streamlit.type_util import (
     ensure_indexable,
     to_key,
     LabelVisibility,
+    maybe_raise_label_visibility_wrong_value_warning,
 )
 from streamlit.util import index_
 from .form import current_form_id
@@ -218,6 +219,7 @@ class SelectSliderMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         opt = ensure_indexable(options)
 

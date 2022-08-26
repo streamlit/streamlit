@@ -15,7 +15,12 @@
 from dataclasses import dataclass
 from datetime import date, time, datetime, timedelta, timezone, tzinfo
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_visibility_wrong_value_warning,
+)
 from typing import Any, List, cast, Optional
 from textwrap import dedent
 
@@ -138,7 +143,7 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: str = "visible",
+        label_visibility: LabelVisibility = "visible",
     ):
         """Display a slider widget.
 
@@ -280,7 +285,7 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        label_visibility: str = "visible",
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ):
         key = to_key(key)
@@ -294,6 +299,7 @@ class SliderMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         if value is None:
             # Set value from session_state if exists.

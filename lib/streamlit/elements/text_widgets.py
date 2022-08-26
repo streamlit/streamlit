@@ -14,7 +14,12 @@
 
 from dataclasses import dataclass
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key, LabelVisibility
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_visibility_wrong_value_warning,
+)
 from textwrap import dedent
 from typing import Optional, cast
 
@@ -187,6 +192,7 @@ class TextWidgetsMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         text_input_proto = TextInputProto()
         text_input_proto.label = label
@@ -363,6 +369,7 @@ class TextWidgetsMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         text_area_proto = TextAreaProto()
         text_area_proto.label = label

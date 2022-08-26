@@ -15,7 +15,12 @@
 from dataclasses import dataclass
 import re
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key, LabelVisibility
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_visibility_wrong_value_warning,
+)
 from textwrap import dedent
 from typing import Optional, cast
 
@@ -150,6 +155,7 @@ class ColorPickerMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         # set value default
         if value is None:

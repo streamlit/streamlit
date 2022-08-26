@@ -40,6 +40,7 @@ from streamlit.type_util import (
     is_type,
     to_key,
     LabelVisibility,
+    maybe_raise_label_visibility_wrong_value_warning,
 )
 
 from streamlit.runtime.state import (
@@ -283,6 +284,7 @@ class MultiSelectMixin:
                 "Please provide a non-empty label and hide it with label_visibility "
                 "if needed."
             )
+        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
         multiselect_proto = MultiSelectProto()

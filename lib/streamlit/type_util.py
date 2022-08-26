@@ -584,3 +584,11 @@ def to_key(key: Optional[Key]) -> Optional[str]:
         return None
     else:
         return str(key)
+
+
+def maybe_raise_label_visibility_wrong_value_warning(label_visibility: Optional[str]):
+    if label_visibility not in ("visible", "hidden", "collapsed"):
+        raise errors.StreamlitAPIException(
+            f"Unsupported label_visibility option '{label_visibility}'. "
+            f"Valid values are 'visible', 'hidden' or 'collapsed'."
+        )
