@@ -61,6 +61,22 @@ describe("Slider widget", () => {
     expect(wrapper.find("StyledWidgetLabel").text()).toBe("Label")
   })
 
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({ labelVisibility: "hidden" })
+    const wrapper = mount(<Slider {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "hidden"
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({ labelVisibility: "collapsed" })
+    const wrapper = mount(<Slider {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "collapsed"
+    )
+  })
+
   it("sets widget value on mount", async () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
