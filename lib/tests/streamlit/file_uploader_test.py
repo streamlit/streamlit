@@ -18,6 +18,7 @@ from parameterized import parameterized
 from unittest.mock import patch
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from streamlit import config
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec, UploadedFile
@@ -179,3 +180,12 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.label_visibility, proto_value)
+
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.file_uploader("the label", label_visibility="wrong_value")
+            self.assertEquals(
+                str(e),
+                "Unsupported label_visibility option 'wrong_value'. Valid values are "
+                "'visible', 'hidden' or 'collapsed'.",
+            )

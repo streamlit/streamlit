@@ -20,6 +20,7 @@ from parameterized import parameterized
 
 from tests import testutil
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
 
 class TextAreaTest(testutil.DeltaGeneratorTestCase):
@@ -121,6 +122,15 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         st.text_area("the label", label_visibility=label_visibility_value)
         c = self.get_delta_from_queue().new_element.text_area
         self.assertEqual(c.label_visibility, proto_value)
+
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.number_input("the label", label_visibility="wrong_value")
+            self.assertEquals(
+                str(e),
+                "Unsupported label_visibility option 'wrong_value'. Valid values are "
+                "'visible', 'hidden' or 'collapsed'.",
+            )
 
     def test_help_dedents(self):
         """Test that help properly dedents"""

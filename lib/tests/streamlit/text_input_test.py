@@ -155,6 +155,15 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.text_input
         self.assertEqual(c.label_visibility, proto_value)
 
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.text_input("the label", label_visibility="wrong_value")
+            self.assertEquals(
+                str(e),
+                "Unsupported label_visibility option 'wrong_value'. Valid values are "
+                "'visible', 'hidden' or 'collapsed'.",
+            )
+
 
 class SomeObj:
     pass
