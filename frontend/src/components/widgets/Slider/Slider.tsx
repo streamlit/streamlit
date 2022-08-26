@@ -326,6 +326,7 @@ class Slider extends React.PureComponent<Props, State> {
             },
             Track: {
               style: {
+                backgroundColor: "none !important",
                 paddingBottom: 0,
                 paddingLeft: 0,
                 paddingRight: 0,

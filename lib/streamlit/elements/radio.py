@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Callable, Optional, cast
 
@@ -39,6 +40,26 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 _LOGGER = _logger.get_logger("root")
+
+
+@dataclass
+class RadioSerde:
+    options: OptionSequence
+    index: int
+
+    def serialize(self, v):
+        if len(self.options) == 0:
+            return 0
+        return index_(self.options, v)
+
+    def deserialize(self, ui_value, widget_id=""):
+        idx = ui_value if ui_value is not None else self.index
+
+        return (
+            self.options[idx]
+            if len(self.options) > 0 and self.options[idx] is not None
+            else None
+        )
 
 
 class RadioMixin:
@@ -193,15 +214,7 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = dedent(help)
 
-        def deserialize_radio(ui_value, widget_id=""):
-            idx = ui_value if ui_value is not None else index
-
-            return opt[idx] if len(opt) > 0 and opt[idx] is not None else None
-
-        def serialize_radio(v):
-            if len(opt) == 0:
-                return 0
-            return index_(opt, v)
+        serde = RadioSerde(opt, index)
 
         widget_state = register_widget(
             "radio",
@@ -210,8 +223,8 @@ class RadioMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_radio,
-            serializer=serialize_radio,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -221,7 +234,7 @@ class RadioMixin:
         radio_proto.label_visibility = label_visibility
 
         if widget_state.value_changed:
-            radio_proto.value = serialize_radio(widget_state.value)
+            radio_proto.value = serde.serialize(widget_state.value)
             radio_proto.set_value = True
 
         self.dg._enqueue("radio", radio_proto)

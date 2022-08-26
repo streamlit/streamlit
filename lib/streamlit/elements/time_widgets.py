@@ -163,6 +163,49 @@ class _DateInputValues:
                 )
 
 
+@dataclass
+class TimeInputSerde:
+    value: time
+
+    def deserialize(self, ui_value: Optional[str], widget_id: Any = "") -> time:
+        return (
+            datetime.strptime(ui_value, "%H:%M").time()
+            if ui_value is not None
+            else self.value
+        )
+
+    def serialize(self, v: Union[datetime, time]) -> str:
+        if isinstance(v, datetime):
+            v = v.time()
+        return time.strftime(v, "%H:%M")
+
+
+@dataclass
+class DateInputSerde:
+    value: _DateInputValues
+
+    def deserialize(
+        self,
+        ui_value: Any,
+        widget_id: str = "",
+    ) -> DateWidgetReturn:
+        return_value: Sequence[date]
+        if ui_value is not None:
+            return_value = tuple(
+                datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
+            )
+        else:
+            return_value = self.value.value
+
+        if not self.value.is_range:
+            return return_value[0]
+        return cast(DateWidgetReturn, tuple(return_value))
+
+    def serialize(self, v: DateWidgetReturn) -> List[str]:
+        to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
+        return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+
+
 class TimeWidgetsMixin:
     def time_input(
         self,
@@ -287,20 +330,7 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = dedent(help)
 
-        def deserialize_time_input(
-            ui_value: Optional[str], widget_id: Any = ""
-        ) -> time:
-            return (
-                datetime.strptime(ui_value, "%H:%M").time()
-                if ui_value is not None
-                else parsed_time
-            )
-
-        def serialize_time_input(v: Union[datetime, time]) -> str:
-            if isinstance(v, datetime):
-                v = v.time()
-            return time.strftime(v, "%H:%M")
-
+        serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
             "time_input",
             time_input_proto,
@@ -308,8 +338,8 @@ class TimeWidgetsMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_time_input,
-            serializer=serialize_time_input,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -318,7 +348,7 @@ class TimeWidgetsMixin:
         time_input_proto.disabled = disabled
         time_input_proto.label_visibility = label_visibility
         if widget_state.value_changed:
-            time_input_proto.value = serialize_time_input(widget_state.value)
+            time_input_proto.value = serde.serialize(widget_state.value)
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
@@ -463,25 +493,7 @@ class TimeWidgetsMixin:
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        def deserialize_date_input(
-            ui_value: Any,
-            widget_id: str = "",
-        ) -> DateWidgetReturn:
-            return_value: Sequence[date]
-            if ui_value is not None:
-                return_value = tuple(
-                    datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
-                )
-            else:
-                return_value = parsed_values.value
-
-            if not parsed_values.is_range:
-                return return_value[0]
-            return cast(DateWidgetReturn, tuple(return_value))
-
-        def serialize_date_input(v: DateWidgetReturn) -> List[str]:
-            to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
-            return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+        serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
             "date_input",
@@ -490,8 +502,8 @@ class TimeWidgetsMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_date_input,
-            serializer=serialize_date_input,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -500,7 +512,7 @@ class TimeWidgetsMixin:
         date_input_proto.disabled = disabled
         date_input_proto.label_visibility = label_visibility
         if widget_state.value_changed:
-            date_input_proto.value[:] = serialize_date_input(widget_state.value)
+            date_input_proto.value[:] = serde.serialize(widget_state.value)
             date_input_proto.set_value = True
 
         self.dg._enqueue("date_input", date_input_proto)

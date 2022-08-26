@@ -18,7 +18,6 @@
 import React, { PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
-import { fromJS } from "immutable"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
@@ -876,7 +875,7 @@ export class App extends PureComponent<Props, State> {
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
-        this.widgetMgr.removeInactive(fromJS([]))
+        this.widgetMgr.removeInactive(new Set([]))
       }
     )
   }

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from streamlit.type_util import Key, to_key, LabelVisibility
 from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
@@ -39,6 +40,73 @@ from .utils import check_callback_rules, check_session_state_rules
 LOGGER = get_logger(__name__)
 
 SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
+
+
+def _get_file_recs(
+    widget_id: str, widget_value: Optional[FileUploaderStateProto]
+) -> List[UploadedFileRec]:
+    if widget_value is None:
+        return []
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return []
+
+    uploaded_file_info = widget_value.uploaded_file_info
+    if len(uploaded_file_info) == 0:
+        return []
+
+    active_file_ids = [f.id for f in uploaded_file_info]
+
+    # Grab the files that correspond to our active file IDs.
+    return ctx.uploaded_file_mgr.get_files(
+        session_id=ctx.session_id,
+        widget_id=widget_id,
+        file_ids=active_file_ids,
+    )
+
+
+@dataclass
+class FileUploaderSerde:
+    accept_multiple_files: bool
+
+    def deserialize(
+        self, ui_value: Optional[FileUploaderStateProto], widget_id: str
+    ) -> SomeUploadedFiles:
+        file_recs = _get_file_recs(widget_id, ui_value)
+        if len(file_recs) == 0:
+            return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
+                [] if self.accept_multiple_files else None
+            )
+        else:
+            files = [UploadedFile(rec) for rec in file_recs]
+            return_value = files if self.accept_multiple_files else files[0]
+        return return_value
+
+    def serialize(self, files: SomeUploadedFiles) -> FileUploaderStateProto:
+        state_proto = FileUploaderStateProto()
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return state_proto
+
+        # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
+        # the *next* uploaded file, so the current highest file id is the
+        # counter minus 1.
+        state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
+
+        if not files:
+            return state_proto
+        elif not isinstance(files, list):
+            files = [files]
+
+        for f in files:
+            file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
+            file_info.id = f.id
+            file_info.name = f.name
+            file_info.size = f.size
+
+        return state_proto
 
 
 class FileUploaderMixin:
@@ -311,43 +379,7 @@ class FileUploaderMixin:
         if help is not None:
             file_uploader_proto.help = dedent(help)
 
-        def deserialize_file_uploader(
-            ui_value: Optional[FileUploaderStateProto], widget_id: str
-        ) -> SomeUploadedFiles:
-            file_recs = self._get_file_recs(widget_id, ui_value)
-            if len(file_recs) == 0:
-                return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
-                    [] if accept_multiple_files else None
-                )
-            else:
-                files = [UploadedFile(rec) for rec in file_recs]
-                return_value = files if accept_multiple_files else files[0]
-            return return_value
-
-        def serialize_file_uploader(files: SomeUploadedFiles) -> FileUploaderStateProto:
-            state_proto = FileUploaderStateProto()
-
-            ctx = get_script_run_ctx()
-            if ctx is None:
-                return state_proto
-
-            # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
-            # the *next* uploaded file, so the current highest file id is the
-            # counter minus 1.
-            state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
-
-            if not files:
-                return state_proto
-            elif not isinstance(files, list):
-                files = [files]
-
-            for f in files:
-                file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-                file_info.id = f.id
-                file_info.name = f.name
-                file_info.size = f.size
-
-            return state_proto
+        serde = FileUploaderSerde(accept_multiple_files)
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
@@ -359,8 +391,8 @@ class FileUploaderMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_file_uploader,
-            serializer=serialize_file_uploader,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -369,7 +401,7 @@ class FileUploaderMixin:
         file_uploader_proto.disabled = disabled
         file_uploader_proto.label_visibility = label_visibility
 
-        file_uploader_state = serialize_file_uploader(widget_state.value)
+        file_uploader_state = serde.serialize(widget_state.value)
         uploaded_file_info = file_uploader_state.uploaded_file_info
         if ctx is not None and len(uploaded_file_info) != 0:
             newest_file_id = file_uploader_state.max_file_id
@@ -384,30 +416,6 @@ class FileUploaderMixin:
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
         return widget_state.value
-
-    @staticmethod
-    def _get_file_recs(
-        widget_id: str, widget_value: Optional[FileUploaderStateProto]
-    ) -> List[UploadedFileRec]:
-        if widget_value is None:
-            return []
-
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return []
-
-        uploaded_file_info = widget_value.uploaded_file_info
-        if len(uploaded_file_info) == 0:
-            return []
-
-        active_file_ids = [f.id for f in uploaded_file_info]
-
-        # Grab the files that correspond to our active file IDs.
-        return ctx.uploaded_file_mgr.get_files(
-            session_id=ctx.session_id,
-            widget_id=widget_id,
-            file_ids=active_file_ids,
-        )
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

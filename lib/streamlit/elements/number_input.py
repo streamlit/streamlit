@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import numbers
 from streamlit import logger as _logger
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -36,6 +37,17 @@ from .utils import check_callback_rules, check_session_state_rules
 Number = Union[int, float]
 
 _LOGGER = _logger.get_logger("root")
+
+
+@dataclass
+class NumberInputSerde:
+    value: Union[int, float]
+
+    def serialize(self, v: Number) -> Number:
+        return v
+
+    def deserialize(self, ui_value: Optional[Number], widget_id: str = "") -> Number:
+        return ui_value if ui_value is not None else self.value
 
 
 class NumberInputMixin:
@@ -297,11 +309,7 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        def deserialize_number_input(
-            ui_value: Optional[Number], widget_id: str = ""
-        ) -> Number:
-            return ui_value if ui_value is not None else cast(Number, value)
-
+        serde = NumberInputSerde(value)
         widget_state = register_widget(
             "number_input",
             number_input_proto,
@@ -309,8 +317,8 @@ class NumberInputMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_number_input,
-            serializer=lambda x: x,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 

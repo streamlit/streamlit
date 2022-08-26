@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -43,7 +43,7 @@
     "@loaders.gl/gltf": "^2.2.8",
     "apache-arrow": "^8.0.0",
     "axios": "^0.21.4",
-    "baseui": "9.106.0",
+    "baseui": "9.116.3",
     "camelcase": "^6.2.0",
     "classnames": "^2.3.1",
     "clipboard": "^2.0.8",
@@ -107,14 +107,15 @@
     "vega": "^5.17.3",
     "vega-embed": "^6.10.0",
     "vega-lite": "^5.2.0",
-    "xxhashjs": "^0.2.2"
+    "xxhashjs": "^0.2.2",
+    "enzyme": "^3.11.0",
+    "@testing-library/react": "^11.2.7"
   },
   "devDependencies": {
     "@craco/craco": "^6.1.2",
     "@deck.gl/json": "^8.2.5",
     "@emotion/jest": "^11.7.1",
     "@testing-library/dom": "^7.31.0",
-    "@testing-library/react": "^11.2.7",
     "@testing-library/react-hooks": "^7.0.2",
     "@testing-library/user-event": "^13.1.9",
     "@types/d3": "^5.7.2",
@@ -157,7 +158,6 @@
     "cypress": "^6.3.0",
     "cypress-file-upload": "^4.1.1",
     "cypress-image-snapshot": "^3.1.1",
-    "enzyme": "^3.11.0",
     "enzyme-to-json": "^3.6.1",
     "eslint-config-airbnb-typescript": "^9.0.0",
     "eslint-config-prettier": "^6.11.0",

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key, LabelVisibility
 from textwrap import dedent
@@ -34,6 +35,28 @@ from .utils import check_callback_rules, check_session_state_rules
 from ..type_util import SupportsStr
 
 _LOGGER = _logger.get_logger("root")
+
+
+@dataclass
+class TextInputSerde:
+    value: SupportsStr
+
+    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
+        return str(ui_value if ui_value is not None else self.value)
+
+    def serialize(self, v: str) -> str:
+        return v
+
+
+@dataclass
+class TextAreaSerde:
+    value: SupportsStr
+
+    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
+        return str(ui_value if ui_value is not None else self.value)
+
+    def serialize(self, v: str) -> str:
+        return v
 
 
 class TextWidgetsMixin:
@@ -195,8 +218,7 @@ class TextWidgetsMixin:
             autocomplete = "new-password" if type == "password" else ""
         text_input_proto.autocomplete = autocomplete
 
-        def deserialize_text_input(ui_value: Optional[str], widget_id: str = "") -> str:
-            return str(ui_value if ui_value is not None else value)
+        serde = TextInputSerde(value)
 
         widget_state = register_widget(
             "text_input",
@@ -205,8 +227,8 @@ class TextWidgetsMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_text_input,
-            serializer=lambda x: x,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -359,9 +381,7 @@ class TextWidgetsMixin:
         if placeholder is not None:
             text_area_proto.placeholder = str(placeholder)
 
-        def deserialize_text_area(ui_value, widget_id="") -> str:
-            return str(ui_value if ui_value is not None else value)
-
+        serde = TextAreaSerde(value)
         widget_state = register_widget(
             "text_area",
             text_area_proto,
@@ -369,8 +389,8 @@ class TextWidgetsMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_text_area,
-            serializer=lambda x: x,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 

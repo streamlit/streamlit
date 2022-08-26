@@ -132,11 +132,11 @@ def index_(iterable: Iterable[_Value], x: _Value) -> int:
     """
 
     for i, value in enumerate(iterable):
-        if isinstance(value, float) and isinstance(x, float):
+        if x == value:
+            return i
+        elif isinstance(value, float) and isinstance(x, float):
             if abs(x - value) < FLOAT_EQUALITY_EPSILON:
                 return i
-        elif x == value:
-            return i
     raise ValueError("{} is not in iterable".format(str(x)))
 
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Callable, Optional, cast
 
@@ -38,6 +39,26 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 _LOGGER = _logger.get_logger("root")
+
+
+@dataclass
+class SelectboxSerde:
+    options: OptionSequence
+    index: int
+
+    def deserialize(self, ui_value, widget_id=""):
+        idx = ui_value if ui_value is not None else self.index
+
+        return (
+            self.options[idx]
+            if len(self.options) > 0 and self.options[idx] is not None
+            else None
+        )
+
+    def serialize(self, v):
+        if len(self.options) == 0:
+            return 0
+        return index_(self.options, v)
 
 
 class SelectboxMixin:
@@ -177,15 +198,7 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = dedent(help)
 
-        def deserialize_select_box(ui_value, widget_id=""):
-            idx = ui_value if ui_value is not None else index
-
-            return opt[idx] if len(opt) > 0 and opt[idx] is not None else None
-
-        def serialize_select_box(v):
-            if len(opt) == 0:
-                return 0
-            return index_(opt, v)
+        serde = SelectboxSerde(opt, index)
 
         widget_state = register_widget(
             "selectbox",
@@ -194,8 +207,8 @@ class SelectboxMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_select_box,
-            serializer=serialize_select_box,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -204,7 +217,7 @@ class SelectboxMixin:
         selectbox_proto.disabled = disabled
         selectbox_proto.label_visibility = label_visibility
         if widget_state.value_changed:
-            selectbox_proto.value = serialize_select_box(widget_state.value)
+            selectbox_proto.value = serde.serialize(widget_state.value)
             selectbox_proto.set_value = True
 
         self.dg._enqueue("selectbox", selectbox_proto)

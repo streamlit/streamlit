@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import re
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key, LabelVisibility
@@ -32,6 +33,17 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 _LOGGER = _logger.get_logger("root")
+
+
+@dataclass
+class ColorPickerSerde:
+    value: str
+
+    def serialize(self, v: str) -> str:
+        return str(v)
+
+    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
+        return str(ui_value if ui_value is not None else self.value)
 
 
 class ColorPickerMixin:
@@ -172,10 +184,7 @@ class ColorPickerMixin:
         if help is not None:
             color_picker_proto.help = dedent(help)
 
-        def deserialize_color_picker(
-            ui_value: Optional[str], widget_id: str = ""
-        ) -> str:
-            return str(ui_value if ui_value is not None else value)
+        serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
             "color_picker",
@@ -184,8 +193,8 @@ class ColorPickerMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_color_picker,
-            serializer=str,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 

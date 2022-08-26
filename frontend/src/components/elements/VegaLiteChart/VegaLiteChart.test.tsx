@@ -17,7 +17,7 @@
 
 import React from "react"
 import { mount } from "src/lib/test_util"
-import { fromJS } from "immutable"
+import { fromJS, Map as ImmutableMap } from "immutable"
 import { VegaLiteChart as VegaLiteChartProto } from "src/autogen/proto"
 import { darkTheme, lightTheme } from "src/theme"
 import { tableGetRowsAndCols } from "src/lib/dataFrameProto"
@@ -36,7 +36,7 @@ const getProps = (
   element: fromJS({
     ...mock,
     ...elementProps,
-  }),
+  }) as ImmutableMap<string, any>,
   width: 0,
   height: 0,
   theme: lightTheme.emotion,
@@ -147,16 +147,18 @@ describe("VegaLiteChart Element", () => {
   cases.forEach(([prevData, data, expected, testDescription]) => {
     it(`tests for appended data properly - ${testDescription}`, () => {
       const [prevNumRows, prevNumCols] = tableGetRowsAndCols(
-        prevData.get("data")
+        (prevData as ImmutableMap<string, number>).get("data")
       )
-      const [numRows, numCols] = tableGetRowsAndCols(data.get("data"))
+      const [numRows, numCols] = tableGetRowsAndCols(
+        (data as ImmutableMap<string, number>).get("data")
+      )
 
       expect(
         dataIsAnAppendOfPrev(
-          prevData,
+          prevData as ImmutableMap<string, number>,
           prevNumRows,
           prevNumCols,
-          data,
+          data as ImmutableMap<string, number>,
           numRows,
           numCols
         )
@@ -187,7 +189,7 @@ describe("VegaLiteChart Element", () => {
     props.element = fromJS({
       ...props.element.toObject(),
       spec: JSON.stringify(spec),
-    })
+    }) as ImmutableMap<string, any>
 
     const wrapper = mount<VegaLiteChart>(<VegaLiteChart {...props} />)
     const generatedSpec = wrapper.instance().generateSpec()

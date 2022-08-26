@@ -84,14 +84,14 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
             # Python < 3.9 represents the signature slightly differently
             self.assertEqual(
                 "(data: 'Data' = None, width: Union[int, NoneType] = None, "
-                "height: Union[int, NoneType] = None) -> 'DeltaGenerator'",
+                "height: Union[int, NoneType] = None, *, use_container_width: bool = False) -> 'DeltaGenerator'",
                 ds.signature,
             )
         else:
 
             self.assertEqual(
                 "(data: 'Data' = None, width: Optional[int] = None, "
-                "height: Optional[int] = None) -> 'DeltaGenerator'",
+                "height: Optional[int] = None, *, use_container_width: bool = False) -> 'DeltaGenerator'",
                 ds.signature,
             )
 

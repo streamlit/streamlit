@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from streamlit.type_util import Key, to_key, LabelVisibility
 from streamlit import logger as _logger
 from textwrap import dedent
@@ -44,6 +45,69 @@ if TYPE_CHECKING:
 SomeUploadedSnapshotFile = Optional[UploadedFile]
 
 _LOGGER = _logger.get_logger("root")
+
+
+def _get_file_recs_for_camera_input_widget(
+    widget_id: str, widget_value: Optional[FileUploaderStateProto]
+) -> List[UploadedFileRec]:
+    if widget_value is None:
+        return []
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return []
+
+    uploaded_file_info = widget_value.uploaded_file_info
+    if len(uploaded_file_info) == 0:
+        return []
+
+    active_file_ids = [f.id for f in uploaded_file_info]
+
+    # Grab the files that correspond to our active file IDs.
+    return ctx.uploaded_file_mgr.get_files(
+        session_id=ctx.session_id,
+        widget_id=widget_id,
+        file_ids=active_file_ids,
+    )
+
+
+@dataclass
+class CameraInputSerde:
+    def serialize(
+        self,
+        snapshot: SomeUploadedSnapshotFile,
+    ) -> FileUploaderStateProto:
+        state_proto = FileUploaderStateProto()
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return state_proto
+
+        # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
+        # the *next* uploaded file, so the current highest file id is the
+        # counter minus 1.
+        state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
+
+        if not snapshot:
+            return state_proto
+
+        file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
+        file_info.id = snapshot.id
+        file_info.name = snapshot.name
+        file_info.size = snapshot.size
+
+        return state_proto
+
+    def deserialize(
+        self, ui_value: Optional[FileUploaderStateProto], widget_id: str
+    ) -> SomeUploadedSnapshotFile:
+        file_recs = _get_file_recs_for_camera_input_widget(widget_id, ui_value)
+
+        if len(file_recs) == 0:
+            return_value = None
+        else:
+            return_value = UploadedFile(file_recs[0])
+        return return_value
 
 
 class CameraInputMixin:
@@ -160,40 +224,7 @@ class CameraInputMixin:
         if help is not None:
             camera_input_proto.help = dedent(help)
 
-        def serialize_camera_image_input(
-            snapshot: SomeUploadedSnapshotFile,
-        ) -> FileUploaderStateProto:
-            state_proto = FileUploaderStateProto()
-
-            ctx = get_script_run_ctx()
-            if ctx is None:
-                return state_proto
-
-            # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
-            # the *next* uploaded file, so the current highest file id is the
-            # counter minus 1.
-            state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
-
-            if not snapshot:
-                return state_proto
-
-            file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-            file_info.id = snapshot.id
-            file_info.name = snapshot.name
-            file_info.size = snapshot.size
-
-            return state_proto
-
-        def deserialize_camera_image_input(
-            ui_value: Optional[FileUploaderStateProto], widget_id: str
-        ) -> SomeUploadedSnapshotFile:
-            file_recs = self._get_file_recs_for_camera_input_widget(widget_id, ui_value)
-
-            if len(file_recs) == 0:
-                return_value = None
-            else:
-                return_value = UploadedFile(file_recs[0])
-            return return_value
+        serde = CameraInputSerde()
 
         camera_input_state = register_widget(
             "camera_input",
@@ -202,8 +233,8 @@ class CameraInputMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_camera_image_input,
-            serializer=serialize_camera_image_input,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -213,9 +244,7 @@ class CameraInputMixin:
         camera_input_proto.label_visibility = label_visibility
 
         ctx = get_script_run_ctx()
-        camera_image_input_state = serialize_camera_image_input(
-            camera_input_state.value
-        )
+        camera_image_input_state = serde.serialize(camera_input_state.value)
 
         uploaded_shapshot_info = camera_image_input_state.uploaded_file_info
 
@@ -237,27 +266,3 @@ class CameraInputMixin:
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-    @staticmethod
-    def _get_file_recs_for_camera_input_widget(
-        widget_id: str, widget_value: Optional[FileUploaderStateProto]
-    ) -> List[UploadedFileRec]:
-        if widget_value is None:
-            return []
-
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return []
-
-        uploaded_file_info = widget_value.uploaded_file_info
-        if len(uploaded_file_info) == 0:
-            return []
-
-        active_file_ids = [f.id for f in uploaded_file_info]
-
-        # Grab the files that correspond to our active file IDs.
-        return ctx.uploaded_file_mgr.get_files(
-            session_id=ctx.session_id,
-            widget_id=widget_id,
-            file_ids=active_file_ids,
-        )

@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date, time, datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import date, time, datetime, timedelta, timezone, tzinfo
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from typing import Any, List, cast, Optional
@@ -35,6 +36,90 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 _LOGGER = _logger.get_logger("root")
+
+SECONDS_TO_MICROS = 1000 * 1000
+DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
+
+
+UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _time_to_datetime(time: time) -> datetime:
+    # Note, here we pick an arbitrary date well after Unix epoch.
+    # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
+    # We're dropping the date from datetime laters, anyways.
+    return datetime.combine(date(2000, 1, 1), time)
+
+
+def _date_to_datetime(date: date) -> datetime:
+    return datetime.combine(date, time())
+
+
+def _delta_to_micros(delta: timedelta) -> int:
+    return (
+        delta.microseconds
+        + delta.seconds * SECONDS_TO_MICROS
+        + delta.days * DAYS_TO_MICROS
+    )
+
+
+def _datetime_to_micros(dt: datetime) -> int:
+    # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
+    # Since we want to show the date/time exactly as it is in the given datetime object,
+    # we just set the tzinfo to UTC and do not do any timezone conversions.
+    # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
+    utc_dt = dt.replace(tzinfo=timezone.utc)
+    return _delta_to_micros(utc_dt - UTC_EPOCH)
+
+
+# Restore times/datetimes to original timezone (dates are always naive)
+def _micros_to_datetime(micros: int, orig_tz: Optional[tzinfo]) -> datetime:
+    utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
+    # Add the original timezone. No conversion is required here,
+    # since in the serialization, we also just replace the timestamp with UTC.
+    return utc_dt.replace(tzinfo=orig_tz)
+
+
+@dataclass
+class SliderSerde:
+    value: List[float]
+    data_type: int
+    single_value: bool
+    orig_tz: Optional[tzinfo]
+
+    def deserialize(self, ui_value: Optional[List[float]], widget_id=""):
+        if ui_value is not None:
+            val: Any = ui_value
+        else:
+            # Widget has not been used; fallback to the original value,
+            val = self.value
+
+        # The widget always returns a float array, so fix the return type if necessary
+        if self.data_type == SliderProto.INT:
+            val = [int(v) for v in val]
+        if self.data_type == SliderProto.DATETIME:
+            val = [_micros_to_datetime(int(v), self.orig_tz) for v in val]
+        if self.data_type == SliderProto.DATE:
+            val = [_micros_to_datetime(int(v), self.orig_tz).date() for v in val]
+        if self.data_type == SliderProto.TIME:
+            val = [
+                _micros_to_datetime(int(v), self.orig_tz)
+                .time()
+                .replace(tzinfo=self.orig_tz)
+                for v in val
+            ]
+        return val[0] if self.single_value else tuple(val)
+
+    def serialize(self, v: Any) -> List[Any]:
+        range_value = isinstance(v, (list, tuple))
+        value = list(v) if range_value else [v]
+        if self.data_type == SliderProto.DATE:
+            value = [_datetime_to_micros(_date_to_datetime(v)) for v in value]
+        if self.data_type == SliderProto.TIME:
+            value = [_datetime_to_micros(_time_to_datetime(v)) for v in value]
+        if self.data_type == SliderProto.DATETIME:
+            value = [_datetime_to_micros(v) for v in value]
+        return value
 
 
 class SliderMixin:
@@ -397,14 +482,9 @@ class SliderMixin:
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
+        orig_tz = None
         # Convert dates or times into datetimes
         if data_type == SliderProto.TIME:
-
-            def _time_to_datetime(time):
-                # Note, here we pick an arbitrary date well after Unix epoch.
-                # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
-                # We're dropping the date from datetime laters, anyways.
-                return datetime.combine(date(2000, 1, 1), time)
 
             value = list(map(_time_to_datetime, value))
             min_value = _time_to_datetime(min_value)
@@ -412,34 +492,12 @@ class SliderMixin:
 
         if data_type == SliderProto.DATE:
 
-            def _date_to_datetime(date):
-                return datetime.combine(date, time())
-
             value = list(map(_date_to_datetime, value))
             min_value = _date_to_datetime(min_value)
             max_value = _date_to_datetime(max_value)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
-            SECONDS_TO_MICROS = 1000 * 1000
-            DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
-
-            def _delta_to_micros(delta):
-                return (
-                    delta.microseconds
-                    + delta.seconds * SECONDS_TO_MICROS
-                    + delta.days * DAYS_TO_MICROS
-                )
-
-            UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-            def _datetime_to_micros(dt):
-                # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
-                # Since we want to show the date/time exactly as it is in the given datetime object,
-                # we just set the tzinfo to UTC and do not do any timezone conversions.
-                # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
-                utc_dt = dt.replace(tzinfo=timezone.utc)
-                return _delta_to_micros(utc_dt - UTC_EPOCH)
 
             # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
@@ -447,12 +505,6 @@ class SliderMixin:
                 if data_type in (SliderProto.TIME, SliderProto.DATETIME)
                 else None
             )
-
-            def _micros_to_datetime(micros):
-                utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
-                # Add the original timezone. No conversion is required here,
-                # since in the serialization, we also just replace the timestamp with UTC.
-                return utc_dt.replace(tzinfo=orig_tz)
 
             value = list(map(_datetime_to_micros, value))
             min_value = _datetime_to_micros(min_value)
@@ -477,37 +529,7 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        def deserialize_slider(ui_value: Optional[List[float]], widget_id=""):
-            if ui_value is not None:
-                val = ui_value
-            else:
-                # Widget has not been used; fallback to the original value,
-                val = cast(List[float], value)
-
-            # The widget always returns a float array, so fix the return type if necessary
-            if data_type == SliderProto.INT:
-                val = [int(v) for v in val]
-            if data_type == SliderProto.DATETIME:
-                val = [_micros_to_datetime(int(v)) for v in val]
-            if data_type == SliderProto.DATE:
-                val = [_micros_to_datetime(int(v)).date() for v in val]
-            if data_type == SliderProto.TIME:
-                val = [
-                    _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
-                    for v in val
-                ]
-            return val[0] if single_value else tuple(val)
-
-        def serialize_slider(v: Any) -> List[Any]:
-            range_value = isinstance(v, (list, tuple))
-            value = list(v) if range_value else [v]
-            if data_type == SliderProto.DATE:
-                value = [_datetime_to_micros(_date_to_datetime(v)) for v in value]
-            if data_type == SliderProto.TIME:
-                value = [_datetime_to_micros(_time_to_datetime(v)) for v in value]
-            if data_type == SliderProto.DATETIME:
-                value = [_datetime_to_micros(v) for v in value]
-            return value
+        serde = SliderSerde(value, data_type, single_value, orig_tz)
 
         widget_state = register_widget(
             "slider",
@@ -516,8 +538,8 @@ class SliderMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_slider,
-            serializer=serialize_slider,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -527,7 +549,7 @@ class SliderMixin:
         slider_proto.label_visibility = label_visibility
 
         if widget_state.value_changed:
-            slider_proto.value[:] = serialize_slider(widget_state.value)
+            slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
