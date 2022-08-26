@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import json
-from typing import Any, Dict, cast
+from typing import Any, Dict, cast, Optional
 
 import streamlit
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
@@ -108,6 +108,21 @@ EMPTY_MAP: Dict[str, Any] = {
 }
 
 
+def _get_pydesk_tooltip(pydeck_obj) -> Optional[Dict[str, str]]:
+    if pydeck_obj is None:
+        return None
+    # For pydesk <9.8.1 or pydesk>=0.8.1 when jupyter extra is installed.
+    desk_widget = getattr(pydeck_obj, "deck_widget", None)
+    if desk_widget is not None and isinstance(desk_widget.tooltip, dict):
+        return desk_widget.tooltip
+    # For pydesk >=0.8.1 when jupyter extra is not installed.
+    # For details, see: https://github.com/visgl/deck.gl/pull/7125/files
+    tooltip = getattr(pydeck_obj, "_tooltip", None)
+    if tooltip is not None and isinstance(tooltip, dict):
+        return tooltip
+    return None
+
+
 def marshall(pydeck_proto, pydeck_obj, use_container_width):
     if pydeck_obj is None:
         spec = json.dumps(EMPTY_MAP)
@@ -117,5 +132,6 @@ def marshall(pydeck_proto, pydeck_obj, use_container_width):
     pydeck_proto.json = spec
     pydeck_proto.use_container_width = use_container_width
 
-    if pydeck_obj is not None and isinstance(pydeck_obj.deck_widget.tooltip, dict):
-        pydeck_proto.tooltip = json.dumps(pydeck_obj.deck_widget.tooltip)
+    tooltip = _get_pydesk_tooltip(pydeck_obj)
+    if tooltip:
+        pydeck_proto.tooltip = json.dumps(tooltip)
