@@ -62,7 +62,7 @@ commands:
             # naturally resets daily. We maintain the convention that the
             # version number is always incremented by 1, but technically it can
             # be reset each day when the previous day's cache expires.
-            echo v1 >> ~/python_cache_key.md5
+            echo v2 >> ~/python_cache_key.md5
 
       - run: &create_node_cache_key
           name: Create Node cache key

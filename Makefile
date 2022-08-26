@@ -59,7 +59,8 @@ pipenv-dev-install: lib/Pipfile
 	# but we don't actually want to use the lockfile.
 	cd lib; \
 		rm Pipfile.lock; \
-		pipenv install --dev --sequential
+		pipenv install --dev --sequential; \
+		pipenv run pip freeze
 
 SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
 .PHONY: py-test-install
