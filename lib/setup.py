@@ -48,7 +48,7 @@ INSTALL_REQUIRES = [
     "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",
-    "pydeck>=0.1.dev5",
+    "pydeck>=0.1.dev5,!=0.8.0b1",
     "pympler>=0.9",
     "python-dateutil",
     "requests>=2.4",
