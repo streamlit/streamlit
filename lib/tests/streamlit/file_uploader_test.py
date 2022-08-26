@@ -54,7 +54,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, [".png", ".svg", ".jpeg"])
 
-    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
+    @patch("streamlit.elements.file_uploader._get_file_recs")
     def test_multiple_files(self, get_file_recs_patch):
         """Test the accept_multiple_files flag"""
         # Patch UploadFileManager to return two files
@@ -104,7 +104,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
             c.max_upload_size_mb, config.get_option("server.maxUploadSize")
         )
 
-    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
+    @patch("streamlit.elements.file_uploader._get_file_recs")
     def test_unique_uploaded_file_instance(self, get_file_recs_patch):
         """We should get a unique UploadedFile instance each time we access
         the file_uploader widget."""
@@ -133,7 +133,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
     @patch(
         "streamlit.runtime.uploaded_file_manager.UploadedFileManager.remove_orphaned_files"
     )
-    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
+    @patch("streamlit.elements.file_uploader._get_file_recs")
     def test_remove_orphaned_files(
         self, get_file_recs_patch, remove_orphaned_files_patch
     ):

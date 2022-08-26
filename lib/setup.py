@@ -18,7 +18,6 @@ import sys
 
 from setuptools.command.install import install
 
-
 VERSION = "1.12.2"  # PEP-440
 
 NAME = "streamlit"

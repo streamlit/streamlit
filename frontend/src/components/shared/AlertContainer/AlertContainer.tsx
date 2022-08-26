@@ -71,7 +71,7 @@ export default function AlertContainer({
           style: {
             marginTop: 0,
             marginBottom: 0,
-            width,
+            width: width ? width.toString() : undefined,
             border: 0,
           },
         },
