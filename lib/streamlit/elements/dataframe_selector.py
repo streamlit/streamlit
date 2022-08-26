@@ -39,6 +39,8 @@ class DataFrameSelectorMixin:
         data: "Data" = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
+        *,
+        use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -56,12 +58,19 @@ class DataFrameSelectorMixin:
             (i.e. with `config.dataFrameSerialization = "legacy"`).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
             `config.dataFrameSerialization = "arrow"`.
+
         width : int or None
-            Desired width of the UI element expressed in pixels. If None, a
-            default width based on the page width is used.
+            Desired width of the dataframe expressed in pixels. If None, the width
+            will be automatically calculated based on the column content.
+
         height : int or None
-            Desired height of the UI element expressed in pixels. If None, a
+            Desired height of the dataframe expressed in pixels. If None, a
             default height is used.
+
+        use_container_width : bool
+            If True, set the dataframe width to the width of the parent container.
+            This takes precedence over the width argument.
+            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -92,7 +101,9 @@ class DataFrameSelectorMixin:
 
         """
         if _use_arrow():
-            return self.dg._arrow_dataframe(data, width, height)
+            return self.dg._arrow_dataframe(
+                data, width, height, use_container_width=use_container_width
+            )
         else:
             return self.dg._legacy_dataframe(data, width, height)
 

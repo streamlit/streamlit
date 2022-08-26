@@ -35,6 +35,7 @@ import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
 import { Theme } from "src/theme"
+import { Arrow as ArrowProto } from "src/autogen/proto"
 
 import {
   getCellTemplate,
@@ -49,13 +50,14 @@ import "@glideapps/glide-data-grid/dist/index.css"
 
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
-const MAX_COLUMN_WIDTH = 600
+const MAX_COLUMN_WIDTH = 650
 // Min width for the resizable table container:
 // Based on one column at minimum width + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
 // Min height for the resizable table container:
 // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
+const DEFAULT_TABLE_HEIGHT = 400
 
 /**
  * Creates a glide-data-grid compatible theme based on our theme configuration.
@@ -112,10 +114,13 @@ type GridColumnWithCellTemplate = GridColumn & {
 /**
  * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
  */
-export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
+export function getColumns(
+  element: ArrowProto,
+  data: Quiver
+): GridColumnWithCellTemplate[] {
   const columns: GridColumnWithCellTemplate[] = []
 
-  if (element.isEmpty()) {
+  if (data.isEmpty()) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
     // As a workaround, we are adding an empty index column in this case.
     columns.push({
@@ -130,11 +135,11 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
     return columns
   }
 
-  const numIndices = element.types?.index?.length ?? 0
-  const numColumns = element.columns?.[0]?.length ?? 0
+  const numIndices = data.types?.index?.length ?? 0
+  const numColumns = data.columns?.[0]?.length ?? 0
 
   for (let i = 0; i < numIndices; i++) {
-    const quiverType = element.types.index[i]
+    const quiverType = data.types.index[i]
     const columnType = determineColumnType(quiverType)
     columns.push({
       id: `index-${i}`,
@@ -149,10 +154,12 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
   }
 
   for (let i = 0; i < numColumns; i++) {
-    const columnTitle = element.columns[0][i]
+    const columnTitle = data.columns[0][i]
 
-    const quiverType = element.types.data[i]
+    const quiverType = data.types.data[i]
     const columnType = determineColumnType(quiverType)
+
+    const stretchColumn = element.useContainerWidth || element.width
 
     columns.push({
       id: `column-${columnTitle}-${i}`,
@@ -162,6 +169,7 @@ export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
         return getCellTemplate(columnType, true)
       },
       columnType,
+      ...(stretchColumn ? { grow: 1 } : {}),
     } as GridColumnWithCellTemplate)
   }
   return columns
@@ -213,7 +221,8 @@ type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
  * such as column resizing, sorting, etc.
  */
 export function useDataLoader(
-  element: Quiver,
+  element: ArrowProto,
+  data: Quiver,
   sort?: ColumnSortConfig | undefined
 ): DataLoaderReturn {
   // The columns with the corresponding empty template for every type:
@@ -222,20 +231,26 @@ export function useDataLoader(
     () => new Map()
   )
 
-  const columns = getColumns(element).map(column => {
+  const columns = getColumns(element, data).map(column => {
     // Apply column widths from state
-    if (column.id && columnSizes.has(column.id)) {
+    if (
+      column.id &&
+      columnSizes.has(column.id) &&
+      columnSizes.get(column.id) !== undefined
+    ) {
       return {
         ...column,
         width: columnSizes.get(column.id),
+        // TODO (lukasmasuch): set grow: 0 -> currently not possible because of a bug:
+        // https://github.com/glideapps/glide-data-grid/issues/479
       } as GridColumnWithCellTemplate
     }
     return column
   })
 
   // Number of rows of the table minus 1 for the header row:
-  const numRows = element.isEmpty() ? 1 : element.dimensions.rows - 1
-  const numIndices = element.types?.index?.length ?? 0
+  const numRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
+  const numIndices = data.types?.index?.length ?? 0
 
   const onColumnResize = React.useCallback(
     (column: GridColumn, newSize: number) => {
@@ -248,7 +263,7 @@ export function useDataLoader(
 
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
-      if (element.isEmpty()) {
+      if (data.isEmpty()) {
         return {
           ...getCellTemplate(ColumnType.Text, true, "faded"),
           displayData: "empty",
@@ -267,15 +282,15 @@ export function useDataLoader(
       }
       try {
         // Quiver has the header in first row
-        const quiverCell = element.getCell(row + 1, col)
-        return fillCellTemplate(cellTemplate, quiverCell, element.cssStyles)
+        const quiverCell = data.getCell(row + 1, col)
+        return fillCellTemplate(cellTemplate, quiverCell, data.cssStyles)
       } catch (error) {
         // This should not happen in read-only table.
         logError(error)
         return cellTemplate
       }
     },
-    [columns, numRows, element]
+    [columns, numRows, data]
   )
 
   const { getCellContent: getCellContentSorted } = useColumnSort({
@@ -296,15 +311,17 @@ export function useDataLoader(
   }
 }
 export interface DataFrameProps {
-  element: Quiver
-  height?: number
+  element: ArrowProto
+  data: Quiver
   width: number
+  height?: number
 }
 
 function DataFrame({
   element,
-  height: propHeight,
-  width: propWidth,
+  data,
+  width: containerWidth,
+  height: containerHeight,
 }: DataFrameProps): ReactElement {
   const [sort, setSort] = React.useState<ColumnSortConfig>()
   const theme: Theme = useTheme()
@@ -315,7 +332,7 @@ function DataFrame({
     columns,
     getCellContent,
     onColumnResize,
-  } = useDataLoader(element, sort)
+  } = useDataLoader(element, data, sort)
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 
@@ -356,23 +373,47 @@ function DataFrame({
 
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, MIN_TABLE_HEIGHT)
-  let height = Math.min(maxHeight, 400)
+  let height = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
 
-  if (propHeight) {
+  if (element.height) {
     // User has explicitly configured a height
-    height = Math.max(propHeight, MIN_TABLE_HEIGHT)
-    maxHeight = Math.max(propHeight, maxHeight)
+    height = Math.max(element.height, MIN_TABLE_HEIGHT)
+    maxHeight = Math.max(element.height, maxHeight)
+  }
+
+  if (containerHeight) {
+    // If container height is set (e.g. when used in fullscreen)
+    // The maxHeight and height should not be larger than container height
+    height = Math.min(height, containerHeight)
+    maxHeight = Math.min(maxHeight, containerHeight)
+
+    if (!element.height) {
+      // If no explicit height is set, set height to max height (fullscreen mode)
+      height = maxHeight
+    }
+  }
+
+  let width // If container width is undefined, auto set based on column widths
+  let maxWidth = containerWidth
+
+  if (element.useContainerWidth) {
+    // Always use the full container width
+    width = containerWidth
+  } else if (element.width) {
+    // User has explicitly configured a width
+    width = Math.min(Math.max(element.width, MIN_TABLE_WIDTH), containerWidth)
+    maxWidth = Math.min(Math.max(element.width, maxWidth), containerWidth)
   }
 
   return (
     <StyledResizableContainer
       className="stDataFrame"
-      width={propWidth}
+      width={width}
       height={height}
       minHeight={MIN_TABLE_HEIGHT}
       maxHeight={maxHeight}
       minWidth={MIN_TABLE_WIDTH}
-      maxWidth={propWidth}
+      maxWidth={maxWidth}
       onBlur={() => {
         // If the container loses focus, clear the current selection
         if (!isFocused) {
