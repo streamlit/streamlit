@@ -101,6 +101,10 @@ function withExpandable(
                 paddingRight: `${spacing.none} !important`,
                 paddingTop: `${spacing.none} !important`,
                 paddingBottom: `${spacing.none} !important`,
+                borderTop: "none !important",
+                borderBottom: "none !important",
+                borderRight: "none !important",
+                borderLeft: "none !important",
               }),
             },
             Header: {
