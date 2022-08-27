@@ -108,14 +108,14 @@ EMPTY_MAP: Dict[str, Any] = {
 }
 
 
-def _get_pydesk_tooltip(pydeck_obj) -> Optional[Dict[str, str]]:
+def _get_pydeck_tooltip(pydeck_obj) -> Optional[Dict[str, str]]:
     if pydeck_obj is None:
         return None
-    # For pydesk <9.8.1 or pydesk>=0.8.1 when jupyter extra is installed.
+    # For pydeck <9.8.1 or pydeck>=0.8.1 when jupyter extra is installed.
     desk_widget = getattr(pydeck_obj, "deck_widget", None)
     if desk_widget is not None and isinstance(desk_widget.tooltip, dict):
         return desk_widget.tooltip
-    # For pydesk >=0.8.1 when jupyter extra is not installed.
+    # For pydeck >=0.8.1 when jupyter extra is not installed.
     # For details, see: https://github.com/visgl/deck.gl/pull/7125/files
     tooltip = getattr(pydeck_obj, "_tooltip", None)
     if tooltip is not None and isinstance(tooltip, dict):
@@ -132,6 +132,6 @@ def marshall(pydeck_proto, pydeck_obj, use_container_width):
     pydeck_proto.json = spec
     pydeck_proto.use_container_width = use_container_width
 
-    tooltip = _get_pydesk_tooltip(pydeck_obj)
+    tooltip = _get_pydeck_tooltip(pydeck_obj)
     if tooltip:
         pydeck_proto.tooltip = json.dumps(tooltip)
