@@ -37,6 +37,9 @@ module.exports = {
       jestConfig.transformIgnorePatterns = [
         "/node_modules/(?!glideapps)/.+\\.js$",
       ]
+      if ("GITHUB_ACTION" in process.env) {
+        jestConfig.reporters = ["default", "jest-github-actions-reporter"]
+      }
       return jestConfig
     },
   },

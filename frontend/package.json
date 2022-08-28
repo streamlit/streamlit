@@ -168,6 +168,7 @@
     "fetch-mock": "^9.11.0",
     "hard-source-webpack-plugin": "^0.13.1",
     "jest-canvas-mock": "^2.2.0",
+    "jest-github-actions-reporter": "^1.0.3",
     "jest-websocket-mock": "^2.2.0",
     "marked": "^4.0.12",
     "mock-socket": "^9.0.3",
