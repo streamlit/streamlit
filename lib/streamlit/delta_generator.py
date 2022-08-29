@@ -550,14 +550,6 @@ class DeltaGenerator(
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
         parent_block_types = frozenset(dg._parent_block_types)
-        if block_type == "column" and block_type in parent_block_types:
-            raise StreamlitAPIException(
-                "Columns may not be nested inside other columns."
-            )
-        if block_type == "expandable" and block_type in parent_block_types:
-            raise StreamlitAPIException(
-                "Expanders may not be nested inside other expanders."
-            )
 
         if dg._root_container is None or dg._cursor is None:
             return dg
