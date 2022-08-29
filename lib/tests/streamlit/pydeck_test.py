@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import json
+import unittest
+import unittest.mock
 
 import pandas as pd
 import pydeck as pdk
@@ -49,6 +51,69 @@ class PyDeckTest(testutil.DeltaGeneratorTestCase):
                 {"lat": 4, "lon": 40},
             ],
         )
+        self.assertEqual(el.deck_gl_json_chart.tooltip, "")
+
+    def test_with_tooltip(self):
+        """Test that pydeck object with tooltip orks."""
+
+        tooltip = {
+            "html": "<b>Elevation Value:</b> {elevationValue}",
+            "style": {"color": "white"},
+        }
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer("ScatterplotLayer", data=df1),
+                ],
+                tooltip=tooltip,
+            )
+        )
+
+        el = self.get_delta_from_queue().new_element
+        actual = json.loads(el.deck_gl_json_chart.tooltip)
+
+        self.assertEqual(actual, tooltip)
+
+    def test_pydesk_with_tooltip_pydesk_0_7_1(self):
+        """Test that pydeck object with tooltip created by pydesk v0.7.1 orks."""
+
+        tooltip = {
+            "html": "<b>Elevation Value:</b> {elevationValue}",
+            "style": {"color": "white"},
+        }
+
+        mock_desk = unittest.mock.Mock(
+            spec=["to_json", "_tooltip"],
+            **{"to_json.return_value": json.dumps({"layers": []}), "_tooltip": tooltip},
+        )
+        st.pydeck_chart(mock_desk)
+
+        el = self.get_delta_from_queue().new_element
+        actual = json.loads(el.deck_gl_json_chart.tooltip)
+
+        self.assertEqual(actual, tooltip)
+
+    def test_pydesk_with_tooltip_pydesk_0_8_1(self):
+        """Test that pydeck object with tooltip created by pydesk v0.8.1 orks."""
+
+        tooltip = {
+            "html": "<b>Elevation Value:</b> {elevationValue}",
+            "style": {"color": "white"},
+        }
+
+        mock_desk = unittest.mock.Mock(
+            spec=["to_json", "deck_widget"],
+            **{
+                "to_json.return_value": json.dumps({"layers": []}),
+                "deck_widget.tooltip": tooltip,
+            },
+        )
+        st.pydeck_chart(mock_desk)
+
+        el = self.get_delta_from_queue().new_element
+        actual = json.loads(el.deck_gl_json_chart.tooltip)
+
+        self.assertEqual(actual, tooltip)
 
     def test_no_args(self):
         """Test that it can be called with no args."""
