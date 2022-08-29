@@ -14,18 +14,32 @@
 
 import json
 import copy
-from typing import Any, cast, TYPE_CHECKING
+from typing import (
+    Any,
+    Hashable,
+    List,
+    MutableMapping,
+    Tuple,
+    Union,
+    cast,
+    TYPE_CHECKING,
+)
+
+from typing_extensions import TypeAlias
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.state import SessionStateProxy
+from streamlit.type_util import is_iterable
 from streamlit.user_info import UserInfoProxy
 
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+Body: TypeAlias = Union[List[Any], Tuple[Any, ...], MutableMapping[Hashable, Any]]
 
-def _convert_sets_to_lists(body: Any) -> Any:
+
+def _convert_sets_to_lists(body: Body) -> Body:
     if isinstance(body, (list, tuple)):
         # We could technically iterate through the elements of a list/tuple and convert
         # any sets that we find to lists like we do below, but lists/tuples of sets
@@ -38,8 +52,9 @@ def _convert_sets_to_lists(body: Any) -> Any:
     for key in body:
         if isinstance(body[key], set):
             if not set_found:
-                # When set is found to prevent mutation of input body, we need to shallow copy it once
-                # To avoid copying it multiple times we use set_found flag
+                # When set is found to prevent mutation of input body, we need
+                # to shallow copy it once. To avoid copying it multiple times
+                # we use set_found flag.
                 body = copy.copy(body)
                 set_found = True
             body[key] = list(body[key])
@@ -49,7 +64,7 @@ def _convert_sets_to_lists(body: Any) -> Any:
 class JsonMixin:
     def json(
         self,
-        body: Any,
+        body: object,
         *,  # keyword-only arguments:
         expanded: bool = True,
     ) -> "DeltaGenerator":
@@ -57,7 +72,7 @@ class JsonMixin:
 
         Parameters
         ----------
-        body : Object or str
+        body : object or str
             The object to print as JSON. All referenced objects should be
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
@@ -91,15 +106,13 @@ class JsonMixin:
             body = body.to_dict()
 
         if not isinstance(body, str):
-            # Check if body is iterable, if it is convert it's sets to lists
-            try:
-                iter(body)
-            except TypeError:
-                # body is not iterable, do nothing with the body
-                pass
-            else:
+            # Check if body is iterable, if it is, convert its sets to lists
+            if is_iterable(body):
                 # body is iterable, look for sets and change them to lists
-                body = _convert_sets_to_lists(body)
+                # TODO(harahu): This function does not handle iterables in
+                #  general. Either generalize the function, or do further type
+                #  checking here.
+                body = _convert_sets_to_lists(body)  # type: ignore[arg-type]
 
             try:
                 # Serialize body to string
@@ -107,7 +120,7 @@ class JsonMixin:
             except TypeError as err:
                 st.warning(
                     "Warning: this data structure was not fully serializable as "
-                    "JSON due to one or more unexpected keys.  (Error was: %s)" % err
+                    f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )
                 body = json.dumps(body, skipkeys=True, default=repr)
 
