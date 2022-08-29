@@ -203,7 +203,6 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         ]
     )
     def test_image_to_url(self, img, expected_prefix):
-
         url = image.image_to_url(
             img,
             width=-1,
