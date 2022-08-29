@@ -21,7 +21,6 @@ export const StyledImageList = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   flexWrap: "wrap",
-  paddingTop: theme.spacing.sm,
   // Not supported in Safari, but at least it's not a regression for those users:
   rowGap: theme.spacing.lg,
 }))
