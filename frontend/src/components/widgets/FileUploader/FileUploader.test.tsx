@@ -162,6 +162,22 @@ describe("FileUploader widget", () => {
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({ labelVisibility: "hidden" })
+    const wrapper = mount(<FileUploader {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "hidden"
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({ labelVisibility: "collapsed" })
+    const wrapper = mount(<FileUploader {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "collapsed"
+    )
+  })
+
   it("uploads a single selected file", async () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
