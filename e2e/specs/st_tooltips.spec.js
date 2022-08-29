@@ -114,21 +114,16 @@ describe("tooltip text with dedent on widgets", () => {
     cy.get(`.stTextInput .stTooltipIcon`)
       .invoke("show")
       .click();
-    cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "not.exist"
-    );
-    cy.get("[data-testid=stMarkdownContainer]").should(
-      "have.text",
-      defaultTooltip
-    );
+    cy.get("[data-testid=stMarkdownContainer]").should('contain', defaultTooltip);
   });
+
 
   it("Display text properly on tooltips on numberinput", () => {
     cy.get(`.stNumberInput .stTooltipIcon`)
       .invoke("show")
       .click();
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "have.text",
+      "contain",
       tooltipCodeBlock1
     );
   });
@@ -137,11 +132,8 @@ describe("tooltip text with dedent on widgets", () => {
     cy.get(`.stCheckbox .stTooltipIcon`)
       .invoke("show")
       .click();
-    cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "not.exist"
-    );
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "have.text",
+      "contain",
       tooltipTextBlock1
     );
   });
@@ -151,7 +143,7 @@ describe("tooltip text with dedent on widgets", () => {
       .invoke("show")
       .click();
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "have.text",
+      "contain",
       tooltipCodeBlock2
     );
   });
@@ -160,11 +152,8 @@ describe("tooltip text with dedent on widgets", () => {
     cy.get(`.stSelectbox .stTooltipIcon`)
       .invoke("show")
       .click();
-    cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "not.exist"
-    );
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "have.text",
+      "contain",
       defaultTooltip
     );
   });
@@ -174,7 +163,7 @@ describe("tooltip text with dedent on widgets", () => {
       .invoke("show")
       .click();
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "have.text",
+      "contain",
       tooltipCodeBlock1
     );
   });
@@ -183,11 +172,8 @@ describe("tooltip text with dedent on widgets", () => {
     cy.get(`.stDateInput .stTooltipIcon`)
       .invoke("show")
       .click();
-    cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "not.exist"
-    );
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "have.text",
+      "contain",
       tooltipTextBlock1
     );
   });
@@ -199,7 +185,7 @@ describe("tooltip text with dedent on widgets", () => {
       .invoke("show")
       .click();
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "have.text",
+      "contain",
       tooltipCodeBlock2
     );
   });
@@ -208,11 +194,8 @@ describe("tooltip text with dedent on widgets", () => {
     cy.get(`[data-testid="stColorPicker"]  .stTooltipIcon`)
       .invoke("show")
       .click();
-    cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "not.exist"
-    );
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "have.text",
+      "contain",
       tooltipTextBlock2
     );
   });
@@ -221,11 +204,8 @@ describe("tooltip text with dedent on widgets", () => {
     cy.get(`[data-testid="stFileUploader"] .stTooltipIcon`)
       .invoke("show")
       .click();
-    cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "not.exist"
-    );
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "have.text",
+      "contain",
       defaultTooltip
     );
   });
@@ -234,9 +214,9 @@ describe("tooltip text with dedent on widgets", () => {
     cy.get(`.stMultiSelect .stTooltipIcon`)
       .invoke("show")
       .click({ force: true })
-      .trigger("mouseover");
+      .trigger("mouseover", {force: true});
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "have.text",
+      "contain",
       tooltipCodeBlock1
     );
   });
@@ -245,12 +225,9 @@ describe("tooltip text with dedent on widgets", () => {
     cy.get(`.stTextArea .stTooltipIcon`)
       .invoke("show")
       .click({ force: true })
-      .trigger("mouseover");
-    cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "not.exist"
-    );
+      .trigger("mouseover", { force: true });
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "have.text",
+      "contain",
       tooltipTextBlock1
     );
   });
@@ -258,26 +235,26 @@ describe("tooltip text with dedent on widgets", () => {
   it("Display text properly on tooltips on sliders", () => {
     cy.getIndexed(".stSlider .stTooltipIcon", 1)
       .invoke("show")
-      .trigger("mouseenter")
-      .trigger("mouseover");
+      .trigger("mouseenter", { force: true })
+      .trigger("mouseover", { force: true });
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
-      "have.text",
+      "contain",
       tooltipCodeBlock2
     );
   });
 
   it("Display text properly on tooltips on button", () => {
-    cy.get(".stButton [data-testid=tooltipHoverTarget]").trigger("mouseover");
+    cy.get(".stButton [data-testid=tooltipHoverTarget]").trigger("mouseover", { force: true });
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "contain.text",
+      "contain",
       tooltipTextBlock2
     );
   });
 
   it("Display text properly on tooltips on metric", () => {
-    cy.get("[data-testid=stMetricLabel] [data-testid=tooltipHoverTarget]").trigger("mouseover");
+    cy.get("[data-testid=stMetricLabel] [data-testid=tooltipHoverTarget]").trigger("mouseover", { force: true });
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "contain.text",
+      "contain",
       tooltipTextBlock2
     );
   });
