@@ -50,7 +50,7 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         self.assertTrue(is_emoji(c.favicon))
 
     def test_set_page_config_icon_invalid_string(self):
-        """If set_page_config is passed a garbage string, we just pass it
+        """If set_page_config is passed a garbage icon string, we just pass it
         through without an error (even though nothing will be displayed).
         """
         st.set_page_config(page_icon="st.balloons")
