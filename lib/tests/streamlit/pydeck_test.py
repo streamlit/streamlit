@@ -74,8 +74,8 @@ class PyDeckTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(actual, tooltip)
 
-    def test_pydesk_with_tooltip_pydesk_0_7_1(self):
-        """Test that pydeck object with tooltip created by pydesk v0.7.1 orks."""
+    def test_pydeck_with_tooltip_pydeck_0_7_1(self):
+        """Test that pydeck object with tooltip created by pydeck v0.7.1 orks."""
 
         tooltip = {
             "html": "<b>Elevation Value:</b> {elevationValue}",
@@ -93,8 +93,8 @@ class PyDeckTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(actual, tooltip)
 
-    def test_pydesk_with_tooltip_pydesk_0_8_1(self):
-        """Test that pydeck object with tooltip created by pydesk v0.8.1 orks."""
+    def test_pydeck_with_tooltip_pydeck_0_8_1(self):
+        """Test that pydeck object with tooltip created by pydeck v0.8.1 orks."""
 
         tooltip = {
             "html": "<b>Elevation Value:</b> {elevationValue}",
