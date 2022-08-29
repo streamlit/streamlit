@@ -23,7 +23,7 @@ describe("st.text_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextInput").should("have.length", 7);
+    cy.get(".stTextInput").should("have.length", 9);
 
     cy.get(".stTextInput").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("text_input" + idx);
@@ -39,7 +39,9 @@ describe("st.text_input", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: " default text "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: " default text "' +
+        'value 9: "  "' +
         "text input changed: False"
     );
   });
@@ -57,7 +59,9 @@ describe("st.text_input", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: " default text "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: " default text "' +
+        'value 9: "  "' +
         "text input changed: False"
     );
   });
@@ -75,7 +79,9 @@ describe("st.text_input", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: " default text "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: " default text "' +
+        'value 9: "  "' +
         "text input changed: False"
     );
   });
@@ -94,13 +100,15 @@ describe("st.text_input", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: " default text "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: " default text "' +
+        'value 9: "  "' +
         "text input changed: False"
     );
   });
 
   it("calls callback if one is registered", () => {
-    cy.getIndexed(".stTextInput input", 6)
+    cy.getIndexed(".stTextInput input", 8)
       .type("test input")
       .blur();
 
@@ -112,7 +120,9 @@ describe("st.text_input", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: " default text "' +
-        'value 7: " test input "' +
+        'value 7: " default text "' +
+        'value 8: " default text "' +
+        'value 9: " test input "' +
         "text input changed: True"
     );
   });
