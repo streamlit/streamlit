@@ -292,6 +292,11 @@ def image_to_url(
     image_id: str,
     allow_emoji: bool = False,
 ) -> str:
+    """Return a URL that an image can be served from.
+    If `image` is already a URL, return it unmodified.
+    If `image` is an emoji, return it unmodified.
+    Otherwise, add the image to the MediaFileManager and return the URL.
+    """
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
         format = _format_from_image_type(image, output_format)
