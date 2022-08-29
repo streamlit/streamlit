@@ -51,8 +51,8 @@ if TYPE_CHECKING:
     import sympy
     from pandas import DataFrame, Series, Index
     from pandas.io.formats.style import Styler
-    from plotly.graph_objs._figure import Figure
-    from pydeck.bindings.deck import Deck  # type: ignore[import]
+    from plotly.graph_objs import Figure
+    from pydeck import Deck
 
 
 # The array value field names are part of the larger set of possible value
