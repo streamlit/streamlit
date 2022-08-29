@@ -118,9 +118,6 @@ export const createBaseThemePrimitives = (
     mono800: colors.bodyText, // Selectbox text
     mono900: colors.bodyText, // Not used, but just in case.
     mono1000: colors.black,
-
-    rating200: "#FFE1A5",
-    rating400: "#FFC043",
   }
 }
 

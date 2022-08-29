@@ -44,7 +44,7 @@
     "@testing-library/react": "^11.2.7",
     "apache-arrow": "^8.0.0",
     "axios": "^0.21.4",
-    "baseui": "10.12.1",
+    "baseui": "11.2.1",
     "camelcase": "^6.2.0",
     "classnames": "^2.3.1",
     "clipboard": "^2.0.8",

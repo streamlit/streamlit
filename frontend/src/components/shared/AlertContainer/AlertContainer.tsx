@@ -27,7 +27,13 @@ export enum Kind {
   WARNING = "warning",
 }
 
-function getNotificationKind(kind: Kind): KIND[keyof KIND] {
+function getNotificationKind(
+  kind: Kind
+):
+  | typeof KIND.negative
+  | typeof KIND.info
+  | typeof KIND.positive
+  | typeof KIND.warning {
   switch (kind) {
     case Kind.ERROR:
       return KIND.negative
