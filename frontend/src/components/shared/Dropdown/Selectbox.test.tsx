@@ -66,6 +66,22 @@ describe("Selectbox widget", () => {
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.label)
   })
 
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({ labelVisibility: "hidden" })
+    const wrapper = mount(<Selectbox {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "hidden"
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({ labelVisibility: "collapsed" })
+    const wrapper = mount(<Selectbox {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      "collapsed"
+    )
+  })
+
   it("renders a placeholder with empty options", () => {
     props = getProps({
       options: [],
