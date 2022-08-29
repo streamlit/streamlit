@@ -65,11 +65,17 @@ st.text("value 7: %s" % i7)
 i8 = st.multiselect("choose shakes", list(Shake), Shake.CHOCOLATE)
 st.text("value 8: %s" % i8)
 
+i9 = st.multiselect("Hidden label", options, label_visibility="hidden")
+st.text("value 9: %s" % i9)
+
+i10 = st.multiselect("Collapsed label", options, label_visibility="collapsed")
+st.text("value 10: %s" % i10)
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.multiselect_changed = True
 
-    st.multiselect("multiselect 9", options, key="multiselect9", on_change=on_change)
-    st.text("value 9: %s" % st.session_state.multiselect9)
+    st.multiselect("multiselect 11", options, key="multiselect11", on_change=on_change)
+    st.text("value 11: %s" % st.session_state.multiselect11)
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")
