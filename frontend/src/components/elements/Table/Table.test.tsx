@@ -17,13 +17,13 @@
 
 import React from "react"
 import { mount } from "src/lib/test_util"
-import { fromJS } from "immutable"
+import { fromJS, Map as ImmutableMap } from "immutable"
 
 import { table, emptyTable } from "./mock"
 import { Table, TableProps } from "./Table"
 
 const getProps = (elementProps: Record<string, unknown> = {}): TableProps => ({
-  element: fromJS(elementProps),
+  element: fromJS(elementProps) as ImmutableMap<string, any>,
 })
 
 describe("Table Element", () => {

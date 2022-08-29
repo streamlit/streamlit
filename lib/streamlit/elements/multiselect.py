@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import (
     Any,
@@ -43,6 +43,66 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 T = TypeVar("T")
+
+
+@overload
+def _check_and_convert_to_indices(  # type: ignore[misc]
+    opt: Sequence[Any], default_values: None
+) -> Optional[List[int]]:
+    ...
+
+
+@overload
+def _check_and_convert_to_indices(
+    opt: Sequence[Any], default_values: Union[Iterable[Any], Any]
+) -> List[int]:
+    ...
+
+
+def _check_and_convert_to_indices(
+    opt: Sequence[Any], default_values: Union[Iterable[Any], Any, None]
+) -> Optional[List[int]]:
+    """Perform validation checks and return indices based on the default values."""
+    if default_values is None and None not in opt:
+        return None
+
+    if not isinstance(default_values, list):
+        # This if is done before others because calling if not x (done
+        # right below) when x is of type pd.Series() or np.array() throws a
+        # ValueError exception.
+        if is_type(default_values, "numpy.ndarray") or is_type(
+            default_values, "pandas.core.series.Series"
+        ):
+            default_values = list(cast(Iterable[Any], default_values))
+        elif not default_values or default_values in opt:
+            default_values = [default_values]
+        else:
+            default_values = list(default_values)
+
+    for value in default_values:
+        if value not in opt:
+            raise StreamlitAPIException(
+                "Every Multiselect default value must exist in options"
+            )
+
+    return [opt.index(value) for value in default_values]
+
+
+@dataclass
+class MultiSelectSerde:
+    options: Sequence[Any]
+    default_value: List[int]
+
+    def deserialize(
+        self, ui_value: Optional[List[int]], widget_id: str = ""
+    ) -> List[Any]:
+        current_value: List[int] = (
+            ui_value if ui_value is not None else self.default_value
+        )
+        return [self.options[i] for i in current_value]
+
+    def serialize(self, value: List[Any]) -> List[int]:
+        return _check_and_convert_to_indices(self.options, value)
 
 
 class MultiSelectMixin:
@@ -184,55 +244,6 @@ class MultiSelectMixin:
 
         opt = ensure_indexable(options)
 
-        @overload
-        def _check_and_convert_to_indices(  # type: ignore[misc]
-            opt: Sequence[Any], default_values: None
-        ) -> Optional[List[int]]:
-            ...
-
-        @overload
-        def _check_and_convert_to_indices(
-            opt: Sequence[Any], default_values: Union[Iterable[Any], Any]
-        ) -> List[int]:
-            ...
-
-        def _check_and_convert_to_indices(
-            opt: Sequence[Any], default_values: Union[Iterable[Any], Any, None]
-        ) -> Optional[List[int]]:
-            """Perform validation checks and return indices based on the default values."""
-            if default_values is None and None not in opt:
-                return None
-
-            if not isinstance(default_values, list):
-                # This if is done before others because calling if not x (done
-                # right below) when x is of type pd.Series() or np.array() throws a
-                # ValueError exception.
-                if is_type(default_values, "numpy.ndarray") or is_type(
-                    default_values, "pandas.core.series.Series"
-                ):
-                    default_values = list(cast(Iterable[Any], default_values))
-                elif not default_values or default_values in opt:
-                    default_values = [default_values]
-                else:
-                    default_values = list(default_values)
-            if len(default_values) != 0 and isinstance(default_values[0], Enum):
-                str_default_values = [str(enum) for enum in default_values]
-                mapped_opt_keys = [str(enum) for enum in opt]
-                for value in str_default_values:
-                    if value not in mapped_opt_keys:
-                        raise StreamlitAPIException(
-                            "Every Multiselect default value must exist in options"
-                        )
-                return [mapped_opt_keys.index(value) for value in str_default_values]
-
-            for value in default_values:
-                if value not in opt:
-                    raise StreamlitAPIException(
-                        "Every Multiselect default value must exist in options"
-                    )
-
-            return [opt.index(value) for value in default_values]
-
         indices = _check_and_convert_to_indices(opt, default)
         multiselect_proto = MultiSelectProto()
         multiselect_proto.label = label
@@ -243,16 +254,7 @@ class MultiSelectMixin:
         if help is not None:
             multiselect_proto.help = dedent(help)
 
-        def deserialize_multiselect(
-            ui_value: Optional[List[int]], widget_id: str = ""
-        ) -> List[Any]:
-            current_value: List[int] = (
-                ui_value if ui_value is not None else default_value
-            )
-            return [opt[i] for i in current_value]
-
-        def serialize_multiselect(value: List[Any]) -> List[int]:
-            return _check_and_convert_to_indices(opt, value)
+        serde = MultiSelectSerde(opt, default_value)
 
         widget_state = register_widget(
             "multiselect",
@@ -261,21 +263,18 @@ class MultiSelectMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_multiselect,
-            serializer=serialize_multiselect,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
         if widget_state.value_changed:
-            multiselect_proto.value[:] = serialize_multiselect(widget_state.value)
+            multiselect_proto.value[:] = serde.serialize(widget_state.value)
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
-        if len(widget_state.value) != 0:
-            if isinstance(widget_state.value[0], Enum):
-                return [str(enum) for enum in widget_state.value]
         return widget_state.value
 
     @property
