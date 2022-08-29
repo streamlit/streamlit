@@ -35,7 +35,6 @@ from typing import (
 from typing_extensions import (
     Final,
     Literal,
-    Protocol,
     TypeAlias,
     TypeGuard,
     get_args,
@@ -47,12 +46,13 @@ from pandas.api.types import infer_dtype
 from streamlit import errors
 
 if TYPE_CHECKING:
+    import graphviz
     import numpy as np
     import sympy
     from pandas import DataFrame, Series, Index
     from pandas.io.formats.style import Styler
-    from plotly.graph_objs._figure import Figure
-    from pydeck.bindings.deck import Deck  # type: ignore[import]
+    from plotly.graph_objs import Figure
+    from pydeck import Deck
 
 
 # The array value field names are part of the larger set of possible value
@@ -289,7 +289,9 @@ def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str,
     )
 
 
-def is_graphviz_chart(obj: object) -> bool:
+def is_graphviz_chart(
+    obj: object,
+) -> TypeGuard[Union[graphviz.Graph, graphviz.Digraph]]:
     """True if input looks like a GraphViz chart."""
     return (
         # GraphViz < 0.18
