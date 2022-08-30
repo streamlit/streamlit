@@ -68,7 +68,7 @@ function ProgressBar({
     },
     Bar: {
       style: ({ $theme }: { $theme: any }) => ({
-        width,
+        width: width ? width.toString() : undefined,
         marginTop: theme.spacing.none,
         marginBottom: theme.spacing.none,
         marginRight: theme.spacing.none,

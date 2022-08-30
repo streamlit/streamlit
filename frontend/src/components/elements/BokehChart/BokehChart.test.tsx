@@ -93,7 +93,7 @@ describe("BokehChart element", () => {
       attachTo: div,
     })
 
-    expect(wrapper.find("div").length).toBe(2)
+    expect(wrapper.find("div").length).toBe(1)
   })
 
   describe("Chart dimensions", () => {

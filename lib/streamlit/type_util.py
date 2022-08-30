@@ -35,7 +35,6 @@ from typing import (
 from typing_extensions import (
     Final,
     Literal,
-    Protocol,
     TypeAlias,
     TypeGuard,
     get_args,
@@ -47,12 +46,13 @@ from pandas.api.types import infer_dtype
 from streamlit import errors
 
 if TYPE_CHECKING:
+    import graphviz
     import numpy as np
     import sympy
     from pandas import DataFrame, Series, Index
     from pandas.io.formats.style import Styler
-    from plotly.graph_objs._figure import Figure
-    from pydeck.bindings.deck import Deck  # type: ignore[import]
+    from plotly.graph_objs import Figure
+    from pydeck import Deck
 
 
 # The array value field names are part of the larger set of possible value
@@ -288,7 +288,9 @@ def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str,
     )
 
 
-def is_graphviz_chart(obj: object) -> bool:
+def is_graphviz_chart(
+    obj: object,
+) -> TypeGuard[Union[graphviz.Graph, graphviz.Digraph]]:
     """True if input looks like a GraphViz chart."""
     return (
         # GraphViz < 0.18
@@ -356,6 +358,16 @@ def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
 def is_pydeck(obj: object) -> TypeGuard[Deck]:
     """True if input looks like a pydeck chart."""
     return is_type(obj, "pydeck.bindings.deck.Deck")
+
+
+def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
+    try:
+        # The ignore statement here is intentional, as this is a
+        # perfectly fine way of checking for iterables.
+        iter(obj)  # type: ignore[call-overload]
+    except TypeError:
+        return False
+    return True
 
 
 def is_sequence(seq: Any) -> bool:
@@ -447,11 +459,12 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
     if is_dataframe(obj):
         return cast(Iterable[Any], obj.iloc[:, 0])
 
-    try:
-        iter(obj)
-        return cast(Iterable[T], obj)
-    except TypeError:
-        raise
+    if is_iterable(obj):
+        return obj
+
+    raise TypeError(
+        f"Object is not an iterable and could not be converted to one. Object: {obj}"
+    )
 
 
 @overload

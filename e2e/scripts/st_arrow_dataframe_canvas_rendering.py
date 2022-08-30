@@ -95,14 +95,17 @@ def highlight_max(s, props=""):
     return np.where(s == np.nanmax(s.values), props, "")
 
 
-styled_df = df.style.applymap(style_negative, props="color:red;").applymap(
+# Passing style values w/ all color formats to test css-style-string parsing robustness.
+styled_df = df.style.applymap(style_negative, props="color:#FF0000;").applymap(
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
-styled_df.apply(highlight_max, props="color:white;background-color:darkblue", axis=0)
+styled_df.apply(
+    highlight_max, props="color:white;background-color:rgb(255, 0, 0)", axis=0
+)
 
 styled_df.apply(
-    highlight_max, props="color:white;background-color:pink;", axis=1
+    highlight_max, props="color:white;background-color:hsl(273, 98%, 60%);", axis=1
 ).apply(highlight_max, props="color:white;background-color:purple", axis=None)
 
 st._arrow_dataframe(styled_df)
@@ -326,3 +329,12 @@ st._arrow_dataframe(list_1)
 df = pd.DataFrame(
     np.random.randn(50, 36), columns=list("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 )
+
+st.header("Long colum header")
+
+df = pd.DataFrame(
+    np.random.randn(200, 4),
+    columns=["this is a very long header name", "A", "C", "this is another long name"],
+)
+
+st._arrow_dataframe(df)

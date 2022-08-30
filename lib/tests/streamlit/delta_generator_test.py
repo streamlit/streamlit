@@ -415,6 +415,28 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
 
+    def test_json_list(self):
+        """Test Text.JSON list."""
+        json_data = [5, 6, 7, 8]
+
+        st.json(json_data)
+
+        json_string = json.dumps(json_data)
+
+        element = self.get_delta_from_queue().new_element
+        self.assertEqual(json_string, element.json.body)
+
+    def test_json_tuple(self):
+        """Test Text.JSON tuple."""
+        json_data = (5, 6, 7, 8)
+
+        st.json(json_data)
+
+        json_string = json.dumps(json_data)
+
+        element = self.get_delta_from_queue().new_element
+        self.assertEqual(json_string, element.json.body)
+
     def test_json_object(self):
         """Test Text.JSON object."""
         json_data = {"key": "value"}
@@ -473,18 +495,34 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         st.json(json_data)
         self.assertIsInstance(json_data["some_set"], set)
 
-    def test_json_serializes_sets_as_lists(self):
-        """Test st.json serializes sets as lists"""
-        json_data = {"some_set": {"a", "b"}}
-
+    def test_st_json_set_is_serialized_as_list(self):
+        """Test st.json serializes set as list"""
+        json_data = {"a", "b", "c", "d"}
         st.json(json_data)
         element = self.get_delta_from_queue().new_element
+        parsed_element = json.loads(element.json.body)
+        self.assertIsInstance(parsed_element, list)
+        for el in json_data:
+            self.assertIn(el, parsed_element)
 
+    def test_st_json_serializes_sets_inside_iterables_as_lists(self):
+        """Test st.json serializes sets inside iterables as lists"""
+        json_data = {"some_set": {"a", "b"}}
+        st.json(json_data)
+        element = self.get_delta_from_queue().new_element
         parsed_element = json.loads(element.json.body)
         set_as_list = parsed_element.get("some_set")
-
         self.assertIsInstance(set_as_list, list)
         self.assertSetEqual(json_data["some_set"], set(set_as_list))
+
+    def test_st_json_generator_is_serialized_as_string(self):
+        """Test st.json serializes generator as string"""
+        json_data = (c for c in "foo")
+        st.json(json_data)
+        element = self.get_delta_from_queue().new_element
+        parsed_element = json.loads(element.json.body)
+        self.assertIsInstance(parsed_element, str)
+        self.assertIn("generator", parsed_element)
 
     def test_markdown(self):
         """Test Markdown element."""
