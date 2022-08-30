@@ -14,7 +14,7 @@
 
 """Unit tests for MediaFileManager"""
 
-from typing import Optional
+from typing import Optional, Union
 from unittest import mock, TestCase
 import random
 import time
@@ -101,7 +101,7 @@ class MediaFileManagerTest(TestCase):
 
     def _add_file_and_get_object(
         self,
-        content: bytes,
+        content: Union[bytes, str],
         mimetype: str,
         coordinates: str,
         file_name: Optional[str] = None,
@@ -132,25 +132,30 @@ class MediaFileManagerTest(TestCase):
             _calculate_file_id(fake_bytes, "audio/wav", file_name="name2.wav"),
         )
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    def test_add_files(self, _get_session_id):
-        """Test that MediaFileManager.add works as expected."""
-        _get_session_id.return_value = "SESSION1"
-
-        coord = random_coordinates()
-
-        # Make sure we reject files containing None
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session",
+    )
+    def test_reject_null_files(self, _):
+        """Adding a null file to the manager raises an error."""
         with self.assertRaises(TypeError):
-            self.media_file_manager.add(None, "media/any", coord)
+            self.media_file_manager.add(None, "media/any", random_coordinates())
 
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session",
+    )
+    def test_add_binary_files(self, _):
+        """Test that we can add binary files to the manager."""
         sample_coords = set()
         while len(sample_coords) < len(ALL_FIXTURES):
             sample_coords.add(random_coordinates())
 
         for sample in ALL_FIXTURES.values():
-            f = self._add_file_and_get_object(
-                sample["content"], sample["mimetype"], sample_coords.pop()
-            )
+            content = sample["content"]
+            self.assertIsInstance(content, bytes)
+            mimetype = sample["mimetype"]
+            f = self._add_file_and_get_object(content, mimetype, sample_coords.pop())
             self.assertTrue(f.id in self.media_file_manager)
 
         # There should be as many files in MFM as we added.
