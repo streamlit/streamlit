@@ -18,7 +18,7 @@ import collections
 import hashlib
 import mimetypes
 from enum import Enum
-from typing import Dict, Set, Optional, List
+from typing import Dict, Set, Optional, List, Union
 
 from streamlit import util
 from streamlit.logger import get_logger
@@ -230,7 +230,7 @@ class MediaFileManager(CacheStatsProvider):
 
     def add(
         self,
-        content: bytes,
+        data_or_filename: Union[bytes, str],
         mimetype: str,
         coordinates: str,
         file_name: Optional[str] = None,
@@ -243,12 +243,13 @@ class MediaFileManager(CacheStatsProvider):
 
         Parameters
         ----------
-        content : bytes
-            Raw data to store in file object.
+        data_or_filename : bytes or str
+            If bytes: the media file's raw data. If str: the name of a file
+            to load from disk.
         mimetype : str
             The mime type for the file. E.g. "audio/mpeg".
             This string will be used in the "Content-Type" header when the file
-            is sent via HTTP GET.
+            is served over HTTP.
         coordinates : str
             Unique string identifying an element's location.
             Prevents memory leak of "forgotten" file IDs when element media
@@ -264,11 +265,25 @@ class MediaFileManager(CacheStatsProvider):
         -------
         str
             The url that the frontend can use to fetch the media.
-        """
-        file_id = _calculate_file_id(content, mimetype, file_name=file_name)
-        file = self._files_by_id.get(file_id, None)
 
-        if file is None:
+        Raises
+        ------
+        If a filename is passed, any Exception raised when trying to read the
+        file will be re-raised.
+        """
+
+        # If we were passed a filename, open and read the file into memory.
+        content: bytes
+        if isinstance(data_or_filename, str):
+            with open(data_or_filename, "rb") as f:
+                content = f.read()
+        else:
+            content = data_or_filename
+
+        file_id = _calculate_file_id(content, mimetype, file_name=file_name)
+        media_file = self._files_by_id.get(file_id, None)
+
+        if media_file is None:
             LOGGER.debug("Adding media file %s", file_id)
 
             if is_for_static_download:
@@ -276,7 +291,7 @@ class MediaFileManager(CacheStatsProvider):
             else:
                 file_type = MediaFileType.MEDIA
 
-            file = MediaFile(
+            media_file = MediaFile(
                 file_id=file_id,
                 content=content,
                 mimetype=mimetype,
@@ -287,8 +302,8 @@ class MediaFileManager(CacheStatsProvider):
             LOGGER.debug("Overwriting media file %s", file_id)
 
         session_id = _get_session_id()
-        self._files_by_id[file.id] = file
-        self._files_by_session_and_coord[session_id][coordinates] = file
+        self._files_by_id[media_file.id] = media_file
+        self._files_by_session_and_coord[session_id][coordinates] = media_file
 
         LOGGER.debug(
             "Files: %s; Sessions with files: %s",
@@ -296,7 +311,7 @@ class MediaFileManager(CacheStatsProvider):
             len(self._files_by_session_and_coord),
         )
 
-        return file.url
+        return media_file.url
 
     def get(self, file_id: str) -> MediaFile:
         """Returns the MediaFile for the given file_id.
