@@ -200,18 +200,9 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 "https://streamlit.io/test.png",
             ),
             ("https://streamlit.io/test.svg", "https://streamlit.io/test.svg"),
-            (
-                "🦈",
-                "🦈",
-            ),
-            (
-                ":shark:",
-                ":shark:",
-            ),
         ]
     )
     def test_image_to_url(self, img, expected_prefix):
-
         url = image.image_to_url(
             img,
             width=-1,
@@ -219,7 +210,6 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             channels="RGB",
             output_format="JPEG",
             image_id="blah",
-            allow_emoji=True,
         )
         self.assertTrue(url.startswith(expected_prefix))
 

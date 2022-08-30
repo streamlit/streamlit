@@ -290,11 +290,9 @@ def image_to_url(
     channels: Channels,
     output_format: OutputFormat,
     image_id: str,
-    allow_emoji: bool = False,
 ) -> str:
     """Return a URL that an image can be served from.
     If `image` is already a URL, return it unmodified.
-    If `image` is an emoji, return it unmodified.
     Otherwise, add the image to the MediaFileManager and return the URL.
     """
     # PIL Images
@@ -335,7 +333,7 @@ def image_to_url(
 
     # Strings
     elif isinstance(image, str):
-        # If it's a url, then set the protobuf and continue
+        # If it's a url, return it directly.
         try:
             p = urlparse(image)
             if p.scheme:
@@ -343,17 +341,9 @@ def image_to_url(
         except UnicodeDecodeError:
             pass
 
-        # Finally, see if it's a file.
-        try:
-            with open(image, "rb") as f:
-                data = f.read()
-        except:
-            if allow_emoji:
-                # This might be an emoji string, so just pass it to the frontend
-                return image
-            else:
-                # Allow OS filesystem errors to raise
-                raise
+        # Otherwise, open it as a file.
+        with open(image, "rb") as f:
+            data = f.read()
 
     # Assume input in bytes.
     else:
