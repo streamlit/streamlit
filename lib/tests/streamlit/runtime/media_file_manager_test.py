@@ -14,7 +14,7 @@
 
 """Unit tests for MediaFileManager"""
 
-from typing import Optional
+from typing import Optional, Union
 from unittest import mock, TestCase
 import random
 import time
@@ -102,7 +102,7 @@ class MediaFileManagerTest(TestCase):
 
     def _add_file_and_get_object(
         self,
-        content: bytes,
+        content: Union[bytes, str],
         mimetype: str,
         coordinates: str,
         file_name: Optional[str] = None,
