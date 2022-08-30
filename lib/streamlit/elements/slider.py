@@ -19,13 +19,12 @@ from streamlit.type_util import (
     Key,
     to_key,
     LabelVisibility,
-    maybe_raise_label_visibility_wrong_value_warning,
+    maybe_raise_label_warnings,
 )
 from typing import Any, List, cast, Optional
 from textwrap import dedent
 
 import streamlit
-from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
@@ -39,8 +38,6 @@ from streamlit.runtime.state import (
 )
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
-
-_LOGGER = _logger.get_logger("root")
 
 SECONDS_TO_MICROS = 1000 * 1000
 DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
@@ -292,14 +289,7 @@ class SliderMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        if label == "":
-            _LOGGER.warning(
-                "`label` got an empty string. This is discouraged for accessibility "
-                "reasons and may be disallowed in the future by raising an exception. "
-                "Please provide a non-empty label and hide it with label_visibility "
-                "if needed."
-            )
-        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
+        maybe_raise_label_warnings(label, label_visibility)
 
         if value is None:
             # Set value from session_state if exists.

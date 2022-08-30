@@ -17,7 +17,7 @@ from streamlit.type_util import (
     Key,
     to_key,
     LabelVisibility,
-    maybe_raise_label_visibility_wrong_value_warning,
+    maybe_raise_label_warnings,
 )
 from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
@@ -25,7 +25,6 @@ from typing_extensions import Literal
 
 import streamlit
 from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -41,8 +40,6 @@ from ..proto.Common_pb2 import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from .utils import check_callback_rules, check_session_state_rules
-
-LOGGER = get_logger(__name__)
 
 SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
 
@@ -353,15 +350,7 @@ class FileUploaderMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
-
-        if label == "":
-            LOGGER.warning(
-                "`label` got an empty string. This is discouraged for accessibility "
-                "reasons and may be disallowed in the future by raising an exception. "
-                "Please provide a non-empty label and hide it with label_visibility "
-                "if needed."
-            )
-        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
+        maybe_raise_label_warnings(label, label_visibility)
 
         if type:
             if isinstance(type, str):

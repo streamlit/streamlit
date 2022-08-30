@@ -17,9 +17,9 @@ from streamlit.type_util import (
     Key,
     to_key,
     LabelVisibility,
-    maybe_raise_label_visibility_wrong_value_warning,
+    maybe_raise_label_warnings,
 )
-from streamlit import logger as _logger
+
 from textwrap import dedent
 from typing import Optional, cast, List, TYPE_CHECKING
 
@@ -48,8 +48,6 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 SomeUploadedSnapshotFile = Optional[UploadedFile]
-
-_LOGGER = _logger.get_logger("root")
 
 
 def _get_file_recs_for_camera_input_widget(
@@ -213,15 +211,7 @@ class CameraInputMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
-
-        if label == "":
-            _LOGGER.warning(
-                "`label` got an empty string. This is discouraged for accessibility "
-                "reasons and may be disallowed in the future by raising an exception. "
-                "Please provide a non-empty label and hide it with label_visibility "
-                "if needed."
-            )
-        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
+        maybe_raise_label_warnings(label, label_visibility)
 
         camera_input_proto = CameraInputProto()
         camera_input_proto.label = label

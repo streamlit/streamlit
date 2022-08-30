@@ -28,7 +28,6 @@ from typing import (
 )
 
 import streamlit
-from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -39,7 +38,7 @@ from streamlit.type_util import (
     is_type,
     to_key,
     LabelVisibility,
-    maybe_raise_label_visibility_wrong_value_warning,
+    maybe_raise_label_warnings,
 )
 
 from streamlit.runtime.state import (
@@ -52,7 +51,6 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 T = TypeVar("T")
-_LOGGER = _logger.get_logger("root")
 
 
 @overload
@@ -266,15 +264,7 @@ class MultiSelectMixin:
         check_session_state_rules(default_value=default, key=key)
 
         opt = ensure_indexable(options)
-
-        if label == "":
-            _LOGGER.warning(
-                "`label` got an empty string. This is discouraged for accessibility "
-                "reasons and may be disallowed in the future by raising an exception. "
-                "Please provide a non-empty label and hide it with label_visibility "
-                "if needed."
-            )
-        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
+        maybe_raise_label_warnings(label, label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
         multiselect_proto = MultiSelectProto()

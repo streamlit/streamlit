@@ -17,7 +17,6 @@ from textwrap import dedent
 from typing import Any, Callable, Optional, cast
 
 import streamlit
-import streamlit.logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -33,13 +32,11 @@ from streamlit.type_util import (
     OptionSequence,
     ensure_indexable,
     to_key,
-    maybe_raise_label_visibility_wrong_value_warning,
+    maybe_raise_label_warnings,
 )
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
-
-_LOGGER = _logger.get_logger("root")
 
 
 @dataclass
@@ -171,14 +168,7 @@ class SelectboxMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
 
-        if label == "":
-            _LOGGER.warning(
-                "`label` got an empty string. This is discouraged for accessibility "
-                "reasons and may be disallowed in the future by raising an exception. "
-                "Please provide a non-empty label and hide it with label_visibility "
-                "if needed."
-            )
-        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
+        maybe_raise_label_warnings(label, label_visibility)
 
         opt = ensure_indexable(options)
 

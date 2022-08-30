@@ -25,10 +25,9 @@ from streamlit.type_util import (
     Key,
     to_key,
     LabelVisibility,
-    maybe_raise_label_visibility_wrong_value_warning,
+    maybe_raise_label_warnings,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit import logger as _logger
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.runtime.state import (
@@ -42,8 +41,6 @@ from .utils import check_callback_rules, check_session_state_rules
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-_LOGGER = _logger.get_logger("root")
 
 TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
@@ -306,14 +303,7 @@ class TimeWidgetsMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        if label == "":
-            _LOGGER.warning(
-                "`label` got an empty string. This is discouraged for accessibility "
-                "reasons and may be disallowed in the future by raising an exception. "
-                "Please provide a non-empty label and hide it with label_visibility "
-                "if needed."
-            )
-        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
+        maybe_raise_label_warnings(label, label_visibility)
 
         parsed_time: time
         if value is None:
@@ -469,14 +459,7 @@ class TimeWidgetsMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        if label == "":
-            _LOGGER.warning(
-                "`label` got an empty string. This is discouraged for accessibility "
-                "reasons and may be disallowed in the future by raising an exception. "
-                "Please provide a non-empty label and hide it with label_visibility "
-                "if needed."
-            )
-        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
+        maybe_raise_label_warnings(label, label_visibility)
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,

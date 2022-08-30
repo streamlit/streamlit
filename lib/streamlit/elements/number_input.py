@@ -14,13 +14,12 @@
 
 from dataclasses import dataclass
 import numbers
-from streamlit import logger as _logger
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import (
     LabelVisibility,
     Key,
     to_key,
-    maybe_raise_label_visibility_wrong_value_warning,
+    maybe_raise_label_warnings,
 )
 from textwrap import dedent
 from typing import Optional, Union, cast
@@ -40,8 +39,6 @@ from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
 Number = Union[int, float]
-
-_LOGGER = _logger.get_logger("root")
 
 
 @dataclass
@@ -179,16 +176,7 @@ class NumberInputMixin:
         check_session_state_rules(
             default_value=None if isinstance(value, NoValue) else value, key=key
         )
-
-        if label == "":
-            _LOGGER.warning(
-                "`label` got an empty string. This is discouraged for accessibility "
-                "reasons and may be disallowed in the future by raising an exception. "
-                "Please provide a non-empty label and hide it with label_visibility "
-                "if needed."
-            )
-        maybe_raise_label_visibility_wrong_value_warning(label_visibility)
-
+        maybe_raise_label_warnings(label, label_visibility)
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
