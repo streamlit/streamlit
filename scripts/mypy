@@ -119,7 +119,7 @@ def main(report: bool = False) -> None:
     args.extend(paths)
 
     shell_command = shlex_join(itertools.chain(['mypy'], args))
-    print("Executing command", shell_command)
+    print("Executing command:", shell_command)
     mypy_main.main(None, sys.stdout, sys.stderr, args=args)
     if report:
         process_report(os.path.join(tempdir.name, "lineprecision.txt"))
