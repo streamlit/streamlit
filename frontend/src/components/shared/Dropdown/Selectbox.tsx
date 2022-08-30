@@ -178,7 +178,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           clearable={false}
           disabled={disabled}
           labelKey="label"
-          aria-label={label?.toString()} // TODO [Karen] Find more elegant solution to avoid type error
+          aria-label={label || ""}
           onChange={this.onChange}
           onInputChange={this.onInputChange}
           onClose={this.onClose}
