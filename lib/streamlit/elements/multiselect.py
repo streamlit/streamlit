@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from enum import Enum
 from textwrap import dedent
 from typing import (
     Any,
@@ -90,15 +89,6 @@ def _check_and_convert_to_indices(
             default_values = [default_values]
         else:
             default_values = list(default_values)
-    if len(default_values) != 0 and isinstance(default_values[0], Enum):
-        str_default_values = [str(enum) for enum in default_values]
-        mapped_opt_keys = [str(enum) for enum in opt]
-        for value in str_default_values:
-            if value not in mapped_opt_keys:
-                raise StreamlitAPIException(
-                    "Every Multiselect default value must exist in options"
-                )
-        return [mapped_opt_keys.index(value) for value in str_default_values]
 
     for value in default_values:
         if value not in opt:
@@ -129,24 +119,6 @@ class MultiSelectSerde:
 
 
 class MultiSelectMixin:
-    @overload
-    def multiselect(  # type: ignore[misc]
-        self,
-        label: str,
-        options: OptionSequence[Enum],
-        default: Optional[Any] = None,
-        format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        *,  # keyword-only arguments:
-        disabled: bool = False,
-    ) -> List[str]:
-        ...
-
-    @overload
     def multiselect(
         self,
         label: str,
@@ -160,23 +132,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> List[V_co]:
-        ...
-
-    def multiselect(
-        self,
-        label: str,
-        options: OptionSequence[V_co],
-        default: Optional[Any] = None,
-        format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        *,  # keyword-only arguments:
-        disabled: bool = False,
-    ) -> Union[List[V_co], List[str]]:
+    ) -> Union[List[V_co]]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -260,7 +216,7 @@ class MultiSelectMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Union[List[V_co], List[str]]:
+    ) -> Union[List[V_co]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
@@ -298,9 +254,6 @@ class MultiSelectMixin:
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
-        if len(widget_state.value) != 0:
-            if isinstance(widget_state.value[0], Enum):
-                return [str(enum) for enum in widget_state.value]
         return widget_state.value
 
     @property
