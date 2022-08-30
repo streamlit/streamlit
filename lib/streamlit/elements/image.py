@@ -160,19 +160,23 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
         return False
 
 
-def _format_from_image_type(
-    image: PILImage,
-    output_format: str,
-) -> Literal["JPEG", "PNG"]:
-    output_format = output_format.upper()
-    if output_format == "JPEG" or output_format == "PNG":
+def _validate_format(image: PILImage, format: str) -> Literal["JPEG", "PNG"]:
+    """Return either "JPEG" or "PNG", based on the input `format` argument.
+
+    - If `format` is "JPEG" or "JPG" (or any capitalization thereof), return "JPEG"
+    - If `format` is "PNG" (or any capitalization thereof), return "PNG"
+    - For all other strings, return "PNG" if the image has an alpha channel,
+      and "JPEG" otherwise.
+    """
+    format = format.upper()
+    if format == "JPEG" or format == "PNG":
         return cast(
             Literal["JPEG", "PNG"],
-            output_format,
+            format,
         )
 
     # We are forgiving on the spelling of JPEG
-    if output_format == "JPG":
+    if format == "JPG":
         return "JPEG"
 
     if _image_may_have_alpha_channel(image):
@@ -208,7 +212,7 @@ def _np_array_to_bytes(
     output_format="JPEG",
 ) -> bytes:
     img = Image.fromarray(array.astype(np.uint8))
-    format = _format_from_image_type(img, output_format)
+    format = _validate_format(img, output_format)
 
     return _PIL_to_bytes(img, format)
 
@@ -243,7 +247,7 @@ def _normalize_to_bytes(
     """
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
-    format = _format_from_image_type(image, output_format)
+    format = _validate_format(image, output_format)
     if output_format.lower() == "auto":
         # Inspect the image's header and try to guess its mimetype.
         ext = imghdr.what(None, data)
@@ -298,7 +302,7 @@ def image_to_url(
     """
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
-        format = _format_from_image_type(image, output_format)
+        format = _validate_format(image, output_format)
         data = _PIL_to_bytes(image, format)
 
     # BytesIO
