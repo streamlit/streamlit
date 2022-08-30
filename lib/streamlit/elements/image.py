@@ -364,6 +364,47 @@ def marshall_images(
     channels: Channels = "RGB",
     output_format: OutputFormat = "auto",
 ) -> None:
+    """Fill an ImageListProto with a list of images and their captions.
+
+    The images will be resized and reformatted as necessary.
+
+    Parameters
+    ----------
+    coordinates
+        A string indentifying the images' location in the frontend.
+    image
+        The image or images to include in the ImageListProto.
+    caption
+        Image caption. If displaying multiple images, caption should be a
+        list of captions (one for each image).
+    width
+        The desired width of the image or images. This parameter will be
+        passed to the frontend, where it has some special meanings:
+        -1: "OriginalWidth" (display the image at its original width)
+        -2: "ColumnWidth" (display the image at the width of the column it's in)
+        -3: "AutoWidth" (display the image at its original width, unless it
+            would exceed the width of its column in which case clamp it to
+            its column width).
+    proto_imgs
+        The ImageListProto to fill in.
+    clamp
+        Clamp image pixel values to a valid range ([0-255] per channel).
+        This is only meaningful for byte array images; the parameter is
+        ignored for image URLs. If this is not set, and an image has an
+        out-of-range value, an error will be thrown.
+    channels
+        If image is an nd.array, this parameter denotes the format used to
+        represent color information. Defaults to 'RGB', meaning
+        `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
+        `image[:, :, 2]` is blue. For images coming from libraries like
+        OpenCV you should set this to 'BGR', instead.
+    output_format
+        This parameter specifies the format to use when transferring the
+        image data. Photos should use the JPEG format for lossy compression
+        while diagrams should use the PNG format for lossless compression.
+        Defaults to 'auto' which identifies the compression type based
+        on the type and format of the image argument.
+    """
     channels = cast(Channels, channels.upper())
 
     # Turn single image and caption into one element list.
