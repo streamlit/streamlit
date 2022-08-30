@@ -62,7 +62,7 @@ repos:
     rev: v1.2.0
     hooks:
       - id: insert-license
-        name: Add license for all JS(X)/TS(X) files
+        name: Add license for all (S)CSS/JS(X)/TS(X) files
         files: \.(s?css|jsx?|tsx?)$
         args:
           - --comment-style
@@ -73,7 +73,8 @@ repos:
         exclude: |
           (?x)
           /vendor/|
-          ^component-lib/declarations/apache-arrow
+          ^component-lib/declarations/apache-arrow|
+          ^frontend/src/assets/css/variables\.scss
       - id: insert-license
         name: Add license for all Proto files
         files: \.proto$
