@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-def _convert_sets_to_lists_repr(o: object) -> Union[str, List[Any]]:
+def _ensure_serialization(o: object) -> Union[str, List[Any]]:
     """repr function for json.dumps default arg, which tries to serialize sets as lists"""
     if isinstance(o, set):
         return list(o)
@@ -84,14 +84,13 @@ class JsonMixin:
         if not isinstance(body, str):
             try:
                 # Serialize body to string and try to interpret sets as lists
-                body = json.dumps(body, default=_convert_sets_to_lists_repr)
-            # It's safer to have more general exception catch, because of our usage of custom serialization function
-            except Exception as err:
+                body = json.dumps(body, default=_ensure_serialization)
+            except TypeError as err:
                 st.warning(
                     "Warning: this data structure was not fully serializable as "
                     f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )
-                body = json.dumps(body, skipkeys=True, default=repr)
+                body = json.dumps(body, skipkeys=True, default=_ensure_serialization)
 
         json_proto = JsonProto()
         json_proto.body = body
