@@ -245,9 +245,10 @@ def _normalize_to_bytes(
     actual_width, actual_height = image.size
     format = _format_from_image_type(image, output_format)
     if output_format.lower() == "auto":
+        # Inspect the image's header and try to guess its mimetype.
         ext = imghdr.what(None, data)
         mimetype = mimetypes.guess_type(f"image.{ext}")[0]
-        # if no other options, attempt to convert
+        # If we weren't able to guess the mimetype, use a sensible default.
         if mimetype is None:
             mimetype = f"image/{format.lower()}"
     else:
