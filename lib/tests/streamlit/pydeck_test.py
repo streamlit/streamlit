@@ -14,7 +14,7 @@
 
 import json
 import unittest
-import unittest.mock
+from unittest import mock
 
 import pandas as pd
 import pydeck as pdk
@@ -28,7 +28,7 @@ df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
 class PyDeckTest(testutil.DeltaGeneratorTestCase):
     def test_basic(self):
-        """Test that pydeck object orks."""
+        """Test that pydeck object works."""
 
         st.pydeck_chart(
             pdk.Deck(
@@ -54,7 +54,7 @@ class PyDeckTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.deck_gl_json_chart.tooltip, "")
 
     def test_with_tooltip(self):
-        """Test that pydeck object with tooltip orks."""
+        """Test that pydeck object with tooltip works."""
 
         tooltip = {
             "html": "<b>Elevation Value:</b> {elevationValue}",
@@ -75,14 +75,14 @@ class PyDeckTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(actual, tooltip)
 
     def test_pydeck_with_tooltip_pydeck_0_7_1(self):
-        """Test that pydeck object with tooltip created by pydeck v0.7.1 orks."""
+        """Test that pydeck object with tooltip created by pydeck v0.7.1 works."""
 
         tooltip = {
             "html": "<b>Elevation Value:</b> {elevationValue}",
             "style": {"color": "white"},
         }
 
-        mock_desk = unittest.mock.Mock(
+        mock_desk = mock.Mock(
             spec=["to_json", "_tooltip"],
             **{"to_json.return_value": json.dumps({"layers": []}), "_tooltip": tooltip},
         )
@@ -94,14 +94,14 @@ class PyDeckTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(actual, tooltip)
 
     def test_pydeck_with_tooltip_pydeck_0_8_1(self):
-        """Test that pydeck object with tooltip created by pydeck v0.8.1 orks."""
+        """Test that pydeck object with tooltip created by pydeck v0.8.1 works."""
 
         tooltip = {
             "html": "<b>Elevation Value:</b> {elevationValue}",
             "style": {"color": "white"},
         }
 
-        mock_desk = unittest.mock.Mock(
+        mock_desk = mock.Mock(
             spec=["to_json", "deck_widget"],
             **{
                 "to_json.return_value": json.dumps({"layers": []}),
