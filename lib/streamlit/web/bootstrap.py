@@ -235,6 +235,10 @@ def _print_url(is_running_hello: bool) -> None:
         external_ip = net_util.get_external_ip()
         if external_ip:
             named_urls.append(("External URL", server_util.get_url(external_ip)))
+    elif server_address_is_unix_socket():
+        named_urls = [
+            ("Unix Socket", config.get_option("server.address")),
+        ]
 
     else:
         named_urls = [
