@@ -34,8 +34,6 @@ from streamlit.user_info import UserInfoProxy
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-Body: TypeAlias = Union[List[Any], Tuple[Any, ...], MutableMapping[Hashable, Any]]
-
 
 def _convert_sets_to_lists_repr(o: Any) -> Union[str, List[Any]]:
     """repr function for json.dumps default arg, which tries to serialize sets as lists"""
