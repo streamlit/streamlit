@@ -186,6 +186,7 @@ def _PIL_to_bytes(
     format: Literal["JPEG", "PNG"] = "JPEG",
     quality: int = 100,
 ) -> bytes:
+    """Convert a PIL image to bytes."""
     tmp = io.BytesIO()
 
     # User must have specified JPEG, so we must convert it
@@ -233,21 +234,24 @@ def _verify_np_shape(array: "npt.NDArray[Any]") -> "npt.NDArray[Any]":
 
 
 def _normalize_to_bytes(
-    data,
+    data: bytes,
     width: int,
     output_format: OutputFormat,
 ) -> Tuple[bytes, str]:
+    """Resize an image if it exceeds MAXIMUM_CONTENT_WIDTH, and return
+    the (possibly resized) image and its mimetype.
+    """
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
     format = _format_from_image_type(image, output_format)
     if output_format.lower() == "auto":
         ext = imghdr.what(None, data)
-        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
+        mimetype = mimetypes.guess_type(f"image.{ext}")[0]
         # if no other options, attempt to convert
         if mimetype is None:
-            mimetype = "image/" + format.lower()
+            mimetype = f"image/{format.lower()}"
     else:
-        mimetype = "image/" + format.lower()
+        mimetype = f"image/{format.lower()}"
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
         width = MAXIMUM_CONTENT_WIDTH
@@ -256,7 +260,7 @@ def _normalize_to_bytes(
         new_height = int(1.0 * actual_height * width / actual_width)
         image = image.resize((width, new_height), resample=Image.BILINEAR)
         data = _PIL_to_bytes(image, format=format, quality=90)
-        mimetype = "image/" + format.lower()
+        mimetype = f"image/{format.lower()}"
 
     return data, mimetype
 
@@ -286,8 +290,11 @@ def image_to_url(
     channels: Channels,
     output_format: OutputFormat,
     image_id: str,
-    allow_emoji: bool = False,
-):
+) -> str:
+    """Return a URL that an image can be served from.
+    If `image` is already a URL, return it unmodified.
+    Otherwise, add the image to the MediaFileManager and return the URL.
+    """
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
         format = _format_from_image_type(image, output_format)
@@ -326,7 +333,7 @@ def image_to_url(
 
     # Strings
     elif isinstance(image, str):
-        # If it's a url, then set the protobuf and continue
+        # If it's a url, return it directly.
         try:
             p = urlparse(image)
             if p.scheme:
@@ -334,17 +341,9 @@ def image_to_url(
         except UnicodeDecodeError:
             pass
 
-        # Finally, see if it's a file.
-        try:
-            with open(image, "rb") as f:
-                data = f.read()
-        except:
-            if allow_emoji:
-                # This might be an emoji string, so just pass it to the frontend
-                return image
-            else:
-                # Allow OS filesystem errors to raise
-                raise
+        # Otherwise, open it as a file.
+        with open(image, "rb") as f:
+            data = f.read()
 
     # Assume input in bytes.
     else:

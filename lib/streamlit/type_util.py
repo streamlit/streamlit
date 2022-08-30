@@ -360,6 +360,16 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
+def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
+    try:
+        # The ignore statement here is intentional, as this is a
+        # perfectly fine way of checking for iterables.
+        iter(obj)  # type: ignore[call-overload]
+    except TypeError:
+        return False
+    return True
+
+
 def is_sequence(seq: Any) -> bool:
     """True if input looks like a sequence."""
     if isinstance(seq, str):
@@ -449,11 +459,12 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
     if is_dataframe(obj):
         return cast(Iterable[Any], obj.iloc[:, 0])
 
-    try:
-        iter(obj)
-        return cast(Iterable[T], obj)
-    except TypeError:
-        raise
+    if is_iterable(obj):
+        return obj
+
+    raise TypeError(
+        f"Object is not an iterable and could not be converted to one. Object: {obj}"
+    )
 
 
 @overload
