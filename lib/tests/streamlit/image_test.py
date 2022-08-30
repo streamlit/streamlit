@@ -183,6 +183,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             "streamlit.elements.image.media_file_manager.add"
         ) as mock_mfm_add:
             mock_mfm_add.return_value = "https://mockoutputurl.com"
+
             result = image.image_to_url(
                 input_string,
                 width=-1,
@@ -191,6 +192,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 output_format="JPEG",
                 image_id="mock_image_id",
             )
+
             if is_url:
                 # URLs should be returned as-is, and should not result in a call to
                 # MediaFileManager.add
