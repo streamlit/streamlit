@@ -104,6 +104,9 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
         )
     except BaseException:
         if isinstance(page_icon, str):
+            # This fall-thru handles emoji shortcode strings (e.g. ":shark:"),
+            # which aren't valid filenames and so will cause an Exception from
+            # `image_to_url`.
             return page_icon
         raise
 
