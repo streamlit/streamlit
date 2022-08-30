@@ -15,16 +15,11 @@
 import json
 from typing import (
     Any,
-    Hashable,
     List,
-    MutableMapping,
-    Tuple,
     Union,
     cast,
     TYPE_CHECKING,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.state import SessionStateProxy
