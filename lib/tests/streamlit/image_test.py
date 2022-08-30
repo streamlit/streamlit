@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Unit test for image."""
+from unittest import mock
 
 import pytest
 from PIL import Image, ImageDraw
@@ -170,6 +171,35 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             image_id="blah",
         )
         self.assertTrue(url.startswith(expected_prefix))
+
+    @parameterized.expand(
+        [("foo.bar", False), ("path/to/foo.bar", False), ("https://foo.bar", True)]
+    )
+    def test_image_to_url_passes_filenames_to_media_file_mgr(
+        self, input_string: str, is_url: bool
+    ):
+        """image_to_url should pass any non-URL strings through to MediaFileManager."""
+        with mock.patch(
+            "streamlit.elements.image.media_file_manager.add"
+        ) as mock_mfm_add:
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+            result = image.image_to_url(
+                input_string,
+                width=-1,
+                clamp=False,
+                channels="RGB",
+                output_format="JPEG",
+                image_id="mock_image_id",
+            )
+            if is_url:
+                # URLs should be returned as-is, and should not result in a call to
+                # MediaFileManager.add
+                self.assertEqual(input_string, result)
+                mock_mfm_add.assert_not_called()
+            else:
+                # Other strings should be passed to MediaFileManager.add
+                self.assertEqual("https://mockoutputurl.com", result)
+                mock_mfm_add.assert_called_once()
 
     @parameterized.expand(
         [
