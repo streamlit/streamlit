@@ -242,9 +242,11 @@ def _get_image_format_mimetype(image_format: ImageFormat) -> str:
     return f"image/{image_format.lower()}"
 
 
-def _resize_image(image_data: bytes, width: int, image_format: ImageFormat) -> bytes:
+def _maybe_resize_image(
+    image_data: bytes, width: int, image_format: ImageFormat
+) -> bytes:
     """Resize an image if it exceeds the given width, or if exceeds
-    MAXIMUM_CONTENT_WIDTH. Return the (possibly resized) image data
+    MAXIMUM_CONTENT_WIDTH. Return the (possibly resized) image data.
     """
     image = Image.open(io.BytesIO(image_data))
     actual_width, actual_height = image.size
@@ -348,7 +350,7 @@ def image_to_url(
 
     # Determine the image's format, resize it, and get its mimetype
     image_format = _validate_image_format_string(image_data, output_format)
-    image_data = _resize_image(image_data, width, image_format)
+    image_data = _maybe_resize_image(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
     this_file = in_memory_file_manager.add(image_data, mimetype, image_id)
