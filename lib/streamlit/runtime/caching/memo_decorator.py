@@ -33,6 +33,7 @@ from streamlit.file_util import (
     get_streamlit_file_path,
 )
 from streamlit.logger import get_logger
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStatsProvider, CacheStat
 from .cache_errors import (
     CacheError,
@@ -42,11 +43,14 @@ from .cache_errors import (
 from .cache_utils import (
     Cache,
     CachedResult,
+    InitialCachedResults,
     MsgData,
     create_cache_wrapper,
     CacheWarningCallStack,
     CachedFunction,
     CacheMessagesCallStack,
+    ElementMsgData,
+    _make_widget_key,
 )
 
 _LOGGER = get_logger(__name__)
@@ -421,12 +425,22 @@ class MemoCache(Cache):
 
         try:
             entry = pickle.loads(pickled_entry)
-            if not isinstance(entry, CachedResult):
+            if not isinstance(entry, InitialCachedResults):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.
                 self._remove_from_disk_cache(key)
                 raise CacheKeyNotFoundError()
-            return entry
+            ctx = get_script_run_ctx()
+            if ctx:
+                state = ctx.session_state
+                widgets = [(wid, state[wid]) for wid in entry.widget_ids]
+                widget_key = _make_widget_key(widgets)
+                if widget_key in entry.results:
+                    return entry.results[widget_key]
+                else:
+                    raise CacheKeyNotFoundError()
+            else:
+                raise CacheKeyNotFoundError()
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
@@ -437,8 +451,51 @@ class MemoCache(Cache):
         try:
             main_id = st._main.id
             sidebar_id = st.sidebar.id
-            entry = CachedResult(value, messages, main_id, sidebar_id)
-            pickled_entry = pickle.dumps(entry)
+            widgets = [
+                msg.widget_metadata.widget_id
+                for msg in messages
+                if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
+            ]
+            ctx = get_script_run_ctx()
+            if ctx:
+                state = ctx.session_state
+                widget_values = [(wid, state[wid]) for wid in widgets]
+                widget_key = _make_widget_key(widget_values)
+
+                # cases that can happen with trying to load cached results:
+                # mem cache hit, unpickles correctly -> use it
+                # mem cache hit, unpickle failure -> clear and fall back to disk or default
+                # mem cache miss, disk hit, unpickles -> use it and update mem cache
+                # mem cache miss, disk hit, pickle failure (or wrong type) -> fall back to default
+                # mem cache miss, disk miss/off -> fall back to default
+
+                with self._mem_cache_lock:
+                    default_results = InitialCachedResults(
+                        widget_ids=widgets, results={}
+                    )
+                    try:
+                        # TODO use _read_from_mem_cache ?
+                        initial_results = self._mem_cache[key]
+                        initial_results = pickle.loads(initial_results)
+                        if not isinstance(initial_results, InitialCachedResults):
+                            self._remove_from_disk_cache(key)
+                            raise CacheKeyNotFoundError()
+                    except (KeyError, CacheKeyNotFoundError, pickle.PicklingError):
+                        if self.persist == "disk":
+                            try:
+                                initial_results = self._read_from_disk_cache(key)
+                                initial_results = pickle.loads(initial_results)
+                            except CacheKeyNotFoundError:
+                                initial_results = default_results
+                        else:
+                            initial_results = default_results
+
+                    result = CachedResult(value, messages, main_id, sidebar_id)
+                    initial_results.results[widget_key] = result
+
+                    pickled_entry = pickle.dumps(initial_results)
+            else:
+                return
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
@@ -465,6 +522,9 @@ class MemoCache(Cache):
             else:
                 _LOGGER.debug("Memory cache MISS: %s", key)
                 raise CacheKeyNotFoundError("Key not found in mem cache")
+
+    # def _read_initial_from_mem_cache(self, key: str) -> InitialCachedResults:
+    #     pickled = self._read_from_mem_cache(key)
 
     def _read_from_disk_cache(self, key: str) -> bytes:
         path = self._get_file_path(key)

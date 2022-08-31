@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Iterator
 from google.protobuf.message import Message
 
 from streamlit.proto.Block_pb2 import Block
+from streamlit.runtime.state.session_state import WidgetMetadata
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -62,6 +63,11 @@ def save_block_message(
     SINGLETON_MESSAGE_CALL_STACK.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
+
+
+def save_widget_metadata(metadata: WidgetMetadata) -> None:
+    MEMO_MESSAGES_CALL_STACK.save_widget_metadata(metadata)
+    SINGLETON_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:

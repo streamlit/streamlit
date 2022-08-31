@@ -41,9 +41,11 @@ import streamlit as st
 from streamlit import util
 from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
-from streamlit.elements import NONWIDGET_ELEMENTS
+from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.state.session_state import WidgetMetadata
 from .cache_errors import (
     CacheReplayClosureError,
     CacheType,
@@ -60,6 +62,13 @@ _LOGGER = get_logger(__name__)
 
 
 @dataclass
+class WidgetMsgMetadata:
+    widget_id: str
+    widget_value: Any
+    metadata: WidgetMetadata
+
+
+@dataclass
 class ElementMsgData:
     """An element's message and related metadata for
     replaying that element's function call.
@@ -69,12 +78,7 @@ class ElementMsgData:
     message: Message
     id_of_dg_called_on: str
     returned_dgs_id: str
-
-
-@dataclass
-class WidgetMsgData:
-    widget_id: str
-    widget_value: Any
+    widget_metadata: Optional[WidgetMsgMetadata] = None
 
 
 @dataclass
@@ -231,15 +235,21 @@ def replay_result_messages(
     call is on one of them.
     """
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widgets import register_widget_from_metadata
 
     # Maps originally recorded dg ids to this script run's version of that dg
     returned_dgs: Dict[str, DeltaGenerator] = {}
     returned_dgs[result.main_id] = st._main
     returned_dgs[result.sidebar_id] = st.sidebar
+    ctx = get_script_run_ctx()
 
     try:
         for msg in result.messages:
             if isinstance(msg, ElementMsgData):
+                if msg.widget_metadata is not None:
+                    register_widget_from_metadata(
+                        msg.widget_metadata.metadata, ctx, "", ""
+                    )
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 maybe_dg = dg._enqueue(msg.delta_type, msg.message)
                 if isinstance(maybe_dg, DeltaGenerator):
@@ -379,8 +389,10 @@ class CacheWarningCallStack(threading.local):
             The name of the Streamlit function that was called.
 
         """
-        if st_func_name in NONWIDGET_ELEMENTS:
+        # TODO does this leave anything unsupported? can we remove the warning callstack?
+        if st_func_name in NONWIDGET_ELEMENTS or st_func_name in WIDGETS:
             return
+        print("found something that is neither a widget nor nonwidget")
         if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
             cached_func = self._cached_func_stack[-1]
             self._show_cached_st_function_warning(dg, st_func_name, cached_func)
@@ -441,6 +453,7 @@ class CacheMessagesCallStack(threading.local):
         self._cached_message_stack: List[List[MsgData]] = []
         self._seen_dg_stack: List[Set[str]] = []
         self._most_recent_messages: List[MsgData] = []
+        self._registered_metadata: Optional[WidgetMetadata] = None
         self._cache_type = cache_type
 
     def __repr__(self) -> str:
@@ -470,11 +483,28 @@ class CacheMessagesCallStack(threading.local):
         """
         id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
         for msgs in self._cached_message_stack:
+            try:
+                wid = element_proto.id
+                assert self._registered_metadata is not None
+                widget_meta = WidgetMsgMetadata(
+                    wid, None, metadata=self._registered_metadata
+                )
+                self._registered_metadata = None
+            except AttributeError:
+                widget_meta = None
             msgs.append(
-                ElementMsgData(delta_type, element_proto, id_to_save, returned_dg_id)
+                ElementMsgData(
+                    delta_type,
+                    element_proto,
+                    id_to_save,
+                    returned_dg_id,
+                    widget_meta,
+                )
             )
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
+
+    # TODO add a save_widget_message method to handle the widget stuff
 
     def save_block_message(
         self,
@@ -503,6 +533,9 @@ class CacheMessagesCallStack(threading.local):
             return acting_on_id
         else:
             return invoked_id
+
+    def save_widget_metadata(self, metadata: WidgetMetadata) -> None:
+        self._registered_metadata = metadata
 
 
 def _make_value_key(

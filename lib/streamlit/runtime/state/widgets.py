@@ -39,6 +39,7 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 from streamlit.type_util import ValueFieldName
+import streamlit.runtime.caching as caching
 
 from .session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
@@ -186,10 +187,35 @@ def register_widget(
     widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
+    # Create the widget's updated metadata, and register it with session_state.
+    metadata = WidgetMetadata(
+        widget_id,
+        deserializer,
+        serializer,
+        value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
+        callback=on_change_handler,
+        callback_args=args,
+        callback_kwargs=kwargs,
+    )
+    return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
+
+
+def register_widget_from_metadata(
+    metadata: WidgetMetadata,
+    ctx: Optional["ScriptRunContext"],
+    # TODO get real values for these
+    widget_func_name: Optional[str],
+    element_type: ElementType,
+) -> RegisterWidgetResult:
+
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
-        return RegisterWidgetResult.failure(deserializer=deserializer)
+        return RegisterWidgetResult.failure(deserializer=metadata.deserializer)
+
+    widget_id = metadata.id
+    user_key = widget_id.split("-", maxsplit=2)[-1]
+    user_key = None if user_key == "None" else user_key
 
     # Ensure another widget with the same user key hasn't already been registered.
     if user_key is not None:
@@ -214,17 +240,7 @@ def register_widget(
                 user_key,
             )
         )
-
-    # Create the widget's updated metadata, and register it with session_state.
-    metadata = WidgetMetadata(
-        widget_id,
-        deserializer,
-        serializer,
-        value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
-        callback=on_change_handler,
-        callback_args=args,
-        callback_kwargs=kwargs,
-    )
+    caching.save_widget_metadata(metadata)
     return ctx.session_state.register_widget(metadata, user_key)
 
 

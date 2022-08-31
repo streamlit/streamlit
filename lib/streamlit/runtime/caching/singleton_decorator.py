@@ -22,16 +22,20 @@ from pympler import asizeof
 
 import streamlit as st
 from streamlit.logger import get_logger
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStatsProvider, CacheStat
 from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import (
     Cache,
     CacheMessagesCallStack,
     CachedResult,
+    ElementMsgData,
+    InitialCachedResults,
     MsgData,
     create_cache_wrapper,
     CacheWarningCallStack,
     CachedFunction,
+    _make_widget_key,
 )
 
 _LOGGER = get_logger(__name__)
@@ -257,7 +261,7 @@ class SingletonCache(Cache):
     def __init__(self, key: str, display_name: str):
         self.key = key
         self.display_name = display_name
-        self._mem_cache: Dict[str, CachedResult] = {}
+        self._mem_cache: Dict[str, InitialCachedResults] = {}
         self._mem_cache_lock = threading.Lock()
 
     def read_result(self, key: str) -> CachedResult:
@@ -266,8 +270,19 @@ class SingletonCache(Cache):
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
-                return self._mem_cache[key]
+                initial = self._mem_cache[key]
 
+                ctx = get_script_run_ctx()
+                if ctx:
+                    state = ctx.session_state
+                    widgets = [(wid, state[wid]) for wid in initial.widget_ids]
+                    widget_key = _make_widget_key(widgets)
+                    if widget_key in initial.results:
+                        return initial.results[widget_key]
+                    else:
+                        raise CacheKeyNotFoundError()
+                else:
+                    raise CacheKeyNotFoundError()
             else:
                 raise CacheKeyNotFoundError()
 
@@ -275,8 +290,30 @@ class SingletonCache(Cache):
         """Write a value and associated messages to the cache."""
         main_id = st._main.id
         sidebar_id = st.sidebar.id
-        with self._mem_cache_lock:
-            self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
+        # should MsgData contain info about being a widget? should this method take a separate arg of the widgets?
+        widgets = [
+            msg.widget_metadata.widget_id
+            for msg in messages
+            if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
+        ]
+        ctx = get_script_run_ctx()
+        if ctx:
+            state = ctx.session_state
+            widget_values = [(wid, state[wid]) for wid in widgets]
+            widget_key = _make_widget_key(widget_values)
+
+            with self._mem_cache_lock:
+                try:
+                    existing_results = self._mem_cache[key]
+                except KeyError:
+                    existing_results = InitialCachedResults(
+                        widget_ids=widgets, results={}
+                    )
+
+                result = CachedResult(value, messages, main_id, sidebar_id)
+                # TODO update widget_ids with any new ids
+                existing_results.results[widget_key] = result
+                self._mem_cache[key] = existing_results
 
     def clear(self) -> None:
         with self._mem_cache_lock:
