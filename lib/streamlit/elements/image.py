@@ -351,7 +351,7 @@ def image_to_url(
         with open(image, "rb") as f:
             image_data = f.read()
 
-    # Assume input in bytes.
+    # Raw bytes
     else:
         image_data = image
 
