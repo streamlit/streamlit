@@ -21,6 +21,7 @@ from parameterized import parameterized
 from tests import testutil
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Label_pb2 import Label as LabelProto
 
 
 class TextAreaTest(testutil.DeltaGeneratorTestCase):
@@ -31,8 +32,10 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         st.text_area("the label")
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.label_visibility, "visible")
+        self.assertEqual(c.label.label, "the label")
+        self.assertEqual(
+            c.label.label_visibility, LabelProto.LabelVisibilityEnum.VISIBLE
+        )
         self.assertEqual(c.default, "")
         self.assertEqual(c.disabled, False)
 
@@ -52,7 +55,7 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
             st.text_area("the label", arg_value)
 
             c = self.get_delta_from_queue().new_element.text_area
-            self.assertEqual(c.label, "the label")
+            self.assertEqual(c.label.label, "the label")
             self.assertTrue(re.match(proto_value, c.default))
 
     def test_height(self):
@@ -60,7 +63,7 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         st.text_area("the label", "", 300)
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label.label, "the label")
         self.assertEqual(c.default, "")
         self.assertEqual(c.height, 300)
 
@@ -69,7 +72,7 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         st.text_area("the label", "", placeholder="testing")
 
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label.label, "the label")
         self.assertEqual(c.default, "")
         self.assertEqual(c.placeholder, "testing")
 
@@ -112,16 +115,16 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", "visible"),
-            ("hidden", "hidden"),
-            ("collapsed", "collapsed"),
+            ("visible", LabelProto.LabelVisibilityEnum.VISIBLE),
+            ("hidden", LabelProto.LabelVisibilityEnum.HIDDEN),
+            ("collapsed", LabelProto.LabelVisibilityEnum.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
         """Test that it can be called with label_visibility param."""
         st.text_area("the label", label_visibility=label_visibility_value)
         c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label_visibility, proto_value)
+        self.assertEqual(c.label.label_visibility, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
