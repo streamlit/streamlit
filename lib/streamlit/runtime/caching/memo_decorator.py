@@ -469,31 +469,22 @@ class MemoCache(Cache):
                 # mem cache miss, disk hit, pickle failure (or wrong type) -> fall back to default
                 # mem cache miss, disk miss/off -> fall back to default
 
-                with self._mem_cache_lock:
-                    default_results = InitialCachedResults(
-                        widget_ids=widgets, results={}
-                    )
-                    try:
-                        # TODO use _read_from_mem_cache ?
-                        initial_results = self._mem_cache[key]
-                        initial_results = pickle.loads(initial_results)
-                        if not isinstance(initial_results, InitialCachedResults):
-                            self._remove_from_disk_cache(key)
-                            raise CacheKeyNotFoundError()
-                    except (KeyError, CacheKeyNotFoundError, pickle.PicklingError):
-                        if self.persist == "disk":
-                            try:
-                                initial_results = self._read_from_disk_cache(key)
-                                initial_results = pickle.loads(initial_results)
-                            except CacheKeyNotFoundError:
-                                initial_results = default_results
-                        else:
+                default_results = InitialCachedResults(widget_ids=widgets, results={})
+                try:
+                    initial_results = self._read_initial_from_mem_cache(key)
+                except (CacheKeyNotFoundError, pickle.UnpicklingError):
+                    if self.persist == "disk":
+                        try:
+                            initial_results = self._read_initial_from_disk_cache(key)
+                        except CacheKeyNotFoundError:
                             initial_results = default_results
+                    else:
+                        initial_results = default_results
 
-                    result = CachedResult(value, messages, main_id, sidebar_id)
-                    initial_results.results[widget_key] = result
+                result = CachedResult(value, messages, main_id, sidebar_id)
+                initial_results.results[widget_key] = result
 
-                    pickled_entry = pickle.dumps(initial_results)
+                pickled_entry = pickle.dumps(initial_results)
             else:
                 return
         except pickle.PicklingError as exc:
@@ -523,8 +514,15 @@ class MemoCache(Cache):
                 _LOGGER.debug("Memory cache MISS: %s", key)
                 raise CacheKeyNotFoundError("Key not found in mem cache")
 
-    # def _read_initial_from_mem_cache(self, key: str) -> InitialCachedResults:
-    #     pickled = self._read_from_mem_cache(key)
+    def _read_initial_from_mem_cache(self, key: str) -> InitialCachedResults:
+        pickled = self._read_from_mem_cache(key)
+        maybe_initial = pickle.loads(pickled)
+        if isinstance(maybe_initial, InitialCachedResults):
+            return maybe_initial
+        else:
+            with self._mem_cache_lock:
+                del self._mem_cache[key]
+            raise CacheKeyNotFoundError()
 
     def _read_from_disk_cache(self, key: str) -> bytes:
         path = self._get_file_path(key)
@@ -540,6 +538,15 @@ class MemoCache(Cache):
         except BaseException as e:
             _LOGGER.error(e)
             raise CacheError("Unable to read from cache") from e
+
+    def _read_initial_from_disk_cache(self, key: str) -> InitialCachedResults:
+        pickled = self._read_from_disk_cache(key)
+        maybe_initial = pickle.loads(pickled)
+        if isinstance(maybe_initial, InitialCachedResults):
+            return maybe_initial
+        else:
+            self._remove_from_disk_cache(key)
+            raise CacheKeyNotFoundError("Key not found in disk cache")
 
     def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
         with self._mem_cache_lock:

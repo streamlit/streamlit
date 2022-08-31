@@ -25,12 +25,21 @@ from streamlit.runtime.caching import (
     singleton_decorator,
     get_singleton_stats_provider,
 )
-from streamlit.runtime.caching.cache_utils import CachedResult
+from streamlit.runtime.caching.cache_utils import (
+    CachedResult,
+    InitialCachedResults,
+    _make_widget_key,
+)
 from streamlit.runtime.stats import CacheStat
 
 
 def as_cached_result(value):
-    return CachedResult(value, [], st._main.id, st.sidebar.id)
+    result = CachedResult(value, [], st._main.id, st.sidebar.id)
+    widget_key = _make_widget_key([])
+    d = {}
+    d[widget_key] = result
+    initial = InitialCachedResults([], d)
+    return initial
 
 
 class SingletonTest(unittest.TestCase):

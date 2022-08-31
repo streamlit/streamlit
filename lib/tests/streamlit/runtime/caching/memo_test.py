@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.memo unit tests."""
+from collections import defaultdict
 import pickle
 import re
 import unittest
@@ -23,7 +24,12 @@ from streamlit import StreamlitAPIException, file_util
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.caching import memo_decorator
 from streamlit.runtime.caching.cache_errors import CacheError
-from streamlit.runtime.caching.cache_utils import CachedResult, ElementMsgData
+from streamlit.runtime.caching.cache_utils import (
+    CachedResult,
+    ElementMsgData,
+    InitialCachedResults,
+    _make_widget_key,
+)
 from streamlit.runtime.caching.memo_decorator import (
     get_cache_path,
     get_memo_stats_provider,
@@ -33,7 +39,24 @@ from tests.testutil import DeltaGeneratorTestCase
 
 
 def as_cached_result(value):
-    return CachedResult(value, [], st._main.id, st.sidebar.id)
+    result = CachedResult(value, [], st._main.id, st.sidebar.id)
+    widget_key = _make_widget_key([])
+    d = {}
+    d[widget_key] = result
+    initial = InitialCachedResults([], d)
+    return initial
+
+
+def as_replay_test_data():
+    widget_key = _make_widget_key([])
+    d = {}
+    d[widget_key] = CachedResult(
+        1,
+        [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
+        st._main.id,
+        st.sidebar.id,
+    )
+    return InitialCachedResults([], d)
 
 
 class MemoTest(unittest.TestCase):
@@ -267,16 +290,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
         "streamlit.file_util.open",
-        wraps=mock_open(
-            read_data=pickle.dumps(
-                CachedResult(
-                    1,
-                    [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
-                    st._main.id,
-                    st.sidebar.id,
-                )
-            )
-        ),
+        wraps=mock_open(read_data=pickle.dumps(as_replay_test_data())),
     )
     def test_cached_st_function_replay(self, _):
         @st.experimental_memo(persist="disk")
