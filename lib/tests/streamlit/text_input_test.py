@@ -22,6 +22,7 @@ from streamlit import StreamlitAPIException
 from streamlit.proto.TextInput_pb2 import TextInput
 from tests import testutil
 import streamlit as st
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 
 
 class TextInputTest(testutil.DeltaGeneratorTestCase):
@@ -33,7 +34,9 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.text_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.label_visibility, "visible")
+        self.assertEqual(
+            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
+        )
         self.assertEqual(c.default, "")
         self.assertEqual(c.type, TextInput.DEFAULT)
         self.assertEqual(c.disabled, False)
@@ -144,16 +147,16 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", "visible"),
-            ("hidden", "hidden"),
-            ("collapsed", "collapsed"),
+            ("visible", LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
         """Test that it can be called with label_visibility param."""
         st.text_input("the label", label_visibility=label_visibility_value)
         c = self.get_delta_from_queue().new_element.text_input
-        self.assertEqual(c.label_visibility, proto_value)
+        self.assertEqual(c.label_visibility.value, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:

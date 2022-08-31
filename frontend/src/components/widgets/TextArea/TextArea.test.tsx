@@ -18,8 +18,8 @@
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
 import {
-  TextArea as TextAreaProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
+  TextArea as TextAreaProto,
 } from "src/autogen/proto"
 
 import { WidgetStateManager } from "src/lib/WidgetStateManager"

@@ -235,7 +235,9 @@ class TextWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_input_proto.disabled = disabled
-        text_input_proto.label_visibility = label_visibility
+        text_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
