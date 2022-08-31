@@ -44,7 +44,10 @@ from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import (
+    ScriptRunContext,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.session_state import WidgetMetadata
 from .cache_errors import (
     CacheReplayClosureError,
@@ -154,6 +157,12 @@ class InitialCachedResults:
 
     widget_ids: List[str]
     results: Dict[str, CachedResult]
+
+    def get_current_widget_key(self, ctx: ScriptRunContext) -> str:
+        state = ctx.session_state
+        widget_values = [(wid, state[wid]) for wid in self.widget_ids]
+        widget_key = _make_widget_key(widget_values)
+        return widget_key
 
 
 class Cache:

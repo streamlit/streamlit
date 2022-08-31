@@ -432,9 +432,7 @@ class MemoCache(Cache):
                 raise CacheKeyNotFoundError()
             ctx = get_script_run_ctx()
             if ctx:
-                state = ctx.session_state
-                widgets = [(wid, state[wid]) for wid in entry.widget_ids]
-                widget_key = _make_widget_key(widgets)
+                widget_key = entry.get_current_widget_key(ctx)
                 if widget_key in entry.results:
                     return entry.results[widget_key]
                 else:
@@ -457,36 +455,27 @@ class MemoCache(Cache):
                 if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
             ]
             ctx = get_script_run_ctx()
-            if ctx:
-                state = ctx.session_state
-                widget_values = [(wid, state[wid]) for wid in widgets]
-                widget_key = _make_widget_key(widget_values)
-
-                # cases that can happen with trying to load cached results:
-                # mem cache hit, unpickles correctly -> use it
-                # mem cache hit, unpickle failure -> clear and fall back to disk or default
-                # mem cache miss, disk hit, unpickles -> use it and update mem cache
-                # mem cache miss, disk hit, pickle failure (or wrong type) -> fall back to default
-                # mem cache miss, disk miss/off -> fall back to default
-
-                default_results = InitialCachedResults(widget_ids=widgets, results={})
-                try:
-                    initial_results = self._read_initial_from_mem_cache(key)
-                except (CacheKeyNotFoundError, pickle.UnpicklingError):
-                    if self.persist == "disk":
-                        try:
-                            initial_results = self._read_initial_from_disk_cache(key)
-                        except CacheKeyNotFoundError:
-                            initial_results = default_results
-                    else:
-                        initial_results = default_results
-
-                result = CachedResult(value, messages, main_id, sidebar_id)
-                initial_results.results[widget_key] = result
-
-                pickled_entry = pickle.dumps(initial_results)
-            else:
+            if ctx is None:
                 return
+
+            initial_results = InitialCachedResults(widget_ids=widgets, results={})
+            widget_key = initial_results.get_current_widget_key(ctx)
+
+            # Try to find in mem cache, falling back to disk, then falling back
+            # to a new result instance
+            try:
+                initial_results = self._read_initial_from_mem_cache(key)
+            except (CacheKeyNotFoundError, pickle.UnpicklingError):
+                if self.persist == "disk":
+                    try:
+                        initial_results = self._read_initial_from_disk_cache(key)
+                    except CacheKeyNotFoundError:
+                        pass
+
+            result = CachedResult(value, messages, main_id, sidebar_id)
+            initial_results.results[widget_key] = result
+
+            pickled_entry = pickle.dumps(initial_results)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
