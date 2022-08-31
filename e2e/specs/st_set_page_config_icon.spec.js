@@ -25,7 +25,7 @@ describe("st.set_page_config", () => {
       .should("have.attr", "href")
       .should(
         "contain",
-        "92018b2805266c4cb9a98e90c849ce5b5e7ba6d1af423bd7b7c345da.png"
+        "d1e92a291d26c1e0cb9b316a93c929b3be15899677ef3bc6e3bf3573.png"
       );
   });
 });
