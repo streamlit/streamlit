@@ -642,7 +642,3 @@ export function computeSpacingStyle(value: string, theme: Theme): string {
     })
     .join(" ")
 }
-
-export function hasLightBackgroundColor(theme: Theme): boolean {
-  return getLuminance(theme.colors.bgColor) > 0.5
-}

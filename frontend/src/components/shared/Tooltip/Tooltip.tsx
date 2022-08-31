@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
-import { hasLightBackgroundColor } from "src/theme/utils"
+import { getLuminance } from "color2k"
 import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import { StatefulTooltip, ACCESSIBILITY_TYPE, PLACEMENT } from "baseui/tooltip"
@@ -89,7 +89,7 @@ function Tooltip({
         },
         Inner: {
           style: {
-            backgroundColor: hasLightBackgroundColor(theme)
+            backgroundColor: getLuminance(colors.bgColor)
               ? colors.bgColor
               : colors.secondaryBg,
             color: colors.bodyText,
