@@ -16,6 +16,7 @@
  */
 
 import React from "react"
+import { LabelVisibilityMessage as LabelVisibilityMessageProto } from "src/autogen/proto"
 import { StyledWidgetLabel } from "./styled-components"
 
 export interface LabelProps {
@@ -29,7 +30,10 @@ export interface LabelProps {
   disabled?: boolean | null
 
   // Used to specify whether widget is visible or not.
-  labelVisibility?: string
+  labelVisibility?:
+    | string
+    | LabelVisibilityMessageProto.LabelVisibilityEnum
+    | null
 }
 
 export function WidgetLabel({
