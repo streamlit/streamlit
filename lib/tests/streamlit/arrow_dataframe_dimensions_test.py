@@ -45,9 +45,9 @@ class ArrowDataFrameDimensionsTest(testutil.DeltaGeneratorTestCase):
         df = pd.DataFrame({"A": [1, 2, 3, 4, 5]})
 
         fn(st._arrow_dataframe, df)
-        metadata = self._get_metadata()
-        self.assertEqual(metadata.element_dimension_spec.width, expectedWidth)
-        self.assertEqual(metadata.element_dimension_spec.height, expectedHeight)
+        arrow_data_frame = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(arrow_data_frame.width, expectedWidth)
+        self.assertEqual(arrow_data_frame.height, expectedHeight)
 
     def _get_metadata(self):
         """Returns the metadata for the most recent element in the

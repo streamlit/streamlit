@@ -13,14 +13,12 @@
 # limitations under the License.
 
 import streamlit as st
-import inspect
-import textwrap
 import numpy as np
 from typing import Any
 from streamlit.hello.utils import show_code
 
 
-def animation_demo():
+def animation_demo() -> None:
 
     # Interactive Streamlit elements, like these sliders, return their value.
     # This gives you an extremely simple interaction model.

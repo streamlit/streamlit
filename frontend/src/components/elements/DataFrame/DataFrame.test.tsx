@@ -17,7 +17,7 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { fromJS } from "immutable"
+import { fromJS, Map as ImmutableMap } from "immutable"
 import { random, times } from "lodash"
 import { MultiGrid } from "react-virtualized"
 
@@ -36,7 +36,7 @@ const getProps = (
   element: fromJS({
     ...mockDataFrame,
     ...elementProps,
-  }),
+  }) as ImmutableMap<string, any>,
   width: 400,
   height: 400,
 })

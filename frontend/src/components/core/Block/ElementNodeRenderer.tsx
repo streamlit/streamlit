@@ -16,6 +16,7 @@
  */
 
 import {
+  Arrow as ArrowProto,
   Alert as AlertProto,
   Audio as AudioProto,
   BokehChart as BokehChartProto,
@@ -219,7 +220,8 @@ const RawElementNodeRenderer = (
     case "arrowDataFrame":
       return (
         <ArrowDataFrame
-          element={node.quiverElement as Quiver}
+          element={node.element.arrowDataFrame as ArrowProto}
+          data={node.quiverElement as Quiver}
           width={width}
           height={height}
         />

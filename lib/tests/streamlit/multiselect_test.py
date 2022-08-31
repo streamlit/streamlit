@@ -22,13 +22,6 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests import testutil
-from enum import Enum
-
-
-class Drinks(Enum):
-    COFFEE = 1
-    TEA = 2
-    WATER = 3
 
 
 class Multiselectbox(testutil.DeltaGeneratorTestCase):
@@ -76,8 +69,8 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
     def test_cast_options_to_string(self):
         """Test that it casts options to string."""
-        arg_options = ["some str", 123, None, {}, Drinks.COFFEE]
-        proto_options = ["some str", "123", "None", "{}", str(Drinks.COFFEE)]
+        arg_options = ["some str", 123, None, {}]
+        proto_options = ["some str", "123", "None", "{}"]
 
         st.multiselect("the label", arg_options, default=None)
 
@@ -154,15 +147,6 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
 
-    def test_default_enum(self):
-        """Test that an enum can be passed"""
-        st.multiselect("the label", list(Drinks), [Drinks.COFFEE, Drinks.TEA])
-
-        c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [0, 1])
-        self.assertEqual(c.options, list(map(lambda enum: str(enum), list(Drinks))))
-
     @parameterized.expand(
         [
             (
@@ -194,12 +178,6 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
                 ["male", "female"],
                 ["male", "female"],
                 [0, 1],
-            ),
-            (
-                list(Drinks),
-                [Drinks.COFFEE],
-                list(map(lambda enum: str(enum), list(Drinks))),
-                [0],
             ),
         ]
     )
