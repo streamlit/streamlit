@@ -53,7 +53,8 @@ AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
-OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
+ImageFormat: TypeAlias = Literal["JPEG", "PNG"]
+ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
 class ImageMixin:
@@ -67,7 +68,7 @@ class ImageMixin:
         use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
-        output_format: OutputFormat = "auto",
+        output_format: ImageFormatOrAuto = "auto",
     ) -> "DeltaGenerator":
         """Display an image or list of images.
 
@@ -160,19 +161,20 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
         return False
 
 
-def _format_from_image_type(
-    image: PILImage,
-    output_format: str,
-) -> Literal["JPEG", "PNG"]:
-    output_format = output_format.upper()
-    if output_format == "JPEG" or output_format == "PNG":
-        return cast(
-            Literal["JPEG", "PNG"],
-            output_format,
-        )
+def _validate_image_format_string(image: PILImage, format: str) -> ImageFormat:
+    """Return either "JPEG" or "PNG", based on the input `format` string.
+
+    - If `format` is "JPEG" or "JPG" (or any capitalization thereof), return "JPEG"
+    - If `format` is "PNG" (or any capitalization thereof), return "PNG"
+    - For all other strings, return "PNG" if the image has an alpha channel,
+      and "JPEG" otherwise.
+    """
+    format = format.upper()
+    if format == "JPEG" or format == "PNG":
+        return cast(ImageFormat, format)
 
     # We are forgiving on the spelling of JPEG
-    if output_format == "JPG":
+    if format == "JPG":
         return "JPEG"
 
     if _image_may_have_alpha_channel(image):
@@ -183,7 +185,7 @@ def _format_from_image_type(
 
 def _PIL_to_bytes(
     image: PILImage,
-    format: Literal["JPEG", "PNG"] = "JPEG",
+    format: ImageFormat = "JPEG",
     quality: int = 100,
 ) -> bytes:
     """Convert a PIL image to bytes."""
@@ -203,12 +205,9 @@ def _BytesIO_to_bytes(data: io.BytesIO) -> bytes:
     return data.getvalue()
 
 
-def _np_array_to_bytes(
-    array: "npt.NDArray[Any]",
-    output_format="JPEG",
-) -> bytes:
+def _np_array_to_bytes(array: "npt.NDArray[Any]", output_format="JPEG") -> bytes:
     img = Image.fromarray(array.astype(np.uint8))
-    format = _format_from_image_type(img, output_format)
+    format = _validate_image_format_string(img, output_format)
 
     return _PIL_to_bytes(img, format)
 
@@ -236,18 +235,19 @@ def _verify_np_shape(array: "npt.NDArray[Any]") -> "npt.NDArray[Any]":
 def _normalize_to_bytes(
     data: bytes,
     width: int,
-    output_format: OutputFormat,
+    output_format: ImageFormatOrAuto,
 ) -> Tuple[bytes, str]:
     """Resize an image if it exceeds MAXIMUM_CONTENT_WIDTH, and return
     the (possibly resized) image and its mimetype.
     """
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
-    format = _format_from_image_type(image, output_format)
+    format = _validate_image_format_string(image, output_format)
     if output_format.lower() == "auto":
+        # Inspect the image's header and try to guess its mimetype.
         ext = imghdr.what(None, data)
         mimetype = mimetypes.guess_type(f"image.{ext}")[0]
-        # if no other options, attempt to convert
+        # If we weren't able to guess the mimetype, use a sensible default.
         if mimetype is None:
             mimetype = f"image/{format.lower()}"
     else:
@@ -288,7 +288,7 @@ def image_to_url(
     width: int,
     clamp: bool,
     channels: Channels,
-    output_format: OutputFormat,
+    output_format: ImageFormatOrAuto,
     image_id: str,
 ) -> str:
     """Return a URL that an image can be served from.
@@ -297,7 +297,7 @@ def image_to_url(
     """
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
-        format = _format_from_image_type(image, output_format)
+        format = _validate_image_format_string(image, output_format)
         data = _PIL_to_bytes(image, format)
 
     # BytesIO
@@ -362,8 +362,49 @@ def marshall_images(
     proto_imgs: ImageListProto,
     clamp: bool,
     channels: Channels = "RGB",
-    output_format: OutputFormat = "auto",
+    output_format: ImageFormatOrAuto = "auto",
 ) -> None:
+    """Fill an ImageListProto with a list of images and their captions.
+
+    The images will be resized and reformatted as necessary.
+
+    Parameters
+    ----------
+    coordinates
+        A string indentifying the images' location in the frontend.
+    image
+        The image or images to include in the ImageListProto.
+    caption
+        Image caption. If displaying multiple images, caption should be a
+        list of captions (one for each image).
+    width
+        The desired width of the image or images. This parameter will be
+        passed to the frontend, where it has some special meanings:
+        -1: "OriginalWidth" (display the image at its original width)
+        -2: "ColumnWidth" (display the image at the width of the column it's in)
+        -3: "AutoWidth" (display the image at its original width, unless it
+            would exceed the width of its column in which case clamp it to
+            its column width).
+    proto_imgs
+        The ImageListProto to fill in.
+    clamp
+        Clamp image pixel values to a valid range ([0-255] per channel).
+        This is only meaningful for byte array images; the parameter is
+        ignored for image URLs. If this is not set, and an image has an
+        out-of-range value, an error will be thrown.
+    channels
+        If image is an nd.array, this parameter denotes the format used to
+        represent color information. Defaults to 'RGB', meaning
+        `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
+        `image[:, :, 2]` is blue. For images coming from libraries like
+        OpenCV you should set this to 'BGR', instead.
+    output_format
+        This parameter specifies the format to use when transferring the
+        image data. Photos should use the JPEG format for lossy compression
+        while diagrams should use the PNG format for lossless compression.
+        Defaults to 'auto' which identifies the compression type based
+        on the type and format of the image argument.
+    """
     channels = cast(Channels, channels.upper())
 
     # Turn single image and caption into one element list.
