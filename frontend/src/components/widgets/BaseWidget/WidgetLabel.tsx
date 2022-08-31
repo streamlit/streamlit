@@ -16,7 +16,6 @@
  */
 
 import React from "react"
-import { Label as LabelProto } from "src/autogen/proto"
 import { StyledWidgetLabel } from "./styled-components"
 
 export interface LabelProps {
@@ -29,8 +28,8 @@ export interface LabelProps {
   // Used to specify whether widget disabled or enabled.
   disabled?: boolean | null
 
-  // Used to specify whether widget is visible, hidden or collapsed.
-  labelVisibility?: string | LabelProto.LabelVisibilityEnum | null
+  // Used to specify whether widget is visible or not.
+  labelVisibility?: string
 }
 
 export function WidgetLabel({

@@ -17,11 +17,7 @@
 
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
-import {
-  TextArea as TextAreaProto,
-  Label as LabelProto,
-} from "src/autogen/proto"
-
+import { TextArea as TextAreaProto } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -30,10 +26,7 @@ import TextArea, { Props } from "./TextArea"
 const getProps = (elementProps: Partial<TextAreaProto> = {}): Props => ({
   element: TextAreaProto.create({
     id: "1",
-    label: {
-      label: "Label",
-      labelVisibility: LabelProto.LabelVisibilityEnum.VISIBLE,
-    },
+    label: "Label",
     default: "",
     placeholder: "Placeholder",
     ...elementProps,
@@ -86,34 +79,22 @@ describe("TextArea widget", () => {
     const props = getProps()
     const wrapper = mount(<TextArea {...props} />)
 
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(
-      props.element.label?.label
-    )
+    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getProps({
-      label: {
-        label: "Label",
-        labelVisibility: LabelProto.LabelVisibilityEnum.HIDDEN,
-      },
-    })
+    const props = getProps({ labelVisibility: "hidden" })
     const wrapper = mount(<TextArea {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelProto.LabelVisibilityEnum.HIDDEN
+      "hidden"
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getProps({
-      label: {
-        label: "Label",
-        labelVisibility: LabelProto.LabelVisibilityEnum.COLLAPSED,
-      },
-    })
+    const props = getProps({ labelVisibility: "collapsed" })
     const wrapper = mount(<TextArea {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelProto.LabelVisibilityEnum.COLLAPSED
+      "collapsed"
     )
   })
 

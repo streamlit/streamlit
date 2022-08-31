@@ -26,7 +26,6 @@ from typing import Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
-from streamlit.proto.Label_pb2 import Label as LabelProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.runtime.state import (
     register_widget,
@@ -356,7 +355,7 @@ class TextWidgetsMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         text_area_proto = TextAreaProto()
-        text_area_proto.label.label = label
+        text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
 
@@ -388,20 +387,7 @@ class TextWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_area_proto.disabled = disabled
-
-        if label_visibility == "visible":
-            text_area_proto.label.label_visibility = (
-                LabelProto.LabelVisibilityEnum.VISIBLE
-            )
-        elif label_visibility == "hidden":
-            text_area_proto.label.label_visibility = (
-                LabelProto.LabelVisibilityEnum.HIDDEN
-            )
-        elif label_visibility == "collapsed":
-            text_area_proto.label.label_visibility = (
-                LabelProto.LabelVisibilityEnum.COLLAPSED
-            )
-
+        text_area_proto.label_visibility = label_visibility
         if widget_state.value_changed:
             text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
