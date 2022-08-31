@@ -53,7 +53,8 @@ AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
-OutputFormat: TypeAlias = Literal["JPEG", "PNG", "auto"]
+ImageFormatOrAuto: TypeAlias = Literal["JPEG", "PNG", "auto"]
+ImageFormat: TypeAlias = Literal["JPEG", "PNG"]
 
 
 class ImageMixin:
@@ -67,7 +68,7 @@ class ImageMixin:
         use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
-        output_format: OutputFormat = "auto",
+        output_format: ImageFormatOrAuto = "auto",
     ) -> "DeltaGenerator":
         """Display an image or list of images.
 
@@ -160,8 +161,8 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
         return False
 
 
-def _validate_format(image: PILImage, format: str) -> Literal["JPEG", "PNG"]:
-    """Return either "JPEG" or "PNG", based on the input `format` argument.
+def _validate_format(image: PILImage, format: str) -> ImageFormat:
+    """Return either "JPEG" or "PNG", based on the input `format` string.
 
     - If `format` is "JPEG" or "JPG" (or any capitalization thereof), return "JPEG"
     - If `format` is "PNG" (or any capitalization thereof), return "PNG"
@@ -170,10 +171,7 @@ def _validate_format(image: PILImage, format: str) -> Literal["JPEG", "PNG"]:
     """
     format = format.upper()
     if format == "JPEG" or format == "PNG":
-        return cast(
-            Literal["JPEG", "PNG"],
-            format,
-        )
+        return cast(ImageFormat, format)
 
     # We are forgiving on the spelling of JPEG
     if format == "JPG":
@@ -187,7 +185,7 @@ def _validate_format(image: PILImage, format: str) -> Literal["JPEG", "PNG"]:
 
 def _PIL_to_bytes(
     image: PILImage,
-    format: Literal["JPEG", "PNG"] = "JPEG",
+    format: ImageFormat = "JPEG",
     quality: int = 100,
 ) -> bytes:
     """Convert a PIL image to bytes."""
@@ -207,10 +205,7 @@ def _BytesIO_to_bytes(data: io.BytesIO) -> bytes:
     return data.getvalue()
 
 
-def _np_array_to_bytes(
-    array: "npt.NDArray[Any]",
-    output_format="JPEG",
-) -> bytes:
+def _np_array_to_bytes(array: "npt.NDArray[Any]", output_format="JPEG") -> bytes:
     img = Image.fromarray(array.astype(np.uint8))
     format = _validate_format(img, output_format)
 
@@ -240,7 +235,7 @@ def _verify_np_shape(array: "npt.NDArray[Any]") -> "npt.NDArray[Any]":
 def _normalize_to_bytes(
     data: bytes,
     width: int,
-    output_format: OutputFormat,
+    output_format: ImageFormatOrAuto,
 ) -> Tuple[bytes, str]:
     """Resize an image if it exceeds MAXIMUM_CONTENT_WIDTH, and return
     the (possibly resized) image and its mimetype.
@@ -293,7 +288,7 @@ def image_to_url(
     width: int,
     clamp: bool,
     channels: Channels,
-    output_format: OutputFormat,
+    output_format: ImageFormatOrAuto,
     image_id: str,
 ) -> str:
     """Return a URL that an image can be served from.
@@ -367,7 +362,7 @@ def marshall_images(
     proto_imgs: ImageListProto,
     clamp: bool,
     channels: Channels = "RGB",
-    output_format: OutputFormat = "auto",
+    output_format: ImageFormatOrAuto = "auto",
 ) -> None:
     """Fill an ImageListProto with a list of images and their captions.
 
