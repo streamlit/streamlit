@@ -252,7 +252,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     position: "relative",
     height: "100%",
     width: "100%",
-    overflow: hideScrollbar ? "hidden" : "overlay",
+    overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
   })
 )
 

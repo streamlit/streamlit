@@ -112,6 +112,8 @@ export const StyledPrimaryButton = styled(StyledBaseButton)<
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
+    borderColor: theme.colors.fadedText40,
+    backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
   },

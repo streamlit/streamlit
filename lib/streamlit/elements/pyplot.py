@@ -146,12 +146,12 @@ def marshall(
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
     image_utils.marshall_images(
-        coordinates,
-        image,
-        None,
-        -2,
-        image_list_proto,
-        False,
+        coordinates=coordinates,
+        image=image,
+        caption=None,
+        width=-2,
+        proto_imgs=image_list_proto,
+        clamp=False,
         channels="RGB",
         output_format="PNG",
     )
