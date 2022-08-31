@@ -161,7 +161,7 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
         return False
 
 
-def _validate_format(image: PILImage, format: str) -> ImageFormat:
+def _validate_image_format_string(image: PILImage, format: str) -> ImageFormat:
     """Return either "JPEG" or "PNG", based on the input `format` string.
 
     - If `format` is "JPEG" or "JPG" (or any capitalization thereof), return "JPEG"
@@ -207,7 +207,7 @@ def _BytesIO_to_bytes(data: io.BytesIO) -> bytes:
 
 def _np_array_to_bytes(array: "npt.NDArray[Any]", output_format="JPEG") -> bytes:
     img = Image.fromarray(array.astype(np.uint8))
-    format = _validate_format(img, output_format)
+    format = _validate_image_format_string(img, output_format)
 
     return _PIL_to_bytes(img, format)
 
@@ -242,7 +242,7 @@ def _normalize_to_bytes(
     """
     image = Image.open(io.BytesIO(data))
     actual_width, actual_height = image.size
-    format = _validate_format(image, output_format)
+    format = _validate_image_format_string(image, output_format)
     if output_format.lower() == "auto":
         # Inspect the image's header and try to guess its mimetype.
         ext = imghdr.what(None, data)
@@ -297,7 +297,7 @@ def image_to_url(
     """
     # PIL Images
     if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
-        format = _validate_format(image, output_format)
+        format = _validate_image_format_string(image, output_format)
         data = _PIL_to_bytes(image, format)
 
     # BytesIO
