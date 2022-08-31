@@ -27,6 +27,7 @@ import {
   GridMouseEventArgs,
   Theme as GlideTheme,
 } from "@glideapps/glide-data-grid"
+import { Resizable } from "re-resizable"
 import { useColumnSort } from "@glideapps/glide-data-grid-source"
 import { transparentize } from "color2k"
 import { useTheme } from "@emotion/react"
@@ -317,6 +318,73 @@ export interface DataFrameProps {
   height?: number
 }
 
+function getDefaultHeight(
+  elementHeight: number,
+  containerHeight: number | undefined,
+  maxHeight: number
+): number {
+  let height = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
+  if (elementHeight) {
+    // User has explicitly configured a height
+    height = Math.max(elementHeight, MIN_TABLE_HEIGHT)
+  }
+
+  if (containerHeight) {
+    // If container height is set (e.g. when used in fullscreen)
+    // The maxHeight and height should not be larger than container height
+    height = Math.min(height, containerHeight)
+    if (!elementHeight) {
+      // If no explicit height is set, set height to max height (fullscreen mode)
+      height = maxHeight
+    }
+  }
+
+  return height
+}
+
+function getDefaultMaxHeight(
+  elementHeight: number | undefined,
+  containerHeight: number | undefined,
+  numRows: number
+): number {
+  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
+  let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, MIN_TABLE_HEIGHT)
+
+  if (elementHeight) {
+    // User has explicitly configured a height
+    maxHeight = Math.max(elementHeight, maxHeight)
+  }
+  if (containerHeight) {
+    // If container height is set (e.g. when used in fullscreen)
+    // The maxHeight and height should not be larger than container height
+    maxHeight = Math.min(maxHeight, containerHeight)
+  }
+
+  return maxHeight
+}
+
+function getDefaultWidth(
+  elementWidth: number | undefined,
+  containerWidth: number
+): number {
+  let width: number
+  if (elementWidth) {
+    width = Math.min(Math.max(elementWidth, MIN_TABLE_WIDTH), containerWidth)
+  } else {
+    width = containerWidth
+  }
+  return width
+}
+
+function getDefaultMaxWidth(
+  elementWidth: number | undefined,
+  containerWidth: number
+): number {
+  return elementWidth
+    ? Math.min(Math.max(elementWidth, containerWidth), containerWidth)
+    : containerWidth
+}
+
 function DataFrame({
   element,
   data,
@@ -335,6 +403,20 @@ function DataFrame({
   } = useDataLoader(element, data, sort)
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
+
+  const dfMaxHeight = getDefaultMaxHeight(
+    element.height,
+    containerHeight,
+    numRows
+  )
+  const [dfHeight, setDFHeight] = React.useState<number>(
+    getDefaultHeight(element.height, containerHeight, dfMaxHeight)
+  )
+
+  const [dfWidth, setDFWidth] = React.useState<number>(
+    getDefaultWidth(element.width, containerWidth)
+  )
+  const dfMaxWidth = getDefaultMaxWidth(element.width, containerWidth)
 
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
     columns: CompactSelection.empty(),
@@ -371,108 +453,91 @@ function DataFrame({
     [sort, columns]
   )
 
-  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
-  let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, MIN_TABLE_HEIGHT)
-  let height = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
-
-  if (element.height) {
-    // User has explicitly configured a height
-    height = Math.max(element.height, MIN_TABLE_HEIGHT)
-    maxHeight = Math.max(element.height, maxHeight)
-  }
-
-  if (containerHeight) {
-    // If container height is set (e.g. when used in fullscreen)
-    // The maxHeight and height should not be larger than container height
-    height = Math.min(height, containerHeight)
-    maxHeight = Math.min(maxHeight, containerHeight)
-
-    if (!element.height) {
-      // If no explicit height is set, set height to max height (fullscreen mode)
-      height = maxHeight
-    }
-  }
-
-  let width // If container width is undefined, auto set based on column widths
-  let maxWidth = containerWidth
-
-  if (element.useContainerWidth) {
-    // Always use the full container width
-    width = containerWidth
-  } else if (element.width) {
-    // User has explicitly configured a width
-    width = Math.min(Math.max(element.width, MIN_TABLE_WIDTH), containerWidth)
-    maxWidth = Math.min(Math.max(element.width, maxWidth), containerWidth)
-  }
-
   return (
-    <StyledResizableContainer
-      className="stDataFrame"
-      width={width}
-      height={height}
+    <Resizable
+      data-testid="stDataFrameResizeable"
+      size={{ width: dfWidth, height: dfHeight }}
       minHeight={MIN_TABLE_HEIGHT}
-      maxHeight={maxHeight}
+      maxHeight={dfMaxHeight}
       minWidth={MIN_TABLE_WIDTH}
-      maxWidth={maxWidth}
-      onBlur={() => {
-        // If the container loses focus, clear the current selection
-        if (!isFocused) {
-          setGridSelection({
-            columns: CompactSelection.empty(),
-            rows: CompactSelection.empty(),
-            current: undefined,
-          } as GridSelection)
-        }
+      maxWidth={dfMaxWidth}
+      enable={{
+        top: false,
+        right: true,
+        bottom: true,
+        left: false,
+        topRight: false,
+        bottomRight: true,
+        bottomLeft: false,
+        topLeft: false,
+      }}
+      onResizeStop={(e, direction, ref, d) => {
+        setDFWidth(dfWidth + d.width)
+        setDFHeight(dfHeight + d.height)
       }}
     >
-      <GlideDataEditor
-        ref={dataEditorRef}
-        columns={columns}
-        rows={numRows}
-        minColumnWidth={MIN_COLUMN_WIDTH}
-        maxColumnWidth={MAX_COLUMN_WIDTH}
-        rowHeight={ROW_HEIGHT}
-        headerHeight={ROW_HEIGHT}
-        getCellContent={getCellContent}
-        onColumnResize={onColumnResize}
-        // Freeze all index columns:
-        freezeColumns={numIndices}
-        smoothScrollX={true}
-        // Only activate smooth mode for vertical scrolling for large tables:
-        smoothScrollY={numRows < 100000}
-        // Show borders between cells:
-        verticalBorder={true}
-        // Activate copy to clipboard functionality:
-        getCellsForSelection={true}
-        // Deactivate row markers and numbers:
-        rowMarkers={"none"}
-        // Deactivate selections:
-        rangeSelect={"rect"}
-        columnSelect={"none"}
-        rowSelect={"none"}
-        // Activate search:
-        keybindings={{ search: true }}
-        // Header click is used for column sorting:
-        onHeaderClicked={onHeaderClick}
-        gridSelection={gridSelection}
-        onGridSelectionChange={(newSelection: GridSelection) => {
-          setGridSelection(newSelection)
-        }}
-        theme={createDataFrameTheme(theme)}
-        onMouseMove={(args: GridMouseEventArgs) => {
-          // Determine if the dataframe is focused or not
-          if (args.kind === "out-of-bounds" && isFocused) {
-            setIsFocused(false)
-          } else if (args.kind !== "out-of-bounds" && !isFocused) {
-            setIsFocused(true)
+      <StyledResizableContainer
+        className="stDataFrame"
+        onBlur={() => {
+          // If the container loses focus, clear the current selection
+          if (!isFocused) {
+            setGridSelection({
+              columns: CompactSelection.empty(),
+              rows: CompactSelection.empty(),
+              current: undefined,
+            } as GridSelection)
           }
         }}
-        experimental={{
-          // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
-          scrollbarWidthOverride: 1,
-        }}
-      />
-    </StyledResizableContainer>
+      >
+        <GlideDataEditor
+          ref={dataEditorRef}
+          columns={columns}
+          rows={numRows}
+          minColumnWidth={MIN_COLUMN_WIDTH}
+          maxColumnWidth={MAX_COLUMN_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          headerHeight={ROW_HEIGHT}
+          getCellContent={getCellContent}
+          onColumnResize={onColumnResize}
+          // Freeze all index columns:
+          freezeColumns={numIndices}
+          smoothScrollX={true}
+          // Only activate smooth mode for vertical scrolling for large tables:
+          smoothScrollY={numRows < 100000}
+          // Show borders between cells:
+          verticalBorder={true}
+          // Activate copy to clipboard functionality:
+          getCellsForSelection={true}
+          // Deactivate row markers and numbers:
+          rowMarkers={"none"}
+          // Deactivate selections:
+          rangeSelect={"rect"}
+          columnSelect={"none"}
+          rowSelect={"none"}
+          // Activate search:
+          keybindings={{ search: true }}
+          // Header click is used for column sorting:
+          onHeaderClicked={onHeaderClick}
+          gridSelection={gridSelection}
+          onGridSelectionChange={(newSelection: GridSelection) => {
+            setGridSelection(newSelection)
+          }}
+          theme={createDataFrameTheme(theme)}
+          onMouseMove={(args: GridMouseEventArgs) => {
+            // Determine if the dataframe is focused or not
+            if (args.kind === "out-of-bounds" && isFocused) {
+              setIsFocused(false)
+            } else if (args.kind !== "out-of-bounds" && !isFocused) {
+              setIsFocused(true)
+            }
+          }}
+          experimental={{
+            // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
+            scrollbarWidthOverride: 1,
+          }}
+        />
+      </StyledResizableContainer>
+    </Resizable>
   )
 }
 
