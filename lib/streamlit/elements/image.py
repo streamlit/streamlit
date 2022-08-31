@@ -19,19 +19,20 @@
 
 """Image marshalling."""
 
+import imghdr
 import io
-from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union
-from typing_extensions import Final, Literal, TypeAlias
-from urllib.parse import urlparse
 import re
+from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union
+from urllib.parse import urlparse
 
 import numpy as np
 from PIL import Image, ImageFile
+from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 
 if TYPE_CHECKING:
     import numpy.typing as npt
@@ -242,11 +243,12 @@ def _get_image_format_mimetype(image_format: ImageFormat) -> str:
     return f"image/{image_format.lower()}"
 
 
-def _maybe_resize_image(
+def _ensure_image_size_and_format(
     image_data: bytes, width: int, image_format: ImageFormat
 ) -> bytes:
     """Resize an image if it exceeds the given width, or if exceeds
-    MAXIMUM_CONTENT_WIDTH. Return the (possibly resized) image data.
+    MAXIMUM_CONTENT_WIDTH. Ensure the image's format corresponds to the given
+    ImageFormat. Return the (possibly resized and reformatted) image bytes.
     """
     image = Image.open(io.BytesIO(image_data))
     actual_width, actual_height = image.size
@@ -255,12 +257,17 @@ def _maybe_resize_image(
         width = MAXIMUM_CONTENT_WIDTH
 
     if width > 0 and actual_width > width:
-        # Resize!
+        # We need to resize the image.
         new_height = int(1.0 * actual_height * width / actual_width)
         image = image.resize((width, new_height), resample=Image.BILINEAR)
         return _PIL_to_bytes(image, format=image_format, quality=90)
 
-    # No resizing necessary
+    ext = imghdr.what(None, image_data)
+    if ext != image_format.lower():
+        # We need to reformat the image.
+        return _PIL_to_bytes(image, format=image_format, quality=90)
+
+    # No resizing or reformatting necessary - return the original bytes.
     return image_data
 
 
@@ -350,7 +357,7 @@ def image_to_url(
 
     # Determine the image's format, resize it, and get its mimetype
     image_format = _validate_image_format_string(image_data, output_format)
-    image_data = _maybe_resize_image(image_data, width, image_format)
+    image_data = _ensure_image_size_and_format(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
     this_file = in_memory_file_manager.add(image_data, mimetype, image_id)
