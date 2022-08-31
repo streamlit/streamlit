@@ -53,8 +53,8 @@ AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
-ImageFormatOrAuto: TypeAlias = Literal["JPEG", "PNG", "auto"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG"]
+ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
 class ImageMixin:
