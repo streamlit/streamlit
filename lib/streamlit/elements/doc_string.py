@@ -14,7 +14,6 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
-
 import contextlib
 import inspect
 from typing import Any, cast, TYPE_CHECKING
