@@ -48,7 +48,11 @@ from streamlit.runtime.state import (
     WidgetKwargs,
 )
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -85,7 +89,6 @@ SliderReturn: TypeAlias = Union[
 
 SECONDS_TO_MICROS: Final = 1000 * 1000
 DAYS_TO_MICROS: Final = 24 * 60 * 60 * SECONDS_TO_MICROS
-
 
 UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
@@ -531,20 +534,17 @@ class SliderMixin:
         orig_tz = None
         # Convert dates or times into datetimes
         if data_type == SliderProto.TIME:
-
             value = list(map(_time_to_datetime, value))
             min_value = _time_to_datetime(min_value)
             max_value = _time_to_datetime(max_value)
 
         if data_type == SliderProto.DATE:
-
             value = list(map(_date_to_datetime, value))
             min_value = _date_to_datetime(min_value)
             max_value = _date_to_datetime(max_value)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
-
             # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
                 value[0].tzinfo
@@ -592,7 +592,9 @@ class SliderMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
-        slider_proto.label_visibility = label_visibility
+        slider_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)

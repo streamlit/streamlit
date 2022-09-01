@@ -36,7 +36,11 @@ from streamlit.type_util import (
 )
 from streamlit.util import index_
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 
 @dataclass
@@ -267,7 +271,9 @@ class SelectSliderMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
-        slider_proto.label_visibility = label_visibility
+        slider_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True
