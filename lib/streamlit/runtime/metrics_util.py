@@ -183,12 +183,16 @@ def _get_command_telemetry(callable: Callable, *args, **kwargs) -> Command:
             self_arg = arg
             continue
         argument = Argument(k=keyword, t=_get_type_name(arg), p=pos)
-        if arg_metadata := _get_arg_metadata(arg):
+
+        arg_metadata = _get_arg_metadata(arg)
+        if arg_metadata:
             argument.m = arg_metadata
         arguments.append(argument)
     for kwarg, kwarg_value in kwargs.items():
         argument = Argument(k=kwarg, t=_get_type_name(kwarg_value))
-        if arg_metadata := _get_arg_metadata(kwarg_value):
+
+        arg_metadata = _get_arg_metadata(kwarg_value)
+        if arg_metadata:
             argument.m = arg_metadata
         arguments.append(argument)
     name = _get_callable_name(callable)
