@@ -47,6 +47,7 @@ const getProps = (
   }),
   data,
   width: 700,
+  isFullScreen: false,
 })
 
 const { ResizeObserver } = window
