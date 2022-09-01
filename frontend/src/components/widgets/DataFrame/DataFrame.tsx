@@ -112,10 +112,6 @@ type GridColumnWithCellTemplate = GridColumn & {
   columnType: ColumnType
 }
 
-function getNumColumns(data: Quiver): number {
-  return data.columns?.[0]?.length
-}
-
 /**
  * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
  */
@@ -141,7 +137,7 @@ export function getColumns(
   }
 
   const numIndices = data.types?.index?.length ?? 0
-  const numColumns = getNumColumns(data)
+  const numColumns = data.columns?.[0]?.length
 
   for (let i = 0; i < numIndices; i++) {
     const quiverType = data.types.index[i]
@@ -424,7 +420,6 @@ function DataFrame({
     getDefaultHeight(element, containerHeight, maxHeight, isFullScreen)
   )
 
-  // const initialWidth = getDefaultWidth(element, containerWidth, isFullScreen)
   const maxWidth = getMaxWidth(element, containerWidth)
   const [nonFullScreenWidth, setNonFullScreenWidth] = React.useState<
     number | undefined
