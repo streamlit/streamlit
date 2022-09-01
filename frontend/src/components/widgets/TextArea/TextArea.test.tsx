@@ -89,24 +89,24 @@ describe("TextArea widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     const wrapper = mount(<TextArea {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     const wrapper = mount(<TextArea {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
     )
   })
 

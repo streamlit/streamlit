@@ -36,7 +36,7 @@ export interface Props {
   onChange: (value: number) => void
   options: any[]
   label?: string | null
-  labelVisibility?: LabelVisibilityMessageProto.LabelVisibilityEnum | null
+  labelVisibility?: LabelVisibilityMessageProto.LabelVisibilityOptions | null
   help?: string
 }
 

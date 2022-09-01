@@ -108,24 +108,24 @@ describe("CameraInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     const wrapper = mount(<CameraInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     const wrapper = mount(<CameraInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
     )
   })
 

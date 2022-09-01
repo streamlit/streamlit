@@ -89,8 +89,8 @@ def get_label_visibility_proto_value(
     """
 
     if label_visibility_string == "visible":
-        return LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
+        return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
     elif label_visibility_string == "hidden":
-        return LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN
+        return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
     elif label_visibility_string == "collapsed":
-        return LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED
+        return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED

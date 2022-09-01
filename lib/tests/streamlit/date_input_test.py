@@ -37,7 +37,8 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.date_input
         self.assertEqual(c.label, "the label")
         self.assertEqual(
-            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
+            c.label_visibility.value,
+            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
         )
         self.assertLessEqual(
             datetime.strptime(c.default[0], "%Y/%m/%d").date(), datetime.now().date()
@@ -191,9 +192,9 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED),
+            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):

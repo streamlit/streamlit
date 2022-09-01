@@ -69,22 +69,23 @@ describe("Selectbox widget", () => {
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
-      labelVisibility: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
+      labelVisibility:
+        LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
     })
     const wrapper = mount(<Selectbox {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
       labelVisibility:
-        LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+        LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
     })
     const wrapper = mount(<Selectbox {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
     )
   })
 

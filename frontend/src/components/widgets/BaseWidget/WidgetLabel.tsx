@@ -30,7 +30,7 @@ export interface LabelProps {
   disabled?: boolean | null
 
   // Used to specify whether widget is visible or not.
-  labelVisibility?: LabelVisibilityMessageProto.LabelVisibilityEnum | null
+  labelVisibility?: LabelVisibilityMessageProto.LabelVisibilityOptions | null
 }
 
 export function WidgetLabel({

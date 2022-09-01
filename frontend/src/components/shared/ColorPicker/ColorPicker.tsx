@@ -40,7 +40,7 @@ export interface Props {
   value: string
   showValue?: boolean
   label: string
-  labelVisibility?: LabelVisibilityMessage.LabelVisibilityEnum | null
+  labelVisibility?: LabelVisibilityMessage.LabelVisibilityOptions | null
   onChange: (value: string) => any
   help?: string
 }
