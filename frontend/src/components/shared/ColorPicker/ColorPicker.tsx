@@ -25,6 +25,7 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { logWarning } from "src/lib/log"
+import { LabelVisibilityMessage } from "src/autogen/proto"
 import {
   StyledColorPicker,
   StyledChromePicker,
@@ -39,7 +40,7 @@ export interface Props {
   value: string
   showValue?: boolean
   label: string
-  labelVisibility?: string
+  labelVisibility?: LabelVisibilityMessage.LabelVisibilityEnum | null
   onChange: (value: string) => any
   help?: string
 }

@@ -21,6 +21,7 @@ import { mount, shallow } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
+import { LabelVisibilityMessage as LabelVisibilityMessageProto } from "src/autogen/proto"
 import ColorPicker, { Props } from "./ColorPicker"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -51,18 +52,23 @@ describe("ColorPicker widget", () => {
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getProps({ labelVisibility: "hidden" })
+    const props = getProps({
+      labelVisibility: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
+    })
     const wrapper = mount(<ColorPicker {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "hidden"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getProps({ labelVisibility: "collapsed" })
+    const props = getProps({
+      labelVisibility:
+        LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+    })
     const wrapper = mount(<ColorPicker {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "collapsed"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
     )
   })
 
