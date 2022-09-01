@@ -371,37 +371,11 @@ function getMaxHeight(
   return maxHeight
 }
 
-function getDefaultNonFullScreenWidth(
+function getDefaultWidth(
   element: ArrowProto,
   containerWidth: number
 ): number | undefined {
   let width // If container width is undefined, auto set based on column widths
-
-  if (element.useContainerWidth) {
-    // Always use the full container width
-    width = containerWidth
-  } else if (element.width) {
-    // User has explicitly configured a width
-    width = Math.min(Math.max(element.width, MIN_TABLE_WIDTH), containerWidth)
-  }
-  return width
-}
-
-function getDefaultFullScreenWidth(
-  element: ArrowProto,
-  containerWidth: number,
-  isFullScreen: boolean
-): number | undefined {
-  let width // If container width is undefined, auto set based on column widths
-
-  if (isFullScreen) {
-    if (width && width > containerWidth) {
-      return containerWidth
-    }
-    if (width) {
-      return width
-    }
-  }
 
   if (element.useContainerWidth) {
     // Always use the full container width
@@ -454,18 +428,14 @@ function DataFrame({
   const maxWidth = getMaxWidth(element, containerWidth)
   const [nonFullScreenWidth, setNonFullScreenWidth] = React.useState<
     number | undefined
-  >(getDefaultNonFullScreenWidth(element, containerWidth))
+  >(getDefaultWidth(element, containerWidth))
   const [fullScreenWidth, setFullScreenWidth] = React.useState<
     number | undefined
-  >(getDefaultFullScreenWidth(element, containerWidth, isFullScreen))
+  >(getDefaultWidth(element, containerWidth))
 
-  // have exited full screen, df has been resized, and the width > non fullscreen width
-  if (
-    !isFullScreen &&
-    nonFullScreenWidth &&
-    nonFullScreenWidth > containerWidth
-  ) {
-    setNonFullScreenWidth(containerWidth)
+  // have exited full screen, df has been resized in full screen, and the width > non fullscreen max width
+  if (!isFullScreen && nonFullScreenWidth && nonFullScreenWidth > maxWidth) {
+    setNonFullScreenWidth(maxWidth)
   }
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
@@ -537,8 +507,8 @@ function DataFrame({
           topLeft: false,
         }}
         onResizeStop={(e, direction, ref, d) => {
-          setFullScreenWidth(Math.min(ref.clientWidth + d.width, maxWidth))
-          setNonFullScreenWidth(Math.min(ref.clientWidth + d.width, maxWidth))
+          setFullScreenWidth(Math.min(ref.clientWidth, maxWidth))
+          setNonFullScreenWidth(Math.min(ref.clientWidth, maxWidth))
           setHeight(height + d.height)
         }}
       >
