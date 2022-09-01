@@ -22,7 +22,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityOptions
 from tests import testutil
 
 
@@ -35,9 +35,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
-        )
+        self.assertEqual(c.label_visibility, LabelVisibilityOptions.VISIBLE)
         self.assertEqual(c.default, 0)
         self.assertEqual(c.disabled, False)
 
@@ -131,9 +129,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
-        )
+        self.assertEqual(c.label_visibility, LabelVisibilityOptions.VISIBLE)
         self.assertEqual(c.default, 0)
         self.assertEqual(c.options, [])
 
@@ -188,9 +184,9 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED),
+            ("visible", LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -200,7 +196,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, 0)
-        self.assertEqual(c.label_visibility.value, proto_value)
+        self.assertEqual(c.label_visibility, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:

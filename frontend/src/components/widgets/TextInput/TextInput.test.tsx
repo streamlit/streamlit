@@ -22,7 +22,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { Input as UIInput } from "baseui/input"
 import {
   TextInput as TextInputProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibilityOptions as LabelVisibilityOptionsProto,
 } from "src/autogen/proto"
 import TextInput, { Props } from "./TextInput"
 
@@ -57,25 +57,21 @@ describe("TextInput widget", () => {
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.HIDDEN,
     })
     const wrapper = mount(<TextInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+      LabelVisibilityOptionsProto.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.COLLAPSED,
     })
     const wrapper = mount(<TextInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityOptionsProto.COLLAPSED
     )
   })
 

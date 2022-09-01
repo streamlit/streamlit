@@ -41,7 +41,7 @@ message FileUploader {
 
   bool disabled = 9;
 
-  LabelVisibilityMessage label_visibility = 10;
+  LabelVisibilityOptions label_visibility = 10;
 
   reserved 5;
 }

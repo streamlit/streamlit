@@ -46,5 +46,5 @@ message Slider {
   repeated string options = 13;
   string help = 14;
   bool disabled = 15;
-  LabelVisibilityMessage label_visibility = 16;
+  LabelVisibilityOptions label_visibility = 16;
 }

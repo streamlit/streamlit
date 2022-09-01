@@ -18,7 +18,7 @@
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibilityOptions as LabelVisibilityOptionsProto,
   TextArea as TextAreaProto,
 } from "src/autogen/proto"
 
@@ -88,25 +88,21 @@ describe("TextArea widget", () => {
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.COLLAPSED,
     })
     const wrapper = mount(<TextArea {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityOptionsProto.COLLAPSED
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.COLLAPSED,
     })
     const wrapper = mount(<TextArea {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityOptionsProto.COLLAPSED
     )
   })
 

@@ -18,7 +18,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityOptions
 from tests import testutil
 
 
@@ -29,9 +29,7 @@ class CameraInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.camera_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
-        )
+        self.assertEqual(c.label_visibility, LabelVisibilityOptions.VISIBLE)
 
     def test_help_tooltip(self):
         """Test that it can be called with help parameter."""
@@ -42,9 +40,9 @@ class CameraInputTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED),
+            ("visible", LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -52,7 +50,7 @@ class CameraInputTest(testutil.DeltaGeneratorTestCase):
         st.camera_input("the label", label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.camera_input
-        self.assertEqual(c.label_visibility.value, proto_value)
+        self.assertEqual(c.label_visibility, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:

@@ -23,7 +23,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityOptions
 from tests import testutil
 
 
@@ -36,9 +36,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
-        )
+        self.assertEqual(c.label_visibility, LabelVisibilityOptions.VISIBLE)
         self.assertEqual(c.default, [0])
         self.assertEqual(c.min, 0)
         self.assertEqual(c.max, 2)
@@ -235,9 +233,9 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED),
+            ("visible", LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -249,7 +247,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.label_visibility.value, proto_value)
+        self.assertEqual(c.label_visibility, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:

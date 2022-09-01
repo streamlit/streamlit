@@ -23,6 +23,6 @@ message CameraInput {
   string help = 3;
   string form_id = 4;
   bool disabled = 5;
-  LabelVisibilityMessage label_visibility = 6;
+  LabelVisibilityOptions label_visibility = 6;
 }
 

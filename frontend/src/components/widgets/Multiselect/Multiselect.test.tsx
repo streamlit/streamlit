@@ -21,7 +21,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Select as UISelect, TYPE } from "baseui/select"
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibilityOptions as LabelVisibilityOptionsProto,
   MultiSelect as MultiSelectProto,
 } from "src/autogen/proto"
 import { lightTheme } from "src/theme"
@@ -89,25 +89,21 @@ describe("Multiselect widget", () => {
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.HIDDEN,
     })
     const wrapper = mount(<Multiselect {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+      LabelVisibilityOptionsProto.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.COLLAPSED,
     })
     const wrapper = mount(<Multiselect {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityOptionsProto.COLLAPSED
     )
   })
 

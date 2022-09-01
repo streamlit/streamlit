@@ -20,7 +20,7 @@ import moment from "moment"
 import { mount, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibilityOptions as LabelVisibilityOptionsProto,
   TimeInput as TimeInputProto,
 } from "src/autogen/proto"
 
@@ -57,25 +57,21 @@ describe("TimeInput widget", () => {
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.HIDDEN,
     })
     const wrapper = mount(<TimeInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+      LabelVisibilityOptionsProto.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.COLLAPSED,
     })
     const wrapper = mount(<TimeInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityOptionsProto.COLLAPSED
     )
   })
 

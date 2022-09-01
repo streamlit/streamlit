@@ -30,5 +30,5 @@ message TextArea {
   bool set_value = 9;
   string placeholder = 10;
   bool disabled = 11;
-  LabelVisibilityMessage label_visibility = 12;
+  LabelVisibilityOptions label_visibility = 12;
 }

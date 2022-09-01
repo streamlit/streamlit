@@ -18,7 +18,7 @@ import streamlit
 from streamlit import type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityOptions
 from streamlit.runtime.state import get_session_state, WidgetCallback
 
 if TYPE_CHECKING:
@@ -89,8 +89,8 @@ def get_label_visibility_proto_value(
     """
 
     if label_visibility_string == "visible":
-        return LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
+        return LabelVisibilityOptions.VISIBLE
     elif label_visibility_string == "hidden":
-        return LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN
+        return LabelVisibilityOptions.HIDDEN
     elif label_visibility_string == "collapsed":
-        return LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED
+        return LabelVisibilityOptions.COLLAPSED

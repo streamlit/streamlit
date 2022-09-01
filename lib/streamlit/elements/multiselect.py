@@ -296,7 +296,7 @@ class MultiSelectMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
-        multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
+        multiselect_proto.label_visibility = get_label_visibility_proto_value(
             label_visibility
         )
         if widget_state.value_changed:

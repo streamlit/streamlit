@@ -17,7 +17,7 @@
 
 import { ShallowWrapper } from "enzyme"
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibilityOptions as LabelVisibilityOptionsProto,
   NumberInput as NumberInputProto,
 } from "src/autogen/proto"
 import React from "react"
@@ -123,25 +123,21 @@ describe("NumberInput widget", () => {
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getIntProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.HIDDEN,
     })
     const wrapper = mount(<NumberInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+      LabelVisibilityOptionsProto.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getIntProps({
-      labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
-      },
+      labelVisibility: LabelVisibilityOptionsProto.COLLAPSED,
     })
     const wrapper = mount(<NumberInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityOptionsProto.COLLAPSED
     )
   })
 

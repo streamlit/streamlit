@@ -19,7 +19,7 @@ import pytest
 from tests import testutil
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityOptions
 from parameterized import parameterized
 
 
@@ -30,9 +30,7 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.color_picker
         self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
-        )
+        self.assertEqual(c.label_visibility, LabelVisibilityOptions.VISIBLE)
         self.assertEqual(c.default, "#000000")
         self.assertEqual(c.disabled, False)
 
@@ -86,9 +84,9 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED),
+            ("visible", LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -97,7 +95,7 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.color_picker
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.label_visibility.value, proto_value)
+        self.assertEqual(c.label_visibility, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:

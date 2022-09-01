@@ -16,11 +16,11 @@
  */
 import styled from "@emotion/styled"
 
-import { LabelVisibilityMessage as LabelVisibilityMessageProto } from "src/autogen/proto"
+import { LabelVisibilityOptions as LabelVisibilityOptionsProto } from "src/autogen/proto"
 
 export interface StyledWidgetProps {
   disabled?: boolean | null
-  labelVisibility?: LabelVisibilityMessageProto.LabelVisibilityEnum | null
+  labelVisibility?: LabelVisibilityOptionsProto | null
 }
 
 export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
@@ -28,13 +28,11 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
     display:
-      labelVisibility ===
-      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      labelVisibility === LabelVisibilityOptionsProto.COLLAPSED
         ? "none"
         : "flex",
     visibility:
-      labelVisibility ===
-      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+      labelVisibility === LabelVisibilityOptionsProto.HIDDEN
         ? "hidden"
         : "visible",
     marginBottom: theme.spacing.sm,

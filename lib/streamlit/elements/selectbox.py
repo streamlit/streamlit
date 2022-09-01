@@ -211,7 +211,7 @@ class SelectboxMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         selectbox_proto.disabled = disabled
-        selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
+        selectbox_proto.label_visibility = get_label_visibility_proto_value(
             label_visibility
         )
         if widget_state.value_changed:

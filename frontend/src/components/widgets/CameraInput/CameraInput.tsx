@@ -366,7 +366,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         <WidgetLabel
           label={element.label}
           disabled={disabled}
-          labelVisibility={element.labelVisibility?.value}
+          labelVisibility={element.labelVisibility}
         >
           {element.help && (
             <StyledWidgetLabelHelp>

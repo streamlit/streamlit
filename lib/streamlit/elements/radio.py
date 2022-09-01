@@ -225,7 +225,7 @@ class RadioMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         radio_proto.disabled = disabled
-        radio_proto.label_visibility.value = get_label_visibility_proto_value(
+        radio_proto.label_visibility = get_label_visibility_proto_value(
             label_visibility
         )
 

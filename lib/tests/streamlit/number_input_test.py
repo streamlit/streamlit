@@ -22,7 +22,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityOptions
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from tests import testutil
 
@@ -51,9 +51,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.label, "the label")
-        self.assertEqual(
-            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
-        )
+        self.assertEqual(c.label_visibility, LabelVisibilityOptions.VISIBLE)
         self.assertEqual(c.default, 0.0)
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
@@ -267,9 +265,9 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED),
+            ("visible", LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -277,7 +275,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         st.number_input("the label", label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.number_input
-        self.assertEqual(c.label_visibility.value, proto_value)
+        self.assertEqual(c.label_visibility, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
