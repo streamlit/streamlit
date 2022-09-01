@@ -36,7 +36,11 @@ from streamlit.runtime.state import (
     WidgetKwargs,
 )
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 Number = Union[int, float]
 
@@ -262,9 +266,13 @@ class NumberInputMixin:
         try:
             if all_ints:
                 if min_value is not None:
-                    JSNumber.validate_int_bounds(min_value, "`min_value`")  # type: ignore
+                    JSNumber.validate_int_bounds(
+                        min_value, "`min_value`"
+                    )  # type: ignore
                 if max_value is not None:
-                    JSNumber.validate_int_bounds(max_value, "`max_value`")  # type: ignore
+                    JSNumber.validate_int_bounds(
+                        max_value, "`max_value`"
+                    )  # type: ignore
                 if step is not None:
                     JSNumber.validate_int_bounds(step, "`step`")  # type: ignore
                 JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
@@ -319,7 +327,9 @@ class NumberInputMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         number_input_proto.disabled = disabled
-        number_input_proto.label_visibility = label_visibility
+        number_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         if widget_state.value_changed:
             number_input_proto.value = widget_state.value
