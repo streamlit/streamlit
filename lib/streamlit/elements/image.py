@@ -360,8 +360,7 @@ def image_to_url(
     image_data = _ensure_image_size_and_format(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
-    this_file = media_file_manager.add(image_data, mimetype, image_id)
-    return this_file.url
+    return media_file_manager.add(image_data, mimetype, image_id)
 
 
 def marshall_images(
