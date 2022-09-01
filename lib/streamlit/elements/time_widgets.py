@@ -37,7 +37,11 @@ from streamlit.runtime.state import (
     WidgetKwargs,
 )
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -342,7 +346,9 @@ class TimeWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         time_input_proto.disabled = disabled
-        time_input_proto.label_visibility = label_visibility
+        time_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             time_input_proto.value = serde.serialize(widget_state.value)
             time_input_proto.set_value = True
@@ -500,7 +506,9 @@ class TimeWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         date_input_proto.disabled = disabled
-        date_input_proto.label_visibility = label_visibility
+        date_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             date_input_proto.value[:] = serde.serialize(widget_state.value)
             date_input_proto.set_value = True

@@ -18,7 +18,10 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { DateInput as DateInputProto } from "src/autogen/proto"
+import {
+  DateInput as DateInputProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+} from "src/autogen/proto"
 
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { lightTheme } from "src/theme"
@@ -55,18 +58,26 @@ describe("DateInput widget", () => {
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getProps({ labelVisibility: "hidden" })
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
+      },
+    })
     const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "hidden"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getProps({ labelVisibility: "collapsed" })
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+      },
+    })
     const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "collapsed"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
     )
   })
 

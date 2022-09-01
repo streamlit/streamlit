@@ -19,7 +19,10 @@ import React from "react"
 import moment from "moment"
 import { mount, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { TimeInput as TimeInputProto } from "src/autogen/proto"
+import {
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  TimeInput as TimeInputProto,
+} from "src/autogen/proto"
 
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import TimeInput, { Props } from "./TimeInput"
@@ -53,18 +56,26 @@ describe("TimeInput widget", () => {
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getProps({ labelVisibility: "hidden" })
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
+      },
+    })
     const wrapper = mount(<TimeInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "hidden"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getProps({ labelVisibility: "collapsed" })
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+      },
+    })
     const wrapper = mount(<TimeInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "collapsed"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
     )
   })
 
