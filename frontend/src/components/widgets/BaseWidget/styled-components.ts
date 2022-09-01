@@ -20,10 +20,7 @@ import { LabelVisibilityMessage as LabelVisibilityMessageProto } from "src/autog
 
 export interface StyledWidgetProps {
   disabled?: boolean | null
-  labelVisibility?:
-    | string
-    | LabelVisibilityMessageProto.LabelVisibilityEnum
-    | null
+  labelVisibility?: LabelVisibilityMessageProto.LabelVisibilityEnum | null
 }
 
 export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
@@ -31,15 +28,13 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
     display:
-      labelVisibility === "collapsed" ||
       labelVisibility ===
-        LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
         ? "none"
         : "flex",
     visibility:
-      labelVisibility === "hidden" ||
       labelVisibility ===
-        LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
         ? "hidden"
         : "visible",
     marginBottom: theme.spacing.sm,
