@@ -23,6 +23,7 @@ import { mount, shallow } from "src/lib/test_util"
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
@@ -163,18 +164,26 @@ describe("FileUploader widget", () => {
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getProps({ labelVisibility: "hidden" })
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
+      },
+    })
     const wrapper = mount(<FileUploader {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "hidden"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getProps({ labelVisibility: "collapsed" })
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+      },
+    })
     const wrapper = mount(<FileUploader {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "collapsed"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
     )
   })
 
