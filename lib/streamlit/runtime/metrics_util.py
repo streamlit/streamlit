@@ -131,7 +131,7 @@ def _get_type_name(obj: object) -> str:
     return "failed"
 
 
-def _get_callable_name(callable: Callable) -> str:
+def _get_callable_name(callable: Callable[..., Any]) -> str:
     with contextlib.suppress(Exception):
         name = "unknown"
         if inspect.isclass(callable):
@@ -166,7 +166,7 @@ def _get_arg_metadata(arg: object) -> Optional[str]:
     return None
 
 
-def _get_command_telemetry(callable: Callable, *args, **kwargs) -> Command:
+def _get_command_telemetry(callable: Callable[..., Any], *args, **kwargs) -> Command:
     arg_keywords = inspect.getfullargspec(callable).args
     self_arg: Optional[Any] = None
     arguments: List[Argument] = []
