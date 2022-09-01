@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+message LabelVisibilityMessage {
+  // Label Visibility ENUM
+  enum LabelVisibilityEnum {
+    VISIBLE = 0;
+    HIDDEN = 1;
+    COLLAPSED = 2;
+  }
+  LabelVisibilityEnum value = 1;
+}

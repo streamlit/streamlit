@@ -19,6 +19,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit import config
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec, UploadedFile
@@ -32,7 +33,9 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.label, "the label")
-        self.assertEqual(c.label_visibility, "visible")
+        self.assertEqual(
+            c.label_visibility.value, LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE
+        )
         self.assertEqual(c.disabled, False)
 
     def test_just_disabled(self):
@@ -169,9 +172,9 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", "visible"),
-            ("hidden", "hidden"),
-            ("collapsed", "collapsed"),
+            ("visible", LabelVisibilityMessage.LabelVisibilityEnum.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityEnum.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityEnum.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -179,7 +182,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         st.file_uploader("the label", label_visibility=label_visibility_value)
 
         c = self.get_delta_from_queue().new_element.file_uploader
-        self.assertEqual(c.label_visibility, proto_value)
+        self.assertEqual(c.label_visibility.value, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:

@@ -16,7 +16,10 @@
  */
 
 import { ShallowWrapper } from "enzyme"
-import { NumberInput as NumberInputProto } from "src/autogen/proto"
+import {
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  NumberInput as NumberInputProto,
+} from "src/autogen/proto"
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
 import { Input as UIInput } from "baseui/input"
@@ -119,18 +122,26 @@ describe("NumberInput widget", () => {
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getIntProps({ labelVisibility: "hidden" })
+    const props = getIntProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
+      },
+    })
     const wrapper = mount(<NumberInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "hidden"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getIntProps({ labelVisibility: "collapsed" })
+    const props = getIntProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+      },
+    })
     const wrapper = mount(<NumberInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "collapsed"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
     )
   })
 

@@ -16,17 +16,27 @@
  */
 import styled from "@emotion/styled"
 
+import { LabelVisibilityMessage as LabelVisibilityMessageProto } from "src/autogen/proto"
+
 export interface StyledWidgetProps {
   disabled?: boolean | null
-  labelVisibility?: string | null
+  labelVisibility?: LabelVisibilityMessageProto.LabelVisibilityEnum | null
 }
 
 export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
   ({ disabled, labelVisibility, theme }) => ({
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-    display: labelVisibility === "collapsed" ? "none" : "flex",
-    visibility: labelVisibility === "hidden" ? "hidden" : "visible",
+    display:
+      labelVisibility ===
+      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
+        ? "none"
+        : "flex",
+    visibility:
+      labelVisibility ===
+      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
+        ? "hidden"
+        : "visible",
     marginBottom: theme.spacing.sm,
     height: "auto",
     minHeight: theme.fontSizes.xl,

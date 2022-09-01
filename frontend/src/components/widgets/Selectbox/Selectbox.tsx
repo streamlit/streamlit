@@ -124,7 +124,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     return (
       <UISelectbox
         label={label}
-        labelVisibility={labelVisibility}
+        labelVisibility={labelVisibility?.value}
         options={options}
         disabled={disabled}
         width={this.props.width}

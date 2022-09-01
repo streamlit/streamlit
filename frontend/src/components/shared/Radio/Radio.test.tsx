@@ -19,6 +19,7 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 
 import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
+import { LabelVisibilityMessage as LabelVisibilityMessageProto } from "src/autogen/proto"
 import { lightTheme } from "src/theme"
 import Radio, { Props } from "./Radio"
 
@@ -51,18 +52,23 @@ describe("Radio widget", () => {
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getProps({ labelVisibility: "hidden" })
+    const props = getProps({
+      labelVisibility: LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN,
+    })
     const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "hidden"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.HIDDEN
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getProps({ labelVisibility: "collapsed" })
+    const props = getProps({
+      labelVisibility:
+        LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED,
+    })
     const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      "collapsed"
+      LabelVisibilityMessageProto.LabelVisibilityEnum.COLLAPSED
     )
   })
 

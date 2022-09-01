@@ -42,7 +42,11 @@ from ..proto.Common_pb2 import (
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -237,7 +241,9 @@ class CameraInputMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         camera_input_proto.disabled = disabled
-        camera_input_proto.label_visibility = label_visibility
+        camera_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         ctx = get_script_run_ctx()
         camera_image_input_state = serde.serialize(camera_input_state.value)

@@ -178,7 +178,7 @@ class TextInput extends React.PureComponent<Props, State> {
         <WidgetLabel
           label={element.label}
           disabled={disabled}
-          labelVisibility={element.labelVisibility}
+          labelVisibility={element.labelVisibility?.value}
         >
           {element.help && (
             <StyledWidgetLabelHelp>

@@ -120,7 +120,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
     return (
       <UIColorPicker
         label={element.label}
-        labelVisibility={element.labelVisibility}
+        labelVisibility={element.labelVisibility?.value}
         help={element.help}
         onChange={this.onColorClose}
         disabled={disabled}

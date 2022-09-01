@@ -34,7 +34,11 @@ from streamlit.runtime.state import (
     WidgetKwargs,
 )
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 
 @dataclass
@@ -196,7 +200,9 @@ class ColorPickerMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         color_picker_proto.disabled = disabled
-        color_picker_proto.label_visibility = label_visibility
+        color_picker_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True
