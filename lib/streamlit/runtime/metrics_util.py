@@ -22,7 +22,9 @@ import inspect
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
-from typing import Any, Callable, List, Optional, TypeVar, cast, Final, Set
+from typing import Any, Callable, List, Optional, TypeVar, cast, Set
+
+from typing_extensions import Final
 
 from streamlit import util
 from streamlit import config
