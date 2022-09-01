@@ -24,8 +24,8 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { logWarning } from "src/lib/log"
 import { LabelVisibilityMessage } from "src/autogen/proto"
+import { logWarning } from "src/lib/log"
 import {
   StyledColorPicker,
   StyledChromePicker,

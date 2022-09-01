@@ -125,7 +125,7 @@ class Radio extends React.PureComponent<Props, State> {
         width={width}
         disabled={disabled}
         horizontal={horizontal}
-        labelVisibility={labelVisibility}
+        labelVisibility={labelVisibility?.value}
         value={this.state.value}
         help={help}
       />

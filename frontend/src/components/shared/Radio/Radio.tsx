@@ -23,6 +23,7 @@ import {
   StyledWidgetLabelHelpInline,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
+import { LabelVisibilityMessage } from "src/autogen/proto"
 import { Placement } from "src/components/shared/Tooltip"
 import { Theme } from "src/theme"
 
@@ -35,7 +36,7 @@ export interface Props {
   onChange: (selectedIndex: number) => any
   options: any[]
   label?: string
-  labelVisibility?: string
+  labelVisibility?: LabelVisibilityMessage.LabelVisibilityEnum | null
   help?: string
 }
 
