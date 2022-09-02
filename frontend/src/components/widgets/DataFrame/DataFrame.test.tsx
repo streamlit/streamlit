@@ -28,6 +28,7 @@ import { mount } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 
+import { Resizable } from "re-resizable"
 import DataFrame, {
   DataFrameProps,
   useDataLoader,
@@ -37,20 +38,27 @@ import { StyledResizableContainer } from "./styled-components"
 
 const getProps = (
   data: Quiver,
-  useContainerWidth = false
-): DataFrameProps => ({
-  element: ArrowProto.create({
+  useContainerWidth = false,
+  element = ArrowProto.create({
     data: new Uint8Array(),
     useContainerWidth,
     width: 400,
-    height: 400,
+    height: 300,
   }),
+  width = 700
+): DataFrameProps => ({
   data,
-  width: 700,
+  width,
+  element,
   isFullScreen: false,
 })
 
 const { ResizeObserver } = window
+
+const MAX_HEIGHT = 388
+const MIN_HEIGHT = 73
+const MAX_WIDTH = 700
+const MIN_WIDTH = 38
 
 describe("DataFrame widget", () => {
   const props = getProps(new Quiver({ data: TEN_BY_TEN }))
@@ -88,20 +96,16 @@ describe("DataFrame widget", () => {
     const wrapper = mount(
       <DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />
     )
-    const dataFrameContainer = wrapper
-      .find(StyledResizableContainer)
-      .props() as any
-    expect(dataFrameContainer.width).toBe(700)
-    expect(dataFrameContainer.height).toBe(400)
+    const dataFrameContainer = wrapper.find(Resizable).props() as any
+    expect(dataFrameContainer.size.width).toBe(700)
+    expect(dataFrameContainer.size.height).toBe(300)
   })
 
   it("grid container should render with specific size", () => {
     const wrapper = mount(<DataFrame {...props} />)
-    const dataFrameContainer = wrapper
-      .find(StyledResizableContainer)
-      .props() as any
-    expect(dataFrameContainer.width).toBe(400)
-    expect(dataFrameContainer.height).toBe(400)
+    const dataFrameContainer = wrapper.find(Resizable).props() as any
+    expect(dataFrameContainer.size.width).toBe(400)
+    expect(dataFrameContainer.size.height).toBe(300)
   })
 
   it("Test column resizing function.", () => {
@@ -179,5 +183,39 @@ describe("DataFrame widget", () => {
     }
 
     expect(Array.from(sortedData)).toEqual(Array.from(sortedData).sort())
+  })
+  describe("grid container boundaries should be maintained", () => {
+    it("should not go past maxHeight and go below min width", () => {
+      const newArrowProto = ArrowProto.create({
+        data: new Uint8Array(),
+        useContainerWidth: false,
+        width: 1,
+        height: 10000000000,
+      })
+      const wrapper = mount(
+        <DataFrame
+          {...getProps(new Quiver({ data: TEN_BY_TEN }), false, newArrowProto)}
+        />
+      )
+      const dataFrameContainer = wrapper.find(Resizable).props() as any
+      expect(dataFrameContainer.size.height).toBe(MAX_HEIGHT)
+      expect(dataFrameContainer.size.width).toBe(MIN_WIDTH)
+    })
+    it("should not go below minHeight or go past max width", () => {
+      const newArrowProto = ArrowProto.create({
+        data: new Uint8Array(),
+        useContainerWidth: false,
+        width: 1000000,
+        height: 1,
+      })
+      const wrapper = mount(
+        <DataFrame
+          {...getProps(new Quiver({ data: TEN_BY_TEN }), false, newArrowProto)}
+        />
+      )
+      const dataFrameContainer = wrapper.find(Resizable).props() as any
+      expect(dataFrameContainer.size.height).toBe(MIN_HEIGHT)
+      expect(dataFrameContainer.size.width).toBe(MAX_WIDTH)
+    })
   })
 })

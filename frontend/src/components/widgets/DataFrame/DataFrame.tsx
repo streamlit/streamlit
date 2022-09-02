@@ -322,13 +322,12 @@ export interface DataFrameProps {
 function getDefaultHeight(
   element: ArrowProto,
   containerHeight: number | undefined,
-  maxHeight: number,
-  isFullScreen: boolean
+  maxHeight: number
 ): number {
   let height = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
   if (element.height) {
     // User has explicitly configured a height
-    height = Math.max(element.height, MIN_TABLE_HEIGHT)
+    height = Math.min(Math.max(element.height, MIN_TABLE_HEIGHT), maxHeight)
   }
 
   if (containerHeight) {
@@ -342,9 +341,6 @@ function getDefaultHeight(
     }
   }
 
-  if (isFullScreen) {
-    height = height > maxHeight ? maxHeight : height
-  }
   return height
 }
 
@@ -357,7 +353,8 @@ function getMaxHeight(
   let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, MIN_TABLE_HEIGHT)
   if (element.height) {
     // User has explicitly configured a height
-    maxHeight = Math.max(element.height, maxHeight)
+    const minHeight = Math.max(element.height, MIN_TABLE_HEIGHT)
+    maxHeight = Math.min(minHeight, maxHeight)
   }
   if (containerHeight) {
     // If container height is set (e.g. when used in fullscreen)
@@ -417,7 +414,7 @@ function DataFrame({
 
   const maxHeight = getMaxHeight(element, containerHeight, numRows)
   const [height, setHeight] = React.useState<number>(
-    getDefaultHeight(element, containerHeight, maxHeight, isFullScreen)
+    getDefaultHeight(element, containerHeight, maxHeight)
   )
 
   const maxWidth = getMaxWidth(element, containerWidth)
@@ -504,7 +501,7 @@ function DataFrame({
         onResizeStop={(e, direction, ref, d) => {
           setFullScreenWidth(Math.min(ref.clientWidth, maxWidth))
           setNonFullScreenWidth(Math.min(ref.clientWidth, maxWidth))
-          setHeight(height + d.height)
+          setHeight(ref.clientHeight)
         }}
       >
         <GlideDataEditor
