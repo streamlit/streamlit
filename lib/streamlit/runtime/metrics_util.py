@@ -153,13 +153,7 @@ def _get_callable_name(callable: Callable[..., Any]) -> str:
 
 def _get_arg_metadata(arg: object) -> Optional[str]:
     with contextlib.suppress(Exception):
-        if isinstance(arg, bool):
-            return f"val:{arg}"
-
-        if isinstance(arg, int):
-            return f"val:{arg}"
-
-        if isinstance(arg, enum.Enum):
+        if isinstance(arg, (bool, int)):
             return f"val:{arg}"
 
         if isinstance(arg, Sized):
