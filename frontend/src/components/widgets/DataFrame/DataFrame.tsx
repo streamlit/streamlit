@@ -377,8 +377,7 @@ function DataFrame({
 
   if (element.height) {
     // User has explicitly configured a height
-    height = Math.max(element.height, MIN_TABLE_HEIGHT)
-    maxHeight = Math.max(element.height, maxHeight)
+    height = Math.min(Math.max(element.height, MIN_TABLE_HEIGHT), maxHeight)
   }
 
   if (containerHeight) {
