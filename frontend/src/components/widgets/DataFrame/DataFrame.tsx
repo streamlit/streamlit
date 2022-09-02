@@ -319,6 +319,11 @@ export interface DataFrameProps {
   isFullScreen: boolean
 }
 
+// type Dimmensions = {
+//   height: number
+//   width: number | undefined
+// }
+
 function getDefaultHeight(
   element: ArrowProto,
   containerHeight: number | undefined,
@@ -347,7 +352,8 @@ function getDefaultHeight(
 function getMaxHeight(
   element: ArrowProto,
   containerHeight: number | undefined,
-  numRows: number
+  numRows: number,
+  isFullScreen: boolean
 ): number {
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, MIN_TABLE_HEIGHT)
@@ -359,7 +365,13 @@ function getMaxHeight(
   if (containerHeight) {
     // If container height is set (e.g. when used in fullscreen)
     // The maxHeight should not be larger than container height
-    maxHeight = Math.min(maxHeight, containerHeight)
+    maxHeight = Math.max(maxHeight, containerHeight)
+
+    if (isFullScreen) {
+      // console.log("Got in here")
+      // console.log(`containerHeight: ${containerHeight}`)
+      maxHeight = containerHeight
+    }
   }
   return maxHeight
 }
@@ -412,23 +424,45 @@ function DataFrame({
     rows: CompactSelection.empty(),
   })
 
-  const maxHeight = getMaxHeight(element, containerHeight, numRows)
-  const [height, setHeight] = React.useState<number>(
-    getDefaultHeight(element, containerHeight, maxHeight)
+  const maxHeight = getMaxHeight(
+    element,
+    containerHeight,
+    numRows,
+    isFullScreen
   )
-
   const maxWidth = getMaxWidth(element, containerWidth)
-  const [nonFullScreenWidth, setNonFullScreenWidth] = React.useState<
-    number | undefined
-  >(getDefaultWidth(element, containerWidth))
-  const [fullScreenWidth, setFullScreenWidth] = React.useState<
-    number | undefined
-  >(getDefaultWidth(element, containerWidth))
 
-  // have exited full screen, df has been resized in full screen, and the width > non fullscreen max width
-  if (!isFullScreen && nonFullScreenWidth && nonFullScreenWidth > maxWidth) {
-    setNonFullScreenWidth(maxWidth)
+  const defaultDim = {
+    height: getDefaultHeight(element, containerHeight, maxHeight),
+    width: getDefaultWidth(element, containerWidth),
   }
+  const maxDim = { height: maxHeight, width: maxWidth }
+
+  const [nonFullScreenDim, setNonFullScreenDim] = React.useState<{
+    height: number
+    width: number | undefined
+  }>(defaultDim)
+
+  const [fullScreenDim, setFullScreenDim] = React.useState<{
+    height: number
+    width: number | undefined
+  }>(maxDim)
+
+  // have exited full screen, df has been resized in full screen, and either dimmension is out of bounds
+  if (
+    (!isFullScreen &&
+      nonFullScreenDim.width &&
+      nonFullScreenDim.width > maxWidth) ||
+    nonFullScreenDim.height > maxHeight
+  ) {
+    setNonFullScreenDim({
+      height: Math.min(maxHeight, nonFullScreenDim.height),
+      width: maxWidth,
+    })
+  }
+
+  // console.log(`maxWidth: ${maxWidth}`)
+  // console.log(`fullScreenWidth: ${fullScreenDim.width}`)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
@@ -460,6 +494,15 @@ function DataFrame({
     [sort, columns]
   )
 
+  // const size = {
+  //   width: isFullScreen
+  //     ? fullScreenDim.width || "100%"
+  //     : nonFullScreenDim.width || "100%",
+  //   height: isFullScreen ? fullScreenDim.height : nonFullScreenDim.height,
+  // }
+  // console.log(`size.height: ${size.height}`)
+  // console.log(`size.width: ${size.width}`)
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -478,14 +521,16 @@ function DataFrame({
         data-testid="stDataFrameResizeable"
         size={{
           width: isFullScreen
-            ? fullScreenWidth || "100%"
-            : nonFullScreenWidth || "100%",
-          height,
+            ? fullScreenDim.width || "100%"
+            : nonFullScreenDim.width || "100%",
+          height: isFullScreen
+            ? fullScreenDim.height
+            : nonFullScreenDim.height,
         }}
         style={{ border: `1px solid ${theme.colors.fadedText05}` }}
         minHeight={MIN_TABLE_HEIGHT}
-        maxHeight={maxHeight}
         minWidth={MIN_TABLE_WIDTH}
+        maxHeight={maxHeight}
         maxWidth={maxWidth}
         grid={[1, ROW_HEIGHT]}
         enable={{
@@ -499,9 +544,9 @@ function DataFrame({
           topLeft: false,
         }}
         onResizeStop={(e, direction, ref, d) => {
-          setFullScreenWidth(Math.min(ref.clientWidth, maxWidth))
-          setNonFullScreenWidth(Math.min(ref.clientWidth, maxWidth))
-          setHeight(ref.clientHeight)
+          const dim = { height: ref.clientHeight, width: ref.clientWidth }
+          setFullScreenDim(dim)
+          setNonFullScreenDim(dim)
         }}
       >
         <GlideDataEditor

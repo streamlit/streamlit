@@ -23,6 +23,7 @@ import styled from "@emotion/styled"
 export const StyledResizableContainer = styled.div(() => ({
   position: "relative",
   display: "inline-block",
+  overflow: "hidden",
 
   "& .glideDataEditor": {
     height: "100%",
