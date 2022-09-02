@@ -28,6 +28,8 @@ from streamlit.runtime.state import (
 )
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
 from streamlit.util import index_
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -53,6 +55,7 @@ class RadioSerde:
 
 
 class RadioMixin:
+    @gather_metrics
     def radio(
         self,
         label: str,

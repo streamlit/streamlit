@@ -20,6 +20,7 @@ from typing_extensions import TypeAlias, Literal
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.string_util import clean_text
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import numpy as np
@@ -39,6 +40,7 @@ class MetricColorAndDirection:
 
 
 class MetricMixin:
+    @gather_metrics
     def metric(
         self,
         label: str,

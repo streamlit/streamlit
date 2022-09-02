@@ -31,6 +31,8 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -205,6 +207,7 @@ class DateInputSerde:
 
 
 class TimeWidgetsMixin:
+    @gather_metrics
     def time_input(
         self,
         label: str,
@@ -332,6 +335,7 @@ class TimeWidgetsMixin:
         self.dg._enqueue("time_input", time_input_proto)
         return widget_state.value
 
+    @gather_metrics
     def date_input(
         self,
         label: str,

@@ -23,6 +23,7 @@ import pyarrow as pa
 
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -31,6 +32,7 @@ Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]
 
 
 class ArrowMixin:
+    @gather_metrics
     def _arrow_dataframe(
         self,
         data: Data = None,
@@ -97,6 +99,7 @@ class ArrowMixin:
         marshall(proto, data, default_uuid)
         return self.dg._enqueue("arrow_data_frame", proto)
 
+    @gather_metrics
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 
