@@ -63,6 +63,7 @@ import {
   PageInfo,
   PageNotFound,
   PagesChanged,
+  PageProfile,
   SessionEvent,
   WidgetStates,
   SessionState,
@@ -425,6 +426,8 @@ export class App extends PureComponent<Props, State> {
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleScriptFinished(status),
+        pageProfile: (pageProfile: PageProfile) =>
+          this.handlePageProfileMsg(pageProfile),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -514,6 +517,10 @@ export class App extends PureComponent<Props, State> {
         appPages,
       })
     })
+  }
+
+  handlePageProfileMsg = (pageProfile: PageProfile): void => {
+    // TODO(lukasmasuch): Add logic to send page profile to Segment.
   }
 
   /**
