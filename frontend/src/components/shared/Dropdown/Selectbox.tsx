@@ -21,7 +21,7 @@ import { logWarning } from "src/lib/log"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { hasMatch, score } from "fzy.js"
 import _ from "lodash"
-import { LabelVisibilityMessage as LabelVisibilityMessageProto } from "src/autogen/proto"
+import { LabelVisibilityOptions } from "src/lib/utils"
 import { Placement } from "src/components/shared/Tooltip"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import {
@@ -36,7 +36,7 @@ export interface Props {
   onChange: (value: number) => void
   options: any[]
   label?: string | null
-  labelVisibility?: LabelVisibilityMessageProto.LabelVisibilityOptions | null
+  labelVisibility?: LabelVisibilityOptions
   help?: string
 }
 

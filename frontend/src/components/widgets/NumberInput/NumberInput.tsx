@@ -32,6 +32,9 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
+
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+
 import {
   StyledInputContainer,
   StyledInputControl,
@@ -328,7 +331,9 @@ class NumberInput extends React.PureComponent<Props, State> {
         <WidgetLabel
           label={element.label}
           disabled={disabled}
-          labelVisibility={element.labelVisibility?.value}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
         >
           {element.help && (
             <StyledWidgetLabelHelp>

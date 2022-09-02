@@ -36,6 +36,7 @@ import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError } from "src/lib/log"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
@@ -366,7 +367,9 @@ class CameraInput extends React.PureComponent<Props, State> {
         <WidgetLabel
           label={element.label}
           disabled={disabled}
-          labelVisibility={element.labelVisibility?.value}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
         >
           {element.help && (
             <StyledWidgetLabelHelp>

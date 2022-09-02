@@ -36,6 +36,7 @@ import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import { Theme } from "src/theme"
 
 export interface Props {
@@ -201,7 +202,9 @@ class Multiselect extends React.PureComponent<Props, State> {
         <WidgetLabel
           label={element.label}
           disabled={disabled}
-          labelVisibility={element.labelVisibility?.value}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
         >
           {element.help && (
             <StyledWidgetLabelHelp>

@@ -20,6 +20,7 @@ import { Selectbox as SelectboxProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UISelectbox from "src/components/shared/Dropdown"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -124,7 +125,9 @@ class Selectbox extends React.PureComponent<Props, State> {
     return (
       <UISelectbox
         label={label}
-        labelVisibility={labelVisibility?.value}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value
+        )}
         options={options}
         disabled={disabled}
         width={this.props.width}
