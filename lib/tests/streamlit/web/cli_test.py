@@ -285,13 +285,13 @@ class CliTest(unittest.TestCase):
         self.assertTrue(mock_check.called)
         self.assertEqual(0, result.exit_code)
 
-    def test_headless_telemetry_message(self):
-        """If headless mode and usage stats not explicitly configured,
-        show a message about usage metrics gathering."""
+    @parameterized.expand([(True,), (False,)])
+    def test_headless_telemetry_message(self, headless_mode):
+        """If headless mode, show a message about usage metrics gathering."""
 
         from streamlit import config
 
-        config._set_option("server.headless", True, "test")
+        config._set_option("server.headless", headless_mode, "test")
 
         with patch("validators.url", return_value=False), patch(
             "os.path.exists", return_value=True
@@ -302,7 +302,10 @@ class CliTest(unittest.TestCase):
             result = self.runner.invoke(cli, ["run", "file_name.py"])
 
         self.assertNotEqual(0, result.exit_code)
-        self.assertTrue("collection of usage statistics is activated" in result.output)
+        self.assertEqual(
+            "collection of usage statistics is activated" in result.output,
+            headless_mode,  # Should only be shown if n headless mode
+        )
 
     def test_help_command(self):
         """Tests the help command redirects to using the --help flag"""
