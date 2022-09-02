@@ -23,7 +23,7 @@ import { sprintf } from "sprintf-js"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { Slider as SliderProto } from "src/autogen/proto"
-import { debounce } from "src/lib/utils"
+import { debounce, labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import moment from "moment"
 import {
   WidgetLabel,
@@ -292,7 +292,9 @@ class Slider extends React.PureComponent<Props, State> {
         <WidgetLabel
           label={element.label}
           disabled={disabled}
-          labelVisibility={element.labelVisibility?.value}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
         >
           {element.help && (
             <StyledWidgetLabelHelp>

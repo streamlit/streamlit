@@ -24,7 +24,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { LabelVisibilityMessage } from "src/autogen/proto"
+import { LabelVisibilityOptions } from "src/lib/utils"
 import { logWarning } from "src/lib/log"
 import {
   StyledColorPicker,
@@ -40,7 +40,7 @@ export interface Props {
   value: string
   showValue?: boolean
   label: string
-  labelVisibility?: LabelVisibilityMessage.LabelVisibilityOptions | null
+  labelVisibility?: LabelVisibilityOptions
   onChange: (value: string) => any
   help?: string
 }

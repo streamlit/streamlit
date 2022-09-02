@@ -28,7 +28,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { isInForm } from "src/lib/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import { StyledTextAreaContainer } from "./styled-components"
 
 export interface Props {
@@ -189,7 +189,9 @@ class TextArea extends React.PureComponent<Props, State> {
         <WidgetLabel
           label={element.label}
           disabled={disabled}
-          labelVisibility={element.labelVisibility?.value}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
         >
           {element.help && (
             <StyledWidgetLabelHelp>

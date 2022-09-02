@@ -20,6 +20,7 @@ import UIRadio from "src/components/shared/Radio"
 import { Radio as RadioProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -125,7 +126,9 @@ class Radio extends React.PureComponent<Props, State> {
         width={width}
         disabled={disabled}
         horizontal={horizontal}
-        labelVisibility={labelVisibility?.value}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value
+        )}
         value={this.state.value}
         help={help}
       />

@@ -20,7 +20,7 @@ import { ShallowWrapper } from "enzyme"
 import { shallow, mount } from "src/lib/test_util"
 
 import { Select as UISelect } from "baseui/select"
-import { LabelVisibilityMessage as LabelVisibilityMessageProto } from "src/autogen/proto"
+import { LabelVisibilityOptions } from "src/lib/utils"
 import Selectbox, { Props, fuzzyFilterSelectOptions } from "./Selectbox"
 
 jest.mock("src/lib/WidgetStateManager")
@@ -69,23 +69,21 @@ describe("Selectbox widget", () => {
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
-      labelVisibility:
-        LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      labelVisibility: LabelVisibilityOptions.Hidden,
     })
     const wrapper = mount(<Selectbox {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+      LabelVisibilityOptions.Hidden
     )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
-      labelVisibility:
-        LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      labelVisibility: LabelVisibilityOptions.Collapsed,
     })
     const wrapper = mount(<Selectbox {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+      LabelVisibilityOptions.Collapsed
     )
   })
 
