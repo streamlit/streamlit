@@ -36,6 +36,8 @@ export const StyledResizableContainer = styled.div<
   position: "relative",
   resize: "both",
   display: "inline-block",
+  // allow safari specifically to have access to resizablility
+  paddingBottom: "1px",
   ...(width && { width: `${width}px` }),
   minHeight: `${minHeight}px`,
   maxHeight: `${maxHeight}px`,
@@ -51,6 +53,7 @@ export const StyledResizableContainer = styled.div<
 
   "& .dvn-scroller": {
     scrollbarWidth: "thin",
+    // https://caniuse.com/css-overflow-overlay only works on chrome and firefox
     ["overflowX" as any]: "overlay !important",
     ["overflowY" as any]: "overlay !important",
   },
