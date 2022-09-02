@@ -520,8 +520,6 @@ def stop() -> NoReturn:
     raise StopException()
 
 
-# TODO: does this make sense?
-@gather_metrics
 def experimental_rerun() -> NoReturn:
     """Rerun the script immediately.
 

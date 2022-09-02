@@ -24,7 +24,7 @@ _SPACES_RE = re.compile("\\s*")
 _EMPTY_LINE_RE = re.compile("\\s*\n")
 
 
-@gather_metrics  # TODO: test this
+@gather_metrics
 @contextlib.contextmanager
 def echo(code_location="above"):
     """Use in a `with` block to draw some code on the app, then execute it.
