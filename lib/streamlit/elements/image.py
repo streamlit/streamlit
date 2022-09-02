@@ -21,6 +21,7 @@
 
 import imghdr
 import io
+import mimetypes
 import re
 from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union
 from urllib.parse import urlparse
@@ -301,8 +302,34 @@ def image_to_url(
     If `image` is already a URL, return it unmodified.
     Otherwise, add the image to the MediaFileManager and return the URL.
     """
+
+    image_data: bytes
+
+    # Strings
+    if isinstance(image, str):
+        # If it's a url, return it directly.
+        try:
+            p = urlparse(image)
+            if p.scheme:
+                return image
+        except UnicodeDecodeError:
+            pass
+
+        # Otherwise, try to open it as a file.
+        try:
+            with open(image, "rb") as f:
+                image_data = f.read()
+        except:
+            # When we aren't able to open the image file, we still pass the path to
+            # the MediaFileManager - its storage backend may have access to files
+            # that Streamlit does not.
+            mimetype, _ = mimetypes.guess_type(image)
+            if mimetype is None:
+                mimetype = "application/octet-stream"
+            return media_file_manager.add(image, mimetype, image_id)
+
     # PIL Images
-    if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
+    elif isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
         format = _validate_image_format_string(image, output_format)
         image_data = _PIL_to_bytes(image, format)
 
@@ -336,20 +363,6 @@ def image_to_url(
             array=cast("npt.NDArray[Any]", image),  # type: ignore[redundant-cast]
             output_format=output_format,
         )
-
-    # Strings
-    elif isinstance(image, str):
-        # If it's a url, return it directly.
-        try:
-            p = urlparse(image)
-            if p.scheme:
-                return image
-        except UnicodeDecodeError:
-            pass
-
-        # Otherwise, open it as a file.
-        with open(image, "rb") as f:
-            image_data = f.read()
 
     # Raw bytes
     else:

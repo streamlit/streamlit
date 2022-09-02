@@ -173,12 +173,22 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         self.assertTrue(url.startswith(expected_prefix))
 
     @parameterized.expand(
-        [("foo.bar", False), ("path/to/foo.bar", False), ("https://foo.bar", True)]
+        [
+            ("foo.png", "image/png", False),
+            ("path/to/foo.jpg", "image/jpeg", False),
+            ("foo.unknown_extension", "application/octet-stream", False),
+            ("foo", "application/octet-stream", False),
+            ("https://foo.png", "image/png", True),
+        ]
     )
-    def test_image_to_url_passes_filenames_to_media_file_mgr(
-        self, input_string: str, is_url: bool
+    def test_image_to_url_adds_filenames_to_media_file_mgr(
+        self, input_string: str, expected_mimetype: str, is_url: bool
     ):
-        """image_to_url should pass any non-URL strings through to MediaFileManager."""
+        """if `image_to_url` is unable to open an image passed by name, it
+        still passes the filename to MediaFileManager. (MediaFileManager may have a
+        storage backend that's able to open the file, so it's up to the manager -
+        and not image_to_url - to throw an error.)
+        """
         with mock.patch(
             "streamlit.elements.image.media_file_manager.add"
         ) as mock_mfm_add:
@@ -201,7 +211,9 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             else:
                 # Other strings should be passed to MediaFileManager.add
                 self.assertEqual("https://mockoutputurl.com", result)
-                mock_mfm_add.assert_called_once()
+                mock_mfm_add.assert_called_once_with(
+                    input_string, expected_mimetype, "mock_image_id"
+                )
 
     @parameterized.expand(
         [
