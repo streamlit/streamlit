@@ -202,6 +202,6 @@ export function labelVisibilityProtoValueToEnum(
     case LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED:
       return LabelVisibilityOptions.Collapsed
     default:
-      return LabelVisibilityOptions.Collapsed
+      return LabelVisibilityOptions.Visible
   }
 }
