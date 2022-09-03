@@ -1,7 +1,10 @@
 syntax = "proto3";
 
 message LabelVisibilityMessage {
-  // Label Visibility ENUM
+  // We use separate LabelVisibilityMessage instead of just defining Enum and
+  // use it in other widgets proto files due to protobuf js error, when just
+  // enum defined and imported
+  // https://github.com/protobufjs/protobuf.js/issues/1414
   enum LabelVisibilityOptions {
     VISIBLE = 0;
     HIDDEN = 1;
