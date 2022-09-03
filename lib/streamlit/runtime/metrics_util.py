@@ -52,6 +52,8 @@ _CALLABLE_NAME_MAPPING: Final = {
     "_transparent_write": "magic",
     "MemoAPI.__call__": "experimental_memo",
     "SingletonAPI.__call__": "experimental_singleton",
+    "SingletonAPI.clear": "clear_singleton",
+    "MemoAPI.clear": "clear_memo",
     "SingletonCache.write_result": "_cache_singleton_object",
     "MemoCache.write_result": "_cache_memo_object",
     "_write_to_cache": "_cache_object",
