@@ -45,6 +45,7 @@ describe("withMapboxToken", () => {
 
   beforeAll(() => {
     SessionInfo.current = new SessionInfo({
+      appId: "aid",
       sessionId: "mockSessionId",
       streamlitVersion: "sv",
       pythonVersion: "pv",
