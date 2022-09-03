@@ -279,15 +279,13 @@ _create_option(
     replaced_by="logger.level",
 )
 
-
-@_create_option("global.unitTest", visibility="hidden", type_=bool)
-def _global_unit_test() -> bool:
-    """Are we in a unit test?
-
-    This option defaults to False.
-    """
-    return False
-
+_create_option(
+    "global.unitTest",
+    description="Are we in a unit test?",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
 
 _create_option(
     "global.suppressDeprecationWarnings",
@@ -607,7 +605,6 @@ _create_option(
 # TODO: Rename to server.enableCorsProtection.
 _create_option(
     "server.enableCORS",
-    visibility="hidden",
     description="""
     Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
 
