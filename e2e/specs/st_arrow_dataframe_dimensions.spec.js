@@ -21,7 +21,7 @@ describe("DataFrame with different sizes", () => {
     { width: "250px", height: "150px" },
     { width: "250px", height: "400px" },
     { width: "704px", height: "150px" },
-    { width: "704px", height: "5000px" },
+    { width: "704px", height: "3000px" },
     { width: "704px", height: "400px" },
     { width: "500px", height: "400px" },
     { width: "704px", height: "400px" },
