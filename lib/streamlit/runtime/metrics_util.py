@@ -16,7 +16,6 @@ import os
 import threading
 import uuid
 import contextlib
-import enum
 import sys
 import inspect
 from collections.abc import Sized

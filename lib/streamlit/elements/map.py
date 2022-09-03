@@ -24,6 +24,7 @@ from typing_extensions import Final, TypeAlias
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from pandas.io.formats.style import Styler
@@ -71,6 +72,7 @@ _ZOOM_LEVELS: Final = [
 
 
 class MapMixin:
+    @gather_metrics
     def map(
         self,
         data: Data = None,

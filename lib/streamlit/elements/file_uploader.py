@@ -29,6 +29,8 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from ..proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
@@ -197,6 +199,7 @@ class FileUploaderMixin:
     ) -> Optional[UploadedFile]:
         ...
 
+    @gather_metrics
     def file_uploader(
         self,
         label: str,

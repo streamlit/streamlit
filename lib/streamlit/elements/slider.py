@@ -42,6 +42,8 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -165,6 +167,7 @@ class SliderSerde:
 
 
 class SliderMixin:
+    @gather_metrics
     def slider(
         self,
         label: str,

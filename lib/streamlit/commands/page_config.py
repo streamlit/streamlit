@@ -27,6 +27,7 @@ from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.string_util import is_emoji
 from streamlit.util import lower_clean_dict_keys
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from typing_extensions import TypeGuard
@@ -111,6 +112,7 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
         raise
 
 
+@gather_metrics
 def set_page_config(
     page_title: Optional[str] = None,
     page_icon: Optional[PageIcon] = None,

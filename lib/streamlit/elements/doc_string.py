@@ -21,6 +21,7 @@ from typing_extensions import Final
 
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -39,6 +40,7 @@ CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
+    @gather_metrics
     def help(self, obj: Any) -> "DeltaGenerator":
         """Display object's doc string, nicely formatted.
 

@@ -32,13 +32,14 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, to_key
-
 from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -140,6 +141,7 @@ class MultiSelectMixin:
     ) -> List[Any]:
         ...
 
+    @gather_metrics
     def multiselect(
         self,
         label: str,

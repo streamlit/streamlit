@@ -180,4 +180,33 @@ class PageTelemetryTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(forward_msg.page_profile.prep_time, 2000)
         self.assertEqual(forward_msg.page_profile.commands[0].name, "dataframe")
 
-    # TODO (lukasmasuch): the test for the actual decorator will be added in a later PR
+    def test_gather_metrics_decorator(self):
+        """Test gather_metrics decorator"""
+
+        ctx = metrics_util.get_script_run_ctx()
+        ctx.reset()
+        ctx.gather_usage_stats = True
+
+        @metrics_util.gather_metrics
+        def test_function(param1: int, param2: str, param3: float = 0.1) -> str:
+            streamlit.markdown("This command should not be tracked")
+            return "foo"
+
+        test_function(param1=10, param2="foobar")
+
+        self.assertEqual(len(ctx.tracked_commands), 1)
+        self.assertEqual(ctx.tracked_commands[0].name, "test_function")
+
+        streamlit.markdown("This function should be tracked")
+
+        self.assertEqual(len(ctx.tracked_commands), 2)
+        self.assertEqual(ctx.tracked_commands[0].name, "test_function")
+        self.assertEqual(ctx.tracked_commands[1].name, "markdown")
+
+        ctx.reset()
+        # Deactivate usage stats gathering
+        ctx.gather_usage_stats = False
+
+        self.assertEqual(len(ctx.tracked_commands), 0)
+        test_function(param1=10, param2="foobar")
+        self.assertEqual(len(ctx.tracked_commands), 0)
