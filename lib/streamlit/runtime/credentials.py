@@ -80,8 +80,7 @@ _TELEMETRY_TEXT = """
 }
 
 _TELEMETRY_HEADLESS_TEXT = """
-The collection of usage statistics is activated. You can deactivate it
-by setting the browser.gatherUsageStats config option to False.
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to False.
 """
 
 # IMPORTANT: Break the text below at 80 chars.

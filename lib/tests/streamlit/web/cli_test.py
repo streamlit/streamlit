@@ -296,7 +296,7 @@ class CliTest(unittest.TestCase):
 
             self.assertNotEqual(0, result.exit_code)
             self.assertEqual(
-                "collection of usage statistics is activated" in result.output,
+                "Collecting usage statistics" in result.output,
                 headless_mode,  # Should only be shown if n headless mode
             )
 
