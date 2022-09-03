@@ -139,7 +139,7 @@ class PageTelemetryTest(testutil.DeltaGeneratorTestCase):
         )
         self.assertEqual(
             str(command_metadata.args[1]).strip(),
-            'k: "width"\nt: "int"\nm: "val:250"',
+            'k: "width"\nt: "int"',
         )
 
         # Test with text_input command:
