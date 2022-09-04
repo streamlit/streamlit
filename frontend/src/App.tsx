@@ -145,6 +145,7 @@ interface State {
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
+  latestRunTime: number
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -219,6 +220,7 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
+      latestRunTime: performance.now(),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -445,7 +447,11 @@ export class App extends PureComponent<Props, State> {
       menuItems,
     } = pageConfig
 
-    MetricsManager.current.enqueue("pageConfigChanged", pageConfig)
+    MetricsManager.current.enqueue("pageConfigChanged", {
+      favicon,
+      layout,
+      initialSidebarState,
+    })
 
     if (title) {
       this.props.s4aCommunication.sendMessage({
@@ -520,7 +526,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
-    // TODO(lukasmasuch): Add logic to send page profile to Segment.
+    MetricsManager.current.enqueue("pageProfile", {
+      ...PageProfile.toObject(pageProfile),
+      appId: SessionInfo.current.appId,
+      numPages: this.state.appPages?.length,
+      sessionId: SessionInfo.current.sessionId,
+      pythonVersion: SessionInfo.current.pythonVersion,
+      pageScriptHash: this.state.currentPageScriptHash,
+      activeTheme: this.props.theme?.activeTheme?.name,
+      totalLoadTime: Math.round(
+        (performance.now() - this.state.latestRunTime) * 1000
+      ),
+    })
   }
 
   /**
@@ -679,6 +696,7 @@ export class App extends PureComponent<Props, State> {
         hideSidebarNav: config.hideSidebarNav,
         appPages: newSessionProto.appPages,
         currentPageScriptHash: newPageScriptHash,
+        latestRunTime: performance.now(),
       },
       () => {
         this.props.s4aCommunication.sendMessage({
