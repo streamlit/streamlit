@@ -23,25 +23,25 @@ describe("checkbox state update regression", () => {
   });
 
   it("checking one disables the other", () => {
-    cy.get("[role='checkbox']").should("have.length", 2);
-    cy.getIndexed("[role='checkbox']", 0).should(
+    cy.get("[data-baseweb='checkbox']").should("have.length", 2);
+    cy.getIndexed("[type='checkbox']", 0).should(
       "have.attr",
       "aria-checked",
       "true"
     );
-    cy.getIndexed("[role='checkbox']", 1).should(
+    cy.getIndexed("[type='checkbox']", 1).should(
       "have.attr",
       "aria-checked",
       "false"
     );
 
-    cy.getIndexed("[role='checkbox']", 1).click();
-    cy.getIndexed("[role='checkbox']", 0).should(
+    cy.getIndexed("[data-baseweb='checkbox']", 1).click();
+    cy.getIndexed("[type='checkbox']", 0).should(
       "have.attr",
       "aria-checked",
       "false"
     );
-    cy.getIndexed("[role='checkbox']", 1).should(
+    cy.getIndexed("[type='checkbox']", 1).should(
       "have.attr",
       "aria-checked",
       "true"

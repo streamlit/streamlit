@@ -24,6 +24,19 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
   flexDirection: "row",
   flexWrap: "nowrap",
   alignItems: "center",
+
+  // Mimic the baseweb's borders here, so we can apply the focus style
+  // to the entire container and not only the input itself
+  border: "1px solid transparent",
+  transitionDuration: "200ms",
+  transitionProperty: "border",
+  transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
+  borderRadius: theme.radii.md,
+
+  "&.focused": {
+    borderColor: theme.colors.primary,
+  },
+
   input: {
     MozAppearance: "textfield",
     "&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
@@ -34,9 +47,9 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledInputControls = styled.div({
-  height: "40px",
   display: "flex",
   flexDirection: "row",
+  alignSelf: "stretch",
 })
 
 export const StyledInputControl = styled.button(({ theme }) => ({

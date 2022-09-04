@@ -32,6 +32,9 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
+
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+
 import {
   StyledInputContainer,
   StyledInputControl,
@@ -62,6 +65,11 @@ export interface State {
    * The value with applied format that is going to be shown to the user
    */
   formattedValue: string
+
+  /**
+   * True if the input is selected
+   */
+  isFocused: boolean
 }
 
 class NumberInput extends React.PureComponent<Props, State> {
@@ -76,6 +84,7 @@ class NumberInput extends React.PureComponent<Props, State> {
       dirty: false,
       value: this.initialValue,
       formattedValue: this.formatValue(this.initialValue),
+      isFocused: false,
     }
   }
 
@@ -204,6 +213,12 @@ class NumberInput extends React.PureComponent<Props, State> {
     if (this.state.dirty) {
       this.commitWidgetValue({ fromUi: true })
     }
+
+    this.setState({ isFocused: false })
+  }
+
+  private onFocus = (): void => {
+    this.setState({ isFocused: true })
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -297,7 +312,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { element, width, disabled, widgetMgr } = this.props
-    const { formattedValue, dirty } = this.state
+    const { formattedValue, dirty, isFocused } = this.state
 
     const style = { width }
 
@@ -313,7 +328,13 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stNumberInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -323,16 +344,18 @@ class NumberInput extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <StyledInputContainer>
+        <StyledInputContainer className={isFocused ? "focused" : ""}>
           <UIInput
             type="number"
             inputRef={this.inputRef}
             value={formattedValue}
             onBlur={this.onBlur}
+            onFocus={this.onFocus}
             onChange={this.onChange}
             onKeyPress={this.onKeyPress}
             onKeyDown={this.onKeyDown}
             disabled={disabled}
+            aria-label={element.label}
             overrides={{
               Input: {
                 props: {
@@ -341,7 +364,7 @@ class NumberInput extends React.PureComponent<Props, State> {
                   max: this.getMax(),
                 },
                 style: {
-                  lineHeight: "1.5",
+                  lineHeight: "1.4",
                   // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                   paddingRight: ".5rem",
                   paddingLeft: ".5rem",

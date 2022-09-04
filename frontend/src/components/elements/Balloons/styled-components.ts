@@ -43,6 +43,7 @@ export const StyledBalloon = styled.img(({ theme }) => ({
   animationDelay: `${Math.random() * DELAY_MAX_MS}ms`,
   height: `${IMAGE_HEIGHT}px`,
   width: `${IMAGE_WIDTH}px`,
+  pointerEvents: "none",
 
   animationDuration: "750ms",
   animationName: moveUp,

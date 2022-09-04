@@ -12,23 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import textwrap
 from typing import Any, cast, Hashable, Optional, TYPE_CHECKING, Union
 
 import streamlit
 from streamlit import type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
-from streamlit.state import get_session_state, WidgetCallback
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.runtime.state import get_session_state, WidgetCallback
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.type_util import DataFrameCompatible, SupportsStr
-
-
-def clean_text(text: "SupportsStr") -> str:
-    """Convert an object to text, dedent it, and strip whitespace."""
-    return textwrap.dedent(str(text)).strip()
+    from streamlit.type_util import DataFrameCompatible
 
 
 def last_index_for_melted_dataframes(
@@ -84,3 +79,18 @@ def check_session_state_rules(
             " also had its value set via the Session State API."
         )
         _shown_default_value_warning = True
+
+
+def get_label_visibility_proto_value(
+    label_visibility_string: type_util.LabelVisibility,
+) -> Any:
+    """
+    Returns one of LabelVisibilityMessage enum constants based on string value
+    """
+
+    if label_visibility_string == "visible":
+        return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+    elif label_visibility_string == "hidden":
+        return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
+    elif label_visibility_string == "collapsed":
+        return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED

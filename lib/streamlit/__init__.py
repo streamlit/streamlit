@@ -46,7 +46,7 @@ For more detailed info, see https://docs.streamlit.io.
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.secrets import Secrets, SECRETS_FILE_LOC
+from streamlit.runtime.secrets import Secrets, SECRETS_FILE_LOC
 
 _LOGGER = _logger.get_logger("root")
 
@@ -68,7 +68,7 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     add_script_run_ctx as _add_script_run_ctx,
     get_script_run_ctx as _get_script_run_ctx,
     StopException,
@@ -82,9 +82,11 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 # syntax pass mypy checking with implicit_reexport disabled.
 
 from streamlit.echo import echo as echo
-from streamlit.legacy_caching import cache as cache
-from streamlit.caching import singleton as experimental_singleton
-from streamlit.caching import memo as experimental_memo
+from streamlit.runtime.legacy_caching import cache as cache
+from streamlit.runtime.caching import (
+    singleton as experimental_singleton,
+    memo as experimental_memo,
+)
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -195,7 +197,7 @@ from streamlit.commands.page_config import set_page_config as set_page_config
 
 # Session State
 
-from streamlit.state import SessionStateProxy
+from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
 
 session_state = SessionStateProxy()
@@ -405,10 +407,10 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
     >>> st.success('Done!')
 
     """
-    import streamlit.legacy_caching.caching as legacy_caching
-    import streamlit.caching as caching
-    from streamlit.elements.utils import clean_text
+    import streamlit.runtime.legacy_caching.caching as legacy_caching
+    import streamlit.runtime.caching as caching
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
+    from streamlit.string_util import clean_text
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions

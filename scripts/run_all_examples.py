@@ -27,7 +27,7 @@ EXAMPLE_DIR = "examples"
 
 # These are all the files we excliude
 EXCLUDED_FILENAMES = (
-    # Exclude mnist becuase it takes so long to run.
+    # Exclude mnist because it takes so long to run.
     "mnist-cnn.py",
     # Exclude caching because we special case it.
     "caching.py",

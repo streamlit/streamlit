@@ -16,6 +16,7 @@
  */
 
 import {
+  Arrow as ArrowProto,
   Alert as AlertProto,
   Audio as AudioProto,
   BokehChart as BokehChartProto,
@@ -49,6 +50,7 @@ import {
   Progress as ProgressProto,
   Text as TextProto,
   Video as VideoProto,
+  Heading as HeadingProto,
 } from "src/autogen/proto"
 
 import React, { ReactElement, Suspense } from "react"
@@ -75,6 +77,7 @@ import { getAlertKind } from "src/components/elements/Alert/Alert"
 
 import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
+import { Heading } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 import {
   BaseBlockProps,
@@ -201,6 +204,7 @@ const RawElementNodeRenderer = (
       return (
         <Alert
           width={width}
+          icon={alertProto.icon}
           body={alertProto.body}
           kind={getAlertKind(alertProto.format)}
         />
@@ -216,7 +220,8 @@ const RawElementNodeRenderer = (
     case "arrowDataFrame":
       return (
         <ArrowDataFrame
-          element={node.quiverElement as Quiver}
+          element={node.element.arrowDataFrame as ArrowProto}
+          data={node.quiverElement as Quiver}
           width={width}
           height={height}
         />
@@ -306,6 +311,14 @@ const RawElementNodeRenderer = (
         <Markdown
           width={width}
           element={node.element.markdown as MarkdownProto}
+        />
+      )
+
+    case "heading":
+      return (
+        <Heading
+          width={width}
+          element={node.element.heading as HeadingProto}
         />
       )
 

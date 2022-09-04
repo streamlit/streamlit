@@ -23,7 +23,6 @@ from streamlit import file_util
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
-from streamlit.session_data import SessionData
 from streamlit.source_util import get_pages
 from streamlit.watcher.path_watcher import (
     get_default_path_watcher_class,
@@ -40,8 +39,9 @@ PathWatcher = None
 
 
 class LocalSourcesWatcher:
-    def __init__(self, session_data: SessionData):
-        self._session_data = session_data
+    def __init__(self, main_script_path: str):
+        self._main_script_path = os.path.abspath(main_script_path)
+        self._script_folder = os.path.dirname(self._main_script_path)
         self._on_file_changed: List[Callable[[str], None]] = []
         self._is_closed = False
         self._cached_sys_modules: Set[str] = set()
@@ -53,7 +53,7 @@ class LocalSourcesWatcher:
 
         self._watched_modules: Dict[str, WatchedModule] = {}
 
-        for page_info in get_pages(self._session_data.main_script_path).values():
+        for page_info in get_pages(self._main_script_path).values():
             self._register_watcher(
                 page_info["script_path"],
                 module_name=None,  # Only root scripts have their modules set to None
@@ -116,7 +116,7 @@ class LocalSourcesWatcher:
         if filepath not in self._watched_modules:
             return
 
-        if filepath == self._session_data.main_script_path:
+        if filepath == self._main_script_path:
             return
 
         wm = self._watched_modules[filepath]
@@ -129,7 +129,7 @@ class LocalSourcesWatcher:
     def _file_should_be_watched(self, filepath):
         # Using short circuiting for performance.
         return self._file_is_new(filepath) and (
-            file_util.file_is_in_folder_glob(filepath, self._session_data.script_folder)
+            file_util.file_is_in_folder_glob(filepath, self._script_folder)
             or file_util.file_in_pythonpath(filepath)
         )
 

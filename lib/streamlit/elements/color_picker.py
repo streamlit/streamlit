@@ -12,23 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import re
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from textwrap import dedent
 from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from streamlit.state import register_widget
-from streamlit.state import (
+from streamlit.runtime.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
+
+
+@dataclass
+class ColorPickerSerde:
+    value: str
+
+    def serialize(self, v: str) -> str:
+        return str(v)
+
+    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
+        return str(ui_value if ui_value is not None else self.value)
 
 
 class ColorPickerMixin:
@@ -43,6 +64,7 @@ class ColorPickerMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> str:
         """Display a color picker widget.
 
@@ -50,6 +72,9 @@ class ColorPickerMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : str
             The hex value of this widget when it first renders. If None,
             defaults to black.
@@ -71,6 +96,11 @@ class ColorPickerMixin:
             An optional boolean, which disables the color picker if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -97,6 +127,7 @@ class ColorPickerMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -111,11 +142,13 @@ class ColorPickerMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+        maybe_raise_label_warnings(label, label_visibility)
 
         # set value default
         if value is None:
@@ -150,10 +183,7 @@ class ColorPickerMixin:
         if help is not None:
             color_picker_proto.help = dedent(help)
 
-        def deserialize_color_picker(
-            ui_value: Optional[str], widget_id: str = ""
-        ) -> str:
-            return str(ui_value if ui_value is not None else value)
+        serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
             "color_picker",
@@ -162,14 +192,17 @@ class ColorPickerMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_color_picker,
-            serializer=str,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         color_picker_proto.disabled = disabled
+        color_picker_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True

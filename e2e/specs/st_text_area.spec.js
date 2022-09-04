@@ -23,7 +23,7 @@ describe("st.text_area", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 8);
+    cy.get(".stTextArea").should("have.length", 10);
 
     cy.get(".stTextArea").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("text_area" + idx);
@@ -40,7 +40,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -59,7 +61,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -78,7 +82,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -97,7 +103,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -117,7 +125,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -136,7 +146,9 @@ describe("st.text_area", () => {
         'value 5: " test area! "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -156,7 +168,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: " text area! "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: " text area! "' +
         "text area changed: True"
     );
   });

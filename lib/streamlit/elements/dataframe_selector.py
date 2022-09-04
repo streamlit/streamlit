@@ -39,6 +39,8 @@ class DataFrameSelectorMixin:
         data: "Data" = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
+        *,
+        use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -48,7 +50,7 @@ class DataFrameSelectorMixin:
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
-            underyling DataFrame. Streamlit supports custom cell
+            underlying DataFrame. Streamlit supports custom cell
             values and colors. (It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
@@ -56,12 +58,19 @@ class DataFrameSelectorMixin:
             (i.e. with `config.dataFrameSerialization = "legacy"`).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
             `config.dataFrameSerialization = "arrow"`.
+
         width : int or None
-            Desired width of the UI element expressed in pixels. If None, a
-            default width based on the page width is used.
+            Desired width of the dataframe expressed in pixels. If None, the width
+            will be automatically calculated based on the column content.
+
         height : int or None
-            Desired height of the UI element expressed in pixels. If None, a
+            Desired height of the dataframe expressed in pixels. If None, a
             default height is used.
+
+        use_container_width : bool
+            If True, set the dataframe width to the width of the parent container.
+            This takes precedence over the width argument.
+            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -92,7 +101,9 @@ class DataFrameSelectorMixin:
 
         """
         if _use_arrow():
-            return self.dg._arrow_dataframe(data, width, height)
+            return self.dg._arrow_dataframe(
+                data, width, height, use_container_width=use_container_width
+            )
         else:
             return self.dg._legacy_dataframe(data, width, height)
 
@@ -165,7 +176,7 @@ class DataFrameSelectorMixin:
         y : str, sequence of str, or None
             Column name(s) to use for the y-axis. If a sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all columns as data series.
+            the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
         width : int
@@ -247,7 +258,7 @@ class DataFrameSelectorMixin:
         y : str, sequence of str, or None
             Column name(s) to use for the y-axis. If a sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all columns as data series.
+            the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
         width : int
@@ -329,7 +340,7 @@ class DataFrameSelectorMixin:
         y : str, sequence of str, or None
             Column name(s) to use for the y-axis. If a sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all columns as data series.
+            the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
         width : int

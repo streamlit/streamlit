@@ -13,37 +13,34 @@
 # limitations under the License.
 
 """Streamlit Unit test."""
-from io import BytesIO
 
-from unittest.mock import patch
 import json
+import logging
 import os
-import io
 import re
 import sys
-import time
 import textwrap
+import time
 import unittest
-import logging
+from unittest.mock import patch
 
-from google.protobuf import json_format
 import PIL.Image as Image
 import numpy as np
 import pandas as pd
+from google.protobuf import json_format
 from parameterized import parameterized
-from scipy.io import wavfile
 
 import streamlit as st
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.Alert_pb2 import Alert
-
-from streamlit.in_memory_file_manager import _calculate_file_id
-from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.in_memory_file_manager import STATIC_MEDIA_ENDPOINT
-
+from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+from streamlit.runtime.in_memory_file_manager import (
+    _calculate_file_id,
+    in_memory_file_manager,
+    STATIC_MEDIA_ENDPOINT,
+)
 from tests import testutil
 
 
@@ -75,9 +72,13 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to off
         self.assertEqual(True, st.get_option("client.displayEnabled"))
 
-        # client.displayEnabled and client.caching can be set after run starts.
-        st.set_option("client.displayEnabled", False)
-        self.assertEqual(False, st.get_option("client.displayEnabled"))
+        try:
+            # client.displayEnabled and client.caching can be set after run starts.
+            st.set_option("client.displayEnabled", False)
+            self.assertEqual(False, st.get_option("client.displayEnabled"))
+        finally:
+            # Restore original value
+            st.set_option("client.displayEnabled", True)
 
     def test_set_option_unscriptable(self):
         """Test that unscriptable options cannot be set with st.set_option."""
@@ -197,80 +198,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    def test_st_audio(self):
-        """Test st.audio."""
-
-        # Fake audio data: expect the resultant mimetype to be audio default.
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
-
-        st.audio(fake_audio_data)
-
-        el = self.get_delta_from_queue().new_element
-
-        # locate resultant file in InMemoryFileManager and test its properties.
-        file_id = _calculate_file_id(fake_audio_data, "audio/wav")
-        self.assertTrue(file_id in in_memory_file_manager)
-
-        afile = in_memory_file_manager.get(file_id)
-        self.assertEqual(afile.mimetype, "audio/wav")
-        self.assertEqual(afile.url, el.audio.url)
-
-        # Test using generated data in a file-like object.
-
-        sampleRate = 44100
-        frequency = 440
-        length = 5
-
-        t = np.linspace(
-            0, length, sampleRate * length
-        )  #  Produces a 5 second Audio-File
-        y = np.sin(frequency * 2 * np.pi * t)  #  Has frequency of 440Hz
-
-        wavfile.write("test.wav", sampleRate, y)
-
-        with io.open("test.wav", "rb") as f:
-            st.audio(f)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertTrue(".wav" in el.audio.url)
-
-        os.remove("test.wav")
-
-        # Test using a URL instead of data
-        some_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
-        st.audio(some_url)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.audio.url, some_url)
-
-        # Test that a non-URL string is assumed to be a filename
-        bad_filename = "blah"
-        with self.assertRaises(FileNotFoundError):
-            st.audio(bad_filename)
-
-        # Test that we can use an empty/None value without error.
-        st.audio(None)
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.audio.url, "")
-
-        # Test that our other data types don't result in an error.
-        st.audio(b"bytes_data")
-        st.audio("str_data".encode("utf-8"))
-        st.audio(BytesIO(b"bytesio_data"))
-        st.audio(np.array([0, 1, 2, 3]))
-
-    def test_st_audio_options(self):
-        """Test st.audio with options."""
-        from streamlit.in_memory_file_manager import _calculate_file_id
-
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
-        st.audio(fake_audio_data, format="audio/mp3", start_time=10)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.audio.start_time, 10)
-        self.assertTrue(el.audio.url.startswith(STATIC_MEDIA_ENDPOINT))
-        self.assertTrue(_calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
-
     def test_st_balloons(self):
         """Test st.balloons."""
         st.balloons()
@@ -374,6 +301,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.body, "some error")
         self.assertEqual(el.alert.format, Alert.ERROR)
 
+    def test_st_error_with_icon(self):
+        """Test st.error with icon."""
+        st.error("some error", icon="😱")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.alert.body, "some error")
+        self.assertEqual(el.alert.icon, "😱")
+        self.assertEqual(el.alert.format, Alert.ERROR)
+
     @parameterized.expand([(True,), (False,)])
     def test_st_exception(self, show_error_details: bool):
         """Test st.exception."""
@@ -398,16 +334,17 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.header("some header")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "## some header")
+        self.assertEqual(el.heading.body, "some header")
+        self.assertEqual(el.heading.tag, "h2")
 
     def test_st_header_with_anchor(self):
         """Test st.header with anchor."""
         st.header("some header", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h2 data-anchor="some-anchor">some header</h2>'
-        )
+        self.assertEqual(el.heading.body, "some header")
+        self.assertEqual(el.heading.tag, "h2")
+        self.assertEqual(el.heading.anchor, "some-anchor")
 
     def test_st_help(self):
         """Test st.help."""
@@ -424,12 +361,12 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             # Python < 3.9 represents the signature slightly differently
             self.assertEqual(
                 el.doc_string.signature,
-                "(body: str, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'",
+                "(body: object, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'",
             )
         else:
             self.assertEqual(
                 el.doc_string.signature,
-                "(body: str, anchor: Optional[str] = None) -> 'DeltaGenerator'",
+                "(body: object, anchor: Optional[str] = None) -> 'DeltaGenerator'",
             )
 
     def test_st_image_PIL_image(self):
@@ -524,6 +461,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.alert.body, "some info")
+        self.assertEqual(el.alert.format, Alert.INFO)
+
+    def test_st_info_with_icon(self):
+        """Test st.info with icon."""
+        st.info("some info", icon="👉🏻")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.alert.body, "some info")
+        self.assertEqual(el.alert.icon, "👉🏻")
         self.assertEqual(el.alert.format, Alert.INFO)
 
     def test_st_json(self):
@@ -738,16 +684,17 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.subheader("some subheader")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "### some subheader")
+        self.assertEqual(el.heading.body, "some subheader")
+        self.assertEqual(el.heading.tag, "h3")
 
     def test_st_subheader_with_anchor(self):
         """Test st.subheader with anchor."""
         st.subheader("some subheader", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h3 data-anchor="some-anchor">some subheader</h3>'
-        )
+        self.assertEqual(el.heading.body, "some subheader")
+        self.assertEqual(el.heading.tag, "h3")
+        self.assertEqual(el.heading.anchor, "some-anchor")
 
     def test_st_success(self):
         """Test st.success."""
@@ -755,6 +702,15 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.alert.body, "some success")
+        self.assertEqual(el.alert.format, Alert.SUCCESS)
+
+    def test_st_success_with_icon(self):
+        """Test st.success with icon."""
+        st.success("some success", icon="✅")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.alert.body, "some success")
+        self.assertEqual(el.alert.icon, "✅")
         self.assertEqual(el.alert.format, Alert.SUCCESS)
 
     def test_st_legacy_table(self):
@@ -793,93 +749,21 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.title("some title")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "# some title")
+        self.assertEqual(el.heading.body, "some title")
+        self.assertEqual(el.heading.tag, "h1")
 
     def test_st_title_with_anchor(self):
         """Test st.title with anchor."""
         st.title("some title", anchor="some-anchor")
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h1 data-anchor="some-anchor">some title</h1>'
-        )
+        self.assertEqual(el.heading.body, "some title")
+        self.assertEqual(el.heading.tag, "h1")
+        self.assertEqual(el.heading.anchor, "some-anchor")
 
     def test_st_legacy_vega_lite_chart(self):
         """Test st._legacy_vega_lite_chart."""
         pass
-
-    def test_st_video(self):
-        """Test st.video."""
-
-        # Make up some bytes to pretend we have a video.  The server should not vet
-        # the video before sending it to the browser.
-        fake_video_data = "\x12\x10\x35\x44\x55\x66".encode("utf-8")
-
-        st.video(fake_video_data)
-
-        el = self.get_delta_from_queue().new_element
-
-        # locate resultant file in InMemoryFileManager and test its properties.
-        file_id = _calculate_file_id(fake_video_data, "video/mp4")
-        self.assertTrue(file_id in in_memory_file_manager)
-
-        afile = in_memory_file_manager.get(file_id)
-        self.assertEqual(afile.mimetype, "video/mp4")
-        self.assertEqual(afile.url, el.video.url)
-
-        # Test with an arbitrary URL in place of data
-        some_url = "http://www.marmosetcare.com/video/in-the-wild/intro.webm"
-        st.video(some_url)
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.url, some_url)
-
-        # Test with sufficiently varied youtube URLs
-        yt_urls = (
-            "https://youtu.be/_T8LGqJtuGc",
-            "https://www.youtube.com/watch?v=kmfC-i9WgH0",
-            "https://www.youtube.com/embed/sSn4e1lLVpA",
-        )
-        yt_embeds = (
-            "https://www.youtube.com/embed/_T8LGqJtuGc",
-            "https://www.youtube.com/embed/kmfC-i9WgH0",
-            "https://www.youtube.com/embed/sSn4e1lLVpA",
-        )
-        # url should be transformed into an embed link (or left alone).
-        for x in range(0, len(yt_urls)):
-            st.video(yt_urls[x])
-            el = self.get_delta_from_queue().new_element
-            self.assertEqual(el.video.url, yt_embeds[x])
-
-        # Test that a non-URL string is assumed to be a filename
-        bad_filename = "blah"
-        with self.assertRaises(FileNotFoundError):
-            st.video(bad_filename)
-
-        # Test that we can use an empty/None value without error.
-        st.video(None)
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.url, "")
-
-        # Test that our other data types don't result in an error.
-        st.video(b"bytes_data")
-        st.video("str_data".encode("utf-8"))
-        st.video(BytesIO(b"bytesio_data"))
-        st.video(np.array([0, 1, 2, 3]))
-
-    def test_st_video_options(self):
-        """Test st.video with options."""
-
-        from streamlit.in_memory_file_manager import _calculate_file_id
-
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
-        st.video(fake_video_data, format="video/mp4", start_time=10)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.start_time, 10)
-        self.assertTrue(el.video.url.startswith(STATIC_MEDIA_ENDPOINT))
-        self.assertTrue(
-            _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
-        )
 
     def test_st_warning(self):
         """Test st.warning."""
@@ -888,3 +772,18 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.alert.body, "some warning")
         self.assertEqual(el.alert.format, Alert.WARNING)
+
+    def test_st_warning_with_icon(self):
+        """Test st.warning with icon."""
+        st.warning("some warning", icon="⚠️")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.alert.body, "some warning")
+        self.assertEqual(el.alert.icon, "⚠️")
+        self.assertEqual(el.alert.format, Alert.WARNING)
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_st_alert_exceptions(self, alert_func):
+        """Test that alert functions throw an exception when a non-emoji is given as an icon."""
+        with self.assertRaises(StreamlitAPIException):
+            alert_func("some alert", icon="hello world")

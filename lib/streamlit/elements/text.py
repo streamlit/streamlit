@@ -15,7 +15,7 @@
 from typing import cast, TYPE_CHECKING
 
 from streamlit.proto.Text_pb2 import Text as TextProto
-from .utils import clean_text
+from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

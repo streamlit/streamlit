@@ -64,7 +64,7 @@ enum ComponentMessageType {
  */
 export class Streamlit {
   /**
-   * The Streamlit component API version we're targetting.
+   * The Streamlit component API version we're targeting.
    * There's currently only 1!
    */
   public static readonly API_VERSION = 1;

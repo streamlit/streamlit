@@ -252,7 +252,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     position: "relative",
     height: "100%",
     width: "100%",
-    overflow: hideScrollbar ? "hidden" : "overlay",
+    overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
   })
 )
 
@@ -311,6 +311,6 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.sidebarMobile,
 
   "&:hover": {
-    backgroundImage: `linear-gradient(to right, transparent 40%, ${theme.colors.fadedText10} 45%, transparent 60%)`,
+    backgroundImage: `linear-gradient(to right, transparent 42%, ${theme.colors.fadedText20} 50%, transparent 58%)`,
   },
 }))

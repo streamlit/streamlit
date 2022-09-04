@@ -13,10 +13,16 @@
 # limitations under the License.
 
 import json
-from typing import Any, cast, TYPE_CHECKING
+from typing import (
+    Any,
+    List,
+    Union,
+    cast,
+    TYPE_CHECKING,
+)
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
-from streamlit.state import SessionStateProxy
+from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
 
 
@@ -24,10 +30,17 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+def _ensure_serialization(o: object) -> Union[str, List[Any]]:
+    """repr function for json.dumps default arg, which tries to serialize sets as lists"""
+    if isinstance(o, set):
+        return list(o)
+    return repr(o)
+
+
 class JsonMixin:
     def json(
         self,
-        body: Any,
+        body: object,
         *,  # keyword-only arguments:
         expanded: bool = True,
     ) -> "DeltaGenerator":
@@ -35,7 +48,7 @@ class JsonMixin:
 
         Parameters
         ----------
-        body : Object or str
+        body : object or str
             The object to print as JSON. All referenced objects should be
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
@@ -70,13 +83,14 @@ class JsonMixin:
 
         if not isinstance(body, str):
             try:
-                body = json.dumps(body, default=repr)
+                # Serialize body to string and try to interpret sets as lists
+                body = json.dumps(body, default=_ensure_serialization)
             except TypeError as err:
                 st.warning(
                     "Warning: this data structure was not fully serializable as "
-                    "JSON due to one or more unexpected keys.  (Error was: %s)" % err
+                    f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )
-                body = json.dumps(body, skipkeys=True, default=repr)
+                body = json.dumps(body, skipkeys=True, default=_ensure_serialization)
 
         json_proto = JsonProto()
         json_proto.body = body
