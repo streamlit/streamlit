@@ -20,6 +20,7 @@ import { Selectbox as SelectboxProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UISelectbox from "src/components/shared/Dropdown"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -105,7 +106,13 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { options, help, label, formId } = this.props.element
+    const {
+      options,
+      help,
+      label,
+      labelVisibility,
+      formId,
+    } = this.props.element
     const { disabled, widgetMgr } = this.props
 
     // Manage our form-clear event handler.
@@ -118,6 +125,9 @@ class Selectbox extends React.PureComponent<Props, State> {
     return (
       <UISelectbox
         label={label}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value
+        )}
         options={options}
         disabled={disabled}
         width={this.props.width}

@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message Slider {
   enum DataType {
     // What numeric type are we working with? This doesn't change how the
@@ -44,4 +46,5 @@ message Slider {
   repeated string options = 13;
   string help = 14;
   bool disabled = 15;
+  LabelVisibilityMessage label_visibility = 16;
 }

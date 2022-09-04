@@ -21,7 +21,10 @@ import { enableFetchMocks } from "jest-fetch-mock"
 
 import { mount, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { CameraInput as CameraInputProto } from "src/autogen/proto"
+import {
+  CameraInput as CameraInputProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+} from "src/autogen/proto"
 import CameraInput, { Props, State } from "./CameraInput"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent from "./WebcamComponent"
@@ -38,7 +41,7 @@ jest.mock("react-device-detect", () => {
 
 const INITIAL_SERVER_FILE_ID = 1
 
-const getProps = (elementProps: Partial<Props> = {}): Props => {
+const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
   let mockServerFileIdCounter = INITIAL_SERVER_FILE_ID
   return {
     element: CameraInputProto.create({
@@ -99,6 +102,30 @@ describe("CameraInput widget", () => {
     const wrapper = shallow(<CameraInput {...props} />)
     expect(wrapper.find(WidgetLabel).props().label).toEqual(
       props.element.label
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = mount(<CameraInput {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<CameraInput {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
     )
   })
 

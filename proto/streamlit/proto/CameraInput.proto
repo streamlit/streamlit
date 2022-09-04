@@ -15,11 +15,14 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message CameraInput {
   string id = 1;
   string label = 2;
   string help = 3;
   string form_id = 4;
   bool disabled = 5;
+  LabelVisibilityMessage label_visibility = 6;
 }
 

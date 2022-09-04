@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
 
 
@@ -33,6 +34,10 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.selectbox
         self.assertEqual(c.label, "the label")
+        self.assertEqual(
+            c.label_visibility.value,
+            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        )
         self.assertEqual(c.default, 0)
         self.assertEqual(c.disabled, False)
 
@@ -151,3 +156,26 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         selectbox_proto = self.get_delta_from_queue(1).new_element.selectbox
         self.assertEqual(selectbox_proto.form_id, form_proto.form.form_id)
+
+    @parameterized.expand(
+        [
+            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.selectbox("the label", ("m", "f"), label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        self.assertEqual(c.label_visibility.value, proto_value)
+
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.selectbox("the label", ("m", "f"), label_visibility="wrong_value")
+            self.assertEquals(
+                str(e),
+                "Unsupported label_visibility option 'wrong_value'. Valid values are "
+                "'visible', 'hidden' or 'collapsed'.",
+            )

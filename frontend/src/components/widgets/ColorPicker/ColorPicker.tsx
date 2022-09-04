@@ -20,6 +20,7 @@ import { ColorPicker as ColorPickerProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UIColorPicker from "src/components/shared/ColorPicker"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -120,6 +121,9 @@ class ColorPicker extends React.PureComponent<Props, State> {
     return (
       <UIColorPicker
         label={element.label}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          element.labelVisibility?.value
+        )}
         help={element.help}
         onChange={this.onColorClose}
         disabled={disabled}
