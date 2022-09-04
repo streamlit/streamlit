@@ -269,6 +269,8 @@ class MemoAPI:
         ttl : float or None
             The maximum number of seconds to keep an entry in the cache, or
             None if cache entries should not expire. The default is None.
+            Note that ttl is incompatible with `persist="disk"` - `ttl` will be
+            ignored if `persist` is specified.
 
         Example
         -------
@@ -338,9 +340,8 @@ class MemoAPI:
             # warning in case both persist="disk" and ttl parameters specified
             if persist == "disk" and ttl is not None:
                 _LOGGER.warning(
-                    'The decorator uses the persist="disk" and ttl '
-                    "parameters at the same time. Persist cache currently "
-                    "does not support the TTL cache feature."
+                    f"The memoized function '{f.__name__}' has a TTL that will be "
+                    f"ignored. Persistent memo caches currently don't support TTL."
                 )
             return create_cache_wrapper(
                 MemoizedFunction(
