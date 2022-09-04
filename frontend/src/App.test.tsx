@@ -119,6 +119,7 @@ jest.mock("moment", () =>
 describe("App", () => {
   beforeEach(() => {
     SessionInfo.current = new SessionInfo({
+      appId: "aid",
       sessionId: "sessionId",
       streamlitVersion: "sv",
       pythonVersion: "pv",
