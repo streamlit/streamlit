@@ -27,7 +27,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { isInForm } from "src/lib/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import { StyledTextInput } from "./styled-components"
 
 export interface Props {
@@ -175,7 +175,13 @@ class TextInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledTextInput className="row-widget stTextInput" width={width}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -191,6 +197,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
+          aria-label={element.label}
           disabled={disabled}
           type={this.getTypeString()}
           autoComplete={element.autocomplete}

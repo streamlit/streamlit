@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
 
 
@@ -33,6 +34,10 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
+        self.assertEqual(
+            c.label_visibility.value,
+            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        )
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.disabled, False)
 
@@ -241,3 +246,26 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertEqual(multiselect_proto.label, "foo")
         self.assertEqual(multiselect_proto.options, ["bar", "baz"])
         self.assertEqual(multiselect_proto.default, [])
+
+    @parameterized.expand(
+        [
+            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.multiselect("the label", ("m", "f"), label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.label_visibility.value, proto_value)
+
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.multiselect("the label", ("m", "f"), label_visibility="wrong_value")
+            self.assertEquals(
+                str(e),
+                "Unsupported label_visibility option 'wrong_value'. Valid values are "
+                "'visible', 'hidden' or 'collapsed'.",
+            )

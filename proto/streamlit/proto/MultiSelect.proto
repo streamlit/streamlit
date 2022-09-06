@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message MultiSelect {
   string id = 1;
   string label = 2;
@@ -26,4 +28,5 @@ message MultiSelect {
   repeated int32 value = 7;
   bool set_value = 8;
   bool disabled = 9;
+  LabelVisibilityMessage label_visibility = 10;
 }

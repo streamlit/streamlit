@@ -21,6 +21,7 @@ import { logWarning } from "src/lib/log"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { hasMatch, score } from "fzy.js"
 import _ from "lodash"
+import { LabelVisibilityOptions } from "src/lib/utils"
 import { Placement } from "src/components/shared/Tooltip"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import {
@@ -35,6 +36,7 @@ export interface Props {
   onChange: (value: number) => void
   options: any[]
   label?: string | null
+  labelVisibility?: LabelVisibilityOptions
   help?: string
 }
 
@@ -131,7 +133,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const style = { width: this.props.width }
-    const { label, help } = this.props
+    const { label, labelVisibility, help } = this.props
     let { disabled, options } = this.props
 
     let value = [
@@ -162,7 +164,11 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <WidgetLabel label={label} disabled={disabled}>
+        <WidgetLabel
+          label={label}
+          labelVisibility={labelVisibility}
+          disabled={disabled}
+        >
           {help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
@@ -173,6 +179,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           clearable={false}
           disabled={disabled}
           labelKey="label"
+          aria-label={label || ""}
           onChange={this.onChange}
           onInputChange={this.onInputChange}
           onClose={this.onClose}
