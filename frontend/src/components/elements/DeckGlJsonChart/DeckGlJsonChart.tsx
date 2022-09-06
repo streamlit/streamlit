@@ -216,7 +216,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   render(): ReactNode {
     const deck = DeckGlJsonChart.getDeckObject(this.props)
     const { viewState } = this.state
-    const { zoomButton } = this.props.element
 
     return (
       <StyledDeckGlChart
@@ -245,13 +244,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             }
             mapboxApiAccessToken={this.props.mapboxToken}
           />
-          {zoomButton && (
-            <div
-              style={{ position: "absolute", right: 30, top: 120, zIndex: 1 }}
-            >
-              <NavigationControl className="zoomButton" showCompass={false} />
-            </div>
-          )}
+          <div style={{ position: "absolute", right: 10, top: 10, zIndex: 1 }}>
+            <NavigationControl className="zoomButton" showCompass={false} />
+          </div>
+          )
         </DeckGL>
       </StyledDeckGlChart>
     )

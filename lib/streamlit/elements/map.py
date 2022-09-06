@@ -78,7 +78,6 @@ class MapMixin:
         data: Data = None,
         zoom: Optional[int] = None,
         use_container_width: bool = True,
-        zoom_button: bool = False,
     ) -> "DeltaGenerator":
         """Display a map with points on it.
 
@@ -104,8 +103,6 @@ class MapMixin:
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels
         use_container_width: bool
-        zoom_button: bool
-            Specifies whether or not to display a clickable zoom button.
 
         Example
         -------
@@ -127,7 +124,6 @@ class MapMixin:
         map_proto = DeckGlJsonChartProto()
         map_proto.json = to_deckgl_json(data, zoom)
         map_proto.use_container_width = use_container_width
-        map_proto.zoom_button = zoom_button
         return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
