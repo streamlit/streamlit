@@ -59,7 +59,7 @@ export const StyledResizableContainer = styled.div<
   },
 
   // Hide the resize handle in the right corner. Resizing is still be possible.
-  // firefox doesn't doesn't support this so it always shows
+  // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar only works on chrome and safari
   "&::-webkit-resizer": {
     display: "none",
   },
