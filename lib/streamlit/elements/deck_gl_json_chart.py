@@ -18,6 +18,7 @@ from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, cast
 from typing_extensions import Final
 
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from pydeck import Deck
@@ -32,6 +33,7 @@ EMPTY_MAP: Final[Mapping[str, Any]] = {
 
 
 class PydeckMixin:
+    @gather_metrics
     def pydeck_chart(
         self,
         pydeck_obj: Optional["Deck"] = None,

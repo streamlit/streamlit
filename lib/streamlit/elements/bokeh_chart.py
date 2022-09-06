@@ -21,6 +21,7 @@ from typing_extensions import Final
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from bokeh.plotting.figure import Figure
@@ -30,6 +31,7 @@ ST_BOKEH_VERSION: Final = "2.4.3"
 
 
 class BokehMixin:
+    @gather_metrics
     def bokeh_chart(
         self,
         figure: "Figure",
