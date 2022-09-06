@@ -31,7 +31,7 @@ coords: "np.typing.NDArray[np.float_]" = cast(
 ) + [37.76, -122.4]
 df = pd.DataFrame(coords, columns=["lat", "lon"])
 
-st.map(df)
+st.map(df, zoom_button=True)
 
 # Same but with custom zoom level:
 

@@ -23,4 +23,8 @@ describe("st.map", () => {
   it("displays 3 maps", () => {
     cy.get(".element-container .stDeckGlJsonChart").should("have.length", 3);
   });
+  
+  it("displays 1 zoom button", () => {
+    cy.get(".element-container .zoomButton").should("have.length", 1)
+  })
 });
