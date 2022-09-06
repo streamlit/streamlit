@@ -52,6 +52,8 @@ _CALLABLE_NAME_MAPPING: Final = {
     "_transparent_write": "magic",
     "MemoAPI.__call__": "experimental_memo",
     "SingletonAPI.__call__": "experimental_singleton",
+    "SingletonAPI.clear": "clear_singleton",
+    "MemoAPI.clear": "clear_memo",
     "SingletonCache.write_result": "_cache_singleton_object",
     "MemoCache.write_result": "_cache_memo_object",
     "_write_to_cache": "_cache_object",
@@ -152,7 +154,7 @@ def _get_callable_name(callable: Callable[..., Any]) -> str:
 
 def _get_arg_metadata(arg: object) -> Optional[str]:
     with contextlib.suppress(Exception):
-        if isinstance(arg, (bool, int)):
+        if isinstance(arg, (bool)):
             return f"val:{arg}"
 
         if isinstance(arg, Sized):
