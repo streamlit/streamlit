@@ -18,7 +18,11 @@
 import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
 import isEqual from "lodash/isEqual"
-import { StaticMap } from "react-map-gl"
+import {
+  _MapContext as MapContext,
+  StaticMap,
+  NavigationControl,
+} from "react-map-gl"
 import { withTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import { getLuminance } from "color2k"
@@ -226,6 +230,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
+          ContextProvider={MapContext.Provider}
           controller
         >
           <StaticMap
@@ -239,6 +244,11 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             }
             mapboxApiAccessToken={this.props.mapboxToken}
           />
+          <div
+            style={{ position: "absolute", right: 30, top: 120, zIndex: 1 }}
+          >
+            <NavigationControl showCompass={false} />
+          </div>
         </DeckGL>
       </StyledDeckGlChart>
     )
