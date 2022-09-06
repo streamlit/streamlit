@@ -89,9 +89,10 @@ function Tooltip({
         },
         Inner: {
           style: {
-            backgroundColor: getLuminance(colors.bgColor)
-              ? colors.bgColor
-              : colors.secondaryBg,
+            backgroundColor:
+              getLuminance(colors.bgColor) > 0.5
+                ? colors.bgColor
+                : colors.secondaryBg,
             color: colors.bodyText,
             fontSize: fontSizes.sm,
             fontWeight: "normal",
