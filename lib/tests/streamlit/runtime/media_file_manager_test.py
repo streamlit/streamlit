@@ -14,10 +14,11 @@
 
 """Unit tests for MediaFileManager"""
 
-from typing import Optional, Union
+from typing import Optional
 from unittest import mock, TestCase
 import random
 import time
+from unittest.mock import mock_open
 
 from streamlit.runtime.media_file_manager import (
     MediaFileManager,
@@ -101,7 +102,7 @@ class MediaFileManagerTest(TestCase):
 
     def _add_file_and_get_object(
         self,
-        content: Union[bytes, str],
+        content: bytes,
         mimetype: str,
         coordinates: str,
         file_name: Optional[str] = None,
@@ -163,6 +164,29 @@ class MediaFileManagerTest(TestCase):
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session",
+    )
+    @mock.patch(
+        "streamlit.runtime.media_file_manager.open",
+        mock_open(read_data=b"mock_test_file"),
+        create=True,
+    )
+    def test_add_file_by_name(self, _1):
+        """Test that we can add files by filename."""
+        self.media_file_manager.add(
+            "mock/file/path.png", "image/png", random_coordinates()
+        )
+
+        # We should have a single file in the MFM.
+        self.assertEqual(len(self.media_file_manager), 1)
+
+        # And it should be registered to our session
+        self.assertEqual(
+            len(self.media_file_manager._files_by_session_and_coord["mock_session"]), 1
+        )
 
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     @mock.patch("time.time")
