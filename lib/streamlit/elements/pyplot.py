@@ -23,6 +23,7 @@ from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
@@ -33,6 +34,7 @@ LOGGER: Final = get_logger(__name__)
 
 
 class PyplotMixin:
+    @gather_metrics
     def pyplot(
         self,
         fig: Optional["Figure"] = None,

@@ -19,6 +19,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.metrics_util import gather_metrics
 
 
 class FormData(NamedTuple):
@@ -109,6 +110,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
 
 
 class FormMixin:
+    @gather_metrics
     def form(self, key: str, clear_on_submit: bool = False):
         """Create a form that batches elements together with a "Submit" button.
 
@@ -197,6 +199,7 @@ class FormMixin:
         block_dg._form_data = FormData(form_id)
         return block_dg
 
+    @gather_metrics
     def form_submit_button(
         self,
         label: str = "Submit",

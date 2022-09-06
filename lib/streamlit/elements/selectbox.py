@@ -35,6 +35,8 @@ from streamlit.type_util import (
     maybe_raise_label_warnings,
 )
 from streamlit.util import index_
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from .utils import (
     check_callback_rules,
@@ -64,6 +66,7 @@ class SelectboxSerde:
 
 
 class SelectboxMixin:
+    @gather_metrics
     def selectbox(
         self,
         label: str,

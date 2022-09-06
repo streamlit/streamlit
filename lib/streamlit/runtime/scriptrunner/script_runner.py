@@ -19,6 +19,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from typing import Dict, Optional, Callable
+from timeit import default_timer as timer
 
 from blinker import Signal
 
@@ -283,6 +284,7 @@ class ScriptRunner:
             uploaded_file_mgr=self._uploaded_file_mgr,
             page_script_hash=self._client_state.page_script_hash,
             user_info=self._user_info,
+            gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -408,6 +410,8 @@ class ScriptRunner:
 
         LOGGER.debug("Running script %s", rerun_data)
 
+        start_time: float = timer()
+
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
@@ -416,6 +420,7 @@ class ScriptRunner:
         # Safe because pages will at least contain the app's main page.
         main_page_info = list(pages.values())[0]
         current_page_info = None
+        uncaught_exception = None
 
         if rerun_data.page_script_hash:
             current_page_info = pages.get(rerun_data.page_script_hash, None)
@@ -553,6 +558,7 @@ class ScriptRunner:
                     self._session_state.on_script_will_rerun(rerun_data.widget_states)
 
                 ctx.on_script_start()
+                prep_time = timer() - start_time
                 exec(code, module.__dict__)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
@@ -563,13 +569,38 @@ class ScriptRunner:
 
         except BaseException as e:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
-            handle_uncaught_app_exception(e)
+            uncaught_exception = e
+            handle_uncaught_app_exception(uncaught_exception)
 
         finally:
             if rerun_exception_data:
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
             else:
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+
+            if ctx.gather_usage_stats:
+                try:
+                    # Prevent issues with circular import
+                    from streamlit.runtime.metrics_util import (
+                        create_page_profile_message,
+                        to_microseconds,
+                    )
+
+                    # Create and send page profile information
+                    ctx.enqueue(
+                        create_page_profile_message(
+                            ctx.tracked_commands,
+                            exec_time=to_microseconds(timer() - start_time),
+                            prep_time=to_microseconds(prep_time),
+                            uncaught_exception=type(uncaught_exception).__name__
+                            if uncaught_exception
+                            else None,
+                        )
+                    )
+                except Exception as ex:
+                    # Always capture all exceptions since we want to make sure that
+                    # the telemetry never causes any issues.
+                    LOGGER.debug("Failed to create page profile", exc_info=ex)
             self._on_script_finished(ctx, finished_event)
 
         # Use _log_if_error() to make sure we never ever ever stop running the
