@@ -30,7 +30,9 @@ class MediaFileStorageError(Exception):
 
 
 class MediaFileStorage(Protocol):
-    def load_and_get_id(self, file: Union[str, bytes], mimetype: str) -> str:
+    def load_and_get_id(
+        self, filename_or_data: Union[str, bytes], mimetype: str
+    ) -> str:
         """Load the given file path or bytes into the manager and return
         an ID that uniquely identifies it.
 
@@ -40,7 +42,7 @@ class MediaFileStorage(Protocol):
 
         Parameters
         ----------
-        file
+        filename_or_data
             A path to a file, or the file's raw data as bytes.
 
         mimetype
