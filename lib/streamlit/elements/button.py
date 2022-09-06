@@ -31,6 +31,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
 )
 from streamlit.type_util import Key, to_key
+from streamlit.runtime.metrics_util import gather_metrics
 
 from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
@@ -58,6 +59,7 @@ class ButtonSerde:
 
 
 class ButtonMixin:
+    @gather_metrics
     def button(
         self,
         label: str,
@@ -125,6 +127,7 @@ class ButtonMixin:
             ctx=ctx,
         )
 
+    @gather_metrics
     def download_button(
         self,
         label: str,

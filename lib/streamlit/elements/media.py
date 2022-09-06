@@ -23,6 +23,7 @@ from streamlit import type_util
 from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from typing import Any
@@ -38,6 +39,7 @@ Data: TypeAlias = Union[
 
 
 class MediaMixin:
+    @gather_metrics
     def audio(
         self,
         data: Data,
@@ -76,6 +78,7 @@ class MediaMixin:
         marshall_audio(coordinates, audio_proto, data, format, start_time)
         return self.dg._enqueue("audio", audio_proto)
 
+    @gather_metrics
     def video(
         self,
         data: Data,

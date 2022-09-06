@@ -35,6 +35,8 @@ from streamlit.file_util import (
 from streamlit.logger import get_logger
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStatsProvider, CacheStat
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
@@ -229,6 +231,7 @@ class MemoAPI:
     # __call__ should be a static method, but there's a mypy bug that
     # breaks type checking for overloaded static functions:
     # https://github.com/python/mypy/issues/7781
+    @gather_metrics
     def __call__(
         self,
         func: Optional[F] = None,
@@ -273,6 +276,8 @@ class MemoAPI:
         ttl : float or None
             The maximum number of seconds to keep an entry in the cache, or
             None if cache entries should not expire. The default is None.
+            Note that ttl is incompatible with `persist="disk"` - `ttl` will be
+            ignored if `persist` is specified.
 
         Example
         -------
@@ -337,10 +342,15 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        # Support passing the params via function decorator, e.g.
-        # @st.memo(persist=True, show_spinner=False)
-        if func is None:
-            return lambda f: create_cache_wrapper(
+        def wrapper(f):
+            # We use wrapper function here instead of lambda function to be able to log
+            # warning in case both persist="disk" and ttl parameters specified
+            if persist == "disk" and ttl is not None:
+                _LOGGER.warning(
+                    f"The memoized function '{f.__name__}' has a TTL that will be "
+                    f"ignored. Persistent memo caches currently don't support TTL."
+                )
+            return create_cache_wrapper(
                 MemoizedFunction(
                     func=f,
                     persist=persist,
@@ -350,6 +360,11 @@ class MemoAPI:
                     ttl=ttl,
                 )
             )
+
+        # Support passing the params via function decorator, e.g.
+        # @st.memo(persist=True, show_spinner=False)
+        if func is None:
+            return wrapper
 
         return create_cache_wrapper(
             MemoizedFunction(
@@ -363,6 +378,7 @@ class MemoAPI:
         )
 
     @staticmethod
+    @gather_metrics
     def clear() -> None:
         """Clear all in-memory and on-disk memo caches."""
         _memo_caches.clear_all()
@@ -442,6 +458,7 @@ class MemoCache(Cache):
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
+    @gather_metrics
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.

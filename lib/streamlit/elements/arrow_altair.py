@@ -41,6 +41,7 @@ from streamlit import type_util
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
+from streamlit.runtime.metrics_util import gather_metrics
 
 from .arrow import Data
 from .utils import last_index_for_melted_dataframes
@@ -65,6 +66,7 @@ class ChartType(Enum):
 
 
 class ArrowAltairMixin:
+    @gather_metrics
     def _arrow_line_chart(
         self,
         data: Data = None,
@@ -133,6 +135,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
 
+    @gather_metrics
     def _arrow_area_chart(
         self,
         data: Data = None,
@@ -200,6 +203,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
 
+    @gather_metrics
     def _arrow_bar_chart(
         self,
         data: Data = None,
@@ -268,6 +272,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
 
+    @gather_metrics
     def _arrow_altair_chart(
         self,
         altair_chart: Chart,

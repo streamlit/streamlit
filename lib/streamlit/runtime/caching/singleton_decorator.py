@@ -24,6 +24,8 @@ import streamlit as st
 from streamlit.logger import get_logger
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStatsProvider, CacheStat
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import (
     Cache,
@@ -151,6 +153,7 @@ class SingletonAPI:
     # __call__ should be a static method, but there's a mypy bug that
     # breaks type checking for overloaded static functions:
     # https://github.com/python/mypy/issues/7781
+    @gather_metrics
     def __call__(
         self,
         func: Optional[F] = None,
@@ -250,6 +253,7 @@ class SingletonAPI:
         )
 
     @staticmethod
+    @gather_metrics
     def clear() -> None:
         """Clear all singleton caches."""
         _singleton_caches.clear_all()
@@ -286,6 +290,7 @@ class SingletonCache(Cache):
             else:
                 raise CacheKeyNotFoundError()
 
+    @gather_metrics
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         main_id = st._main.id

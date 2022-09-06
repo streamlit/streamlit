@@ -39,6 +39,7 @@ describe("FileUploadClient Upload", () => {
   beforeEach(() => {
     axiosMock = new MockAdapter(axios)
     SessionInfo.current = new SessionInfo({
+      appId: "aid",
       sessionId: "sessionId",
       streamlitVersion: "sv",
       pythonVersion: "pv",
