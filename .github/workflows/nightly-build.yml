@@ -1,0 +1,120 @@
+name: Nightly Build
+# TODO: Add workflow call to on: prompt
+  # - cypress
+
+on:
+  # FOR TESTING ONLY:
+  push:
+    branches:
+      - '**'
+
+  # schedule:
+  #   # Run job at 10.30pm PST or 11.30pm PDT
+  #   - cron:  '30 6 * * *'
+
+jobs:
+  create-nightly-tag:
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: make develop
+      # - name: Create tag
+      #   run: |
+      #     git config user.email "core+streamlitbot-github@streamlit.io"
+      #     git config user.name "Streamlit Bot"
+
+      #     TAG="$(./scripts/pypi_nightly_create_tag.py)"
+
+      #     ./scripts/update_version.py $TAG
+      #     ./scripts/update_name.py streamlit-nightly
+
+      #     git add lib/setup.py
+      #     git add frontend/package.json
+
+      #     git add lib/streamlit/__init__.py
+      #     git add lib/streamlit/version.py
+
+      #     git commit -m "Update version and project name in files"
+
+      #     git tag -a TEST-$TAG -m "Streamlit nightly $TAG"
+      #     git push origin $TAG
+
+  run-python-tests:
+    needs: create-nightly-tag
+    uses: ./.github/workflows/python-versions.yml
+
+  run-javascript-tests:
+    needs: create-nightly-tag
+    uses: ./.github/workflows/js-tests.yml
+
+  run-py-prod-deps-smoke-test:
+    needs: create-nightly-tag
+    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+
+  # run-cypress-tests:
+    # needs: create-nightly-tag
+  #   uses: ./.github/workflows/cypress.yml
+  
+  create-nightly-build:
+    runs-on: ubuntu-latest
+
+    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test]
+    # needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+
+    permissions:
+      actions: read
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Verify git tag vs. version
+        run: |
+          cd lib
+          python setup.py verify
+      # TODO: Secure Secret Mgmt
+      # - name: Initialize .pypirc
+      #   run: |
+      #     cd lib
+      #     echo -e "[pypi]" >> ~/.pypirc
+      #     echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+      #     echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      # - name: Build Package
+      #   timeout-minutes: 120
+      #   run: |
+      #     sudo apt install rsync
+      #     make package
+      # - name: Upload to PyPI
+      #   run: |
+      #     make distribute

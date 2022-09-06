@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - '**'
+  workflow_call:
 
 # Avoid duplicate workflows on same branch
 concurrency: 
