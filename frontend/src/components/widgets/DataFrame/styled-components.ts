@@ -53,12 +53,13 @@ export const StyledResizableContainer = styled.div<
 
   "& .dvn-scroller": {
     scrollbarWidth: "thin",
-    // https://caniuse.com/css-overflow-overlay only works on chrome and firefox
+    // https://caniuse.com/css-overflow-overlay only works on chrome
     ["overflowX" as any]: "overlay !important",
     ["overflowY" as any]: "overlay !important",
   },
 
   // Hide the resize handle in the right corner. Resizing is still be possible.
+  // firefox doesn't doesn't support this so it always shows
   "&::-webkit-resizer": {
     display: "none",
   },
