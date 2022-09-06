@@ -26,12 +26,24 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import (
+    Key,
+    LabelVisibility,
+    OptionSequence,
+    ensure_indexable,
+    to_key,
+    maybe_raise_label_warnings,
+)
+
 from streamlit.util import index_
 from streamlit.runtime.metrics_util import gather_metrics
 
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 
 @dataclass
@@ -70,6 +82,7 @@ class RadioMixin:
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Any:
         """Display a radio button widget.
 
@@ -77,6 +90,9 @@ class RadioMixin:
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the radio options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
@@ -108,6 +124,12 @@ class RadioMixin:
             An optional boolean, which orients the radio group horizontally.
             The default is false (vertical buttons). This argument can only
             be supplied by keyword.
+
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -144,6 +166,7 @@ class RadioMixin:
             disabled=disabled,
             horizontal=horizontal,
             ctx=ctx,
+            label_visibility=label_visibility,
         )
 
     def _radio(
@@ -160,12 +183,13 @@ class RadioMixin:
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext],
     ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
-
+        maybe_raise_label_warnings(label, label_visibility)
         opt = ensure_indexable(options)
 
         if not isinstance(index, int):
@@ -204,6 +228,10 @@ class RadioMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         radio_proto.disabled = disabled
+        radio_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if widget_state.value_changed:
             radio_proto.value = serde.serialize(widget_state.value)
             radio_proto.set_value = True

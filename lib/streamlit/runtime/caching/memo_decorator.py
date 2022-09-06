@@ -272,6 +272,8 @@ class MemoAPI:
         ttl : float or None
             The maximum number of seconds to keep an entry in the cache, or
             None if cache entries should not expire. The default is None.
+            Note that ttl is incompatible with `persist="disk"` - `ttl` will be
+            ignored if `persist` is specified.
 
         Example
         -------
@@ -336,10 +338,15 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        # Support passing the params via function decorator, e.g.
-        # @st.memo(persist=True, show_spinner=False)
-        if func is None:
-            return lambda f: create_cache_wrapper(
+        def wrapper(f):
+            # We use wrapper function here instead of lambda function to be able to log
+            # warning in case both persist="disk" and ttl parameters specified
+            if persist == "disk" and ttl is not None:
+                _LOGGER.warning(
+                    f"The memoized function '{f.__name__}' has a TTL that will be "
+                    f"ignored. Persistent memo caches currently don't support TTL."
+                )
+            return create_cache_wrapper(
                 MemoizedFunction(
                     func=f,
                     persist=persist,
@@ -349,6 +356,11 @@ class MemoAPI:
                     ttl=ttl,
                 )
             )
+
+        # Support passing the params via function decorator, e.g.
+        # @st.memo(persist=True, show_spinner=False)
+        if func is None:
+            return wrapper
 
         return create_cache_wrapper(
             MemoizedFunction(

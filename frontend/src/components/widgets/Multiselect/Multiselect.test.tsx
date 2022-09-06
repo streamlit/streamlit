@@ -20,7 +20,10 @@ import { mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Select as UISelect, TYPE } from "baseui/select"
-import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
+import {
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  MultiSelect as MultiSelectProto,
+} from "src/autogen/proto"
 import { lightTheme } from "src/theme"
 import Multiselect, { Props } from "./Multiselect"
 
@@ -82,6 +85,30 @@ describe("Multiselect widget", () => {
     const props = getProps()
     const wrapper = mount(<Multiselect {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = mount(<Multiselect {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<Multiselect {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    )
   })
 
   describe("placeholder", () => {

@@ -13,7 +13,13 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
+
 from textwrap import dedent
 from typing import Optional, cast, List, TYPE_CHECKING
 
@@ -37,7 +43,11 @@ from ..proto.Common_pb2 import (
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -120,6 +130,7 @@ class CameraInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> SomeUploadedSnapshotFile:
         """Display a widget that returns pictures from the user's webcam.
 
@@ -127,6 +138,9 @@ class CameraInputMixin:
         ----------
         label : str
             A short label explaining to the user what this widget is used for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
@@ -151,6 +165,11 @@ class CameraInputMixin:
             An optional boolean, which disables the camera input if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -178,6 +197,7 @@ class CameraInputMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -191,11 +211,13 @@ class CameraInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> SomeUploadedSnapshotFile:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        maybe_raise_label_warnings(label, label_visibility)
 
         camera_input_proto = CameraInputProto()
         camera_input_proto.label = label
@@ -221,6 +243,9 @@ class CameraInputMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         camera_input_proto.disabled = disabled
+        camera_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         ctx = get_script_run_ctx()
         camera_image_input_state = serde.serialize(camera_input_state.value)

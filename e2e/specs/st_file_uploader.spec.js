@@ -46,6 +46,15 @@ describe("st.file_uploader", () => {
     cy.getIndexed("[data-testid='stFileUploader']", 2).matchThemedSnapshots(
       "multi_file_uploader"
     );
+
+    cy.getIndexed("[data-testid='stFileUploader']", 4).matchThemedSnapshots(
+      "hidden_label_file_uploader"
+    );
+
+    cy.getIndexed("[data-testid='stFileUploader']", 5).matchThemedSnapshots(
+      "collapsed_label_file_uploader"
+    );
+
   });
 
   it("shows error message for disallowed files", () => {
@@ -396,7 +405,7 @@ describe("st.file_uploader", () => {
   // regression test for https://github.com/streamlit/streamlit/issues/4256 bug
   it("does not call a callback when not changed", () => {
     const fileName1 = "file1.txt";
-    const uploaderIndex = 4;
+    const uploaderIndex = 6;
 
     cy.fixture(fileName1).then(file1 => {
       const files = [

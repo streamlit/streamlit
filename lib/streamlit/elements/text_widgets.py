@@ -14,7 +14,12 @@
 
 from dataclasses import dataclass
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from textwrap import dedent
 from typing import Optional, cast
 
@@ -31,7 +36,11 @@ from streamlit.runtime.state import (
 from streamlit.runtime.metrics_util import gather_metrics
 
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 from ..type_util import SupportsStr
 
 
@@ -74,6 +83,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> str:
         """Display a single-line text input widget.
 
@@ -81,6 +91,9 @@ class TextWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : object
             The text value of this widget when it first renders. This will be
             cast to str internally.
@@ -114,6 +127,11 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the text input if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -144,6 +162,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -162,11 +181,14 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
+
+        maybe_raise_label_warnings(label, label_visibility)
 
         text_input_proto = TextInputProto()
         text_input_proto.label = label
@@ -215,6 +237,9 @@ class TextWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_input_proto.disabled = disabled
+        text_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
@@ -237,6 +262,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> str:
         """Display a multi-line text input widget.
 
@@ -244,6 +270,9 @@ class TextWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : object
             The text value of this widget when it first renders. This will be
             cast to str internally.
@@ -271,6 +300,11 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the text area if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -302,6 +336,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -319,11 +354,14 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
+
+        maybe_raise_label_warnings(label, label_visibility)
 
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
@@ -358,6 +396,9 @@ class TextWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         text_area_proto.disabled = disabled
+        text_area_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
