@@ -26,10 +26,21 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import (
+    Key,
+    OptionSequence,
+    ensure_indexable,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from streamlit.util import index_
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 
 @dataclass
@@ -85,6 +96,7 @@ class SelectSliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Any:
         """
         Display a slider widget to select items from a list.
@@ -101,6 +113,9 @@ class SelectSliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the slider options. All options will be cast to str
             internally by default. For pandas.DataFrame, the first column is
@@ -131,6 +146,11 @@ class SelectSliderMixin:
         disabled : bool
             An optional boolean, which disables the select slider if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -170,6 +190,7 @@ class SelectSliderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -185,12 +206,13 @@ class SelectSliderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
-
+        maybe_raise_label_warnings(label, label_visibility)
         opt = ensure_indexable(options)
 
         if len(opt) == 0:
@@ -249,6 +271,9 @@ class SelectSliderMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
+        slider_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True

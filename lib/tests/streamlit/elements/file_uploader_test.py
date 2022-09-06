@@ -14,10 +14,12 @@
 
 """file_uploader unit test."""
 
+from parameterized import parameterized
 from unittest.mock import patch
 
-
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit import config
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec, UploadedFile
@@ -31,6 +33,10 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.label, "the label")
+        self.assertEqual(
+            c.label_visibility.value,
+            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        )
         self.assertEqual(c.disabled, False)
 
     def test_just_disabled(self):
@@ -164,3 +170,26 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         st.file_uploader("foo")
         remove_orphaned_files_patch.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility parameter."""
+        st.file_uploader("the label", label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        self.assertEqual(c.label_visibility.value, proto_value)
+
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.file_uploader("the label", label_visibility="wrong_value")
+            self.assertEquals(
+                str(e),
+                "Unsupported label_visibility option 'wrong_value'. Valid values are "
+                "'visible', 'hidden' or 'collapsed'.",
+            )

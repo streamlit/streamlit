@@ -16,9 +16,12 @@
 
 import re
 from unittest.mock import patch
+from parameterized import parameterized
 
 from tests import testutil
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 
 
 class TextAreaTest(testutil.DeltaGeneratorTestCase):
@@ -30,6 +33,10 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.text_area
         self.assertEqual(c.label, "the label")
+        self.assertEqual(
+            c.label_visibility.value,
+            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        )
         self.assertEqual(c.default, "")
         self.assertEqual(c.disabled, False)
 
@@ -106,6 +113,28 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         text_area_proto = self.get_delta_from_queue().new_element.text_area
 
         self.assertEqual(text_area_proto.label, "foo")
+
+    @parameterized.expand(
+        [
+            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.text_area("the label", label_visibility=label_visibility_value)
+        c = self.get_delta_from_queue().new_element.text_area
+        self.assertEqual(c.label_visibility.value, proto_value)
+
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.number_input("the label", label_visibility="wrong_value")
+            self.assertEquals(
+                str(e),
+                "Unsupported label_visibility option 'wrong_value'. Valid values are "
+                "'visible', 'hidden' or 'collapsed'.",
+            )
 
     def test_help_dedents(self):
         """Test that help properly dedents"""

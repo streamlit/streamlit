@@ -19,7 +19,10 @@ import React from "react"
 import { Slider as UISlider } from "baseui/slider"
 import TimezoneMock from "timezone-mock"
 
-import { Slider as SliderProto } from "src/autogen/proto"
+import {
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Slider as SliderProto,
+} from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { lightTheme } from "src/theme"
@@ -59,6 +62,30 @@ describe("Slider widget", () => {
     const wrapper = mount(<Slider {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe("Label")
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = mount(<Slider {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<Slider {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    )
   })
 
   it("sets widget value on mount", async () => {

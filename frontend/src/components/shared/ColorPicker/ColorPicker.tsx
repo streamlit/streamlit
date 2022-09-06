@@ -24,6 +24,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
+import { LabelVisibilityOptions } from "src/lib/utils"
 import { logWarning } from "src/lib/log"
 import {
   StyledColorPicker,
@@ -39,6 +40,7 @@ export interface Props {
   value: string
   showValue?: boolean
   label: string
+  labelVisibility?: LabelVisibilityOptions
   onChange: (value: string) => any
   help?: string
 }
@@ -97,7 +99,14 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { width, showValue, label, help, disabled } = this.props
+    const {
+      width,
+      showValue,
+      label,
+      labelVisibility,
+      help,
+      disabled,
+    } = this.props
     const { value } = this.state
     const cursor = disabled ? "not-allowed" : "default"
     const style = { width, cursor }
@@ -112,7 +121,11 @@ class ColorPicker extends React.PureComponent<Props, State> {
 
     return (
       <StyledColorPicker data-testid="stColorPicker" style={style}>
-        <WidgetLabel label={label} disabled={disabled}>
+        <WidgetLabel
+          label={label}
+          disabled={disabled}
+          labelVisibility={labelVisibility}
+        >
           {help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />

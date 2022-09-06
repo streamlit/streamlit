@@ -19,6 +19,7 @@ import pytest
 from tests import testutil
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from parameterized import parameterized
 
 
@@ -29,6 +30,10 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.color_picker
         self.assertEqual(c.label, "the label")
+        self.assertEqual(
+            c.label_visibility.value,
+            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        )
         self.assertEqual(c.default, "#000000")
         self.assertEqual(c.disabled, False)
 
@@ -79,3 +84,27 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         color_picker_proto = self.get_delta_from_queue(1).new_element.color_picker
         self.assertEqual(color_picker_proto.form_id, form_proto.form.form_id)
+
+    @parameterized.expand(
+        [
+            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.color_picker("the label", label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.color_picker
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility.value, proto_value)
+
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.color_picker("the label", label_visibility="wrong_value")
+            self.assertEquals(
+                str(e),
+                "Unsupported label_visibility option 'wrong_value'. Valid values are "
+                "'visible', 'hidden' or 'collapsed'.",
+            )
