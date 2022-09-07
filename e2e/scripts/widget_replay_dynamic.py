@@ -17,7 +17,7 @@ import streamlit as st
 st.button("click to rerun")
 
 
-@st.experimental_memo
+@st.experimental_memo  # type: ignore
 def cached():
     options = ["foo", "bar", "baz"]
     if st.checkbox("custom filters"):
