@@ -40,7 +40,7 @@ class MediaTest(testutil.DeltaGeneratorTestCase):
             ("https://foo.com/foo.wav", "audio/wav", TestMediaKind.AUDIO, True),
             ("foo.mp4", "video/mp4", TestMediaKind.VIDEO, False),
             ("path/to/foo.mp4", "video/mp4", TestMediaKind.VIDEO, False),
-            (b"fake_audio_data", "video/mp4", TestMediaKind.VIDEO, False),
+            (b"fake_video_data", "video/mp4", TestMediaKind.VIDEO, False),
             ("https://foo.com/foo.mp4", "video/mp4", TestMediaKind.VIDEO, True),
         ]
     )

@@ -329,7 +329,7 @@ def image_to_url(
             return media_file_manager.add(image, mimetype, image_id)
 
     # PIL Images
-    elif isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
+    elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
         format = _validate_image_format_string(image, output_format)
         image_data = _PIL_to_bytes(image, format)
 
