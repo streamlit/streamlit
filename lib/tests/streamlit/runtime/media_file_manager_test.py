@@ -18,6 +18,7 @@ from typing import Optional
 from unittest import mock, TestCase
 import random
 import time
+from unittest.mock import mock_open
 
 from streamlit.runtime.media_file_manager import (
     MediaFileManager,
@@ -132,25 +133,30 @@ class MediaFileManagerTest(TestCase):
             _calculate_file_id(fake_bytes, "audio/wav", file_name="name2.wav"),
         )
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    def test_add_files(self, _get_session_id):
-        """Test that MediaFileManager.add works as expected."""
-        _get_session_id.return_value = "SESSION1"
-
-        coord = random_coordinates()
-
-        # Make sure we reject files containing None
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session",
+    )
+    def test_reject_null_files(self, _):
+        """Adding a null file to the manager raises an error."""
         with self.assertRaises(TypeError):
-            self.media_file_manager.add(None, "media/any", coord)
+            self.media_file_manager.add(None, "media/any", random_coordinates())
 
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session",
+    )
+    def test_add_binary_files(self, _):
+        """Test that we can add binary files to the manager."""
         sample_coords = set()
         while len(sample_coords) < len(ALL_FIXTURES):
             sample_coords.add(random_coordinates())
 
         for sample in ALL_FIXTURES.values():
-            f = self._add_file_and_get_object(
-                sample["content"], sample["mimetype"], sample_coords.pop()
-            )
+            content = sample["content"]
+            self.assertIsInstance(content, bytes)
+            mimetype = sample["mimetype"]
+            f = self._add_file_and_get_object(content, mimetype, sample_coords.pop())
             self.assertTrue(f.id in self.media_file_manager)
 
         # There should be as many files in MFM as we added.
@@ -158,6 +164,29 @@ class MediaFileManagerTest(TestCase):
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session",
+    )
+    @mock.patch(
+        "streamlit.runtime.media_file_manager.open",
+        mock_open(read_data=b"mock_test_file"),
+        create=True,
+    )
+    def test_add_file_by_name(self, _1):
+        """Test that we can add files by filename."""
+        self.media_file_manager.add(
+            "mock/file/path.png", "image/png", random_coordinates()
+        )
+
+        # We should have a single file in the MFM.
+        self.assertEqual(len(self.media_file_manager), 1)
+
+        # And it should be registered to our session
+        self.assertEqual(
+            len(self.media_file_manager._files_by_session_and_coord["mock_session"]), 1
+        )
 
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     @mock.patch("time.time")
