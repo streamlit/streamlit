@@ -280,7 +280,7 @@ class SingletonCache(Cache):
                 if ctx:
                     state = ctx.session_state
                     widgets = [(wid, state[wid]) for wid in initial.widget_ids]
-                    widget_key = _make_widget_key(widgets)
+                    widget_key = _make_widget_key(widgets, CacheType.SINGLETON)
                     if widget_key in initial.results:
                         return initial.results[widget_key]
                     else:
@@ -305,7 +305,7 @@ class SingletonCache(Cache):
         if ctx:
             state = ctx.session_state
             widget_values = [(wid, state[wid]) for wid in widgets]
-            widget_key = _make_widget_key(widget_values)
+            widget_key = _make_widget_key(widget_values, CacheType.SINGLETON)
 
             with self._mem_cache_lock:
                 try:

@@ -158,10 +158,12 @@ class InitialCachedResults:
     widget_ids: List[str]
     results: Dict[str, CachedResult]
 
-    def get_current_widget_key(self, ctx: ScriptRunContext) -> str:
+    def get_current_widget_key(
+        self, ctx: ScriptRunContext, cache_type: CacheType
+    ) -> str:
         state = ctx.session_state
         widget_values = [(wid, state[wid]) for wid in self.widget_ids]
-        widget_key = _make_widget_key(widget_values)
+        widget_key = _make_widget_key(widget_values, cache_type)
         return widget_key
 
 
@@ -660,12 +662,12 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
     return None
 
 
-def _make_widget_key(widgets: List[Tuple[str, Any]]) -> str:
+def _make_widget_key(widgets: List[Tuple[str, Any]], cache_type: CacheType) -> str:
     """
     widget_id + widget_value pair -> hash
     """
     func_hasher = hashlib.new("md5")
     for widget_id_val in widgets:
-        update_hash(widget_id_val, func_hasher, None)
+        update_hash(widget_id_val, func_hasher, cache_type)
 
     return func_hasher.hexdigest()

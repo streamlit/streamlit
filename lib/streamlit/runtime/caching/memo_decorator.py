@@ -52,7 +52,6 @@ from .cache_utils import (
     CachedFunction,
     CacheMessagesCallStack,
     ElementMsgData,
-    _make_widget_key,
 )
 
 _LOGGER = get_logger(__name__)
@@ -448,7 +447,7 @@ class MemoCache(Cache):
                 raise CacheKeyNotFoundError()
             ctx = get_script_run_ctx()
             if ctx:
-                widget_key = entry.get_current_widget_key(ctx)
+                widget_key = entry.get_current_widget_key(ctx, CacheType.MEMO)
                 if widget_key in entry.results:
                     return entry.results[widget_key]
                 else:
@@ -475,7 +474,7 @@ class MemoCache(Cache):
             return
 
         initial_results = InitialCachedResults(widget_ids=widgets, results={})
-        widget_key = initial_results.get_current_widget_key(ctx)
+        widget_key = initial_results.get_current_widget_key(ctx, CacheType.MEMO)
 
         # Try to find in mem cache, falling back to disk, then falling back
         # to a new result instance
