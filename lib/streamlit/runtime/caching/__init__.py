@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import contextlib
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 from google.protobuf.message import Message
 
@@ -65,7 +65,7 @@ def save_block_message(
     )
 
 
-def save_widget_metadata(metadata: WidgetMetadata) -> None:
+def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
     MEMO_MESSAGES_CALL_STACK.save_widget_metadata(metadata)
     SINGLETON_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
 

@@ -495,7 +495,8 @@ class CacheMessagesCallStack(threading.local):
         id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
         for msgs in self._cached_message_stack:
             try:
-                wid = element_proto.id
+                wid = element_proto.id  # type: ignore
+                # TODO replace `Message` with a more precise type
                 assert self._registered_metadata is not None
                 widget_meta = WidgetMsgMetadata(
                     wid, None, metadata=self._registered_metadata
