@@ -25,6 +25,7 @@ from streamlit.runtime.caching import (
     singleton_decorator,
     get_singleton_stats_provider,
 )
+from streamlit.runtime.caching.cache_errors import CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     InitialCachedResults,
@@ -35,7 +36,7 @@ from streamlit.runtime.stats import CacheStat
 
 def as_cached_result(value):
     result = CachedResult(value, [], st._main.id, st.sidebar.id)
-    widget_key = _make_widget_key([])
+    widget_key = _make_widget_key([], CacheType.SINGLETON)
     d = {}
     d[widget_key] = result
     initial = InitialCachedResults([], d)

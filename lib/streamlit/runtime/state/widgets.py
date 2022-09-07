@@ -39,7 +39,6 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 from streamlit.type_util import ValueFieldName
-import streamlit.runtime.caching as caching
 
 from .session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
@@ -207,6 +206,7 @@ def register_widget_from_metadata(
     widget_func_name: Optional[str],
     element_type: ElementType,
 ) -> RegisterWidgetResult[T]:
+    import streamlit.runtime.caching as caching
 
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means

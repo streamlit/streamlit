@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """st.memo unit tests."""
-from collections import defaultdict
 import logging
 import pickle
 import re
@@ -24,7 +23,7 @@ import streamlit as st
 from streamlit import StreamlitAPIException, file_util
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.caching import memo_decorator
-from streamlit.runtime.caching.cache_errors import CacheError
+from streamlit.runtime.caching.cache_errors import CacheError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     ElementMsgData,
@@ -41,7 +40,7 @@ from tests.testutil import DeltaGeneratorTestCase
 
 def as_cached_result(value):
     result = CachedResult(value, [], st._main.id, st.sidebar.id)
-    widget_key = _make_widget_key([])
+    widget_key = _make_widget_key([], CacheType.MEMO)
     d = {}
     d[widget_key] = result
     initial = InitialCachedResults([], d)
@@ -49,7 +48,7 @@ def as_cached_result(value):
 
 
 def as_replay_test_data():
-    widget_key = _make_widget_key([])
+    widget_key = _make_widget_key([], CacheType.MEMO)
     d = {}
     d[widget_key] = CachedResult(
         1,
