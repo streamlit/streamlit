@@ -24,7 +24,7 @@ from typing import (
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
-
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -38,6 +38,7 @@ def _ensure_serialization(o: object) -> Union[str, List[Any]]:
 
 
 class JsonMixin:
+    @gather_metrics
     def json(
         self,
         body: object,
