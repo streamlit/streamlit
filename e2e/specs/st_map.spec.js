@@ -21,11 +21,14 @@ describe("st.map", () => {
   });
 
   it("displays 3 maps", () => {
-    // Only do first screenshot to check for zoom button on map
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 3).first().matchThemedSnapshots("stDeckGlJsonChart")
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 3)
   });
   
   it("displays 3 zoom buttons", () => {
     cy.get(".element-container .zoomButton").should("have.length", 3)
+  })
+
+  it("displays the correct snapshot", () => {
+    cy.get(".element-container").last().matchThemedSnapshots("stDeckGlJsonChart")
   })
 });
