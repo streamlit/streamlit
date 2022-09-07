@@ -18,11 +18,7 @@
 import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
 import isEqual from "lodash/isEqual"
-import {
-  _MapContext as MapContext,
-  StaticMap,
-  NavigationControl,
-} from "react-map-gl"
+import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import { getLuminance } from "color2k"
@@ -233,6 +229,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
+          // https://github.com/visgl/react-map-gl/issues/662 to pass viewPort to NavigationControl
           ContextProvider={MapContext.Provider}
           controller
         >
