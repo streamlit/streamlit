@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
+from typing import Union, Optional
 
 from typing_extensions import Protocol
 
@@ -31,7 +31,7 @@ class MediaFileStorageError(Exception):
 
 class MediaFileStorage(Protocol):
     def load_and_get_id(
-        self, filename_or_data: Union[str, bytes], mimetype: str
+        self, path_or_data: Union[str, bytes], mimetype: str, filename: Optional[str]
     ) -> str:
         """Load the given file path or bytes into the manager and return
         an ID that uniquely identifies it.
@@ -42,12 +42,15 @@ class MediaFileStorage(Protocol):
 
         Parameters
         ----------
-        filename_or_data
+        path_or_data
             A path to a file, or the file's raw data as bytes.
 
         mimetype
             The media’s mimetype. Used to set the Content-Type header when
             serving the media over HTTP.
+
+        filename : str or None
+            Optional filename. Used to set the filename in the response header.
 
         Returns
         -------
