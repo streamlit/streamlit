@@ -229,7 +229,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
-          // https://github.com/visgl/react-map-gl/issues/662 to pass viewPort to NavigationControl
           ContextProvider={MapContext.Provider}
           controller
         >
