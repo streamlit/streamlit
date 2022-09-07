@@ -35,6 +35,8 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from .utils import (
     check_callback_rules,
@@ -57,6 +59,7 @@ class NumberInputSerde:
 
 
 class NumberInputMixin:
+    @gather_metrics
     def number_input(
         self,
         label: str,

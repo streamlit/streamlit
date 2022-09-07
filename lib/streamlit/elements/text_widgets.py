@@ -33,6 +33,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
 
 from .form import current_form_id
 from .utils import (
@@ -66,6 +67,7 @@ class TextAreaSerde:
 
 
 class TextWidgetsMixin:
+    @gather_metrics
     def text_input(
         self,
         label: str,
@@ -245,6 +247,7 @@ class TextWidgetsMixin:
         self.dg._enqueue("text_input", text_input_proto)
         return widget_state.value
 
+    @gather_metrics
     def text_area(
         self,
         label: str,

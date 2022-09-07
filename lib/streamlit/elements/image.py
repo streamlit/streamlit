@@ -34,6 +34,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import numpy.typing as npt
@@ -58,6 +59,7 @@ ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
 class ImageMixin:
+    @gather_metrics
     def image(
         self,
         image: ImageOrImageList,

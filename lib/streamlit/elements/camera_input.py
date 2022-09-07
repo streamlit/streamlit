@@ -34,6 +34,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
 
 from ..proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
@@ -118,6 +119,7 @@ class CameraInputSerde:
 
 
 class CameraInputMixin:
+    @gather_metrics
     def camera_input(
         self,
         label: str,
