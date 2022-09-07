@@ -68,7 +68,7 @@ _LOGGER = get_logger(__name__)
 class WidgetMsgMetadata:
     widget_id: str
     widget_value: Any
-    metadata: WidgetMetadata
+    metadata: WidgetMetadata[Any]
 
 
 @dataclass
@@ -462,7 +462,7 @@ class CacheMessagesCallStack(threading.local):
         self._cached_message_stack: List[List[MsgData]] = []
         self._seen_dg_stack: List[Set[str]] = []
         self._most_recent_messages: List[MsgData] = []
-        self._registered_metadata: Optional[WidgetMetadata] = None
+        self._registered_metadata: Optional[WidgetMetadata[Any]] = None
         self._cache_type = cache_type
 
     def __repr__(self) -> str:
@@ -513,8 +513,6 @@ class CacheMessagesCallStack(threading.local):
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
 
-    # TODO add a save_widget_message method to handle the widget stuff
-
     def save_block_message(
         self,
         block_proto: Block,
@@ -543,7 +541,7 @@ class CacheMessagesCallStack(threading.local):
         else:
             return invoked_id
 
-    def save_widget_metadata(self, metadata: WidgetMetadata) -> None:
+    def save_widget_metadata(self, metadata: WidgetMetadata[Any]) -> None:
         self._registered_metadata = metadata
 
 

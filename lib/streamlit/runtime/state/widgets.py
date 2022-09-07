@@ -201,12 +201,12 @@ def register_widget(
 
 
 def register_widget_from_metadata(
-    metadata: WidgetMetadata,
+    metadata: WidgetMetadata[T],
     ctx: Optional["ScriptRunContext"],
     # TODO get real values for these
     widget_func_name: Optional[str],
     element_type: ElementType,
-) -> RegisterWidgetResult:
+) -> RegisterWidgetResult[T]:
 
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
