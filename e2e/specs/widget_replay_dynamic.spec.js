@@ -22,19 +22,19 @@ describe("dynamic widget replay", () => {
 
   it("interaction with a new widget still works", () => {
     cy.get(".stCheckbox").should("have.length", 1)
-    cy.get(".stMarkdown").first().should("have.text", "['foo']")
+    cy.get(".stText").first().should("have.text", "['foo']")
 
     // check checkbox, verify multiselect renders and affects output
     cy.get(".stCheckbox")
       .first()
       .click({ multiple: true });
     cy.get(".stMultiSelect").should("have.length", 1)
-    cy.get(".stMarkdown").first().should("have.text", "[]")
+    cy.get(".stText").first().should("have.text", "[]")
 
     // selecting option in multiselect works
     cy.getIndexed(".stMultiSelect", 0).find("input").click();
     cy.getIndexed("li", 2).click();
-    cy.get(".stMarkdown").first().should("have.text", "['baz']")
+    cy.get(".stText").first().should("have.text", "['baz']")
 
     // uncheck checkbox for testing missing widget
     cy.get(".stCheckbox")
@@ -42,7 +42,7 @@ describe("dynamic widget replay", () => {
       .click({ multiple: true });
     cy.get(".stButton")
       .first().click();
-    cy.getIndexed(".stMarkdown", 1).should("have.text", "['foo']")
+    cy.getIndexed(".stText", 0).should("have.text", "['foo']")
   });
 
 })

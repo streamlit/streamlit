@@ -14,11 +14,13 @@
 
 import streamlit as st
 
-st.button("click to rerun")
+irrelevant_value = 0
+if st.button("click to rerun"):
+    irrelevant_value = 1
 
 
 @st.experimental_memo  # type: ignore
-def cached():
+def cached(irrelevant):
     options = ["foo", "bar", "baz"]
     if st.checkbox("custom filters"):
         selected = st.multiselect("filters", options)
@@ -27,4 +29,4 @@ def cached():
     return selected
 
 
-st.write(cached())
+st.text(cached(irrelevant_value))
