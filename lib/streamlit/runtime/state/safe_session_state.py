@@ -123,3 +123,13 @@ class SafeSessionState:
                 raise KeyError(key)
 
             del self._state[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        with self._lock:
+            if self._disconnected:
+                raise KeyError(key)
+
+            try:
+                return self[key]
+            except KeyError:
+                return default

@@ -668,6 +668,12 @@ class SessionState:
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
 
+    def get(self, key: str, default: Any = None) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
 
 def _is_widget_id(key: str) -> bool:
     return key.startswith(GENERATED_WIDGET_KEY_PREFIX)

@@ -150,6 +150,14 @@ class CachedResult:
 
 
 @dataclass
+class WidgetStateNotFound:
+    pass
+
+
+WIDGET_STATE_NOT_FOUND = WidgetStateNotFound()
+
+
+@dataclass
 class InitialCachedResults:
     """Widgets called by a cache-decorated function, and a mapping of the
     widget-derived cache key to the final results of executing the function.
@@ -162,7 +170,10 @@ class InitialCachedResults:
         self, ctx: ScriptRunContext, cache_type: CacheType
     ) -> str:
         state = ctx.session_state
-        widget_values = [(wid, state[wid]) for wid in sorted(self.widget_ids)]
+        widget_values = [
+            (wid, state.get(wid, WIDGET_STATE_NOT_FOUND))
+            for wid in sorted(self.widget_ids)
+        ]
         widget_key = _make_widget_key(widget_values, cache_type)
         return widget_key
 
