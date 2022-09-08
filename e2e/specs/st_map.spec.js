@@ -29,6 +29,6 @@ describe("st.map", () => {
   })
 
   it("displays the correct snapshot", () => {
-    cy.get(".element-container").last().matchThemedSnapshots("stDeckGlJsonChart")
+    cy.get(".element-container").last({ waitForAnimations: true }).matchThemedSnapshots("stDeckGlJsonChart")
   })
 });
