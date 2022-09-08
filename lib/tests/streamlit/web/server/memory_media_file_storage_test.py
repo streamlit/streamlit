@@ -159,7 +159,7 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
 
         stats = self.storage.get_stats()
         self.assertEqual(num_files, len(stats))
-        self.assertEqual("st_media_file_manager", stats[0].category_name)
+        self.assertEqual("st_memory_media_file_storage", stats[0].category_name)
         self.assertEqual(
             len(mock_data) * num_files, sum(stat.byte_length for stat in stats)
         )

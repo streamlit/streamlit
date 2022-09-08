@@ -148,7 +148,7 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         for file_id, file in files_by_id.items():
             stats.append(
                 CacheStat(
-                    category_name="st_media_file_manager",
+                    category_name="st_memory_media_file_storage",
                     cache_name="",
                     byte_length=len(file.content),
                 )
