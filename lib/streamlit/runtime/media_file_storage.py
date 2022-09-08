@@ -31,7 +31,10 @@ class MediaFileStorageError(Exception):
 
 class MediaFileStorage(Protocol):
     def load_and_get_id(
-        self, path_or_data: Union[str, bytes], mimetype: str, filename: Optional[str]
+        self,
+        path_or_data: Union[str, bytes],
+        mimetype: str,
+        filename: Optional[str] = None,
     ) -> str:
         """Load the given file path or bytes into the manager and return
         an ID that uniquely identifies it.

@@ -83,7 +83,10 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         self._media_endpoint = media_endpoint
 
     def load_and_get_id(
-        self, path_or_data: Union[str, bytes], mimetype: str, filename: Optional[str]
+        self,
+        path_or_data: Union[str, bytes],
+        mimetype: str,
+        filename: Optional[str] = None,
     ) -> str:
         """Add a file to the manager and return its ID."""
         file_data: bytes
