@@ -279,7 +279,7 @@ class SingletonCache(Cache):
                 ctx = get_script_run_ctx()
                 if ctx:
                     state = ctx.session_state
-                    widgets = [(wid, state[wid]) for wid in initial.widget_ids]
+                    widgets = [(wid, state[wid]) for wid in sorted(initial.widget_ids)]
                     widget_key = _make_widget_key(widgets, CacheType.SINGLETON)
                     if widget_key in initial.results:
                         return initial.results[widget_key]
@@ -296,29 +296,29 @@ class SingletonCache(Cache):
         main_id = st._main.id
         sidebar_id = st.sidebar.id
         # should MsgData contain info about being a widget? should this method take a separate arg of the widgets?
-        widgets = [
+        widgets = {
             msg.widget_metadata.widget_id
             for msg in messages
             if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
-        ]
+        }
         ctx = get_script_run_ctx()
-        if ctx:
-            state = ctx.session_state
-            widget_values = [(wid, state[wid]) for wid in widgets]
-            widget_key = _make_widget_key(widget_values, CacheType.SINGLETON)
+        if ctx is None:
+            return
 
-            with self._mem_cache_lock:
-                try:
-                    existing_results = self._mem_cache[key]
-                except KeyError:
-                    existing_results = InitialCachedResults(
-                        widget_ids=widgets, results={}
-                    )
+        with self._mem_cache_lock:
+            try:
+                initial_results = self._mem_cache[key]
+            except KeyError:
+                initial_results = InitialCachedResults(widget_ids=widgets, results={})
 
-                result = CachedResult(value, messages, main_id, sidebar_id)
-                # TODO update widget_ids with any new ids
-                existing_results.results[widget_key] = result
-                self._mem_cache[key] = existing_results
+            initial_results.widget_ids.update(widgets)
+            widget_key = initial_results.get_current_widget_key(
+                ctx, CacheType.SINGLETON
+            )
+
+            result = CachedResult(value, messages, main_id, sidebar_id)
+            initial_results.results[widget_key] = result
+            self._mem_cache[key] = initial_results
 
     def clear(self) -> None:
         with self._mem_cache_lock:

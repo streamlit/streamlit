@@ -155,14 +155,14 @@ class InitialCachedResults:
     widget-derived cache key to the final results of executing the function.
     """
 
-    widget_ids: List[str]
+    widget_ids: Set[str]
     results: Dict[str, CachedResult]
 
     def get_current_widget_key(
         self, ctx: ScriptRunContext, cache_type: CacheType
     ) -> str:
         state = ctx.session_state
-        widget_values = [(wid, state[wid]) for wid in self.widget_ids]
+        widget_values = [(wid, state[wid]) for wid in sorted(self.widget_ids)]
         widget_key = _make_widget_key(widget_values, cache_type)
         return widget_key
 

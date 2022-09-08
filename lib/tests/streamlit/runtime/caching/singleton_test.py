@@ -39,7 +39,7 @@ def as_cached_result(value):
     widget_key = _make_widget_key([], CacheType.SINGLETON)
     d = {}
     d[widget_key] = result
-    initial = InitialCachedResults([], d)
+    initial = InitialCachedResults(set(), d)
     return initial
 
 

@@ -464,17 +464,16 @@ class MemoCache(Cache):
         """
         main_id = st._main.id
         sidebar_id = st.sidebar.id
-        widgets = [
+        widgets = {
             msg.widget_metadata.widget_id
             for msg in messages
             if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
-        ]
+        }
         ctx = get_script_run_ctx()
         if ctx is None:
             return
 
-        initial_results = InitialCachedResults(widget_ids=widgets, results={})
-        widget_key = initial_results.get_current_widget_key(ctx, CacheType.MEMO)
+        initial_results: Optional[InitialCachedResults] = None
 
         # Try to find in mem cache, falling back to disk, then falling back
         # to a new result instance
@@ -486,6 +485,11 @@ class MemoCache(Cache):
                     initial_results = self._read_initial_from_disk_cache(key)
                 except CacheKeyNotFoundError:
                     pass
+
+        if initial_results is None:
+            initial_results = InitialCachedResults(widget_ids=widgets, results={})
+        initial_results.widget_ids.update(widgets)
+        widget_key = initial_results.get_current_widget_key(ctx, CacheType.MEMO)
 
         result = CachedResult(value, messages, main_id, sidebar_id)
         initial_results.results[widget_key] = result
@@ -512,7 +516,7 @@ class MemoCache(Cache):
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = bytes(self._mem_cache[key])
-                _LOGGER.debug("Memory cache HIT: %s", key)
+                _LOGGER.debug("Memory cache initial HIT: %s", key)
                 return entry
 
             else:
@@ -534,7 +538,7 @@ class MemoCache(Cache):
         try:
             with streamlit_read(path, binary=True) as input:
                 value = input.read()
-                _LOGGER.debug("Disk cache HIT: %s", key)
+                _LOGGER.debug("Disk cache initial HIT: %s", key)
                 # The value is a pickled CachedResult, but we don't unpickle it yet
                 # so we can avoid having to repickle it when writing to the mem_cache
                 return bytes(value)

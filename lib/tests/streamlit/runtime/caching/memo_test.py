@@ -43,7 +43,7 @@ def as_cached_result(value):
     widget_key = _make_widget_key([], CacheType.MEMO)
     d = {}
     d[widget_key] = result
-    initial = InitialCachedResults([], d)
+    initial = InitialCachedResults(set(), d)
     return initial
 
 
@@ -56,7 +56,7 @@ def as_replay_test_data():
         st._main.id,
         st.sidebar.id,
     )
-    return InitialCachedResults([], d)
+    return InitialCachedResults(set(), d)
 
 
 class MemoTest(unittest.TestCase):
