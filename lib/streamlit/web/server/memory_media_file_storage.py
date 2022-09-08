@@ -17,10 +17,11 @@
 import contextlib
 import hashlib
 import mimetypes
-from typing import Union, NamedTuple, Dict, Optional
+from typing import Union, NamedTuple, Dict, Optional, List
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileStorage, MediaFileStorageError
+from streamlit.runtime.stats import CacheStatsProvider, CacheStat
 
 LOGGER = get_logger(__name__)
 
@@ -76,7 +77,7 @@ class MemoryFile(NamedTuple):
     filename: Optional[str]
 
 
-class MemoryMediaFileStorage(MediaFileStorage):
+class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
     def __init__(self, media_endpoint: str):
         self._files_by_id: Dict[str, MemoryFile] = {}
         self._media_endpoint = media_endpoint
@@ -134,3 +135,19 @@ class MemoryMediaFileStorage(MediaFileStorage):
                 return f.read()
         except BaseException as e:
             raise MediaFileStorageError(f"Error opening '{filename}'") from e
+
+    def get_stats(self) -> List[CacheStat]:
+        # We operate on a copy of our dict, to avoid race conditions
+        # with other threads that may be manipulating the cache.
+        files_by_id = self._files_by_id.copy()
+
+        stats: List[CacheStat] = []
+        for file_id, file in files_by_id.items():
+            stats.append(
+                CacheStat(
+                    category_name="st_media_file_manager",
+                    cache_name="",
+                    byte_length=len(file.content),
+                )
+            )
+        return stats
