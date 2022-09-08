@@ -277,14 +277,12 @@ class SingletonCache(Cache):
                 initial = self._mem_cache[key]
 
                 ctx = get_script_run_ctx()
-                if ctx:
-                    state = ctx.session_state
-                    widgets = [(wid, state[wid]) for wid in sorted(initial.widget_ids)]
-                    widget_key = _make_widget_key(widgets, CacheType.SINGLETON)
-                    if widget_key in initial.results:
-                        return initial.results[widget_key]
-                    else:
-                        raise CacheKeyNotFoundError()
+                if not ctx:
+                    raise CacheKeyNotFoundError()
+
+                widget_key = initial.get_current_widget_key(ctx, CacheType.SINGLETON)
+                if widget_key in initial.results:
+                    return initial.results[widget_key]
                 else:
                     raise CacheKeyNotFoundError()
             else:
