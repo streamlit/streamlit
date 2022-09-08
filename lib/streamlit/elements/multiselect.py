@@ -135,6 +135,7 @@ class MultiSelectMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        max_selections: Optional[int] = None,
     ) -> List[T]:
         ...
 
@@ -153,6 +154,7 @@ class MultiSelectMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        max_selections: Optional[int] = None,
     ) -> List[Any]:
         ...
 
@@ -171,6 +173,7 @@ class MultiSelectMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        max_selections: Optional[int] = None,
     ) -> List[Any]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -248,6 +251,7 @@ class MultiSelectMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             ctx=ctx,
+            max_selections=max_selections,
         )
 
     def _multiselect(
@@ -265,6 +269,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
+        max_selections: Optional[int] = None,
     ) -> List[Any]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -282,6 +287,8 @@ class MultiSelectMixin:
         multiselect_proto.form_id = current_form_id(self.dg)
         if help is not None:
             multiselect_proto.help = dedent(help)
+        if max_selections is not None:
+            multiselect_proto.max_selections = max_selections
 
         serde = MultiSelectSerde(opt, default_value)
 
@@ -302,6 +309,7 @@ class MultiSelectMixin:
         multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
+
         if widget_state.value_changed:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)
             multiselect_proto.set_value = True

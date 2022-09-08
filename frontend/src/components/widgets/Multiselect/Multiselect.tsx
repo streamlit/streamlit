@@ -52,6 +52,8 @@ interface State {
    * The value specified by the user via the UI.
    */
   value: number[]
+
+  displayWarning: boolean
 }
 
 interface MultiselectOption {
@@ -64,7 +66,10 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   public state: State = {
     value: this.initialValue,
+    displayWarning: false,
   }
+
+  maxSelections: number = this.props.element.maxSelections
 
   get initialValue(): number[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
@@ -132,7 +137,10 @@ class Multiselect extends React.PureComponent<Props, State> {
     })
   }
 
-  private generateNewState(data: OnChangeParams): State {
+  private generateNewState(
+    data: OnChangeParams,
+    displayWarning: boolean
+  ): State {
     const getIndex = (): number => {
       const valueId = data.option?.value
       return parseInt(valueId, 10)
@@ -140,13 +148,20 @@ class Multiselect extends React.PureComponent<Props, State> {
 
     switch (data.type) {
       case "remove": {
-        return { value: without(this.state.value, getIndex()) }
+        if (
+          this.maxSelections &&
+          this.state.value.length - 1 < this.maxSelections
+        ) {
+          displayWarning = false
+        }
+        return { value: without(this.state.value, getIndex()), displayWarning }
       }
       case "clear": {
-        return { value: [] }
+        displayWarning = false
+        return { value: [], displayWarning }
       }
       case "select": {
-        return { value: this.state.value.concat([getIndex()]) }
+        return { value: this.state.value.concat([getIndex()]), displayWarning }
       }
       default: {
         throw new Error(`State transition is unknown: ${data.type}`)
@@ -155,8 +170,23 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private onChange = (params: OnChangeParams): void => {
-    const newState = this.generateNewState(params)
-    this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
+    if (this.maxSelections) {
+      if (this.state.value.length < this.maxSelections) {
+        const newState = this.generateNewState(params, false)
+        this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
+      } else if (params.type === "clear" || params.type === "remove") {
+        const newState = this.generateNewState(params, true)
+        this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
+      } else if (!this.state.displayWarning) {
+        this.setState({ ...this.state, displayWarning: true }, () =>
+          this.commitWidgetValue({ fromUi: true })
+        )
+        // console.log("setting display warnign to be true")
+      }
+    } else {
+      const newState = this.generateNewState(params, true)
+      this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
+    }
   }
 
   private filterOptions = (
@@ -196,6 +226,10 @@ class Multiselect extends React.PureComponent<Props, State> {
       element.formId,
       this.onFormCleared
     )
+
+    if (this.state.displayWarning) {
+      // console.log("I SHOULD DISPLAY WARNING!")
+    }
 
     return (
       <div className="row-widget stMultiSelect" style={style}>
