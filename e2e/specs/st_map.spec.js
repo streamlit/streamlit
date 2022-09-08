@@ -29,6 +29,7 @@ describe("st.map", () => {
   })
 
   it("displays the correct snapshot", () => {
+    cy.get(".mapboxgl-canvas")
     cy.get(".element-container", { waitForAnimations: true }).last().matchThemedSnapshots("stDeckGlJsonChart")
   })
 });
