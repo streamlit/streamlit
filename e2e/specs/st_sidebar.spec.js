@@ -22,7 +22,7 @@ describe("st.sidebar", () => {
     cy.prepForElementSnapshots();
   });
 
-  it("looks right", () => {
+  it("displays sidebar correctly", () => {
     cy.get("[data-testid='stSidebar']").matchThemedSnapshots("sidebar");
   });
 
