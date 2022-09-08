@@ -43,7 +43,7 @@ import { notNullOrUndefined } from "src/lib/utils"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import {
   StyledDeckGlChart,
-  StyledNavigationControlDiv,
+  StyledNavigationControlContainer,
 } from "./styled-components"
 
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -243,9 +243,9 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             }
             mapboxApiAccessToken={this.props.mapboxToken}
           />
-          <StyledNavigationControlDiv>
+          <StyledNavigationControlContainer>
             <NavigationControl className="zoomButton" showCompass={false} />
-          </StyledNavigationControlDiv>
+          </StyledNavigationControlContainer>
           )
         </DeckGL>
       </StyledDeckGlChart>
