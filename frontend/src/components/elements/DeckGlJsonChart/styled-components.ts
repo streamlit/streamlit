@@ -30,3 +30,10 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
     width,
   })
 )
+
+export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
+  position: "absolute",
+  right: "2.625rem",
+  top: theme.spacing.md,
+  zIndex: 1,
+}))
