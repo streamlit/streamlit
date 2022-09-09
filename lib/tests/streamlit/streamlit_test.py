@@ -22,6 +22,7 @@ import sys
 import textwrap
 import time
 import unittest
+from io import BytesIO
 from unittest.mock import patch
 
 import PIL.Image as Image
@@ -778,9 +779,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         # locate resultant file in InMemoryFileManager and test its properties.
         file_id = _calculate_file_id(fake_video_data, "video/mp4")
-        self.assertTrue(file_id in in_memory_file_manager)
+        self.assertTrue(file_id in media_file_manager)
 
-        afile = in_memory_file_manager.get(file_id)
+        afile = media_file_manager.get(file_id)
         self.assertEqual(afile.mimetype, "video/mp4")
         self.assertEqual(afile.url, el.video.url)
 
@@ -826,7 +827,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_video_options(self):
         """Test st.video with options."""
 
-        from streamlit.runtime.in_memory_file_manager import _calculate_file_id
+        from streamlit.runtime.media_file_manager import _calculate_file_id
 
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         st.video(fake_video_data, format="video/mp4", start_time=10)
