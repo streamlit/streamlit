@@ -108,18 +108,19 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         return file_id
 
     def get_file(self, file_id: str) -> MemoryFile:
-        """Return the MemoryFile with the given ID. Raise KeyError if not found."""
-        return self._files_by_id[file_id]
+        """Return the MemoryFile with the given ID. Raise MediaFileStorageError
+        if so such file exists.
+        """
+        try:
+            return self._files_by_id[file_id]
+        except KeyError as e:
+            raise MediaFileStorageError(f"No media file with id '{file_id}'") from e
 
     def get_url(self, file_id: str) -> str:
         """Get a URL for a given media file. Raise a MediaFileStorageError if
         no such file exists.
         """
-        try:
-            media_file = self._files_by_id[file_id]
-        except KeyError as e:
-            raise MediaFileStorageError(f"No media file with id '{file_id}'") from e
-
+        media_file = self.get_file(file_id)
         extension = _get_extension_for_mimetype(media_file.mimetype)
         return f"{self._media_endpoint}/{file_id}{extension}"
 
