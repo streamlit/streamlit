@@ -176,7 +176,12 @@ describe("Heading", () => {
   it("renders properly after a new line", () => {
     const props = getHeadingProps()
     const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("hello world")
+    expect(
+      wrapper
+        .find("h1")
+        .first()
+        .text()
+    ).toEqual("hello world")
     expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
       "this is a new line"
     )
@@ -185,28 +190,48 @@ describe("Heading", () => {
   it("renders properly without a new line", () => {
     const props = getHeadingProps({ body: "hello" })
     const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("hello")
+    expect(
+      wrapper
+        .find("h1")
+        .first()
+        .text()
+    ).toEqual("hello")
     expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(0)
   })
 
   it("does not render ol block", () => {
     const props = getHeadingProps({ body: "1) hello" })
     const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("1) hello")
+    expect(
+      wrapper
+        .find("h1")
+        .first()
+        .text()
+    ).toEqual("1) hello")
     expect(wrapper.find("ol")).toHaveLength(0)
   })
 
   it("does not render ul block", () => {
     const props = getHeadingProps({ body: "* hello" })
     const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("* hello")
+    expect(
+      wrapper
+        .find("h1")
+        .first()
+        .text()
+    ).toEqual("* hello")
     expect(wrapper.find("ul")).toHaveLength(0)
   })
 
   it("does not render blockquote with >", () => {
     const props = getHeadingProps({ body: ">hello" })
     const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual(">hello")
+    expect(
+      wrapper
+        .find("h1")
+        .first()
+        .text()
+    ).toEqual(">hello")
     expect(wrapper.find("blockquote")).toHaveLength(0)
   })
 
@@ -218,7 +243,12 @@ describe("Heading", () => {
     | Paragraph   | Text        |`,
     })
     const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual(`| Syntax | Description |`)
+    expect(
+      wrapper
+        .find("h1")
+        .first()
+        .text()
+    ).toEqual(`| Syntax | Description |`)
     expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
       `| ----------- | ----------- |
 | Header      | Title       |

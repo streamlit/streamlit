@@ -22,7 +22,6 @@ import React, {
   CSSProperties,
   HTMLProps,
   FunctionComponent,
-  Fragment,
 } from "react"
 import ReactMarkdown, { PluggableList } from "react-markdown"
 import {
@@ -193,14 +192,11 @@ export interface RenderedMarkdownProps {
    * any HTML will be escaped in the output.
    */
   allowHTML: boolean
-
-  overrideComponents?: Components
 }
 
 export function RenderedMarkdown({
   allowHTML,
   source,
-  overrideComponents,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -212,7 +208,6 @@ export function RenderedMarkdown({
     h4: CustomHeading,
     h5: CustomHeading,
     h6: CustomHeading,
-    ...(overrideComponents || {}),
   }
 
   const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
@@ -337,20 +332,7 @@ export function Heading(props: HeadingProtoProps): ReactElement {
   return (
     <div className="stMarkdown" style={{ width }}>
       <HeadingWithAnchor tag={tag} anchor={anchor}>
-        <RenderedMarkdown
-          source={heading}
-          allowHTML={false}
-          // this is purely an inline string
-          overrideComponents={{
-            p: Fragment,
-            h1: Fragment,
-            h2: Fragment,
-            h3: Fragment,
-            h4: Fragment,
-            h5: Fragment,
-            h6: Fragment,
-          }}
-        />
+        <RenderedMarkdown source={heading} allowHTML={false} />
       </HeadingWithAnchor>
       {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
       {rest.length > 0 && (
