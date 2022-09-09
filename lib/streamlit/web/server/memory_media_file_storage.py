@@ -98,8 +98,7 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         # Because our file_ids are stable, if we already have a file with the
         # given ID, we don't need to create a new one.
         file_id = _calculate_file_id(file_data, mimetype, filename)
-        media_file = self._files_by_id.get(file_id)
-        if media_file is None:
+        if file_id not in self._files_by_id:
             LOGGER.debug("Adding media file %s", file_id)
             media_file = MemoryFile(
                 content=file_data, mimetype=mimetype, filename=filename
