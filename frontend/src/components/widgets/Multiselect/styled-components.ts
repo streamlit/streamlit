@@ -22,3 +22,11 @@ export const StyledUISelect = styled.div(({ theme }) => ({
     background: theme.colors.fadedText05,
   },
 }))
+
+export const StyledUISelectWarning = styled.div(({ theme }) => ({
+  "span[aria-disabled='true']": {
+    background: theme.colors.fadedText05,
+  },
+  borderColor: "red",
+  borderRadius: theme.radii.lg,
+}))

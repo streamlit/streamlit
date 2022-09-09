@@ -31,7 +31,10 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
-import { StyledUISelect } from "src/components/widgets/Multiselect/styled-components"
+import {
+  StyledUISelect,
+  StyledUISelectWarning,
+} from "src/components/widgets/Multiselect/styled-components"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
@@ -206,7 +209,12 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { element, theme, width, widgetMgr } = this.props
-    const style = { width }
+    const style = {
+      width,
+      border: "1px solid red",
+      borderRadius: theme.radii.md,
+      padding: "8px",
+    }
     const { options } = element
     const disabled = options.length === 0 ? true : this.props.disabled
     const placeholder =
@@ -228,7 +236,130 @@ class Multiselect extends React.PureComponent<Props, State> {
     )
 
     if (this.state.displayWarning) {
-      // console.log("I SHOULD DISPLAY WARNING!")
+      // console.log("GOT HERE")
+      return (
+        <div className="row-widget stMultiSelect" style={style}>
+          <WidgetLabel
+            label={element.label}
+            disabled={disabled}
+            labelVisibility={labelVisibilityProtoValueToEnum(
+              element.labelVisibility?.value
+            )}
+          >
+            {element.help && (
+              <StyledWidgetLabelHelp>
+                <TooltipIcon
+                  content={element.help}
+                  placement={Placement.TOP_RIGHT}
+                />
+              </StyledWidgetLabelHelp>
+            )}
+          </WidgetLabel>
+          <StyledUISelectWarning>
+            <UISelect
+              options={selectOptions}
+              labelKey="label"
+              valueKey="value"
+              aria-label={element.label}
+              placeholder={placeholder}
+              type={TYPE.select}
+              multi
+              onChange={this.onChange}
+              value={this.valueFromState}
+              disabled={disabled}
+              size={"compact"}
+              filterOptions={this.filterOptions}
+              overrides={{
+                IconsContainer: {
+                  style: () => ({
+                    paddingRight: ".5rem",
+                  }),
+                },
+
+                ControlContainer: {
+                  style: () => ({
+                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                    borderLeftWidth: "1px",
+                    borderRightWidth: "1px",
+                    borderTopWidth: "1px",
+                    borderBottomWidth: "1px",
+                  }),
+                },
+
+                ValueContainer: {
+                  style: () => ({
+                    /*
+                      This minHeight is needed to fix a bug from BaseWeb in which the
+                      div that contains the options changes their height from 40px to 44px.
+  
+                      You could check this behavior in their documentation as well:
+                      https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
+  
+                      Issue related: https://github.com/streamlit/streamlit/issues/590
+                    */
+                    minHeight: "38.4px",
+                    paddingLeft: ".5rem",
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                    paddingRight: 0,
+                  }),
+                },
+                ClearIcon: {
+                  style: {
+                    color: theme.colors.darkGray,
+                  },
+                },
+                SearchIcon: {
+                  style: {
+                    color: theme.colors.darkGray,
+                  },
+                },
+                Tag: {
+                  props: {
+                    overrides: {
+                      Root: {
+                        style: {
+                          borderTopLeftRadius: theme.radii.md,
+                          borderTopRightRadius: theme.radii.md,
+                          borderBottomRightRadius: theme.radii.md,
+                          borderBottomLeftRadius: theme.radii.md,
+                          fontSize: theme.fontSizes.sm,
+                          paddingLeft: theme.spacing.sm,
+                          marginLeft: 0,
+                          marginRight: theme.spacing.sm,
+                          height: "28px",
+                        },
+                      },
+                      Action: {
+                        style: {
+                          paddingLeft: 0,
+                        },
+                      },
+                      Text: {
+                        style: {
+                          fontSize: theme.fontSizes.md,
+                        },
+                      },
+                    },
+                  },
+                },
+                MultiValue: {
+                  props: {
+                    overrides: {
+                      Root: {
+                        style: {
+                          fontSize: theme.fontSizes.sm,
+                        },
+                      },
+                    },
+                  },
+                },
+                Dropdown: { component: VirtualDropdown },
+              }}
+            />
+          </StyledUISelectWarning>
+        </div>
+      )
     }
 
     return (
