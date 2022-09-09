@@ -96,6 +96,10 @@ class MediaFileStorage(Protocol):
         by any connected client, so that the MediaFileStorage can free its
         resources.
 
+        Calling `delete_file` on a file_id that doesn't exist is allowed,
+        and is a no-op. (This means that multiple `delete_file` calls with
+        the same file_id is not an error.)
+
         Note: implementations can choose to ignore `delete_file` calls -
         this function is a *suggestion*, not a *command*. Callers should
         not rely on file deletion happening immediately (or at all).
