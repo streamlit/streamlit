@@ -303,9 +303,32 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   )
 }
 
+function fixBodyForHeader(tag: string, body: string): string {
+  switch (tag) {
+    case "h1": {
+      body = `# ${body}`
+      break
+    }
+    case "h2": {
+      body = `## ${body}`
+      break
+    }
+    case "h3": {
+      body = `### ${body}`
+      break
+    }
+    default: {
+      throw new Error(`Unrecognized tag for header: ${tag}`)
+    }
+  }
+  return body
+}
+
 export function Heading(props: HeadingProtoProps): ReactElement {
   const { width } = props
-  const { tag, anchor, body } = props.element
+  let { body } = props.element
+  const { tag, anchor } = props.element
+  body = fixBodyForHeader(tag, body)
   const isSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
