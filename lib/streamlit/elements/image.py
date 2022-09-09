@@ -31,8 +31,8 @@ from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -362,7 +362,7 @@ def image_to_url(
     image_data = _ensure_image_size_and_format(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
-    this_file = in_memory_file_manager.add(image_data, mimetype, image_id)
+    this_file = media_file_manager.add(image_data, mimetype, image_id)
     return this_file.url
 
 
@@ -457,7 +457,7 @@ def marshall_images(
             proto_img.caption = str(caption)
 
         # We use the index of the image in the input image list to identify this image inside
-        # InMemoryFileManager. For this, we just add the index to the image's "coordinates".
+        # MediaFileManager. For this, we just add the index to the image's "coordinates".
         image_id = "%s-%i" % (coordinates, coord_suffix)
 
         is_svg = False

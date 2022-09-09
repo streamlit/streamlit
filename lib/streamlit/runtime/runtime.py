@@ -36,7 +36,7 @@ from .forward_msg_cache import (
     populate_hash_if_needed,
     create_reference_msg,
 )
-from .in_memory_file_manager import in_memory_file_manager
+from .media_file_manager import media_file_manager
 from .legacy_caching.caching import _mem_caches
 from .session_data import SessionData
 from .state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
@@ -172,7 +172,7 @@ class Runtime:
         self._stats_mgr.register_provider(get_singleton_stats_provider())
         self._stats_mgr.register_provider(_mem_caches)
         self._stats_mgr.register_provider(self._message_cache)
-        self._stats_mgr.register_provider(in_memory_file_manager)
+        self._stats_mgr.register_provider(media_file_manager)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
         self._stats_mgr.register_provider(
             SessionStateStatProvider(self._session_info_by_id)
