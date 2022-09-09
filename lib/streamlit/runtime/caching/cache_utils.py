@@ -508,7 +508,10 @@ class CacheMessagesCallStack(threading.local):
             try:
                 wid = element_proto.id  # type: ignore
                 # TODO replace `Message` with a more precise type
-                assert self._registered_metadata is not None
+                if not self._registered_metadata:
+                    _LOGGER.warning(
+                        "Trying to save widget message that wasn't registered. This should not happen."
+                    )
                 widget_meta = WidgetMsgMetadata(
                     wid, None, metadata=self._registered_metadata
                 )
