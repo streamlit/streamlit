@@ -22,7 +22,6 @@ import sys
 import textwrap
 import time
 import unittest
-from io import BytesIO
 from unittest.mock import patch
 
 import PIL.Image as Image
@@ -765,79 +764,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     def test_st_legacy_vega_lite_chart(self):
         """Test st._legacy_vega_lite_chart."""
         pass
-
-    def test_st_video(self):
-        """Test st.video."""
-
-        # Make up some bytes to pretend we have a video.  The server should not vet
-        # the video before sending it to the browser.
-        fake_video_data = "\x12\x10\x35\x44\x55\x66".encode("utf-8")
-
-        st.video(fake_video_data)
-
-        el = self.get_delta_from_queue().new_element
-
-        # locate resultant file in InMemoryFileManager and test its properties.
-        file_id = _calculate_file_id(fake_video_data, "video/mp4")
-        self.assertTrue(file_id in media_file_manager)
-
-        afile = media_file_manager.get(file_id)
-        self.assertEqual(afile.mimetype, "video/mp4")
-        self.assertEqual(afile.url, el.video.url)
-
-        # Test with an arbitrary URL in place of data
-        some_url = "http://www.marmosetcare.com/video/in-the-wild/intro.webm"
-        st.video(some_url)
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.url, some_url)
-
-        # Test with sufficiently varied youtube URLs
-        yt_urls = (
-            "https://youtu.be/_T8LGqJtuGc",
-            "https://www.youtube.com/watch?v=kmfC-i9WgH0",
-            "https://www.youtube.com/embed/sSn4e1lLVpA",
-        )
-        yt_embeds = (
-            "https://www.youtube.com/embed/_T8LGqJtuGc",
-            "https://www.youtube.com/embed/kmfC-i9WgH0",
-            "https://www.youtube.com/embed/sSn4e1lLVpA",
-        )
-        # url should be transformed into an embed link (or left alone).
-        for x in range(0, len(yt_urls)):
-            st.video(yt_urls[x])
-            el = self.get_delta_from_queue().new_element
-            self.assertEqual(el.video.url, yt_embeds[x])
-
-        # Test that a non-URL string is assumed to be a filename
-        bad_filename = "blah"
-        with self.assertRaises(FileNotFoundError):
-            st.video(bad_filename)
-
-        # Test that we can use an empty/None value without error.
-        st.video(None)
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.url, "")
-
-        # Test that our other data types don't result in an error.
-        st.video(b"bytes_data")
-        st.video("str_data".encode("utf-8"))
-        st.video(BytesIO(b"bytesio_data"))
-        st.video(np.array([0, 1, 2, 3]))
-
-    def test_st_video_options(self):
-        """Test st.video with options."""
-
-        from streamlit.runtime.media_file_manager import _calculate_file_id
-
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
-        st.video(fake_video_data, format="video/mp4", start_time=10)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.video.start_time, 10)
-        self.assertTrue(el.video.url.startswith(STATIC_MEDIA_ENDPOINT))
-        self.assertTrue(
-            _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
-        )
 
     def test_st_warning(self):
         """Test st.warning."""
