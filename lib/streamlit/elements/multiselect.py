@@ -18,6 +18,7 @@ from typing import (
     Any,
     Callable,
     cast,
+    Generic,
     Iterable,
     Optional,
     overload,
@@ -104,18 +105,18 @@ def _check_and_convert_to_indices(
 
 
 @dataclass
-class MultiSelectSerde:
-    options: Sequence[Any]
+class MultiSelectSerde(Generic[T]):
+    options: Sequence[T]
     default_value: List[int]
 
-    def serialize(self, value: List[Any]) -> List[int]:
+    def serialize(self, value: List[T]) -> List[int]:
         return _check_and_convert_to_indices(self.options, value)
 
     def deserialize(
         self,
         ui_value: Optional[List[int]],
         widget_id: str = "",
-    ) -> List[Any]:
+    ) -> List[T]:
         current_value: List[int] = (
             ui_value if ui_value is not None else self.default_value
         )
@@ -232,7 +233,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Union[List[T]]:
+    ) -> List[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
