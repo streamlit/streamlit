@@ -199,10 +199,23 @@ def register_widget(
     return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
 
 
+def user_key_from_widget_id(wid: str) -> Optional[str]:
+    """Extract the user key used to generate a widget id, from that id.
+
+    Returns `None` instead of `"None"` if there was no user key,
+    for compatibility with the rest of the codebase, which represents it that way.
+
+    TODO This will not work correctly if the user actually provides "None"
+    as a key, but we can't avoid this kind of problem while storing the
+    string representation of the no-user-key sentinel as part of the widget id.
+    """
+    user_key = wid.split("-", maxsplit=2)[-1]
+    user_key = None if user_key == "None" else user_key
+
+
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
     ctx: Optional["ScriptRunContext"],
-    # TODO get real values for these
     widget_func_name: Optional[str],
     element_type: ElementType,
 ) -> RegisterWidgetResult[T]:
@@ -214,8 +227,7 @@ def register_widget_from_metadata(
         return RegisterWidgetResult.failure(deserializer=metadata.deserializer)
 
     widget_id = metadata.id
-    user_key = widget_id.split("-", maxsplit=2)[-1]
-    user_key = None if user_key == "None" else user_key
+    user_key = user_key_from_widget_id(widget_id)
 
     # Ensure another widget with the same user key hasn't already been registered.
     if user_key is not None:
@@ -240,6 +252,7 @@ def register_widget_from_metadata(
                 user_key,
             )
         )
+    # Save the widget metadata for cached result replay
     caching.save_widget_metadata(metadata)
     return ctx.session_state.register_widget(metadata, user_key)
 
