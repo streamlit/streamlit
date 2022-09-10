@@ -524,6 +524,11 @@ class MemoCache(Cache):
                 raise CacheKeyNotFoundError("Key not found in mem cache")
 
     def _read_initial_from_mem_cache(self, key: str) -> InitialCachedResults:
+        """Look up the initial results and ensure it has the right type.
+
+        Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
+        entry is malformed.
+        """
         pickled = self._read_from_mem_cache(key)
         maybe_initial = pickle.loads(pickled)
         if isinstance(maybe_initial, InitialCachedResults):
@@ -549,6 +554,12 @@ class MemoCache(Cache):
             raise CacheError("Unable to read from cache") from e
 
     def _read_initial_from_disk_cache(self, key: str) -> InitialCachedResults:
+        """Look up the initial results from disk and ensure it has the right type.
+
+        Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
+        entry is the wrong type, which usually means it was written by another
+        version of streamlit.
+        """
         pickled = self._read_from_disk_cache(key)
         maybe_initial = pickle.loads(pickled)
         if isinstance(maybe_initial, InitialCachedResults):
