@@ -16,6 +16,7 @@
 import logging
 import pickle
 import re
+from typing import Any
 import unittest
 from unittest.mock import patch, mock_open, MagicMock, Mock
 
@@ -35,19 +36,20 @@ from streamlit.runtime.caching.memo_decorator import (
     get_memo_stats_provider,
 )
 from streamlit.runtime.stats import CacheStat
+from tests.streamlit.runtime.caching.common_cache_test import (
+    as_cached_result as _as_cached_result,
+)
 from tests.testutil import DeltaGeneratorTestCase
 
 
-def as_cached_result(value):
-    result = CachedResult(value, [], st._main.id, st.sidebar.id)
-    widget_key = _make_widget_key([], CacheType.MEMO)
-    d = {}
-    d[widget_key] = result
-    initial = InitialCachedResults(set(), d)
-    return initial
+def as_cached_result(value: Any) -> InitialCachedResults:
+    return _as_cached_result(value, CacheType.MEMO)
 
 
 def as_replay_test_data():
+    """Creates cached results for a function that returned `value`
+    and executed `st.text(1)`.
+    """
     widget_key = _make_widget_key([], CacheType.MEMO)
     d = {}
     d[widget_key] = CachedResult(

@@ -15,6 +15,7 @@
 """st.singleton unit tests."""
 
 import threading
+from typing import Any
 import unittest
 from unittest.mock import patch
 
@@ -27,20 +28,16 @@ from streamlit.runtime.caching import (
 )
 from streamlit.runtime.caching.cache_errors import CacheType
 from streamlit.runtime.caching.cache_utils import (
-    CachedResult,
     InitialCachedResults,
-    _make_widget_key,
 )
 from streamlit.runtime.stats import CacheStat
+from tests.streamlit.runtime.caching.common_cache_test import (
+    as_cached_result as _as_cached_result,
+)
 
 
-def as_cached_result(value):
-    result = CachedResult(value, [], st._main.id, st.sidebar.id)
-    widget_key = _make_widget_key([], CacheType.SINGLETON)
-    d = {}
-    d[widget_key] = result
-    initial = InitialCachedResults(set(), d)
-    return initial
+def as_cached_result(value: Any) -> InitialCachedResults:
+    return _as_cached_result(value, CacheType.MEMO)
 
 
 class SingletonTest(unittest.TestCase):

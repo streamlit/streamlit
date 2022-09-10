@@ -15,7 +15,7 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
-from typing import List
+from typing import Any, List
 from unittest.mock import patch
 import pytest as pytest
 
@@ -26,7 +26,12 @@ from streamlit.runtime.caching import (
     MEMO_CALL_STACK,
     SINGLETON_CALL_STACK,
 )
-from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
+from streamlit.runtime.caching.cache_errors import CacheReplayClosureError, CacheType
+from streamlit.runtime.caching.cache_utils import (
+    CachedResult,
+    InitialCachedResults,
+    _make_widget_key,
+)
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
@@ -48,6 +53,18 @@ def get_text_or_block(delta):
             return element.text.body
     elif delta.WhichOneof("type") == "add_block":
         return "new_block"
+
+
+def as_cached_result(value: Any, cache_type: CacheType) -> InitialCachedResults:
+    """Creates cached results for a function that returned `value`
+    and did not execute any elements.
+    """
+    result = CachedResult(value, [], st._main.id, st.sidebar.id)
+    widget_key = _make_widget_key([], cache_type)
+    d = {}
+    d[widget_key] = result
+    initial = InitialCachedResults(set(), d)
+    return initial
 
 
 class CommonCacheTest(DeltaGeneratorTestCase):
