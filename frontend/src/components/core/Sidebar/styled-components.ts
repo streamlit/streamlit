@@ -252,7 +252,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     position: "relative",
     height: "100%",
     width: "100%",
-    overflow: hideScrollbar ? "hidden" : "overlay",
+    overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
   })
 )
 
@@ -290,27 +290,14 @@ export const StyledSidebarCollapsedControl = styled.div<
   },
 }))
 
-export const StyledResizeHandleMargin = styled.div(({ theme }) => ({
-  // Avoids resize handle & scrollbar showing simultaneously
-  position: "absolute",
-  width: "20px",
-  height: "100%",
-  top: "0px",
-  right: "5px",
-  cursor: "default",
-  overflow: "hidden",
-}))
-
 export const StyledResizeHandle = styled.div(({ theme }) => ({
   position: "absolute",
-  width: "10px",
+  width: "8px",
   height: "100%",
-  top: "0px",
-  right: "0px",
   cursor: "col-resize",
   zIndex: theme.zIndices.sidebarMobile,
 
   "&:hover": {
-    backgroundImage: `linear-gradient(to right, transparent 42%, ${theme.colors.fadedText20} 50%, transparent 58%)`,
+    backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.fadedText20} 28%, transparent 36%)`,
   },
 }))

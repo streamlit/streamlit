@@ -38,6 +38,8 @@ from streamlit.type_util import (
     is_type,
     to_key,
     V_co,
+    LabelVisibility,
+    maybe_raise_label_warnings,
 )
 
 from streamlit.runtime.state import (
@@ -46,8 +48,14 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -119,6 +127,7 @@ class MultiSelectSerde:
 
 
 class MultiSelectMixin:
+    @gather_metrics
     def multiselect(
         self,
         label: str,
@@ -132,7 +141,8 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> Union[List[V_co]]:
+        label_visibility: LabelVisibility = "visible",
+    ) -> List[V_co]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -140,6 +150,9 @@ class MultiSelectMixin:
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         options : Sequence[V], numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the select options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
@@ -167,6 +180,11 @@ class MultiSelectMixin:
             An optional boolean, which disables the multiselect widget if set
             to True. The default is False. This argument can only be supplied
             by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -199,6 +217,7 @@ class MultiSelectMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -215,6 +234,7 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> Union[List[V_co]]:
         key = to_key(key)
@@ -222,6 +242,7 @@ class MultiSelectMixin:
         check_session_state_rules(default_value=default, key=key)
 
         opt = ensure_indexable(options)
+        maybe_raise_label_warnings(label, label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
         multiselect_proto = MultiSelectProto()
@@ -249,6 +270,9 @@ class MultiSelectMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
+        multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)
             multiselect_proto.set_value = True

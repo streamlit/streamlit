@@ -15,12 +15,14 @@
 from typing import cast, TYPE_CHECKING
 
 from streamlit.proto.Snow_pb2 import Snow as SnowProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
 class SnowMixin:
+    @gather_metrics
     def snow(self) -> "DeltaGenerator":
         """Draw celebratory snowfall.
 

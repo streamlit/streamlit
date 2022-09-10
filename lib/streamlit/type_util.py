@@ -45,6 +45,7 @@ import pyarrow as pa
 from pandas.api.types import infer_dtype
 
 from streamlit import errors
+from streamlit import logger as _logger
 
 if TYPE_CHECKING:
     import graphviz
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
+_LOGGER = _logger.get_logger("root")
 
 # The array value field names are part of the larger set of possible value
 # field names. See the explanation for said set below. The message types
@@ -123,6 +125,7 @@ OptionSequence: TypeAlias = Union[
 
 Key: TypeAlias = Union[str, int]
 
+LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
 # This should really be a Protocol, but can't be, due to:
 # https://github.com/python/mypy/issues/12933
@@ -598,3 +601,18 @@ def to_key(key: Optional[Key]) -> Optional[str]:
         return None
     else:
         return str(key)
+
+
+def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[str]):
+    if not label:
+        _LOGGER.warning(
+            "`label` got an empty value. This is discouraged for accessibility "
+            "reasons and may be disallowed in the future by raising an exception. "
+            "Please provide a non-empty label and hide it with label_visibility "
+            "if needed."
+        )
+    if label_visibility not in ("visible", "hidden", "collapsed"):
+        raise errors.StreamlitAPIException(
+            f"Unsupported label_visibility option '{label_visibility}'. "
+            f"Valid values are 'visible', 'hidden' or 'collapsed'."
+        )

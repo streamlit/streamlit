@@ -21,6 +21,7 @@ import { shallow } from "src/lib/test_util"
 import { lightTheme } from "src/theme"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
+import { NavigationControl } from "react-map-gl"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
 
 const getProps = (
@@ -79,6 +80,7 @@ describe("DeckGlJsonChart element", () => {
     const wrapper = shallow(<DeckGlJsonChart {...props} />)
 
     expect(wrapper.find(DeckGL).length).toBe(1)
+    expect(wrapper.find(NavigationControl).length).toBe(1)
   })
 
   it("merges client and server changes", () => {

@@ -17,7 +17,11 @@
 
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
-import { TextArea as TextAreaProto } from "src/autogen/proto"
+import {
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  TextArea as TextAreaProto,
+} from "src/autogen/proto"
+
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -80,6 +84,30 @@ describe("TextArea widget", () => {
     const wrapper = mount(<TextArea {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<TextArea {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<TextArea {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    )
   })
 
   it("has a default value", () => {

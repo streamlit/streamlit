@@ -26,6 +26,7 @@ jest.mock("src/lib/utils", () => ({
 
 const createSessionInfo = (): SessionInfo =>
   new SessionInfo({
+    appId: "aid",
     sessionId: "sessionId",
     streamlitVersion: "sv",
     pythonVersion: "pv",

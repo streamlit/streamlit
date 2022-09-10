@@ -31,6 +31,7 @@ describe("HttpClient", () => {
 
   beforeEach(() => {
     SessionInfo.current = new SessionInfo({
+      appId: "aid",
       sessionId: "sessionId",
       streamlitVersion: "sv",
       pythonVersion: "pv",

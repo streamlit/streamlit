@@ -27,6 +27,8 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+
 export interface Props {
   disabled: boolean
   element: TimeInputProto
@@ -203,7 +205,13 @@ class TimeInput extends PureComponent<Props, State> {
 
     return (
       <div className="stTimeInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -219,6 +227,7 @@ class TimeInput extends PureComponent<Props, State> {
           onChange={this.handleChange}
           overrides={selectOverrides}
           creatable
+          aria-label={element.label}
         />
       </div>
     )
