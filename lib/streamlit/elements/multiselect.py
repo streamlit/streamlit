@@ -24,7 +24,6 @@ from typing import (
     List,
     Sequence,
     Union,
-    TypeVar,
     TYPE_CHECKING,
 )
 
@@ -37,7 +36,7 @@ from streamlit.type_util import (
     ensure_indexable,
     is_type,
     to_key,
-    V_co,
+    T,
     LabelVisibility,
     maybe_raise_label_warnings,
 )
@@ -59,9 +58,6 @@ from .utils import (
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-
-T = TypeVar("T")
 
 
 @overload
@@ -131,7 +127,7 @@ class MultiSelectMixin:
     def multiselect(
         self,
         label: str,
-        options: OptionSequence[V_co],
+        options: OptionSequence[T],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -142,7 +138,7 @@ class MultiSelectMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> List[V_co]:
+    ) -> List[T]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -224,7 +220,7 @@ class MultiSelectMixin:
     def _multiselect(
         self,
         label: str,
-        options: OptionSequence[V_co],
+        options: OptionSequence[T],
         default: Union[Iterable[Any], Any, None] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -236,7 +232,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Union[List[V_co]]:
+    ) -> Union[List[T]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)

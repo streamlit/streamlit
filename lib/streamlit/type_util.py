@@ -100,7 +100,12 @@ ValueFieldName: TypeAlias = Literal[
     "trigger_value",
 ]
 
-V_co = TypeVar("V_co", covariant=True)
+V_co = TypeVar(
+    "V_co",
+    covariant=True,  # https://peps.python.org/pep-0484/#covariance-and-contravariance
+)
+
+T = TypeVar("T")
 
 
 class DataFrameGenericAlias(Protocol[V_co]):
@@ -110,7 +115,8 @@ class DataFrameGenericAlias(Protocol[V_co]):
     significantly increasing its usefulness.
 
     We can't use types.GenericAlias, as it is only available from python>=3.9,
-    and isn't easily back-ported."""
+    and isn't easily back-ported.
+    """
 
     @property
     def iloc(self) -> _iLocIndexer:
@@ -471,7 +477,9 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
 
     """
     if is_dataframe(obj):
-        # Select fist column
+        # Return first column as a pd.Series
+        # The type of the elements in this column is not known up front, hence
+        # the Iterable[Any] return type.
         return cast(Iterable[Any], obj.iloc[:, 0])
 
     if is_iterable(obj):
@@ -491,7 +499,7 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
     if callable(index_fn):
-        return it  # type: ignore
+        return it  # type: ignore[return-value]
     else:
         return list(it)
 

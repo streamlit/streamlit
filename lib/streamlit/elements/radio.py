@@ -31,7 +31,7 @@ from streamlit.type_util import (
     OptionSequence,
     ensure_indexable,
     to_key,
-    V_co,
+    T,
     maybe_raise_label_warnings,
 )
 
@@ -50,8 +50,8 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class RadioSerde(Generic[V_co]):
-    options: Sequence[V_co]
+class RadioSerde(Generic[T]):
+    options: Sequence[T]
     index: int
 
     def serialize(self, v: object) -> int:
@@ -63,7 +63,7 @@ class RadioSerde(Generic[V_co]):
         self,
         ui_value: Optional[int],
         widget_id: str = "",
-    ) -> Optional[V_co]:
+    ) -> Optional[T]:
         idx = ui_value if ui_value is not None else self.index
 
         return (
@@ -78,7 +78,7 @@ class RadioMixin:
     def radio(
         self,
         label: str,
-        options: OptionSequence[V_co],
+        options: OptionSequence[T],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -90,7 +90,7 @@ class RadioMixin:
         disabled: bool = False,
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[V_co]:
+    ) -> Optional[T]:
         """Display a radio button widget.
 
         Parameters
@@ -179,7 +179,7 @@ class RadioMixin:
     def _radio(
         self,
         label: str,
-        options: OptionSequence[V_co],
+        options: OptionSequence[T],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -192,7 +192,7 @@ class RadioMixin:
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext],
-    ) -> Optional[V_co]:
+    ) -> Optional[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)

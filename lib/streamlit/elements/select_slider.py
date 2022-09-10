@@ -22,7 +22,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     TYPE_CHECKING,
     Union,
     cast,
@@ -44,7 +43,7 @@ from streamlit.type_util import (
     OptionSequence,
     ensure_indexable,
     to_key,
-    V_co,
+    T,
     LabelVisibility,
     maybe_raise_label_warnings,
 )
@@ -62,16 +61,13 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-T = TypeVar("T")
-
-
 def _is_range_value(value: Union[T, Sequence[T]]) -> TypeGuard[Sequence[T]]:
     return isinstance(value, (list, tuple))
 
 
 @dataclass
-class SelectSliderSerde(Generic[V_co]):
-    options: Sequence[V_co]
+class SelectSliderSerde(Generic[T]):
+    options: Sequence[T]
     value: List[int]
     is_range_value: bool
 
@@ -82,14 +78,14 @@ class SelectSliderSerde(Generic[V_co]):
         self,
         ui_value: Optional[List[int]],
         widget_id: str = "",
-    ) -> Union[V_co, Tuple[V_co, V_co]]:
+    ) -> Union[T, Tuple[T, T]]:
         if not ui_value:
             # Widget has not been used; fallback to the original value,
             ui_value = self.value
 
         # The widget always returns floats, so convert to ints before indexing
-        return_value: Tuple[V_co, V_co] = cast(
-            Tuple[V_co, V_co],
+        return_value: Tuple[T, T] = cast(
+            Tuple[T, T],
             tuple(map(lambda x: self.options[int(x)], ui_value)),
         )
 
@@ -112,7 +108,7 @@ class SelectSliderMixin:
     def select_slider(
         self,
         label: str,
-        options: OptionSequence[V_co] = (),
+        options: OptionSequence[T] = (),
         value: object = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -123,7 +119,7 @@ class SelectSliderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Union[V_co, Tuple[V_co, V_co]]:
+    ) -> Union[T, Tuple[T, T]]:
         """
         Display a slider widget to select items from a list.
 
@@ -223,7 +219,7 @@ class SelectSliderMixin:
     def _select_slider(
         self,
         label: str,
-        options: OptionSequence[V_co] = (),
+        options: OptionSequence[T] = (),
         value: object = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -234,7 +230,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Union[V_co, Tuple[V_co, V_co]]:
+    ) -> Union[T, Tuple[T, T]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
