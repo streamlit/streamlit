@@ -466,9 +466,10 @@ jobs:
     docker:
       - image: circleci/python:3.10.1
 
-    working_directory: ~/repo
-
+    
     resource_class: large
+
+    working_directory: ~/repo
 
     steps:
       - checkout:
