@@ -466,7 +466,6 @@ jobs:
     docker:
       - image: circleci/python:3.10.1
 
-    
     resource_class: large
 
     working_directory: ~/repo
@@ -920,10 +919,13 @@ jobs:
                 failure_message: ":blobonfire: Nightly job failed on E2E tests"
 
   cli-regression-test:
-    resource_class: large
     docker:
       - image: circleci/python:3.10.1
+
+    # resource_class: large
+
     working_directory: ~/repo
+
     steps:
       - checkout:
           name: Checkout Streamlit code
