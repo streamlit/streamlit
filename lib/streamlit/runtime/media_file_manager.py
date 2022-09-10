@@ -17,6 +17,7 @@
 import collections
 import hashlib
 import mimetypes
+import threading
 from enum import Enum
 from typing import Dict, Set, Optional, List
 
@@ -179,44 +180,50 @@ class MediaFileManager(CacheStatsProvider):
             str, Dict[str, MediaFile]
         ] = collections.defaultdict(dict)
 
-    def __repr__(self) -> str:
-        return util.repr_(self)
+        self._lock = threading.RLock()
 
     def del_expired_files(self) -> None:
+        """Delete files that are no longer referenced by any active session.
+
+        Safe to call from any thread.
+        """
         LOGGER.debug("Deleting expired files...")
+        with self._lock:
+            # Get a flat set of every file ID in the session ID map.
+            active_file_ids: Set[str] = set()
 
-        # Get a flat set of every file ID in the session ID map.
-        active_file_ids: Set[str] = set()
+            for files_by_coord in self._files_by_session_and_coord.values():
+                file_ids = map(lambda file: file.id, files_by_coord.values())
+                active_file_ids = active_file_ids.union(file_ids)
 
-        for files_by_coord in self._files_by_session_and_coord.values():
-            file_ids = map(lambda file: file.id, files_by_coord.values())
-            active_file_ids = active_file_ids.union(file_ids)
+            for file_id, file in list(self._files_by_id.items()):
+                if file.id not in active_file_ids:
 
-        for file_id, file in list(self._files_by_id.items()):
-            if file.id not in active_file_ids:
-
-                if file.file_type == MediaFileType.MEDIA:
-                    LOGGER.debug(f"Deleting File: {file_id}")
-                    del self._files_by_id[file_id]
-                elif file.file_type == MediaFileType.DOWNLOADABLE:
-                    if file._is_marked_for_delete:
+                    if file.file_type == MediaFileType.MEDIA:
                         LOGGER.debug(f"Deleting File: {file_id}")
                         del self._files_by_id[file_id]
-                    else:
-                        file._mark_for_delete()
+                    elif file.file_type == MediaFileType.DOWNLOADABLE:
+                        if file._is_marked_for_delete:
+                            LOGGER.debug(f"Deleting File: {file_id}")
+                            del self._files_by_id[file_id]
+                        else:
+                            file._mark_for_delete()
 
     def clear_session_files(self, session_id: Optional[str] = None) -> None:
         """Removes AppSession-coordinate mapping immediately, and id-file mapping later.
 
         Should be called whenever ScriptRunner completes and when a session ends.
+
+        Safe to call from any thread.
         """
         if session_id is None:
             session_id = _get_session_id()
 
         LOGGER.debug("Disconnecting files for session with ID %s", session_id)
 
-        if session_id in self._files_by_session_and_coord:
-            del self._files_by_session_and_coord[session_id]
+        with self._lock:
+            if session_id in self._files_by_session_and_coord:
+                del self._files_by_session_and_coord[session_id]
 
         LOGGER.debug(
             "Sessions still active: %r", self._files_by_session_and_coord.keys()
@@ -246,6 +253,8 @@ class MediaFileManager(CacheStatsProvider):
 
         coordinates should look like this: "1.(3.-14).5"
 
+        Safe to call from any thread.
+
         Parameters
         ----------
         content : bytes
@@ -263,52 +272,59 @@ class MediaFileManager(CacheStatsProvider):
             not as a media for rendering at page. [default: None]
         """
         file_id = _calculate_file_id(content, mimetype, file_name=file_name)
-        file = self._files_by_id.get(file_id, None)
-
-        if file is None:
-            LOGGER.debug("Adding media file %s", file_id)
-
-            if is_for_static_download:
-                file_type = MediaFileType.DOWNLOADABLE
-            else:
-                file_type = MediaFileType.MEDIA
-
-            file = MediaFile(
-                file_id=file_id,
-                content=content,
-                mimetype=mimetype,
-                file_name=file_name,
-                file_type=file_type,
-            )
-        else:
-            LOGGER.debug("Overwriting media file %s", file_id)
-
         session_id = _get_session_id()
-        self._files_by_id[file.id] = file
-        self._files_by_session_and_coord[session_id][coordinates] = file
 
-        LOGGER.debug(
-            "Files: %s; Sessions with files: %s",
-            len(self._files_by_id),
-            len(self._files_by_session_and_coord),
-        )
+        with self._lock:
+            file = self._files_by_id.get(file_id, None)
 
-        return file
+            if file is None:
+                LOGGER.debug("Adding media file %s", file_id)
+
+                if is_for_static_download:
+                    file_type = MediaFileType.DOWNLOADABLE
+                else:
+                    file_type = MediaFileType.MEDIA
+
+                file = MediaFile(
+                    file_id=file_id,
+                    content=content,
+                    mimetype=mimetype,
+                    file_name=file_name,
+                    file_type=file_type,
+                )
+            else:
+                LOGGER.debug("Overwriting media file %s", file_id)
+
+            self._files_by_id[file.id] = file
+            self._files_by_session_and_coord[session_id][coordinates] = file
+
+            LOGGER.debug(
+                "Files: %s; Sessions with files: %s",
+                len(self._files_by_id),
+                len(self._files_by_session_and_coord),
+            )
+
+            return file
 
     def get(self, file_id: str) -> MediaFile:
         """Returns the MediaFile for the given file_id.
 
         Raises KeyError if not found.
+
+        Safe to call from any thread.
         """
         # Filename is {requested_hash}.{extension} but MediaFileManager
         # is indexed by requested_hash.
         hash = file_id.split(".")[0]
+
+        # dictionary access is atomic, so no need to take a lock.
         return self._files_by_id[hash]
 
     def get_stats(self) -> List[CacheStat]:
         # We operate on a copy of our dict, to avoid race conditions
         # with other threads that may be manipulating the cache.
-        files_by_id = self._files_by_id.copy()
+        with self._lock:
+            files_by_id = self._files_by_id.copy()
 
         stats: List[CacheStat] = []
         for file_id, file in files_by_id.items():
