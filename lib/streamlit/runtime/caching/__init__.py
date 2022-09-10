@@ -43,6 +43,10 @@ def save_element_message(
     used_dg_id: str,
     returned_dg_id: str,
 ) -> None:
+    """Save the message for an element to a thread-local callstack, so it can
+    be used later to replay the element when a cache-decorated function's
+    execution is skipped.
+    """
     MEMO_MESSAGES_CALL_STACK.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
@@ -57,6 +61,10 @@ def save_block_message(
     used_dg_id: str,
     returned_dg_id: str,
 ) -> None:
+    """Save the message for a block to a thread-local callstack, so it can
+    be used later to replay the block when a cache-decorated function's
+    execution is skipped.
+    """
     MEMO_MESSAGES_CALL_STACK.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
@@ -66,6 +74,9 @@ def save_block_message(
 
 
 def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
+    """Save a widget's metadata to a thread-local callstack, so the widget
+    can be registered again when that widget is replayed.
+    """
     MEMO_MESSAGES_CALL_STACK.save_widget_metadata(metadata)
     SINGLETON_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
 
