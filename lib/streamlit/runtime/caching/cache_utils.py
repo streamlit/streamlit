@@ -39,7 +39,6 @@ from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import util
-from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.logger import get_logger
@@ -57,9 +56,6 @@ from .cache_errors import (
     UnhashableTypeError,
 )
 from .hashing import update_hash
-
-if TYPE_CHECKING:
-    from streamlit.delta_generator import DeltaGenerator
 
 _LOGGER = get_logger(__name__)
 
