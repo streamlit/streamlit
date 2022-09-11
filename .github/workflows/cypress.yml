@@ -7,9 +7,13 @@ on:
     branches:
       - '**'
 
+# Avoid duplicate workflows on same branch
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e_tests:
-    
     runs-on: ubuntu-latest
 
     permissions:
