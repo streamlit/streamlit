@@ -79,6 +79,10 @@ _TELEMETRY_TEXT = """
     "config": click.style(_CONFIG_FILE_PATH),
 }
 
+_TELEMETRY_HEADLESS_TEXT = """
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to False.
+"""
+
 # IMPORTANT: Break the text below at 80 chars.
 _INSTRUCTIONS_TEXT = """
   %(start)s
@@ -282,5 +286,8 @@ def check_credentials():
     from streamlit import config
 
     if not _check_credential_file_exists() and config.get_option("server.headless"):
+        if not config.is_manually_set("browser.gatherUsageStats"):
+            # If not manually defined, show short message about usage stats gathering.
+            click.secho(_TELEMETRY_HEADLESS_TEXT)
         return
     Credentials.get_current()._check_activated()

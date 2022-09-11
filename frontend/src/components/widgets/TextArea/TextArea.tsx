@@ -28,7 +28,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { isInForm } from "src/lib/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import { StyledTextAreaContainer } from "./styled-components"
 
 export interface Props {
@@ -186,7 +186,13 @@ class TextArea extends React.PureComponent<Props, State> {
 
     return (
       <div className="stTextArea" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -204,6 +210,7 @@ class TextArea extends React.PureComponent<Props, State> {
             onBlur={this.onBlur}
             onChange={this.onChange}
             onKeyDown={this.onKeyDown}
+            aria-label={element.label}
             disabled={disabled}
             overrides={{
               Input: {

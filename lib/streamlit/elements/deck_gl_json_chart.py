@@ -13,14 +13,32 @@
 # limitations under the License.
 
 import json
-from typing import Any, Dict, cast
+from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, cast
 
-import streamlit
+from typing_extensions import Final
+
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
+from streamlit.runtime.metrics_util import gather_metrics
+
+if TYPE_CHECKING:
+    from pydeck import Deck
+
+    from streamlit.delta_generator import DeltaGenerator
+
+
+# Mapping used when no data is passed.
+EMPTY_MAP: Final[Mapping[str, Any]] = {
+    "initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1},
+}
 
 
 class PydeckMixin:
-    def pydeck_chart(self, pydeck_obj=None, use_container_width=False):
+    @gather_metrics
+    def pydeck_chart(
+        self,
+        pydeck_obj: Optional["Deck"] = None,
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
         """Draw a chart using the PyDeck library.
 
         This supports 3D maps, point clouds, and more! More info about PyDeck
@@ -42,8 +60,9 @@ class PydeckMixin:
 
         Parameters
         ----------
-        spec: pydeck.Deck or None
+        pydeck_obj: pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
+        use_container_width: bool
 
         Example
         -------
@@ -97,18 +116,34 @@ class PydeckMixin:
         return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-# Map used when no data is passed.
-EMPTY_MAP: Dict[str, Any] = {
-    "initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1},
-}
+def _get_pydeck_tooltip(pydeck_obj: Optional["Deck"]) -> Optional[Dict[str, str]]:
+    if pydeck_obj is None:
+        return None
+
+    # For pydeck <0.8.1 or pydeck>=0.8.1 when jupyter extra is installed.
+    desk_widget = getattr(pydeck_obj, "deck_widget", None)
+    if desk_widget is not None and isinstance(desk_widget.tooltip, dict):
+        return desk_widget.tooltip
+
+    # For pydeck >=0.8.1 when jupyter extra is not installed.
+    # For details, see: https://github.com/visgl/deck.gl/pull/7125/files
+    tooltip = getattr(pydeck_obj, "_tooltip", None)
+    if tooltip is not None and isinstance(tooltip, dict):
+        return tooltip
+
+    return None
 
 
-def marshall(pydeck_proto, pydeck_obj, use_container_width):
+def marshall(
+    pydeck_proto: PydeckProto,
+    pydeck_obj: Optional["Deck"],
+    use_container_width: bool,
+) -> None:
     if pydeck_obj is None:
         spec = json.dumps(EMPTY_MAP)
     else:
@@ -117,5 +152,6 @@ def marshall(pydeck_proto, pydeck_obj, use_container_width):
     pydeck_proto.json = spec
     pydeck_proto.use_container_width = use_container_width
 
-    if pydeck_obj is not None and isinstance(pydeck_obj.deck_widget.tooltip, dict):
-        pydeck_proto.tooltip = json.dumps(pydeck_obj.deck_widget.tooltip)
+    tooltip = _get_pydeck_tooltip(pydeck_obj)
+    if tooltip:
+        pydeck_proto.tooltip = json.dumps(tooltip)

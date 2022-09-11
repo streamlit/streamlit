@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message TextInput {
   enum Type {
     // A normal text input.
@@ -37,4 +39,5 @@ message TextInput {
   string autocomplete = 10;
   string placeholder = 11;
   bool disabled = 12;
+  LabelVisibilityMessage label_visibility = 13;
 }

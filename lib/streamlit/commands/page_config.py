@@ -11,19 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Mapping
-from urllib.parse import urlparse
+
+import random
 from textwrap import dedent
+from typing import Mapping
 from typing import cast, Optional, TYPE_CHECKING, Union
+from urllib.parse import urlparse
 
 from typing_extensions import Final, Literal, TypeAlias
 
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
-from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
+from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.string_util import is_emoji
 from streamlit.util import lower_clean_dict_keys
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from typing_extensions import TypeGuard
@@ -32,7 +36,7 @@ GET_HELP_KEY: Final = "get help"
 REPORT_A_BUG_KEY: Final = "report a bug"
 ABOUT_KEY: Final = "about"
 
-PageIcon: TypeAlias = Union[image.AtomicImage, str, None]
+PageIcon: TypeAlias = Union[image.AtomicImage, str]
 Layout: TypeAlias = Literal["centered", "wide"]
 InitialSideBarState: TypeAlias = Literal["auto", "expanded", "collapsed"]
 _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
@@ -41,10 +45,77 @@ _About: TypeAlias = Literal["About", "about"]
 MenuKey: TypeAlias = Literal[_GetHelp, _ReportABug, _About]
 MenuItems: TypeAlias = Mapping[MenuKey, Optional[str]]
 
+# Emojis recommended by https://share.streamlit.io/rensdimmendaal/emoji-recommender/main/app/streamlit.py
+# for the term "streamlit". Watch out for zero-width joiners,
+# as they won't parse correctly in the list() call!
+RANDOM_EMOJIS: Final = list(
+    "🔥™🎉🚀🌌💣✨🌙🎆🎇💥🤩🤙🌛🤘⬆💡🤪🥂⚡💨🌠🎊🍿😛🔮🤟🌃🍃🍾💫▪🌴🎈🎬🌀🎄😝☔⛽🍂💃😎🍸🎨🥳☀😍🅱🌞😻🌟😜💦💅🦄😋😉👻🍁🤤👯🌻‼🌈👌🎃💛😚🔫🙌👽🍬🌅☁🍷👭☕🌚💁👅🥰🍜😌🎥🕺❕🧡☄💕🍻✅🌸🚬🤓🍹®☺💪😙☘🤠✊🤗🍵🤞😂💯😏📻🎂💗💜🌊❣🌝😘💆🤑🌿🦋😈⛄🚿😊🌹🥴😽💋😭🖤🙆👐⚪💟☃🙈🍭💻🥀🚗🤧🍝💎💓🤝💄💖🔞⁉⏰🕊🎧☠♥🌳🏾🙉⭐💊🍳🌎🙊💸❤🔪😆🌾✈📚💀🏠✌🏃🌵🚨💂🤫🤭😗😄🍒👏🙃🖖💞😅🎅🍄🆓👉💩🔊🤷⌚👸😇🚮💏👳🏽💘💿💉👠🎼🎶🎤👗❄🔐🎵🤒🍰👓🏄🌲🎮🙂📈🚙📍😵🗣❗🌺🙄👄🚘🥺🌍🏡♦💍🌱👑👙☑👾🍩🥶📣🏼🤣☯👵🍫➡🎀😃✋🍞🙇😹🙏👼🐝⚫🎁🍪🔨🌼👆👀😳🌏📖👃🎸👧💇🔒💙😞⛅🏻🍴😼🗿🍗♠🦁✔🤖☮🐢🐎💤😀🍺😁😴📺☹😲👍🎭💚🍆🍋🔵🏁🔴🔔🧐👰☎🏆🤡🐠📲🙋📌🐬✍🔑📱💰🐱💧🎓🍕👟🐣👫🍑😸🍦👁🆗🎯📢🚶🦅🐧💢🏀🚫💑🐟🌽🏊🍟💝💲🐍🍥🐸☝♣👊⚓❌🐯🏈📰🌧👿🐳💷🐺📞🆒🍀🤐🚲🍔👹🙍🌷🙎🐥💵🔝📸⚠❓🎩✂🍼😑⬇⚾🍎💔🐔⚽💭🏌🐷🍍✖🍇📝🍊🐙👋🤔🥊🗽🐑🐘🐰💐🐴♀🐦🍓✏👂🏴👇🆘😡🏉👩💌😺✝🐼🐒🐶👺🖕👬🍉🐻🐾⬅⏬▶👮🍌♂🔸👶🐮👪⛳🐐🎾🐕👴🐨🐊🔹©🎣👦👣👨👈💬⭕📹📷"
+)
 
+# Also pick out some vanity emojis.
+ENG_EMOJIS: Final = [
+    "🎈",  # st.balloons 🎈🎈
+    "🤓",  # Abhi
+    "🏈",  # Amey
+    "🚲",  # Thiago
+    "🐧",  # Matteo
+    "🦒",  # Ken
+    "🐳",  # Karrie
+    "🕹️",  # Jonathan
+    "🇦🇲",  # Henrikh
+    "🎸",  # Guido
+    "🦈",  # Austin
+    "💎",  # Emiliano
+    "👩‍🎤",  # Naomi
+    "🧙‍♂️",  # Jon
+    "🐻",  # Brandon
+    "🎎",  # James
+    # TODO: Solicit emojis from the rest of Streamlit
+]
+
+
+def _get_favicon_string(page_icon: PageIcon) -> str:
+    """Return the string to pass to the frontend to have it show
+    the given PageIcon.
+
+    If page_icon is a string that looks like an emoji (or an emoji shortcode),
+    we return it as-is. Otherwise we use `image_to_url` to return a URL.
+
+    (If `image_to_url` raises an error and page_icon is a string, return
+    the unmodified page_icon string instead of re-raising the error.)
+    """
+
+    # Choose a random emoji.
+    if page_icon == "random":
+        return get_random_emoji()
+
+    # If page_icon is an emoji, return it as is.
+    if isinstance(page_icon, str) and is_emoji(page_icon):
+        return page_icon
+
+    # Fall back to image_to_url.
+    try:
+        return image.image_to_url(
+            page_icon,
+            width=-1,  # Always use full width for favicons
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="favicon",
+        )
+    except BaseException:
+        if isinstance(page_icon, str):
+            # This fall-thru handles emoji shortcode strings (e.g. ":shark:"),
+            # which aren't valid filenames and so will cause an Exception from
+            # `image_to_url`.
+            return page_icon
+        raise
+
+
+@gather_metrics
 def set_page_config(
     page_title: Optional[str] = None,
-    page_icon: PageIcon = None,
+    page_icon: Optional[PageIcon] = None,
     layout: Layout = "centered",
     initial_sidebar_state: InitialSideBarState = "auto",
     menu_items: Optional[MenuItems] = None,
@@ -108,22 +179,11 @@ def set_page_config(
 
     msg = ForwardProto()
 
-    if page_title:
+    if page_title is not None:
         msg.page_config_changed.title = page_title
 
-    if page_icon:
-        if page_icon == "random":
-            page_icon = get_random_emoji()
-
-        msg.page_config_changed.favicon = image.image_to_url(
-            page_icon,
-            width=-1,  # Always use full width for favicons
-            clamp=False,
-            channels="RGB",
-            output_format="auto",
-            image_id="favicon",
-            allow_emoji=True,
-        )
+    if page_icon is not None:
+        msg.page_config_changed.favicon = _get_favicon_string(page_icon)
 
     pb_layout: "PageConfigProto.Layout.ValueType"
     if layout == "centered":
@@ -165,35 +225,6 @@ def set_page_config(
 
 
 def get_random_emoji() -> str:
-    import random
-
-    # Emojis recommended by https://share.streamlit.io/rensdimmendaal/emoji-recommender/main/app/streamlit.py
-    # for the term "streamlit". Watch out for zero-width joiners,
-    # as they won't parse correctly in the list() call!
-    RANDOM_EMOJIS = list(
-        "🔥™🎉🚀🌌💣✨🌙🎆🎇💥🤩🤙🌛🤘⬆💡🤪🥂⚡💨🌠🎊🍿😛🔮🤟🌃🍃🍾💫▪🌴🎈🎬🌀🎄😝☔⛽🍂💃😎🍸🎨🥳☀😍🅱🌞😻🌟😜💦💅🦄😋😉👻🍁🤤👯🌻‼🌈👌🎃💛😚🔫🙌👽🍬🌅☁🍷👭☕🌚💁👅🥰🍜😌🎥🕺❕🧡☄💕🍻✅🌸🚬🤓🍹®☺💪😙☘🤠✊🤗🍵🤞😂💯😏📻🎂💗💜🌊❣🌝😘💆🤑🌿🦋😈⛄🚿😊🌹🥴😽💋😭🖤🙆👐⚪💟☃🙈🍭💻🥀🚗🤧🍝💎💓🤝💄💖🔞⁉⏰🕊🎧☠♥🌳🏾🙉⭐💊🍳🌎🙊💸❤🔪😆🌾✈📚💀🏠✌🏃🌵🚨💂🤫🤭😗😄🍒👏🙃🖖💞😅🎅🍄🆓👉💩🔊🤷⌚👸😇🚮💏👳🏽💘💿💉👠🎼🎶🎤👗❄🔐🎵🤒🍰👓🏄🌲🎮🙂📈🚙📍😵🗣❗🌺🙄👄🚘🥺🌍🏡♦💍🌱👑👙☑👾🍩🥶📣🏼🤣☯👵🍫➡🎀😃✋🍞🙇😹🙏👼🐝⚫🎁🍪🔨🌼👆👀😳🌏📖👃🎸👧💇🔒💙😞⛅🏻🍴😼🗿🍗♠🦁✔🤖☮🐢🐎💤😀🍺😁😴📺☹😲👍🎭💚🍆🍋🔵🏁🔴🔔🧐👰☎🏆🤡🐠📲🙋📌🐬✍🔑📱💰🐱💧🎓🍕👟🐣👫🍑😸🍦👁🆗🎯📢🚶🦅🐧💢🏀🚫💑🐟🌽🏊🍟💝💲🐍🍥🐸☝♣👊⚓❌🐯🏈📰🌧👿🐳💷🐺📞🆒🍀🤐🚲🍔👹🙍🌷🙎🐥💵🔝📸⚠❓🎩✂🍼😑⬇⚾🍎💔🐔⚽💭🏌🐷🍍✖🍇📝🍊🐙👋🤔🥊🗽🐑🐘🐰💐🐴♀🐦🍓✏👂🏴👇🆘😡🏉👩💌😺✝🐼🐒🐶👺🖕👬🍉🐻🐾⬅⏬▶👮🍌♂🔸👶🐮👪⛳🐐🎾🐕👴🐨🐊🔹©🎣👦👣👨👈💬⭕📹📷"
-    )
-
-    # Also pick out some vanity emojis.
-    ENG_EMOJIS = [
-        "🎈",  # st.balloons 🎈🎈
-        "🤓",  # Abhi
-        "🏈",  # Amey
-        "🚲",  # Thiago
-        "🐧",  # Matteo
-        "🦒",  # Ken
-        "🐳",  # Karrie
-        "🕹️",  # Jonathan
-        "🇦🇲",  # Henrikh
-        "🎸",  # Guido
-        "🦈",  # Austin
-        "💎",  # Emiliano
-        "👩‍🎤",  # Naomi
-        "🧙‍♂️",  # Jon
-        "🐻",  # Brandon
-        "🎎",  # James
-        # TODO: Solicit emojis from the rest of Streamlit
-    ]
 
     # Weigh our emojis 10x, cuz we're awesome!
     # TODO: fix the random seed with a hash of the user's app code, for stability?

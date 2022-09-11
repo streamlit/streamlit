@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import io
 from typing import cast, Optional, Union, BinaryIO, TextIO, TYPE_CHECKING
 from textwrap import dedent
@@ -20,7 +21,7 @@ from typing_extensions import Final
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -30,6 +31,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
 )
 from streamlit.type_util import Key, to_key
+from streamlit.runtime.metrics_util import gather_metrics
 
 from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
@@ -47,7 +49,17 @@ For more information, refer to the
 DownloadButtonDataType = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
 
 
+@dataclass
+class ButtonSerde:
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: Optional[bool], widget_id: str = "") -> bool:
+        return ui_value or False
+
+
 class ButtonMixin:
+    @gather_metrics
     def button(
         self,
         label: str,
@@ -115,6 +127,7 @@ class ButtonMixin:
             ctx=ctx,
         )
 
+    @gather_metrics
     def download_button(
         self,
         label: str,
@@ -272,8 +285,7 @@ class ButtonMixin:
         if help is not None:
             download_button_proto.help = dedent(help)
 
-        def deserialize_button(ui_value: Optional[bool], widget_id: str = "") -> bool:
-            return ui_value or False
+        serde = ButtonSerde()
 
         button_state = register_widget(
             "download_button",
@@ -282,8 +294,8 @@ class ButtonMixin:
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_button,
-            serializer=bool,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -334,8 +346,7 @@ class ButtonMixin:
         if help is not None:
             button_proto.help = dedent(help)
 
-        def deserialize_button(ui_value: Optional[bool], widget_id: str = "") -> bool:
-            return ui_value or False
+        serde = ButtonSerde()
 
         button_state = register_widget(
             "button",
@@ -344,8 +355,8 @@ class ButtonMixin:
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_button,
-            serializer=bool,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
@@ -397,7 +408,7 @@ def marshall_file(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = in_memory_file_manager.add(
+    this_file = media_file_manager.add(
         data_as_bytes,
         mimetype,
         coordinates,

@@ -15,20 +15,6 @@
 from typing import Any, List
 
 import streamlit as st
-from enum import Enum
-
-
-class Colors(Enum):
-    yellow = 1
-    blue = 2
-
-
-class Shake(Enum):
-    VANILLA = "VANILLA"
-    CHOCOLATE = "CHOCOLATE"
-    COOKIES = "COOKIES"
-    MINT = "MINT"
-
 
 options = ("male", "female")
 
@@ -58,11 +44,10 @@ st.text("value 5: %s" % i5)
 i6 = st.multiselect("multiselect 6", options, disabled=True)
 st.text("value 6: %s" % i6)
 
-
-i7 = st.multiselect("choose colors", list(Colors), Colors.yellow)
+i7 = st.multiselect("Hidden label", options, label_visibility="hidden")
 st.text("value 7: %s" % i7)
 
-i8 = st.multiselect("choose shakes", list(Shake), Shake.CHOCOLATE)
+i8 = st.multiselect("Collapsed label", options, label_visibility="collapsed")
 st.text("value 8: %s" % i8)
 
 if st._is_running_with_streamlit:
