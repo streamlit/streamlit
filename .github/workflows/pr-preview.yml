@@ -1,6 +1,8 @@
 name: PR Preview
 
 on:
+  pull_request:
+    types: [opened]
   push:
     branches:
       - '**'
@@ -33,14 +35,14 @@ jobs:
         run: |
           sudo apt install rsync
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
-      - name: Set PREVIEW_BRANCH & BRANCH env variable
+      - name: Set Environment Variables
         uses: ./.github/actions/preview_branch
         with:
           pull_request_number: ${{ github.event.pull_request.number }}
           ref_type: ${{ github.ref_type }}
           branch: ${{ github.ref_name }}
 
-      # Need the AWS S3 secret/key for the below steps - added the if statement to gate for now
+      # TODO: Need the AWS S3 secret/key for the below steps - added the if statement to gate for now
       - if: ${{ 'true' == 'false' }}
         name: Upload wheel to S3
         env:

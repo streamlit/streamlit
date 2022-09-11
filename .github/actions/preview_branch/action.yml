@@ -1,4 +1,4 @@
-name: "Set PREVIEW_BRANCH & BRANCH env variable"
+name: "Set PREVIEW_BRANCH & BRANCH env variables"
 
 inputs:
   pull_request_number:
@@ -11,7 +11,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Restore pre-commit cache
+    - name: Set PREVIEW_BRANCH & BRANCH
       run: |
         echo "PREVIEW_BRANCH=$(
           if [[ -n "$PR_NUMBER" ]]
