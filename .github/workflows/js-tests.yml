@@ -17,8 +17,8 @@ jobs:
   js_tests:
     runs-on: ubuntu-latest
 
-    permissions:
-      actions: read
+    # permissions:
+    #   actions: read
 
     defaults:
       run:

@@ -14,8 +14,8 @@ jobs:
   create-nightly-tag:
     runs-on: ubuntu-latest
 
-    permissions:
-      actions: read
+    # permissions:
+    #   actions: read
 
     defaults:
       run:
@@ -58,18 +58,26 @@ jobs:
           git push origin $TAG
 
   run-python-tests:
+    # permissions:
+    #   actions: read
     needs: create-nightly-tag
     uses: ./.github/workflows/python-versions.yml
 
   run-javascript-tests:
+    # permissions:
+    #   actions: read
     needs: create-nightly-tag
     uses: ./.github/workflows/js-tests.yml
 
   run-py-prod-deps-smoke-test:
+    # permissions:
+    #   actions: read
     needs: create-nightly-tag
     uses: ./.github/workflows/py-prod-deps-smoke-test.yml
 
   run-cypress-tests:
+    # permissions:
+    #   actions: read
     needs: create-nightly-tag
     uses: ./.github/workflows/cypress.yml
   
@@ -78,8 +86,8 @@ jobs:
 
     needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
-    permissions:
-      actions: read
+    # permissions:
+    #   actions: read
 
     defaults:
       run:

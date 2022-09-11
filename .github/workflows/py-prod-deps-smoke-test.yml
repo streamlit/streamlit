@@ -17,8 +17,8 @@ jobs:
   python-prod-deps-smoke-test:
     runs-on: ubuntu-latest
 
-    permissions:
-      actions: read
+    # permissions:
+    #   actions: read
 
     defaults:
       run:
