@@ -62,6 +62,10 @@ _LOGGER = get_logger(__name__)
 
 @dataclass
 class WidgetMsgMetadata:
+    """Everything needed for replaying a widget and treating it as an implicit
+    argument to a cached function, beyond what is stored for all elements.
+    """
+
     widget_id: str
     widget_value: Any
     metadata: WidgetMetadata[Any]
@@ -71,6 +75,8 @@ class WidgetMsgMetadata:
 class ElementMsgData:
     """An element's message and related metadata for
     replaying that element's function call.
+
+    widget_metadata is filled in if and only if this element is a widget.
     """
 
     delta_type: str
