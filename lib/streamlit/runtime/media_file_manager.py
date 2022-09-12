@@ -207,7 +207,7 @@ class MediaFileManager(CacheStatsProvider):
 
         Safe to call from any thread.
         """
-        LOGGER.debug("Deleting expired files...")
+        LOGGER.debug("Removing orphaned files...")
 
         with self._lock:
             for file_id in self._get_inactive_file_ids():

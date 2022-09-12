@@ -623,7 +623,7 @@ class ScriptRunner:
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Delete expired files now that the script has run and files in use
+        # Remove orphaned files now that the script has run and files in use
         # are marked as active.
         media_file_manager.remove_orphaned_files()
 
