@@ -90,7 +90,7 @@
     "react-hotkeys": "^1.1.4",
     "react-html-parser": "^2.0.2",
     "react-json-view": "^1.19.1",
-    "react-map-gl": "^5.2.19",
+    "react-map-gl": "^5.3.19",
     "react-markdown": "^6.0.3",
     "react-plotly.js": "^2.4.0",
     "react-syntax-highlighter": "^15.4.5",
