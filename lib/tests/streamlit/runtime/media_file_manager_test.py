@@ -16,7 +16,6 @@
 
 from unittest import mock, TestCase
 import random
-import time
 
 from streamlit.runtime.media_file_manager import (
     MediaFileManager,
@@ -309,43 +308,6 @@ class MediaFileManagerTest(TestCase):
         # After a final call to remove_orphaned_files, the files should be gone.
         self.media_file_manager.remove_orphaned_files()
         self.assertEqual(len(self.media_file_manager), 0)
-
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    def test_add_file_multiple_sessions_then_clear(self, _get_session_id):
-        _get_session_id.return_value = "mock_session_1"
-
-        sample = next(iter(ALL_FIXTURES.values()))
-
-        coord = random_coordinates()
-        f = self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
-        self.assertTrue(f.id in self.media_file_manager)
-
-        _get_session_id.return_value = "mock_session_2"
-
-        coord = random_coordinates()
-        f = self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
-        self.assertTrue(f.id in self.media_file_manager)
-
-        # There should be only 1 file in MFM.
-        self.assertEqual(len(self.media_file_manager), 1)
-
-        # There should be 2 sessions with registered files.
-        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 2)
-
-        # force every MediaFile to have a TTD of now, so we can see it get deleted w/o waiting.
-        for file in self.media_file_manager._files_by_id.values():
-            file.ttd = time.time()
-
-        self.media_file_manager.clear_session_refs()
-
-        # There should be 1 session with registered files.
-        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
-
-        _get_session_id.return_value = "mock_session_1"
-        self.media_file_manager.clear_session_refs()
-
-        # There should be 0 session with registered files.
-        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
     def test_media_file_url(self):
         self.assertEqual(MediaFile("abcd", b"", "audio/wav").url, "/media/abcd.wav")
