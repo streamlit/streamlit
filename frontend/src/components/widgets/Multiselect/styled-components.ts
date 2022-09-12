@@ -23,10 +23,7 @@ export const StyledUISelect = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledUISelectWarning = styled.div(({ theme }) => ({
-  "span[aria-disabled='true']": {
-    background: theme.colors.fadedText05,
-  },
-  borderColor: "red",
-  borderRadius: theme.radii.lg,
+export const StyledLabel = styled.div(({ theme }) => ({
+  display: "inline-block",
+  verticalAlign: "baseline",
 }))

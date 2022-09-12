@@ -31,10 +31,6 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
-import {
-  StyledUISelect,
-  StyledUISelectWarning,
-} from "src/components/widgets/Multiselect/styled-components"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
@@ -67,12 +63,12 @@ interface MultiselectOption {
 class Multiselect extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
+  maxSelections: number = this.props.element.maxSelections
+
   public state: State = {
     value: this.initialValue,
-    displayWarning: false,
+    displayWarning: this.initialValue.length >= this.maxSelections,
   }
-
-  maxSelections: number = this.props.element.maxSelections
 
   get initialValue(): number[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
@@ -151,16 +147,9 @@ class Multiselect extends React.PureComponent<Props, State> {
 
     switch (data.type) {
       case "remove": {
-        if (
-          this.maxSelections &&
-          this.state.value.length - 1 < this.maxSelections
-        ) {
-          displayWarning = false
-        }
         return { value: without(this.state.value, getIndex()), displayWarning }
       }
       case "clear": {
-        displayWarning = false
         return { value: [], displayWarning }
       }
       case "select": {
@@ -174,17 +163,31 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private onChange = (params: OnChangeParams): void => {
     if (this.maxSelections) {
-      if (this.state.value.length < this.maxSelections) {
+      if (params.type === "clear") {
         const newState = this.generateNewState(params, false)
         this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
-      } else if (params.type === "clear" || params.type === "remove") {
-        const newState = this.generateNewState(params, true)
-        this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
-      } else if (!this.state.displayWarning) {
-        this.setState({ ...this.state, displayWarning: true }, () =>
-          this.commitWidgetValue({ fromUi: true })
-        )
-        // console.log("setting display warnign to be true")
+      } else if (params.type === "remove") {
+        if (this.state.value.length > this.maxSelections) {
+          const newState = this.generateNewState(params, true)
+          this.setState(newState, () =>
+            this.commitWidgetValue({ fromUi: true })
+          )
+        } else {
+          const newState = this.generateNewState(params, false)
+          this.setState(newState, () =>
+            this.commitWidgetValue({ fromUi: true })
+          )
+        }
+      } else if (params.type === "select") {
+        if (this.state.value.length < this.maxSelections) {
+          const newState = this.generateNewState(
+            params,
+            this.state.value.length === this.maxSelections - 1
+          )
+          this.setState(newState, () =>
+            this.commitWidgetValue({ fromUi: true })
+          )
+        }
       }
     } else {
       const newState = this.generateNewState(params, true)
@@ -196,6 +199,14 @@ class Multiselect extends React.PureComponent<Props, State> {
     options: readonly Option[],
     filterValue: string
   ): readonly Option[] => {
+    if (options.length === 1) {
+      if (
+        options.at(0)?.label ===
+        `You can only choose up to ${this.maxSelections} options`
+      ) {
+        return options
+      }
+    }
     // We need to manually filter for previously selected options here
     const unselectedOptions = options.filter(
       option => !this.state.value.includes(Number(option.value))
@@ -209,24 +220,28 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { element, theme, width, widgetMgr } = this.props
-    const style = {
-      width,
-      border: "1px solid red",
-      borderRadius: theme.radii.md,
-      padding: "8px",
-    }
+    const style = { width }
     const { options } = element
     const disabled = options.length === 0 ? true : this.props.disabled
-    const placeholder =
-      options.length === 0 ? "No options to select." : "Choose an option"
-    const selectOptions: MultiselectOption[] = options.map(
-      (option: string, idx: number) => {
+    let placeholder
+    let selectOptions: MultiselectOption[]
+    if (this.state.displayWarning) {
+      selectOptions = [
+        {
+          label: `You can only choose up to ${this.maxSelections} options`,
+          value: "",
+        },
+      ]
+    } else {
+      selectOptions = options.map((option: string, idx: number) => {
         return {
           label: option,
           value: idx.toString(),
         }
-      }
-    )
+      })
+      placeholder =
+        options.length === 0 ? "No options to select." : "Choose an option"
+    }
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -234,133 +249,6 @@ class Multiselect extends React.PureComponent<Props, State> {
       element.formId,
       this.onFormCleared
     )
-
-    if (this.state.displayWarning) {
-      // console.log("GOT HERE")
-      return (
-        <div className="row-widget stMultiSelect" style={style}>
-          <WidgetLabel
-            label={element.label}
-            disabled={disabled}
-            labelVisibility={labelVisibilityProtoValueToEnum(
-              element.labelVisibility?.value
-            )}
-          >
-            {element.help && (
-              <StyledWidgetLabelHelp>
-                <TooltipIcon
-                  content={element.help}
-                  placement={Placement.TOP_RIGHT}
-                />
-              </StyledWidgetLabelHelp>
-            )}
-          </WidgetLabel>
-          <StyledUISelectWarning>
-            <UISelect
-              options={selectOptions}
-              labelKey="label"
-              valueKey="value"
-              aria-label={element.label}
-              placeholder={placeholder}
-              type={TYPE.select}
-              multi
-              onChange={this.onChange}
-              value={this.valueFromState}
-              disabled={disabled}
-              size={"compact"}
-              filterOptions={this.filterOptions}
-              overrides={{
-                IconsContainer: {
-                  style: () => ({
-                    paddingRight: ".5rem",
-                  }),
-                },
-
-                ControlContainer: {
-                  style: () => ({
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: "1px",
-                    borderRightWidth: "1px",
-                    borderTopWidth: "1px",
-                    borderBottomWidth: "1px",
-                  }),
-                },
-
-                ValueContainer: {
-                  style: () => ({
-                    /*
-                      This minHeight is needed to fix a bug from BaseWeb in which the
-                      div that contains the options changes their height from 40px to 44px.
-  
-                      You could check this behavior in their documentation as well:
-                      https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
-  
-                      Issue related: https://github.com/streamlit/streamlit/issues/590
-                    */
-                    minHeight: "38.4px",
-                    paddingLeft: ".5rem",
-                    paddingTop: 0,
-                    paddingBottom: 0,
-                    paddingRight: 0,
-                  }),
-                },
-                ClearIcon: {
-                  style: {
-                    color: theme.colors.darkGray,
-                  },
-                },
-                SearchIcon: {
-                  style: {
-                    color: theme.colors.darkGray,
-                  },
-                },
-                Tag: {
-                  props: {
-                    overrides: {
-                      Root: {
-                        style: {
-                          borderTopLeftRadius: theme.radii.md,
-                          borderTopRightRadius: theme.radii.md,
-                          borderBottomRightRadius: theme.radii.md,
-                          borderBottomLeftRadius: theme.radii.md,
-                          fontSize: theme.fontSizes.sm,
-                          paddingLeft: theme.spacing.sm,
-                          marginLeft: 0,
-                          marginRight: theme.spacing.sm,
-                          height: "28px",
-                        },
-                      },
-                      Action: {
-                        style: {
-                          paddingLeft: 0,
-                        },
-                      },
-                      Text: {
-                        style: {
-                          fontSize: theme.fontSizes.md,
-                        },
-                      },
-                    },
-                  },
-                },
-                MultiValue: {
-                  props: {
-                    overrides: {
-                      Root: {
-                        style: {
-                          fontSize: theme.fontSizes.sm,
-                        },
-                      },
-                    },
-                  },
-                },
-                Dropdown: { component: VirtualDropdown },
-              }}
-            />
-          </StyledUISelectWarning>
-        </div>
-      )
-    }
 
     return (
       <div className="row-widget stMultiSelect" style={style}>
@@ -380,40 +268,39 @@ class Multiselect extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <StyledUISelect>
-          <UISelect
-            options={selectOptions}
-            labelKey="label"
-            valueKey="value"
-            aria-label={element.label}
-            placeholder={placeholder}
-            type={TYPE.select}
-            multi
-            onChange={this.onChange}
-            value={this.valueFromState}
-            disabled={disabled}
-            size={"compact"}
-            filterOptions={this.filterOptions}
-            overrides={{
-              IconsContainer: {
-                style: () => ({
-                  paddingRight: ".5rem",
-                }),
-              },
+        <UISelect
+          options={selectOptions}
+          labelKey="label"
+          valueKey="value"
+          aria-label={element.label}
+          placeholder={placeholder}
+          type={TYPE.select}
+          multi
+          onChange={this.onChange}
+          value={this.valueFromState}
+          disabled={disabled}
+          size={"compact"}
+          filterOptions={this.filterOptions}
+          overrides={{
+            IconsContainer: {
+              style: () => ({
+                paddingRight: ".5rem",
+              }),
+            },
 
-              ControlContainer: {
-                style: () => ({
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  borderLeftWidth: "1px",
-                  borderRightWidth: "1px",
-                  borderTopWidth: "1px",
-                  borderBottomWidth: "1px",
-                }),
-              },
+            ControlContainer: {
+              style: () => ({
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: "1px",
+                borderRightWidth: "1px",
+                borderTopWidth: "1px",
+                borderBottomWidth: "1px",
+              }),
+            },
 
-              ValueContainer: {
-                style: () => ({
-                  /*
+            ValueContainer: {
+              style: () => ({
+                /*
                     This minHeight is needed to fix a bug from BaseWeb in which the
                     div that contains the options changes their height from 40px to 44px.
 
@@ -422,67 +309,66 @@ class Multiselect extends React.PureComponent<Props, State> {
 
                     Issue related: https://github.com/streamlit/streamlit/issues/590
                   */
-                  minHeight: "38.4px",
-                  paddingLeft: ".5rem",
-                  paddingTop: 0,
-                  paddingBottom: 0,
-                  paddingRight: 0,
-                }),
+                minHeight: "38.4px",
+                paddingLeft: ".5rem",
+                paddingTop: 0,
+                paddingBottom: 0,
+                paddingRight: 0,
+              }),
+            },
+            ClearIcon: {
+              style: {
+                color: theme.colors.darkGray,
               },
-              ClearIcon: {
-                style: {
-                  color: theme.colors.darkGray,
-                },
+            },
+            SearchIcon: {
+              style: {
+                color: theme.colors.darkGray,
               },
-              SearchIcon: {
-                style: {
-                  color: theme.colors.darkGray,
-                },
-              },
-              Tag: {
-                props: {
-                  overrides: {
-                    Root: {
-                      style: {
-                        borderTopLeftRadius: theme.radii.md,
-                        borderTopRightRadius: theme.radii.md,
-                        borderBottomRightRadius: theme.radii.md,
-                        borderBottomLeftRadius: theme.radii.md,
-                        fontSize: theme.fontSizes.sm,
-                        paddingLeft: theme.spacing.sm,
-                        marginLeft: 0,
-                        marginRight: theme.spacing.sm,
-                        height: "28px",
-                      },
+            },
+            Tag: {
+              props: {
+                overrides: {
+                  Root: {
+                    style: {
+                      borderTopLeftRadius: theme.radii.md,
+                      borderTopRightRadius: theme.radii.md,
+                      borderBottomRightRadius: theme.radii.md,
+                      borderBottomLeftRadius: theme.radii.md,
+                      fontSize: theme.fontSizes.sm,
+                      paddingLeft: theme.spacing.sm,
+                      marginLeft: 0,
+                      marginRight: theme.spacing.sm,
+                      height: "28px",
                     },
-                    Action: {
-                      style: {
-                        paddingLeft: 0,
-                      },
+                  },
+                  Action: {
+                    style: {
+                      paddingLeft: 0,
                     },
-                    Text: {
-                      style: {
-                        fontSize: theme.fontSizes.md,
-                      },
+                  },
+                  Text: {
+                    style: {
+                      fontSize: theme.fontSizes.md,
                     },
                   },
                 },
               },
-              MultiValue: {
-                props: {
-                  overrides: {
-                    Root: {
-                      style: {
-                        fontSize: theme.fontSizes.sm,
-                      },
+            },
+            MultiValue: {
+              props: {
+                overrides: {
+                  Root: {
+                    style: {
+                      fontSize: theme.fontSizes.sm,
                     },
                   },
                 },
               },
-              Dropdown: { component: VirtualDropdown },
-            }}
-          />
-        </StyledUISelect>
+            },
+            Dropdown: { component: VirtualDropdown },
+          }}
+        />
       </div>
     )
   }

@@ -288,6 +288,8 @@ class MultiSelectMixin:
         if help is not None:
             multiselect_proto.help = dedent(help)
         if max_selections is not None:
+            if max_selections <= 0:
+                raise StreamlitAPIException("Max selections must be greater than 0")
             multiselect_proto.max_selections = max_selections
 
         serde = MultiSelectSerde(opt, default_value)
