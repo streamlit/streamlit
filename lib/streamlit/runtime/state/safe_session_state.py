@@ -129,7 +129,4 @@ class SafeSessionState:
             if self._disconnected:
                 raise KeyError(key)
 
-            try:
-                return self[key]
-            except KeyError:
-                return default
+            return self._state.get(key, default)

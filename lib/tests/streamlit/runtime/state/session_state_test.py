@@ -613,6 +613,12 @@ class SessionStateMethodTests(unittest.TestCase):
         assert not wsr.value_changed
         assert self.session_state["widget_id_1"] == WIDGET_VALUE
 
+    def test_get_present(self):
+        assert self.session_state.get("foo") == self.session_state["foo"]
+
+    def test_get_absent(self):
+        assert self.session_state.get("absent", "wub") == "wub"
+
 
 @given(state=stst.session_state())
 def test_compact_idempotent(state):
