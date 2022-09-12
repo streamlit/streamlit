@@ -29,7 +29,7 @@ source:
 build:
   # NOTE: The build number is set because it's required, but it's essentially
   # unused since the GIT_HASH uniquely identifies this build.
-  number: 0
+  number: 1
   string: {{ environ.get('GIT_HASH') }}
   noarch: python
   script: python -m pip install . -vv
