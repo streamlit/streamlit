@@ -213,8 +213,8 @@ class MediaFileManager(CacheStatsProvider):
 
         return file_ids
 
-    def del_expired_files(self) -> None:
-        """Delete files that are no longer referenced by any active session.
+    def remove_orphaned_files(self) -> None:
+        """Remove all files that are no longer referenced by any active session.
 
         Safe to call from any thread.
         """
@@ -233,8 +233,11 @@ class MediaFileManager(CacheStatsProvider):
                     else:
                         file._mark_for_delete()
 
-    def clear_session_files(self, session_id: Optional[str] = None) -> None:
-        """Removes AppSession-coordinate mapping immediately, and id-file mapping later.
+    def clear_session_refs(self, session_id: Optional[str] = None) -> None:
+        """Remove the given session's file references.
+
+        (This does not remove any files from the manager - you must call
+        `remove_orphaned_files` for that.)
 
         Should be called whenever ScriptRunner completes and when a session ends.
 

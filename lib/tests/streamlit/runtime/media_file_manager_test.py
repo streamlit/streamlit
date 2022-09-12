@@ -171,8 +171,8 @@ class MediaFileManagerTest(TestCase):
             len(self.media_file_manager._files_by_session_and_coord["SESSION1"]), 1
         )
 
-        self.media_file_manager.clear_session_files()
-        self.media_file_manager.del_expired_files()
+        self.media_file_manager.clear_session_refs()
+        self.media_file_manager.remove_orphaned_files()
 
         # There should be only 0 file in MFM.
         self.assertEqual(len(self.media_file_manager), 0)
@@ -247,21 +247,21 @@ class MediaFileManagerTest(TestCase):
         # There should be only 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    @mock.patch("time.time")
-    def test_clear_session_files(self, _time, _get_session_id):
-        """Test that MediaFileManager removes session maps when requested (even if empty)."""
-        _get_session_id.return_value = "SESSION1"
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session_id",
+    )
+    def test_clear_session_refs(self, _):
+        """Test that clear_session_refs removes session references correctly."""
+        self.assertEqual(len(self.media_file_manager), 0)
+        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
+
+        self.media_file_manager.clear_session_refs()
 
         self.assertEqual(len(self.media_file_manager), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
-        self.media_file_manager.clear_session_files()
-
-        self.assertEqual(len(self.media_file_manager), 0)
-        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
-
-        self.media_file_manager.del_expired_files()
+        self.media_file_manager.remove_orphaned_files()
 
         self.assertEqual(len(self.media_file_manager), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
@@ -273,7 +273,7 @@ class MediaFileManagerTest(TestCase):
         self.assertEqual(len(self.media_file_manager), len(VIDEO_FIXTURES))
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-        self.media_file_manager.clear_session_files()
+        self.media_file_manager.clear_session_refs()
 
         self.assertEqual(
             len(self.media_file_manager), len(VIDEO_FIXTURES)
@@ -282,7 +282,7 @@ class MediaFileManagerTest(TestCase):
             len(self.media_file_manager._files_by_session_and_coord), 0
         )  # Clears immediately
 
-        self.media_file_manager.del_expired_files()
+        self.media_file_manager.remove_orphaned_files()
 
         self.assertEqual(len(self.media_file_manager), 0)  # Now this is cleared too!
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
@@ -313,13 +313,13 @@ class MediaFileManagerTest(TestCase):
         for file in self.media_file_manager._files_by_id.values():
             file.ttd = time.time()
 
-        self.media_file_manager.clear_session_files()
+        self.media_file_manager.clear_session_refs()
 
         # There should be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
         _get_session_id.return_value = "SESSION1"
-        self.media_file_manager.clear_session_files()
+        self.media_file_manager.clear_session_refs()
 
         # There should be 0 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
@@ -345,6 +345,6 @@ class MediaFileManagerTest(TestCase):
         assert stats[0].category_name == "st_media_file_manager"
         assert sum(stat.byte_length for stat in stats) == 232
 
-        manager.clear_session_files("SESSION1")
-        manager.del_expired_files()
+        manager.clear_session_refs("SESSION1")
+        manager.remove_orphaned_files()
         assert len(manager.get_stats()) == 0
