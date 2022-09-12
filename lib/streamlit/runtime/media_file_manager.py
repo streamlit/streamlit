@@ -19,7 +19,7 @@ import hashlib
 import mimetypes
 import threading
 from enum import Enum
-from typing import Dict, Set, Optional, List
+from typing import Dict, Set, Optional, List, Iterable
 
 from streamlit import util
 from streamlit.logger import get_logger
@@ -185,32 +185,53 @@ class MediaFileManager(CacheStatsProvider):
         # means taking it multiple times from the same thread will deadlock.)
         self._lock = threading.Lock()
 
+    def _get_session_file_ids(self, session_id: str) -> Iterable[str]:
+        """Return an iterable containing all the file IDs that the given session
+        is using.
+
+        Thread safety: callers must hold `self._lock`.
+        """
+        files_by_coord = self._files_by_session_and_coord.get(session_id)
+        if files_by_coord is None:
+            return ()
+
+        return map(lambda file: file.id, files_by_coord.values())
+
+    def _get_inactive_file_ids(self) -> Set[str]:
+        """Compute the set of files that are stored in the manager, but are
+        not referenced by any active session. These are files that can be
+        safely deleted.
+
+        Thread safety: callers must hold `self._lock`.
+        """
+        # Get the set of all our file IDs.
+        file_ids = set(self._files_by_id.keys())
+
+        # Subtract all IDs that are in use by each session
+        for session_id in self._files_by_session_and_coord.keys():
+            file_ids.difference_update(self._get_session_file_ids(session_id))
+
+        return file_ids
+
     def del_expired_files(self) -> None:
         """Delete files that are no longer referenced by any active session.
 
         Safe to call from any thread.
         """
         LOGGER.debug("Deleting expired files...")
+
         with self._lock:
-            # Get a flat set of every file ID in the session ID map.
-            active_file_ids: Set[str] = set()
-
-            for files_by_coord in self._files_by_session_and_coord.values():
-                file_ids = map(lambda file: file.id, files_by_coord.values())
-                active_file_ids = active_file_ids.union(file_ids)
-
-            for file_id, file in list(self._files_by_id.items()):
-                if file.id not in active_file_ids:
-
-                    if file.file_type == MediaFileType.MEDIA:
+            for file_id in self._get_inactive_file_ids():
+                file = self._files_by_id[file_id]
+                if file.file_type == MediaFileType.MEDIA:
+                    LOGGER.debug(f"Deleting File: {file_id}")
+                    del self._files_by_id[file_id]
+                elif file.file_type == MediaFileType.DOWNLOADABLE:
+                    if file._is_marked_for_delete:
                         LOGGER.debug(f"Deleting File: {file_id}")
                         del self._files_by_id[file_id]
-                    elif file.file_type == MediaFileType.DOWNLOADABLE:
-                        if file._is_marked_for_delete:
-                            LOGGER.debug(f"Deleting File: {file_id}")
-                            del self._files_by_id[file_id]
-                        else:
-                            file._mark_for_delete()
+                    else:
+                        file._mark_for_delete()
 
     def clear_session_files(self, session_id: Optional[str] = None) -> None:
         """Removes AppSession-coordinate mapping immediately, and id-file mapping later.
