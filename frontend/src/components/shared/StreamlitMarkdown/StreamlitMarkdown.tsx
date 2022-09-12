@@ -303,16 +303,17 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   )
 }
 
-function makeMarkdownHeading(tag: string, body: string): string {
+function makeMarkdownHeading(tag: string, markdown: string): string {
   switch (tag.toLowerCase()) {
+    // willhuang1997: TODO: could be refactored to Enums
     case "h1": {
-      return `# ${body}`
+      return `# ${markdown}`
     }
     case "h2": {
-      return `## ${body}`
+      return `## ${markdown}`
     }
     case "h3": {
-      return `### ${body}`
+      return `### ${markdown}`
     }
     default: {
       throw new Error(`Unrecognized tag for header: ${tag}`)
