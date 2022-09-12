@@ -303,32 +303,26 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   )
 }
 
-function fixBodyForHeader(tag: string, body: string): string {
-  switch (tag) {
+function makeMarkdownHeading(tag: string, body: string): string {
+  switch (tag.toLowerCase()) {
     case "h1": {
-      body = `# ${body}`
-      break
+      return `# ${body}`
     }
     case "h2": {
-      body = `## ${body}`
-      break
+      return `## ${body}`
     }
     case "h3": {
-      body = `### ${body}`
-      break
+      return `### ${body}`
     }
     default: {
       throw new Error(`Unrecognized tag for header: ${tag}`)
     }
   }
-  return body
 }
 
 export function Heading(props: HeadingProtoProps): ReactElement {
   const { width } = props
-  let { body } = props.element
-  const { tag, anchor } = props.element
-  body = fixBodyForHeader(tag, body)
+  const { body, tag, anchor } = props.element
   const isSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
@@ -338,7 +332,7 @@ export function Heading(props: HeadingProtoProps): ReactElement {
     <div className="stMarkdown" style={{ width }}>
       <HeadingWithAnchor tag={tag} anchor={anchor}>
         <RenderedMarkdown
-          source={heading}
+          source={makeMarkdownHeading(tag, heading)}
           allowHTML={false}
           // this is purely an inline string
           overrideComponents={{
