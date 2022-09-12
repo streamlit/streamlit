@@ -22,8 +22,3 @@ export const StyledUISelect = styled.div(({ theme }) => ({
     background: theme.colors.fadedText05,
   },
 }))
-
-export const StyledLabel = styled.div(({ theme }) => ({
-  display: "inline-block",
-  verticalAlign: "baseline",
-}))
