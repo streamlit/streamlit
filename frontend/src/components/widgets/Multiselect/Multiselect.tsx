@@ -68,7 +68,7 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   public state: State = {
     value: this.initialValue,
-    overMaxSelections: this.initialValue.length > this.maxSelections + 1,
+    overMaxSelections: this.initialValue.length > this.maxSelections - 1,
   }
 
   get initialValue(): number[] {
