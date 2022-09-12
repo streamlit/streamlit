@@ -180,7 +180,10 @@ class MediaFileManager(CacheStatsProvider):
             str, Dict[str, MediaFile]
         ] = collections.defaultdict(dict)
 
-        self._lock = threading.RLock()
+        # MediaFileManager is used from multiple threads, so all operations
+        # need to be protected with a Lock. (This is not an RLock, which
+        # means taking it multiple times from the same thread will deadlock.)
+        self._lock = threading.Lock()
 
     def del_expired_files(self) -> None:
         """Delete files that are no longer referenced by any active session.
