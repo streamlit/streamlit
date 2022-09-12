@@ -75,11 +75,12 @@ class MemoizedFunction(CachedFunction):
         func: types.FunctionType,
         show_spinner: bool,
         suppress_st_warning: bool,
+        validate: types.FunctionType,
         persist: Optional[str],
         max_entries: Optional[int],
         ttl: Optional[float],
     ):
-        super().__init__(func, show_spinner, suppress_st_warning)
+        super().__init__(func, show_spinner, suppress_st_warning, validate)
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
@@ -219,6 +220,7 @@ class MemoAPI:
         persist: Optional[str] = None,
         show_spinner: bool = True,
         suppress_st_warning: bool = False,
+        validate: Optional[F] = None,
         max_entries: Optional[int] = None,
         ttl: Optional[float] = None,
     ) -> Callable[[F], F]:
@@ -235,6 +237,7 @@ class MemoAPI:
         persist: Optional[str] = None,
         show_spinner: bool = True,
         suppress_st_warning: bool = False,
+        validate: Optional[F] = None,
         max_entries: Optional[int] = None,
         ttl: Optional[float] = None,
     ):
@@ -274,6 +277,11 @@ class MemoAPI:
             None if cache entries should not expire. The default is None.
             Note that ttl is incompatible with `persist="disk"` - `ttl` will be
             ignored if `persist` is specified.
+
+        validate : callable (returning bool)
+            Function that will check if cached object is still valid.
+            For example, if the object is a database session, check that
+            the session is still open.
 
         Example
         -------
@@ -352,6 +360,7 @@ class MemoAPI:
                     persist=persist,
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
+                    validate=validate,
                     max_entries=max_entries,
                     ttl=ttl,
                 )
@@ -368,6 +377,7 @@ class MemoAPI:
                 persist=persist,
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
+                validate=validate,
                 max_entries=max_entries,
                 ttl=ttl,
             )

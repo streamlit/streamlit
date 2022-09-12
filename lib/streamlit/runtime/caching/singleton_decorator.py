@@ -143,6 +143,7 @@ class SingletonAPI:
         *,
         show_spinner: bool = True,
         suppress_st_warning=False,
+        validate: Optional[F] = None,
     ) -> Callable[[F], F]:
         ...
 
@@ -156,6 +157,7 @@ class SingletonAPI:
         *,
         show_spinner: bool = True,
         suppress_st_warning=False,
+        validate: Optional[F] = None,
     ):
         """Function decorator to store singleton objects.
 
@@ -181,6 +183,11 @@ class SingletonAPI:
         suppress_st_warning : boolean
             Suppress warnings about calling Streamlit functions from within
             the singleton function.
+
+        validate : callable (returning bool)
+            Function that will check if cached object is still valid.
+            For example, if the object is a database session, check that
+            the session is still open.
 
         Example
         -------
@@ -218,6 +225,41 @@ class SingletonAPI:
         >>> # value - even though the _sessionmaker parameter was different
         >>> # in both calls.
 
+        It is sometimes useful to validate that a cached object is still usable.
+        For example, you may want to test that a cached database connection is still
+        open. For that use case, you can supply an optional `validate` function. This
+        function will be run on the cached object, and if it returns True then the
+        cached object is returned, but if it returns False then the function will be
+        run and the returned result will be cached.
+
+        >>> def sessionOpen(dbSession):
+        ...     # Check if dbSession is still open. Return True if yes, False if no.
+        ...
+        >>> @st.experimental_singleton(validate=sessionOpen)
+        ... def get_database_session(url):
+        ...     # Create a database session object that points to the URL.
+        ...     return session
+        ...
+        >>> s1 = get_database_session(SESSION_URL_1)
+        >>> # Actually executes the function, since this is the first time it was
+        >>> # encountered.
+        >>>
+        >>> s2 = get_database_session(SESSION_URL_1)
+        >>> # Does not execute the function. Instead, returns its previously computed
+        >>> # value. This means that now the connection object in s1 is the same as in s2.
+        >>>
+        >>> s3 = get_database_session(SESSION_URL_2)
+        >>> # This is a different URL, so the function executes.
+        >>>
+        >>> s2.close()
+        >>> # This closes the database connection (method `close()` for illustration).
+        >>> # Using s2 again would result in failure since the database connection is closed.
+        >>>
+        >>> s4 = get_database_session(SESSION_URL_1)
+        >>> # This will return the same cached value as s1 and s2, however the sessionOpen
+        >>> # function will return False. Thus, the function will execute.
+
+
         A singleton function's cache can be procedurally cleared:
 
         >>> @st.experimental_singleton
@@ -237,6 +279,7 @@ class SingletonAPI:
                     func=f,
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
+                    validate=validate,
                 )
             )
 
@@ -245,6 +288,7 @@ class SingletonAPI:
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
+                validate=validate,
             )
         )
 

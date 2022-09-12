@@ -128,11 +128,16 @@ class CachedFunction:
     """
 
     def __init__(
-        self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
+        self,
+        func: types.FunctionType,
+        show_spinner: bool,
+        suppress_st_warning: bool,
+        validate: types.FunctionType,
     ):
         self.func = func
         self.show_spinner = show_spinner
         self.suppress_st_warning = suppress_st_warning
+        self.validate = validate
 
     @property
     def cache_type(self) -> CacheType:
@@ -221,9 +226,15 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             # arguments passed to the function.
             value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
 
+            do_create = False
             try:
                 result = cache.read_result(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
+
+                if cached_func.validate is not None:
+                    if not cached_func.validate(result.value):
+                        _LOGGER.debug("Cached value is invalid: %s", func)
+                        do_create = True
 
                 replay_result_messages(result, cached_func.cache_type, func)
 
@@ -231,7 +242,9 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
+                do_create = True
 
+            if do_create:
                 with cached_func.warning_call_stack.calling_cached_function(
                     func
                 ), cached_func.message_call_stack.calling_cached_function():
