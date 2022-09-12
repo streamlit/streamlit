@@ -19,7 +19,7 @@ import hashlib
 import mimetypes
 import threading
 from enum import Enum
-from typing import Dict, Set, Optional, List, Iterable
+from typing import Dict, Set, Optional, List
 
 from streamlit import util
 from streamlit.logger import get_logger
@@ -185,18 +185,6 @@ class MediaFileManager(CacheStatsProvider):
         # means taking it multiple times from the same thread will deadlock.)
         self._lock = threading.Lock()
 
-    def _get_session_file_ids(self, session_id: str) -> Iterable[str]:
-        """Return an iterable containing all the file IDs that the given session
-        is using.
-
-        Thread safety: callers must hold `self._lock`.
-        """
-        files_by_coord = self._files_by_session_and_coord.get(session_id)
-        if files_by_coord is None:
-            return ()
-
-        return map(lambda file: file.id, files_by_coord.values())
-
     def _get_inactive_file_ids(self) -> Set[str]:
         """Compute the set of files that are stored in the manager, but are
         not referenced by any active session. These are files that can be
@@ -208,8 +196,9 @@ class MediaFileManager(CacheStatsProvider):
         file_ids = set(self._files_by_id.keys())
 
         # Subtract all IDs that are in use by each session
-        for session_id in self._files_by_session_and_coord.keys():
-            file_ids.difference_update(self._get_session_file_ids(session_id))
+        for session_id, files_by_coord in self._files_by_session_and_coord.items():
+            file_ids_in_session = map(lambda file: file.id, files_by_coord.values())
+            file_ids.difference_update(file_ids_in_session)
 
         return file_ids
 
