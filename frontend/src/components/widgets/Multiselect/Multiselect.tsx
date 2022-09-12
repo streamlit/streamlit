@@ -206,13 +206,12 @@ class Multiselect extends React.PureComponent<Props, State> {
     options: readonly Option[],
     filterValue: string
   ): readonly Option[] => {
-    if (options.length === 1) {
-      if (
-        options.at(0)?.label ===
+    if (
+      options.length === 1 &&
+      options.at(0)?.label ===
         `You can only choose up to ${this.maxSelections} options`
-      ) {
-        return options
-      }
+    ) {
+      return options
     }
     // We need to manually filter for previously selected options here
     const unselectedOptions = options.filter(
@@ -230,8 +229,9 @@ class Multiselect extends React.PureComponent<Props, State> {
     const style = { width }
     const { options } = element
     const disabled = options.length === 0 ? true : this.props.disabled
-    let placeholder
     let selectOptions: MultiselectOption[]
+    const placeholder =
+      options.length === 0 ? "No options to select." : "Choose an option"
     if (this.state.overMaxSelections) {
       selectOptions = [
         {
@@ -246,8 +246,6 @@ class Multiselect extends React.PureComponent<Props, State> {
           value: idx.toString(),
         }
       })
-      placeholder =
-        options.length === 0 ? "No options to select." : "Choose an option"
     }
 
     // Manage our form-clear event handler.
@@ -309,14 +307,14 @@ class Multiselect extends React.PureComponent<Props, State> {
               ValueContainer: {
                 style: () => ({
                   /*
-                      This minHeight is needed to fix a bug from BaseWeb in which the
-                      div that contains the options changes their height from 40px to 44px.
+                    This minHeight is needed to fix a bug from BaseWeb in which the
+                    div that contains the options changes their height from 40px to 44px.
 
-                      You could check this behavior in their documentation as well:
-                      https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
+                    You could check this behavior in their documentation as well:
+                    https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
 
-                      Issue related: https://github.com/streamlit/streamlit/issues/590
-                    */
+                    Issue related: https://github.com/streamlit/streamlit/issues/590
+                  */
                   minHeight: "38.4px",
                   paddingLeft: ".5rem",
                   paddingTop: 0,
