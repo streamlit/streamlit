@@ -323,7 +323,7 @@ function makeMarkdownHeading(tag: string, markdown: string): string {
 
 export function Heading(props: HeadingProtoProps): ReactElement {
   const { width } = props
-  const { body, tag, anchor } = props.element
+  const { tag, anchor, body } = props.element
   const isSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
