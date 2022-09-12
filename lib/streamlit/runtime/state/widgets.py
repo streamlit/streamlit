@@ -211,6 +211,7 @@ def user_key_from_widget_id(wid: str) -> Optional[str]:
     """
     user_key = wid.split("-", maxsplit=2)[-1]
     user_key = None if user_key == "None" else user_key
+    return user_key
 
 
 def register_widget_from_metadata(
