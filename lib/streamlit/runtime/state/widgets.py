@@ -219,6 +219,15 @@ def register_widget_from_metadata(
     widget_func_name: Optional[str],
     element_type: ElementType,
 ) -> RegisterWidgetResult[T]:
+    """Register a widget and return its value, using an already constructed
+    `WidgetMetadata`.
+
+    This is split out from `register_widget` to allow caching code to replay
+    widgets by saving and reusing the completed metadata.
+
+    See `register_widget` for details on what this returns.
+    """
+    # Local import to avoid import cycle
     import streamlit.runtime.caching as caching
 
     if ctx is None:
