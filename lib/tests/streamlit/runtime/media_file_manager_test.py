@@ -123,14 +123,18 @@ class MediaFileManagerTest(TestCase):
         "streamlit.runtime.media_file_manager._get_session_id",
         return_value="mock_session_id",
     )
-    def test_add_files(self, _):
-        """Test that MediaFileManager.add works as expected."""
+    def test_reject_null_files(self, _):
+        """MediaFileManager.add raises a TypeError if it's passed None."""
         coord = random_coordinates()
-
-        # Make sure we reject files containing None
         with self.assertRaises(TypeError):
             self.media_file_manager.add(None, "media/any", coord)
 
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session_id",
+    )
+    def test_add_files(self, _):
+        """Test that MediaFileManager.add works as expected."""
         sample_coords = set()
         while len(sample_coords) < len(ALL_FIXTURES):
             sample_coords.add(random_coordinates())
@@ -257,41 +261,54 @@ class MediaFileManagerTest(TestCase):
         "streamlit.runtime.media_file_manager._get_session_id",
         return_value="mock_session_id",
     )
-    def test_clear_session_refs(self, _):
-        """Test that clear_session_refs removes session references correctly."""
+    def test_remove_orphaned_files_in_empty_manager(self, _):
+        """Calling clear_session_refs/remove_orphaned_files in an empty manager
+        is a no-op.
+        """
         self.assertEqual(len(self.media_file_manager), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
         self.media_file_manager.clear_session_refs()
-
-        self.assertEqual(len(self.media_file_manager), 0)
-        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
-
         self.media_file_manager.remove_orphaned_files()
 
         self.assertEqual(len(self.media_file_manager), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
-        for sample in VIDEO_FIXTURES.values():
-            coord = random_coordinates()
-            self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
+    def test_remove_orphaned_files_multiple_sessions(self, mock_get_session_id):
+        """clear_session_refs/remove_orphaned_files behaves correctly when multiple
+        sessions are referencing some of the same files.
+        """
+        # Have two sessions add the same set of files
+        for session_id in ("mock_session_1", "mock_session_2"):
+            mock_get_session_id.return_value = session_id
+            for sample in VIDEO_FIXTURES.values():
+                coord = random_coordinates()
+                self.media_file_manager.add(
+                    sample["content"], sample["mimetype"], coord
+                )
 
         self.assertEqual(len(self.media_file_manager), len(VIDEO_FIXTURES))
-        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
+        # Remove session1's references
+        mock_get_session_id.return_value = "mock_session_1"
         self.media_file_manager.clear_session_refs()
-
-        self.assertEqual(
-            len(self.media_file_manager), len(VIDEO_FIXTURES)
-        )  # Clears later
-        self.assertEqual(
-            len(self.media_file_manager._files_by_session_and_coord), 0
-        )  # Clears immediately
-
         self.media_file_manager.remove_orphaned_files()
 
-        self.assertEqual(len(self.media_file_manager), 0)  # Now this is cleared too!
-        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
+        # The files are all still referenced by session_2
+        self.assertEqual(len(self.media_file_manager), len(VIDEO_FIXTURES))
+
+        # Remove session2's references, but don't call "remove_orphaned_files" yet...
+        mock_get_session_id.return_value = "mock_session_2"
+        self.media_file_manager.clear_session_refs()
+
+        # The files still exist, because they've only been de-referenced and not
+        # removed.
+        self.assertEqual(len(self.media_file_manager), len(VIDEO_FIXTURES))
+
+        # After a final call to remove_orphaned_files, the files should be gone.
+        self.media_file_manager.remove_orphaned_files()
+        self.assertEqual(len(self.media_file_manager), 0)
 
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_add_file_multiple_sessions_then_clear(self, _get_session_id):
