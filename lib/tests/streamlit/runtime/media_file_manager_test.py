@@ -119,11 +119,12 @@ class MediaFileManagerTest(TestCase):
             _calculate_file_id(fake_bytes, "audio/wav", file_name="name2.wav"),
         )
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    def test_add_files(self, _get_session_id):
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session_id",
+    )
+    def test_add_files(self, _):
         """Test that MediaFileManager.add works as expected."""
-        _get_session_id.return_value = "SESSION1"
-
         coord = random_coordinates()
 
         # Make sure we reject files containing None
@@ -146,12 +147,12 @@ class MediaFileManagerTest(TestCase):
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    @mock.patch("time.time")
-    def test_add_files_same_coord(self, _time, _get_session_id):
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session_id",
+    )
+    def test_add_files_same_coord(self, _):
         """Test that MediaFileManager.add works as expected."""
-        _get_session_id.return_value = "SESSION1"
-
         coord = random_coordinates()
 
         for sample in ALL_FIXTURES.values():
@@ -168,7 +169,8 @@ class MediaFileManagerTest(TestCase):
 
         # There should only be 1 coord in that session.
         self.assertEqual(
-            len(self.media_file_manager._files_by_session_and_coord["SESSION1"]), 1
+            len(self.media_file_manager._files_by_session_and_coord["mock_session_id"]),
+            1,
         )
 
         self.media_file_manager.clear_session_refs()
@@ -180,10 +182,11 @@ class MediaFileManagerTest(TestCase):
         # There should only be 0 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    def test_add_file_already_exists_same_coord(self, _get_session_id):
-        _get_session_id.return_value = "SESSION1"
-
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session_id",
+    )
+    def test_add_file_already_exists_same_coord(self, _):
         sample = IMAGE_FIXTURES["png"]
         coord = random_coordinates()
 
@@ -203,10 +206,11 @@ class MediaFileManagerTest(TestCase):
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    def test_add_file_already_exists_different_coord(self, _get_session_id):
-        _get_session_id.return_value = "SESSION1"
-
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session_id",
+    )
+    def test_add_file_already_exists_different_coord(self, _):
         sample = IMAGE_FIXTURES["png"]
 
         coord = random_coordinates()
@@ -227,10 +231,12 @@ class MediaFileManagerTest(TestCase):
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    def test_add_file_different_mimetypes(self, _get_session_id):
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session_id",
+    )
+    def test_add_file_different_mimetypes(self, _):
         """Test that we create a new file if new mimetype, even with same bytes for content."""
-        _get_session_id.return_value = "SESSION1"
         coord = random_coordinates()
 
         sample = AUDIO_FIXTURES["mp3"]
@@ -289,7 +295,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_add_file_multiple_sessions_then_clear(self, _get_session_id):
-        _get_session_id.return_value = "SESSION1"
+        _get_session_id.return_value = "mock_session_1"
 
         sample = next(iter(ALL_FIXTURES.values()))
 
@@ -297,7 +303,7 @@ class MediaFileManagerTest(TestCase):
         f = self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
         self.assertTrue(f.id in self.media_file_manager)
 
-        _get_session_id.return_value = "SESSION2"
+        _get_session_id.return_value = "mock_session_2"
 
         coord = random_coordinates()
         f = self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
@@ -318,7 +324,7 @@ class MediaFileManagerTest(TestCase):
         # There should be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
-        _get_session_id.return_value = "SESSION1"
+        _get_session_id.return_value = "mock_session_1"
         self.media_file_manager.clear_session_refs()
 
         # There should be 0 session with registered files.
@@ -330,9 +336,11 @@ class MediaFileManagerTest(TestCase):
         self.assertEqual(MediaFile("abcd", b"", "video/mp4").url, "/media/abcd.mp4")
         self.assertEqual(MediaFile("abcd", b"", "video/webm").url, "/media/abcd.webm")
 
-    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
-    def test_stats_provider(self, _get_session_id):
-        _get_session_id.return_value = "SESSION1"
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session_id",
+    )
+    def test_stats_provider(self, _):
         manager = self.media_file_manager
         assert len(manager.get_stats()) == 0
 
@@ -345,6 +353,6 @@ class MediaFileManagerTest(TestCase):
         assert stats[0].category_name == "st_media_file_manager"
         assert sum(stat.byte_length for stat in stats) == 232
 
-        manager.clear_session_refs("SESSION1")
+        manager.clear_session_refs("mock_session_id")
         manager.remove_orphaned_files()
         assert len(manager.get_stats()) == 0
