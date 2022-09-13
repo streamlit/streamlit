@@ -30,7 +30,6 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.runtime.state import (
     SessionState,
@@ -44,6 +43,7 @@ from .script_requests import (
     ScriptRequestType,
 )
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
+from ..media_file_manager import get_media_file_manager
 
 LOGGER = get_logger(__name__)
 
@@ -413,7 +413,7 @@ class ScriptRunner:
         start_time: float = timer()
 
         # Reset DeltaGenerators, widgets, media files.
-        media_file_manager.clear_session_refs()
+        get_media_file_manager().clear_session_refs()
 
         main_script_path = self._main_script_path
         pages = source_util.get_pages(main_script_path)
@@ -625,7 +625,7 @@ class ScriptRunner:
 
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.
-        media_file_manager.remove_orphaned_files()
+        get_media_file_manager().remove_orphaned_files()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

@@ -55,6 +55,7 @@ from streamlit.web.server.upload_file_request_handler import (
 )
 from .browser_websocket_handler import BrowserWebSocketHandler
 from .component_request_handler import ComponentRequestHandler
+from .memory_media_file_storage import MemoryMediaFileStorage
 from .stats_request_handler import StatsRequestHandler
 
 LOGGER = get_logger(__name__)
@@ -169,12 +170,17 @@ class Server:
 
         self._main_script_path = main_script_path
 
+        media_file_storage = MemoryMediaFileStorage()
+
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
+                media_file_storage=media_file_storage,
             ),
         )
+
+        self._runtime.stats_mgr.register_provider(media_file_storage)
 
     def __repr__(self) -> str:
         return util.repr_(self)

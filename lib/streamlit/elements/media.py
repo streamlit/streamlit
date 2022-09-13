@@ -20,9 +20,9 @@ from typing_extensions import Final, TypeAlias
 from validators import url
 
 from streamlit import type_util
-from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
+from streamlit.runtime.media_file_manager import get_media_file_manager
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -205,7 +205,7 @@ def _marshall_av_media(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    file_url = media_file_manager.add(data_or_filename, mimetype, coordinates)
+    file_url = get_media_file_manager().add(data_or_filename, mimetype, coordinates)
     proto.url = file_url
 
 

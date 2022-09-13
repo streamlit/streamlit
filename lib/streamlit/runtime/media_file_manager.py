@@ -271,3 +271,25 @@ class MediaFileManager:
 
     def __len__(self):
         return len(self._files_by_id)
+
+
+# Singleton MediaFileManager instance. The Runtime will initialize
+# this during startup.
+_media_file_manager: Optional[MediaFileManager] = None
+
+
+def set_media_file_manager(manager: MediaFileManager) -> None:
+    """Set the singleton MediaFileManager instance."""
+    global _media_file_manager
+    if _media_file_manager is not None:
+        raise RuntimeError("MediaFileManager singleton already exists!")
+    _media_file_manager = manager
+
+
+def get_media_file_manager() -> MediaFileManager:
+    """Return the singleton MediaFileManager instance. Raise an error
+    if it hasn't been instantiated yet.
+    """
+    if _media_file_manager is None:
+        raise RuntimeError("MediaFileManager hasn't been created!")
+    return _media_file_manager
