@@ -53,7 +53,7 @@ interface State {
    */
   value: number[]
 
-  overMaxSelections: boolean
+  overMaxSelections: boolean | undefined
 }
 
 interface MultiselectOption {
@@ -68,7 +68,10 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   public state: State = {
     value: this.initialValue,
-    overMaxSelections: this.initialValue.length > this.maxSelections - 1,
+    overMaxSelections:
+      this.maxSelections === 0
+        ? undefined
+        : this.initialValue.length > this.maxSelections - 1,
   }
 
   get initialValue(): number[] {
@@ -139,7 +142,7 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private generateNewState(
     data: OnChangeParams,
-    overMaxSelections: boolean
+    overMaxSelections: boolean | undefined
   ): State {
     const getIndex = (): number => {
       const valueId = data.option?.value
@@ -197,7 +200,10 @@ class Multiselect extends React.PureComponent<Props, State> {
         }
       }
     } else {
-      const newState = this.generateNewState(params, true)
+      const newState = this.generateNewState(
+        params,
+        this.state.overMaxSelections
+      )
       this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
     }
   }
@@ -232,7 +238,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     let selectOptions: MultiselectOption[]
     const placeholder =
       options.length === 0 ? "No options to select." : "Choose an option"
-    if (this.state.overMaxSelections) {
+    if (this.state.overMaxSelections !== undefined) {
       selectOptions = [
         {
           label: `You can only choose up to ${this.maxSelections} options`,
