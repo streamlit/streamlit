@@ -177,17 +177,11 @@ class Multiselect extends React.PureComponent<Props, State> {
         const newState = this.generateNewState(params, false)
         this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
       } else if (params.type === "remove") {
-        if (this.state.value.length > this.maxSelections) {
-          const newState = this.generateNewState(params, true)
-          this.setState(newState, () =>
-            this.commitWidgetValue({ fromUi: true })
-          )
-        } else {
-          const newState = this.generateNewState(params, false)
-          this.setState(newState, () =>
-            this.commitWidgetValue({ fromUi: true })
-          )
-        }
+        const newState = this.generateNewState(
+          params,
+          this.state.value.length > this.maxSelections
+        )
+        this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
       } else if (params.type === "select") {
         if (this.state.value.length < this.maxSelections) {
           const newState = this.generateNewState(
@@ -238,7 +232,10 @@ class Multiselect extends React.PureComponent<Props, State> {
     let selectOptions: MultiselectOption[]
     const placeholder =
       options.length === 0 ? "No options to select." : "Choose an option"
-    if (this.state.overMaxSelections !== undefined) {
+    if (
+      this.state.overMaxSelections !== undefined &&
+      this.state.overMaxSelections
+    ) {
       selectOptions = [
         {
           label: `You can only choose up to ${this.maxSelections} options`,
