@@ -206,12 +206,8 @@ class Multiselect extends React.PureComponent<Props, State> {
     options: readonly Option[],
     filterValue: string
   ): readonly Option[] => {
-    if (
-      options.length === 1 &&
-      options.at(0)?.label ===
-        `You can only choose up to ${this.maxSelections} options`
-    ) {
-      return options
+    if (this.state.overMaxSelections) {
+      return []
     }
     // We need to manually filter for previously selected options here
     const unselectedOptions = options.filter(
@@ -229,27 +225,19 @@ class Multiselect extends React.PureComponent<Props, State> {
     const style = { width }
     const { options } = element
     const disabled = options.length === 0 ? true : this.props.disabled
-    let selectOptions: MultiselectOption[]
     const placeholder =
       options.length === 0 ? "No options to select." : "Choose an option"
-    if (
+    const noResultsMsg =
       this.state.overMaxSelections !== undefined &&
       this.state.overMaxSelections
-    ) {
-      selectOptions = [
-        {
-          label: `You can only choose up to ${this.maxSelections} options`,
-          value: "",
-        },
-      ]
-    } else {
-      selectOptions = options.map((option: string, idx: number) => {
-        return {
-          label: option,
-          value: idx.toString(),
-        }
-      })
-    }
+        ? `You can only select up to ${this.maxSelections} options`
+        : "No results"
+    const selectOptions = options.map((option: string, idx: number) => {
+      return {
+        label: option,
+        value: idx.toString(),
+      }
+    })
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -289,6 +277,7 @@ class Multiselect extends React.PureComponent<Props, State> {
             value={this.valueFromState}
             disabled={disabled}
             size={"compact"}
+            noResultsMsg={noResultsMsg}
             filterOptions={this.filterOptions}
             overrides={{
               IconsContainer: {
