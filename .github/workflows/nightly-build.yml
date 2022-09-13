@@ -24,34 +24,36 @@ jobs:
         with: 
           persist-credentials: false
           submodules: 'recursive'
-      # - name: Set up Python 3.10
-      #   uses: actions/setup-python@v4
-      #   with:
-      #     python-version: "3.10"
-      # - name: Setup virtual env
-      #   uses: ./.github/actions/make_init
-      # - name: Run make develop
-      #   run: make develop
-      # - name: Create tag
-      #   run: |
-      #     git config user.email "core+streamlitbot-github@streamlit.io"
-      #     git config user.name "Streamlit Bot"
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: make develop
+      # TODO: Avoid creating unnecessary tags, gated for now
+      - if: ${{ 'true' == 'false' }}
+        name: Create tag
+        run: |
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
 
-      #     TAG="$(./scripts/pypi_nightly_create_tag.py)"
+          TAG="$(./scripts/pypi_nightly_create_tag.py)"
 
-      #     ./scripts/update_version.py $TAG
-      #     ./scripts/update_name.py streamlit-nightly
+          ./scripts/update_version.py $TAG
+          ./scripts/update_name.py streamlit-nightly
 
-      #     git add lib/setup.py
-      #     git add frontend/package.json
+          git add lib/setup.py
+          git add frontend/package.json
 
-      #     git add lib/streamlit/__init__.py
-      #     git add lib/streamlit/version.py
+          git add lib/streamlit/__init__.py
+          git add lib/streamlit/version.py
 
-      #     git commit -m "Update version and project name in files"
+          git commit -m "Update version and project name in files"
 
-      #     git tag -a $TAG -m "Streamlit nightly $TAG"
-      #     git push origin $TAG
+          git tag -a $TAG -m "Streamlit nightly $TAG"
+          git push origin $TAG
 
   run-python-tests:
     needs: create-nightly-tag
@@ -84,28 +86,35 @@ jobs:
         with: 
           persist-credentials: false
           submodules: 'recursive'
-      # - name: Set up Python 3.10
-      #   uses: actions/setup-python@v4
-      #   with:
-      #     python-version: "3.10"
-      # - name: Setup virtual env
-      #   uses: ./.github/actions/make_init
-      # - name: Verify git tag vs. version
-      #   run: |
-      #     cd lib
-      #     python setup.py verify
-      # TODO: Secure Secret Mgmt
-      # - name: Initialize .pypirc
-      #   run: |
-      #     cd lib
-      #     echo -e "[pypi]" >> ~/.pypirc
-      #     echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
-      #     echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-      # - name: Build Package
-      #   timeout-minutes: 120
-      #   run: |
-      #     sudo apt install rsync
-      #     make package
-      # - name: Upload to PyPI
-      #   run: |
-      #     make distribute
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Verify git tag vs. version
+        run: |
+          cd lib
+          python setup.py verify
+
+      # TODO: Need the streamlit PyPI user/password for the below steps - added the if statement to gate for now
+      - if: ${{ 'true' == 'false' }}
+        name: Initialize .pypirc
+        env:
+          STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
+          STREAMLIT_PYPI_API_TOKEN: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
+        run: |
+          cd lib
+          echo -e "[pypi]" >> ~/.pypirc
+          echo -e "username = $STREAMLIT_PYPI_USERNAME" >> ~/.pypirc
+          echo -e "password = $STREAMLIT_PYPI_API_TOKEN" >> ~/.pypirc
+      - if: ${{ 'true' == 'false' }}
+        name: Build Package
+        timeout-minutes: 120
+        run: |
+          sudo apt install rsync
+          make package
+      - if: ${{ 'true' == 'false' }}
+        name: Upload to PyPI
+        run: |
+          make distribute
