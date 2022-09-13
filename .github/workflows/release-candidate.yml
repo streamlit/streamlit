@@ -1,0 +1,97 @@
+name: Release Candidate
+
+on:
+  # TODO: Add Manual Trigger
+
+  # FOR TESTING ONLY:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  # run-python-tests:
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/python-versions.yml
+
+  # run-javascript-tests:
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/js-tests.yml
+
+  # run-py-prod-deps-smoke-test:
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+
+  # run-cypress-tests:
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/cypress.yml
+
+  build-release-candidate:
+    runs-on: ubuntu-latest
+
+    # needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Set Environment Variables
+        uses: ./.github/actions/branch
+        with:
+          branch: ${{ github.ref_name }}
+      - name: Set desired version from branch name
+        env:
+          BRANCH: ${{ env.BRANCH }}
+        run: |
+          echo 'export DESIRED_VERSION=$(echo "${BRANCH}" | tr -d "release/")' >> $GITHUB_ENV
+      - name: Set final versions for pre-release and update version
+        env: 
+          DESIRED_VERSION: ${{ env.DESIRED_VERSION }}
+        run: |
+          # Start at the latest existing RC for this version if one exists,
+          # so the following update will increment to the right RC version
+          export LATEST_MATCHING_RC=$(curl https://pypi.org/pypi/streamlit/json | jq ".releases | keys | map(select(contains(\"rc\"))) | map(select(contains(\"$DESIRED_VERSION\"))) | sort | .[-1]" | tr --delete '"')
+          if [ $LATEST_MATCHING_RC != "null" ]; then python scripts/update_version.py $LATEST_MATCHING_RC; fi
+
+          export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)
+          echo 'export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)' >> $GITHUB_ENV
+          echo 'export STREAMLIT_RELEASE_VERSION=$(echo $STREAMLIT_RELEASE_SEMVER | sed s/\-rc\./rc/)' >> $GITHUB_ENV
+          python scripts/update_version.py $STREAMLIT_RELEASE_SEMVER
+      - name: Create Package
+        timeout-minutes: 120
+        run: |
+          sudo apt install rsync
+          make package
+      - name: Run CLI regression tests
+        run: make cli-regression-tests
+      - name: Store Package
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          path: lib/dist
+      - name: Initialize .pypirc
+        env:
+          STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
+          STREAMLIT_PYPI_API_TOKEN: ${{ secrets.STREAMLIT_PYPI_API_TOKEN 
+        run: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $STREAMLIT_PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $STREAMLIT_PYPI_API_TOKEN" >> ~/.pypirc
+
+      # TODO: Need the streamlit PyPI user/password for the below steps - added the if statement to gate for now
+      - if: ${{ 'true' == 'false' }}
+        name: Upload to PyPI
+        run: |
+          make distribute

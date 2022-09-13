@@ -1,0 +1,14 @@
+name: "Set BRANCH env variables"
+
+inputs:
+  branch:
+    description: 'Name of the branch'
+
+runs:
+  using: composite
+  steps:
+    - name: Set BRANCH
+      run: echo "BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
+      env:
+        BRANCH_NAME: ${{ inputs.branch }}
+      shell: bash -ileo pipefail {0}
