@@ -1,0 +1,14 @@
+name: "Set GIT_TAG env variables"
+
+inputs:
+  tag_name:
+    description: 'Name of the tag'
+
+runs:
+  using: composite
+  steps:
+    - name: Set GIT_TAG
+      run: echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
+      env:
+        GIT_TAG: ${{ inputs.tag_name }}
+      shell: bash -ileo pipefail {0}
