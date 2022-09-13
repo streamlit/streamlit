@@ -101,13 +101,13 @@ jobs:
       - if: ${{ 'true' == 'false' }}
         name: Initialize .pypirc
         env:
-          STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
-          STREAMLIT_PYPI_API_TOKEN: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
+          NIGHTLY_PYPI_USERNAME: ${{ secrets.NIGHTLY_PYPI_USERNAME }}
+          NIGHTLY_PYPI_API_TOKEN: ${{ secrets.NIGHTLY_PYPI_API_TOKEN }}
         run: |
           cd lib
           echo -e "[pypi]" >> ~/.pypirc
-          echo -e "username = $STREAMLIT_PYPI_USERNAME" >> ~/.pypirc
-          echo -e "password = $STREAMLIT_PYPI_API_TOKEN" >> ~/.pypirc
+          echo -e "username = $NIGHTLY_PYPI_USERNAME" >> ~/.pypirc
+          echo -e "password = $NIGHTLY_PYPI_API_TOKEN" >> ~/.pypirc
       - if: ${{ 'true' == 'false' }}
         name: Build Package
         timeout-minutes: 120
