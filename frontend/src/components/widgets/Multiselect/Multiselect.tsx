@@ -109,6 +109,8 @@ class Multiselect extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
+    this.props.element.disabled = true
+    this.props.element.label = `You cannot set this multiwidget's value from session state with the following label: "${this.props.element.label}" with the following possible options: "${this.props.element.options}" and default options: "${this.props.element.default}"`
     this.setState(
       {
         value,
@@ -240,7 +242,7 @@ class Multiselect extends React.PureComponent<Props, State> {
       this.state.overMaxSelections !== undefined &&
       this.state.overMaxSelections
         ? `You can only select up to ${this.maxSelections} options`
-        : "Poopy"
+        : "No results"
     const selectOptions = options.map((option: string, idx: number) => {
       return {
         label: option,
