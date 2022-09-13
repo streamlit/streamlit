@@ -495,33 +495,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             foo(1)
 
     @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
-    def test_cached_widget_replay(self, _, cache_decorator):
-        @cache_decorator(show_spinner=False)
-        def foo(i):
-            options = ["foo", "bar", "baz", "qux"]
-            r = st.radio("radio", options, index=i)
-            return r
-
-        r = foo(1)
-        # foo(1)
-
-        deltas = self.get_all_deltas_from_queue()
-        values = [
-            (element.radio.value if element.radio.set_value else element.radio.default)
-            for element in (delta.new_element for delta in deltas)
-            if element.WhichOneof("type") == "radio"
-        ]
-
-        # assert values == [1, 1]
-        assert r == "bar"
-        # TODO write an e2e test that does interaction to test that changing widgets does things
-
-    @parameterized.expand(
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
     )
     def test_multithreaded_call_stack(self, _, call_stack):
