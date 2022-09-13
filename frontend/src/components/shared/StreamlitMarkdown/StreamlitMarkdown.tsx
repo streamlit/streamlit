@@ -303,6 +303,24 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   )
 }
 
+function makeMarkdownHeading(tag: string, markdown: string): string {
+  switch (tag.toLowerCase()) {
+    // willhuang1997: TODO: could be refactored to Enums
+    case "h1": {
+      return `# ${markdown}`
+    }
+    case "h2": {
+      return `## ${markdown}`
+    }
+    case "h3": {
+      return `### ${markdown}`
+    }
+    default: {
+      throw new Error(`Unrecognized tag for header: ${tag}`)
+    }
+  }
+}
+
 export function Heading(props: HeadingProtoProps): ReactElement {
   const { width } = props
   const { tag, anchor, body } = props.element
@@ -315,7 +333,7 @@ export function Heading(props: HeadingProtoProps): ReactElement {
     <div className="stMarkdown" style={{ width }}>
       <HeadingWithAnchor tag={tag} anchor={anchor}>
         <RenderedMarkdown
-          source={heading}
+          source={makeMarkdownHeading(tag, heading)}
           allowHTML={false}
           // this is purely an inline string
           overrideComponents={{
