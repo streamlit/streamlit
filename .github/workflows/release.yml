@@ -1,0 +1,101 @@
+name: Build Release
+
+on:
+  # TODO: Add Manual Trigger
+
+  # FOR TESTING ONLY:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Set GIT_TAG env variable
+        uses: ./.github/actions/tag
+        with:
+          tag_name: ${{ github.ref_name }}
+      - name: Install GitHub CLI tool and related dependencies
+        run: |
+          sudo apt install jq
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          brew install gh
+      - name: Configure GitHub CLI Settings
+        run: echo 'export GH_REPO="${{ github.repository }}"' >> $GITHUB_ENV
+      - name: Look up the related GitHub PR number and branch name
+        run: |
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
+      - name: Ensure that version tag matches branch version
+        run: |
+          if [ "$(echo $GH_PR_BRANCH | tr -d 'release/')" != "$GIT_TAG" ]
+          then
+            echo "ERROR: Version number from tag does not match the version number from the branch name."
+            exit 1
+          fi
+      - name: Checkout head of branch
+        run: |
+          git pull origin ${GH_PR_BRANCH} --ff-only
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Set release version from tag name
+        run: echo 'export STREAMLIT_RELEASE_VERSION=$(echo "$GIT_TAG")' >> GITHUB_ENV
+      - name: Update version
+        run: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
+      - name: Create Package
+        timeout-minutes: 120
+        run: |
+          sudo apt install rsync
+          make package
+      - name: Run CLI regression tests
+        run: make cli-regression-tests
+      - name: Store Package
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          path: lib/dist
+      - name: Initialize .pypirc
+        env:
+          STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
+          STREAMLIT_PYPI_API_TOKEN: ${{ secrets.STREAMLIT_PYPI_API_TOKEN 
+        run: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $STREAMLIT_PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $STREAMLIT_PYPI_API_TOKEN" >> ~/.pypirc
+
+      # TODO: Need the streamlit PyPI user/password for the below steps - added the if statement to gate for now
+      - if: ${{ 'true' == 'false' }}
+        name: Upload to PyPI
+        run: |
+          make distribute
+      - if: ${{ 'true' == 'false' }}
+        name: Commit version updates
+        run: |
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
+
+          git switch -c $GH_PR_BRANCH
+
+          git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $GH_PR_BRANCH || echo "No changes to commit"
+      - if: ${{ 'true' == 'false' }}
+        name: Create GitHub Release
+        run: |
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          gh release create "$GIT_TAG" -n "" -t "$GIT_TAG"
