@@ -16,77 +16,37 @@
 
 import copy
 import json
-from typing import Any, Dict, cast
+from typing import Any, Dict, Iterable, Optional, Union, cast, TYPE_CHECKING
 
 import pandas as pd
+from typing_extensions import Final, TypeAlias
 
-import streamlit
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
+from streamlit.runtime.metrics_util import gather_metrics
+
+if TYPE_CHECKING:
+    from pandas.io.formats.style import Styler
+
+    from streamlit.delta_generator import DeltaGenerator
 
 
-class MapMixin:
-    def map(self, data=None, zoom=None, use_container_width=True):
-        """Display a map with points on it.
-
-        This is a wrapper around st.pydeck_chart to quickly create scatterplot
-        charts on top of a map, with auto-centering and auto-zoom.
-
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
-
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels). For more
-        info on how to set config options, see
-        https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            The data to be plotted. Must have columns called 'lat', 'lon',
-            'latitude', or 'longitude'.
-        zoom : int
-            Zoom level as specified in
-            https://wiki.openstreetmap.org/wiki/Zoom_levels
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...     columns=['lat', 'lon'])
-        >>>
-        >>> st.map(df)
-
-        .. output::
-           https://doc-map.streamlitapp.com/
-           height: 650px
-
-        """
-        map_proto = DeckGlJsonChartProto()
-        map_proto.json = to_deckgl_json(data, zoom)
-        map_proto.use_container_width = use_container_width
-        return self.dg._enqueue("deck_gl_json_chart", map_proto)
-
-    @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
-        """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
-
+Data: TypeAlias = Union[
+    pd.DataFrame,
+    "Styler",
+    Iterable[Any],
+    Dict[Any, Any],
+    None,
+]
 
 # Map used as the basis for st.map.
-_DEFAULT_MAP = dict(deck_gl_json_chart.EMPTY_MAP)  # type: Dict[str, Any]
+_DEFAULT_MAP: Final[Dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 
 # Other default parameters for st.map.
-_DEFAULT_COLOR = [200, 30, 0, 160]
-_DEFAULT_ZOOM_LEVEL = 12
-_ZOOM_LEVELS = [
+_DEFAULT_COLOR: Final = [200, 30, 0, 160]
+_DEFAULT_ZOOM_LEVEL: Final = 12
+_ZOOM_LEVELS: Final = [
     360,
     180,
     90,
@@ -111,7 +71,68 @@ _ZOOM_LEVELS = [
 ]
 
 
-def _get_zoom_level(distance):
+class MapMixin:
+    @gather_metrics
+    def map(
+        self,
+        data: Data = None,
+        zoom: Optional[int] = None,
+        use_container_width: bool = True,
+    ) -> "DeltaGenerator":
+        """Display a map with points on it.
+
+        This is a wrapper around st.pydeck_chart to quickly create scatterplot
+        charts on top of a map, with auto-centering and auto-zoom.
+
+        When using this command, we advise all users to use a personal Mapbox
+        token. This ensures the map tiles used in this chart are more
+        robust. You can do this with the mapbox.token config option.
+
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free! (for moderate usage levels). For more
+        info on how to set config options, see
+        https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+            or None
+            The data to be plotted. Must have columns called 'lat', 'lon',
+            'latitude', or 'longitude'.
+        zoom : int
+            Zoom level as specified in
+            https://wiki.openstreetmap.org/wiki/Zoom_levels
+        use_container_width: bool
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> df = pd.DataFrame(
+        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...     columns=['lat', 'lon'])
+        >>>
+        >>> st.map(df)
+
+        .. output::
+           https://doc-map.streamlitapp.com/
+           height: 650px
+
+        """
+        map_proto = DeckGlJsonChartProto()
+        map_proto.json = to_deckgl_json(data, zoom)
+        map_proto.use_container_width = use_container_width
+        return self.dg._enqueue("deck_gl_json_chart", map_proto)
+
+    @property
+    def dg(self) -> "DeltaGenerator":
+        """Get our DeltaGenerator."""
+        return cast("DeltaGenerator", self)
+
+
+def _get_zoom_level(distance: float) -> int:
     """Get the zoom level for a given distance in degrees.
 
     See https://wiki.openstreetmap.org/wiki/Zoom_levels for reference.
@@ -127,19 +148,20 @@ def _get_zoom_level(distance):
         The zoom level, from 0 to 20.
 
     """
-
-    # For small number of points the default zoom level will be used.
-    if distance < _ZOOM_LEVELS[-1]:
-        return _DEFAULT_ZOOM_LEVEL
-
     for i in range(len(_ZOOM_LEVELS) - 1):
         if _ZOOM_LEVELS[i + 1] < distance <= _ZOOM_LEVELS[i]:
             return i
 
+    # For small number of points the default zoom level will be used.
+    return _DEFAULT_ZOOM_LEVEL
 
-def to_deckgl_json(data, zoom):
 
-    if data is None or data.empty:
+def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
+    # TODO(harahu): The ignore statement here is because iterables don't have
+    #  the empty attribute. This is either a bug, or the documented data type
+    #  is too broad. One or the other should be addressed, and the ignore
+    #  statement removed.
+    if data is None or data.empty:  # type: ignore[union-attr]
         return json.dumps(_DEFAULT_MAP)
 
     if "lat" in data:
@@ -160,7 +182,11 @@ def to_deckgl_json(data, zoom):
             'Map data must contain a column called "longitude" or "lon".'
         )
 
-    if data[lon].isnull().values.any() or data[lat].isnull().values.any():
+    # TODO(harahu): The ignore statement here is because iterables don't have
+    #  the empty attribute. This is either a bug, or the documented data type
+    #  is too broad. One or the other should be addressed, and the ignore
+    #  statement removed.
+    if data[lon].isnull().values.any() or data[lat].isnull().values.any():  # type: ignore[index]
         raise StreamlitAPIException("Latitude and longitude data must be numeric.")
 
     data = pd.DataFrame(data)
@@ -174,7 +200,7 @@ def to_deckgl_json(data, zoom):
     range_lon = abs(max_lon - min_lon)
     range_lat = abs(max_lat - min_lat)
 
-    if zoom == None:
+    if zoom is None:
         if range_lon > range_lat:
             longitude_distance = range_lon
         else:

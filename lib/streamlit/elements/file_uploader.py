@@ -12,14 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.type_util import Key, to_key
+from dataclasses import dataclass
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
 from typing_extensions import Literal
 
 import streamlit
 from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -28,17 +33,88 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from ..proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
     UploadedFileInfo as UploadedFileInfoProto,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
-from .utils import check_callback_rules, check_session_state_rules
-
-LOGGER = get_logger(__name__)
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
+
+
+def _get_file_recs(
+    widget_id: str, widget_value: Optional[FileUploaderStateProto]
+) -> List[UploadedFileRec]:
+    if widget_value is None:
+        return []
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return []
+
+    uploaded_file_info = widget_value.uploaded_file_info
+    if len(uploaded_file_info) == 0:
+        return []
+
+    active_file_ids = [f.id for f in uploaded_file_info]
+
+    # Grab the files that correspond to our active file IDs.
+    return ctx.uploaded_file_mgr.get_files(
+        session_id=ctx.session_id,
+        widget_id=widget_id,
+        file_ids=active_file_ids,
+    )
+
+
+@dataclass
+class FileUploaderSerde:
+    accept_multiple_files: bool
+
+    def deserialize(
+        self, ui_value: Optional[FileUploaderStateProto], widget_id: str
+    ) -> SomeUploadedFiles:
+        file_recs = _get_file_recs(widget_id, ui_value)
+        if len(file_recs) == 0:
+            return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
+                [] if self.accept_multiple_files else None
+            )
+        else:
+            files = [UploadedFile(rec) for rec in file_recs]
+            return_value = files if self.accept_multiple_files else files[0]
+        return return_value
+
+    def serialize(self, files: SomeUploadedFiles) -> FileUploaderStateProto:
+        state_proto = FileUploaderStateProto()
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return state_proto
+
+        # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
+        # the *next* uploaded file, so the current highest file id is the
+        # counter minus 1.
+        state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
+
+        if not files:
+            return state_proto
+        elif not isinstance(files, list):
+            files = [files]
+
+        for f in files:
+            file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
+            file_info.id = f.id
+            file_info.name = f.name
+            file_info.size = f.size
+
+        return state_proto
 
 
 class FileUploaderMixin:
@@ -67,6 +143,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[List[UploadedFile]]:
         ...
 
@@ -85,6 +162,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[UploadedFile]:
         ...
 
@@ -108,6 +186,7 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[List[UploadedFile]]:
         ...
 
@@ -126,9 +205,11 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[UploadedFile]:
         ...
 
+    @gather_metrics
     def file_uploader(
         self,
         label: str,
@@ -141,6 +222,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
@@ -152,6 +234,9 @@ class FileUploaderMixin:
         ----------
         label : str
             A short label explaining to the user what this file uploader is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
 
         type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
@@ -185,6 +270,11 @@ class FileUploaderMixin:
             An optional boolean, which disables the file uploader if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -245,6 +335,7 @@ class FileUploaderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -259,12 +350,14 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ):
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        maybe_raise_label_warnings(label, label_visibility)
 
         if type:
             if isinstance(type, str):
@@ -288,43 +381,7 @@ class FileUploaderMixin:
         if help is not None:
             file_uploader_proto.help = dedent(help)
 
-        def deserialize_file_uploader(
-            ui_value: Optional[FileUploaderStateProto], widget_id: str
-        ) -> SomeUploadedFiles:
-            file_recs = self._get_file_recs(widget_id, ui_value)
-            if len(file_recs) == 0:
-                return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
-                    [] if accept_multiple_files else None
-                )
-            else:
-                files = [UploadedFile(rec) for rec in file_recs]
-                return_value = files if accept_multiple_files else files[0]
-            return return_value
-
-        def serialize_file_uploader(files: SomeUploadedFiles) -> FileUploaderStateProto:
-            state_proto = FileUploaderStateProto()
-
-            ctx = get_script_run_ctx()
-            if ctx is None:
-                return state_proto
-
-            # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
-            # the *next* uploaded file, so the current highest file id is the
-            # counter minus 1.
-            state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
-
-            if not files:
-                return state_proto
-            elif not isinstance(files, list):
-                files = [files]
-
-            for f in files:
-                file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-                file_info.id = f.id
-                file_info.name = f.name
-                file_info.size = f.size
-
-            return state_proto
+        serde = FileUploaderSerde(accept_multiple_files)
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
@@ -336,16 +393,19 @@ class FileUploaderMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_file_uploader,
-            serializer=serialize_file_uploader,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         file_uploader_proto.disabled = disabled
+        file_uploader_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
-        file_uploader_state = serialize_file_uploader(widget_state.value)
+        file_uploader_state = serde.serialize(widget_state.value)
         uploaded_file_info = file_uploader_state.uploaded_file_info
         if ctx is not None and len(uploaded_file_info) != 0:
             newest_file_id = file_uploader_state.max_file_id
@@ -360,30 +420,6 @@ class FileUploaderMixin:
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
         return widget_state.value
-
-    @staticmethod
-    def _get_file_recs(
-        widget_id: str, widget_value: Optional[FileUploaderStateProto]
-    ) -> List[UploadedFileRec]:
-        if widget_value is None:
-            return []
-
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return []
-
-        uploaded_file_info = widget_value.uploaded_file_info
-        if len(uploaded_file_info) == 0:
-            return []
-
-        active_file_ids = [f.id for f in uploaded_file_info]
-
-        # Grab the files that correspond to our active file IDs.
-        return ctx.uploaded_file_mgr.get_files(
-            session_id=ctx.session_id,
-            widget_id=widget_id,
-            file_ids=active_file_ids,
-        )
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

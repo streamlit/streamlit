@@ -12,13 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date, time, datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import date, time, datetime, timedelta, timezone, tzinfo
+from typing import (
+    Any,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    TYPE_CHECKING,
+    TypeVar,
+    cast,
+)
+
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
-from typing import Any, List, cast, Optional
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
+from typing_extensions import Final, TypeAlias
 from textwrap import dedent
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
@@ -30,18 +47,142 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+SliderScalarT = TypeVar("SliderScalarT", int, float, date, time, datetime)
+
+Step: TypeAlias = Union[int, float, timedelta]
+SliderScalar: TypeAlias = Union[int, float, date, time, datetime]
+
+SliderValueGeneric: TypeAlias = Union[
+    SliderScalarT,
+    Sequence[SliderScalarT],
+]
+SliderValue: TypeAlias = Union[
+    SliderValueGeneric[int],
+    SliderValueGeneric[float],
+    SliderValueGeneric[date],
+    SliderValueGeneric[time],
+    SliderValueGeneric[datetime],
+]
+
+SliderReturnGeneric: TypeAlias = Union[
+    SliderScalarT,
+    Tuple[SliderScalarT],
+    Tuple[SliderScalarT, SliderScalarT],
+]
+SliderReturn: TypeAlias = Union[
+    SliderReturnGeneric[int],
+    SliderReturnGeneric[float],
+    SliderReturnGeneric[date],
+    SliderReturnGeneric[time],
+    SliderReturnGeneric[datetime],
+]
+
+SECONDS_TO_MICROS: Final = 1000 * 1000
+DAYS_TO_MICROS: Final = 24 * 60 * 60 * SECONDS_TO_MICROS
+
+UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _time_to_datetime(time_: time) -> datetime:
+    # Note, here we pick an arbitrary date well after Unix epoch.
+    # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
+    # We're dropping the date from datetime later, anyway.
+    return datetime.combine(date(2000, 1, 1), time_)
+
+
+def _date_to_datetime(date_: date) -> datetime:
+    return datetime.combine(date_, time())
+
+
+def _delta_to_micros(delta: timedelta) -> int:
+    return (
+        delta.microseconds
+        + delta.seconds * SECONDS_TO_MICROS
+        + delta.days * DAYS_TO_MICROS
+    )
+
+
+def _datetime_to_micros(dt: datetime) -> int:
+    # The frontend is not aware of timezones and only expects a UTC-based
+    # timestamp (in microseconds). Since we want to show the date/time exactly
+    # as it is in the given datetime object, we just set the tzinfo to UTC and
+    # do not do any timezone conversions. Only the backend knows about
+    # original timezone and will replace the UTC timestamp in the deserialization.
+    utc_dt = dt.replace(tzinfo=timezone.utc)
+    return _delta_to_micros(utc_dt - UTC_EPOCH)
+
+
+def _micros_to_datetime(micros: int, orig_tz: Optional[tzinfo]) -> datetime:
+    """Restore times/datetimes to original timezone (dates are always naive)"""
+    utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
+    # Add the original timezone. No conversion is required here,
+    # since in the serialization, we also just replace the timestamp with UTC.
+    return utc_dt.replace(tzinfo=orig_tz)
+
+
+@dataclass
+class SliderSerde:
+    value: List[float]
+    data_type: int
+    single_value: bool
+    orig_tz: Optional[tzinfo]
+
+    def deserialize(self, ui_value: Optional[List[float]], widget_id: str = ""):
+        if ui_value is not None:
+            val: Any = ui_value
+        else:
+            # Widget has not been used; fallback to the original value,
+            val = self.value
+
+        # The widget always returns a float array, so fix the return type if necessary
+        if self.data_type == SliderProto.INT:
+            val = [int(v) for v in val]
+        if self.data_type == SliderProto.DATETIME:
+            val = [_micros_to_datetime(int(v), self.orig_tz) for v in val]
+        if self.data_type == SliderProto.DATE:
+            val = [_micros_to_datetime(int(v), self.orig_tz).date() for v in val]
+        if self.data_type == SliderProto.TIME:
+            val = [
+                _micros_to_datetime(int(v), self.orig_tz)
+                .time()
+                .replace(tzinfo=self.orig_tz)
+                for v in val
+            ]
+        return val[0] if self.single_value else tuple(val)
+
+    def serialize(self, v: Any) -> List[Any]:
+        range_value = isinstance(v, (list, tuple))
+        value = list(v) if range_value else [v]
+        if self.data_type == SliderProto.DATE:
+            value = [_datetime_to_micros(_date_to_datetime(v)) for v in value]
+        if self.data_type == SliderProto.TIME:
+            value = [_datetime_to_micros(_time_to_datetime(v)) for v in value]
+        if self.data_type == SliderProto.DATETIME:
+            value = [_datetime_to_micros(v) for v in value]
+        return value
 
 
 class SliderMixin:
+    @gather_metrics
     def slider(
         self,
         label: str,
-        min_value=None,
-        max_value=None,
-        value=None,
-        step=None,
+        min_value: Optional[SliderScalar] = None,
+        max_value: Optional[SliderScalar] = None,
+        value: Optional[SliderValue] = None,
+        step: Optional[Step] = None,
         format: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -50,7 +191,13 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ):
+        label_visibility: LabelVisibility = "visible",
+        # TODO(harahu): Add overload definitions. The return type is
+        #  `SliderReturn`, in reality, but the return type is left as `Any`
+        #  until we have proper overload definitions in place. Otherwise the
+        #  user would have to cast the return value more often than not, which
+        #  can be annoying.
+    ) -> Any:
         """Display a slider widget.
 
         This supports int, float, date, time, and datetime types.
@@ -67,6 +214,9 @@ class SliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         min_value : a supported type or None
             The minimum permitted value.
             Defaults to 0 if the value is an int, 0.0 if a float,
@@ -108,6 +258,12 @@ class SliderMixin:
         disabled : bool
             An optional boolean, which disables the slider if set to True. The
             default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
+
 
         Returns
         -------
@@ -163,6 +319,7 @@ class SliderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -172,8 +329,8 @@ class SliderMixin:
         min_value=None,
         max_value=None,
         value=None,
-        step=None,
-        format=None,
+        step: Optional[Step] = None,
+        format: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -181,11 +338,14 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ):
+    ) -> SliderReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+
+        maybe_raise_label_warnings(label, label_visibility)
 
         if value is None:
             # Set value from session_state if exists.
@@ -283,14 +443,14 @@ class SliderMixin:
         if max_value is None:
             max_value = DEFAULTS[data_type]["max_value"]
         if step is None:
-            step = DEFAULTS[data_type]["step"]
+            step = cast(Step, DEFAULTS[data_type]["step"])
             if data_type in (
                 SliderProto.DATETIME,
                 SliderProto.DATE,
             ) and max_value - min_value < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
-            format = DEFAULTS[data_type]["format"]
+            format = cast(str, DEFAULTS[data_type]["format"])
 
         if step == 0:
             raise StreamlitAPIException(
@@ -374,50 +534,20 @@ class SliderMixin:
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
+        orig_tz = None
         # Convert dates or times into datetimes
         if data_type == SliderProto.TIME:
-
-            def _time_to_datetime(time):
-                # Note, here we pick an arbitrary date well after Unix epoch.
-                # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
-                # We're dropping the date from datetime laters, anyways.
-                return datetime.combine(date(2000, 1, 1), time)
-
             value = list(map(_time_to_datetime, value))
             min_value = _time_to_datetime(min_value)
             max_value = _time_to_datetime(max_value)
 
         if data_type == SliderProto.DATE:
-
-            def _date_to_datetime(date):
-                return datetime.combine(date, time())
-
             value = list(map(_date_to_datetime, value))
             min_value = _date_to_datetime(min_value)
             max_value = _date_to_datetime(max_value)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
-            SECONDS_TO_MICROS = 1000 * 1000
-            DAYS_TO_MICROS = 24 * 60 * 60 * SECONDS_TO_MICROS
-
-            def _delta_to_micros(delta):
-                return (
-                    delta.microseconds
-                    + delta.seconds * SECONDS_TO_MICROS
-                    + delta.days * DAYS_TO_MICROS
-                )
-
-            UTC_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-            def _datetime_to_micros(dt):
-                # The frontend is not aware of timezones and only expects a UTC-based timestamp (in microseconds).
-                # Since we want to show the date/time exactly as it is in the given datetime object,
-                # we just set the tzinfo to UTC and do not do any timezone conversions.
-                # Only the backend knows about original timezone and will replace the UTC timestamp in the deserialization.
-                utc_dt = dt.replace(tzinfo=timezone.utc)
-                return _delta_to_micros(utc_dt - UTC_EPOCH)
-
             # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
                 value[0].tzinfo
@@ -425,16 +555,10 @@ class SliderMixin:
                 else None
             )
 
-            def _micros_to_datetime(micros):
-                utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
-                # Add the original timezone. No conversion is required here,
-                # since in the serialization, we also just replace the timestamp with UTC.
-                return utc_dt.replace(tzinfo=orig_tz)
-
             value = list(map(_datetime_to_micros, value))
             min_value = _datetime_to_micros(min_value)
             max_value = _datetime_to_micros(max_value)
-            step = _delta_to_micros(step)
+            step = _delta_to_micros(cast(timedelta, step))
 
         # It would be great if we could guess the number of decimal places from
         # the `step` argument, but this would only be meaningful if step were a
@@ -447,44 +571,14 @@ class SliderMixin:
         slider_proto.default[:] = value
         slider_proto.min = min_value
         slider_proto.max = max_value
-        slider_proto.step = step
+        slider_proto.step = cast(float, step)
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
         slider_proto.form_id = current_form_id(self.dg)
         if help is not None:
             slider_proto.help = dedent(help)
 
-        def deserialize_slider(ui_value: Optional[List[float]], widget_id=""):
-            if ui_value is not None:
-                val = ui_value
-            else:
-                # Widget has not been used; fallback to the original value,
-                val = cast(List[float], value)
-
-            # The widget always returns a float array, so fix the return type if necessary
-            if data_type == SliderProto.INT:
-                val = [int(v) for v in val]
-            if data_type == SliderProto.DATETIME:
-                val = [_micros_to_datetime(int(v)) for v in val]
-            if data_type == SliderProto.DATE:
-                val = [_micros_to_datetime(int(v)).date() for v in val]
-            if data_type == SliderProto.TIME:
-                val = [
-                    _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
-                    for v in val
-                ]
-            return val[0] if single_value else tuple(val)
-
-        def serialize_slider(v: Any) -> List[Any]:
-            range_value = isinstance(v, (list, tuple))
-            value = list(v) if range_value else [v]
-            if data_type == SliderProto.DATE:
-                value = [_datetime_to_micros(_date_to_datetime(v)) for v in value]
-            if data_type == SliderProto.TIME:
-                value = [_datetime_to_micros(_time_to_datetime(v)) for v in value]
-            if data_type == SliderProto.DATETIME:
-                value = [_datetime_to_micros(v) for v in value]
-            return value
+        serde = SliderSerde(value, data_type, single_value, orig_tz)
 
         widget_state = register_widget(
             "slider",
@@ -493,22 +587,26 @@ class SliderMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_slider,
-            serializer=serialize_slider,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
+        slider_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if widget_state.value_changed:
-            slider_proto.value[:] = serialize_slider(widget_state.value)
+            slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
-        return widget_state.value
+        return cast(SliderReturn, widget_state.value)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

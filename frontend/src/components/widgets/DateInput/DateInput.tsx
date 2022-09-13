@@ -31,6 +31,8 @@ import { Theme } from "src/theme"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+
 export interface Props {
   disabled: boolean
   element: DateInputProto
@@ -192,7 +194,13 @@ class DateInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stDateInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

@@ -21,7 +21,12 @@ from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
@@ -31,12 +36,17 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
@@ -161,7 +171,51 @@ class _DateInputValues:
                 )
 
 
+@dataclass
+class TimeInputSerde:
+    value: time
+
+    def deserialize(self, ui_value: Optional[str], widget_id: Any = "") -> time:
+        return (
+            datetime.strptime(ui_value, "%H:%M").time()
+            if ui_value is not None
+            else self.value
+        )
+
+    def serialize(self, v: Union[datetime, time]) -> str:
+        if isinstance(v, datetime):
+            v = v.time()
+        return time.strftime(v, "%H:%M")
+
+
+@dataclass
+class DateInputSerde:
+    value: _DateInputValues
+
+    def deserialize(
+        self,
+        ui_value: Any,
+        widget_id: str = "",
+    ) -> DateWidgetReturn:
+        return_value: Sequence[date]
+        if ui_value is not None:
+            return_value = tuple(
+                datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
+            )
+        else:
+            return_value = self.value.value
+
+        if not self.value.is_range:
+            return return_value[0]
+        return cast(DateWidgetReturn, tuple(return_value))
+
+    def serialize(self, v: DateWidgetReturn) -> List[str]:
+        to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
+        return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+
+
 class TimeWidgetsMixin:
+    @gather_metrics
     def time_input(
         self,
         label: str,
@@ -173,6 +227,7 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> time:
         """Display a time input widget.
 
@@ -180,6 +235,9 @@ class TimeWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this time input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : datetime.time/datetime.datetime
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to the current time.
@@ -199,6 +257,11 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the time input if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -225,6 +288,7 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -239,11 +303,14 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> time:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+
+        maybe_raise_label_warnings(label, label_visibility)
 
         parsed_time: time
         if value is None:
@@ -266,20 +333,7 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = dedent(help)
 
-        def deserialize_time_input(
-            ui_value: Optional[str], widget_id: Any = ""
-        ) -> time:
-            return (
-                datetime.strptime(ui_value, "%H:%M").time()
-                if ui_value is not None
-                else parsed_time
-            )
-
-        def serialize_time_input(v: Union[datetime, time]) -> str:
-            if isinstance(v, datetime):
-                v = v.time()
-            return time.strftime(v, "%H:%M")
-
+        serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
             "time_input",
             time_input_proto,
@@ -287,21 +341,25 @@ class TimeWidgetsMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_time_input,
-            serializer=serialize_time_input,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         time_input_proto.disabled = disabled
+        time_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
-            time_input_proto.value = serialize_time_input(widget_state.value)
+            time_input_proto.value = serde.serialize(widget_state.value)
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
         return widget_state.value
 
+    @gather_metrics
     def date_input(
         self,
         label: str,
@@ -315,6 +373,7 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> DateWidgetReturn:
         """Display a date input widget.
 
@@ -322,6 +381,9 @@ class TimeWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this date input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
             The value of this widget when it first renders. If a list/tuple with
             0 to 2 date/datetime values is provided, the datepicker will allow
@@ -348,6 +410,11 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the date input if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -378,6 +445,7 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -394,11 +462,14 @@ class TimeWidgetsMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+
+        maybe_raise_label_warnings(label, label_visibility)
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,
@@ -422,25 +493,7 @@ class TimeWidgetsMixin:
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        def deserialize_date_input(
-            ui_value: Any,
-            widget_id: str = "",
-        ) -> DateWidgetReturn:
-            return_value: Sequence[date]
-            if ui_value is not None:
-                return_value = tuple(
-                    datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
-                )
-            else:
-                return_value = parsed_values.value
-
-            if not parsed_values.is_range:
-                return return_value[0]
-            return cast(DateWidgetReturn, tuple(return_value))
-
-        def serialize_date_input(v: DateWidgetReturn) -> List[str]:
-            to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
-            return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+        serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
             "date_input",
@@ -449,16 +502,19 @@ class TimeWidgetsMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_date_input,
-            serializer=serialize_date_input,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         date_input_proto.disabled = disabled
+        date_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
-            date_input_proto.value[:] = serialize_date_input(widget_state.value)
+            date_input_proto.value[:] = serde.serialize(widget_state.value)
             date_input_proto.set_value = True
 
         self.dg._enqueue("date_input", date_input_proto)

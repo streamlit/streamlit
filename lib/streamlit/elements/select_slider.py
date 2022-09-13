@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Callable, Optional, cast
 
@@ -25,13 +26,66 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import (
+    Key,
+    OptionSequence,
+    ensure_indexable,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from streamlit.util import index_
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
+
+
+@dataclass
+class SelectSliderSerde:
+    options: OptionSequence
+    value: Any
+    is_range_value: bool
+
+    def deserialize(self, ui_value, widget_id=""):
+        if not ui_value:
+            # Widget has not been used; fallback to the original value,
+            ui_value = self.value
+
+        # The widget always returns floats, so convert to ints before indexing
+        return_value = list(map(lambda x: self.options[int(x)], ui_value))  # type: ignore[no-any-return]
+
+        # If the original value was a list/tuple, so will be the output (and vice versa)
+        return tuple(return_value) if self.is_range_value else return_value[0]
+
+    def serialize(self, v):
+        return self.as_index_list(v)
+
+    def as_index_list(self, v):
+        is_range_value = isinstance(v, (list, tuple))
+        if is_range_value:
+            slider_value = [index_(self.options, val) for val in v]
+            start, end = slider_value
+            if start > end:
+                slider_value = [end, start]
+            return slider_value
+        else:
+            # Simplify future logic by always making value a list
+            try:
+                return [index_(self.options, v)]
+            except ValueError:
+                if self.value is not None:
+                    raise
+
+                return [0]
 
 
 class SelectSliderMixin:
+    @gather_metrics
     def select_slider(
         self,
         label: str,
@@ -45,6 +99,7 @@ class SelectSliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Any:
         """
         Display a slider widget to select items from a list.
@@ -61,6 +116,9 @@ class SelectSliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the slider options. All options will be cast to str
             internally by default. For pandas.DataFrame, the first column is
@@ -91,6 +149,11 @@ class SelectSliderMixin:
         disabled : bool
             An optional boolean, which disables the select slider if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -130,6 +193,7 @@ class SelectSliderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -145,12 +209,13 @@ class SelectSliderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
-
+        maybe_raise_label_warnings(label, label_visibility)
         opt = ensure_indexable(options)
 
         if len(opt) == 0:
@@ -192,19 +257,7 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        def deserialize_select_slider(ui_value, widget_id=""):
-            if not ui_value:
-                # Widget has not been used; fallback to the original value,
-                ui_value = slider_value
-
-            # The widget always returns floats, so convert to ints before indexing
-            return_value = list(map(lambda x: opt[int(x)], ui_value))  # type: ignore[no-any-return]
-
-            # If the original value was a list/tuple, so will be the output (and vice versa)
-            return tuple(return_value) if is_range_value else return_value[0]
-
-        def serialize_select_slider(v):
-            return as_index_list(v)
+        serde = SelectSliderSerde(opt, slider_value, is_range_value)
 
         widget_state = register_widget(
             "slider",
@@ -213,16 +266,19 @@ class SelectSliderMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_select_slider,
-            serializer=serialize_select_slider,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
+        slider_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
-            slider_proto.value[:] = serialize_select_slider(widget_state.value)
+            slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)

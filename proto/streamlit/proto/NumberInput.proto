@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message NumberInput {
   enum DataType {
     // Does the input operate on ints or floats? This doesn't change how the
@@ -41,6 +43,7 @@ message NumberInput {
   double value = 19;
   bool set_value = 20;
   bool disabled = 21;
+  LabelVisibilityMessage label_visibility = 22;
 
   reserved 4, 5, 6, 7, 9, 10;
 }

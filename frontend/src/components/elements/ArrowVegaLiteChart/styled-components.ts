@@ -18,8 +18,6 @@
 import styled from "@emotion/styled"
 
 export const StyledVegaLiteChartContainer = styled.div(({ theme }) => ({
-  paddingTop: theme.spacing.sm,
-
   // These styles come from VegaLite Library
   "&.vega-embed": {
     "&:hover summary, .vega-embed:focus summary": {

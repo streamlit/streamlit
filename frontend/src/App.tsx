@@ -18,7 +18,6 @@
 import React, { PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
-import { fromJS } from "immutable"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
@@ -64,6 +63,7 @@ import {
   PageInfo,
   PageNotFound,
   PagesChanged,
+  PageProfile,
   SessionEvent,
   WidgetStates,
   SessionState,
@@ -145,6 +145,7 @@ interface State {
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
+  latestRunTime: number
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -219,6 +220,7 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
+      latestRunTime: performance.now(),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -426,6 +428,8 @@ export class App extends PureComponent<Props, State> {
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleScriptFinished(status),
+        pageProfile: (pageProfile: PageProfile) =>
+          this.handlePageProfileMsg(pageProfile),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -443,7 +447,11 @@ export class App extends PureComponent<Props, State> {
       menuItems,
     } = pageConfig
 
-    MetricsManager.current.enqueue("pageConfigChanged", pageConfig)
+    MetricsManager.current.enqueue("pageConfigChanged", {
+      favicon,
+      layout,
+      initialSidebarState,
+    })
 
     if (title) {
       this.props.s4aCommunication.sendMessage({
@@ -514,6 +522,21 @@ export class App extends PureComponent<Props, State> {
         type: "SET_APP_PAGES",
         appPages,
       })
+    })
+  }
+
+  handlePageProfileMsg = (pageProfile: PageProfile): void => {
+    MetricsManager.current.enqueue("pageProfile", {
+      ...PageProfile.toObject(pageProfile),
+      appId: SessionInfo.current.appId,
+      numPages: this.state.appPages?.length,
+      sessionId: SessionInfo.current.sessionId,
+      pythonVersion: SessionInfo.current.pythonVersion,
+      pageScriptHash: this.state.currentPageScriptHash,
+      activeTheme: this.props.theme?.activeTheme?.name,
+      totalLoadTime: Math.round(
+        (performance.now() - this.state.latestRunTime) * 1000
+      ),
     })
   }
 
@@ -673,6 +696,7 @@ export class App extends PureComponent<Props, State> {
         hideSidebarNav: config.hideSidebarNav,
         appPages: newSessionProto.appPages,
         currentPageScriptHash: newPageScriptHash,
+        latestRunTime: performance.now(),
       },
       () => {
         this.props.s4aCommunication.sendMessage({
@@ -876,7 +900,7 @@ export class App extends PureComponent<Props, State> {
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
-        this.widgetMgr.removeInactive(fromJS([]))
+        this.widgetMgr.removeInactive(new Set([]))
       }
     )
   }

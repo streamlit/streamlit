@@ -144,7 +144,7 @@ function isHttps(): boolean {
 export function xssSanitizeSvg(uri: string): string {
   const SVG_PREFIX = "data:image/svg+xml,"
   const unsafe = uri.substring(SVG_PREFIX.length)
-  return DOMPurify.sanitize(unsafe)
+  return DOMPurify.sanitize(unsafe, {})
 }
 
 /**

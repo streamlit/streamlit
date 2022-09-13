@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from textwrap import dedent
@@ -24,6 +25,8 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -32,7 +35,19 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+@dataclass
+class CheckboxSerde:
+    value: bool
+
+    def serialize(self, v: bool) -> bool:
+        return bool(v)
+
+    def deserialize(self, ui_value: Optional[bool], widget_id: str = "") -> bool:
+        return bool(ui_value if ui_value is not None else self.value)
+
+
 class CheckboxMixin:
+    @gather_metrics
     def checkbox(
         self,
         label: str,
@@ -127,8 +142,7 @@ class CheckboxMixin:
         if help is not None:
             checkbox_proto.help = dedent(help)
 
-        def deserialize_checkbox(ui_value: Optional[bool], widget_id: str = "") -> bool:
-            return bool(ui_value if ui_value is not None else value)
+        serde = CheckboxSerde(value)
 
         checkbox_state = register_widget(
             "checkbox",
@@ -137,8 +151,8 @@ class CheckboxMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_checkbox,
-            serializer=bool,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 

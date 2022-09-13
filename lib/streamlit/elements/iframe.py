@@ -15,19 +15,21 @@
 from typing import cast, Optional, TYPE_CHECKING
 
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
 class IframeMixin:
+    @gather_metrics
     def _iframe(
         self,
         src: str,
         width: Optional[int] = None,
         height: Optional[int] = None,
         scrolling: bool = False,
-    ):
+    ) -> "DeltaGenerator":
         """Load a remote URL in an iframe.
 
         Parameters
@@ -54,13 +56,14 @@ class IframeMixin:
         )
         return self.dg._enqueue("iframe", iframe_proto)
 
+    @gather_metrics
     def _html(
         self,
         html: str,
         width: Optional[int] = None,
         height: Optional[int] = None,
         scrolling: bool = False,
-    ):
+    ) -> "DeltaGenerator":
         """Display an HTML string in an iframe.
 
         Parameters

@@ -329,3 +329,12 @@ st._arrow_dataframe(list_1)
 df = pd.DataFrame(
     np.random.randn(50, 36), columns=list("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 )
+
+st.header("Long colum header")
+
+df = pd.DataFrame(
+    np.random.randn(200, 4),
+    columns=["this is a very long header name", "A", "C", "this is another long name"],
+)
+
+st._arrow_dataframe(df)

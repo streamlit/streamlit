@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Callable, Optional, cast
 
@@ -25,13 +26,47 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import (
+    Key,
+    LabelVisibility,
+    OptionSequence,
+    ensure_indexable,
+    to_key,
+    maybe_raise_label_warnings,
+)
 from streamlit.util import index_
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
+
+
+@dataclass
+class SelectboxSerde:
+    options: OptionSequence
+    index: int
+
+    def deserialize(self, ui_value, widget_id=""):
+        idx = ui_value if ui_value is not None else self.index
+
+        return (
+            self.options[idx]
+            if len(self.options) > 0 and self.options[idx] is not None
+            else None
+        )
+
+    def serialize(self, v):
+        if len(self.options) == 0:
+            return 0
+        return index_(self.options, v)
 
 
 class SelectboxMixin:
+    @gather_metrics
     def selectbox(
         self,
         label: str,
@@ -45,6 +80,7 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Any:
         """Display a select widget.
 
@@ -52,6 +88,9 @@ class SelectboxMixin:
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the select options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
@@ -76,6 +115,11 @@ class SelectboxMixin:
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -107,6 +151,7 @@ class SelectboxMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -123,11 +168,14 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
+
+        maybe_raise_label_warnings(label, label_visibility)
 
         opt = ensure_indexable(options)
 
@@ -149,15 +197,7 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = dedent(help)
 
-        def deserialize_select_box(ui_value, widget_id=""):
-            idx = ui_value if ui_value is not None else index
-
-            return opt[idx] if len(opt) > 0 and opt[idx] is not None else None
-
-        def serialize_select_box(v):
-            if len(opt) == 0:
-                return 0
-            return index_(opt, v)
+        serde = SelectboxSerde(opt, index)
 
         widget_state = register_widget(
             "selectbox",
@@ -166,16 +206,19 @@ class SelectboxMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_select_box,
-            serializer=serialize_select_box,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         selectbox_proto.disabled = disabled
+        selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
-            selectbox_proto.value = serialize_select_box(widget_state.value)
+            selectbox_proto.value = serde.serialize(widget_state.value)
             selectbox_proto.set_value = True
 
         self.dg._enqueue("selectbox", selectbox_proto)

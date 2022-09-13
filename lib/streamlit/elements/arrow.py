@@ -23,6 +23,7 @@ import pyarrow as pa
 
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -31,11 +32,14 @@ Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]
 
 
 class ArrowMixin:
+    @gather_metrics
     def _arrow_dataframe(
         self,
         data: Data = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
+        *,
+        use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -46,12 +50,19 @@ class ArrowMixin:
 
             If 'data' is a pandas.Styler, it will be used to style its
             underlying DataFrame.
+
         width : int or None
-            Desired width of the UI element expressed in pixels. If None, a
-            default width based on the page width is used.
+            Desired width of the dataframe expressed in pixels. If None, the width
+            will be automatically calculated based on the column content.
+
         height : int or None
-            Desired height of the UI element expressed in pixels. If None, a
+            Desired height of the dataframe element expressed in pixels. If None, a
             default height is used.
+
+        use_container_width : bool
+            If True, set the dataframe width to the width of the parent container.
+            This takes precedence over the width argument.
+            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -80,14 +91,15 @@ class ArrowMixin:
         default_uuid = str(hash(delta_path))
 
         proto = ArrowProto()
+        proto.use_container_width = use_container_width
+        if width:
+            proto.width = width
+        if height:
+            proto.height = height
         marshall(proto, data, default_uuid)
-        return self.dg._enqueue(
-            delta_type="arrow_data_frame",
-            element_proto=proto,
-            element_width=width,
-            element_height=height,
-        )
+        return self.dg._enqueue("arrow_data_frame", proto)
 
+    @gather_metrics
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 

@@ -15,19 +15,33 @@
 """Streamlit support for GraphViz charts."""
 
 import hashlib
-from typing import cast
+from typing import TYPE_CHECKING, Union, cast
 
-import streamlit
+from typing_extensions import Final, TypeAlias
+
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
+from streamlit.runtime.metrics_util import gather_metrics
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    import graphviz
+
+    from streamlit.delta_generator import DeltaGenerator
+
+LOGGER: Final = get_logger(__name__)
+
+FigureOrDot: TypeAlias = Union["graphviz.Graph", "graphviz.Digraph", str]
 
 
 class GraphvizMixin:
-    def graphviz_chart(self, figure_or_dot, use_container_width=False):
+    @gather_metrics
+    def graphviz_chart(
+        self,
+        figure_or_dot: FigureOrDot,
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
         """Display a graph using the dagre-d3 library.
 
         Parameters
@@ -99,12 +113,17 @@ class GraphvizMixin:
         return self.dg._enqueue("graphviz_chart", graphviz_chart_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-def marshall(proto, figure_or_dot, use_container_width, element_id):
+def marshall(
+    proto: GraphVizChartProto,
+    figure_or_dot: FigureOrDot,
+    use_container_width: bool,
+    element_id: str,
+) -> None:
     """Construct a GraphViz chart object.
 
     See DeltaGenerator.graphviz_chart for docs.

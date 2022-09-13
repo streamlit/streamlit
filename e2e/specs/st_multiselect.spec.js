@@ -42,8 +42,8 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: ['Colors.yellow']" +
-            "value 8: ['Shake.CHOCOLATE']" +
+            "value 7: []" +
+            "value 8: []" +
             "value 9: []" +
             "multiselect changed: False"
         );
@@ -138,8 +138,8 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: ['Colors.yellow']" +
-            "value 8: ['Shake.CHOCOLATE']" +
+            "value 7: []" +
+            "value 8: []" +
             "value 9: []" +
             "multiselect changed: False"
         );
@@ -159,8 +159,8 @@ describe("st.multiselect", () => {
               "value 4: ['tea', 'water']" +
               "value 5: []" +
               "value 6: []" +
-              "value 7: ['Colors.yellow']" +
-              "value 8: ['Shake.CHOCOLATE']" +
+              "value 7: []" +
+              "value 8: []" +
               "value 9: []" +
               "multiselect changed: False"
           );
@@ -172,11 +172,6 @@ describe("st.multiselect", () => {
           cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
             .eq(0)
             .click();
-
-          // this the 'close button' element for 'Shake.Vanilla'
-          cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
-            .eq(2)
-            .click();
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
@@ -186,11 +181,11 @@ describe("st.multiselect", () => {
               "value 1: []" +
                 "value 2: ['male']" +
                 "value 3: []" +
-                "value 4: ['tea']" +
+                "value 4: ['tea', 'water']" +
                 "value 5: []" +
                 "value 6: []" +
-                "value 7: ['Colors.yellow']" +
-                "value 8: ['Shake.CHOCOLATE']" +
+                "value 7: []" +
+                "value 8: []" +
                 "value 9: []" +
                 "multiselect changed: False"
             );
@@ -201,9 +196,6 @@ describe("st.multiselect", () => {
         beforeEach(() => {
           cy.get('.stMultiSelect [role="button"][aria-label="Clear all"]')
             .eq(0)
-            .click();
-          cy.get('.stMultiSelect [role="button"][aria-label="Clear all"]')
-            .eq(1)
             .click();
         });
         it("outputs the correct value", () => {
@@ -218,7 +210,7 @@ describe("st.multiselect", () => {
                 "value 5: []" +
                 "value 6: []" +
                 "value 7: []" +
-                "value 8: ['Shake.CHOCOLATE']" +
+                "value 8: []" +
                 "value 9: []" +
                 "multiselect changed: False"
             );
@@ -246,8 +238,8 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
-            "value 7: ['Colors.yellow']" +
-            "value 8: ['Shake.CHOCOLATE']" +
+            "value 7: []" +
+            "value 8: []" +
             "value 9: ['male']" +
             "multiselect changed: True"
         );
