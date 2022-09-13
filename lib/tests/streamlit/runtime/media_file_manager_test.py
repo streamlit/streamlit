@@ -22,7 +22,7 @@ from unittest.mock import mock_open
 from streamlit.runtime.media_file_manager import (
     MediaFileManager,
     _calculate_file_id,
-    MediaFile,
+    MediaFileMetadata,
 )
 
 
@@ -105,7 +105,7 @@ class MediaFileManagerTest(TestCase):
         mimetype: str,
         coordinates: str,
         file_name: Optional[str] = None,
-    ) -> MediaFile:
+    ) -> MediaFileMetadata:
         """Add a new file to our test manager and return its MediaFile object."""
         file_id = _calculate_file_id(content, mimetype, file_name)
         self.media_file_manager.add(content, mimetype, coordinates, file_name)
@@ -348,10 +348,18 @@ class MediaFileManagerTest(TestCase):
         self.assertEqual(len(self.media_file_manager), 0)
 
     def test_media_file_url(self):
-        self.assertEqual(MediaFile("abcd", b"", "audio/wav").url, "/media/abcd.wav")
-        self.assertEqual(MediaFile("abcd", b"", "image/jpeg").url, "/media/abcd.jpeg")
-        self.assertEqual(MediaFile("abcd", b"", "video/mp4").url, "/media/abcd.mp4")
-        self.assertEqual(MediaFile("abcd", b"", "video/webm").url, "/media/abcd.webm")
+        self.assertEqual(
+            MediaFileMetadata("abcd", b"", "audio/wav").url, "/media/abcd.wav"
+        )
+        self.assertEqual(
+            MediaFileMetadata("abcd", b"", "image/jpeg").url, "/media/abcd.jpeg"
+        )
+        self.assertEqual(
+            MediaFileMetadata("abcd", b"", "video/mp4").url, "/media/abcd.mp4"
+        )
+        self.assertEqual(
+            MediaFileMetadata("abcd", b"", "video/webm").url, "/media/abcd.webm"
+        )
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",

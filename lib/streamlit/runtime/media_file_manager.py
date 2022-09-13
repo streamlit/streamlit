@@ -15,23 +15,17 @@
 """Provides global MediaFileManager object as `media_file_manager`."""
 
 import collections
-import hashlib
-import mimetypes
 import threading
 from enum import Enum
-from typing import Dict, Set, Optional, List, Union
+from typing import Dict, Set, Optional, Union
 
 from streamlit import util
 from streamlit.logger import get_logger
-from .stats import CacheStatsProvider, CacheStat
+from .media_file_storage import MediaFileStorage
 
 LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
-PREFERRED_MIMETYPE_EXTENSION_MAP = {
-    "image/jpeg": ".jpeg",
-    "audio/wav": ".wav",
-}
 
 
 class MediaFileType(Enum):
@@ -43,7 +37,7 @@ class MediaFileType(Enum):
 
 
 def _get_session_id() -> str:
-    """Semantic wrapper to retrieve current AppSession ID."""
+    """Get the active AppSession's session_id."""
     from streamlit.runtime.scriptrunner import get_script_run_ctx
 
     ctx = get_script_run_ctx()
@@ -56,62 +50,14 @@ def _get_session_id() -> str:
         return ctx.session_id
 
 
-def _calculate_file_id(
-    data: bytes, mimetype: str, file_name: Optional[str] = None
-) -> str:
-    """Return an ID by hashing the data and mime.
-
-    Parameters
-    ----------
-    data : bytes
-        Content of in-memory file in bytes. Other types will throw TypeError.
-    mimetype : str
-        Any string. Will be converted to bytes and used to compute a hash.
-        None will be converted to empty string.  [default: None]
-    file_name : str
-        Any string. Will be converted to bytes and used to compute a hash.
-        None will be converted to empty string. [default: None]
-    """
-    filehash = hashlib.new("sha224")
-    filehash.update(data)
-    filehash.update(bytes(mimetype.encode()))
-
-    if file_name is not None:
-        filehash.update(bytes(file_name.encode()))
-
-    return filehash.hexdigest()
-
-
-def _get_extension_for_mimetype(mimetype: str) -> str:
-    # Python mimetypes preference was changed in Python versions, so we specify
-    # a preference first and let Python's mimetypes library guess the rest.
-    # See https://bugs.python.org/issue4963
-    #
-    # Note: Removing Python 3.6 support would likely eliminate this code
-    if mimetype in PREFERRED_MIMETYPE_EXTENSION_MAP:
-        return PREFERRED_MIMETYPE_EXTENSION_MAP[mimetype]
-
-    extension = mimetypes.guess_extension(mimetype)
-    if extension is None:
-        return ""
-
-    return extension
-
-
-class MediaFile:
-    """Abstraction for file objects."""
-
+class MediaFileMetadata:
     def __init__(
         self,
         file_id: str,
-        content: bytes,
-        mimetype: str,
         file_name: Optional[str] = None,
         file_type: MediaFileType = MediaFileType.MEDIA,
     ):
         self._file_id = file_id
-        self._content = content
-        self._mimetype = mimetype
         self._file_name = file_name
         self._file_type = file_type
         self._is_marked_for_delete = False
@@ -120,25 +66,8 @@ class MediaFile:
         return util.repr_(self)
 
     @property
-    def url(self) -> str:
-        extension = _get_extension_for_mimetype(self._mimetype)
-        return f"{STATIC_MEDIA_ENDPOINT}/{self.id}{extension}"
-
-    @property
     def id(self) -> str:
         return self._file_id
-
-    @property
-    def content(self) -> bytes:
-        return self._content
-
-    @property
-    def mimetype(self) -> str:
-        return self._mimetype
-
-    @property
-    def content_size(self) -> int:
-        return len(self._content)
 
     @property
     def file_type(self) -> MediaFileType:
@@ -152,7 +81,7 @@ class MediaFile:
         self._is_marked_for_delete = True
 
 
-class MediaFileManager(CacheStatsProvider):
+class MediaFileManager:
     """In-memory file manager for MediaFile objects.
 
     This keeps track of:
@@ -171,13 +100,15 @@ class MediaFileManager(CacheStatsProvider):
       we should address it at some point.)
     """
 
-    def __init__(self):
-        # Dict of file ID to MediaFile.
-        self._files_by_id: Dict[str, MediaFile] = dict()
+    def __init__(self, storage: MediaFileStorage):
+        self._storage = storage
 
-        # Dict[session ID][coordinates] -> MediaFile.
+        # Dict of file ID to MediaFile.
+        self._files_by_id: Dict[str, MediaFileMetadata] = dict()
+
+        # Dict[session ID][coordinates] -> file_id.
         self._files_by_session_and_coord: Dict[
-            str, Dict[str, MediaFile]
+            str, Dict[str, str]
         ] = collections.defaultdict(dict)
 
         # MediaFileManager is used from multiple threads, so all operations
@@ -196,9 +127,8 @@ class MediaFileManager(CacheStatsProvider):
         file_ids = set(self._files_by_id.keys())
 
         # Subtract all IDs that are in use by each session
-        for session_id, files_by_coord in self._files_by_session_and_coord.items():
-            file_ids_in_session = map(lambda file: file.id, files_by_coord.values())
-            file_ids.difference_update(file_ids_in_session)
+        for session_file_ids_by_coord in self._files_by_session_and_coord.values():
+            file_ids.difference_update(session_file_ids_by_coord.values())
 
         return file_ids
 
@@ -213,14 +143,22 @@ class MediaFileManager(CacheStatsProvider):
             for file_id in self._get_inactive_file_ids():
                 file = self._files_by_id[file_id]
                 if file.file_type == MediaFileType.MEDIA:
-                    LOGGER.debug(f"Deleting File: {file_id}")
-                    del self._files_by_id[file_id]
+                    self._delete_file(file_id)
                 elif file.file_type == MediaFileType.DOWNLOADABLE:
                     if file._is_marked_for_delete:
-                        LOGGER.debug(f"Deleting File: {file_id}")
-                        del self._files_by_id[file_id]
+                        self._delete_file(file_id)
                     else:
                         file._mark_for_delete()
+
+    def _delete_file(self, file_id: str) -> None:
+        """Delete the given file from storage, and remove its metadata from
+        self._files_by_id.
+
+        Thread safety: callers must hold `self._lock`.
+        """
+        LOGGER.debug("Deleting File: %s", file_id)
+        self._storage.delete_file(file_id)
+        del self._files_by_id[file_id]
 
     def clear_session_refs(self, session_id: Optional[str] = None) -> None:
         """Remove the given session's file references.
@@ -253,7 +191,7 @@ class MediaFileManager(CacheStatsProvider):
 
     def add(
         self,
-        data_or_filename: Union[bytes, str],
+        path_or_data: Union[bytes, str],
         mimetype: str,
         coordinates: str,
         file_name: Optional[str] = None,
@@ -268,7 +206,7 @@ class MediaFileManager(CacheStatsProvider):
 
         Parameters
         ----------
-        data_or_filename : bytes or str
+        path_or_data : bytes or str
             If bytes: the media file's raw data. If str: the name of a file
             to load from disk.
         mimetype : str
@@ -297,50 +235,24 @@ class MediaFileManager(CacheStatsProvider):
         file will be re-raised.
         """
 
-        # If we were passed a filename, open and read the file into memory.
-        content: bytes
-        if isinstance(data_or_filename, str):
-            with open(data_or_filename, "rb") as f:
-                content = f.read()
-        else:
-            content = data_or_filename
-
-        file_id = _calculate_file_id(content, mimetype, file_name=file_name)
-
         session_id = _get_session_id()
 
         with self._lock:
-            media_file = self._files_by_id.get(file_id, None)
-            if media_file is None:
-                LOGGER.debug("Adding media file %s", file_id)
-
-                if is_for_static_download:
-                    file_type = MediaFileType.DOWNLOADABLE
-                else:
-                    file_type = MediaFileType.MEDIA
-
-                media_file = MediaFile(
-                    file_id=file_id,
-                    content=content,
-                    mimetype=mimetype,
-                    file_name=file_name,
-                    file_type=file_type,
-                )
-            else:
-                LOGGER.debug("Overwriting media file %s", file_id)
-
-            self._files_by_id[media_file.id] = media_file
-            self._files_by_session_and_coord[session_id][coordinates] = media_file
-
-            LOGGER.debug(
-                "Files: %s; Sessions with files: %s",
-                len(self._files_by_id),
-                len(self._files_by_session_and_coord),
+            file_id = self._storage.load_and_get_id(path_or_data, mimetype, file_name)
+            metadata = MediaFileMetadata(
+                file_id=file_id,
+                file_name=file_name,
+                file_type=MediaFileType.DOWNLOADABLE
+                if is_for_static_download
+                else MediaFileType.MEDIA,
             )
 
-        return media_file.url
+            self._files_by_id[file_id] = metadata
+            self._files_by_session_and_coord[session_id][coordinates] = file_id
 
-    def get(self, file_id: str) -> MediaFile:
+            return self._storage.get_url(file_id)
+
+    def get(self, file_id: str) -> MediaFileMetadata:
         """Returns the MediaFile for the given file_id.
 
         Raises KeyError if not found.
@@ -354,28 +266,8 @@ class MediaFileManager(CacheStatsProvider):
         # dictionary access is atomic, so no need to take a lock.
         return self._files_by_id[hash]
 
-    def get_stats(self) -> List[CacheStat]:
-        # We operate on a copy of our dict, to avoid race conditions
-        # with other threads that may be manipulating the cache.
-        with self._lock:
-            files_by_id = self._files_by_id.copy()
-
-        stats: List[CacheStat] = []
-        for file_id, file in files_by_id.items():
-            stats.append(
-                CacheStat(
-                    category_name="st_media_file_manager",
-                    cache_name="",
-                    byte_length=file.content_size,
-                )
-            )
-        return stats
-
     def __contains__(self, file_id: str) -> bool:
         return file_id in self._files_by_id
 
     def __len__(self):
         return len(self._files_by_id)
-
-
-media_file_manager = MediaFileManager()
