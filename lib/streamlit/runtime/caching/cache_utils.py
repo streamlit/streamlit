@@ -60,7 +60,7 @@ from .hashing import update_hash
 _LOGGER = get_logger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class WidgetMsgMetadata:
     """Everything needed for replaying a widget and treating it as an implicit
     argument to a cached function, beyond what is stored for all elements.
@@ -71,7 +71,7 @@ class WidgetMsgMetadata:
     metadata: WidgetMetadata[Any]
 
 
-@dataclass
+@dataclass(frozen=True)
 class ElementMsgData:
     """An element's message and related metadata for
     replaying that element's function call.
@@ -86,7 +86,7 @@ class ElementMsgData:
     widget_metadata: Optional[WidgetMsgMetadata] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class BlockMsgData:
     message: Block
     id_of_dg_called_on: str
