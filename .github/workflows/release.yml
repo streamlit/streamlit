@@ -73,7 +73,7 @@ jobs:
       - name: Initialize .pypirc
         env:
           STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
-          STREAMLIT_PYPI_API_TOKEN: ${{ secrets.STREAMLIT_PYPI_API_TOKEN 
+          STREAMLIT_PYPI_API_TOKEN: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
         run: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
