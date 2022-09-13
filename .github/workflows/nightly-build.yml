@@ -1,14 +1,14 @@
 name: Nightly Build
 
 on:
-  # FOR TESTING ONLY:
-  push:
-    branches:
-      - '**'
-
   # schedule:
   #   # Run job at 10.30pm PST or 11.30pm PDT
   #   - cron:  '30 6 * * *'
+
+  # FOR TESTING ONLY:
+  # push:
+  #   branches:
+  #     - '**'
 
 jobs:
   create-nightly-tag:
