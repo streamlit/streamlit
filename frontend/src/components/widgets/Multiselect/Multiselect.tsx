@@ -71,7 +71,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     overMaxSelections:
       this.maxSelections === 0
         ? undefined
-        : this.initialValue.length > this.maxSelections - 1,
+        : this.initialValue.length >= this.maxSelections,
   }
 
   get initialValue(): number[] {
@@ -109,9 +109,18 @@ class Multiselect extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value }, () => {
-      this.commitWidgetValue({ fromUi: false })
-    })
+    this.setState(
+      {
+        value,
+        overMaxSelections:
+          this.maxSelections === 0
+            ? undefined
+            : value.length >= this.maxSelections,
+      },
+      () => {
+        this.commitWidgetValue({ fromUi: false })
+      }
+    )
   }
 
   /** Commit state.value to the WidgetStateManager. */
@@ -231,7 +240,7 @@ class Multiselect extends React.PureComponent<Props, State> {
       this.state.overMaxSelections !== undefined &&
       this.state.overMaxSelections
         ? `You can only select up to ${this.maxSelections} options`
-        : "No results"
+        : "Poopy"
     const selectOptions = options.map((option: string, idx: number) => {
       return {
         label: option,
