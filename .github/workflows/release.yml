@@ -55,7 +55,7 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Set release version from tag name
-        run: echo 'export STREAMLIT_RELEASE_VERSION=$(echo "$GIT_TAG")' >> GITHUB_ENV
+        run: echo "STREAMLIT_RELEASE_VERSION=$(echo "$GIT_TAG")" >> GITHUB_ENV
       - name: Update version
         run: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
       - name: Create Package
