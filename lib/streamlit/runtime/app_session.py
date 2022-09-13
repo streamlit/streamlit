@@ -183,8 +183,8 @@ class AppSession:
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
-            media_file_manager.clear_session_files(self.id)
-            media_file_manager.del_expired_files()
+            media_file_manager.clear_session_refs(self.id)
+            media_file_manager.remove_orphaned_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -529,7 +529,7 @@ class AppSession:
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
                 # session is actually shutting down.
-                media_file_manager.clear_session_files(self.id)
+                media_file_manager.clear_session_refs(self.id)
 
             self._client_state = client_state
             self._scriptrunner = None

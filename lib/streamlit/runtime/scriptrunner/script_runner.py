@@ -413,7 +413,7 @@ class ScriptRunner:
         start_time: float = timer()
 
         # Reset DeltaGenerators, widgets, media files.
-        media_file_manager.clear_session_files()
+        media_file_manager.clear_session_refs()
 
         main_script_path = self._main_script_path
         pages = source_util.get_pages(main_script_path)
@@ -623,9 +623,9 @@ class ScriptRunner:
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Delete expired files now that the script has run and files in use
+        # Remove orphaned files now that the script has run and files in use
         # are marked as active.
-        media_file_manager.del_expired_files()
+        media_file_manager.remove_orphaned_files()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and
