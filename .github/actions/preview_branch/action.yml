@@ -1,0 +1,35 @@
+name: "Set PREVIEW_BRANCH & BRANCH env variables"
+
+inputs:
+  pull_request_number:
+    description: 'Pull request number'
+  ref_type:
+    description: 'The type of Git ref object created in the repository. Can be either branch or tag'
+  branch:
+    description: 'Name of the branch'
+
+runs:
+  using: composite
+  steps:
+    - name: Set PREVIEW_BRANCH & BRANCH
+      run: |
+        echo "PREVIEW_BRANCH=$(
+          if [[ -n "$PR_NUMBER" ]]
+          then
+            echo "pr-$PR_NUMBER"
+          elif [[ "$REF_TYPE" == 'branch' ]]
+          then
+            echo "$BRANCH_NAME-preview"
+          elif [[ "$REF_TYPE" == 'tag' ]]
+          then
+            echo "tag-$BRANCH_NAME"
+          else
+            echo "main-preview"
+          fi
+        )" >> $GITHUB_ENV
+        echo "BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
+      env:
+        PR_NUMBER: ${{ inputs.pull_request_number }}
+        REF_TYPE: ${{ inputs.ref_type }}
+        BRANCH_NAME: ${{ inputs.branch }}
+      shell: bash -ileo pipefail {0}
