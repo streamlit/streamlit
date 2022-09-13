@@ -42,13 +42,13 @@ jobs:
         run: |
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
-      - name: Ensure that version tag matches branch version
-        run: |
-          if [ "$(echo $GH_PR_BRANCH | tr -d 'release/')" != "$GIT_TAG" ]
-          then
-            echo "ERROR: Version number from tag does not match the version number from the branch name."
-            exit 1
-          fi
+      # - name: Ensure that version tag matches branch version
+      #   run: |
+      #     if [ "$(echo $GH_PR_BRANCH | tr -d 'release/')" != "$GIT_TAG" ]
+      #     then
+      #       echo "ERROR: Version number from tag does not match the version number from the branch name."
+      #       exit 1
+      #     fi
       - name: Checkout head of branch
         run: |
           git pull origin ${GH_PR_BRANCH} --ff-only
@@ -70,7 +70,10 @@ jobs:
         if: always()
         with:
           path: lib/dist
-      - name: Initialize .pypirc
+
+      # TODO: Need the streamlit PyPI user/password for the below steps - added the if statement to gate for now
+      - if: ${{ 'true' == 'false' }}
+        name: Initialize .pypirc
         env:
           STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
           STREAMLIT_PYPI_API_TOKEN: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
@@ -79,8 +82,6 @@ jobs:
             echo -e "[pypi]" >> ~/.pypirc
             echo -e "username = $STREAMLIT_PYPI_USERNAME" >> ~/.pypirc
             echo -e "password = $STREAMLIT_PYPI_API_TOKEN" >> ~/.pypirc
-
-      # TODO: Need the streamlit PyPI user/password for the below steps - added the if statement to gate for now
       - if: ${{ 'true' == 'false' }}
         name: Upload to PyPI
         run: |
