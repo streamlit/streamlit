@@ -106,8 +106,8 @@ jobs:
         run: |
           cd lib
           echo -e "[pypi]" >> ~/.pypirc
-          echo -e "username = $NIGHTLY_PYPI_USERNAME" >> ~/.pypirc
-          echo -e "password = $NIGHTLY_PYPI_API_TOKEN" >> ~/.pypirc
+          echo -e "username = "$NIGHTLY_PYPI_USERNAME"" >> ~/.pypirc
+          echo -e "password = "$NIGHTLY_PYPI_API_TOKEN"" >> ~/.pypirc
       - if: ${{ 'true' == 'false' }}
         name: Build Package
         timeout-minutes: 120
