@@ -296,7 +296,7 @@ class MultiSelectMixin:
         if help is not None:
             multiselect_proto.help = dedent(help)
 
-        if get_default_count(default) > max_selections:
+        if max_selections is not None and get_default_count(default) > max_selections:
             raise StreamlitAPIException(
                 f"Multiselect got {get_default_count(default)} default option(s) but max_selections is set to {max_selections}. Please decrease the number of default options to be lower or equal to max_selections"
             )
@@ -314,15 +314,16 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-        if get_default_count(widget_state.value) > max_selections:
+        if (
+            max_selections is not None
+            and get_default_count(widget_state.value) > max_selections
+        ):
             raise StreamlitAPIException(
                 f"""This multiselect has {get_default_count(widget_state.value)} 
                 options selected but `max_selections` is set to {max_selections}. 
-                You selected too many options by supplying them by manipulating 
-                `st.session_state` (note that this will occur somewhere else in 
-                your code than indicated by the traceback but this is the multiselect 
-                that is causing issues). Please decrease the number of selected 
-                options to be lower or equal to `max_selections`."""
+                You selected too many options when setting the value through session state. 
+                This occurred somewhere earlier in the script, possibly as part of a callback. 
+                Please decrease the number of selected options to be lower or equal to `max_selections` """
             )
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
