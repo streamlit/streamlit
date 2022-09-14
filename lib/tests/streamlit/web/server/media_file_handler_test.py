@@ -16,7 +16,6 @@ from unittest import mock
 
 import tornado.testing
 import tornado.web
-from tornado.httpclient import HTTPResponse
 
 from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.web.server.media_file_handler import MediaFileHandler
@@ -34,9 +33,6 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             [("/media/(.*)", MediaFileHandler, {"path": ""})]
         )
 
-    def _fetch_file(self, filename) -> HTTPResponse:
-        return self.fetch(f"/media/{filename}", method="GET")
-
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
         return_value="mock_session_id",
@@ -44,8 +40,8 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_media_file(self, _) -> None:
         """Requests for media files in MediaFileManager should succeed."""
         # Add a media file and read it back
-        media_file = media_file_manager.add(b"mock_data", "video/mp4", "mock_coords")
-        rsp = self._fetch_file(f"{media_file.id}{media_file.extension}")
+        url = media_file_manager.add(b"mock_data", "video/mp4", "mock_coords")
+        rsp = self.fetch(url, method="GET")
 
         self.assertEqual(200, rsp.code)
         self.assertEqual(b"mock_data", rsp.body)
@@ -61,14 +57,14 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         that includes their user-specified filename.
         """
         # Add a downloadable file with a filename
-        media_file = media_file_manager.add(
+        url = media_file_manager.add(
             b"mock_data",
             "video/mp4",
             "mock_coords",
             file_name="MockVideo.mp4",
             is_for_static_download=True,
         )
-        rsp = self._fetch_file(f"{media_file.id}{media_file.extension}")
+        rsp = self.fetch(url, method="GET")
 
         self.assertEqual(200, rsp.code)
         self.assertEqual(b"mock_data", rsp.body)
@@ -80,5 +76,5 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_invalid_file(self) -> None:
         """Requests for invalid files fail with 404."""
-        rsp = self._fetch_file("invalid_media_file")
+        rsp = self.fetch("/media/invalid_media_file.mp4")
         self.assertEqual(404, rsp.code)
