@@ -16,24 +16,12 @@
 
 import collections
 import threading
-from enum import Enum
 from typing import Dict, Set, Optional, Union
 
-from streamlit import util
 from streamlit.logger import get_logger
-from .media_file_storage import MediaFileStorage
+from .media_file_storage import MediaFileStorage, MediaFileKind
 
 LOGGER = get_logger(__name__)
-
-STATIC_MEDIA_ENDPOINT = "/media"
-
-
-class MediaFileType(Enum):
-    # used for images and videos in st.image() and st.video()
-    MEDIA = "media"
-
-    # used for st.download_button files
-    DOWNLOADABLE = "downloadable"
 
 
 def _get_session_id() -> str:
@@ -54,28 +42,19 @@ class MediaFileMetadata:
     def __init__(
         self,
         file_id: str,
-        file_name: Optional[str] = None,
-        file_type: MediaFileType = MediaFileType.MEDIA,
+        kind: MediaFileKind = MediaFileKind.MEDIA,
     ):
         self._file_id = file_id
-        self._file_name = file_name
-        self._file_type = file_type
+        self._kind = kind
         self._is_marked_for_delete = False
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
 
     @property
     def id(self) -> str:
         return self._file_id
 
     @property
-    def file_type(self) -> MediaFileType:
-        return self._file_type
-
-    @property
-    def file_name(self) -> Optional[str]:
-        return self._file_name
+    def kind(self) -> MediaFileKind:
+        return self._kind
 
     def _mark_for_delete(self) -> None:
         self._is_marked_for_delete = True
@@ -142,9 +121,9 @@ class MediaFileManager:
         with self._lock:
             for file_id in self._get_inactive_file_ids():
                 file = self._files_by_id[file_id]
-                if file.file_type == MediaFileType.MEDIA:
+                if file.kind == MediaFileKind.MEDIA:
                     self._delete_file(file_id)
-                elif file.file_type == MediaFileType.DOWNLOADABLE:
+                elif file.kind == MediaFileKind.DOWNLOADABLE:
                     if file._is_marked_for_delete:
                         self._delete_file(file_id)
                     else:
@@ -238,39 +217,20 @@ class MediaFileManager:
         session_id = _get_session_id()
 
         with self._lock:
-            file_id = self._storage.load_and_get_id(path_or_data, mimetype, file_name)
-            metadata = MediaFileMetadata(
-                file_id=file_id,
-                file_name=file_name,
-                file_type=MediaFileType.DOWNLOADABLE
+            kind = (
+                MediaFileKind.DOWNLOADABLE
                 if is_for_static_download
-                else MediaFileType.MEDIA,
+                else MediaFileKind.MEDIA
             )
+            file_id = self._storage.load_and_get_id(
+                path_or_data, mimetype, kind, file_name
+            )
+            metadata = MediaFileMetadata(file_id=file_id, kind=kind)
 
             self._files_by_id[file_id] = metadata
             self._files_by_session_and_coord[session_id][coordinates] = file_id
 
             return self._storage.get_url(file_id)
-
-    def get(self, filename: str) -> MediaFileMetadata:
-        """Returns the MediaFile for the given filename.
-
-        Raises KeyError if not found.
-
-        Safe to call from any thread.
-        """
-        # Filename is {file_id}.{extension} but MediaFileManager
-        # is indexed by requested_hash.
-        file_id = filename.split(".")[0]
-
-        # dictionary access is atomic, so no need to take a lock.
-        return self._files_by_id[file_id]
-
-    def __contains__(self, file_id: str) -> bool:
-        return file_id in self._files_by_id
-
-    def __len__(self):
-        return len(self._files_by_id)
 
 
 # Singleton MediaFileManager instance. The Runtime will initialize

@@ -26,6 +26,7 @@ import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
+from typing_extensions import Final
 
 from streamlit import config
 from streamlit import file_util
@@ -81,6 +82,9 @@ MAX_PORT_SEARCH_RETRIES = 100
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
+
+# The endpoint we serve media files from.
+MEDIA_ENDPOINT: Final = "media"
 
 
 class RetriesExceeded(Exception):
@@ -170,7 +174,9 @@ class Server:
 
         self._main_script_path = main_script_path
 
-        media_file_storage = MemoryMediaFileStorage()
+        # Initialize MediaFileStorage and its associated endpoint
+        media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
+        MediaFileHandler.initialize_storage(media_file_storage)
 
         self._runtime = Runtime(
             RuntimeConfig(
@@ -251,7 +257,11 @@ class Server:
                 AssetsFileHandler,
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
-            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler, {"path": ""}),
+            (
+                make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
+                MediaFileHandler,
+                {"path": ""},
+            ),
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,

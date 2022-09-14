@@ -18,18 +18,30 @@ from urllib.parse import quote, unquote_plus
 import tornado.web
 
 from streamlit.logger import get_logger
-from streamlit.runtime.media_file_manager import (
-    _get_extension_for_mimetype,
-    media_file_manager,
-    MediaFileType,
-)
+from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.string_util import generate_download_filename_from_title
 from streamlit.web.server import allow_cross_origin_requests
+from streamlit.web.server.memory_media_file_storage import (
+    get_extension_for_mimetype,
+    MemoryMediaFileStorage,
+)
 
 LOGGER = get_logger(__name__)
 
 
 class MediaFileHandler(tornado.web.StaticFileHandler):
+    _storage: MemoryMediaFileStorage
+
+    @classmethod
+    def initialize_storage(cls, storage: MemoryMediaFileStorage) -> None:
+        """Set the MemoryMediaFileStorage object used by instances of this
+        handler. Must be called on server startup.
+        """
+        # This is a class method, rather than an instance method, because
+        # `get_content()` is a class method and needs to access the storage
+        # instance.
+        cls._storage = storage
+
     def set_default_headers(self) -> None:
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
@@ -44,17 +56,17 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         Used for serving downloadable files, like files stored via the
         `st.download_button` widget.
         """
-        media_file = media_file_manager.get(path)
+        media_file = self._storage.get_file(path)
 
-        if media_file and media_file.file_type == MediaFileType.DOWNLOADABLE:
-            file_name = media_file.file_name
+        if media_file and media_file.kind == MediaFileKind.DOWNLOADABLE:
+            file_name = media_file.filename
 
             if not file_name:
                 title = self.get_argument("title", "", True)
                 title = unquote_plus(title)
                 filename = generate_download_filename_from_title(title)
                 file_name = (
-                    f"{filename}{_get_extension_for_mimetype(media_file.mimetype)}"
+                    f"{filename}{get_extension_for_mimetype(media_file.mimetype)}"
                 )
 
             try:
@@ -74,7 +86,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
     # `validate_absolute_path`.
     def validate_absolute_path(self, root: str, absolute_path: str) -> str:
         try:
-            media_file_manager.get(absolute_path)
+            self._storage.get_file(absolute_path)
         except KeyError:
             LOGGER.error("MediaFileHandler: Missing file %s", absolute_path)
             raise tornado.web.HTTPError(404, "not found")
@@ -86,7 +98,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         if abspath is None:
             return 0
 
-        media_file = media_file_manager.get(abspath)
+        media_file = self._storage.get_file(abspath)
         return media_file.content_size
 
     def get_modified_time(self) -> None:
@@ -108,7 +120,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
         try:
             # abspath is the hash as used `get_absolute_path`
-            media_file = media_file_manager.get(abspath)
+            media_file = cls._storage.get_file(abspath)
         except:
             LOGGER.error("MediaFileHandler: Missing file %s", abspath)
             return
