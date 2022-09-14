@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - '**'
+  # Allows workflow to be called from other workflows
   workflow_call:
 
 # Avoid duplicate workflows on same branch
@@ -16,9 +17,6 @@ concurrency:
 jobs:
   python-prod-deps-smoke-test:
     runs-on: ubuntu-latest
-
-    # permissions:
-    #   actions: read
 
     defaults:
       run:
