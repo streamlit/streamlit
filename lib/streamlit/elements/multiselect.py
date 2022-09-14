@@ -314,9 +314,15 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-        if len(widget_state.value) > max_selections:
+        if get_default_count(widget_state.value) > max_selections:
             raise StreamlitAPIException(
-                f"Multiselect got {len(widget_state.value)} option(s) set but max_selections is set to {max_selections}. Please decrease the number of options to be lower or equal to max_selections"
+                f"""This multiselect has {get_default_count(widget_state.value)} 
+                options selected but `max_selections` is set to {max_selections}. 
+                You selected too many options by supplying them by manipulating 
+                `st.session_state` (note that this will occur somewhere else in 
+                your code than indicated by the traceback but this is the multiselect 
+                that is causing issues). Please decrease the number of selected 
+                options to be lower or equal to `max_selections`."""
             )
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
