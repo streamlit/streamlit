@@ -296,10 +296,12 @@ class MultiSelectMixin:
         if help is not None:
             multiselect_proto.help = dedent(help)
 
-        if max_selections is not None and get_default_count(default) > max_selections:
-            raise StreamlitAPIException(
-                f"Multiselect got {get_default_count(default)} default option(s) but max_selections is set to {max_selections}. Please decrease the number of default options to be lower or equal to max_selections"
-            )
+        if max_selections is not None:
+            if get_default_count(default) > max_selections:
+                raise StreamlitAPIException(
+                    f"Multiselect got {get_default_count(default)} default option(s) but max_selections is set to {max_selections}. Please select at most {max_selections} options."
+                )
+            multiselect_proto.max_selections = max_selections
 
         serde = MultiSelectSerde(opt, default_value)
 

@@ -269,3 +269,19 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
                 "Unsupported label_visibility option 'wrong_value'. Valid values are "
                 "'visible', 'hidden' or 'collapsed'.",
             )
+
+    def test_max_selections(self):
+        st.multiselect("the label", ("m", "f"), max_selections=2)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.max_selections, 2)
+
+    def test_over_max_selections_initialization(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.multiselect(
+                "the label", ("a", "b", "c", "d"), ("a", "b", "c"), max_selections=2
+            )
+            self.assertEquals(
+                str(e),
+                "Multiselect got 3 default option(s) but max_selections is set to 2. Please select at most 2 options.",
+            )
