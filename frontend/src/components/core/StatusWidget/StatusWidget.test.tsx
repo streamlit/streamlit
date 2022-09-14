@@ -21,7 +21,7 @@ import { ConnectionState } from "src/lib/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import { SessionEvent } from "src/autogen/proto"
-import { darkTheme, lightTheme } from "src/theme"
+import { lightTheme } from "src/theme"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
@@ -37,22 +37,6 @@ const getProps = (
   theme: lightTheme.emotion,
   ...propOverrides,
 })
-
-const customLightTheme = {
-  ...lightTheme.emotion,
-  colors: {
-    ...lightTheme.emotion.colors,
-    bgColor: "#dddddd",
-  },
-}
-
-const customDarkTheme = {
-  ...darkTheme.emotion,
-  colors: {
-    ...darkTheme.emotion.colors,
-    bgColor: "#203d3f",
-  },
-}
 
 describe("Tooltip element", () => {
   it("renders a Tooltip", () => {
@@ -109,32 +93,6 @@ describe("Tooltip element", () => {
     )
 
     expect(wrapper.find("Tooltip").exists()).toBeFalsy()
-  })
-
-  it("renders running img correctly with lightTheme", () => {
-    const wrapper = mount(<StatusWidget {...getProps()} />)
-    expect(wrapper).toMatchSnapshot()
-  })
-
-  it("renders running img correctly with custom light background color", () => {
-    const wrapper = mount(
-      <StatusWidget {...getProps({ theme: customLightTheme })} />
-    )
-    expect(wrapper).toMatchSnapshot()
-  })
-
-  it("renders running img correctly with darkTheme", () => {
-    const wrapper = mount(
-      <StatusWidget {...getProps({ theme: darkTheme.emotion })} />
-    )
-    expect(wrapper).toMatchSnapshot()
-  })
-
-  it("renders running img correctly with custom dark background color", () => {
-    const wrapper = mount(
-      <StatusWidget {...getProps({ theme: customDarkTheme })} />
-    )
-    expect(wrapper).toMatchSnapshot()
   })
 
   it("sets and unsets the sessionEventConnection", () => {

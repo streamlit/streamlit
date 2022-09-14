@@ -22,6 +22,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.proto.PageProfile_pb2 import Command
 
 LOGGER: Final = get_logger(__name__)
 
@@ -50,6 +51,9 @@ class ScriptRunContext:
     page_script_hash: str
     user_info: UserInfo
 
+    gather_usage_stats: bool = False
+    command_tracking_deactivated: bool = False
+    tracked_commands: List[Command] = field(default_factory=list)
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
     widget_ids_this_run: Set[str] = field(default_factory=set)
@@ -70,6 +74,8 @@ class ScriptRunContext:
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True
         self._has_script_started = False
+        self.command_tracking_deactivated: bool = False
+        self.tracked_commands = []
 
     def on_script_start(self) -> None:
         self._has_script_started = True

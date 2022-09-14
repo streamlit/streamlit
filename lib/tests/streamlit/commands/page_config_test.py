@@ -1,10 +1,32 @@
-from tests import testutil
-from parameterized import parameterized
-import streamlit as st
+# Copyright 2018-2022 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+from unittest import mock
+
+from parameterized import parameterized, param
+
+import streamlit as st
+from streamlit.commands.page_config import (
+    valid_url,
+    ENG_EMOJIS,
+    RANDOM_EMOJIS,
+    PageIcon,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
-from streamlit.commands.page_config import valid_url
+from streamlit.string_util import is_emoji
+from tests import testutil
 
 
 class PageConfigTest(testutil.DeltaGeneratorTestCase):
@@ -13,10 +35,38 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         c = self.get_message_from_queue().page_config_changed
         self.assertEqual(c.title, "Hello")
 
-    def test_set_page_config_icon(self):
+    @parameterized.expand(["🦈", ":shark:", "https://foo.com/image.png"])
+    def test_set_page_config_icon_strings(self, icon_string: str):
+        """page_config icons can be emojis, emoji shortcodes, and image URLs."""
+        st.set_page_config(page_icon=icon_string)
+        c = self.get_message_from_queue().page_config_changed
+        self.assertEqual(c.favicon, icon_string)
+
+    def test_set_page_config_icon_random(self):
+        """If page_icon == "random", we choose a random emoji."""
+        st.set_page_config(page_icon="random")
+        c = self.get_message_from_queue().page_config_changed
+        self.assertIn(c.favicon, set(RANDOM_EMOJIS + ENG_EMOJIS))
+        self.assertTrue(is_emoji(c.favicon))
+
+    def test_set_page_config_icon_invalid_string(self):
+        """If set_page_config is passed a garbage icon string, we just pass it
+        through without an error (even though nothing will be displayed).
+        """
         st.set_page_config(page_icon="st.balloons")
         c = self.get_message_from_queue().page_config_changed
         self.assertEqual(c.favicon, "st.balloons")
+
+    @parameterized.expand([param(b"123"), param("file/on/disk.png")])
+    def test_set_page_config_icon_calls_image_to_url(self, icon: PageIcon):
+        """For all other page_config icon inputs, we just call image_to_url."""
+        with mock.patch(
+            "streamlit.commands.page_config.image.image_to_url",
+            return_value="https://mock.url",
+        ):
+            st.set_page_config(page_icon=icon)
+            c = self.get_message_from_queue().page_config_changed
+            self.assertEqual(c.favicon, "https://mock.url")
 
     def test_set_page_config_layout_wide(self):
         st.set_page_config(layout="wide")

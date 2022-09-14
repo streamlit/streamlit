@@ -22,6 +22,10 @@ describe("st.sidebar", () => {
     cy.prepForElementSnapshots();
   });
 
+  it("displays sidebar correctly", () => {
+    cy.get("[data-testid='stSidebar']").matchThemedSnapshots("sidebar");
+  });
+
   it("handles z-index of date input popover", () => {
     cy.get("[data-testid='stSidebar'] .stDateInput").should("have.length", 2);
 

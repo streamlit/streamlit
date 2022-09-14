@@ -36,6 +36,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
@@ -502,7 +503,13 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     return (
       <StyledFileUploader data-testid="stFileUploader">
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -517,6 +524,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           multiple={element.multipleFiles}
           acceptedExtensions={acceptedExtensions}
           maxSizeBytes={this.maxUploadSizeInBytes}
+          label={element.label}
           disabled={disabled}
         />
         {newestToOldestFiles.length > 0 && (

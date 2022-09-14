@@ -15,7 +15,11 @@
  * limitations under the License.
  */
 
-import { Alert as AlertProto, Element } from "src/autogen/proto"
+import {
+  Alert as AlertProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Element,
+} from "src/autogen/proto"
 import _ from "lodash"
 import url from "url"
 import xxhash from "xxhashjs"
@@ -179,4 +183,25 @@ export function isValidFormId(formId?: string): formId is string {
 /** True if the given widget element is part of a form. */
 export function isInForm(widget: { formId?: string }): boolean {
   return isValidFormId(widget.formId)
+}
+
+export enum LabelVisibilityOptions {
+  Visible,
+  Hidden,
+  Collapsed,
+}
+
+export function labelVisibilityProtoValueToEnum(
+  value: LabelVisibilityMessageProto.LabelVisibilityOptions | null | undefined
+): LabelVisibilityOptions {
+  switch (value) {
+    case LabelVisibilityMessageProto.LabelVisibilityOptions.VISIBLE:
+      return LabelVisibilityOptions.Visible
+    case LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN:
+      return LabelVisibilityOptions.Hidden
+    case LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED:
+      return LabelVisibilityOptions.Collapsed
+    default:
+      return LabelVisibilityOptions.Visible
+  }
 }

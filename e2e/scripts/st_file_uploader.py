@@ -62,6 +62,34 @@ with st.form("foo"):
         st.text(form_file.read())
 
 
+hidden_label = st.file_uploader(
+    "Hidden label:",
+    key="hidden_label",
+    label_visibility="hidden",
+)
+
+if hidden_label is None:
+    st.text("No upload")
+else:
+    st.text(hidden_label.read())
+
+if st._is_running_with_streamlit:
+    st.write(repr(st.session_state.hidden_label) == repr(hidden_label))
+
+collapsed_label = st.file_uploader(
+    "Collapsed label:",
+    key="collapsed_label",
+    label_visibility="collapsed",
+)
+
+if collapsed_label is None:
+    st.text("No upload")
+else:
+    st.text(collapsed_label.read())
+
+if st._is_running_with_streamlit:
+    st.write(repr(st.session_state.collapsed_label) == repr(collapsed_label))
+
 if st._is_running_with_streamlit:
     if not st.session_state.get("counter"):
         st.session_state["counter"] = 0

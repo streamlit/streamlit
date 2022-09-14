@@ -18,6 +18,7 @@
 describe("st.date_input", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
+    cy.prepForElementSnapshots();
   });
 
   it("shows labels", () => {
@@ -29,8 +30,19 @@ describe("st.date_input", () => {
         "Range, one date" +
         "Range, two dates" +
         "Disabled, no date" +
+        "Label hidden" +
+        "Label collapsed" +
         "Single date with callback"
     );
+  });
+
+  it("shows widget correctly", () => {
+    cy.get(".stDateInput").should("have.length", 9);
+
+    cy.get(".stDateInput").each((el, idx) => {
+      // @ts-ignore
+      return cy.wrap(el).matchThemedSnapshots("date_input" + idx);
+    });
   });
 
   it("has correct values", () => {
@@ -42,7 +54,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
   });
@@ -72,7 +86,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
   });
@@ -94,7 +110,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
   });
@@ -116,7 +134,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10),)" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
 
@@ -133,7 +153,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
   });
@@ -141,7 +163,7 @@ describe("st.date_input", () => {
   it("calls callback if one is registered", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 7: 1970-01-01" + "Date Input Changed: False"
+      "Value 9: 1970-01-01" + "Date Input Changed: False"
     );
 
     cy.get(".stDateInput")
@@ -154,7 +176,7 @@ describe("st.date_input", () => {
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 7: 1970-01-02" + "Date Input Changed: True"
+      "Value 9: 1970-01-02" + "Date Input Changed: True"
     );
   });
 
@@ -177,7 +199,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
 
@@ -192,15 +216,17 @@ describe("st.date_input", () => {
 
     // value should be reset to 1970-01-01
     cy.get(".stMarkdown").should(
-      "have.text",
+      "contain.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
-        "Date Input Changed: False"
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01"
+        // removed "Date Input Changed:" line due to resulting flakiness
     );
   });
 
@@ -221,7 +247,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10),)" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
 
@@ -238,7 +266,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
 
@@ -259,7 +289,9 @@ describe("st.date_input", () => {
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: ()" +
         "Value 6: ()" +
-        "Value 7: 1970-01-01" +
+        "Value 7: 2019-07-06" +
+        "Value 8: 2019-07-06" +
+        "Value 9: 1970-01-01" +
         "Date Input Changed: False"
     );
   });

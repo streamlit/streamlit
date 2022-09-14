@@ -2289,13 +2289,13 @@
   dependencies:
     "@math.gl/core" "3.4.2"
 
-"@math.gl/web-mercator@^3.1.3", "@math.gl/web-mercator@^3.3.0":
-  version "3.4.2"
-  resolved "https://registry.yarnpkg.com/@math.gl/web-mercator/-/web-mercator-3.4.2.tgz#72c7c7e698bcf8d1d1d60c0ec4c5a4698c9b960e"
-  integrity sha512-Az/WI8vxbqnrTEcYgqDQ3CgCRoFA2a4XT9mkjVrT7iIlfrUF5lrIXcmpljjKvoFNBldKrng7hFSeHHM2ghgSrg==
+"@math.gl/web-mercator@^3.3.0", "@math.gl/web-mercator@^3.5.5":
+  version "3.6.3"
+  resolved "https://registry.yarnpkg.com/@math.gl/web-mercator/-/web-mercator-3.6.3.tgz#ef91168e030eecffc788618d686e8a6c1d7a0bf8"
+  integrity sha512-UVrkSOs02YLehKaehrxhAejYMurehIHPfFQvPFZmdJHglHOU4V2cCUApTVEwOksvCp161ypEqVp+9H6mGhTTcw==
   dependencies:
     "@babel/runtime" "^7.12.0"
-    gl-matrix "^3.0.0"
+    gl-matrix "^3.4.0"
 
 "@nodelib/fs.scandir@2.1.4":
   version "2.1.4"
@@ -3130,6 +3130,11 @@
   resolved "https://registry.yarnpkg.com/@types/geojson/-/geojson-7946.0.7.tgz#c8fa532b60a0042219cdf173ca21a975ef0666ad"
   integrity sha512-wE2v81i4C4Ol09RtsWFAqg3BUitWbHSpSlIo+bNdsCJijO9sjme+zm+73ZMCa/qMC8UEERxzGbvmr1cffo2SiQ==
 
+"@types/geojson@^7946.0.7":
+  version "7946.0.10"
+  resolved "https://registry.yarnpkg.com/@types/geojson/-/geojson-7946.0.10.tgz#6dfbf5ea17142f7f9a043809f1cd4c448cb68249"
+  integrity sha512-Nmh0K3iWQJzniTuPRcJn5hxXkfB1T1pgB89SBig5PlJQU5yocazeu4jATJlaA0GYFKWMqDdvYemoSnF2pXgLVA==
+
 "@types/glob@^7.1.1":
   version "7.1.3"
   resolved "https://registry.yarnpkg.com/@types/glob/-/glob-7.1.3.tgz#e6ba80f36b7daad2c685acd9266382e68985c183"
@@ -3144,6 +3149,11 @@
   integrity sha512-anKkLmZZ+xm4p8JWBf4hElkM4XR+EZeA2M9BAkkTldmcyDY4mbdIJnRghDJH3Ov5ooY7/UAoENtmdMSkaAd7Cw==
   dependencies:
     "@types/node" "*"
+
+"@types/hammerjs@^2.0.41":
+  version "2.0.41"
+  resolved "https://registry.yarnpkg.com/@types/hammerjs/-/hammerjs-2.0.41.tgz#f6ecf57d1b12d2befcce00e928a6a097c22980aa"
+  integrity sha512-ewXv/ceBaJprikMcxCmWU1FKyMAQ2X7a9Gtmzw8fcg2kIePI1crERDM818W+XYrxqdBBOdlf2rm137bU+BltCA==
 
 "@types/hast@^2.0.0":
   version "2.3.4"
@@ -3240,6 +3250,13 @@
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/@types/mapbox-gl/-/mapbox-gl-2.0.2.tgz#79dc50459b61bbcfd053ea93867a8b365f8f32dd"
   integrity sha512-vHEa8Xk3ukdiLxccMJOUxeDo3WeKPB8AmdSbnI9jDFQfGHLV1uGn6eXdYcJ/yozo3iATjan2Rb9+69LPhVTnEQ==
+  dependencies:
+    "@types/geojson" "*"
+
+"@types/mapbox-gl@^2.0.3":
+  version "2.7.5"
+  resolved "https://registry.yarnpkg.com/@types/mapbox-gl/-/mapbox-gl-2.7.5.tgz#9e31fc592adb2762e4e5c7727dca5ec367dfc780"
+  integrity sha512-T8gACm3oGKMlBo2l/9vnKEAxgCc0g2mr8g6dI1d3ZO6EzRe7JALBONlWRmc7SOHV79kiarkcdLdDVEnfd+jilA==
   dependencies:
     "@types/geojson" "*"
 
@@ -3386,10 +3403,10 @@
     "@types/htmlparser2" "*"
     "@types/react" "*"
 
-"@types/react-map-gl@^5.2.6":
-  version "5.2.9"
-  resolved "https://registry.yarnpkg.com/@types/react-map-gl/-/react-map-gl-5.2.9.tgz#67e00d96e3035d792f55a4266b08dbee11d06dd2"
-  integrity sha512-DbN7irrx9OEfDTK9TNOyTjWgz4/TOJXyY9EDDmHQC1Ne7KW6QCbOt6vKD+StMYjdO1CfkayjM1n4/CeyTHw0BA==
+"@types/react-map-gl@^5.2.11":
+  version "5.2.11"
+  resolved "https://registry.yarnpkg.com/@types/react-map-gl/-/react-map-gl-5.2.11.tgz#440323fb4ca8b72899ba2e544cc924bcdf8e3cfa"
+  integrity sha512-yK9O7szpEgWiYZVBZKuWXCTk+elSn/g1GFUc2MYE38XSWSE0zdCbFRRbTwMZjG6WxbJ/UkC8sHyKI73xC2a8ew==
   dependencies:
     "@types/geojson" "*"
     "@types/mapbox-gl" "*"
@@ -9083,7 +9100,7 @@ gl-matrix@^3.0.0, gl-matrix@^3.2.0:
   resolved "https://registry.yarnpkg.com/gl-matrix/-/gl-matrix-3.3.0.tgz#232eef60b1c8b30a28cbbe75b2caf6c48fd6358b"
   integrity sha512-COb7LDz+SXaHtl/h4LeaFcNdJdAQSDeVqjiIihSXNrkWObZLhDI4hIkZC11Aeqp7bcE72clzB0BnDXr2SmslRA==
 
-gl-matrix@^3.2.1:
+gl-matrix@^3.2.1, gl-matrix@^3.4.0:
   version "3.4.3"
   resolved "https://registry.yarnpkg.com/gl-matrix/-/gl-matrix-3.4.3.tgz#fc1191e8320009fd4d20e9339595c6041ddc22c9"
   integrity sha512-wcCp8vu8FT22BnvKVPjXa/ICBWRq/zjFfdofZy1WSpQZpphblv12/bOQLBC1rMM7SGOFS9ltVmKOHil5+Ml7gA==
@@ -12434,12 +12451,12 @@ mixin-deep@^1.2.0:
     for-in "^1.0.2"
     is-extendable "^1.0.1"
 
-mjolnir.js@^2.3.0, mjolnir.js@^2.4.0:
-  version "2.5.0"
-  resolved "https://registry.yarnpkg.com/mjolnir.js/-/mjolnir.js-2.5.0.tgz#5918b74625d9682002da82e01d6ffb0b16b02b0e"
-  integrity sha512-YkVoyKs7qm9xvAgRgjx3Md/7eYqmq7VXOgTKQNnmuzcBJzMebjdIWa7FdTd0RZBrw3UL6V6TTktsxJwBMLXUNA==
+mjolnir.js@^2.3.0, mjolnir.js@^2.5.0:
+  version "2.7.1"
+  resolved "https://registry.yarnpkg.com/mjolnir.js/-/mjolnir.js-2.7.1.tgz#4e12590fe168b377c9c669b9c31aa5a62f8b8460"
+  integrity sha512-72BeUWgTv2cj5aZQKpwL8caNUFhXZ9bDm1hxpNj70XJQ62IBnTZmtv/WPxJvtaVNhzNo+D2U8O6ryNI0zImYcw==
   dependencies:
-    "@babel/runtime" "^7.0.0"
+    "@types/hammerjs" "^2.0.41"
     hammerjs "^2.0.8"
 
 mkdirp@0.5.5, mkdirp@^0.5.1, mkdirp@^0.5.3, mkdirp@^0.5.4, mkdirp@^0.5.5, mkdirp@~0.5.1:
@@ -15067,17 +15084,19 @@ react-lifecycles-compat@^3.0.4:
   resolved "https://registry.yarnpkg.com/react-lifecycles-compat/-/react-lifecycles-compat-3.0.4.tgz#4f1a273afdfc8f3488a8c516bfda78f872352362"
   integrity sha512-fBASbA6LnOU9dOU2eW7aQ8xmYBSXUIWr+UmF9b1efZBazGNO+rcXT/icdKnYm2pTwcRylVUYwW7H1PHfLekVzA==
 
-react-map-gl@^5.2.7:
-  version "5.2.12"
-  resolved "https://registry.yarnpkg.com/react-map-gl/-/react-map-gl-5.2.12.tgz#41d77e9f6865893152d7bc05792718f2c4404ba6"
-  integrity sha512-NqkwTKS6jhlD76/B23/5E9mkSVxcgWZzkQ/gHOWv0xBDkG1KDRr+IdKAs1MEHO5U8MspM6Q0UvPlDoC2OhC2bQ==
+react-map-gl@^5.3.19:
+  version "5.3.19"
+  resolved "https://registry.yarnpkg.com/react-map-gl/-/react-map-gl-5.3.19.tgz#8c012eb7328c64dc2a4bb65eeceacd4a66734f72"
+  integrity sha512-Ia8OlbFJIjC9x7XMaUCNtm179NKiD/bjQOt1R/SbBcaz35pSFPUyI0SwOnIUQ98/mR4xopL6phgIfs0B3yZhtQ==
   dependencies:
     "@babel/runtime" "^7.0.0"
+    "@types/geojson" "^7946.0.7"
+    "@types/mapbox-gl" "^2.0.3"
     mapbox-gl "^1.0.0"
-    mjolnir.js "^2.4.0"
+    mjolnir.js "^2.5.0"
     prop-types "^15.7.2"
-    react-virtualized-auto-sizer "^1.0.2"
-    viewport-mercator-project "^6.2.3 || ^7.0.1"
+    resize-observer-polyfill "^1.5.1"
+    viewport-mercator-project "^7.0.4"
 
 react-markdown@^6.0.3:
   version "6.0.3"
@@ -18510,12 +18529,12 @@ vfile@^4.0.0:
     unist-util-stringify-position "^2.0.0"
     vfile-message "^2.0.0"
 
-"viewport-mercator-project@^6.2.3 || ^7.0.1":
-  version "7.0.1"
-  resolved "https://registry.yarnpkg.com/viewport-mercator-project/-/viewport-mercator-project-7.0.1.tgz#9d7248072f2cbb122f93b63d2b346a5763b8d79a"
-  integrity sha512-WKTuTL7o6WKdPQ+gmZhlXL7UpSdCdPUjxkDTBd/3AayBdAFSQGHxsqdbmPBvmoGwvo9KWo/30HTkNo/Z7ORJpw==
+viewport-mercator-project@^7.0.4:
+  version "7.0.4"
+  resolved "https://registry.yarnpkg.com/viewport-mercator-project/-/viewport-mercator-project-7.0.4.tgz#67feec04135484bf424dd4890d630e82116b31e6"
+  integrity sha512-0jzpL6pIMocCKWg1C3mqi/N4UPgZC3FzwghEm1H+XsUo8hNZAyJc3QR7YqC816ibOR8aWT5pCsV+gCu8/BMJgg==
   dependencies:
-    "@math.gl/web-mercator" "^3.1.3"
+    "@math.gl/web-mercator" "^3.5.5"
 
 viz.js@^1.8.2:
   version "1.8.2"

@@ -20,7 +20,10 @@ import { shallow, mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Input as UIInput } from "baseui/input"
-import { TextInput as TextInputProto } from "src/autogen/proto"
+import {
+  TextInput as TextInputProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+} from "src/autogen/proto"
 import TextInput, { Props } from "./TextInput"
 
 const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
@@ -50,6 +53,30 @@ describe("TextInput widget", () => {
     const props = getProps()
     const wrapper = mount(<TextInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = mount(<TextInput {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<TextInput {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    )
   })
 
   it("shows a placeholder", () => {

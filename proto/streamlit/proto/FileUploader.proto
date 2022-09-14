@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 // file_uploader widget
 message FileUploader {
   // The widget id
@@ -38,6 +40,8 @@ message FileUploader {
   string form_id = 8;
 
   bool disabled = 9;
+
+  LabelVisibilityMessage label_visibility = 10;
 
   reserved 5;
 }

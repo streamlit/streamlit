@@ -188,4 +188,43 @@ describe("Heading", () => {
     expect(wrapper.find("h1").text()).toEqual("hello")
     expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(0)
   })
+
+  it("does not render ol block", () => {
+    const props = getHeadingProps({ body: "1) hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual("1) hello")
+    expect(wrapper.find("ol")).toHaveLength(0)
+  })
+
+  it("does not render ul block", () => {
+    const props = getHeadingProps({ body: "* hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual("* hello")
+    expect(wrapper.find("ul")).toHaveLength(0)
+  })
+
+  it("does not render blockquote with >", () => {
+    const props = getHeadingProps({ body: ">hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual(">hello")
+    expect(wrapper.find("blockquote")).toHaveLength(0)
+  })
+
+  it("does not render tables", () => {
+    const props = getHeadingProps({
+      body: `| Syntax | Description |
+    | ----------- | ----------- |
+    | Header      | Title       |
+    | Paragraph   | Text        |`,
+    })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual(`| Syntax | Description |`)
+    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+      `| ----------- | ----------- |
+| Header      | Title       |
+| Paragraph   | Text        |
+`
+    )
+    expect(wrapper.find("table")).toHaveLength(0)
+  })
 })
