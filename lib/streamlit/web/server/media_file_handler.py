@@ -40,9 +40,9 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         Set header value to "attachment" indicating that file should be saved
         locally instead of displaying inline in browser.
 
-        We also set filename to specify filename for  downloaded file.
-        Used for serve downloadable files, like files stored
-        via st.download_button widget
+        We also set filename to specify the filename for downloaded files.
+        Used for serving downloadable files, like files stored via the
+        `st.download_button` widget.
         """
         media_file = media_file_manager.get(path)
 
@@ -67,7 +67,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
     # Overriding StaticFileHandler to use the MediaFileManager
     #
-    # From the Torndado docs:
+    # From the Tornado docs:
     # To replace all interaction with the filesystem (e.g. to serve
     # static content from a database), override `get_content`,
     # `get_content_size`, `get_modified_time`, `get_absolute_path`, and
