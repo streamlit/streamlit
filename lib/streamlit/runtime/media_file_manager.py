@@ -121,12 +121,15 @@ class MediaFile:
 
     @property
     def url(self) -> str:
-        extension = _get_extension_for_mimetype(self._mimetype)
-        return f"{STATIC_MEDIA_ENDPOINT}/{self.id}{extension}"
+        return f"{STATIC_MEDIA_ENDPOINT}/{self.id}{self.extension}"
 
     @property
     def id(self) -> str:
         return self._file_id
+
+    @property
+    def extension(self) -> str:
+        return _get_extension_for_mimetype(self.mimetype)
 
     @property
     def content(self) -> bytes:
@@ -340,19 +343,19 @@ class MediaFileManager(CacheStatsProvider):
 
         return media_file.url
 
-    def get(self, file_id: str) -> MediaFile:
-        """Returns the MediaFile for the given file_id.
+    def get(self, filename: str) -> MediaFile:
+        """Returns the MediaFile for the given filename.
 
         Raises KeyError if not found.
 
         Safe to call from any thread.
         """
-        # Filename is {requested_hash}.{extension} but MediaFileManager
+        # Filename is {file_id}.{extension} but MediaFileManager
         # is indexed by requested_hash.
-        hash = file_id.split(".")[0]
+        file_id = filename.split(".")[0]
 
         # dictionary access is atomic, so no need to take a lock.
-        return self._files_by_id[hash]
+        return self._files_by_id[file_id]
 
     def get_stats(self) -> List[CacheStat]:
         # We operate on a copy of our dict, to avoid race conditions
