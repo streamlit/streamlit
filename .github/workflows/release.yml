@@ -37,11 +37,15 @@ jobs:
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install gh
       - name: Configure GitHub CLI Settings
-        run: echo 'export GH_REPO="${{ github.repository }}"' >> $GITHUB_ENV
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "GH_REPO="$REPO"" >> $GITHUB_ENV
       - name: Look up the related GitHub PR number and branch name
+        env:
+          GH_REPO: ${{ env.GH_REPO }}
         run: |
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
+          echo "GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
       # - name: Ensure that version tag matches branch version
       #   run: |
       #     if [ "$(echo $GH_PR_BRANCH | tr -d 'release/')" != "$GIT_TAG" ]
@@ -50,6 +54,8 @@ jobs:
       #       exit 1
       #     fi
       - name: Checkout head of branch
+        env:
+          GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
         run: |
           git pull origin ${GH_PR_BRANCH} --ff-only
       - name: Setup virtual env
@@ -57,6 +63,8 @@ jobs:
       - name: Set release version from tag name
         run: echo "STREAMLIT_RELEASE_VERSION=$(echo "$GIT_TAG")" >> GITHUB_ENV
       - name: Update version
+        env:
+          STREAMLIT_RELEASE_VERSION: ${{ env.STREAMLIT_RELEASE_VERSION }}
         run: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
       - name: Create Package
         timeout-minutes: 120
@@ -80,23 +88,28 @@ jobs:
         run: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = $STREAMLIT_PYPI_USERNAME" >> ~/.pypirc
-            echo -e "password = $STREAMLIT_PYPI_API_TOKEN" >> ~/.pypirc
+            echo -e "username = "$STREAMLIT_PYPI_USERNAME"" >> ~/.pypirc
+            echo -e "password = "$STREAMLIT_PYPI_API_TOKEN"" >> ~/.pypirc
       - if: ${{ 'true' == 'false' }}
         name: Upload to PyPI
         run: |
           make distribute
       - if: ${{ 'true' == 'false' }}
         name: Commit version updates
+        env:
+          GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
+          STREAMLIT_RELEASE_VERSION: ${{ env.STREAMLIT_RELEASE_VERSION }}
         run: |
           git config user.email "core+streamlitbot-github@streamlit.io"
           git config user.name "Streamlit Bot"
 
-          git switch -c $GH_PR_BRANCH
+          git switch -c "$GH_PR_BRANCH"
 
-          git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $GH_PR_BRANCH || echo "No changes to commit"
+          git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin "$GH_PR_BRANCH" || echo "No changes to commit"
       - if: ${{ 'true' == 'false' }}
         name: Create GitHub Release
+        env:
+          GIT_TAG: ${{ env.GIT_TAG }}
         run: |
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           gh release create "$GIT_TAG" -n "" -t "$GIT_TAG"
