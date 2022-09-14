@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from unittest import mock
 
 import tornado.testing
@@ -28,7 +29,7 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         media_file_manager._files_by_id.clear()
         media_file_manager._files_by_session_and_coord.clear()
 
-    def get_app(self):
+    def get_app(self) -> tornado.web.Application:
         return tornado.web.Application(
             [("/media/(.*)", MediaFileHandler, {"path": ""})]
         )
@@ -40,7 +41,7 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         "streamlit.runtime.media_file_manager._get_session_id",
         return_value="mock_session_id",
     )
-    def test_media_file(self, _):
+    def test_media_file(self, _) -> None:
         """Requests for media files in MediaFileManager should succeed."""
         # Add a media file and read it back
         media_file = media_file_manager.add(b"mock_data", "video/mp4", "mock_coords")
@@ -55,7 +56,7 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         "streamlit.runtime.media_file_manager._get_session_id",
         return_value="mock_session_id",
     )
-    def test_downloadable_file(self, _):
+    def test_downloadable_file(self, _) -> None:
         """Downloadable files get an additional 'Content-Disposition' header
         that includes their user-specified filename.
         """
@@ -77,7 +78,7 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             'attachment; filename="MockVideo.mp4"', rsp.headers["Content-Disposition"]
         )
 
-    def test_invalid_file(self):
+    def test_invalid_file(self) -> None:
         """Requests for invalid files fail with 404."""
         rsp = self._fetch_file("invalid_media_file")
         self.assertEqual(404, rsp.code)
