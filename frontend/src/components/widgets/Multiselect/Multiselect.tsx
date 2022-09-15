@@ -241,7 +241,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     const noResultsMsg =
       this.state.overMaxSelections !== undefined &&
       this.state.overMaxSelections
-        ? `You can only select up to ${this.maxSelections} option(s)`
+        ? `You can only select up to ${this.maxSelections} options`
         : "No results"
     const selectOptions = options.map((option: string, idx: number) => {
       return {
