@@ -16,13 +16,13 @@
 
 from unittest.mock import patch
 
-import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 
 import streamlit as st
-import testutil
 from streamlit.runtime.media_file_manager import STATIC_MEDIA_ENDPOINT
+from tests import testutil
 
 
 class PyplotTest(testutil.DeltaGeneratorTestCase):
