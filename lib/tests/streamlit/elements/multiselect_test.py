@@ -279,21 +279,9 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
     def test_over_max_selections_initialization(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.multiselect(
-                "the label", ("a", "b", "c", "d"), ("a", "b", "c"), max_selections=2
+                "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
-
-    @patch("streamlit._is_running_with_streamlit", new=True)
-    @patch("streamlit.elements.utils.get_session_state")
-    def test_over_max_selections_session_state(self, patched_get_session_state):
-        mock_session_state = MagicMock()
-        mock_session_state.is_new_state_value.return_value = True
-        patched_get_session_state.return_value = mock_session_state
-
-        with self.assertRaises(StreamlitAPIException) as e:
-            st.multiselect(
-                "a label",
-                ["a", "b", "c", "d", "e"],
-                ["a", "b", "c"],
-                max_selections=2,
-                key="foo",
-            )
+        self.assertEqual(
+            str(e.exception),
+            "Multiselect got 3 default options but max_selections is set to 2. Please select at most 2 options.",
+        )

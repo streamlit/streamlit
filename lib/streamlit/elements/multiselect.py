@@ -102,10 +102,10 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def get_default_count(default: Union[Iterable[Any], Any, None]):
+def get_default_count(default: Union[List[Any], Any, None]):
     if default is None:
         return 0
-    if not isinstance(default, list):
+    if not isinstance(default, List):
         return 1
     return len(default)
 
@@ -295,7 +295,6 @@ class MultiSelectMixin:
         multiselect_proto.form_id = current_form_id(self.dg)
         if help is not None:
             multiselect_proto.help = dedent(help)
-
         if max_selections is not None:
             if get_default_count(default) > max_selections:
                 raise StreamlitAPIException(
@@ -304,7 +303,6 @@ class MultiSelectMixin:
             multiselect_proto.max_selections = max_selections
 
         serde = MultiSelectSerde(opt, default_value)
-
         widget_state = register_widget(
             "multiselect",
             multiselect_proto,
@@ -321,10 +319,10 @@ class MultiSelectMixin:
             and get_default_count(widget_state.value) > max_selections
         ):
             raise StreamlitAPIException(
-                f"""Multiselect has {get_default_count(widget_state.value)} options selected but `max_selections` 
-is set to {max_selections}. This happened because you manipulated  
-the widget's state through `st.session_state`. Note that this 
-happened before the line indicated in the traceback. 
+                f"""Multiselect has {get_default_count(widget_state.value)} options selected but `max_selections`
+is set to {max_selections}. This happened because you manipulated
+the widget's state through `st.session_state`. Note that this
+happened before the line indicated in the traceback.
 Please select at most {max_selections} options."""
             )
         # This needs to be done after register_widget because we don't want
