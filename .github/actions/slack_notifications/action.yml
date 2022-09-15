@@ -1,0 +1,40 @@
+name: "Slack Notification of Test Failures"
+
+inputs:
+  python_result:
+    description: 'Python Test Result'
+  javascript_result:
+    description: 'Javascript Test Result'
+  py_prod_deps_result:
+    description: 'Python Prod Deps Test Result'
+  cypress_result:
+    description: 'Cypress Test Result'
+
+runs:
+  using: composite
+  steps:
+    - name: Identify failing tests
+      env:
+        PYTHON: ${{ inputs.python_result }}
+        JAVASCRIPT: ${{ inputs.javascript_result }}
+        PY_PROD: ${{ inputs.py_prod_deps_result }}
+        CYPRESS: ${{ inputs.cypress_result }}
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      run: |
+        MESSAGE=":blobonfire: Nightly job failed to release\n Tests failed:"
+        if [[ "$PYTHON" == 'failure' ]]
+        then
+          MESSAGE+=" Python,"
+        if [[ "$JAVASCRIPT" == 'failure' ]]
+        then
+          MESSAGE+=" Javascript,"
+        if [[ "$PY_PROD" == 'failure' ]]
+        then
+          MESSAGE+=" Python Prod Deps,"
+        if [[ "$CYPRESS" == 'failure' ]]
+        then
+          MESSAGE+=" Cypress,"
+        fi
+        FINAL=$(sed 's/.$//' <<< "$MESSAGE")
+        curl -X POST -H 'Content-type: application/json' --data '{"text":"$FINAL"}' "$SLACK_WEBHOOK"
+      shell: bash -ileo pipefail {0}

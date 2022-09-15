@@ -70,6 +70,15 @@ jobs:
   run-cypress-tests:
     needs: create-nightly-tag
     uses: ./.github/workflows/cypress.yml
+
+  # test-failure-notification:
+  #   needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+  #   uses: ./.github/actions/slack_notifications
+  #   with:
+  #     python_result: ${{ needs.run-python-tests.result }}
+  #     javascript_result: ${{ needs.run-javascript-tests.result }}
+  #     py_prod_deps_result: ${{ needs.run-py-prod-deps-smoke-test.result }}
+  #     cypress_result: ${{ needs.run-cypress-tests.result }}
   
   create-nightly-build:
     runs-on: ubuntu-latest
@@ -118,3 +127,11 @@ jobs:
         name: Upload to PyPI
         run: |
           make distribute
+      
+      # TODO: Confirm this works...
+      - if: ${{ failure() }}
+        name: Nightly Build Failure Slack Message
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"IGNORE - Testing Slack Webhook :test_tube:"}' "$SLACK_WEBHOOK"
