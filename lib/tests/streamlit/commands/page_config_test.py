@@ -130,7 +130,6 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as e:
             menu_items = {"report a bug": "", "GET HELP": "", "about": ""}
             st.set_page_config(menu_items=menu_items)
-            self.assertEqual(False, True)
             self.assertEquals(str(e), "' ' is not a valid URL!")
 
     def test_set_page_config_menu_items_none(self):
