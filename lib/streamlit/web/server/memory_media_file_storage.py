@@ -77,6 +77,8 @@ def get_extension_for_mimetype(mimetype: str) -> str:
 
 
 class MemoryFile(NamedTuple):
+    """A MediaFile stored in memory."""
+
     content: bytes
     mimetype: str
     kind: MediaFileKind
