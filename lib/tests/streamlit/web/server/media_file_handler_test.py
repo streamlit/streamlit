@@ -16,21 +16,27 @@ from unittest import mock
 
 import tornado.testing
 import tornado.web
+from typing_extensions import Final
 
-from streamlit.runtime.media_file_manager import get_media_file_manager
+from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.web.server.media_file_handler import MediaFileHandler
+from streamlit.web.server.memory_media_file_storage import MemoryMediaFileStorage
+
+MOCK_ENDPOINT: Final = "/mock/media"
 
 
 class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self) -> None:
         super().setUp()
-        # Clear the MediaFileManager before each test
-        get_media_file_manager()._files_by_id.clear()
-        get_media_file_manager()._files_by_session_and_coord.clear()
+        # Create a new MediaFileManager and assign its storage to
+        # MediaFileHandler.
+        storage = MemoryMediaFileStorage(MOCK_ENDPOINT)
+        self.media_file_manager = MediaFileManager(storage)
+        MediaFileHandler.initialize_storage(storage)
 
     def get_app(self) -> tornado.web.Application:
         return tornado.web.Application(
-            [("/media/(.*)", MediaFileHandler, {"path": ""})]
+            [(f"{MOCK_ENDPOINT}/(.*)", MediaFileHandler, {"path": ""})]
         )
 
     @mock.patch(
@@ -40,7 +46,7 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_media_file(self, _) -> None:
         """Requests for media files in MediaFileManager should succeed."""
         # Add a media file and read it back
-        url = get_media_file_manager().add(b"mock_data", "video/mp4", "mock_coords")
+        url = self.media_file_manager.add(b"mock_data", "video/mp4", "mock_coords")
         rsp = self.fetch(url, method="GET")
 
         self.assertEqual(200, rsp.code)
@@ -57,7 +63,7 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         that includes their user-specified filename.
         """
         # Add a downloadable file with a filename
-        url = get_media_file_manager().add(
+        url = self.media_file_manager.add(
             b"mock_data",
             "video/mp4",
             "mock_coords",

@@ -17,6 +17,7 @@
 import contextlib
 import hashlib
 import mimetypes
+import os.path
 from typing import Union, NamedTuple, Dict, Optional, List
 
 from streamlit.logger import get_logger
@@ -88,6 +89,14 @@ class MemoryFile(NamedTuple):
 
 class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
     def __init__(self, media_endpoint: str):
+        """Create a new MemoryMediaFileStorage instance
+
+        Parameters
+        ----------
+        media_endpoint
+            The name of the local endpoint that media is served from.
+            This endpoint should start with a forward-slash (e.g. "/media").
+        """
         self._files_by_id: Dict[str, MemoryFile] = {}
         self._media_endpoint = media_endpoint
 
@@ -117,14 +126,20 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
 
         return file_id
 
-    def get_file(self, file_id: str) -> MemoryFile:
-        """Return the MemoryFile with the given ID. Raise MediaFileStorageError
-        if so such file exists.
+    def get_file(self, filename: str) -> MemoryFile:
+        """Return the MemoryFile with the given filename. Filenames are of the
+        form "file_id.extension". (Note that this is *not* the optional
+        user-specified filename for download files.)
+
+        Raises a MediaFileStorageError if no such file exists.
         """
+        file_id = os.path.splitext(filename)[0]
         try:
             return self._files_by_id[file_id]
         except KeyError as e:
-            raise MediaFileStorageError(f"No media file with id '{file_id}'") from e
+            raise MediaFileStorageError(
+                f"Bad filename '{filename}'. (No media file with id '{file_id}')"
+            ) from e
 
     def get_url(self, file_id: str) -> str:
         """Get a URL for a given media file. Raise a MediaFileStorageError if
