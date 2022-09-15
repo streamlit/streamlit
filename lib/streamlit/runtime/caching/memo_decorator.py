@@ -445,13 +445,14 @@ class MemoCache(Cache):
                 # rerun the function.
                 self._remove_from_disk_cache(key)
                 raise CacheKeyNotFoundError()
+
             ctx = get_script_run_ctx()
-            if ctx:
-                widget_key = entry.get_current_widget_key(ctx, CacheType.MEMO)
-                if widget_key in entry.results:
-                    return entry.results[widget_key]
-                else:
-                    raise CacheKeyNotFoundError()
+            if not ctx:
+                raise CacheKeyNotFoundError()
+
+            widget_key = entry.get_current_widget_key(ctx, CacheType.MEMO)
+            if widget_key in entry.results:
+                return entry.results[widget_key]
             else:
                 raise CacheKeyNotFoundError()
         except pickle.UnpicklingError as exc:
