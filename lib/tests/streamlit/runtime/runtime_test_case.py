@@ -19,7 +19,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import media_file_manager
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
-from streamlit.web.server.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 

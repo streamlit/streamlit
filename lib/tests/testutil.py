@@ -33,7 +33,7 @@ from streamlit.runtime.scriptrunner import (
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.web.server.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.web.server.server import MEDIA_ENDPOINT
 
 

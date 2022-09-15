@@ -35,6 +35,7 @@ from streamlit import util
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime import (
     Runtime,
     RuntimeConfig,
@@ -56,7 +57,6 @@ from streamlit.web.server.upload_file_request_handler import (
 from .browser_websocket_handler import BrowserWebSocketHandler
 from .component_request_handler import ComponentRequestHandler
 from .media_file_handler import MediaFileHandler
-from .memory_media_file_storage import MemoryMediaFileStorage
 from .stats_request_handler import StatsRequestHandler
 
 LOGGER = get_logger(__name__)

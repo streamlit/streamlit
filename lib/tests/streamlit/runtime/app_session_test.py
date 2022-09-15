@@ -22,13 +22,14 @@ import pytest
 
 import streamlit.runtime.app_session as app_session
 from streamlit import config
-from streamlit.runtime import media_file_manager
-from streamlit.runtime.app_session import AppSession, AppSessionState
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import media_file_manager
+from streamlit.runtime.app_session import AppSession, AppSessionState
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -41,7 +42,6 @@ from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
-from streamlit.web.server.memory_media_file_storage import MemoryMediaFileStorage
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 from tests.testutil import patch_config_options
 

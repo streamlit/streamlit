@@ -28,7 +28,7 @@ import streamlit.elements.image as image
 from streamlit.elements.image import _np_array_to_bytes, _PIL_to_bytes
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
-from streamlit.web.server.memory_media_file_storage import (
+from streamlit.runtime.memory_media_file_storage import (
     _calculate_file_id,
 )
 from streamlit.web.server.server import MEDIA_ENDPOINT

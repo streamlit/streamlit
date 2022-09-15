@@ -20,7 +20,7 @@ import random
 from unittest.mock import mock_open
 
 from streamlit.runtime.media_file_manager import MediaFileManager
-from streamlit.web.server.memory_media_file_storage import (
+from streamlit.runtime.memory_media_file_storage import (
     _calculate_file_id,
     MemoryMediaFileStorage,
     MemoryFile,
@@ -173,7 +173,7 @@ class MediaFileManagerTest(TestCase):
         return_value="mock_session",
     )
     @mock.patch(
-        "streamlit.web.server.memory_media_file_storage.open",
+        "streamlit.runtime.memory_media_file_storage.open",
         mock_open(read_data=b"mock_test_file"),
         create=True,
     )

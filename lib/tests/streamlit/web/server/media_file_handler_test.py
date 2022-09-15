@@ -19,8 +19,8 @@ import tornado.web
 from typing_extensions import Final
 
 from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.web.server.media_file_handler import MediaFileHandler
-from streamlit.web.server.memory_media_file_storage import MemoryMediaFileStorage
 
 MOCK_ENDPOINT: Final = "/mock/media"
 

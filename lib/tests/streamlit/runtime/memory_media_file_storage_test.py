@@ -21,7 +21,7 @@ from unittest.mock import mock_open
 from parameterized import parameterized
 
 from streamlit.runtime.media_file_storage import MediaFileStorageError, MediaFileKind
-from streamlit.web.server.memory_media_file_storage import (
+from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     MemoryFile,
 )
@@ -33,7 +33,7 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         self.storage = MemoryMediaFileStorage(media_endpoint="/mock/media")
 
     @mock.patch(
-        "streamlit.web.server.memory_media_file_storage.open",
+        "streamlit.runtime.memory_media_file_storage.open",
         mock_open(read_data=b"mock_bytes"),
     )
     def test_load_with_path(self):
@@ -114,7 +114,7 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         self.assertNotEqual(file_id1, changed_filename)
 
     @mock.patch(
-        "streamlit.web.server.memory_media_file_storage.open", side_effect=Exception
+        "streamlit.runtime.memory_media_file_storage.open", side_effect=Exception
     )
     def test_load_with_bad_path(self, _):
         """Adding a file by path raises a MediaFileStorageError if the file can't be read."""

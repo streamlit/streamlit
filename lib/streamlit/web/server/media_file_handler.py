@@ -19,12 +19,12 @@ import tornado.web
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind
-from streamlit.string_util import generate_download_filename_from_title
-from streamlit.web.server import allow_cross_origin_requests
-from streamlit.web.server.memory_media_file_storage import (
+from streamlit.runtime.memory_media_file_storage import (
     get_extension_for_mimetype,
     MemoryMediaFileStorage,
 )
+from streamlit.string_util import generate_download_filename_from_title
+from streamlit.web.server import allow_cross_origin_requests
 
 LOGGER = get_logger(__name__)
 
