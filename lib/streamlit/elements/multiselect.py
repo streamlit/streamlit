@@ -225,7 +225,8 @@ class MultiSelectMixin:
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
-
+        max_selections : int
+            The max selections that can be selected at a time. This argument can only be supplied by keyword.
         Returns
         -------
         list
