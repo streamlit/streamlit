@@ -54,7 +54,7 @@ st.text(f"value 7: {i7}")
 i8 = st.multiselect("Collapsed label", options, label_visibility="collapsed")
 st.text(f"value 8: {i8}")
 
-i9 = st.multiselect("multiselect 9", options, max_selections=2, key="multiselect 9")
+i9 = st.multiselect("multiselect 9", options, max_selections=1, key="multiselect 9")
 st.text(f"value 9: {i9}")
 
 if st._is_running_with_streamlit:
