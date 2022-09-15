@@ -14,13 +14,13 @@
 
 """multiselect unit tests."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
 
@@ -281,7 +281,19 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
             st.multiselect(
                 "the label", ("a", "b", "c", "d"), ("a", "b", "c"), max_selections=2
             )
-            self.assertEquals(
-                str(e),
-                "Multiselect got 3 default option(s) but max_selections is set to 2. Please select at most 2 options.",
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.elements.utils.get_session_state")
+    def test_over_max_selections_session_state(self, patched_get_session_state):
+        mock_session_state = MagicMock()
+        mock_session_state.is_new_state_value.return_value = True
+        patched_get_session_state.return_value = mock_session_state
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.multiselect(
+                "a label",
+                ["a", "b", "c", "d", "e"],
+                ["a", "b", "c"],
+                max_selections=2,
+                key="foo",
             )
