@@ -24,7 +24,6 @@ import time
 import unittest
 from unittest.mock import patch
 
-import PIL.Image as Image
 import numpy as np
 import pandas as pd
 from google.protobuf import json_format
@@ -36,11 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
-from streamlit.runtime.media_file_manager import (
-    _calculate_file_id,
-    media_file_manager,
-    STATIC_MEDIA_ENDPOINT,
-)
+from streamlit.runtime.media_file_manager import STATIC_MEDIA_ENDPOINT
 from tests import testutil
 
 
@@ -368,92 +363,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
                 el.doc_string.signature,
                 "(body: object, anchor: Optional[str] = None) -> 'DeltaGenerator'",
             )
-
-    def test_st_image_PIL_image(self):
-        """Test st.image with PIL image."""
-        img = Image.new("RGB", (64, 64), color="red")
-
-        st.image(img, caption="some caption", width=100, output_format="PNG")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, 100)
-        self.assertEqual(el.imgs.imgs[0].caption, "some caption")
-
-        # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image import _PIL_to_bytes
-
-        file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
-        self.assertTrue(file_id in media_file_manager)
-
-        afile = media_file_manager.get(file_id)
-        self.assertEqual(afile.mimetype, "image/png")
-        self.assertEqual(afile.url, el.imgs.imgs[0].url)
-
-    def test_st_image_PIL_array(self):
-        """Test st.image with a PIL array."""
-        imgs = [
-            Image.new("RGB", (64, 64), color="red"),
-            Image.new("RGB", (64, 64), color="blue"),
-            Image.new("RGB", (64, 64), color="green"),
-        ]
-
-        st.image(
-            imgs,
-            caption=["some caption"] * 3,
-            width=200,
-            use_column_width=True,
-            clamp=True,
-            output_format="PNG",
-        )
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, -2)
-
-        # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image import _PIL_to_bytes
-
-        for idx in range(len(imgs)):
-            file_id = _calculate_file_id(
-                _PIL_to_bytes(imgs[idx], format="PNG"), "image/png"
-            )
-            self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
-            self.assertTrue(file_id in media_file_manager)
-            afile = media_file_manager.get(file_id)
-            self.assertEqual(afile.mimetype, "image/png")
-            self.assertEqual(afile.url, el.imgs.imgs[idx].url)
-
-    def test_st_image_with_single_url(self):
-        """Test st.image with single url."""
-        url = "http://server/fake0.jpg"
-
-        st.image(url, caption="some caption", width=300)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, 300)
-        self.assertEqual(el.imgs.imgs[0].caption, "some caption")
-        self.assertEqual(el.imgs.imgs[0].url, url)
-
-    def test_st_image_with_list_of_urls(self):
-        """Test st.image with list of urls."""
-        urls = [
-            "http://server/fake0.jpg",
-            "http://server/fake1.jpg",
-            "http://server/fake2.jpg",
-        ]
-        st.image(urls, caption=["some caption"] * 3, width=300)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, 300)
-        for idx, url in enumerate(urls):
-            self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
-            self.assertEqual(el.imgs.imgs[idx].url, url)
-
-    def test_st_image_bad_width(self):
-        """Test st.image with bad width."""
-        with self.assertRaises(StreamlitAPIException) as ctx:
-            st.image("does/not/exist", width=-1234)
-
-        self.assertTrue("Image width must be positive." in str(ctx.exception))
 
     def test_st_info(self):
         """Test st.info."""
