@@ -21,7 +21,6 @@ from unittest.mock import mock_open
 
 from streamlit.runtime.media_file_manager import (
     MediaFileManager,
-    _calculate_file_id,
     MediaFileMetadata,
 )
 

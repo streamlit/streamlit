@@ -25,15 +25,13 @@ from parameterized import parameterized
 
 import streamlit as st
 import streamlit.elements.image as image
-import streamlit.runtime.media_file_manager as media_file_manager
 from streamlit.elements.image import _np_array_to_bytes, _PIL_to_bytes
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
-from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.web.server.memory_media_file_storage import (
-    MemoryMediaFileStorage,
     _calculate_file_id,
 )
+from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests import testutil
 
 
@@ -103,15 +101,6 @@ IMAGES = {
 class ImageProtoTest(testutil.DeltaGeneratorTestCase):
     """Test streamlit.image."""
 
-    def setUp(self, override_root=True):
-        super().setUp(override_root)
-        self._storage = MemoryMediaFileStorage("/mock/media")
-        media_file_manager._media_file_manager = MediaFileManager(self._storage)
-
-    def tearDown(self):
-        media_file_manager._media_file_manager = None
-        super().tearDown()
-
     @parameterized.expand(
         [
             (IMAGES["img_32_32_3_rgb"]["np"], "png"),
@@ -142,7 +131,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         st.image(data_in, output_format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
-        self.assertTrue(imglist.imgs[0].url.startswith("/mock/media"))
+        self.assertTrue(imglist.imgs[0].url.startswith(MEDIA_ENDPOINT))
         self.assertTrue(imglist.imgs[0].url.endswith(f".{format}"))
         self.assertTrue(file_id in imglist.imgs[0].url)
 
@@ -170,7 +159,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (IMAGES["img_32_32_3_rgb"]["np"], "/mock/media/"),
+            (IMAGES["img_32_32_3_rgb"]["np"], "/media/"),
             ("https://streamlit.io/test.png", "https://streamlit.io/test.png"),
             ("https://streamlit.io/test.svg", "https://streamlit.io/test.svg"),
         ]
@@ -312,10 +301,10 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
 
         # locate resultant file in the file manager and check its metadata.
         file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
-        media_file = self._storage.get_file(file_id)
+        media_file = self.media_file_storage.get_file(file_id)
         self.assertIsNotNone(media_file)
         self.assertEqual(media_file.mimetype, "image/png")
-        self.assertEqual(self._storage.get_url(file_id), el.imgs.imgs[0].url)
+        self.assertEqual(self.media_file_storage.get_url(file_id), el.imgs.imgs[0].url)
 
     def test_st_image_PIL_array(self):
         """Test st.image with a PIL array."""
@@ -343,10 +332,12 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 _PIL_to_bytes(imgs[idx], format="PNG"), "image/png"
             )
             self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
-            media_file = self._storage.get_file(file_id)
+            media_file = self.media_file_storage.get_file(file_id)
             self.assertIsNotNone(media_file)
             self.assertEqual(media_file.mimetype, "image/png")
-            self.assertEqual(self._storage.get_url(file_id), el.imgs.imgs[idx].url)
+            self.assertEqual(
+                self.media_file_storage.get_url(file_id), el.imgs.imgs[idx].url
+            )
 
     def test_st_image_with_single_url(self):
         """Test st.image with single url."""

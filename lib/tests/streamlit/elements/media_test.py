@@ -23,9 +23,6 @@ import streamlit as st
 from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.elements.media import MediaData
-from streamlit.runtime import media_file_manager
-from streamlit.runtime.media_file_manager import MediaFileManager
-from streamlit.web.server.memory_media_file_storage import MemoryMediaFileStorage
 from tests import testutil
 
 
@@ -35,16 +32,6 @@ class TestMediaKind(Enum):
 
 
 class MediaTest(testutil.DeltaGeneratorTestCase):
-    def setUp(self, override_root=True):
-        super().setUp(override_root)
-        media_file_manager._media_file_manager = MediaFileManager(
-            MemoryMediaFileStorage("/mock/media")
-        )
-
-    def tearDown(self):
-        media_file_manager._media_file_manager = None
-        super().tearDown()
-
     @parameterized.expand(
         [
             ("foo.wav", "audio/wav", TestMediaKind.AUDIO, False),

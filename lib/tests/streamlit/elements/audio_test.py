@@ -22,26 +22,15 @@ import numpy as np
 from scipy.io import wavfile
 
 import streamlit as st
-import streamlit.runtime.media_file_manager as media_file_manager
-from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.web.server.memory_media_file_storage import (
-    MemoryMediaFileStorage,
     _calculate_file_id,
 )
+from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests import testutil
 
 
 class AudioTest(testutil.DeltaGeneratorTestCase):
-    def setUp(self, override_root=True):
-        super().setUp(override_root)
-        self._storage = MemoryMediaFileStorage("/mock/media")
-        media_file_manager._media_file_manager = MediaFileManager(self._storage)
-
-    def tearDown(self):
-        media_file_manager._media_file_manager = None
-        super().tearDown()
-
     def test_st_audio_from_bytes(self):
         """Test st.audio using fake audio bytes."""
 
@@ -54,10 +43,10 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
 
         # locate resultant file in InMemoryFileManager and test its properties.
         file_id = _calculate_file_id(fake_audio_data, "audio/wav")
-        media_file = self._storage.get_file(file_id)
+        media_file = self.media_file_storage.get_file(file_id)
         self.assertIsNotNone(media_file)
         self.assertEqual(media_file.mimetype, "audio/wav")
-        self.assertEqual(self._storage.get_url(file_id), el.audio.url)
+        self.assertEqual(self.media_file_storage.get_url(file_id), el.audio.url)
 
     def test_st_audio_from_file(self):
         """Test st.audio using generated data in a file-like object."""
@@ -116,5 +105,5 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.start_time, 10)
-        self.assertTrue(el.audio.url.startswith("/mock/media"))
+        self.assertTrue(el.audio.url.startswith(MEDIA_ENDPOINT))
         self.assertTrue(_calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
