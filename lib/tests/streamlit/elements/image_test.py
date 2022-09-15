@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.image unit tests."""
+"""Unit tests for st.image and other image.py utility code."""
 
 import PIL.Image as Image
 import cv2
