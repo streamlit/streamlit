@@ -19,7 +19,6 @@ import tornado.web
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_manager import (
-    _get_extension_for_mimetype,
     media_file_manager,
     MediaFileType,
 )
@@ -47,21 +46,18 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         media_file = media_file_manager.get(path)
 
         if media_file and media_file.file_type == MediaFileType.DOWNLOADABLE:
-            file_name = media_file.file_name
+            filename = media_file.file_name
 
-            if not file_name:
+            if not filename:
                 title = self.get_argument("title", "", True)
                 title = unquote_plus(title)
                 filename = generate_download_filename_from_title(title)
-                file_name = (
-                    f"{filename}{_get_extension_for_mimetype(media_file.mimetype)}"
-                )
+                filename = f"{filename}{media_file.extension}"
 
             try:
-                file_name.encode("ascii")
-                file_expr = 'filename="{}"'.format(file_name)
+                file_expr = 'filename="{}"'.format(filename)
             except UnicodeEncodeError:
-                file_expr = "filename*=utf-8''{}".format(quote(file_name))
+                file_expr = "filename*=utf-8''{}".format(quote(filename))
 
             self.set_header("Content-Disposition", f"attachment; {file_expr}")
 
