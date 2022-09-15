@@ -55,21 +55,21 @@ jobs:
           git tag -a $TAG -m "Streamlit nightly $TAG"
           git push origin $TAG
 
-  run-python-tests:
-    needs: create-nightly-tag
-    uses: ./.github/workflows/python-versions.yml
+  # run-python-tests:
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/python-versions.yml
 
-  run-javascript-tests:
-    needs: create-nightly-tag
-    uses: ./.github/workflows/js-tests.yml
+  # run-javascript-tests:
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/js-tests.yml
 
-  run-py-prod-deps-smoke-test:
-    needs: create-nightly-tag
-    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+  # run-py-prod-deps-smoke-test:
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/py-prod-deps-smoke-test.yml
 
-  run-cypress-tests:
-    needs: create-nightly-tag
-    uses: ./.github/workflows/cypress.yml
+  # run-cypress-tests:
+  #   needs: create-nightly-tag
+  #   uses: ./.github/workflows/cypress.yml
 
   # test-failure-notification:
   #   needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
@@ -83,7 +83,7 @@ jobs:
   create-nightly-build:
     runs-on: ubuntu-latest
 
-    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+    # needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
     defaults:
       run:
@@ -127,11 +127,9 @@ jobs:
         name: Upload to PyPI
         run: |
           make distribute
-      
-      # TODO: Confirm this works...
-      - if: ${{ failure() }}
-        name: Nightly Build Failure Slack Message
-        env: 
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"IGNORE - Testing Slack Webhook :test_tube:"}' "$SLACK_WEBHOOK"
+      # - if: ${{ failure() }}
+      #   name: Nightly Build Failure Slack Message
+      #   env: 
+      #     SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      #   run: |
+      #     curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly build failed to release"}' "$SLACK_WEBHOOK"

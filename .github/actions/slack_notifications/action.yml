@@ -1,4 +1,4 @@
-name: "Slack Notification of Test Failures"
+name: "Slack Notification for Test Failures"
 
 inputs:
   python_result:
@@ -10,31 +10,34 @@ inputs:
   cypress_result:
     description: 'Cypress Test Result'
 
+env:
+  SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
 runs:
   using: composite
   steps:
-    - name: Identify failing tests
+    - if: ${{ inputs.python_result == 'failure' }}
       env:
-        PYTHON: ${{ inputs.python_result }}
-        JAVASCRIPT: ${{ inputs.javascript_result }}
-        PY_PROD: ${{ inputs.py_prod_deps_result }}
-        CYPRESS: ${{ inputs.cypress_result }}
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       run: |
-        MESSAGE=":blobonfire: Nightly job failed to release\n Tests failed:"
-        if [[ "$PYTHON" == 'failure' ]]
-        then
-          MESSAGE+=" Python,"
-        if [[ "$JAVASCRIPT" == 'failure' ]]
-        then
-          MESSAGE+=" Javascript,"
-        if [[ "$PY_PROD" == 'failure' ]]
-        then
-          MESSAGE+=" Python Prod Deps,"
-        if [[ "$CYPRESS" == 'failure' ]]
-        then
-          MESSAGE+=" Cypress,"
-        fi
-        FINAL=$(sed 's/.$//' <<< "$MESSAGE")
-        curl -X POST -H 'Content-type: application/json' --data '{"text":"$FINAL"}' "$SLACK_WEBHOOK"
+        curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly job failed on python tests"}' "$SLACK_WEBHOOK"
       shell: bash -ileo pipefail {0}
+    - if: ${{ inputs.javascript_result == 'failure' }}
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly job failed on javascript tests"}' "$SLACK_WEBHOOK"
+      shell: bash -ileo pipefail {0}
+    - if: ${{ inputs.py_prod_deps_result == 'failure' }}
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly job failed on python prod dependencies test"}' "$SLACK_WEBHOOK"
+      shell: bash -ileo pipefail {0}
+    - if: ${{ inputs.cypress_result == 'failure' }}
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly job failed on cypress tests"}' "$SLACK_WEBHOOK"
+      shell: bash -ileo pipefail {0}
+
