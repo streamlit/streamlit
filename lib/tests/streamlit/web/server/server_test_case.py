@@ -21,6 +21,7 @@ import tornado.websocket
 from tornado.websocket import WebSocketClientConnection
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import media_file_manager
 from streamlit.runtime.app_session import AppSession
 from streamlit.web.server import Server
 
@@ -37,6 +38,10 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
     """
 
     _next_session_id = 0
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        media_file_manager._media_file_manager = None
 
     def get_app(self) -> tornado.web.Application:
         self.server = Server(
