@@ -326,7 +326,7 @@ describe("Multiselect widget", () => {
           .find(UISelect)
           .prop("noResultsMsg")
           ?.toString()
-      ).toBe(`You can only select up to 2 options`)
+      ).toBe(`You can only select up to 2 options. Remove an option first.`)
     })
 
     it("does not allow for more selection when an option is picked", () => {
