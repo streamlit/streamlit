@@ -30,8 +30,8 @@ export interface Theme {
 }
 
 /** Data sent in the custom Streamlit render event. */
-export interface RenderData {
-  args: any;
+export interface RenderData<ArgType=any> {
+  args: ArgType;
   disabled: boolean;
   theme?: Theme;
 }
@@ -168,13 +168,13 @@ export class Streamlit {
    * Handle an untyped Streamlit render event and redispatch it as a
    * StreamlitRenderEvent.
    */
-  private static onRenderMessage = (data: any): void => {
+  private static onRenderMessage = <ArgType=any, >(data: {args: ArgType, dfs?: ArgsDataframe[], disabled?: boolean, theme?: Theme}): void => {
     let args = data["args"];
     if (args == null) {
       console.error(
         `Got null args in onRenderMessage. This should never happen`
       );
-      args = {};
+      args = {} as ArgType;
     }
 
     // Parse our dataframe arguments with arrow, and merge them into our args dict
@@ -196,7 +196,7 @@ export class Streamlit {
 
     // Dispatch a render event!
     const eventData = { disabled, args, theme };
-    const event = new CustomEvent<RenderData>(Streamlit.RENDER_EVENT, {
+    const event = new CustomEvent<RenderData<ArgType>>(Streamlit.RENDER_EVENT, {
       detail: eventData
     });
     Streamlit.events.dispatchEvent(event);

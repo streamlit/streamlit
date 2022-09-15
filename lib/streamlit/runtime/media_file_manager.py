@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Provides global InMemoryFileManager object as `in_memory_file_manager`."""
+"""Provides global MediaFileManager object as `media_file_manager`."""
 
 import collections
 import hashlib
 import mimetypes
+import threading
+from enum import Enum
 from typing import Dict, Set, Optional, List
 
 from streamlit import util
@@ -31,11 +33,13 @@ PREFERRED_MIMETYPE_EXTENSION_MAP = {
     "audio/wav": ".wav",
 }
 
-# used for images and videos in st.image() and st.video()
-FILE_TYPE_MEDIA = "media_file"
 
-# used for st.download_button files
-FILE_TYPE_DOWNLOADABLE = "downloadable_file"
+class MediaFileType(Enum):
+    # used for images and videos in st.image() and st.video()
+    MEDIA = "media"
+
+    # used for st.download_button files
+    DOWNLOADABLE = "downloadable"
 
 
 def _get_session_id() -> str:
@@ -94,7 +98,7 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
     return extension
 
 
-class InMemoryFile:
+class MediaFile:
     """Abstraction for file objects."""
 
     def __init__(
@@ -103,7 +107,7 @@ class InMemoryFile:
         content: bytes,
         mimetype: str,
         file_name: Optional[str] = None,
-        file_type: str = FILE_TYPE_MEDIA,
+        file_type: MediaFileType = MediaFileType.MEDIA,
     ):
         self._file_id = file_id
         self._content = content
@@ -117,12 +121,15 @@ class InMemoryFile:
 
     @property
     def url(self) -> str:
-        extension = _get_extension_for_mimetype(self._mimetype)
-        return f"{STATIC_MEDIA_ENDPOINT}/{self.id}{extension}"
+        return f"{STATIC_MEDIA_ENDPOINT}/{self.id}{self.extension}"
 
     @property
     def id(self) -> str:
         return self._file_id
+
+    @property
+    def extension(self) -> str:
+        return _get_extension_for_mimetype(self.mimetype)
 
     @property
     def content(self) -> bytes:
@@ -137,7 +144,7 @@ class InMemoryFile:
         return len(self._content)
 
     @property
-    def file_type(self) -> str:
+    def file_type(self) -> MediaFileType:
         return self._file_type
 
     @property
@@ -148,8 +155,8 @@ class InMemoryFile:
         self._is_marked_for_delete = True
 
 
-class InMemoryFileManager(CacheStatsProvider):
-    """In-memory file manager for InMemoryFile objects.
+class MediaFileManager(CacheStatsProvider):
+    """In-memory file manager for MediaFile objects.
 
     This keeps track of:
     - Which files exist, and what their IDs are. This is important so we can
@@ -168,52 +175,74 @@ class InMemoryFileManager(CacheStatsProvider):
     """
 
     def __init__(self):
-        # Dict of file ID to InMemoryFile.
-        self._files_by_id: Dict[str, InMemoryFile] = dict()
+        # Dict of file ID to MediaFile.
+        self._files_by_id: Dict[str, MediaFile] = dict()
 
-        # Dict[session ID][coordinates] -> InMemoryFile.
+        # Dict[session ID][coordinates] -> MediaFile.
         self._files_by_session_and_coord: Dict[
-            str, Dict[str, InMemoryFile]
+            str, Dict[str, MediaFile]
         ] = collections.defaultdict(dict)
 
-    def __repr__(self) -> str:
-        return util.repr_(self)
+        # MediaFileManager is used from multiple threads, so all operations
+        # need to be protected with a Lock. (This is not an RLock, which
+        # means taking it multiple times from the same thread will deadlock.)
+        self._lock = threading.Lock()
 
-    def del_expired_files(self) -> None:
-        LOGGER.debug("Deleting expired files...")
+    def _get_inactive_file_ids(self) -> Set[str]:
+        """Compute the set of files that are stored in the manager, but are
+        not referenced by any active session. These are files that can be
+        safely deleted.
 
-        # Get a flat set of every file ID in the session ID map.
-        active_file_ids: Set[str] = set()
+        Thread safety: callers must hold `self._lock`.
+        """
+        # Get the set of all our file IDs.
+        file_ids = set(self._files_by_id.keys())
 
-        for files_by_coord in self._files_by_session_and_coord.values():
-            file_ids = map(lambda imf: imf.id, files_by_coord.values())
-            active_file_ids = active_file_ids.union(file_ids)
+        # Subtract all IDs that are in use by each session
+        for session_id, files_by_coord in self._files_by_session_and_coord.items():
+            file_ids_in_session = map(lambda file: file.id, files_by_coord.values())
+            file_ids.difference_update(file_ids_in_session)
 
-        for file_id, imf in list(self._files_by_id.items()):
-            if imf.id not in active_file_ids:
+        return file_ids
 
-                if imf.file_type == FILE_TYPE_MEDIA:
+    def remove_orphaned_files(self) -> None:
+        """Remove all files that are no longer referenced by any active session.
+
+        Safe to call from any thread.
+        """
+        LOGGER.debug("Removing orphaned files...")
+
+        with self._lock:
+            for file_id in self._get_inactive_file_ids():
+                file = self._files_by_id[file_id]
+                if file.file_type == MediaFileType.MEDIA:
                     LOGGER.debug(f"Deleting File: {file_id}")
                     del self._files_by_id[file_id]
-                elif imf.file_type == FILE_TYPE_DOWNLOADABLE:
-                    if imf._is_marked_for_delete:
+                elif file.file_type == MediaFileType.DOWNLOADABLE:
+                    if file._is_marked_for_delete:
                         LOGGER.debug(f"Deleting File: {file_id}")
                         del self._files_by_id[file_id]
                     else:
-                        imf._mark_for_delete()
+                        file._mark_for_delete()
 
-    def clear_session_files(self, session_id: Optional[str] = None) -> None:
-        """Removes AppSession-coordinate mapping immediately, and id-file mapping later.
+    def clear_session_refs(self, session_id: Optional[str] = None) -> None:
+        """Remove the given session's file references.
+
+        (This does not remove any files from the manager - you must call
+        `remove_orphaned_files` for that.)
 
         Should be called whenever ScriptRunner completes and when a session ends.
+
+        Safe to call from any thread.
         """
         if session_id is None:
             session_id = _get_session_id()
 
         LOGGER.debug("Disconnecting files for session with ID %s", session_id)
 
-        if session_id in self._files_by_session_and_coord:
-            del self._files_by_session_and_coord[session_id]
+        with self._lock:
+            if session_id in self._files_by_session_and_coord:
+                del self._files_by_session_and_coord[session_id]
 
         LOGGER.debug(
             "Sessions still active: %r", self._files_by_session_and_coord.keys()
@@ -232,8 +261,8 @@ class InMemoryFileManager(CacheStatsProvider):
         coordinates: str,
         file_name: Optional[str] = None,
         is_for_static_download: bool = False,
-    ) -> InMemoryFile:
-        """Adds new InMemoryFile with given parameters; returns the object.
+    ) -> MediaFile:
+        """Adds new MediaFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
         and registers the current session as a user.
@@ -243,12 +272,14 @@ class InMemoryFileManager(CacheStatsProvider):
 
         coordinates should look like this: "1.(3.-14).5"
 
+        Safe to call from any thread.
+
         Parameters
         ----------
         content : bytes
             Raw data to store in file object.
         mimetype : str
-            The mime type for the in-memory file. E.g. "audio/mpeg"
+            The mime type for the file. E.g. "audio/mpeg"
         coordinates : str
             Unique string identifying an element's location.
             Prevents memory leak of "forgotten" file IDs when element media
@@ -260,69 +291,76 @@ class InMemoryFileManager(CacheStatsProvider):
             not as a media for rendering at page. [default: None]
         """
         file_id = _calculate_file_id(content, mimetype, file_name=file_name)
-        imf = self._files_by_id.get(file_id, None)
-
-        if imf is None:
-            LOGGER.debug("Adding media file %s", file_id)
-
-            if is_for_static_download:
-                file_type = FILE_TYPE_DOWNLOADABLE
-            else:
-                file_type = FILE_TYPE_MEDIA
-
-            imf = InMemoryFile(
-                file_id=file_id,
-                content=content,
-                mimetype=mimetype,
-                file_name=file_name,
-                file_type=file_type,
-            )
-        else:
-            LOGGER.debug("Overwriting media file %s", file_id)
-
         session_id = _get_session_id()
-        self._files_by_id[imf.id] = imf
-        self._files_by_session_and_coord[session_id][coordinates] = imf
 
-        LOGGER.debug(
-            "Files: %s; Sessions with files: %s",
-            len(self._files_by_id),
-            len(self._files_by_session_and_coord),
-        )
+        with self._lock:
+            file = self._files_by_id.get(file_id, None)
 
-        return imf
+            if file is None:
+                LOGGER.debug("Adding media file %s", file_id)
 
-    def get(self, inmemory_filename: str) -> InMemoryFile:
-        """Returns InMemoryFile object for given file_id or InMemoryFile object.
+                if is_for_static_download:
+                    file_type = MediaFileType.DOWNLOADABLE
+                else:
+                    file_type = MediaFileType.MEDIA
+
+                file = MediaFile(
+                    file_id=file_id,
+                    content=content,
+                    mimetype=mimetype,
+                    file_name=file_name,
+                    file_type=file_type,
+                )
+            else:
+                LOGGER.debug("Overwriting media file %s", file_id)
+
+            self._files_by_id[file.id] = file
+            self._files_by_session_and_coord[session_id][coordinates] = file
+
+            LOGGER.debug(
+                "Files: %s; Sessions with files: %s",
+                len(self._files_by_id),
+                len(self._files_by_session_and_coord),
+            )
+
+            return file
+
+    def get(self, filename: str) -> MediaFile:
+        """Returns the MediaFile for the given filename.
 
         Raises KeyError if not found.
+
+        Safe to call from any thread.
         """
-        # Filename is {requested_hash}.{extension} but InMemoryFileManager
+        # Filename is {file_id}.{extension} but MediaFileManager
         # is indexed by requested_hash.
-        hash = inmemory_filename.split(".")[0]
-        return self._files_by_id[hash]
+        file_id = filename.split(".")[0]
+
+        # dictionary access is atomic, so no need to take a lock.
+        return self._files_by_id[file_id]
 
     def get_stats(self) -> List[CacheStat]:
         # We operate on a copy of our dict, to avoid race conditions
         # with other threads that may be manipulating the cache.
-        files_by_id = self._files_by_id.copy()
+        with self._lock:
+            files_by_id = self._files_by_id.copy()
 
         stats: List[CacheStat] = []
         for file_id, file in files_by_id.items():
             stats.append(
                 CacheStat(
-                    category_name="st_in_memory_file_manager",
+                    category_name="st_media_file_manager",
                     cache_name="",
                     byte_length=file.content_size,
                 )
             )
         return stats
 
-    def __contains__(self, inmemory_file_or_id):
-        return inmemory_file_or_id in self._files_by_id
+    def __contains__(self, file_id: str) -> bool:
+        return file_id in self._files_by_id
 
     def __len__(self):
         return len(self._files_by_id)
 
 
-in_memory_file_manager = InMemoryFileManager()
+media_file_manager = MediaFileManager()

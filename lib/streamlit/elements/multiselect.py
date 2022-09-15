@@ -18,16 +18,16 @@ from typing import (
     Any,
     Callable,
     cast,
+    Generic,
     Iterable,
     Optional,
     overload,
     List,
     Sequence,
     Union,
-    TypeVar,
+    TYPE_CHECKING,
 )
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -37,6 +37,7 @@ from streamlit.type_util import (
     ensure_indexable,
     is_type,
     to_key,
+    T,
     LabelVisibility,
     maybe_raise_label_warnings,
 )
@@ -56,7 +57,8 @@ from .utils import (
     get_label_visibility_proto_value,
 )
 
-T = TypeVar("T")
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 @overload
@@ -111,66 +113,30 @@ def get_default_count(default: Union[List[Any], Any, None]):
 
 
 @dataclass
-class MultiSelectSerde:
-    options: Sequence[Any]
+class MultiSelectSerde(Generic[T]):
+    options: Sequence[T]
     default_value: List[int]
 
+    def serialize(self, value: List[T]) -> List[int]:
+        return _check_and_convert_to_indices(self.options, value)
+
     def deserialize(
-        self, ui_value: Optional[List[int]], widget_id: str = ""
-    ) -> List[Any]:
+        self,
+        ui_value: Optional[List[int]],
+        widget_id: str = "",
+    ) -> List[T]:
         current_value: List[int] = (
             ui_value if ui_value is not None else self.default_value
         )
         return [self.options[i] for i in current_value]
 
-    def serialize(self, value: List[Any]) -> List[int]:
-        return _check_and_convert_to_indices(self.options, value)
-
 
 class MultiSelectMixin:
-    @overload
-    def multiselect(
-        self,
-        label: str,
-        options: Sequence[T],
-        default: Optional[Any] = None,
-        format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        *,  # keyword-only arguments:
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        max_selections: Optional[int] = None,
-    ) -> List[T]:
-        ...
-
-    @overload
-    def multiselect(
-        self,
-        label: str,
-        options: OptionSequence,
-        default: Optional[Any] = None,
-        format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        *,  # keyword-only arguments:
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        max_selections: Optional[int] = None,
-    ) -> List[Any]:
-        ...
-
     @gather_metrics
     def multiselect(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[T],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -266,7 +232,7 @@ class MultiSelectMixin:
     def _multiselect(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[T],
         default: Union[Iterable[Any], Any, None] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -341,6 +307,6 @@ Please select at most {max_selections} options."""
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
