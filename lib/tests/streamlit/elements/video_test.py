@@ -19,17 +19,28 @@ from io import BytesIO
 import numpy as np
 
 import streamlit as st
-from streamlit.runtime.media_file_manager import (
+import streamlit.runtime.media_file_manager as media_file_manager
+from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.media_file_storage import MediaFileStorageError
+from streamlit.web.server.memory_media_file_storage import (
+    MemoryMediaFileStorage,
     _calculate_file_id,
-    media_file_manager,
-    STATIC_MEDIA_ENDPOINT,
 )
 from tests import testutil
 
 
 class VideoTest(testutil.DeltaGeneratorTestCase):
-    def test_st_video(self):
-        """Test st.video."""
+    def setUp(self, override_root=True):
+        super().setUp(override_root)
+        self._storage = MemoryMediaFileStorage("/mock/media")
+        media_file_manager._media_file_manager = MediaFileManager(self._storage)
+
+    def tearDown(self):
+        media_file_manager._media_file_manager = None
+        super().tearDown()
+
+    def test_st_video_from_bytes(self):
+        """Test st.video using fake bytes data."""
         # Make up some bytes to pretend we have a video.  The server should not vet
         # the video before sending it to the browser.
         fake_video_data = "\x12\x10\x35\x44\x55\x66".encode("utf-8")
@@ -40,19 +51,20 @@ class VideoTest(testutil.DeltaGeneratorTestCase):
 
         # locate resultant file in InMemoryFileManager and test its properties.
         file_id = _calculate_file_id(fake_video_data, "video/mp4")
-        self.assertTrue(file_id in media_file_manager)
+        media_file = self._storage.get_file(file_id)
+        self.assertIsNotNone(media_file)
+        self.assertEqual(media_file.mimetype, "video/mp4")
+        self.assertEqual(self._storage.get_url(file_id), el.video.url)
 
-        afile = media_file_manager.get(file_id)
-        self.assertEqual(afile.mimetype, "video/mp4")
-        self.assertEqual(afile.url, el.video.url)
-
-        # Test with an arbitrary URL in place of data
+    def test_st_video_from_url(self):
+        """We can pass a URL directly to st.video"""
         some_url = "http://www.marmosetcare.com/video/in-the-wild/intro.webm"
         st.video(some_url)
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.url, some_url)
 
-        # Test with sufficiently varied youtube URLs
+    def test_youtube_urls_transformed_to_embed_links(self):
+        """Youtube URLs should be transformed into embed links."""
         yt_urls = (
             "https://youtu.be/_T8LGqJtuGc",
             "https://www.youtube.com/watch?v=kmfC-i9WgH0",
@@ -69,17 +81,21 @@ class VideoTest(testutil.DeltaGeneratorTestCase):
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.video.url, yt_embeds[x])
 
-        # Test that a non-URL string is assumed to be a filename
-        bad_filename = "blah"
-        with self.assertRaises(FileNotFoundError):
-            st.video(bad_filename)
+    def test_st_video_raises_on_bad_filename(self):
+        """A non-URL string is assumed to be a filename. A file we can't
+        open will result in an error.
+        """
+        with self.assertRaises(MediaFileStorageError):
+            st.video("not/a/real/file")
 
-        # Test that we can use an empty/None value without error.
+    def test_st_video_from_none(self):
+        """st.video(None) is not an error."""
         st.video(None)
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.url, "")
 
-        # Test that our other data types don't result in an error.
+    def test_st_video_other_inputs(self):
+        """Test that our other data types don't result in an error."""
         st.video(b"bytes_data")
         st.video("str_data".encode("utf-8"))
         st.video(BytesIO(b"bytesio_data"))
@@ -92,7 +108,7 @@ class VideoTest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.start_time, 10)
-        self.assertTrue(el.video.url.startswith(STATIC_MEDIA_ENDPOINT))
+        self.assertTrue(el.video.url.startswith("/mock/media"))
         self.assertTrue(
             _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
         )
