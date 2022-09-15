@@ -293,7 +293,6 @@ class SingletonCache(Cache):
         """Write a value and associated messages to the cache."""
         main_id = st._main.id
         sidebar_id = st.sidebar.id
-        # should MsgData contain info about being a widget? should this method take a separate arg of the widgets?
         widgets = {
             msg.widget_metadata.widget_id
             for msg in messages
