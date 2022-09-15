@@ -14,6 +14,8 @@
 
 """Unit tests for st.image and other image.py utility code."""
 
+from unittest import mock
+
 import PIL.Image as Image
 import cv2
 import numpy as np
