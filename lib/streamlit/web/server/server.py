@@ -84,7 +84,7 @@ MAX_PORT_SEARCH_RETRIES = 100
 UNIX_SOCKET_PREFIX = "unix://"
 
 # The endpoint we serve media files from.
-MEDIA_ENDPOINT: Final = "media"
+MEDIA_ENDPOINT: Final = "/media"
 
 
 class RetriesExceeded(Exception):
