@@ -37,7 +37,7 @@ from .forward_msg_cache import (
     create_reference_msg,
 )
 from .legacy_caching.caching import _mem_caches
-from .media_file_manager import MediaFileManager
+from .media_file_manager import MediaFileManager, set_media_file_manager
 from .media_file_storage import MediaFileStorage
 from .session_data import SessionData
 from .state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
@@ -171,6 +171,7 @@ class Runtime:
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._media_file_manager = MediaFileManager(storage=config.media_file_storage)
+        set_media_file_manager(self._media_file_manager)
 
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_memo_stats_provider())

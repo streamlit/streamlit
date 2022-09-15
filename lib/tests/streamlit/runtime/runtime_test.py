@@ -35,6 +35,7 @@ from streamlit.runtime.runtime import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
+from streamlit.web.server.memory_media_file_storage import MemoryMediaFileStorage
 from tests.streamlit.message_mocks import (
     create_dataframe_msg,
     create_script_finished_message,
@@ -483,7 +484,11 @@ class ScriptCheckTest(RuntimeTestCase):
         super().setUp()
 
     async def asyncSetUp(self):
-        config = RuntimeConfig(script_path=self._path, command_line="mock command line")
+        config = RuntimeConfig(
+            script_path=self._path,
+            command_line="mock command line",
+            media_file_storage=MemoryMediaFileStorage("/mock/media"),
+        )
         self.runtime = Runtime(config)
         await self.runtime.start()
 
