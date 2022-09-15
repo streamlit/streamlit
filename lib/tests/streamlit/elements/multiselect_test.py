@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import StreamlitAPIException
+from streamlit.elements.multiselect import get_default_count
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
 
@@ -285,3 +286,15 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
             str(e.exception),
             "Multiselect got 3 default options but max_selections is set to 2. Please select at most 2 options.",
         )
+
+    @parameterized.expand(
+        [
+            (["a", "b", "c"], 3),
+            (["a"], 1),
+            ([], 0),
+            ("a", 1),
+            (None, 0),
+        ]
+    )
+    def test_get_default_count(self, default, expected_count):
+        self.assertEqual(get_default_count(default), expected_count)

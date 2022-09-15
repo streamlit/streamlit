@@ -52,8 +52,6 @@ interface State {
    * The value specified by the user via the UI.
    */
   value: number[]
-
-  overMaxSelections: boolean | undefined
 }
 
 interface MultiselectOption {
@@ -68,10 +66,12 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   public state: State = {
     value: this.initialValue,
-    overMaxSelections:
-      this.maxSelections === 0
-        ? undefined
-        : this.initialValue.length >= this.maxSelections,
+  }
+
+  public overMaxSelections(): boolean | undefined {
+    return this.maxSelections === 0
+      ? undefined
+      : this.initialValue.length >= this.maxSelections
   }
 
   get initialValue(): number[] {
@@ -109,18 +109,9 @@ class Multiselect extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState(
-      {
-        value,
-        overMaxSelections:
-          this.maxSelections === 0
-            ? undefined
-            : value.length >= this.maxSelections,
-      },
-      () => {
-        this.commitWidgetValue({ fromUi: false })
-      }
-    )
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
   }
 
   /** Commit state.value to the WidgetStateManager. */
@@ -162,16 +153,14 @@ class Multiselect extends React.PureComponent<Props, State> {
       case "remove": {
         return {
           value: without(this.state.value, getIndex()),
-          overMaxSelections,
         }
       }
       case "clear": {
-        return { value: [], overMaxSelections }
+        return { value: [] }
       }
       case "select": {
         return {
           value: this.state.value.concat([getIndex()]),
-          overMaxSelections,
         }
       }
       default: {
@@ -203,10 +192,7 @@ class Multiselect extends React.PureComponent<Props, State> {
         }
       }
     } else {
-      const newState = this.generateNewState(
-        params,
-        this.state.overMaxSelections
-      )
+      const newState = this.generateNewState(params, this.overMaxSelections())
       this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
     }
   }
@@ -215,7 +201,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     options: readonly Option[],
     filterValue: string
   ): readonly Option[] => {
-    if (this.state.overMaxSelections) {
+    if (this.overMaxSelections()) {
       return []
     }
     // We need to manually filter for previously selected options here
@@ -245,8 +231,7 @@ class Multiselect extends React.PureComponent<Props, State> {
       }
     )
     const noResultsMsg =
-      this.state.overMaxSelections !== undefined &&
-      this.state.overMaxSelections
+      this.overMaxSelections() !== undefined && this.overMaxSelections()
         ? `You can only select up to ${this.maxSelections} options. Remove an option first.`
         : "No results"
 

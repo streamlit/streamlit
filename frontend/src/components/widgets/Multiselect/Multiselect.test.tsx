@@ -355,7 +355,7 @@ describe("Multiselect widget", () => {
       ])
     })
 
-    it("does allows an option to be removed when we are at max selections", () => {
+    it("does allow an option to be removed when we are at max selections", () => {
       const props = getProps(
         MultiSelectProto.create({
           id: "1",
