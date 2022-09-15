@@ -110,32 +110,45 @@ look up the function execution's results. The combination of first and second
 cache keys act as one true cache key, just split up because the second part depends
 on the first.
 
-There is a small catch to this. What widgets execute could depend on the values of
-any prior widgets. For example,
-> if st.checkbox():
->     s = st.slider(...)
-> ...
-the first time this code runs, we would miss the slider because it wasn't called,
+We need to treat widgets as implicit arguments of the cached function, because
+the behavior of the function, inluding what elements are created and what it
+returns, can be and usually will be influenced by the values of those widgets.
+For example:
+> @st.memo
+> def example_fn(x):
+>     y = x + 1
+>     if st.checkbox("hi"):
+>         st.write("you checked the thing")
+>         y = 0
+>     return y
+>
+> example_fn(2)
+
+If the checkbox is checked, the function call should return 0 and the checkbox and
+message should be rendered. If the checkbox isn't checked, only the checkbox should
+render, and the function will return 3.
+
+
+There is a small catch in this. Since what widgets execute could depend on the values of
+any prior widgets, if we replace the `st.write` call in the example with a slider,
+the first time it runs, we would miss the slider because it wasn't called,
 so when we later execute the function with the checkbox checked, the widget cache key
 would not include the state of the slider, and would incorrectly get a cache hit
 for a different slider value.
 
 In principle the cache could be function+args key -> 1st widget key -> 2nd widget key
 ... -> final widget key, with each widget dependent on the exact values of the widgets
-seen prior. But this would add complexity and both conceptual and runtime overhead.
-TODO: What if this would be worth it anyway?
+seen prior. This would prevent unnecessary cache misses due to differing values of widgets
+that wouldn't affect the function's execution because they aren't even created.
+But this would add even more complexity and both conceptual and runtime overhead, so it is
+unclear if it would be worth doing.
 
 Instead, we can keep the widgets as one cache key, and if we encounter a new widget
 while executing the function, we just update the list of widgets to include it.
 This will cause existing cached results to be invalidated, which is bad, but to
 avoid it we would need to keep around the full list of widgets and values for each
-widget cache key so we could compute the updated key, which is probably too expensive.
-TODO: But is it?
-
-Another downside of the update approach is that there could be multiple cache
-entries that differ only in the value of a widget that can't even affect the results
-because it isn't used.
-TODO: Is there some way around this?
+widget cache key so we could compute the updated key, which is probably too expensive
+to be worth it.
 """
 
 
