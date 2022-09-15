@@ -233,7 +233,7 @@ class MediaFileManager:
             return self._storage.get_url(file_id)
 
 
-# Singleton MediaFileManager instance. The Runtime will initialize
+# Singleton MediaFileManager instance. The Runtime initializes
 # this during startup.
 _media_file_manager: Optional[MediaFileManager] = None
 
