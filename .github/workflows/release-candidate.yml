@@ -56,19 +56,19 @@ jobs:
         run: |
           echo "DESIRED_VERSION=$(echo "${BRANCH}" | tr -d "release/")" >> $GITHUB_ENV
       # TODO: Needed for Slack Messages
-      # - name: Set final versions for pre-release and update version
-      #   env: 
-      #     DESIRED_VERSION: ${{ env.DESIRED_VERSION }}
-      #   run: |
-      #     # Start at the latest existing RC for this version if one exists,
-      #     # so the following update will increment to the right RC version
-      #     export LATEST_MATCHING_RC=$(curl https://pypi.org/pypi/streamlit/json | jq ".releases | keys | map(select(contains(\"rc\"))) | map(select(contains(\"$DESIRED_VERSION\"))) | sort | .[-1]" | tr --delete '"')
-      #     if [ $LATEST_MATCHING_RC != "null" ]; then python scripts/update_version.py $LATEST_MATCHING_RC; fi
+      - name: Set final versions for pre-release and update version
+        env: 
+          DESIRED_VERSION: ${{ env.DESIRED_VERSION }}
+        run: |
+          # Start at the latest existing RC for this version if one exists,
+          # so the following update will increment to the right RC version
+          export LATEST_MATCHING_RC=$(curl https://pypi.org/pypi/streamlit/json | jq ".releases | keys | map(select(contains(\"rc\"))) | map(select(contains(\"$DESIRED_VERSION\"))) | sort | .[-1]" | tr --delete '"')
+          if [ $LATEST_MATCHING_RC != "null" ]; then python scripts/update_version.py $LATEST_MATCHING_RC; fi
 
-      #     export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py "$DESIRED_VERSION")
-      #     echo "STREAMLIT_RELEASE_SEMVER="$STREAMLIT_RELEASE_SEMVER"" >> $GITHUB_ENV
-      #     echo "STREAMLIT_RELEASE_VERSION=$(echo "$STREAMLIT_RELEASE_SEMVER" | sed s/\-rc\./rc/)" >> $GITHUB_ENV
-      #     python scripts/update_version.py "$STREAMLIT_RELEASE_SEMVER"
+          export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py "$DESIRED_VERSION")
+          echo "STREAMLIT_RELEASE_SEMVER="$STREAMLIT_RELEASE_SEMVER"" >> $GITHUB_ENV
+          echo "STREAMLIT_RELEASE_VERSION=$(echo "$STREAMLIT_RELEASE_SEMVER" | sed s/\-rc\./rc/)" >> $GITHUB_ENV
+          python scripts/update_version.py "$STREAMLIT_RELEASE_SEMVER"
       - name: Create Package
         timeout-minutes: 120
         run: |
@@ -97,3 +97,18 @@ jobs:
         name: Upload to PyPI
         run: |
           make distribute
+      
+      - name: Successful Release Candidate Slack Message
+        if: ${{ success() }}
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          MESSAGE=":rocket: Release of RC version was successful!"
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"IGNORE - Testing :test_tube:/n"$MESSAGE""}' "$SLACK_WEBHOOK"
+      - name: Failed Release Candidate Slack Message
+        if: ${{ failure() }}
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          MESSAGE=":blobonfire: Release of RC version failed"
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"IGNORE - Testing :test_tube:/n"$MESSAGE""}' "$SLACK_WEBHOOK"
