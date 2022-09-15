@@ -236,17 +236,19 @@ class Multiselect extends React.PureComponent<Props, State> {
     const disabled = options.length === 0 ? true : this.props.disabled
     const placeholder =
       options.length === 0 ? "No options to select." : "Choose an option"
+    const selectOptions: MultiselectOption[] = options.map(
+      (option: string, idx: number) => {
+        return {
+          label: option,
+          value: idx.toString(),
+        }
+      }
+    )
     const noResultsMsg =
       this.state.overMaxSelections !== undefined &&
       this.state.overMaxSelections
         ? `You can only select up to ${this.maxSelections} options. Remove an option first.`
         : "No results"
-    const selectOptions = options.map((option: string, idx: number) => {
-      return {
-        label: option,
-        value: idx.toString(),
-      }
-    })
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(

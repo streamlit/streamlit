@@ -193,6 +193,7 @@ class MultiSelectMixin:
             "visible". This argument can only be supplied by keyword.
         max_selections : int
             The max selections that can be selected at a time. This argument can only be supplied by keyword.
+
         Returns
         -------
         list
@@ -270,6 +271,7 @@ class MultiSelectMixin:
             multiselect_proto.max_selections = max_selections
 
         serde = MultiSelectSerde(opt, default_value)
+
         widget_state = register_widget(
             "multiselect",
             multiselect_proto,
@@ -298,7 +300,6 @@ Please select at most {max_selections} options."""
         multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
-
         if widget_state.value_changed:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)
             multiselect_proto.set_value = True
