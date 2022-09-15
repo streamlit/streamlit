@@ -35,7 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
-from streamlit.runtime.media_file_manager import STATIC_MEDIA_ENDPOINT
+from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests import testutil
 
 
@@ -498,7 +498,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, "")
-        self.assertTrue(el.imgs.imgs[0].url.startswith(STATIC_MEDIA_ENDPOINT))
+        self.assertTrue(el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT))
 
     def test_st_pyplot_clear_figure(self):
         """st.pyplot should clear the passed-in figure."""
