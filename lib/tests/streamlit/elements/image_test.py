@@ -23,7 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 import streamlit.elements.image as image
-from streamlit.elements.image import _np_array_to_bytes
+from streamlit.elements.image import _np_array_to_bytes, _PIL_to_bytes
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.media_file_manager import (
@@ -255,8 +255,6 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.imgs[0].caption, "some caption")
 
         # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image import _PIL_to_bytes
-
         file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
         self.assertTrue(file_id in media_file_manager)
 
@@ -285,8 +283,6 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.width, -2)
 
         # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image import _PIL_to_bytes
-
         for idx in range(len(imgs)):
             file_id = _calculate_file_id(
                 _PIL_to_bytes(imgs[idx], format="PNG"), "image/png"
