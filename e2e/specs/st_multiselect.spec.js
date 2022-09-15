@@ -44,7 +44,7 @@ describe("st.multiselect", () => {
             "value 6: []" +
             "value 7: []" +
             "value 8: []" +
-            "value 9: ['male', 'female']" +
+            "value 9: []" +
             "value 10: []" +
             "multiselect changed: False"
         );
@@ -141,7 +141,7 @@ describe("st.multiselect", () => {
             "value 6: []" +
             "value 7: []" +
             "value 8: []" +
-            "value 9: ['male', 'female']" +
+            "value 9: []" +
             "value 10: []" +
             "multiselect changed: False"
         );
@@ -163,7 +163,7 @@ describe("st.multiselect", () => {
               "value 6: []" +
               "value 7: []" +
               "value 8: []" +
-              "value 9: ['male', 'female']" +
+              "value 9: []" +
               "value 10: []" +
               "multiselect changed: False"
           );
@@ -189,7 +189,7 @@ describe("st.multiselect", () => {
                 "value 6: []" +
                 "value 7: []" +
                 "value 8: []" +
-                "value 9: ['male', 'female']" +
+                "value 9: []" +
                 "value 10: []" +
                 "multiselect changed: False"
             );
@@ -215,7 +215,7 @@ describe("st.multiselect", () => {
                 "value 6: []" +
                 "value 7: []" +
                 "value 8: []" +
-                "value 9: ['male', 'female']" +
+                "value 9: []" +
                 "value 10: []" +
                 "multiselect changed: False"
             );
@@ -245,21 +245,50 @@ describe("st.multiselect", () => {
             "value 6: []" +
             "value 7: []" +
             "value 8: []" +
-            "value 9: ['male', 'female']" +
+            "value 9: []" +
             "value 10: ['male']" +
             "multiselect changed: True"
         );
     });
-
+  });
+  describe("when using max_selections for st.multiselect", () => {
     it("should show the correct text when maxSelections is reached", () => {
       cy.getIndexed(".stMultiSelect", 8).then(el => {
-        return cy
+        cy
           .wrap(el)
           .find("input")
           .click()
           .get("li")
-          .should("have.text", "You can only select up to 2 options")
+          .first()
+          .click()
+      });
+      cy.getIndexed(".stMultiSelect", 8).then(el => {
+        cy
+          .wrap(el)
+          // recheck that we have hit the limit
+          .find("input")
+          .click()
+          .get("li")
+          .first()
+          .should("have.text", "You can only select up to 1 options. Remove an option first.")
       });
     });
-  });
+
+
+    it("should display an error when options > max selections set during session state", () => {
+      cy.get(".stCheckbox")
+        .first()
+        // For whatever reason both click() and click({ force: true }) don't want
+        // to work here, so we use {multiple: true} even though we only take a
+        // snapshot of one of the checkboxes below.
+        .click({ multiple: true });
+
+      it("should throw an exception when options > maxSelections is set from session state", () => {
+        cy.get(".element-container .stException").should(
+          "contain.text",
+          `Multiselect has 2 options selected but max_selections\nis set to 1. This happened because you manipulated\nthe widget's state through st.session_state. Note that this\nhappened before the line indicated in the traceback.\nPlease select at most 1 options.`
+        );
+      });
+    });
+  })
 });
