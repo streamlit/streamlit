@@ -255,6 +255,7 @@ class Multiselect extends React.PureComponent<Props, State> {
             size={"compact"}
             noResultsMsg={noResultsMsg}
             filterOptions={this.filterOptions}
+            closeOnSelect={false}
             overrides={{
               IconsContainer: {
                 style: () => ({
