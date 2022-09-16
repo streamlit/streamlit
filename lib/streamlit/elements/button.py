@@ -408,11 +408,16 @@ def marshall_file(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    file_url = get_media_file_manager().add(
-        data_as_bytes,
-        mimetype,
-        coordinates,
-        file_name=file_name,
-        is_for_static_download=True,
-    )
+    if streamlit._is_running_with_streamlit:
+        file_url = get_media_file_manager().add(
+            data_as_bytes,
+            mimetype,
+            coordinates,
+            file_name=file_name,
+            is_for_static_download=True,
+        )
+    else:
+        # When running in "raw mode", we can't access the MediaFileManager.
+        file_url = ""
+
     proto_download_button.url = file_url
