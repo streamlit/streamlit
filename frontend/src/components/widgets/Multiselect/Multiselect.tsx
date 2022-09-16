@@ -68,9 +68,9 @@ class Multiselect extends React.PureComponent<Props, State> {
     value: this.initialValue,
   }
 
-  public overMaxSelections(): boolean | undefined {
+  public overMaxSelections(): boolean {
     return this.maxSelections === 0
-      ? undefined
+      ? false
       : this.initialValue.length >= this.maxSelections
   }
 
