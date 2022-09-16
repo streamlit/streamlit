@@ -148,7 +148,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         max_selections: Optional[int] = None,
-    ) -> List[Any]:
+    ) -> List[T]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
