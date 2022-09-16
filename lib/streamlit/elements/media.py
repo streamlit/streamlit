@@ -19,6 +19,7 @@ from typing_extensions import Final, TypeAlias
 
 from validators import url
 
+import streamlit
 from streamlit import type_util
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
@@ -179,6 +180,9 @@ def _marshall_av_media(
 
     Load data either from file or through bytes-processing methods into a
     MediaFile object.  Pack proto with generated Tornado-based URL.
+
+    (When running in "raw" mode, we won't actually load data into the
+    MediaFileManager, and we'll return an empty URL.)
     """
     # Audio and Video methods have already checked if this is a URL by this point.
 
@@ -205,7 +209,12 @@ def _marshall_av_media(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    file_url = get_media_file_manager().add(data_or_filename, mimetype, coordinates)
+    if streamlit._is_running_with_streamlit:
+        file_url = get_media_file_manager().add(data_or_filename, mimetype, coordinates)
+    else:
+        # When running in "raw mode", we can't access the MediaFileManager.
+        file_url = ""
+
     proto.url = file_url
 
 
