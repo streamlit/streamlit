@@ -18,8 +18,8 @@ import threading
 import types
 from contextlib import contextmanager
 from enum import Enum
-from typing import Dict, Optional, Callable
 from timeit import default_timer as timer
+from typing import Dict, Optional, Callable
 
 from blinker import Signal
 
@@ -30,12 +30,13 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.media_file_manager import get_media_file_manager
 from streamlit.runtime.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
 )
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from . import magic
 from .script_requests import (
     ScriptRequests,
@@ -43,7 +44,6 @@ from .script_requests import (
     ScriptRequestType,
 )
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
-from ..media_file_manager import get_media_file_manager
 
 LOGGER = get_logger(__name__)
 
