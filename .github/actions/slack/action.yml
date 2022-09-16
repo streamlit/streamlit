@@ -1,0 +1,31 @@
+name: "Slack Notification for Test Failures"
+
+inputs:
+  python_result:
+    description: 'Python Test Result'
+  javascript_result:
+    description: 'Javascript Test Result'
+  py_prod_deps_result:
+    description: 'Python Prod Deps Test Result'
+  cypress_result:
+    description: 'Cypress Test Result'
+
+runs:
+  using: composite
+  steps:
+    - if: ${{ inputs.python_result == 'failure' }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly build failed on python tests"}' "$SLACK_WEBHOOK"
+      shell: bash -ileo pipefail {0}
+    - if: ${{ inputs.javascript_result == 'failure' }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly build failed on javascript tests"}' "$SLACK_WEBHOOK"
+      shell: bash -ileo pipefail {0}
+    - if: ${{ inputs.py_prod_deps_result == 'failure' }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly build failed on python prod dependencies test"}' "$SLACK_WEBHOOK"
+      shell: bash -ileo pipefail {0}
+    - if: ${{ inputs.cypress_result == 'failure' }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly build failed on cypress tests"}' "$SLACK_WEBHOOK"
+      shell: bash -ileo pipefail {0}
