@@ -368,6 +368,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.invalidate_pages_cache")
     @patch("streamlit.web.bootstrap.watch_dir")
+    @patch("streamlit.web.bootstrap.Path.exists", Mock(return_value=True))
     def test_install_pages_watcher(
         self, patched_watch_dir, patched_invalidate_pages_cache
     ):
@@ -380,8 +381,13 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             "/foo/bar/pages",
             on_pages_changed,
             glob_pattern="*.py",
-            allow_nonexistent=True,
         )
 
         on_pages_changed("/foo/bar/pages")
         patched_invalidate_pages_cache.assert_called_once()
+
+    @patch("streamlit.web.bootstrap.watch_dir")
+    @patch("streamlit.web.bootstrap.Path.exists", Mock(return_value=False))
+    def test_install_pages_watcher_not_installed_if_no_dir(self, patched_watch_dir):
+        bootstrap._install_pages_watcher("/foo/bar/streamlit_app.py")
+        patched_watch_dir.assert_not_called()

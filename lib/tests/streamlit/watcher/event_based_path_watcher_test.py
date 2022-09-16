@@ -108,14 +108,12 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         ro.close()
 
     def test_kwargs_plumbed_to_calc_md5(self):
-        """Test that we pass the glob_pattern and allow_nonexistent kwargs to
-        calc_md5_with_blocking_retries.
+        """Test that we pass the glob_pattern kwarg to calc_md5_with_blocking_retries.
 
         `EventBasedPathWatcher`s can be created with optional kwargs allowing
         the caller to specify what types of files to watch (when watching a
-        directory) and whether to allow watchers on paths with no files/dirs.
-        This test ensures that these optional parameters make it to our hash
-        calculation helpers across different on_changed events.
+        directory). This test ensures that these optional parameters make it
+        to our hash calculation helpers across different on_changed events.
         """
         cb = Mock()
 
@@ -126,7 +124,6 @@ class EventBasedPathWatcherTest(unittest.TestCase):
             "/this/is/my/dir",
             cb,
             glob_pattern="*.py",
-            allow_nonexistent=True,
         )
 
         fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
@@ -135,7 +132,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         folder_handler = fo._observer.schedule.call_args[0][0]
 
         _, kwargs = self.mock_util.calc_md5_with_blocking_retries.call_args
-        assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
+        assert kwargs == {"glob_pattern": "*.py"}
         cb.assert_not_called()
 
         self.mock_util.path_modification_time = lambda *args: 102.0
@@ -147,7 +144,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         folder_handler.on_modified(ev)
 
         _, kwargs = self.mock_util.calc_md5_with_blocking_retries.call_args
-        assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
+        assert kwargs == {"glob_pattern": "*.py"}
         cb.assert_called_once()
 
         ro.close()

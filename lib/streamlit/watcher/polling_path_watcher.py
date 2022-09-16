@@ -51,7 +51,6 @@ class PollingPathWatcher:
         on_changed: Callable[[str], None],
         *,  # keyword-only arguments:
         glob_pattern: Optional[str] = None,
-        allow_nonexistent: bool = False,
     ) -> None:
         """Constructor.
 
@@ -64,17 +63,13 @@ class PollingPathWatcher:
         self._on_changed = on_changed
 
         self._glob_pattern = glob_pattern
-        self._allow_nonexistent = allow_nonexistent
 
         self._active = True
 
-        self._modification_time = util.path_modification_time(
-            self._path, self._allow_nonexistent
-        )
+        self._modification_time = util.path_modification_time(self._path)
         self._md5 = util.calc_md5_with_blocking_retries(
             self._path,
             glob_pattern=self._glob_pattern,
-            allow_nonexistent=self._allow_nonexistent,
         )
         self._schedule()
 
@@ -93,9 +88,7 @@ class PollingPathWatcher:
             # Don't call self._schedule()
             return
 
-        modification_time = util.path_modification_time(
-            self._path, self._allow_nonexistent
-        )
+        modification_time = util.path_modification_time(self._path)
         if modification_time <= self._modification_time:
             self._schedule()
             return
@@ -105,7 +98,6 @@ class PollingPathWatcher:
         md5 = util.calc_md5_with_blocking_retries(
             self._path,
             glob_pattern=self._glob_pattern,
-            allow_nonexistent=self._allow_nonexistent,
         )
         if md5 == self._md5:
             self._schedule()

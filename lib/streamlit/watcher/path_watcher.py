@@ -52,7 +52,6 @@ class NoOpPathWatcher:
         _on_changed: Callable[[str], None],
         *,  # keyword-only arguments:
         glob_pattern: Optional[str] = None,
-        allow_nonexistent: bool = False,
     ):
         pass
 
@@ -91,7 +90,6 @@ def _watch_path(
     watcher_type: Optional[str] = None,
     *,  # keyword-only arguments:
     glob_pattern: Optional[str] = None,
-    allow_nonexistent: bool = False,
 ) -> bool:
     """Create a PathWatcher for the given path if we have a viable
     PathWatcher class.
@@ -109,9 +107,6 @@ def _watch_path(
         Optional glob pattern to use when watching a directory. If set, only
         files matching the pattern will be counted as being created/deleted
         within the watched directory.
-    allow_nonexistent
-        If True, allow the file or directory at the given path to be
-        nonexistent.
 
     Returns
     -------
@@ -130,7 +125,6 @@ def _watch_path(
         path,
         on_path_changed,
         glob_pattern=glob_pattern,
-        allow_nonexistent=allow_nonexistent,
     )
     return True
 
@@ -149,14 +143,12 @@ def watch_dir(
     watcher_type: Optional[str] = None,
     *,  # keyword-only arguments:
     glob_pattern: Optional[str] = None,
-    allow_nonexistent: bool = False,
 ) -> bool:
     return _watch_path(
         path,
         on_dir_changed,
         watcher_type,
         glob_pattern=glob_pattern,
-        allow_nonexistent=allow_nonexistent,
     )
 
 

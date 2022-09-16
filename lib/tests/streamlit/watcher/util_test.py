@@ -42,11 +42,6 @@ class UtilTest(unittest.TestCase):
         md5 = util.calc_md5_with_blocking_retries("foo", glob_pattern="*.py")
         mock_stable_dir_identifier.assert_called_once_with("foo", "*.py")
 
-    @patch("os.path.exists", MagicMock(return_value=False))
-    def test_md5_calculation_allow_nonexistent(self):
-        md5 = util.calc_md5_with_blocking_retries("hello", allow_nonexistent=True)
-        self.assertEqual(md5, "5d41402abc4b2a76b9719d911017c592")
-
     def test_md5_calculation_opens_file_with_rb(self):
         # This tests implementation :( . But since the issue this is addressing
         # could easily come back to bite us if a distracted coder tweaks the
@@ -70,17 +65,6 @@ class PathModificationTimeTests(unittest.TestCase):
     @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
     def test_st_mtime_if_file_exists(self):
         assert util.path_modification_time("foo") == 101.0
-
-    @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
-    )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
-    def test_st_mtime_if_file_exists_and_allow_nonexistent(self):
-        assert util.path_modification_time("foo", allow_nonexistent=True) == 101.0
-
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=False))
-    def test_zero_if_file_nonexistent_and_allow_nonexistent(self):
-        assert util.path_modification_time("foo", allow_nonexistent=True) == 0.0
 
 
 class DirHelperTests(unittest.TestCase):

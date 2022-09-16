@@ -119,7 +119,6 @@ class FileWatcherTest(unittest.TestCase):
                             "some/file/path",
                             on_file_changed,
                             glob_pattern=None,
-                            allow_nonexistent=False,
                         )
                         self.assertTrue(watching_file)
                     else:
@@ -138,7 +137,6 @@ class FileWatcherTest(unittest.TestCase):
             on_file_changed,
             watcher_type="watchdog",
             glob_pattern="*.py",
-            allow_nonexistent=True,
         )
 
         self.assertTrue(watching_dir)
@@ -146,5 +144,4 @@ class FileWatcherTest(unittest.TestCase):
             "some/dir/path",
             on_file_changed,
             glob_pattern="*.py",
-            allow_nonexistent=True,
         )
