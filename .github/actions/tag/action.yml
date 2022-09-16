@@ -8,7 +8,7 @@ runs:
   using: composite
   steps:
     - name: Set GIT_TAG
-      run: echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
       env:
         GIT_TAG: ${{ inputs.tag_name }}
+      run: echo 'GIT_TAG="$GIT_TAG"' >> $GITHUB_ENV
       shell: bash -ileo pipefail {0}
