@@ -63,7 +63,7 @@ jobs:
           # Start at the latest existing RC for this version if one exists,
           # so the following update will increment to the right RC version
           LATEST_MATCHING_RC=$(curl https://pypi.org/pypi/streamlit/json | jq ".releases | keys | map(select(contains(\"rc\"))) | map(select(contains(\"$DESIRED_VERSION\"))) | sort | .[-1]" | tr --delete '"')
-          if [ $LATEST_MATCHING_RC != "null" ]; then python scripts/update_version.py $LATEST_MATCHING_RC; fi
+          if [ "$LATEST_MATCHING_RC" != "null" ]; then python scripts/update_version.py "$LATEST_MATCHING_RC"; fi
 
           STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py "$DESIRED_VERSION")
           python scripts/update_version.py "$STREAMLIT_RELEASE_SEMVER"
@@ -85,8 +85,8 @@ jobs:
         run: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = "$STREAMLIT_PYPI_USERNAME"" >> ~/.pypirc
-            echo -e "password = "$STREAMLIT_PYPI_API_TOKEN"" >> ~/.pypirc
+            echo -e 'username = "$STREAMLIT_PYPI_USERNAME"' >> ~/.pypirc
+            echo -e 'password = "$STREAMLIT_PYPI_API_TOKEN"' >> ~/.pypirc
       - name: Upload to PyPI
         run: |
           make distribute
