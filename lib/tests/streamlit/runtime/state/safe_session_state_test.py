@@ -202,15 +202,3 @@ class SafeSessionStateTests(unittest.TestCase):
         safe_state, _ = _create_state_spy({"foo": "bar"}, disconnect=True)
         with self.assertRaises(KeyError):
             del safe_state["foo"]
-
-    def test_get(self):
-        safe_state, _ = _create_state_spy({"foo": "bar"}, disconnect=False)
-        assert safe_state.get("foo") == "bar"
-        assert safe_state.get("bar", "baz") == "baz"
-        assert safe_state.get("bar") is None
-
-        safe_state, _ = _create_state_spy({"foo": "bar"}, disconnect=True)
-        with self.assertRaises(KeyError):
-            safe_state.get("foo")
-        with self.assertRaises(KeyError):
-            safe_state.get("bar")

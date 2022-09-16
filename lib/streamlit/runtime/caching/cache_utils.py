@@ -165,14 +165,6 @@ class CachedResult:
 
 
 @dataclass
-class WidgetStateNotFound:
-    pass
-
-
-WIDGET_STATE_NOT_FOUND = WidgetStateNotFound()
-
-
-@dataclass
 class InitialCachedResults:
     """Widgets called by a cache-decorated function, and a mapping of the
     widget-derived cache key to the final results of executing the function.
@@ -185,9 +177,14 @@ class InitialCachedResults:
         self, ctx: ScriptRunContext, cache_type: CacheType
     ) -> str:
         state = ctx.session_state
+        # Compute the key using only widgets that have values. A missing widget
+        # can be ignored because we only care about getting different keys
+        # for different widget values, and for that purpose doing nothing
+        # to the running hash is just as good as including the widget with a
+        # sentinel value. But by excluding it, we might get to reuse a result
+        # saved before we knew about that widget.
         widget_values = [
-            (wid, state.get(wid, WIDGET_STATE_NOT_FOUND))
-            for wid in sorted(self.widget_ids)
+            (wid, state[wid]) for wid in sorted(self.widget_ids) if wid in state
         ]
         widget_key = _make_widget_key(widget_values, cache_type)
         return widget_key
