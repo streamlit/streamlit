@@ -41,6 +41,9 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self) -> None:
         super().tearDown()
+        # Server._create_app() will create the MediaFileManager singleton.
+        # We null it out in tearDown() so that it doesn't interfere with
+        # future tests.
         media_file_manager._media_file_manager = None
 
     def get_app(self) -> tornado.web.Application:
