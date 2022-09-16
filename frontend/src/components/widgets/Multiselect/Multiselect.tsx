@@ -69,9 +69,9 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   public overMaxSelections(): boolean {
-    return this.maxSelections === 0
-      ? false
-      : this.initialValue.length >= this.maxSelections
+    return (
+      this.maxSelections > 0 && this.initialValue.length >= this.maxSelections
+    )
   }
 
   get initialValue(): number[] {
@@ -167,15 +167,16 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private onChange = (params: OnChangeParams): void => {
-    // Do NOT change state when max selection is set, we are selecting, and value.length >= this.maxSelections
     if (
-      !this.maxSelections ||
-      params.type !== "select" ||
-      this.state.value.length < this.maxSelections
+      this.maxSelections &&
+      params.type === "select" &&
+      this.state.value.length >= this.maxSelections
     ) {
-      const newState = this.generateNewState(params)
-      this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
+      return
     }
+    this.setState(this.generateNewState(params), () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
   }
 
   private filterOptions = (
