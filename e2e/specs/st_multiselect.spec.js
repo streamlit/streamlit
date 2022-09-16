@@ -101,17 +101,22 @@ describe("st.multiselect", () => {
     });
   });
 
-  function selectOption(idx) {
-    cy.get(".stMultiSelect")
-      .should("have.length", 10)
-      .eq(1)
+  function selectNthOptionForKthMultiselect(n, k) {
+    cy.getIndexed(".stMultiSelect", k)
+          .find("input")
+          .click();
+    cy
+      .get("li")
+      .eq(n)
+      .click();
+    // close the multiselect
+    cy.getIndexed(".stMultiSelect", k)
       .find("input")
       .click();
-    cy.getIndexed("li", idx).click();
   }
 
   describe("when the user makes a selection", () => {
-    beforeEach(() => selectOption(1));
+    beforeEach(() => selectNthOptionForKthMultiselect(1, 1));
 
     it("sets the value correctly", () => {
       cy.getIndexed(".stMultiSelect span", 1).should("have.text", "Female");
@@ -148,7 +153,7 @@ describe("st.multiselect", () => {
     });
 
     describe("when the user picks a second option", () => {
-      beforeEach(() => selectOption(0));
+      beforeEach(() => selectNthOptionForKthMultiselect(0, 1));
 
       it("outputs the correct value", () => {
         cy.get("[data-testid='stText']")
@@ -254,15 +259,7 @@ describe("st.multiselect", () => {
 
   describe("when using max_selections for st.multiselect", () => {
     it("should show the correct text when maxSelections is reached", () => {
-      cy.getIndexed(".stMultiSelect", 8).then(el => {
-        cy
-          .wrap(el)
-          .find("input")
-          .click()
-          .get("li")
-          .first()
-          .click()
-      });
+      selectNthOptionForKthMultiselect(0, 8)
       cy.getIndexed(".stMultiSelect", 8).then(el => {
         cy
           .wrap(el)
