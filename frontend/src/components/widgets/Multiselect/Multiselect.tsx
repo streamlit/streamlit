@@ -167,22 +167,12 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private onChange = (params: OnChangeParams): void => {
-    if (this.maxSelections) {
-      if (params.type === "clear") {
-        const newState = this.generateNewState(params)
-        this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
-      } else if (params.type === "remove") {
-        const newState = this.generateNewState(params)
-        this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
-      } else if (params.type === "select") {
-        if (this.state.value.length < this.maxSelections) {
-          const newState = this.generateNewState(params)
-          this.setState(newState, () =>
-            this.commitWidgetValue({ fromUi: true })
-          )
-        }
-      }
-    } else {
+    // Do NOT change state when max selection is set, we are selecting, and value.length >= this.maxSelections
+    if (
+      !this.maxSelections ||
+      params.type !== "select" ||
+      this.state.value.length < this.maxSelections
+    ) {
       const newState = this.generateNewState(params)
       this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
     }
