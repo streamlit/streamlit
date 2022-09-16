@@ -17,9 +17,10 @@
 from typing import Optional
 from unittest import mock, TestCase
 import random
-from unittest.mock import mock_open
+from unittest.mock import mock_open, MagicMock, call
 
 from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import (
     _calculate_file_id,
     MemoryMediaFileStorage,
@@ -149,6 +150,9 @@ class MediaFileManagerTest(TestCase):
     )
     def test_add_binary_files(self, _):
         """Test that we can add binary files to the manager."""
+        storage_load_spy = MagicMock(side_effect=self.storage.load_and_get_id)
+        self.storage.load_and_get_id = storage_load_spy
+
         sample_coords = set()
         while len(sample_coords) < len(ALL_FIXTURES):
             sample_coords.add(random_coordinates())
@@ -161,6 +165,12 @@ class MediaFileManagerTest(TestCase):
                 content, mimetype, sample_coords.pop()
             )
             self.assertIsNotNone(media_file)
+
+            # Ensure MediaFileStorage.load_and_get_id was called as expected.
+            storage_load_spy.assert_called_once_with(
+                content, mimetype, MediaFileKind.MEDIA, None
+            )
+            storage_load_spy.reset_mock()
 
         # There should be as many files in MFM as we added.
         self.assertEqual(len(self.media_file_manager._files_by_id), len(ALL_FIXTURES))
@@ -179,6 +189,9 @@ class MediaFileManagerTest(TestCase):
     )
     def test_add_file_by_name(self, _1):
         """Test that we can add files by filename."""
+        storage_load_spy = MagicMock(side_effect=self.storage.load_and_get_id)
+        self.storage.load_and_get_id = storage_load_spy
+
         self.media_file_manager.add(
             "mock/file/path.png", "image/png", random_coordinates()
         )
@@ -189,6 +202,11 @@ class MediaFileManagerTest(TestCase):
         # And it should be registered to our session
         self.assertEqual(
             len(self.media_file_manager._files_by_session_and_coord["mock_session"]), 1
+        )
+
+        # Ensure MediaFileStorage.load_and_get_id was called as expected.
+        storage_load_spy.assert_called_once_with(
+            "mock/file/path.png", "image/png", MediaFileKind.MEDIA, None
         )
 
     @mock.patch(
@@ -280,6 +298,9 @@ class MediaFileManagerTest(TestCase):
         """Calling clear_session_refs/remove_orphaned_files in an empty manager
         is a no-op.
         """
+        storage_delete_spy = MagicMock(side_effect=self.storage.delete_file)
+        self.storage.delete_file = storage_delete_spy
+
         self.assertEqual(len(self.media_file_manager._files_by_id), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
@@ -289,11 +310,18 @@ class MediaFileManagerTest(TestCase):
         self.assertEqual(len(self.media_file_manager._files_by_id), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
+        # MediaFileStorage.delete_file should not have been called, because
+        # no files were actually deleted.
+        storage_delete_spy.assert_not_called()
+
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_remove_orphaned_files_multiple_sessions(self, mock_get_session_id):
         """clear_session_refs/remove_orphaned_files behaves correctly when multiple
         sessions are referencing some of the same files.
         """
+        storage_delete_spy = MagicMock(side_effect=self.storage.delete_file)
+        self.storage.delete_file = storage_delete_spy
+
         # Have two sessions add the same set of files
         for session_id in ("mock_session_1", "mock_session_2"):
             mock_get_session_id.return_value = session_id
@@ -305,6 +333,8 @@ class MediaFileManagerTest(TestCase):
 
         self.assertEqual(len(self.media_file_manager._files_by_id), len(VIDEO_FIXTURES))
 
+        file_ids = list(self.media_file_manager._files_by_id.keys())
+
         # Remove session1's references
         mock_get_session_id.return_value = "mock_session_1"
         self.media_file_manager.clear_session_refs()
@@ -312,6 +342,9 @@ class MediaFileManagerTest(TestCase):
 
         # The files are all still referenced by session_2
         self.assertEqual(len(self.media_file_manager._files_by_id), len(VIDEO_FIXTURES))
+
+        # MediaFileStorage.delete_file should not have been called yet...
+        storage_delete_spy.assert_not_called()
 
         # Remove session2's references, but don't call "remove_orphaned_files" yet...
         mock_get_session_id.return_value = "mock_session_2"
@@ -321,6 +354,15 @@ class MediaFileManagerTest(TestCase):
         # removed.
         self.assertEqual(len(self.media_file_manager._files_by_id), len(VIDEO_FIXTURES))
 
+        # MediaFileStorage.delete_file should not have been called yet...
+        storage_delete_spy.assert_not_called()
+
         # After a final call to remove_orphaned_files, the files should be gone.
         self.media_file_manager.remove_orphaned_files()
         self.assertEqual(len(self.media_file_manager._files_by_id), 0)
+
+        # MediaFileStorage.delete_file should have been called once for each
+        # file.
+        storage_delete_spy.assert_has_calls(
+            [call(file_id) for file_id in file_ids], any_order=True
+        )
