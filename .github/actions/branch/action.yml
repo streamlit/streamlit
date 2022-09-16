@@ -8,7 +8,7 @@ runs:
   using: composite
   steps:
     - name: Set BRANCH
-      run: echo "BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
       env:
         BRANCH_NAME: ${{ inputs.branch }}
+      run: echo "BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
       shell: bash -ileo pipefail {0}
