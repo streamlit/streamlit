@@ -264,9 +264,13 @@ class MultiSelectMixin:
         if help is not None:
             multiselect_proto.help = dedent(help)
         if max_selections is not None:
+            if max_selections < 1:
+                raise StreamlitAPIException(
+                    f"`max_selections` is set to {max_selections}. Please set `max_selections` to be greater than 0."
+                )
             if get_default_count(default) > max_selections:
                 raise StreamlitAPIException(
-                    f"Multiselect got {get_default_count(default)} default options but max_selections is set to {max_selections}. Please select at most {max_selections} options."
+                    f"Multiselect got {get_default_count(default)} default options but `max_selections` is set to {max_selections}. Please select at most {max_selections} options."
                 )
             multiselect_proto.max_selections = max_selections
 
@@ -288,11 +292,13 @@ class MultiSelectMixin:
             and get_default_count(widget_state.value) > max_selections
         ):
             raise StreamlitAPIException(
-                f"""Multiselect has {get_default_count(widget_state.value)} options selected but `max_selections`
-is set to {max_selections}. This happened because you manipulated
-the widget's state through `st.session_state`. Note that this
-happened before the line indicated in the traceback.
-Please select at most {max_selections} options."""
+                f"""           
+Multiselect has {get_default_count(widget_state.value)} options selected but `max_selections` 
+is set to {max_selections}. This happened because you manipulated 
+the widget's state through `st.session_state`. Note that 
+this happened before the line indicated in the traceback. 
+Please select at most {max_selections} options.
+"""
             )
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.

@@ -140,10 +140,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     })
   }
 
-  private generateNewState(
-    data: OnChangeParams,
-    overMaxSelections: boolean | undefined
-  ): State {
+  private generateNewState(data: OnChangeParams): State {
     const getIndex = (): number => {
       const valueId = data.option?.value
       return parseInt(valueId, 10)
@@ -172,27 +169,21 @@ class Multiselect extends React.PureComponent<Props, State> {
   private onChange = (params: OnChangeParams): void => {
     if (this.maxSelections) {
       if (params.type === "clear") {
-        const newState = this.generateNewState(params, false)
+        const newState = this.generateNewState(params)
         this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
       } else if (params.type === "remove") {
-        const newState = this.generateNewState(
-          params,
-          this.state.value.length > this.maxSelections
-        )
+        const newState = this.generateNewState(params)
         this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
       } else if (params.type === "select") {
         if (this.state.value.length < this.maxSelections) {
-          const newState = this.generateNewState(
-            params,
-            this.state.value.length === this.maxSelections - 1
-          )
+          const newState = this.generateNewState(params)
           this.setState(newState, () =>
             this.commitWidgetValue({ fromUi: true })
           )
         }
       }
     } else {
-      const newState = this.generateNewState(params, this.overMaxSelections())
+      const newState = this.generateNewState(params)
       this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
     }
   }
