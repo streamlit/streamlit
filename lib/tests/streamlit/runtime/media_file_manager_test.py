@@ -99,7 +99,7 @@ class MediaFileManagerTest(TestCase):
         random.seed(1337)
 
     def tearDown(self):
-        self.media_file_manager._files_by_id.clear()
+        self.media_file_manager._file_metadata.clear()
         self.media_file_manager._files_by_session_and_coord.clear()
 
     def _add_file_and_get_object(
@@ -173,7 +173,7 @@ class MediaFileManagerTest(TestCase):
             storage_load_spy.reset_mock()
 
         # There should be as many files in MFM as we added.
-        self.assertEqual(len(self.media_file_manager._files_by_id), len(ALL_FIXTURES))
+        self.assertEqual(len(self.media_file_manager._file_metadata), len(ALL_FIXTURES))
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
@@ -197,7 +197,7 @@ class MediaFileManagerTest(TestCase):
         )
 
         # We should have a single file in the MFM.
-        self.assertEqual(len(self.media_file_manager._files_by_id), 1)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 1)
 
         # And it should be registered to our session
         self.assertEqual(
@@ -221,7 +221,7 @@ class MediaFileManagerTest(TestCase):
             self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
 
         # There should be 6 files in MFM.
-        self.assertEqual(len(self.media_file_manager._files_by_id), len(ALL_FIXTURES))
+        self.assertEqual(len(self.media_file_manager._file_metadata), len(ALL_FIXTURES))
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
@@ -236,7 +236,7 @@ class MediaFileManagerTest(TestCase):
         self.media_file_manager.remove_orphaned_files()
 
         # There should be only 0 file in MFM.
-        self.assertEqual(len(self.media_file_manager._files_by_id), 0)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 0)
 
         # There should only be 0 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
@@ -254,13 +254,13 @@ class MediaFileManagerTest(TestCase):
 
         self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
         file_id = _calculate_file_id(sample["content"], sample["mimetype"])
-        self.assertTrue(file_id in self.media_file_manager._files_by_id)
+        self.assertTrue(file_id in self.media_file_manager._file_metadata)
 
         self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
-        self.assertTrue(file_id in self.media_file_manager._files_by_id)
+        self.assertTrue(file_id in self.media_file_manager._file_metadata)
 
         # There should only be 1 file in MFM.
-        self.assertEqual(len(self.media_file_manager._files_by_id), 1)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 1)
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
@@ -278,14 +278,14 @@ class MediaFileManagerTest(TestCase):
         coord = random_coordinates()
         self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
         file_id = _calculate_file_id(sample["content"], sample["mimetype"])
-        self.assertTrue(file_id in self.media_file_manager._files_by_id)
+        self.assertTrue(file_id in self.media_file_manager._file_metadata)
 
         coord = random_coordinates()
         self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
-        self.assertTrue(file_id in self.media_file_manager._files_by_id)
+        self.assertTrue(file_id in self.media_file_manager._file_metadata)
 
         # There should only be 1 file in MFM.
-        self.assertEqual(len(self.media_file_manager._files_by_id), 1)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 1)
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
@@ -301,13 +301,13 @@ class MediaFileManagerTest(TestCase):
         storage_delete_spy = MagicMock(side_effect=self.storage.delete_file)
         self.storage.delete_file = storage_delete_spy
 
-        self.assertEqual(len(self.media_file_manager._files_by_id), 0)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
         self.media_file_manager.clear_session_refs()
         self.media_file_manager.remove_orphaned_files()
 
-        self.assertEqual(len(self.media_file_manager._files_by_id), 0)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
         # MediaFileStorage.delete_file should not have been called, because
@@ -331,9 +331,11 @@ class MediaFileManagerTest(TestCase):
                     sample["content"], sample["mimetype"], coord
                 )
 
-        self.assertEqual(len(self.media_file_manager._files_by_id), len(VIDEO_FIXTURES))
+        self.assertEqual(
+            len(self.media_file_manager._file_metadata), len(VIDEO_FIXTURES)
+        )
 
-        file_ids = list(self.media_file_manager._files_by_id.keys())
+        file_ids = list(self.media_file_manager._file_metadata.keys())
 
         # Remove session1's references
         mock_get_session_id.return_value = "mock_session_1"
@@ -341,7 +343,9 @@ class MediaFileManagerTest(TestCase):
         self.media_file_manager.remove_orphaned_files()
 
         # The files are all still referenced by session_2
-        self.assertEqual(len(self.media_file_manager._files_by_id), len(VIDEO_FIXTURES))
+        self.assertEqual(
+            len(self.media_file_manager._file_metadata), len(VIDEO_FIXTURES)
+        )
 
         # MediaFileStorage.delete_file should not have been called yet...
         storage_delete_spy.assert_not_called()
@@ -352,14 +356,16 @@ class MediaFileManagerTest(TestCase):
 
         # The files still exist, because they've only been de-referenced and not
         # removed.
-        self.assertEqual(len(self.media_file_manager._files_by_id), len(VIDEO_FIXTURES))
+        self.assertEqual(
+            len(self.media_file_manager._file_metadata), len(VIDEO_FIXTURES)
+        )
 
         # MediaFileStorage.delete_file should not have been called yet...
         storage_delete_spy.assert_not_called()
 
         # After a final call to remove_orphaned_files, the files should be gone.
         self.media_file_manager.remove_orphaned_files()
-        self.assertEqual(len(self.media_file_manager._files_by_id), 0)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 0)
 
         # MediaFileStorage.delete_file should have been called once for each
         # file.

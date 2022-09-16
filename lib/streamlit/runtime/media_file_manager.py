@@ -79,8 +79,8 @@ class MediaFileManager:
     def __init__(self, storage: MediaFileStorage):
         self._storage = storage
 
-        # Dict of file ID to MediaFile.
-        self._files_by_id: Dict[str, MediaFileMetadata] = dict()
+        # Dict of [file_id -> MediaFileMetadata]
+        self._file_metadata: Dict[str, MediaFileMetadata] = dict()
 
         # Dict[session ID][coordinates] -> file_id.
         self._files_by_session_and_coord: Dict[
@@ -100,7 +100,7 @@ class MediaFileManager:
         Thread safety: callers must hold `self._lock`.
         """
         # Get the set of all our file IDs.
-        file_ids = set(self._files_by_id.keys())
+        file_ids = set(self._file_metadata.keys())
 
         # Subtract all IDs that are in use by each session
         for session_file_ids_by_coord in self._files_by_session_and_coord.values():
@@ -117,7 +117,7 @@ class MediaFileManager:
 
         with self._lock:
             for file_id in self._get_inactive_file_ids():
-                file = self._files_by_id[file_id]
+                file = self._file_metadata[file_id]
                 if file.kind == MediaFileKind.MEDIA:
                     self._delete_file(file_id)
                 elif file.kind == MediaFileKind.DOWNLOADABLE:
@@ -134,7 +134,7 @@ class MediaFileManager:
         """
         LOGGER.debug("Deleting File: %s", file_id)
         self._storage.delete_file(file_id)
-        del self._files_by_id[file_id]
+        del self._file_metadata[file_id]
 
     def clear_session_refs(self, session_id: Optional[str] = None) -> None:
         """Remove the given session's file references.
@@ -161,7 +161,7 @@ class MediaFileManager:
 
         LOGGER.debug(
             "Files: %s; Sessions with files: %s",
-            len(self._files_by_id),
+            len(self._file_metadata),
             len(self._files_by_session_and_coord),
         )
 
@@ -224,7 +224,7 @@ class MediaFileManager:
             )
             metadata = MediaFileMetadata(kind=kind)
 
-            self._files_by_id[file_id] = metadata
+            self._file_metadata[file_id] = metadata
             self._files_by_session_and_coord[session_id][coordinates] = file_id
 
             return self._storage.get_url(file_id)
