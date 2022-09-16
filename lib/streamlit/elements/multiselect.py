@@ -19,7 +19,6 @@ from typing import (
     Callable,
     cast,
     Generic,
-    Iterable,
     Optional,
     overload,
     List,
@@ -71,13 +70,13 @@ def _check_and_convert_to_indices(  # type: ignore[misc]
 
 @overload
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Iterable[Any], Any]
+    opt: Sequence[Any], default_values: Union[Sequence[Any], Any]
 ) -> List[int]:
     ...
 
 
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Iterable[Any], Any, None]
+    opt: Sequence[Any], default_values: Union[Sequence[Any], Any, None]
 ) -> Optional[List[int]]:
     """Perform validation checks and return indices based on the default values."""
     if default_values is None and None not in opt:
@@ -90,7 +89,7 @@ def _check_and_convert_to_indices(
         if is_type(default_values, "numpy.ndarray") or is_type(
             default_values, "pandas.core.series.Series"
         ):
-            default_values = list(cast(Iterable[Any], default_values))
+            default_values = list(cast(Sequence[Any], default_values))
         elif not default_values or default_values in opt:
             default_values = [default_values]
         else:
@@ -105,10 +104,10 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def get_default_count(default: Union[Iterable[Any], Any, None]):
+def get_default_count(default: Union[Sequence[Any], Any, None]):
     if default is None:
         return 0
-    if not is_iterable(default):
+    if not isinstance(default, Sequence):
         return 1
     return len(default)
 
@@ -236,7 +235,7 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        default: Union[Iterable[Any], Any, None] = None,
+        default: Union[Sequence[Any], Any, None] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
