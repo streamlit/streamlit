@@ -39,24 +39,21 @@ def _get_session_id() -> str:
 
 
 class MediaFileMetadata:
-    def __init__(
-        self,
-        file_id: str,
-        kind: MediaFileKind = MediaFileKind.MEDIA,
-    ):
-        self._file_id = file_id
+    """Metadata that the MediaFileManager needs for each file it manages."""
+
+    def __init__(self, kind: MediaFileKind = MediaFileKind.MEDIA):
         self._kind = kind
         self._is_marked_for_delete = False
-
-    @property
-    def id(self) -> str:
-        return self._file_id
 
     @property
     def kind(self) -> MediaFileKind:
         return self._kind
 
-    def _mark_for_delete(self) -> None:
+    @property
+    def is_marked_for_delete(self) -> bool:
+        return self._is_marked_for_delete
+
+    def mark_for_delete(self) -> None:
         self._is_marked_for_delete = True
 
 
@@ -124,10 +121,10 @@ class MediaFileManager:
                 if file.kind == MediaFileKind.MEDIA:
                     self._delete_file(file_id)
                 elif file.kind == MediaFileKind.DOWNLOADABLE:
-                    if file._is_marked_for_delete:
+                    if file.is_marked_for_delete:
                         self._delete_file(file_id)
                     else:
-                        file._mark_for_delete()
+                        file.mark_for_delete()
 
     def _delete_file(self, file_id: str) -> None:
         """Delete the given file from storage, and remove its metadata from
@@ -225,7 +222,7 @@ class MediaFileManager:
             file_id = self._storage.load_and_get_id(
                 path_or_data, mimetype, kind, file_name
             )
-            metadata = MediaFileMetadata(file_id=file_id, kind=kind)
+            metadata = MediaFileMetadata(kind=kind)
 
             self._files_by_id[file_id] = metadata
             self._files_by_session_and_coord[session_id][coordinates] = file_id
