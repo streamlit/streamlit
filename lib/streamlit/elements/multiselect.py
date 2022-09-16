@@ -39,7 +39,6 @@ from streamlit.type_util import (
     T,
     LabelVisibility,
     maybe_raise_label_warnings,
-    is_iterable,
 )
 
 from streamlit.runtime.state import (
