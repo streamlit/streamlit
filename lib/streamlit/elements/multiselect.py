@@ -40,6 +40,7 @@ from streamlit.type_util import (
     T,
     LabelVisibility,
     maybe_raise_label_warnings,
+    is_iterable,
 )
 
 from streamlit.runtime.state import (
@@ -107,7 +108,7 @@ def _check_and_convert_to_indices(
 def get_default_count(default: Union[Iterable[Any], Any, None]):
     if default is None:
         return 0
-    if not isinstance(default, Iterable):
+    if not is_iterable(default):
         return 1
     return len(default)
 
