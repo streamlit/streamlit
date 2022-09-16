@@ -158,7 +158,19 @@ class _MultiPathWatcher(object):
         allow_nonexistent: bool = False,
     ) -> None:
         """Start watching a path."""
-        folder_path = os.path.abspath(os.path.dirname(path))
+        path = os.path.abspath(path)
+
+        # Watching a folder recursively can be expensive and also might interact with
+        # the filesystem in weird ways (see https://github.com/streamlit/streamlit/issues/5239).
+        # Because of this, we only install watchers on a folder recursively if we're
+        # installing a watcher on the folder itself and not on a file contained in
+        # it.
+        if os.path.isdir(path) or allow_nonexistent:
+            folder_path = path
+            watch_recursively = True
+        else:
+            folder_path = os.path.dirname(path)
+            watch_recursively = False
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
@@ -168,7 +180,24 @@ class _MultiPathWatcher(object):
                 self._folder_handlers[folder_path] = folder_handler
 
                 folder_handler.watch = self._observer.schedule(
-                    folder_handler, folder_path, recursive=True
+                    folder_handler, folder_path, recursive=watch_recursively
+                )
+            elif folder_handler and watch_recursively:
+                # We've already created a _FolderEventHandler for this folder, which
+                # means that we must have previously watched a specific *file* in it (see
+                # the docstring of _FolderEventHandler if this sounds nonsensical). Now,
+                # we want to watch the folder itself. This requires that we reinstall our
+                # watcher recursively. Note that doing so doesn't mess up watchers we
+                # may have on any files.
+
+                # Sometimes watchdog's FileSystemEventHandler does not have
+                # a .watch property. It's unclear why -- may be due to a
+                # race condition.
+                if hasattr(folder_handler, "watch"):
+                    self._observer.unschedule(folder_handler.watch)
+
+                folder_handler.watch = self._observer.schedule(
+                    folder_handler, folder_path, recursive=watch_recursively
                 )
 
             folder_handler.add_path_change_listener(

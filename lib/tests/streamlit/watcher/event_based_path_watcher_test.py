@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-from unittest import mock
+from unittest.mock import Mock, patch
 
 from watchdog import events
 
@@ -31,12 +31,10 @@ class EventBasedPathWatcherTest(unittest.TestCase):
             event_based_path_watcher._MultiPathWatcher.get_singleton().close()
             event_based_path_watcher._MultiPathWatcher._singleton = None
 
-        self.observer_class_patcher = mock.patch(
+        self.observer_class_patcher = patch(
             "streamlit.watcher.event_based_path_watcher.Observer"
         )
-        self.util_patcher = mock.patch(
-            "streamlit.watcher.event_based_path_watcher.util"
-        )
+        self.util_patcher = patch("streamlit.watcher.event_based_path_watcher.util")
         self.MockObserverClass = self.observer_class_patcher.start()
         self.mock_util = self.util_patcher.start()
 
@@ -44,13 +42,14 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
         fo._observer.start.reset_mock()
         fo._observer.schedule.reset_mock()
+        fo._observer.unschedule.reset_mock()
 
         self.observer_class_patcher.stop()
         self.util_patcher.stop()
 
     def test_file_watch_and_callback(self):
         """Test that when a file is modified, the callback is called."""
-        cb = mock.Mock()
+        cb = Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
@@ -60,7 +59,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
 
-        folder_handler = fo._observer.schedule.call_args[0][0]
+        args, kwargs = fo._observer.schedule.call_args
+        folder_handler = args[0]
+        assert not kwargs["recursive"]
 
         cb.assert_not_called()
 
@@ -77,17 +78,20 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
     def test_works_with_directories(self):
         """Test that when a directory is modified, the callback is called."""
-        cb = mock.Mock()
+        cb = Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
 
-        ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
+        with patch("os.path.isdir", Mock(return_value=True)):
+            ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
 
         fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
         fo._observer.schedule.assert_called_once()
 
-        folder_handler = fo._observer.schedule.call_args[0][0]
+        args, kwargs = fo._observer.schedule.call_args
+        folder_handler = args[0]
+        assert kwargs["recursive"]
 
         cb.assert_not_called()
 
@@ -113,10 +117,10 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         This test ensures that these optional parameters make it to our hash
         calculation helpers across different on_changed events.
         """
-        cb = mock.Mock()
+        cb = Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+        self.mock_util.calc_md5_with_blocking_retries = Mock(return_value="1")
 
         ro = event_based_path_watcher.EventBasedPathWatcher(
             "/this/is/my/dir",
@@ -135,7 +139,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="3")
+        self.mock_util.calc_md5_with_blocking_retries = Mock(return_value="3")
 
         ev = events.FileSystemEvent("/this/is/my/dir")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -150,7 +154,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
     def test_callback_not_called_if_same_mtime(self):
         """Test that we ignore files with same mtime."""
-        cb = mock.Mock()
+        cb = Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
@@ -178,7 +182,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
     def test_callback_not_called_if_same_md5(self):
         """Test that we ignore files with same md5."""
-        cb = mock.Mock()
+        cb = Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
@@ -206,7 +210,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
     def test_callback_not_called_if_wrong_event_type(self):
         """Test that we ignore created files."""
-        cb = mock.Mock()
+        cb = Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
@@ -251,8 +255,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
             mod_count[0] += 1.0
 
-        cb1 = mock.Mock()
-        cb2 = mock.Mock()
+        cb1 = Mock()
+        cb2 = Mock()
 
         watcher1 = event_based_path_watcher.EventBasedPathWatcher(filename, cb1)
         watcher2 = event_based_path_watcher.EventBasedPathWatcher(filename, cb2)
@@ -289,3 +293,44 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         # should not have increased.
         assert 1 == cb1.call_count
         assert 2 == cb2.call_count
+
+    def test_watcher_reregistered_if_called_on_file_then_dir(self):
+        cb = Mock()
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+
+        event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir/file.py", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+
+        fo._observer.schedule.assert_called_once()
+        args, kwargs = fo._observer.schedule.call_args
+        folder_handler = args[0]
+        assert not kwargs["recursive"]
+
+        with patch("os.path.isdir", Mock(return_value=True)):
+            event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
+
+        fo._observer.unschedule.assert_called_once_with(folder_handler.watch)
+        assert fo._observer.schedule.call_count == 2
+        args, kwargs = fo._observer.schedule.call_args
+        folder_handler = args[0]
+        assert kwargs["recursive"]
+
+    def test_watcher_not_reregistered_if_called_on_dir_then_file(self):
+        cb = Mock()
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+
+        with patch("os.path.isdir", Mock(return_value=True)):
+            event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+
+        fo._observer.schedule.assert_called_once()
+        args, kwargs = fo._observer.schedule.call_args
+        folder_handler = args[0]
+        assert kwargs["recursive"]
+
+        event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir/file.py", cb)
+        fo._observer.schedule.assert_called_once()
