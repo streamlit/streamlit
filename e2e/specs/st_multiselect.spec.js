@@ -103,8 +103,8 @@ describe("st.multiselect", () => {
 
   function selectNthOptionForKthMultiselect(n, k) {
     cy.getIndexed(".stMultiSelect", k)
-          .find("input")
-          .click();
+      .find("input")
+      .click();
     cy
       .get("li")
       .eq(n)
