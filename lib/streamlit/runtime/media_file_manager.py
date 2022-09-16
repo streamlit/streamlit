@@ -18,10 +18,8 @@ import collections
 import threading
 from typing import Dict, Set, Optional, Union
 
-import streamlit
 from streamlit.logger import get_logger
 from .media_file_storage import MediaFileStorage, MediaFileKind
-from .memory_media_file_storage import MemoryMediaFileStorage
 
 LOGGER = get_logger(__name__)
 
@@ -255,14 +253,6 @@ def get_media_file_manager() -> MediaFileManager:
     global _media_file_manager
 
     if _media_file_manager is None:
-        if not streamlit._is_running_with_streamlit:
-            # If we're running in "raw" mode, we have no Runtime to
-            # create our media_file_manager. So we create one on the
-            # fly instead.
-            LOGGER.info("Creating in-memory MediaFileManager")
-            storage = MemoryMediaFileStorage("/media")
-            _media_file_manager = MediaFileManager(storage)
-        else:
-            raise RuntimeError("MediaFileManager hasn't been created!")
+        raise RuntimeError("MediaFileManager hasn't been created!")
 
     return _media_file_manager
