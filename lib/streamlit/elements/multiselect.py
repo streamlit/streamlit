@@ -104,10 +104,10 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def get_default_count(default: Union[List[Any], Any, None]):
+def get_default_count(default: Union[Iterable[Any], Any, None]):
     if default is None:
         return 0
-    if not isinstance(default, List):
+    if not isinstance(default, Iterable):
         return 1
     return len(default)
 
