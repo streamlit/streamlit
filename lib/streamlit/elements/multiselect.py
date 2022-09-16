@@ -192,7 +192,8 @@ class MultiSelectMixin:
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
         max_selections : int
-            The max selections that can be selected at a time. This argument can only be supplied by keyword.
+            The max selections that can be selected at a time.
+            This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -246,7 +247,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
         max_selections: Optional[int] = None,
-    ) -> List[Any]:
+    ) -> List[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
@@ -270,7 +271,10 @@ class MultiSelectMixin:
                 )
             if get_default_count(default) > max_selections:
                 raise StreamlitAPIException(
-                    f"Multiselect got {get_default_count(default)} default options but `max_selections` is set to {max_selections}. Please select at most {max_selections} options."
+                    f"""
+Multiselect got {get_default_count(default)} default options but `max_selections` is set to {max_selections}.
+Please select at most {max_selections} options.
+"""
                 )
             multiselect_proto.max_selections = max_selections
 
@@ -287,6 +291,7 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+
         if (
             max_selections is not None
             and get_default_count(widget_state.value) > max_selections

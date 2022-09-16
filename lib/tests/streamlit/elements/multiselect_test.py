@@ -284,7 +284,10 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
             )
         self.assertEqual(
             str(e.exception),
-            "Multiselect got 3 default options but `max_selections` is set to 2. Please select at most 2 options.",
+            """
+Multiselect got 3 default options but `max_selections` is set to 2.
+Please select at most 2 options.
+""",
         )
 
     def test_max_selections_initialization_greater_than_0(self):
@@ -294,7 +297,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
             )
         self.assertEqual(
             str(e.exception),
-            "`max_selections` is set to 0. Please set `max_selections` to be greater than 0.",
+            """`max_selections` is set to 0. Please set `max_selections` to be greater than 0.""",
         )
 
     @parameterized.expand(

@@ -286,7 +286,7 @@ describe("st.multiselect", () => {
 
       cy.get(".element-container .stException").should(
         "contain.text",
-        `Multiselect has 2 options selected but max_selections\nis set to 1. This happened because you manipulated\nthe widget's state through st.session_state. Note that this\nhappened before the line indicated in the traceback.\nPlease select at most 1 options.`
+        `Multiselect has 2 options selected but max_selections\nis set to 1. This happened because you manipulated\nthe widget's state through st.session_state. Note that\nthis happened before the line indicated in the traceback.\nPlease select at most 1 options.`
       );
     });
   })
