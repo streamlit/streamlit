@@ -27,9 +27,9 @@ spec = {
 }
 
 # 5 empty charts
-st._legacy_vega_lite_chart(spec, use_container_width=True)
+st._legacy_vega_lite_chart(spec)
 fig, ax = plt.subplots()
-st.pyplot(fig, use_container_width=True)
+st.pyplot(fig)
 st._legacy_line_chart()
 st._legacy_bar_chart()
 st._legacy_area_chart()
