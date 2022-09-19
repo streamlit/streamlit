@@ -15,20 +15,32 @@
 """Streamlit support for Matplotlib PyPlot charts."""
 
 import io
-from typing import cast
+from typing import TYPE_CHECKING, Any, Optional, cast
+from typing_extensions import Final
 
-import streamlit
 import streamlit.elements.image as image_utils
 from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.runtime.metrics_util import gather_metrics
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
+
+    from streamlit.delta_generator import DeltaGenerator
+
+LOGGER: Final = get_logger(__name__)
 
 
 class PyplotMixin:
-    def pyplot(self, fig=None, clear_figure=None, **kwargs):
+    @gather_metrics
+    def pyplot(
+        self,
+        fig: Optional["Figure"] = None,
+        clear_figure: Optional[bool] = None,
+        **kwargs: Any,
+    ) -> "DeltaGenerator":
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -63,7 +75,7 @@ class PyplotMixin:
         >>> st.pyplot(fig)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.pyplot.py
+           https://doc-pyplot.streamlitapp.com/
            height: 630px
 
         Notes
@@ -75,9 +87,8 @@ class PyplotMixin:
            please always pass a figure object as shown in the example section
            above.
 
-        Matplotlib support several different types of "backends". If you're
-        getting an error using Matplotlib with Streamlit, try setting your
-        backend to "TkAgg"::
+        Matplotlib supports several types of "backends". If you're getting an
+        error using Matplotlib with Streamlit, try setting your backend to "TkAgg"::
 
             echo "backend: TkAgg" >> ~/.matplotlib/matplotlibrc
 
@@ -95,12 +106,18 @@ class PyplotMixin:
         return self.dg._enqueue("imgs", image_list_proto)
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)
 
 
-def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwargs):
+def marshall(
+    coordinates: str,
+    image_list_proto: ImageListProto,
+    fig: Optional["Figure"] = None,
+    clear_figure: Optional[bool] = True,
+    **kwargs: Any,
+) -> None:
     try:
         import matplotlib
         import matplotlib.pyplot as plt
@@ -122,8 +139,8 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
     # DPI display.
     options = {"bbox_inches": "tight", "dpi": 200, "format": "png"}
 
-    # If some of the options are passed in from kwargs then replace
-    # the values in options with the ones from kwargs
+    # If some options are passed in from kwargs then replace the values in
+    # options with the ones from kwargs
     options = {a: kwargs.get(a, b) for a, b in options.items()}
     # Merge options back into kwargs.
     kwargs.update(options)
@@ -131,12 +148,12 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
     image_utils.marshall_images(
-        coordinates,
-        image,
-        None,
-        -2,
-        image_list_proto,
-        False,
+        coordinates=coordinates,
+        image=image,
+        caption=None,
+        width=-2,
+        proto_imgs=image_list_proto,
+        clamp=False,
         channels="RGB",
         output_format="PNG",
     )
@@ -148,12 +165,12 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
 
 
 class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
-    def __init__(self):
+    def __init__(self) -> None:
         super(PyplotGlobalUseWarning, self).__init__(
             msg=self._get_message(), config_option="deprecation.showPyplotGlobalUse"
         )
 
-    def _get_message(self):
+    def _get_message(self) -> str:
         return """
 You are calling `st.pyplot()` without any arguments. After December 1st, 2020,
 we will remove the ability to do this as it requires the use of Matplotlib's global

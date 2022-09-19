@@ -23,7 +23,7 @@ describe("st.radio", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stRadio").should("have.length", 6);
+    cy.get(".stRadio").should("have.length", 9);
 
     cy.get(".stRadio").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("radio" + idx);
@@ -93,7 +93,10 @@ describe("st.radio", () => {
         "value 3: None" +
         "value 4: female" +
         "value 5: female" +
-        "value 6: male" +
+        "value 6: female" +
+        "value 7: female" +
+        "value 8: female" +
+        "value 9: male" +
         "radio changed: False"
     );
   });
@@ -135,12 +138,15 @@ describe("st.radio", () => {
         "value 4: female" +
         "value 5: male" +
         "value 6: male" +
+        "value 7: male" +
+        "value 8: male" +
+        "value 9: male" +
         "radio changed: False"
     );
   });
 
   it("calls callback if one is registered", () => {
-    cy.getIndexed(".stRadio", 5).then(el => {
+    cy.getIndexed(".stRadio", 8).then(el => {
       return cy
         .wrap(el)
         .find("input")
@@ -156,6 +162,9 @@ describe("st.radio", () => {
         "value 4: female" +
         "value 5: female" +
         "value 6: female" +
+        "value 7: female" +
+        "value 8: female" +
+        "value 9: female" +
         "radio changed: True"
     );
   });

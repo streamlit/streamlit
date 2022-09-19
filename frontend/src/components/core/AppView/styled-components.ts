@@ -58,16 +58,29 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
       },
       overflow: "visible",
     },
+
+    // Added so sidebar overlays main app content on
+    // smaller screen sizes
+    [`@media (max-width: ${theme.breakpoints.md})`]: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
   })
 )
 
 export interface StyledAppViewBlockContainerProps {
   isWideMode: boolean
+  isEmbedded: boolean
 }
 
 export const StyledAppViewBlockContainer = styled.div<
   StyledAppViewBlockContainerProps
->(({ isWideMode, theme }) => {
+>(({ isWideMode, isEmbedded, theme }) => {
+  const topEmbedPadding = isEmbedded ? "1rem" : "6rem"
+  const bottomEmbedPadding = isEmbedded ? "1rem" : "10rem"
   const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
   return {
     flex: 1,
@@ -79,8 +92,8 @@ export const StyledAppViewBlockContainer = styled.div<
       paddingLeft: theme.inSidebar ? theme.spacing.none : wideSidePadding,
       paddingRight: theme.inSidebar ? theme.spacing.none : wideSidePadding,
     },
-    paddingTop: theme.inSidebar ? theme.spacing.none : "6rem",
-    paddingBottom: theme.inSidebar ? theme.spacing.none : "10rem",
+    paddingTop: theme.inSidebar ? theme.spacing.none : topEmbedPadding,
+    paddingBottom: theme.inSidebar ? theme.spacing.none : bottomEmbedPadding,
     minWidth: isWideMode ? "auto" : undefined,
     maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
   }

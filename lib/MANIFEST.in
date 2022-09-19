@@ -1,4 +1,4 @@
-include README.md
 include Pipfile
-include streamlit/config/config.yaml
+include streamlit/py.typed
+recursive-include streamlit/hello *
 recursive-include streamlit/static *

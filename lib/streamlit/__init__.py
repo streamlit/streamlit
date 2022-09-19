@@ -46,7 +46,7 @@ For more detailed info, see https://docs.streamlit.io.
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.secrets import Secrets, SECRETS_FILE_LOC
+from streamlit.runtime.secrets import Secrets, SECRETS_FILE_LOC
 
 _LOGGER = _logger.get_logger("root")
 
@@ -68,7 +68,7 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     add_script_run_ctx as _add_script_run_ctx,
     get_script_run_ctx as _get_script_run_ctx,
     StopException,
@@ -77,14 +77,19 @@ from streamlit.scriptrunner import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
+from streamlit.runtime.metrics_util import gather_metrics
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 
 from streamlit.echo import echo as echo
-from streamlit.legacy_caching import cache as cache
-from streamlit.caching import singleton as experimental_singleton
-from streamlit.caching import memo as experimental_memo
+from streamlit.runtime.legacy_caching import cache as _cache
+from streamlit.runtime.caching import (
+    singleton as experimental_singleton,
+    memo as experimental_memo,
+)
+
+cache = gather_metrics(_cache)
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -123,6 +128,7 @@ camera_input = _main.camera_input
 checkbox = _main.checkbox
 code = _main.code
 columns = _main.columns
+tabs = _main.tabs
 container = _main.container
 dataframe = _main.dataframe
 date_input = _main.date_input
@@ -194,7 +200,7 @@ from streamlit.commands.page_config import set_page_config as set_page_config
 
 # Session State
 
-from streamlit.state import SessionStateProxy
+from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
 
 session_state = SessionStateProxy()
@@ -203,11 +209,12 @@ experimental_user = UserInfoProxy()
 
 # Beta APIs
 
-beta_container = _main.beta_container
-beta_expander = _main.beta_expander
-beta_columns = _main.beta_columns
+beta_container = gather_metrics(_main.beta_container)
+beta_expander = gather_metrics(_main.beta_expander)
+beta_columns = gather_metrics(_main.beta_columns)
 
 
+@gather_metrics
 def set_option(key: str, value: Any) -> None:
     """Set config option.
 
@@ -247,6 +254,7 @@ def set_option(key: str, value: Any) -> None:
     )
 
 
+@gather_metrics
 def experimental_show(*args: Any) -> None:
     """Write arguments and *argument names* to your app for debugging purposes.
 
@@ -293,8 +301,9 @@ def experimental_show(*args: Any) -> None:
             warning("`show` not enabled in the shell")
             return
 
-        if current_frame.f_back is not None:
-            lines = inspect.getframeinfo(current_frame.f_back)[3]
+        # Use two f_back because of telemetry decorator
+        if current_frame.f_back is not None and current_frame.f_back.f_back is not None:
+            lines = inspect.getframeinfo(current_frame.f_back.f_back)[3]
         else:
             lines = None
 
@@ -327,6 +336,7 @@ def experimental_show(*args: Any) -> None:
         exception(exc)
 
 
+@gather_metrics
 def experimental_get_query_params() -> Dict[str, List[str]]:
     """Return the query parameters that is currently showing in the browser's URL bar.
 
@@ -357,6 +367,7 @@ def experimental_get_query_params() -> Dict[str, List[str]]:
     return _parse.parse_qs(ctx.query_string)
 
 
+@gather_metrics
 def experimental_set_query_params(**query_params: Any) -> None:
     """Set the query parameters that are shown in the browser's URL bar.
 
@@ -404,10 +415,10 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
     >>> st.success('Done!')
 
     """
-    import streamlit.legacy_caching.caching as legacy_caching
-    import streamlit.caching as caching
-    from streamlit.elements.utils import clean_text
+    import streamlit.runtime.legacy_caching.caching as legacy_caching
+    import streamlit.runtime.caching as caching
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
+    from streamlit.string_util import clean_text
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions
@@ -448,6 +459,7 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
                 message.empty()
 
 
+@gather_metrics
 def _transparent_write(*args: Any) -> Any:
     """This is just st.write, but returns the arguments you passed to it."""
     write(*args)

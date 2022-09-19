@@ -22,6 +22,10 @@ describe("st.sidebar", () => {
     cy.prepForElementSnapshots();
   });
 
+  it("displays sidebar correctly", () => {
+    cy.get("[data-testid='stSidebar']").matchThemedSnapshots("sidebar");
+  });
+
   it("handles z-index of date input popover", () => {
     cy.get("[data-testid='stSidebar'] .stDateInput").should("have.length", 2);
 
@@ -62,7 +66,7 @@ describe("st.sidebar", () => {
   it("does not collapse on text input on mobile", () => {
     cy.viewport(400, 800);
     // Expand the sidebar on mobile, with a manual click
-    cy.getIndexed("[data-testid='stSidebar'] button", 1).click();
+    cy.get("[data-testid='collapsedControl'] button").click();
 
     cy.get("[data-testid='stSidebar'] .stTextInput input").click();
 

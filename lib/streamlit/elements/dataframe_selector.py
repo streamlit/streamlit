@@ -16,9 +16,10 @@
 "arrow") based on a config option"""
 from typing import Any
 from typing import Dict
-from typing import cast, Optional, TYPE_CHECKING
+from typing import cast, Optional, TYPE_CHECKING, Union, Sequence
 
 from streamlit import config
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from .arrow import Data
@@ -34,11 +35,14 @@ def _use_arrow() -> bool:
 
 
 class DataFrameSelectorMixin:
+    @gather_metrics
     def dataframe(
         self,
         data: "Data" = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
+        *,
+        use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -48,7 +52,7 @@ class DataFrameSelectorMixin:
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
-            underyling DataFrame. Streamlit supports custom cell
+            underlying DataFrame. Streamlit supports custom cell
             values and colors. (It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
@@ -56,12 +60,19 @@ class DataFrameSelectorMixin:
             (i.e. with `config.dataFrameSerialization = "legacy"`).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
             `config.dataFrameSerialization = "arrow"`.
+
         width : int or None
-            Desired width of the UI element expressed in pixels. If None, a
-            default width based on the page width is used.
+            Desired width of the dataframe expressed in pixels. If None, the width
+            will be automatically calculated based on the column content.
+
         height : int or None
-            Desired height of the UI element expressed in pixels. If None, a
+            Desired height of the dataframe expressed in pixels. If None, a
             default height is used.
+
+        use_container_width : bool
+            If True, set the dataframe width to the width of the parent container.
+            This takes precedence over the width argument.
+            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -72,7 +83,7 @@ class DataFrameSelectorMixin:
         >>> st.dataframe(df)  # Same as st.write(df)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.dataframe.py
+           https://doc-dataframe.streamlitapp.com/
            height: 410px
 
         >>> st.dataframe(df, 200, 100)
@@ -87,15 +98,18 @@ class DataFrameSelectorMixin:
         >>> st.dataframe(df.style.highlight_max(axis=0))
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.dataframe1.py
+           https://doc-dataframe1.streamlitapp.com/
            height: 410px
 
         """
         if _use_arrow():
-            return self.dg._arrow_dataframe(data, width, height)
+            return self.dg._arrow_dataframe(
+                data, width, height, use_container_width=use_container_width
+            )
         else:
             return self.dg._legacy_dataframe(data, width, height)
 
+    @gather_metrics
     def table(self, data: "Data" = None) -> "DeltaGenerator":
         """Display a static table.
 
@@ -120,7 +134,7 @@ class DataFrameSelectorMixin:
         >>> st.table(df)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.table.py
+           https://doc-table.streamlitapp.com/
            height: 480px
 
         """
@@ -129,9 +143,13 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_table(data)
 
+    @gather_metrics
     def line_chart(
         self,
         data: "Data" = None,
+        *,
+        x: Union[str, None] = None,
+        y: Union[str, Sequence[str], None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -155,15 +173,28 @@ class DataFrameSelectorMixin:
             To use pyarrow tables, please enable pyarrow by changing the config setting,
             `config.dataFrameSerialization = "arrow"`.
 
+        x : str or None
+            Column name to use for the x-axis. If None, uses the data index for the x-axis.
+            This argument can only be supplied by keyword.
+
+        y : str, sequence of str, or None
+            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
+            on the same chart by melting your wide-format table into a long-format table behind
+            the scenes. If None, draws the data of all remaining columns as data series.
+            This argument can only be supplied by keyword.
+
         width : int
             The chart width in pixels. If 0, selects the width automatically.
+            This argument can only be supplied by keyword.
 
         height : int
             The chart height in pixels. If 0, selects the height automatically.
+            This argument can only be supplied by keyword.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
+            This argument can only be supplied by keyword.
 
         Example
         -------
@@ -174,18 +205,34 @@ class DataFrameSelectorMixin:
         >>> st.line_chart(chart_data)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.line_chart.py
+           https://doc-line-chart.streamlitapp.com/
            height: 400px
 
         """
         if _use_arrow():
-            return self.dg._arrow_line_chart(data, width, height, use_container_width)
+            return self.dg._arrow_line_chart(
+                data,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                use_container_width=use_container_width,
+            )
         else:
-            return self.dg._legacy_line_chart(data, width, height, use_container_width)
+            return self.dg._legacy_line_chart(
+                data,
+                width=width,
+                height=height,
+                use_container_width=use_container_width,
+            )
 
+    @gather_metrics
     def area_chart(
         self,
         data: "Data" = None,
+        *,
+        x: Union[str, None] = None,
+        y: Union[str, Sequence[str], None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -209,15 +256,28 @@ class DataFrameSelectorMixin:
             To use pyarrow tables, please enable pyarrow by changing the config setting,
             `config.dataFrameSerialization = "arrow"`.
 
+        x : str or None
+            Column name to use for the x-axis. If None, uses the data index for the x-axis.
+            This argument can only be supplied by keyword.
+
+        y : str, sequence of str, or None
+            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
+            on the same chart by melting your wide-format table into a long-format table behind
+            the scenes. If None, draws the data of all remaining columns as data series.
+            This argument can only be supplied by keyword.
+
         width : int
             The chart width in pixels. If 0, selects the width automatically.
+            This argument can only be supplied by keyword.
 
         height : int
             The chart height in pixels. If 0, selects the height automatically.
+            This argument can only be supplied by keyword.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
+            This argument can only be supplied by keyword.
 
         Example
         -------
@@ -228,18 +288,34 @@ class DataFrameSelectorMixin:
         >>> st.area_chart(chart_data)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.area_chart.py
+           https://doc-area-chart.streamlitapp.com/
            height: 400px
 
         """
         if _use_arrow():
-            return self.dg._arrow_area_chart(data, width, height, use_container_width)
+            return self.dg._arrow_area_chart(
+                data,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                use_container_width=use_container_width,
+            )
         else:
-            return self.dg._legacy_area_chart(data, width, height, use_container_width)
+            return self.dg._legacy_area_chart(
+                data,
+                width=width,
+                height=height,
+                use_container_width=use_container_width,
+            )
 
+    @gather_metrics
     def bar_chart(
         self,
         data: "Data" = None,
+        *,
+        x: Union[str, None] = None,
+        y: Union[str, Sequence[str], None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -263,15 +339,28 @@ class DataFrameSelectorMixin:
             To use pyarrow tables, please enable pyarrow by changing the config setting,
             `config.dataFrameSerialization = "arrow"`.
 
+        x : str or None
+            Column name to use for the x-axis. If None, uses the data index for the x-axis.
+            This argument can only be supplied by keyword.
+
+        y : str, sequence of str, or None
+            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
+            on the same chart by melting your wide-format table into a long-format table behind
+            the scenes. If None, draws the data of all remaining columns as data series.
+            This argument can only be supplied by keyword.
+
         width : int
             The chart width in pixels. If 0, selects the width automatically.
+            This argument can only be supplied by keyword.
 
         height : int
             The chart height in pixels. If 0, selects the height automatically.
+            This argument can only be supplied by keyword.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
+            This argument can only be supplied by keyword.
 
         Example
         -------
@@ -282,16 +371,29 @@ class DataFrameSelectorMixin:
         >>> st.bar_chart(chart_data)
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.bar_chart.py
+           https://doc-bar-chart.streamlitapp.com/
            height: 400px
 
         """
 
         if _use_arrow():
-            return self.dg._arrow_bar_chart(data, width, height, use_container_width)
+            return self.dg._arrow_bar_chart(
+                data,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                use_container_width=use_container_width,
+            )
         else:
-            return self.dg._legacy_bar_chart(data, width, height, use_container_width)
+            return self.dg._legacy_bar_chart(
+                data,
+                width=width,
+                height=height,
+                use_container_width=use_container_width,
+            )
 
+    @gather_metrics
     def altair_chart(
         self,
         altair_chart: "Chart",
@@ -328,7 +430,7 @@ class DataFrameSelectorMixin:
         https://altair-viz.github.io/gallery/.
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.vega_lite_chart.py
+           https://doc-vega-lite-chart.streamlitapp.com/
            height: 300px
 
         """
@@ -338,6 +440,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_altair_chart(altair_chart, use_container_width)
 
+    @gather_metrics
     def vega_lite_chart(
         self,
         data: "Data" = None,
@@ -390,7 +493,7 @@ class DataFrameSelectorMixin:
         ... })
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.vega_lite_chart.py
+           https://doc-vega-lite-chart.streamlitapp.com/
            height: 300px
 
         Examples of Vega-Lite usage without Streamlit can be found at
@@ -407,6 +510,7 @@ class DataFrameSelectorMixin:
                 data, spec, use_container_width, **kwargs
             )
 
+    @gather_metrics
     def add_rows(self, data: "Data" = None, **kwargs) -> Optional["DeltaGenerator"]:
         """Concatenate a dataframe to the bottom of the current one.
 

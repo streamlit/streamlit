@@ -28,7 +28,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { isInForm } from "src/lib/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import { StyledTextAreaContainer } from "./styled-components"
 
 export interface Props {
@@ -186,7 +186,13 @@ class TextArea extends React.PureComponent<Props, State> {
 
     return (
       <div className="stTextArea" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -204,11 +210,11 @@ class TextArea extends React.PureComponent<Props, State> {
             onBlur={this.onBlur}
             onChange={this.onChange}
             onKeyDown={this.onKeyDown}
+            aria-label={element.label}
             disabled={disabled}
             overrides={{
               Input: {
                 style: {
-                  padding: "1rem",
                   lineHeight: "1.4",
                   height: height ? `${height}px` : "",
                   minHeight: "95px",
@@ -216,6 +222,11 @@ class TextArea extends React.PureComponent<Props, State> {
                   "::placeholder": {
                     opacity: "0.7",
                   },
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  paddingRight: "1rem",
+                  paddingLeft: "1rem",
+                  paddingBottom: "1rem",
+                  paddingTop: "1rem",
                 },
               },
             }}

@@ -22,8 +22,9 @@ import numpy as np
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.state import SessionStateProxy
+from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -40,6 +41,7 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
 
 
 class WriteMixin:
+    @gather_metrics
     def write(self, *args: Any, **kwargs: Any) -> None:
         """Write arguments to the app.
 
@@ -108,7 +110,7 @@ class WriteMixin:
         >>> write('Hello, *World!* :sunglasses:')
 
         ..  output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write1.py
+            https://doc-write1.streamlitapp.com/
             height: 150px
 
         As mentioned earlier, `st.write()` also accepts other data formats, such as
@@ -121,7 +123,7 @@ class WriteMixin:
         ... }))
 
         ..  output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write2.py
+            https://doc-write2.streamlitapp.com/
             height: 350px
 
         Finally, you can pass in multiple arguments to do things like:
@@ -130,7 +132,7 @@ class WriteMixin:
         >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
 
         ..  output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write3.py
+            https://doc-write3.streamlitapp.com/
             height: 410px
 
         Oh, one more thing: `st.write` accepts chart objects too! For example:
@@ -149,7 +151,7 @@ class WriteMixin:
         >>> st.write(c)
 
         ..  output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.vega_lite_chart.py
+            https://doc-vega-lite-chart.streamlitapp.com/
             height: 300px
 
         """
@@ -226,9 +228,7 @@ class WriteMixin:
                 self.dg.pydeck_chart(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
-                # Cast is needed due to:
-                # https://github.com/python/mypy/issues/12933
-                self.dg.text(cast(type, arg))
+                self.dg.text(arg)
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),

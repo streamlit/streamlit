@@ -23,18 +23,22 @@ message Block {
     Column column = 3;
     Expandable expandable = 4;
     Form form = 5;
+    TabContainer tab_container = 6;
+    Tab tab = 7;
   }
 
-  bool allow_empty = 6;
+  bool allow_empty = 8;
 
   message Vertical {
   }
 
   message Horizontal {
+    string gap = 1;
   }
 
   message Column {
     double weight = 1;
+    string gap = 2;
   }
 
   message Expandable {
@@ -47,5 +51,12 @@ message Block {
     bool clear_on_submit = 2;
   }
 
-  // Next ID: 7
+  message TabContainer {
+  }
+
+  message Tab {
+    string label = 1;
+  }
+
+  // Next ID: 9
 }

@@ -12,30 +12,73 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from textwrap import dedent
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Generic, Optional, Sequence, cast, TYPE_CHECKING
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
-from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.state import (
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import (
     register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
+from streamlit.type_util import (
+    Key,
+    LabelVisibility,
+    OptionSequence,
+    ensure_indexable,
+    to_key,
+    T,
+    maybe_raise_label_warnings,
+)
+
 from streamlit.util import index_
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+
+@dataclass
+class RadioSerde(Generic[T]):
+    options: Sequence[T]
+    index: int
+
+    def serialize(self, v: object) -> int:
+        if len(self.options) == 0:
+            return 0
+        return index_(self.options, v)
+
+    def deserialize(
+        self,
+        ui_value: Optional[int],
+        widget_id: str = "",
+    ) -> Optional[T]:
+        idx = ui_value if ui_value is not None else self.index
+
+        return (
+            self.options[idx]
+            if len(self.options) > 0 and self.options[idx] is not None
+            else None
+        )
 
 
 class RadioMixin:
+    @gather_metrics
     def radio(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[T],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -46,13 +89,17 @@ class RadioMixin:
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
-    ) -> Any:
+        label_visibility: LabelVisibility = "visible",
+    ) -> Optional[T]:
         """Display a radio button widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the radio options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
@@ -85,6 +132,12 @@ class RadioMixin:
             The default is false (vertical buttons). This argument can only
             be supplied by keyword.
 
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
+
         Returns
         -------
         any
@@ -102,7 +155,7 @@ class RadioMixin:
         ...     st.write("You didn\'t select comedy.")
 
         .. output::
-           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.radio.py
+           https://doc-radio.streamlitapp.com/
            height: 260px
 
         """
@@ -120,12 +173,13 @@ class RadioMixin:
             disabled=disabled,
             horizontal=horizontal,
             ctx=ctx,
+            label_visibility=label_visibility,
         )
 
     def _radio(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[T],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -136,12 +190,13 @@ class RadioMixin:
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext],
-    ) -> Any:
+    ) -> Optional[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
-
+        maybe_raise_label_warnings(label, label_visibility)
         opt = ensure_indexable(options)
 
         if not isinstance(index, int):
@@ -163,39 +218,35 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = dedent(help)
 
-        def deserialize_radio(ui_value, widget_id=""):
-            idx = ui_value if ui_value is not None else index
+        serde = RadioSerde(opt, index)
 
-            return opt[idx] if len(opt) > 0 and opt[idx] is not None else None
-
-        def serialize_radio(v):
-            if len(options) == 0:
-                return 0
-            return index_(options, v)
-
-        current_value, set_frontend_value = register_widget(
+        widget_state = register_widget(
             "radio",
             radio_proto,
             user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_radio,
-            serializer=serialize_radio,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=ctx,
         )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         radio_proto.disabled = disabled
-        if set_frontend_value:
-            radio_proto.value = serialize_radio(current_value)
+        radio_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
+        if widget_state.value_changed:
+            radio_proto.value = serde.serialize(widget_state.value)
             radio_proto.set_value = True
 
         self.dg._enqueue("radio", radio_proto)
-        return cast(str, current_value)
+        return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

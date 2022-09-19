@@ -2,15 +2,15 @@ import threading
 
 import streamlit as st
 
-from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.errors import StreamlitAPIException
-from streamlit.scriptrunner import (
+from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,
 )
 
-from streamlit.state import SafeSessionState, SessionState
+from streamlit.runtime.state import SafeSessionState, SessionState
 from tests.testutil import DeltaGeneratorTestCase
 
 
@@ -86,7 +86,7 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                 threading.current_thread(),
                 ScriptRunContext(
                     session_id="test session id",
-                    enqueue=forward_msg_queue.enqueue,
+                    _enqueue=forward_msg_queue.enqueue,
                     query_string="",
                     session_state=SafeSessionState(SessionState()),
                     uploaded_file_mgr=None,

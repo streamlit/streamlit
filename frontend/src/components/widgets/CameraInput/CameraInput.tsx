@@ -36,6 +36,7 @@ import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError } from "src/lib/log"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
@@ -89,7 +90,7 @@ export interface State {
   /**
    * Represents whether the component is in clear photo mode,
    * when snapshot removed and new Webcam component is not shown yet.
-   * Time interval between `Clear Photo` button clicked and access to Webcam recived again
+   * Time interval between `Clear Photo` button clicked and access to Webcam received again
    */
   clearPhotoInProgress: boolean
 
@@ -363,7 +364,13 @@ class CameraInput extends React.PureComponent<Props, State> {
         className="row-widget"
         data-testid="stCameraInput"
       >
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

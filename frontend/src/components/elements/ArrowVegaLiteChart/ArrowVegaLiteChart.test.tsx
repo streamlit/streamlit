@@ -83,6 +83,31 @@ describe("VegaLiteChart Element", () => {
     )
   })
 
+  it("applies Steramlit theme if specified", () => {
+    const props = getProps({
+      element: {
+        ...MOCK,
+        spec: JSON.stringify({
+          mark: "circle",
+          // Apply streamlit theme:
+          usermeta: { embedOptions: { theme: "streamlit" } },
+          encoding: {
+            x: { field: "a", type: "quantitative" },
+            y: { field: "b", type: "quantitative" },
+            size: { field: "c", type: "quantitative" },
+            color: { field: "c", type: "quantitative" },
+          },
+        }),
+      },
+    })
+
+    const wrapper = mount(<ArrowVegaLiteChart {...props} />)
+    // @ts-ignore
+    const generatedSpec = wrapper.instance().generateSpec()
+    // Should have 10 colors defined in range.diverging
+    expect(generatedSpec.config.range?.diverging?.length).toBe(10)
+  })
+
   it("has user specified config take priority", () => {
     const props = getProps({ theme: darkTheme.emotion })
 

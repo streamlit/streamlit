@@ -21,6 +21,7 @@ import { logWarning } from "src/lib/log"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { hasMatch, score } from "fzy.js"
 import _ from "lodash"
+import { LabelVisibilityOptions } from "src/lib/utils"
 import { Placement } from "src/components/shared/Tooltip"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import {
@@ -35,6 +36,7 @@ export interface Props {
   onChange: (value: number) => void
   options: any[]
   label?: string | null
+  labelVisibility?: LabelVisibilityOptions
   help?: string
 }
 
@@ -54,7 +56,7 @@ interface SelectOption {
 }
 
 // Add a custom filterOptions method to filter options only based on labels.
-// The baseweb default method filters based on labels or indeces
+// The baseweb default method filters based on labels or indices
 // More details: https://github.com/streamlit/streamlit/issues/1010
 // Also filters using fuzzy search powered by fzy.js. Automatically handles
 // upper/lowercase.
@@ -131,7 +133,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const style = { width: this.props.width }
-    const { label, help } = this.props
+    const { label, labelVisibility, help } = this.props
     let { disabled, options } = this.props
 
     let value = [
@@ -162,7 +164,11 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <WidgetLabel label={label} disabled={disabled}>
+        <WidgetLabel
+          label={label}
+          labelVisibility={labelVisibility}
+          disabled={disabled}
+        >
           {help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
@@ -173,6 +179,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           clearable={false}
           disabled={disabled}
           labelKey="label"
+          aria-label={label || ""}
           onChange={this.onChange}
           onInputChange={this.onInputChange}
           onClose={this.onClose}
@@ -181,11 +188,20 @@ class Selectbox extends React.PureComponent<Props, State> {
           value={value}
           valueKey="value"
           overrides={{
+            Root: {
+              style: () => ({
+                lineHeight: 1.4,
+              }),
+            },
             Dropdown: { component: VirtualDropdown },
 
             ControlContainer: {
               style: () => ({
-                borderWidth: "1px",
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: "1px",
+                borderRightWidth: "1px",
+                borderTopWidth: "1px",
+                borderBottomWidth: "1px",
               }),
             },
 
@@ -197,7 +213,17 @@ class Selectbox extends React.PureComponent<Props, State> {
 
             ValueContainer: {
               style: () => ({
-                padding: ".5rem",
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                paddingRight: ".5rem",
+                paddingLeft: ".5rem",
+                paddingBottom: ".5rem",
+                paddingTop: ".5rem",
+              }),
+            },
+
+            Input: {
+              style: () => ({
+                lineHeight: 1.4,
               }),
             },
 

@@ -156,12 +156,12 @@ export class WebsocketConnection {
   private lastDispatchedMessageIndex = -1
 
   /**
-   * And this is the index of the next message we recieve.
+   * And this is the index of the next message we receive.
    */
   private nextMessageIndex = 0
 
   /**
-   * This dictionary stores recieved messages that we haven't sent out yet
+   * This dictionary stores received messages that we haven't sent out yet
    * (because we're still decoding previous messages)
    */
   private readonly messageQueue: MessageQueue = {}
@@ -475,7 +475,8 @@ export class WebsocketConnection {
 
     PerformanceEvents.record({ name: "BeginHandleMessage", messageIndex })
 
-    const msg = ForwardMsg.decode(new Uint8Array(data))
+    const encodedMsg = new Uint8Array(data)
+    const msg = ForwardMsg.decode(encodedMsg)
 
     PerformanceEvents.record({
       name: "DecodedMessage",
@@ -485,7 +486,8 @@ export class WebsocketConnection {
     })
 
     this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
-      msg
+      msg,
+      encodedMsg
     )
 
     PerformanceEvents.record({ name: "GotCachedPayload", messageIndex })

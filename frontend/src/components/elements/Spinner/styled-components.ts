@@ -21,14 +21,16 @@ import isPropValid from "@emotion/is-prop-valid"
 
 export const ThemedStyledSpinner = styled(StyledSpinnerNext, {
   shouldForwardProp: isPropValid,
-})(({ theme }) => {
+})(({ theme, $usingCustomTheme }) => {
   return {
     marginTop: theme.spacing.none,
     marginBottom: theme.spacing.none,
     marginRight: theme.spacing.none,
     marginLeft: theme.spacing.none,
     borderColor: theme.colors.fadedText10,
-    borderTopColor: theme.colors.primary,
+    borderTopColor: $usingCustomTheme
+      ? theme.colors.primary
+      : theme.colors.blue70,
     flexGrow: 0,
     flexShrink: 0,
   }

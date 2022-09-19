@@ -24,15 +24,14 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.state.widgets import _build_duplicate_widget_message
-import streamlit.state.widgets as w
+from streamlit.runtime.state.widgets import _build_duplicate_widget_message
+import streamlit.runtime.state.widgets as w
 from tests import testutil
 
 
@@ -43,82 +42,6 @@ def identity(x):
 register_widget = functools.partial(
     w.register_widget, deserializer=lambda x, s: x, serializer=identity
 )
-
-
-class FakeDeltaGenerator(object):
-    """Fake DeltaGenerator class.
-
-    The methods in this class are specifically here as to not use the
-    one in the actual delta generator.  This purely exists just to test the
-    DeltaGenerator Decorators without relying on the actual
-    DeltaGenerator methods.
-    """
-
-    def __init__(self):
-        """Constructor."""
-        pass
-
-    def __getattr__(self, name):
-        streamlit_methods = [
-            method_name for method_name in dir(st) if callable(getattr(st, method_name))
-        ]
-
-        def wrapper(*args, **kwargs):
-            if name in streamlit_methods:
-                if self._container == "sidebar":
-                    message = (
-                        "Method `%(name)s()` does not exist for "
-                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
-                    )
-                else:
-                    message = (
-                        "Method `%(name)s()` does not exist for "
-                        "`DeltaGenerator` objects. Did you mean "
-                        "`st.%(name)s()`?" % {"name": name}
-                    )
-            else:
-                message = "`%(name)s()` is not a valid Streamlit command." % {
-                    "name": name
-                }
-
-            raise AttributeError(message)
-
-        return wrapper
-
-    def fake_text(self, element, body):
-        """Fake text delta generator."""
-        element.text.body = str(body)
-
-    def fake_dataframe(self, arg0, data=None):
-        """Fake dataframe."""
-        return (arg0, data)
-
-    def fake_text_raise_exception(self, element, body):
-        """Fake text that raises exception."""
-        raise Exception("Exception in fake_text_raise_exception")
-
-    def exception(self, e):
-        """Create fake exception handler.
-
-        The real DeltaGenerator exception is more complicated.  We use
-        this so _with_element can find the exception method.  The real
-        exception method wil be tested later on.
-        """
-        self._exception_msg = str(e)
-
-    def _enqueue(self, delta_type, element_proto):
-        delta = Delta()
-        el_proto = getattr(delta.new_element, delta_type)
-        el_proto.CopyFrom(element_proto)
-        return delta
-
-
-class MockQueue(object):
-    def __init__(self):
-        self._deltas = []
-
-    def __call__(self, data):
-        self._deltas.append(data)
 
 
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
@@ -148,7 +71,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.type, "TypeError")
 
     def test_duplicate_widget_id_error(self):
-        """Multiple widgets with the same key should report an error."""
+        """Multiple widgets with the same generated key should report an error."""
         widgets = {
             "button": lambda key=None: st.button("", key=key),
             "checkbox": lambda key=None: st.checkbox("", key=key),
@@ -186,6 +109,55 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(
                 _build_duplicate_widget_message(
                     widget_func_name=widget_type, user_key=widget_type
+                ),
+                str(ctx.exception),
+            )
+
+    def test_duplicate_widget_id_error_when_user_key_specified(self):
+        """Multiple widgets with the different generated key, but same user specified
+        key should report an error.
+        """
+
+        widgets = {
+            "button": lambda key=None, label="": st.button(label=label, key=key),
+            "checkbox": lambda key=None, label="": st.checkbox(label=label, key=key),
+            "multiselect": lambda key=None, label="": st.multiselect(
+                label=label, options=[1, 2], key=key
+            ),
+            "radio": lambda key=None, label="": st.radio(
+                label=label, options=[1, 2], key=key
+            ),
+            "selectbox": lambda key=None, label="": st.selectbox(
+                label=label, options=[1, 2], key=key
+            ),
+            "slider": lambda key=None, label="": st.slider(label=label, key=key),
+            "text_area": lambda key=None, label="": st.text_area(label=label, key=key),
+            "text_input": lambda key=None, label="": st.text_input(
+                label=label, key=key
+            ),
+            "time_input": lambda key=None, label="": st.time_input(
+                label=label, key=key
+            ),
+            "date_input": lambda key=None, label="": st.date_input(
+                label=label, key=key
+            ),
+            "number_input": lambda key=None, label="": st.number_input(
+                label=label, key=key
+            ),
+        }
+
+        for widget_type, create_widget in widgets.items():
+            user_key = widget_type
+            create_widget(label="LABEL_A", key=user_key)
+            with self.assertRaises(DuplicateWidgetID) as ctx:
+                # We specify different labels for widgets, so auto-generated keys
+                # (widget_ids) will be different.
+                # Test creating a widget with a different auto-generated key but same
+                # user specified key raises an exception.
+                create_widget(label="LABEL_B", key=user_key)
+            self.assertEqual(
+                _build_duplicate_widget_message(
+                    widget_func_name=widget_type, user_key=user_key
                 ),
                 str(ctx.exception),
             )
@@ -366,6 +338,28 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
 
+    def test_json_list(self):
+        """Test Text.JSON list."""
+        json_data = [5, 6, 7, 8]
+
+        st.json(json_data)
+
+        json_string = json.dumps(json_data)
+
+        element = self.get_delta_from_queue().new_element
+        self.assertEqual(json_string, element.json.body)
+
+    def test_json_tuple(self):
+        """Test Text.JSON tuple."""
+        json_data = (5, 6, 7, 8)
+
+        st.json(json_data)
+
+        json_string = json.dumps(json_data)
+
+        element = self.get_delta_from_queue().new_element
+        self.assertEqual(json_string, element.json.body)
+
     def test_json_object(self):
         """Test Text.JSON object."""
         json_data = {"key": "value"}
@@ -413,6 +407,45 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
         self.assertEqual(json_string, element.json.body)
         self.assertEqual(False, element.json.expanded)
+
+    def test_json_not_mutates_data_containing_sets(self):
+        """Test st.json do not mutate data containing sets,
+        pass a dict-containing-a-set to st.json; ensure that it's not mutated
+        """
+        json_data = {"some_set": {"a", "b"}}
+        self.assertIsInstance(json_data["some_set"], set)
+
+        st.json(json_data)
+        self.assertIsInstance(json_data["some_set"], set)
+
+    def test_st_json_set_is_serialized_as_list(self):
+        """Test st.json serializes set as list"""
+        json_data = {"a", "b", "c", "d"}
+        st.json(json_data)
+        element = self.get_delta_from_queue().new_element
+        parsed_element = json.loads(element.json.body)
+        self.assertIsInstance(parsed_element, list)
+        for el in json_data:
+            self.assertIn(el, parsed_element)
+
+    def test_st_json_serializes_sets_inside_iterables_as_lists(self):
+        """Test st.json serializes sets inside iterables as lists"""
+        json_data = {"some_set": {"a", "b"}}
+        st.json(json_data)
+        element = self.get_delta_from_queue().new_element
+        parsed_element = json.loads(element.json.body)
+        set_as_list = parsed_element.get("some_set")
+        self.assertIsInstance(set_as_list, list)
+        self.assertSetEqual(json_data["some_set"], set(set_as_list))
+
+    def test_st_json_generator_is_serialized_as_string(self):
+        """Test st.json serializes generator as string"""
+        json_data = (c for c in "foo")
+        st.json(json_data)
+        element = self.get_delta_from_queue().new_element
+        parsed_element = json.loads(element.json.body)
+        self.assertIsInstance(parsed_element, str)
+        self.assertIn("generator", parsed_element)
 
     def test_markdown(self):
         """Test Markdown element."""

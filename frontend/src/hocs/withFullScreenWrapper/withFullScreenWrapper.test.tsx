@@ -16,7 +16,7 @@
  */
 
 import React, { ComponentType } from "react"
-import { fromJS } from "immutable"
+import { fromJS, Map as ImmutableMap } from "immutable"
 import { mount } from "src/lib/test_util"
 
 import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
@@ -30,7 +30,7 @@ const getProps = (props: Partial<AppElementProps> = {}): AppElementProps => ({
   element: fromJS({
     id: 1,
     label: "Label",
-  }),
+  }) as ImmutableMap<string, any>,
   width: 100,
   ...props,
 })

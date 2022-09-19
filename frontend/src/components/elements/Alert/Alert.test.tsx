@@ -39,6 +39,7 @@ describe("Alert element", () => {
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.ERROR)
+    expect(wrap.find("EmojiIcon")).toEqual({})
     expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
       "#what in the world?"
     )
@@ -53,6 +54,7 @@ describe("Alert element", () => {
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.WARNING)
+    expect(wrap.find("EmojiIcon")).toEqual({})
     expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
       "Are you *sure*?"
     )
@@ -67,6 +69,7 @@ describe("Alert element", () => {
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.SUCCESS)
+    expect(wrap.find("EmojiIcon")).toEqual({})
     expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
       "But our princess was in another castle!"
     )
@@ -81,9 +84,27 @@ describe("Alert element", () => {
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.INFO)
+    expect(wrap.find("EmojiIcon")).toEqual({})
     expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
       "It's dangerous to go alone."
     )
+  })
+
+  it("accepts an icon", () => {
+    const props = getProps({
+      kind: getAlertKind(AlertProto.Format.INFO),
+      body: "It's dangerous to go alone.",
+      icon: "👉🏻",
+    })
+    const wrap = shallow(<Alert {...props} />)
+    const elem = wrap.get(0)
+    expect(elem.props.className.includes("stAlert")).toBeTruthy()
+    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.INFO)
+    expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
+      "It's dangerous to go alone."
+    )
+    expect(wrap.find("EmojiIcon")).toBeDefined()
+    expect(wrap.find("EmojiIcon").prop("children")).toContain("👉🏻")
   })
 })
 

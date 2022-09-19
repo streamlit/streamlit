@@ -27,6 +27,8 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+
 export interface Props {
   disabled: boolean
   element: TimeInputProto
@@ -146,7 +148,11 @@ class TimeInput extends PureComponent<Props, State> {
           overrides: {
             ControlContainer: {
               style: {
-                borderWidth: "1px",
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: "1px",
+                borderRightWidth: "1px",
+                borderTopWidth: "1px",
+                borderBottomWidth: "1px",
               },
             },
 
@@ -158,7 +164,11 @@ class TimeInput extends PureComponent<Props, State> {
 
             ValueContainer: {
               style: () => ({
-                padding: ".5rem",
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                paddingRight: ".5rem",
+                paddingLeft: ".5rem",
+                paddingBottom: ".5rem",
+                paddingTop: ".5rem",
               }),
             },
 
@@ -195,7 +205,13 @@ class TimeInput extends PureComponent<Props, State> {
 
     return (
       <div className="stTimeInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -211,6 +227,7 @@ class TimeInput extends PureComponent<Props, State> {
           onChange={this.handleChange}
           overrides={selectOverrides}
           creatable
+          aria-label={element.label}
         />
       </div>
     )

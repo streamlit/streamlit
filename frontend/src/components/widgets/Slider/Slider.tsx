@@ -23,7 +23,7 @@ import { sprintf } from "sprintf-js"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { Slider as SliderProto } from "src/autogen/proto"
-import { debounce } from "src/lib/utils"
+import { debounce, labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import moment from "moment"
 import {
   WidgetLabel,
@@ -244,6 +244,7 @@ class Slider extends React.PureComponent<Props, State> {
           disabled={props.$disabled}
           ref={ref}
           aria-valuetext={formattedValue}
+          aria-label={this.props.element.label}
         >
           <StyledThumbValue
             className="StyledThumbValue"
@@ -288,7 +289,13 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -320,6 +327,7 @@ class Slider extends React.PureComponent<Props, State> {
             },
             Track: {
               style: {
+                backgroundColor: "none !important",
                 paddingBottom: 0,
                 paddingLeft: 0,
                 paddingRight: 0,

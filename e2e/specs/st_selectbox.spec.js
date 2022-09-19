@@ -23,7 +23,7 @@ describe("st.selectbox", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stSelectbox").should("have.length", 6);
+    cy.get(".stSelectbox").should("have.length", 8);
 
     cy.get(".stSelectbox").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("selectbox" + idx);
@@ -38,7 +38,9 @@ describe("st.selectbox", () => {
         "value 3: None" +
         "value 4: e2e/scripts/components_iframe.py" +
         "value 5: male" +
-        "value 6: female" +
+        "value 6: male" +
+        "value 7: male" +
+        "value 8: female" +
         "select box changed: False"
     );
   });
@@ -76,7 +78,9 @@ describe("st.selectbox", () => {
         "value 3: None" +
         "value 4: e2e/scripts/components_iframe.py" +
         "value 5: male" +
-        "value 6: female" +
+        "value 6: male" +
+        "value 7: male" +
+        "value 8: female" +
         "select box changed: False"
     );
   });
@@ -113,7 +117,7 @@ describe("st.selectbox", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cy.getIndexed(".stSelectbox", 5).then(el => {
+    cy.getIndexed(".stSelectbox", 7).then(el => {
       cy.wrap(el)
         .find("input")
         .click();
@@ -130,6 +134,8 @@ describe("st.selectbox", () => {
         "value 4: e2e/scripts/components_iframe.py" +
         "value 5: male" +
         "value 6: male" +
+        "value 7: male" +
+        "value 8: male" +
         "select box changed: True"
     );
   });

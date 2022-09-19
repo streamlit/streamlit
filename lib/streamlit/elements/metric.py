@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import cast, TYPE_CHECKING, Union, Optional
 from typing_extensions import TypeAlias, Literal
 
-import attr
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
-
-from .utils import clean_text
+from streamlit.string_util import clean_text
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import numpy as np
@@ -33,13 +33,14 @@ Delta: TypeAlias = Union[float, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@dataclass(frozen=True)
 class MetricColorAndDirection:
     color: "MetricProto.MetricColor.ValueType"
     direction: "MetricProto.MetricDirection.ValueType"
 
 
 class MetricMixin:
+    @gather_metrics
     def metric(
         self,
         label: str,
@@ -81,7 +82,7 @@ class MetricMixin:
         >>> st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
 
         .. output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example1.py
+            https://doc-metric-example1.streamlitapp.com/
             height: 210px
 
         ``st.metric`` looks especially nice in combination with ``st.columns``:
@@ -92,7 +93,7 @@ class MetricMixin:
         >>> col3.metric("Humidity", "86%", "4%")
 
         .. output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example2.py
+            https://doc-metric-example2.streamlitapp.com/
             height: 210px
 
         The delta indicator color can also be inverted or turned off:
@@ -104,7 +105,7 @@ class MetricMixin:
         ...     delta_color="off")
 
         .. output::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example3.py
+            https://doc-metric-example3.streamlitapp.com/
             height: 320px
 
         """

@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, List, Sequence, TYPE_CHECKING, Union
+from typing import cast, List, Sequence, TYPE_CHECKING, Union, Optional
 
 from streamlit.beta_util import function_beta_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -25,6 +26,7 @@ SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
+    @gather_metrics
     def container(self) -> "DeltaGenerator":
         """Insert a multi-element container.
 
@@ -50,7 +52,7 @@ class LayoutsMixin:
         >>> st.write("This is outside the container")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.container1.py
+            https://doc-container1.streamlitapp.com/
             height: 520px
 
         Inserting elements out of order:
@@ -63,13 +65,16 @@ class LayoutsMixin:
         >>> container.write("This is inside too")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.container2.py
+            https://doc-container2.streamlitapp.com/
             height: 480px
         """
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def columns(self, spec: SpecType) -> List["DeltaGenerator"]:
+    @gather_metrics
+    def columns(
+        self, spec: SpecType, *, gap: Optional[str] = "small"
+    ) -> List["DeltaGenerator"]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -97,6 +102,10 @@ class LayoutsMixin:
                 For example, `st.columns([3, 1, 2])` creates 3 columns where
                 the first column is 3 times the width of the second, and the last
                 column is 2 times that width.
+        gap : string ("small", "medium", or "large")
+            An optional string, which indicates the size of the gap between each column.
+            The default is a small gap between columns. This argument can only be supplied by
+            keyword.
 
         Returns
         -------
@@ -123,7 +132,7 @@ class LayoutsMixin:
         ...    st.image("https://static.streamlit.io/examples/owl.jpg")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.columns1.py
+            https://doc-columns1.streamlitapp.com/
             height: 620px
 
         Or you can just call methods directly in the returned objects:
@@ -138,7 +147,7 @@ class LayoutsMixin:
         >>> col2.write(data)
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.columns2.py
+            https://doc-columns2.streamlitapp.com/
             height: 550px
 
         """
@@ -159,18 +168,123 @@ class LayoutsMixin:
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise weights_exception
 
+        def column_gap(gap):
+            if type(gap) == str:
+                gap_size = gap.lower()
+                valid_sizes = ["small", "medium", "large"]
+
+                if gap_size in valid_sizes:
+                    return gap_size
+
+            raise StreamlitAPIException(
+                'The gap argument to st.columns must be "small", "medium", or "large". \n'
+                f"The argument passed was {gap}."
+            )
+
+        gap_size = column_gap(gap)
+
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
+            col_proto.column.gap = gap_size
             col_proto.allow_empty = True
             return col_proto
 
         block_proto = BlockProto()
-        block_proto.horizontal.SetInParent()
+        block_proto.horizontal.gap = gap_size
         row = self.dg._block(block_proto)
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
+    @gather_metrics
+    def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
+        """Insert containers separated into tabs.
+
+        Inserts a number of multi-element containers as tabs.
+        Tabs are a navigational element that allows users to easily
+        move between groups of related content.
+
+        To add elements to the returned containers, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
+
+        .. warning::
+            All the content of every tab is always sent to and rendered on the frontend.
+            Conditional rendering is currently not supported.
+
+        Parameters
+        ----------
+        tabs : list of strings
+            Creates a tab for each string in the list. The string is used as the name of the tab.
+            The first tab is selected by default.
+
+        Returns
+        -------
+        list of containers
+            A list of container objects.
+
+        Examples
+        --------
+
+        You can use `with` notation to insert any element into a tab:
+
+        >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
+        >>>
+        >>> with tab1:
+        ...    st.header("A cat")
+        ...    st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
+        ...
+        >>> with tab2:
+        ...    st.header("A dog")
+        ...    st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
+        ...
+        >>> with tab3:
+        ...    st.header("An owl")
+        ...    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+
+        .. output ::
+            https://doc-tabs1.streamlitapp.com/
+            height: 620px
+
+        Or you can just call methods directly in the returned objects:
+
+        >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
+        >>> data = np.random.randn(10, 1)
+        >>>
+        >>> tab1.subheader("A tab with a chart")
+        >>> tab1.line_chart(data)
+        >>>
+        >>> tab2.subheader("A tab with the data")
+        >>> tab2.write(data)
+
+
+        .. output ::
+            https://doc-tabs2.streamlitapp.com/
+            height: 700px
+
+        """
+        if not tabs:
+            raise StreamlitAPIException(
+                "The input argument to st.tabs must contain at least one tab label."
+            )
+
+        if any(isinstance(tab, str) == False for tab in tabs):
+            raise StreamlitAPIException(
+                "The tabs input list to st.tabs is only allowed to contain strings."
+            )
+
+        def tab_proto(label: str) -> BlockProto:
+            tab_proto = BlockProto()
+            tab_proto.tab.label = label
+            tab_proto.allow_empty = True
+            return tab_proto
+
+        block_proto = BlockProto()
+        block_proto.tab_container.SetInParent()
+        tab_container = self.dg._block(block_proto)
+        return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
+
+    @gather_metrics
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
         """Insert a multi-element container that can be expanded/collapsed.
 
@@ -209,7 +323,7 @@ class LayoutsMixin:
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.expander.py
+            https://doc-expander.streamlitapp.com/
             height: 750px
 
         Or you can just call methods directly in the returned objects:
@@ -225,7 +339,7 @@ class LayoutsMixin:
         >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.expander.py
+            https://doc-expander.streamlitapp.com/
             height: 750px
 
         """

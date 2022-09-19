@@ -20,6 +20,7 @@ import UIRadio from "src/components/shared/Radio"
 import { Radio as RadioProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -108,7 +109,7 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { disabled, element, width, widgetMgr } = this.props
-    const { horizontal, options, label, help } = element
+    const { horizontal, options, label, labelVisibility, help } = element
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -125,6 +126,9 @@ class Radio extends React.PureComponent<Props, State> {
         width={width}
         disabled={disabled}
         horizontal={horizontal}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value
+        )}
         value={this.state.value}
         help={help}
       />

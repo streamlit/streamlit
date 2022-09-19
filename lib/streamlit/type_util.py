@@ -20,41 +20,127 @@ import re
 import types
 from typing import (
     Any,
-    cast,
     Iterable,
     NamedTuple,
     Optional,
-    overload,
     Sequence,
     TypeVar,
     TYPE_CHECKING,
     Union,
+    cast,
+    overload,
+    List,
 )
-from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard
+
+from typing_extensions import (
+    Final,
+    Literal,
+    Protocol,
+    TypeAlias,
+    TypeGuard,
+    get_args,
+)
 
 import pyarrow as pa
+from pandas.api.types import infer_dtype
 
 from streamlit import errors
+from streamlit import logger as _logger
 
 if TYPE_CHECKING:
-    import numpy as np
+    import graphviz
     import sympy
     from pandas import DataFrame, Series, Index
+    from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
-    from plotly.graph_objs._figure import Figure
-    from pydeck.bindings.deck import Deck  # type: ignore[import]
+    from plotly.graph_objs import Figure
+    from pydeck import Deck
 
+_LOGGER = _logger.get_logger("root")
 
-OptionSequence: TypeAlias = "Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]"
-Key: TypeAlias = Union[str, int]
+# The array value field names are part of the larger set of possible value
+# field names. See the explanation for said set below. The message types
+# associated with these fields are distinguished by storing data in a `data`
+# field in their messages, meaning they need special treatment in certain
+# circumstances. Hence, they need their own, dedicated, sub-type.
+ArrayValueFieldName: TypeAlias = Literal[
+    "double_array_value",
+    "int_array_value",
+    "string_array_value",
+]
 
+# A frozenset containing the allowed values of the ArrayValueFieldName type.
+# Useful for membership checking.
+ARRAY_VALUE_FIELD_NAMES: Final = frozenset(
+    cast(
+        "tuple[ArrayValueFieldName, ...]",
+        # NOTE: get_args is not recursive, so this only works as long as
+        # ArrayValueFieldName remains flat.
+        get_args(ArrayValueFieldName),
+    )
+)
+
+# These are the possible field names that can be set in the `value` oneof-field
+# of the WidgetState message (schema found in .proto/WidgetStates.proto).
+# We need these as a literal type to ensure correspondence with the protobuf
+# schema in certain parts of the python code.
+# TODO(harahu): It would be preferable if this type was automatically derived
+#  from the protobuf schema, rather than manually maintained. Not sure how to
+#  achieve that, though.
+ValueFieldName: TypeAlias = Literal[
+    ArrayValueFieldName,
+    "arrow_value",
+    "bool_value",
+    "bytes_value",
+    "double_value",
+    "file_uploader_state_value",
+    "int_value",
+    "json_value",
+    "string_value",
+    "trigger_value",
+]
+
+V_co = TypeVar(
+    "V_co",
+    covariant=True,  # https://peps.python.org/pep-0484/#covariance-and-contravariance
+)
 
 T = TypeVar("T")
 
 
-class SupportsStr(Protocol):
-    def __str__(self) -> str:
+class DataFrameGenericAlias(Protocol[V_co]):
+    """Technically not a GenericAlias, but serves the same purpose in
+    OptionSequence below, in that it is a type which admits DataFrame,
+    but is generic. This allows OptionSequence to be a fully generic type,
+    significantly increasing its usefulness.
+
+    We can't use types.GenericAlias, as it is only available from python>=3.9,
+    and isn't easily back-ported.
+    """
+
+    @property
+    def iloc(self) -> _iLocIndexer:
         ...
+
+
+OptionSequence: TypeAlias = Union[
+    Iterable[V_co],
+    DataFrameGenericAlias[V_co],
+]
+
+
+Key: TypeAlias = Union[str, int]
+
+LabelVisibility = Literal["visible", "hidden", "collapsed"]
+
+# This should really be a Protocol, but can't be, due to:
+# https://github.com/python/mypy/issues/12933
+# https://github.com/python/mypy/issues/13081
+SupportsStr: TypeAlias = object
+
+
+def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
+    return obj in ARRAY_VALUE_FIELD_NAMES
 
 
 @overload
@@ -105,9 +191,7 @@ def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
 
 def get_fqn(the_type: type) -> str:
     """Get module.type_name for a given type."""
-    module = the_type.__module__
-    name = the_type.__qualname__
-    return "%s.%s" % (module, name)
+    return f"{the_type.__module__}.{the_type.__qualname__}"
 
 
 def get_fqn_type(obj: object) -> str:
@@ -224,7 +308,9 @@ def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str,
     )
 
 
-def is_graphviz_chart(obj: object) -> bool:
+def is_graphviz_chart(
+    obj: object,
+) -> TypeGuard[Union[graphviz.Graph, graphviz.Digraph]]:
     """True if input looks like a GraphViz chart."""
     return (
         # GraphViz < 0.18
@@ -294,6 +380,27 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
+def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
+    try:
+        # The ignore statement here is intentional, as this is a
+        # perfectly fine way of checking for iterables.
+        iter(obj)  # type: ignore[call-overload]
+    except TypeError:
+        return False
+    return True
+
+
+def is_sequence(seq: Any) -> bool:
+    """True if input looks like a sequence."""
+    if isinstance(seq, str):
+        return False
+    try:
+        len(seq)
+    except Exception:
+        return False
+    return True
+
+
 def convert_anything_to_df(df: Any) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
@@ -345,7 +452,7 @@ Offending object:
 
 
 @overload
-def ensure_iterable(obj: Iterable[T]) -> Iterable[T]:
+def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
     ...
 
 
@@ -354,7 +461,7 @@ def ensure_iterable(obj: DataFrame) -> Iterable[Any]:
     ...
 
 
-def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
+def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -370,26 +477,20 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
 
     """
     if is_dataframe(obj):
+        # Return first column as a pd.Series
+        # The type of the elements in this column is not known up front, hence
+        # the Iterable[Any] return type.
         return cast(Iterable[Any], obj.iloc[:, 0])
 
-    try:
-        iter(obj)
-        return cast(Iterable[T], obj)
-    except TypeError:
-        raise
+    if is_iterable(obj):
+        return obj
+
+    raise TypeError(
+        f"Object is not an iterable and could not be converted to one. Object: {obj}"
+    )
 
 
-@overload
-def ensure_indexable(obj: Sequence[T]) -> Sequence[T]:
-    ...
-
-
-@overload
-def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
-    ...
-
-
-def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
+def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     """Try to ensure a value is an indexable Sequence. If the collection already
     is one, it has the index method that we need. Otherwise, convert it to a list.
     """
@@ -398,7 +499,7 @@ def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
     if callable(index_fn):
-        return it  # type: ignore
+        return it  # type: ignore[return-value]
     else:
         return list(it)
 
@@ -438,6 +539,16 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
+def convert_mixed_columns_to_string(
+    df: DataFrame, selected_columns: Optional[List[str]] = None
+) -> DataFrame:
+    for col in selected_columns or df.columns:
+        column = df[col]
+        if column.dtype == "object" and "mixed" in infer_dtype(column):
+            df[col] = column.astype(str)
+    return df
+
+
 def data_frame_to_bytes(df: DataFrame) -> bytes:
     """Serialize pandas.DataFrame to bytes using Apache Arrow.
 
@@ -448,7 +559,12 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
 
     """
     try:
-        table = pa.Table.from_pandas(df)
+        try:
+            table = pa.Table.from_pandas(df)
+        except pa.ArrowTypeError:
+            # Fallback: Convert all object types to string
+            df = convert_mixed_columns_to_string(df)
+            table = pa.Table.from_pandas(df)
         return pyarrow_table_to_bytes(table)
     except Exception as e:
         _NUMPY_DTYPE_ERROR_MESSAGE = "Could not convert dtype"
@@ -493,3 +609,18 @@ def to_key(key: Optional[Key]) -> Optional[str]:
         return None
     else:
         return str(key)
+
+
+def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[str]):
+    if not label:
+        _LOGGER.warning(
+            "`label` got an empty value. This is discouraged for accessibility "
+            "reasons and may be disallowed in the future by raising an exception. "
+            "Please provide a non-empty label and hide it with label_visibility "
+            "if needed."
+        )
+    if label_visibility not in ("visible", "hidden", "collapsed"):
+        raise errors.StreamlitAPIException(
+            f"Unsupported label_visibility option '{label_visibility}'. "
+            f"Valid values are 'visible', 'hidden' or 'collapsed'."
+        )

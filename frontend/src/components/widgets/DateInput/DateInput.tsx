@@ -31,6 +31,8 @@ import { Theme } from "src/theme"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+
 export interface Props {
   disabled: boolean
   element: DateInputProto
@@ -192,7 +194,13 @@ class DateInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stDateInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -278,19 +286,21 @@ class DateInput extends React.PureComponent<Props, State> {
                 overrides: {
                   Root: {
                     style: {
-                      borderWidth: "1px",
+                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                      borderLeftWidth: "1px",
+                      borderRightWidth: "1px",
+                      borderTopWidth: "1px",
+                      borderBottomWidth: "1px",
                     },
                   },
 
-                  InputContainer: {
-                    style: {
-                      borderWidth: "1px",
-                    },
-                  },
                   Input: {
                     style: {
-                      padding: ".5rem",
-                      borderWidth: "1px",
+                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                      paddingRight: ".5rem",
+                      paddingLeft: ".5rem",
+                      paddingBottom: ".5rem",
+                      paddingTop: ".5rem",
                     },
                   },
                 },

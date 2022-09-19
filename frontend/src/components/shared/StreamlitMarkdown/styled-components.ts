@@ -36,7 +36,7 @@ export const StyledStreamlitMarkdown = styled.div<
   },
 
   p: {
-    wordWrap: "break-word",
+    wordBreak: "break-word",
   },
 
   li: {

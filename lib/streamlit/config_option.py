@@ -36,7 +36,7 @@ class ConfigOption:
             description = 'Connect to the proxy at this port.',
             default_val = 8501)
 
-    More complex config options resolve thier values at runtime as follows:
+    More complex config options resolve their values at runtime as follows:
 
         @ConfigOption('browser.serverPort')
         def _proxy_port():
@@ -65,6 +65,8 @@ class ConfigOption:
     where_defined : str
         Indicates which file set this config option.
         ConfigOption.DEFAULT_DEFINITION means this file.
+    is_default: bool
+        True if the config value is equal to its default value.
     visibility : {"visible", "hidden"}
         See __init__.
     scriptable : bool
@@ -138,7 +140,7 @@ class ConfigOption:
             # Capture a group called "section"
             r"(?P<section>"
             # Matching text comprised of letters and numbers that begins
-            # with a lowercase letter with an optional "_" preceeding it.
+            # with a lowercase letter with an optional "_" preceding it.
             # Examples: "_section", "section1"
             r"\_?[a-z][a-zA-Z0-9]*"
             r")"
@@ -163,6 +165,7 @@ class ConfigOption:
         self.default_val = default_val
         self.deprecated = deprecated
         self.replaced_by = replaced_by
+        self.is_default = True
         self._get_val_func: Optional[Callable[[], Any]] = None
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
@@ -231,6 +234,8 @@ class ConfigOption:
             self.where_defined = ConfigOption.DEFAULT_DEFINITION
         else:
             self.where_defined = where_defined
+
+        self.is_default = value == self.default_val
 
         if self.deprecated and self.where_defined != ConfigOption.DEFAULT_DEFINITION:
 

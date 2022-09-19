@@ -14,9 +14,10 @@
 
 from typing import cast, Optional, TYPE_CHECKING, Union
 
-from streamlit import type_util
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
-from .utils import clean_text
+from streamlit.string_util import clean_text
+from streamlit.type_util import SupportsStr, is_sympy_expession
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import sympy
@@ -25,7 +26,10 @@ if TYPE_CHECKING:
 
 
 class MarkdownMixin:
-    def markdown(self, body: str, unsafe_allow_html: bool = False) -> "DeltaGenerator":
+    @gather_metrics
+    def markdown(
+        self, body: SupportsStr, unsafe_allow_html: bool = False
+    ) -> "DeltaGenerator":
         """Display string formatted as Markdown.
 
         Parameters
@@ -36,7 +40,7 @@ class MarkdownMixin:
 
             This also supports:
 
-            * Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
               For a list of all supported codes,
               see https://share.streamlit.io/streamlit/emoji-shortcodes.
 
@@ -55,7 +59,7 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
-            *Also note that `unsafe_allow_html` is a temporary measure and may
+            *Also note that ``unsafe_allow_html`` is a temporary measure and may
             be removed from Streamlit at any time.*
 
             If you decide to turn on HTML anyway, we ask you to please tell us
@@ -78,58 +82,10 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
-    def header(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
-        """Display text in header formatting.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        anchor : str
-            The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-
-        Example
-        -------
-        >>> st.header('This is a header')
-
-        """
-        header_proto = MarkdownProto()
-        if anchor is None:
-            header_proto.body = f"## {clean_text(body)}"
-        else:
-            header_proto.body = f'<h2 data-anchor="{anchor}">{clean_text(body)}</h2>'
-            header_proto.allow_html = True
-        return self.dg._enqueue("markdown", header_proto)
-
-    def subheader(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
-        """Display text in subheader formatting.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        anchor : str
-            The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-
-        Example
-        -------
-        >>> st.subheader('This is a subheader')
-
-        """
-        subheader_proto = MarkdownProto()
-        if anchor is None:
-            subheader_proto.body = f"### {clean_text(body)}"
-        else:
-            subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
-            subheader_proto.allow_html = True
-
-        return self.dg._enqueue("markdown", subheader_proto)
-
-    def code(self, body: str, language: Optional[str] = "python") -> "DeltaGenerator":
+    @gather_metrics
+    def code(
+        self, body: SupportsStr, language: Optional[str] = "python"
+    ) -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -139,9 +95,13 @@ class MarkdownMixin:
         body : str
             The string to display as code.
 
-        language : str
+        language : str or None
             The language that the code is written in, for syntax highlighting.
-            If omitted, the code will be unstyled.
+            If ``None``, the code will be unstyled. Defaults to ``"python"``.
+
+            For a list of available ``language`` values, see:
+
+            https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
 
         Example
         -------
@@ -151,42 +111,14 @@ class MarkdownMixin:
 
         """
         code_proto = MarkdownProto()
-        markdown = "```%(language)s\n%(body)s\n```" % {
-            "language": language or "",
-            "body": body,
-        }
+        markdown = f'```{language or ""}\n{body}\n```'
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
-    def title(self, body: str, anchor: Optional[str] = None) -> "DeltaGenerator":
-        """Display text in title formatting.
-
-        Each document should have a single `st.title()`, although this is not
-        enforced.
-
-        Parameters
-        ----------
-        body : str
-            The text to display.
-
-        anchor : str
-            The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-
-        Example
-        -------
-        >>> st.title('This is a title')
-
-        """
-        title_proto = MarkdownProto()
-        if anchor is None:
-            title_proto.body = f"# {clean_text(body)}"
-        else:
-            title_proto.body = f'<h1 data-anchor="{anchor}">{clean_text(body)}</h1>'
-            title_proto.allow_html = True
-        return self.dg._enqueue("markdown", title_proto)
-
-    def caption(self, body: str, unsafe_allow_html: bool = False) -> "DeltaGenerator":
+    @gather_metrics
+    def caption(
+        self, body: SupportsStr, unsafe_allow_html: bool = False
+    ) -> "DeltaGenerator":
         """Display text in small font.
 
         This should be used for captions, asides, footnotes, sidenotes, and
@@ -229,7 +161,8 @@ class MarkdownMixin:
         caption_proto.is_caption = True
         return self.dg._enqueue("markdown", caption_proto)
 
-    def latex(self, body: Union[str, "sympy.Expr"]) -> "DeltaGenerator":
+    @gather_metrics
+    def latex(self, body: Union[SupportsStr, "sympy.Expr"]) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -254,7 +187,7 @@ class MarkdownMixin:
         ...     ''')
 
         """
-        if type_util.is_sympy_expession(body):
+        if is_sympy_expession(body):
             import sympy
 
             body = sympy.latex(body)
