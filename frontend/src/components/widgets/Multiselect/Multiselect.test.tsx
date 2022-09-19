@@ -289,14 +289,13 @@ describe("Multiselect widget", () => {
     )
   })
   describe("properly invalidates going over max selections", () => {
-    it("has correct noResultsMsg when default.length < maxSelections", () => {
+    it("has correct noResultsMsg when maxSelections is not passed", () => {
       const props = getProps(
         MultiSelectProto.create({
           id: "1",
           label: "Label",
           default: [0],
           options: ["a", "b", "c"],
-          maxSelections: 2,
         })
       )
       const wrapper = mount(<Multiselect {...props} />)
@@ -309,7 +308,7 @@ describe("Multiselect widget", () => {
       ).toBe("No results")
     })
 
-    it("has correct noResultsMsg when default.length >= maxSelections", () => {
+    it("has correct noResultsMsg when maxSelections is passed", () => {
       const props = getProps(
         MultiSelectProto.create({
           id: "1",
