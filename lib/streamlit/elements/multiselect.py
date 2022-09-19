@@ -306,13 +306,7 @@ class MultiSelectMixin:
         if max_selections is not None:
             if get_default_count(widget_state.value) > max_selections:
                 raise StreamlitAPIException(
-                    f"""
-Multiselect has {get_default_count(widget_state.value)} options selected but `max_selections`
-is set to {max_selections}. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most {max_selections} options.
-"""
+                    getOptionsMessage(len(widget_state.value), max_selections)
                 )
             else:
                 multiselect_proto.max_selections = max_selections

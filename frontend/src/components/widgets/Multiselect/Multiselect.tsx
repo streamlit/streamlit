@@ -74,7 +74,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     )
   }
 
-  public getNonResultsMsg(): string {
+  public getNoResultsMsg(): string {
     if (this.maxSelections !== 1) {
       return `You can only select up to ${this.maxSelections} options. Remove an option first.`
     }
@@ -219,9 +219,6 @@ class Multiselect extends React.PureComponent<Props, State> {
         }
       }
     )
-    const noResultsMsg = this.overMaxSelections()
-      ? this.getNonResultsMsg()
-      : "No results"
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -261,7 +258,9 @@ class Multiselect extends React.PureComponent<Props, State> {
             value={this.valueFromState}
             disabled={disabled}
             size={"compact"}
-            noResultsMsg={noResultsMsg}
+            noResultsMsg={
+              this.overMaxSelections() ? this.getNoResultsMsg() : "No results"
+            }
             filterOptions={this.filterOptions}
             closeOnSelect={false}
             overrides={{
