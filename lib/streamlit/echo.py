@@ -63,25 +63,24 @@ def echo(code_location="above"):
         with source_util.open_python_file(filename) as source_file:
             source_lines = source_file.readlines()
 
-        # Get the indent of the first line in the echo block, skipping over any
-        # empty lines.
-        initial_indent = _get_initial_indent(source_lines[start_line:])
+        # Use ast to parse the Python file and find the code block to display
+        import ast
 
-        # Iterate over the remaining lines in the source file
-        # until we find one that's indented less than the rest of the
-        # block. That's our end line.
-        #
-        # Note that this is *not* a perfect strategy, because
-        # de-denting is not guaranteed to signal "end of block". (A
-        # triple-quoted string might be dedented but still in the
-        # echo block, for example.)
-        # TODO: rewrite this to parse the AST to get the *actual* end of the block.
-        lines_to_display: List[str] = []
-        for line in source_lines[start_line:]:
-            indent = _get_indent(line)
-            if indent is not None and indent < initial_indent:
-                break
-            lines_to_display.append(line)
+        ap = ast.parse("".join(source_lines))
+
+        ap_map = {}
+
+        def map_ast(a):
+            if not hasattr(a, "body"):
+                return
+            for b in a.body:
+                ap_map[b.lineno] = b
+                map_ast(b)
+
+        map_ast(ap)
+        lines_to_display = source_lines[
+            ap_map[start_line].body[0].lineno - 1 : ap_map[start_line].end_lineno
+        ]
 
         code_string = textwrap.dedent("".join(lines_to_display))
 
