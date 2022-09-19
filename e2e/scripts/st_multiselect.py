@@ -57,11 +57,18 @@ if "multiselect 9" in st.session_state and set_multiselect_9:
 i9 = st.multiselect("multiselect 9", options, max_selections=1, key="multiselect 9")
 st.text(f"value 9: {i9}")
 
+with st.form("my_max_selections_ms_in_form"):
+    i10 = st.multiselect(
+        "multiselect 10", options, max_selections=1, key="multiselect 10"
+    )
+    st.text(f"value 10: {i10}")
+    submitted = st.form_submit_button("Submit")
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.multiselect_changed = True
 
-    st.multiselect("multiselect 10", options, key="multiselect10", on_change=on_change)
-    st.text(f"value 10: {st.session_state.multiselect10}")
+    st.multiselect("multiselect 11", options, key="multiselect11", on_change=on_change)
+    st.text(f"value 11: {st.session_state.multiselect11}")
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")

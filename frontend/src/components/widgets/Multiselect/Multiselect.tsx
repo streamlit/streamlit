@@ -259,7 +259,7 @@ class Multiselect extends React.PureComponent<Props, State> {
             disabled={disabled}
             size={"compact"}
             noResultsMsg={
-              this.overMaxSelections() ? this.getNoResultsMsg() : "No results"
+              this.maxSelections !== 0 ? this.getNoResultsMsg() : "No results"
             }
             filterOptions={this.filterOptions}
             closeOnSelect={false}
