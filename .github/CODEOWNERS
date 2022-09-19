@@ -4,3 +4,4 @@
 frontend/package.json @jroes @anoctopus @tconkling @kmcgrady
 lib/Pipfile @jroes @anoctopus @tconkling @kmcgrady
 lib/setup.py @jroes @anoctopus @tconkling @kmcgrady
+proto/ @vdonato @tconkling @LukasMasuch
