@@ -16,10 +16,6 @@ from typing import Any, List
 
 import streamlit as st
 
-session_state_enabled = st.checkbox("session_state_enabled")
-if "multiselect 9" in st.session_state and session_state_enabled:
-    st.session_state["multiselect 9"] = ["male", "female"]
-
 options = ("male", "female")
 
 i1 = st.multiselect("multiselect 1", options)
@@ -53,6 +49,10 @@ st.text(f"value 7: {i7}")
 
 i8 = st.multiselect("Collapsed label", options, label_visibility="collapsed")
 st.text(f"value 8: {i8}")
+
+set_multiselect_9 = st.checkbox("set_multiselect_9d")
+if "multiselect 9" in st.session_state and set_multiselect_9:
+    st.session_state["multiselect 9"] = ["male", "female"]
 
 i9 = st.multiselect("multiselect 9", options, max_selections=1, key="multiselect 9")
 st.text(f"value 9: {i9}")

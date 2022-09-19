@@ -111,6 +111,31 @@ def get_default_count(default: Union[Sequence[Any], Any, None]):
     return len(default)
 
 
+def getOptionsMessage(current_selections: int, max_selections: int):
+    middle_msg_part = f"""but `max_selections`
+is set to {max_selections}. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback."""
+    curr_select_msg = ""
+    max_select_msg = ""
+    if current_selections == 1:
+        curr_select_msg = f"""
+Multiselect has {current_selections} option selected """
+    else:
+        curr_select_msg = f"""
+Multiselect has {current_selections} options selected """
+
+    if max_selections == 1:
+        max_select_msg = f"""
+Please select at most {max_selections} option.
+"""
+    else:
+        max_select_msg = f"""
+Please select at most {max_selections} options.
+"""
+    return curr_select_msg + middle_msg_part + max_select_msg
+
+
 @dataclass
 class MultiSelectSerde(Generic[T]):
     options: Sequence[T]

@@ -268,7 +268,7 @@ describe("st.multiselect", () => {
           .click()
           .get("li")
           .first()
-          .should("have.text", "You can only select up to 1 options. Remove an option first.")
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
       });
     });
 
@@ -283,7 +283,7 @@ describe("st.multiselect", () => {
 
       cy.get(".element-container .stException").should(
         "contain.text",
-        `Multiselect has 2 options selected but max_selections\nis set to 1. This happened because you either gave too many options to default\nor you manipulated the widget's state through st.session_state. Note that\nthe latter can happen before the line indicated in the traceback.\nPlease select at most 1 options.`
+        `Multiselect has 2 options selected but max_selections\nis set to 1.`
       );
     });
   })

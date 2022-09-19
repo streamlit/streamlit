@@ -329,6 +329,26 @@ describe("Multiselect widget", () => {
       ).toBe(`You can only select up to 2 options. Remove an option first.`)
     })
 
+    it("has correct noResultsMsg when maxSelections === 1", () => {
+      const props = getProps(
+        MultiSelectProto.create({
+          id: "1",
+          label: "Label",
+          default: [0, 1],
+          options: ["a", "b", "c"],
+          maxSelections: 1,
+        })
+      )
+      const wrapper = mount(<Multiselect {...props} />)
+
+      expect(
+        wrapper
+          .find(UISelect)
+          .prop("noResultsMsg")
+          ?.toString()
+      ).toBe(`You can only select up to 1 option. Remove an option first.`)
+    })
+
     it("does not allow for more selection when an option is picked", () => {
       const props = getProps(
         MultiSelectProto.create({

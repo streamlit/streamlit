@@ -74,6 +74,13 @@ class Multiselect extends React.PureComponent<Props, State> {
     )
   }
 
+  public getNonResultsMsg(): string {
+    if (this.maxSelections !== 1) {
+      return `You can only select up to ${this.maxSelections} options. Remove an option first.`
+    }
+    return `You can only select up to 1 option. Remove an option first.`
+  }
+
   get initialValue(): number[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
@@ -213,7 +220,7 @@ class Multiselect extends React.PureComponent<Props, State> {
       }
     )
     const noResultsMsg = this.overMaxSelections()
-      ? `You can only select up to ${this.maxSelections} options. Remove an option first.`
+      ? this.getNonResultsMsg()
       : "No results"
 
     // Manage our form-clear event handler.
