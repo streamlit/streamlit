@@ -62,21 +62,20 @@ interface MultiselectOption {
 class Multiselect extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
-  maxSelections: number = this.props.element.maxSelections
-
   public state: State = {
     value: this.initialValue,
   }
 
   public overMaxSelections(): boolean {
     return (
-      this.maxSelections > 0 && this.initialValue.length >= this.maxSelections
+      this.props.element.maxSelections > 0 &&
+      this.initialValue.length >= this.props.element.maxSelections
     )
   }
 
   public getNoResultsMsg(): string {
-    if (this.maxSelections !== 1) {
-      return `You can only select up to ${this.maxSelections} options. Remove an option first.`
+    if (this.props.element.maxSelections !== 1) {
+      return `You can only select up to ${this.props.element.maxSelections} options. Remove an option first.`
     }
     return `You can only select up to 1 option. Remove an option first.`
   }
@@ -175,9 +174,9 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private onChange = (params: OnChangeParams): void => {
     if (
-      this.maxSelections &&
+      this.props.element.maxSelections &&
       params.type === "select" &&
-      this.state.value.length >= this.maxSelections
+      this.state.value.length >= this.props.element.maxSelections
     ) {
       return
     }
