@@ -6,7 +6,6 @@ cffi>=1.14
 chart-studio>=1.1.0
 # 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
 cx-Oracle<8.0.0
-click
 graphviz>=0.17
 matplotlib>=3.3.4
 mysqlclient>=2.0.3
