@@ -20,8 +20,7 @@ import DeckGL from "deck.gl"
 import isEqual from "lodash/isEqual"
 import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"
-import { Theme } from "src/theme"
-import { getLuminance } from "color2k"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 // We don't have Typescript defs for these imports, which makes ESLint unhappy
 /* eslint-disable import/no-extraneous-dependencies */
 import * as layers from "@deck.gl/layers"
@@ -150,8 +149,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
     if (!notNullOrUndefined(json.mapStyle)) {
-      const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
-      const mapTheme = hasLightBg ? "light" : "dark"
+      const mapTheme = hasLightBackgroundColor(theme) ? "light" : "dark"
       json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
     }
 
