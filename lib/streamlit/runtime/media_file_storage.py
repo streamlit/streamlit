@@ -12,9 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from typing import Union, Optional
 
 from typing_extensions import Protocol
+
+
+class MediaFileKind(Enum):
+    # st.image, st.video, st.audio files
+    MEDIA = "media"
+
+    # st.download_button files
+    DOWNLOADABLE = "downloadable"
 
 
 class MediaFileStorageError(Exception):
@@ -34,6 +43,7 @@ class MediaFileStorage(Protocol):
         self,
         path_or_data: Union[str, bytes],
         mimetype: str,
+        kind: MediaFileKind,
         filename: Optional[str] = None,
     ) -> str:
         """Load the given file path or bytes into the manager and return
@@ -51,6 +61,9 @@ class MediaFileStorage(Protocol):
         mimetype
             The media’s mimetype. Used to set the Content-Type header when
             serving the media over HTTP.
+
+        kind
+            The kind of file this is: either MEDIA, or DOWNLOADABLE.
 
         filename : str or None
             Optional filename. Used to set the filename in the response header.

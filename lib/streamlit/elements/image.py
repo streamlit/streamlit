@@ -30,10 +30,11 @@ import numpy as np
 from PIL import Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
 
+import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.runtime.media_file_manager import get_media_file_manager
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -303,6 +304,9 @@ def image_to_url(
     """Return a URL that an image can be served from.
     If `image` is already a URL, return it unmodified.
     Otherwise, add the image to the MediaFileManager and return the URL.
+
+    (When running in "raw" mode, we won't actually load data into the
+    MediaFileManager, and we'll return an empty URL.)
     """
 
     image_data: bytes
@@ -328,7 +332,7 @@ def image_to_url(
             mimetype, _ = mimetypes.guess_type(image)
             if mimetype is None:
                 mimetype = "application/octet-stream"
-            return media_file_manager.add(image, mimetype, image_id)
+            return get_media_file_manager().add(image, mimetype, image_id)
 
     # PIL Images
     elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
@@ -375,7 +379,11 @@ def image_to_url(
     image_data = _ensure_image_size_and_format(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
-    return media_file_manager.add(image_data, mimetype, image_id)
+    if streamlit._is_running_with_streamlit:
+        return get_media_file_manager().add(image_data, mimetype, image_id)
+    else:
+        # When running in "raw mode", we can't access the MediaFileManager.
+        return ""
 
 
 def marshall_images(

@@ -55,7 +55,7 @@ class MediaTest(testutil.DeltaGeneratorTestCase):
         MediaFileManager. URL-based media does not go through the MediaFileManager.
         """
         with mock.patch(
-            "streamlit.elements.media.media_file_manager.add"
+            "streamlit.runtime.media_file_manager.MediaFileManager.add"
         ) as mock_mfm_add:
             mock_mfm_add.return_value = "https://mockoutputurl.com"
 

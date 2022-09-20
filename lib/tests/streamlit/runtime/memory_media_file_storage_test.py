@@ -20,8 +20,8 @@ from unittest.mock import mock_open
 
 from parameterized import parameterized
 
-from streamlit.runtime.media_file_storage import MediaFileStorageError
-from streamlit.web.server.memory_media_file_storage import (
+from streamlit.runtime.media_file_storage import MediaFileStorageError, MediaFileKind
+from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     MemoryFile,
 )
@@ -33,17 +33,23 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         self.storage = MemoryMediaFileStorage(media_endpoint="/mock/media")
 
     @mock.patch(
-        "streamlit.web.server.memory_media_file_storage.open",
+        "streamlit.runtime.memory_media_file_storage.open",
         mock_open(read_data=b"mock_bytes"),
     )
     def test_load_with_path(self):
         """Adding a file by path creates a MemoryFile instance."""
         file_id = self.storage.load_and_get_id(
-            "mock/file/path", mimetype="video/mp4", filename="file.mp4"
+            "mock/file/path",
+            mimetype="video/mp4",
+            kind=MediaFileKind.MEDIA,
+            filename="file.mp4",
         )
         self.assertEqual(
             MemoryFile(
-                content=b"mock_bytes", mimetype="video/mp4", filename="file.mp4"
+                content=b"mock_bytes",
+                mimetype="video/mp4",
+                kind=MediaFileKind.MEDIA,
+                filename="file.mp4",
             ),
             self.storage.get_file(file_id),
         )
@@ -51,11 +57,17 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
     def test_load_with_bytes(self):
         """Adding a file with bytes creates a MemoryFile instance."""
         file_id = self.storage.load_and_get_id(
-            b"mock_bytes", mimetype="video/mp4", filename="file.mp4"
+            b"mock_bytes",
+            mimetype="video/mp4",
+            kind=MediaFileKind.MEDIA,
+            filename="file.mp4",
         )
         self.assertEqual(
             MemoryFile(
-                content=b"mock_bytes", mimetype="video/mp4", filename="file.mp4"
+                content=b"mock_bytes",
+                mimetype="video/mp4",
+                kind=MediaFileKind.MEDIA,
+                filename="file.mp4",
             ),
             self.storage.get_file(file_id),
         )
@@ -64,39 +76,54 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         """Two files with the same content, mimetype, and filename should share an ID."""
         # Create 2 identical files. We'll just get one ID.
         file_id1 = self.storage.load_and_get_id(
-            b"mock_bytes", mimetype="video/mp4", filename="file.mp4"
+            b"mock_bytes",
+            mimetype="video/mp4",
+            kind=MediaFileKind.MEDIA,
+            filename="file.mp4",
         )
         file_id2 = self.storage.load_and_get_id(
-            b"mock_bytes", mimetype="video/mp4", filename="file.mp4"
+            b"mock_bytes",
+            mimetype="video/mp4",
+            kind=MediaFileKind.MEDIA,
+            filename="file.mp4",
         )
         self.assertEqual(file_id1, file_id2)
 
         # Change file content -> different ID
         changed_content = self.storage.load_and_get_id(
-            b"mock_bytes_2", mimetype="video/mp4", filename="file.mp4"
+            b"mock_bytes_2",
+            mimetype="video/mp4",
+            kind=MediaFileKind.MEDIA,
+            filename="file.mp4",
         )
         self.assertNotEqual(file_id1, changed_content)
 
         # Change mimetype -> different ID
         changed_mimetype = self.storage.load_and_get_id(
-            b"mock_bytes", mimetype="image/png", filename="file.mp4"
+            b"mock_bytes",
+            mimetype="image/png",
+            kind=MediaFileKind.MEDIA,
+            filename="file.mp4",
         )
         self.assertNotEqual(file_id1, changed_mimetype)
 
         # Change (or omit) filename -> different ID
         changed_filename = self.storage.load_and_get_id(
-            b"mock_bytes", mimetype="video/mp4"
+            b"mock_bytes", mimetype="video/mp4", kind=MediaFileKind.MEDIA
         )
         self.assertNotEqual(file_id1, changed_filename)
 
     @mock.patch(
-        "streamlit.web.server.memory_media_file_storage.open", side_effect=Exception
+        "streamlit.runtime.memory_media_file_storage.open", side_effect=Exception
     )
     def test_load_with_bad_path(self, _):
         """Adding a file by path raises a MediaFileStorageError if the file can't be read."""
         with self.assertRaises(MediaFileStorageError):
             self.storage.load_and_get_id(
-                "mock/file/path", mimetype="video/mp4", filename="file.mp4"
+                "mock/file/path",
+                mimetype="video/mp4",
+                kind=MediaFileKind.MEDIA,
+                filename="file.mp4",
             )
 
     @parameterized.expand(
@@ -111,7 +138,9 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         """URLs should be formatted correctly, and have the right extension for
         the file's mimetype.
         """
-        file_id = self.storage.load_and_get_id(b"mock_bytes", mimetype=mimetype)
+        file_id = self.storage.load_and_get_id(
+            b"mock_bytes", mimetype=mimetype, kind=MediaFileKind.MEDIA
+        )
         url = self.storage.get_url(file_id)
         self.assertEqual(f"/mock/media/{file_id}{extension}", url)
 
@@ -123,10 +152,16 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
     def test_delete_file(self):
         """delete_file removes the file with the given ID."""
         file_id1 = self.storage.load_and_get_id(
-            b"mock_bytes_1", mimetype="video/mp4", filename="file.mp4"
+            b"mock_bytes_1",
+            mimetype="video/mp4",
+            kind=MediaFileKind.MEDIA,
+            filename="file.mp4",
         )
         file_id2 = self.storage.load_and_get_id(
-            b"mock_bytes_2", mimetype="video/mp4", filename="file.mp4"
+            b"mock_bytes_2",
+            mimetype="video/mp4",
+            kind=MediaFileKind.MEDIA,
+            filename="file.mp4",
         )
 
         # delete file 1. It should not exist, but file2 should.
@@ -154,7 +189,10 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         num_files = 5
         for ii in range(num_files):
             self.storage.load_and_get_id(
-                mock_data, mimetype="video/mp4", filename=f"{ii}.mp4"
+                mock_data,
+                mimetype="video/mp4",
+                kind=MediaFileKind.MEDIA,
+                filename=f"{ii}.mp4",
             )
 
         stats = self.storage.get_stats()
