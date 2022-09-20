@@ -24,6 +24,7 @@ import pandas as pd
 
 import streamlit as st
 from streamlit import type_util
+from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
@@ -235,6 +236,15 @@ class StreamlitWriteTest(unittest.TestCase):
 
             with self.assertRaises(Exception):
                 st.write("some text")
+
+    def test_unknown_arguments(self):
+        """Test st.write that raises an exception."""
+        with self.assertLogs(write.LOGGER) as logs:
+            st.write("some text", unknown_keyword_arg=123)
+
+        self.assertIn(
+            'Invalid arguments were passed to "st.write" function.', logs.records[0].msg
+        )
 
     def test_spinner(self):
         """Test st.spinner."""

@@ -22,6 +22,7 @@ from typing_extensions import Final
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
@@ -39,10 +40,12 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
     types.ModuleType,
 )
 
+LOGGER = get_logger(__name__)
+
 
 class WriteMixin:
     @gather_metrics
-    def write(self, *args: Any, **kwargs: Any) -> None:
+    def write(self, *args: Any, unsafe_allow_html=False, **kwargs) -> None:
         """Write arguments to the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
@@ -155,8 +158,15 @@ class WriteMixin:
             height: 300px
 
         """
+        if kwargs:
+            LOGGER.warning(
+                'Invalid arguments were passed to "st.write" function. Support for '
+                "passing such unknown keywords arguments will be dropped in future. "
+                "Invalid arguments were: %s",
+                kwargs,
+            )
+
         string_buffer: List[str] = []
-        unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
         # BUT: 1) such cases are rare, 2) this rule is easy to understand,
