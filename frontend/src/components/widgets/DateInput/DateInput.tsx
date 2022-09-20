@@ -239,9 +239,9 @@ class DateInput extends React.PureComponent<Props, State> {
               },
             },
             Day: {
-              style: ({ $selected }: { $selected: boolean }) => ({
+              style: () => ({
                 "::after": {
-                  borderColor: $selected ? colors.transparent : "",
+                  borderColor: colors.transparent,
                 },
               }),
             },

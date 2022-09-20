@@ -164,7 +164,7 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
 
         # Period index
         df_period = pd.period_range(
-            start="2005-12-21 08:45 ", end="2005-12-21 11:55", freq="H"
+            start="2005-12-21 08:45", end="2005-12-21 11:55", freq="H"
         )
         proto = Index()
         with pytest.raises(NotImplementedError) as e:

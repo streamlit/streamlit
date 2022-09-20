@@ -38,6 +38,7 @@ import {
   getCachedTheme,
   removeCachedTheme,
   setCachedTheme,
+  hasLightBackgroundColor,
 } from "./utils"
 
 const matchMediaFillers = {
@@ -562,5 +563,42 @@ describe("bgColorToBaseString", () => {
 
   it("returns 'dark' for a dark background color", () => {
     expect(bgColorToBaseString("#000000")).toBe("dark")
+  })
+})
+
+describe("hasLightBackgroundColor", () => {
+  const testCases = [
+    {
+      description: "works for default light theme",
+      theme: lightTheme,
+      expectedResult: true,
+    },
+    {
+      description: "works for default dark theme",
+      theme: darkTheme,
+      expectedResult: false,
+    },
+    {
+      description: "works for custom light theme",
+      theme: createTheme(
+        CUSTOM_THEME_NAME,
+        new CustomThemeConfig({ backgroundColor: "yellow" })
+      ),
+      expectedResult: true,
+    },
+    {
+      description: "works for custom dark theme",
+      theme: createTheme(
+        CUSTOM_THEME_NAME,
+        new CustomThemeConfig({ backgroundColor: "navy" })
+      ),
+      expectedResult: false,
+    },
+  ]
+
+  testCases.forEach(({ description, theme, expectedResult }) => {
+    it(description, () => {
+      expect(hasLightBackgroundColor(theme.emotion)).toBe(expectedResult)
+    })
   })
 })
