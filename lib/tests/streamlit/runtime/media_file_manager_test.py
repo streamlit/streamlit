@@ -98,10 +98,6 @@ class MediaFileManagerTest(TestCase):
         self.media_file_manager = MediaFileManager(self.storage)
         random.seed(1337)
 
-    def tearDown(self):
-        self.media_file_manager._file_metadata.clear()
-        self.media_file_manager._files_by_session_and_coord.clear()
-
     def _add_file_and_get_object(
         self,
         content: bytes,
