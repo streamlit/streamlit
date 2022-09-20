@@ -15,6 +15,20 @@
  * limitations under the License.
  */
 
+ function selectNthOptionForKthMultiselect(n, k) {
+  cy.getIndexed(".stMultiSelect", k)
+    .find("input")
+    .click();
+  cy
+    .get("li")
+    .eq(n)
+    .click();
+  // close the multiselect
+  cy.getIndexed(".stMultiSelect", k)
+    .find("input")
+    .click();
+}
+
 describe("st.multiselect", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
@@ -101,20 +115,6 @@ describe("st.multiselect", () => {
     });
   });
 
-  function selectNthOptionForKthMultiselect(n, k) {
-    cy.getIndexed(".stMultiSelect", k)
-      .find("input")
-      .click();
-    cy
-      .get("li")
-      .eq(n)
-      .click();
-    // close the multiselect
-    cy.getIndexed(".stMultiSelect", k)
-      .find("input")
-      .click();
-  }
-
   describe("when the user makes a selection", () => {
     beforeEach(() => selectNthOptionForKthMultiselect(1, 1));
 
@@ -196,8 +196,7 @@ describe("st.multiselect", () => {
     });
 
     it("calls callback if one is registered", () => {
-      cy.get(".stMultiSelect")
-        .eq(10)
+      cy.getIndexed(".stMultiSelect", 10)
         .find("input")
         .click();
       cy.get("li")
@@ -214,7 +213,13 @@ describe("st.multiselect", () => {
   });
 
   describe("when using max_selections for st.multiselect", () => {
-    it("should show the correct text when maxSelections is reached regularly", () => {
+    beforeEach(() => {
+      // this is the 'close button' element for 'Male'
+      cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
+        .eq(0)
+        .click();
+    });
+    it("should show the correct text when maxSelections is reached not within a form and closing input", () => {
       selectNthOptionForKthMultiselect(0, 8)
       cy.getIndexed(".stMultiSelect", 8).then(el => {
         cy
@@ -222,6 +227,51 @@ describe("st.multiselect", () => {
           // recheck that we have hit the limit
           .find("input")
           .click()
+          .get("li")
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      });
+    });
+
+    it("should show the correct text when maxSelections is reached not within a form and not closing input", () => {
+      cy.getIndexed(".stMultiSelect", 8)
+        .find("input")
+        .click();
+      cy
+        .get("li")
+        .eq(0)
+        .click();
+      cy.getIndexed(".stMultiSelect", 8).then(el => {
+        cy
+          .wrap(el)
+          .get("li")
+          .first()
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      });
+    });
+
+    it("should show the correct text when maxSelections is reached in a form when closing input", () => {
+      selectNthOptionForKthMultiselect(0, 9)
+      cy.getIndexed(".stMultiSelect", 9).then(el => {
+        cy
+          .wrap(el)
+          .find("input")
+          .click()
+          .get("li")
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      });
+    });
+
+    it("should show the correct text when maxSelections is reached in a form without closing after selecting", () => {
+      cy.getIndexed(".stMultiSelect", 9)
+        .find("input")
+        .click();
+      cy
+        .get("li")
+        .eq(0)
+        .click();
+      cy.getIndexed(".stMultiSelect", 9).then(el => {
+        cy
+          .wrap(el)
           .get("li")
           .first()
           .should("have.text", "You can only select up to 1 option. Remove an option first.")
@@ -240,38 +290,6 @@ describe("st.multiselect", () => {
         "contain.text",
         `Multiselect has 2 options selected but max_selections\nis set to 1.`
       );
-    });
-
-    it("should show the correct text when maxSelections is reached in a form", () => {
-      selectNthOptionForKthMultiselect(0, 9)
-      cy.getIndexed(".stMultiSelect", 9).then(el => {
-        cy
-          .wrap(el)
-          // recheck that we have hit the limit
-          .find("input")
-          .click()
-          .get("li")
-          .first()
-          .should("have.text", "You can only select up to 1 option. Remove an option first.")
-      });
-    });
-
-    it("should show the correct text when maxSelections is reached in a form without closing after selecting", () => {
-      cy.getIndexed(".stMultiSelect", 9)
-        .find("input")
-        .click();
-      cy
-        .get("li")
-        .eq(0)
-        .click();
-      cy.getIndexed(".stMultiSelect", 9).then(el => {
-        cy
-          .wrap(el)
-          // recheck that we have hit the limit
-          .get("li")
-          .first()
-          .should("have.text", "You can only select up to 1 option. Remove an option first.")
-      });
     });
   })
 });
