@@ -456,9 +456,6 @@ function DataFrame({
         data-testid="stDataFrameResizable"
         ref={resizableRef}
         defaultSize={resizableSize}
-        style={{
-          border: `1px solid ${theme.colors.fadedText05}`,
-        }}
         minHeight={MIN_TABLE_HEIGHT}
         maxHeight={maxHeight}
         minWidth={MIN_TABLE_WIDTH}
