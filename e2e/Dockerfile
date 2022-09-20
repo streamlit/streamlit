@@ -101,7 +101,7 @@ COPY --chown=$USER lib/setup.py ./lib/
 
 # install python modules
 # This would be `make pipenv-install`, but lockfile creation somehow breaks it
-RUN IS_DOCKER=true CIRCLECI=true cd ./lib/ && pipenv install --dev --sequential --skip-lock && cd -
+RUN IS_DOCKER=true CIRCLECI=true cd ./lib/ && pipenv install --dev --skip-lock && cd -
 RUN IS_DOCKER=true CIRCLECI=true make py-test-install
 
 # copy streamlit code
