@@ -22,6 +22,7 @@ import streamlit.elements.legacy_data_frame as data_frame
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from .arrow import Data
@@ -31,6 +32,7 @@ LOGGER: Final = get_logger(__name__)
 
 
 class LegacyVegaLiteMixin:
+    @gather_metrics
     def _legacy_vega_lite_chart(
         self,
         data: "Data" = None,

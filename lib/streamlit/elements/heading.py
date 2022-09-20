@@ -16,12 +16,14 @@ from typing import cast, Optional, TYPE_CHECKING
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.string_util import clean_text
 from streamlit.type_util import SupportsStr
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
 class HeadingMixin:
+    @gather_metrics
     def header(
         self, body: SupportsStr, anchor: Optional[str] = None
     ) -> "DeltaGenerator":
@@ -48,6 +50,7 @@ class HeadingMixin:
         header_proto.tag = "h2"
         return self.dg._enqueue("heading", header_proto)
 
+    @gather_metrics
     def subheader(
         self, body: SupportsStr, anchor: Optional[str] = None
     ) -> "DeltaGenerator":
@@ -75,6 +78,7 @@ class HeadingMixin:
 
         return self.dg._enqueue("heading", subheader_proto)
 
+    @gather_metrics
     def title(
         self, body: SupportsStr, anchor: Optional[str] = None
     ) -> "DeltaGenerator":

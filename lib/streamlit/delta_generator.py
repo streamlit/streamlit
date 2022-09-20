@@ -364,8 +364,8 @@ class DeltaGenerator(
         """Returns the element's delta path as a string like "[0, 2, 3, 1]".
 
         This uniquely identifies the element's position in the front-end,
-        which allows (among other potential uses) the InMemoryFileManager to maintain
-        session-specific maps of InMemoryFile objects placed with their "coordinates".
+        which allows (among other potential uses) the MediaFileManager to maintain
+        session-specific maps of MediaFile objects placed with their "coordinates".
 
         This way, users can (say) use st.image with a stream of different images,
         and Streamlit will expire the older images and replace them in place.

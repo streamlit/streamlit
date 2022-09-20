@@ -20,9 +20,10 @@ from typing_extensions import Final, TypeAlias
 from validators import url
 
 from streamlit import type_util
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
+from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from typing import Any
@@ -38,6 +39,7 @@ Data: TypeAlias = Union[
 
 
 class MediaMixin:
+    @gather_metrics
     def audio(
         self,
         data: Data,
@@ -76,6 +78,7 @@ class MediaMixin:
         marshall_audio(coordinates, audio_proto, data, format, start_time)
         return self.dg._enqueue("audio", audio_proto)
 
+    @gather_metrics
     def video(
         self,
         data: Data,
@@ -175,14 +178,14 @@ def _marshall_av_media(
     Otherwise assume strings are filenames and let any OS errors raise.
 
     Load data either from file or through bytes-processing methods into a
-    InMemoryFile object.  Pack proto with generated Tornado-based URL.
+    MediaFile object.  Pack proto with generated Tornado-based URL.
     """
     # Audio and Video methods have already checked if this is a URL by this point.
 
     if isinstance(data, str):
         # Assume it's a filename or blank.  Allow OS-based file errors.
         with open(data, "rb") as fh:
-            this_file = in_memory_file_manager.add(fh.read(), mimetype, coordinates)
+            this_file = media_file_manager.add(fh.read(), mimetype, coordinates)
             proto.url = this_file.url
             return
 
@@ -207,7 +210,7 @@ def _marshall_av_media(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = in_memory_file_manager.add(data_as_bytes, mimetype, coordinates)
+    this_file = media_file_manager.add(data_as_bytes, mimetype, coordinates)
     proto.url = this_file.url
 
 

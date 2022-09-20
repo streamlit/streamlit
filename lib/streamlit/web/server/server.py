@@ -44,7 +44,6 @@ from streamlit.web.server.routes import (
     AddSlashHandler,
     AssetsFileHandler,
     HealthHandler,
-    MediaFileHandler,
     MessageCacheHandler,
     StaticFileHandler,
 )
@@ -55,6 +54,7 @@ from streamlit.web.server.upload_file_request_handler import (
 )
 from .browser_websocket_handler import BrowserWebSocketHandler
 from .component_request_handler import ComponentRequestHandler
+from .media_file_handler import MediaFileHandler
 from .stats_request_handler import StatsRequestHandler
 
 LOGGER = get_logger(__name__)

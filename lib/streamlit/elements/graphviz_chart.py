@@ -23,6 +23,7 @@ from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import graphviz
@@ -35,6 +36,7 @@ FigureOrDot: TypeAlias = Union["graphviz.Graph", "graphviz.Digraph", str]
 
 
 class GraphvizMixin:
+    @gather_metrics
     def graphviz_chart(
         self,
         figure_or_dot: FigureOrDot,

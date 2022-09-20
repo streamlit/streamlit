@@ -28,6 +28,7 @@ export interface Props {
   multiple: boolean
   acceptedExtensions: string[]
   maxSizeBytes: number
+  label: string
 }
 
 const FileDropzone = ({
@@ -36,6 +37,7 @@ const FileDropzone = ({
   acceptedExtensions,
   maxSizeBytes,
   disabled,
+  label,
 }: Props): React.ReactElement => (
   <Dropzone
     onDrop={onDrop}
@@ -49,6 +51,7 @@ const FileDropzone = ({
         {...getRootProps()}
         data-testid="stFileUploadDropzone"
         isDisabled={disabled}
+        aria-label={label}
       >
         <input {...getInputProps()} />
         <FileDropzoneInstructions

@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message Radio {
   string id = 1;
   string label = 2;
@@ -27,4 +29,5 @@ message Radio {
   bool set_value = 8;
   bool disabled = 9;
   bool horizontal = 10;
+  LabelVisibilityMessage label_visibility = 11;
 }

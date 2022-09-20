@@ -24,6 +24,7 @@ test("Throws an error when used before initialization", () => {
 
 test("Clears session info", () => {
   SessionInfo.current = new SessionInfo({
+    appId: "aid",
     sessionId: "sessionId",
     streamlitVersion: "sv",
     pythonVersion: "pv",

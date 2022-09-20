@@ -16,6 +16,7 @@
  */
 
 import React from "react"
+import { LabelVisibilityOptions } from "src/lib/utils"
 import { StyledWidgetLabel } from "./styled-components"
 
 export interface LabelProps {
@@ -27,19 +28,29 @@ export interface LabelProps {
 
   // Used to specify whether widget disabled or enabled.
   disabled?: boolean | null
+
+  // Used to specify whether widget is visible or not.
+  labelVisibility?: LabelVisibilityOptions
 }
 
 export function WidgetLabel({
   label,
   children,
   disabled,
+  labelVisibility,
 }: LabelProps): React.ReactElement {
   if (label == null) {
     return <></>
   }
 
   return (
-    <StyledWidgetLabel disabled={disabled}>
+    // we use aria-hidden to disable ARIA for StyleWidgetLabel, because each
+    // widget should have its own aria-label and/or implement accessibility.
+    <StyledWidgetLabel
+      aria-hidden="true"
+      disabled={disabled}
+      labelVisibility={labelVisibility}
+    >
       {label}
       {children}
     </StyledWidgetLabel>

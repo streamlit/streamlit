@@ -16,6 +16,7 @@ from typing import cast, TYPE_CHECKING
 
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.string_util import clean_text
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 
 class TextMixin:
+    @gather_metrics
     def text(self, body: "SupportsStr") -> "DeltaGenerator":
         """Write fixed-width and preformatted text.
 

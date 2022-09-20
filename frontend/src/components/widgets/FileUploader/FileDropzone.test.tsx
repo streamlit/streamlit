@@ -22,6 +22,7 @@ import FileDropzone, { Props } from "./FileDropzone"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
+  label: "LABEL",
   onDrop: jest.fn(),
   multiple: true,
   acceptedExtensions: [],
