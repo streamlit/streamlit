@@ -112,29 +112,16 @@ def get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
     return len(cast(Sequence[Any], default))
 
 
-def getOptionsMessage(current_selections: int, max_selections: int):
-    middle_msg_part = f"""but `max_selections`
+def get_options_message(current_selections: int, max_selections: int):
+    curr_selections_noun = "option" if current_selections == 1 else "options"
+    max_selections_noun = "option" if max_selections == 1 else "options"
+    return f"""
+Multiselect has {current_selections} {curr_selections_noun} selected but `max_selections`
 is set to {max_selections}. This happened because you either gave too many options to `default`
 or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback."""
-    curr_select_msg = ""
-    max_select_msg = ""
-    if current_selections == 1:
-        curr_select_msg = f"""
-Multiselect has {current_selections} option selected """
-    else:
-        curr_select_msg = f"""
-Multiselect has {current_selections} options selected """
-
-    if max_selections == 1:
-        max_select_msg = f"""
-Please select at most {max_selections} option.
+the latter can happen before the line indicated in the traceback.
+Please select at most {max_selections} {max_selections_noun}.
 """
-    else:
-        max_select_msg = f"""
-Please select at most {max_selections} options.
-"""
-    return curr_select_msg + middle_msg_part + max_select_msg
 
 
 @dataclass
@@ -289,13 +276,7 @@ class MultiSelectMixin:
         multiselect_proto.form_id = current_form_id(self.dg)
         if help is not None:
             multiselect_proto.help = dedent(help)
-        if max_selections is not None:
-            if get_default_count(default_value) > max_selections:
-                raise StreamlitAPIException(
-                    getOptionsMessage(get_default_count(default_value), max_selections)
-                )
-            else:
-                multiselect_proto.max_selections = max_selections
+        multiselect_proto.max_selections = max_selections or 0
 
         serde = MultiSelectSerde(opt, default_value)
 
@@ -310,14 +291,16 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        if max_selections is not None:
+            if get_default_count(widget_state.value) > max_selections:
+                raise StreamlitAPIException(
+                    get_options_message(
+                        get_default_count(widget_state.value), max_selections
+                    )
+                )
+            else:
+                multiselect_proto.max_selections = max_selections
 
-        if (
-            max_selections is not None
-            and get_default_count(widget_state.value) > max_selections
-        ):
-            raise StreamlitAPIException(
-                getOptionsMessage(get_default_count(widget_state.value), max_selections)
-            )
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled

@@ -21,7 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import StreamlitAPIException
-from streamlit.elements.multiselect import get_default_count, getOptionsMessage
+from streamlit.elements.multiselect import get_default_count, get_options_message
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
 
@@ -358,5 +358,5 @@ Please select at most 2 options.
         self, current_selections, max_selections, expected_msg
     ):
         self.assertEqual(
-            getOptionsMessage(current_selections, max_selections), expected_msg
+            get_options_message(current_selections, max_selections), expected_msg
         )

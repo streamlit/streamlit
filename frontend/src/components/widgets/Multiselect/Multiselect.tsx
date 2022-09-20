@@ -59,7 +59,7 @@ interface MultiselectOption {
   value: string
 }
 
-class Multiselect extends React.Component<Props, State> {
+class Multiselect extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
   public state: State = {
