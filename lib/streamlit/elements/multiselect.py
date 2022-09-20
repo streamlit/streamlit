@@ -104,7 +104,7 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def get_default_count(default: Union[Sequence[Any], Any, None]):
+def get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
     if default is None:
         return 0
     if not is_iterable(default):
@@ -289,6 +289,13 @@ class MultiSelectMixin:
         multiselect_proto.form_id = current_form_id(self.dg)
         if help is not None:
             multiselect_proto.help = dedent(help)
+        if max_selections is not None:
+            if get_default_count(default_value) > max_selections:
+                raise StreamlitAPIException(
+                    getOptionsMessage(get_default_count(default_value), max_selections)
+                )
+            else:
+                multiselect_proto.max_selections = max_selections
 
         serde = MultiSelectSerde(opt, default_value)
 
@@ -304,13 +311,13 @@ class MultiSelectMixin:
             ctx=ctx,
         )
 
-        if max_selections is not None:
-            if get_default_count(widget_state.value) > max_selections:
-                raise StreamlitAPIException(
-                    getOptionsMessage(len(widget_state.value), max_selections)
-                )
-            else:
-                multiselect_proto.max_selections = max_selections
+        if (
+            max_selections is not None
+            and get_default_count(widget_state.value) > max_selections
+        ):
+            raise StreamlitAPIException(
+                getOptionsMessage(get_default_count(widget_state.value), max_selections)
+            )
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
