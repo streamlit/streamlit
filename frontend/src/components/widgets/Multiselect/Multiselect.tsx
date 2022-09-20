@@ -59,7 +59,7 @@ interface MultiselectOption {
   value: string
 }
 
-class Multiselect extends React.PureComponent<Props, State> {
+class Multiselect extends React.Component<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
   public state: State = {
@@ -69,7 +69,7 @@ class Multiselect extends React.PureComponent<Props, State> {
   public overMaxSelections(): boolean {
     return (
       this.props.element.maxSelections > 0 &&
-      this.initialValue.length >= this.props.element.maxSelections
+      this.state.value.length >= this.props.element.maxSelections
     )
   }
 

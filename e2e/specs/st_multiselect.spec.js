@@ -264,11 +264,6 @@ describe("st.multiselect", () => {
         .get("li")
         .eq(0)
         .click();
-      // Click one more option to have overMaxSelections message show
-      cy
-        .get("li")
-        .eq(0)
-        .click();
       cy.getIndexed(".stMultiSelect", 9).then(el => {
         cy
           .wrap(el)
