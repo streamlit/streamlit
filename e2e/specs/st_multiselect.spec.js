@@ -24,7 +24,7 @@ describe("st.multiselect", () => {
 
   describe("when first loaded", () => {
     it("should show widget correctly", () => {
-      cy.get(".stMultiSelect").should("have.length", 10);
+      cy.get(".stMultiSelect").should("have.length", 11);
 
       cy.get(".stMultiSelect").each((el, idx) => {
         return cy.wrap(el).matchThemedSnapshots("multiselect" + idx);
@@ -33,7 +33,6 @@ describe("st.multiselect", () => {
 
     it("should show the correct text", () => {
       cy.get("[data-testid='stText']")
-        .should("have.length", 11)
         .should(
           "have.text",
           "value 1: []" +
@@ -46,6 +45,7 @@ describe("st.multiselect", () => {
             "value 8: []" +
             "value 9: []" +
             "value 10: []" +
+            "value 11: []" +
             "multiselect changed: False"
         );
     });
@@ -135,20 +135,9 @@ describe("st.multiselect", () => {
 
     it("outputs the correct value", () => {
       cy.get("[data-testid='stText']")
-        .should("have.length", 11)
         .should(
-          "have.text",
-          "value 1: []" +
-            "value 2: ['female']" +
-            "value 3: []" +
-            "value 4: ['tea', 'water']" +
-            "value 5: []" +
-            "value 6: []" +
-            "value 7: []" +
-            "value 8: []" +
-            "value 9: []" +
-            "value 10: []" +
-            "multiselect changed: False"
+          "contain.text",
+            "value 2: ['female']"
         );
     });
 
@@ -157,20 +146,9 @@ describe("st.multiselect", () => {
 
       it("outputs the correct value", () => {
         cy.get("[data-testid='stText']")
-          .should("have.length", 11)
           .should(
-            "have.text",
-            "value 1: []" +
-              "value 2: ['female', 'male']" +
-              "value 3: []" +
-              "value 4: ['tea', 'water']" +
-              "value 5: []" +
-              "value 6: []" +
-              "value 7: []" +
-              "value 8: []" +
-              "value 9: []" +
-              "value 10: []" +
-              "multiselect changed: False"
+            "contain.text",
+              "value 2: ['female', 'male']"
           );
       });
 
@@ -183,20 +161,9 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
-            .should("have.length", 11)
             .should(
-              "have.text",
-              "value 1: []" +
-                "value 2: ['male']" +
-                "value 3: []" +
-                "value 4: ['tea', 'water']" +
-                "value 5: []" +
-                "value 6: []" +
-                "value 7: []" +
-                "value 8: []" +
-                "value 9: []" +
-                "value 10: []" +
-                "multiselect changed: False"
+              "contain.text",
+                "value 2: ['male']"
             );
         });
       });
@@ -209,7 +176,6 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
-            .should("have.length", 11)
             .should(
               "have.text",
               "value 1: []" +
@@ -222,6 +188,7 @@ describe("st.multiselect", () => {
                 "value 8: []" +
                 "value 9: []" +
                 "value 10: []" +
+                "value 11: []" +
                 "multiselect changed: False"
             );
         });
@@ -230,8 +197,7 @@ describe("st.multiselect", () => {
 
     it("calls callback if one is registered", () => {
       cy.get(".stMultiSelect")
-        .should("have.length", 10)
-        .last()
+        .eq(10)
         .find("input")
         .click();
       cy.get("li")
@@ -239,26 +205,16 @@ describe("st.multiselect", () => {
         .click();
 
       cy.get("[data-testid='stText']")
-        .should("have.length", 11)
         .should(
-          "have.text",
-          "value 1: []" +
-            "value 2: ['female']" +
-            "value 3: []" +
-            "value 4: ['tea', 'water']" +
-            "value 5: []" +
-            "value 6: []" +
-            "value 7: []" +
-            "value 8: []" +
-            "value 9: []" +
-            "value 10: ['male']" +
+          "contain.text",
+            "value 11: ['male']" +
             "multiselect changed: True"
         );
     });
   });
 
   describe("when using max_selections for st.multiselect", () => {
-    it("should show the correct text when maxSelections is reached", () => {
+    it("should show the correct text when maxSelections is reached regularly", () => {
       selectNthOptionForKthMultiselect(0, 8)
       cy.getIndexed(".stMultiSelect", 8).then(el => {
         cy
@@ -272,7 +228,6 @@ describe("st.multiselect", () => {
       });
     });
 
-
     it("should display an error when options > max selections set during session state", () => {
       cy.get(".stCheckbox")
         .first()
@@ -285,6 +240,38 @@ describe("st.multiselect", () => {
         "contain.text",
         `Multiselect has 2 options selected but max_selections\nis set to 1.`
       );
+    });
+
+    it("should show the correct text when maxSelections is reached in a form", () => {
+      selectNthOptionForKthMultiselect(0, 9)
+      cy.getIndexed(".stMultiSelect", 9).then(el => {
+        cy
+          .wrap(el)
+          // recheck that we have hit the limit
+          .find("input")
+          .click()
+          .get("li")
+          .first()
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      });
+    });
+
+    it("should show the correct text when maxSelections is reached in a form without closing after selecting", () => {
+      cy.getIndexed(".stMultiSelect", 9)
+        .find("input")
+        .click();
+      cy
+        .get("li")
+        .eq(0)
+        .click();
+      cy.getIndexed(".stMultiSelect", 9).then(el => {
+        cy
+          .wrap(el)
+          // recheck that we have hit the limit
+          .get("li")
+          .first()
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      });
     });
   })
 });
