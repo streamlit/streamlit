@@ -155,7 +155,7 @@ install:
 # Install Streamlit as links in your Python environment, pointing to local workspace.
 develop:
 	cd lib; \
-		pipenv install --skip-lock --verbose
+		pipenv install
 
 .PHONY: distribution
 # Create Python distribution files in dist/.
