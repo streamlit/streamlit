@@ -158,12 +158,7 @@ class DateInput extends React.PureComponent<Props, State> {
   private handleClose = (): void => {
     const { isEmpty } = this.state
     if (isEmpty) {
-      this.setState(
-        { values: stringsToDates(this.props.element.default) },
-        () => {
-          this.commitWidgetValue({ fromUi: true })
-        }
-      )
+      this.setState({ values: stringsToDates(this.props.element.default) })
     }
   }
 
