@@ -1,6 +1,6 @@
 [[source]]
 name = "pypi"
-url = "https://pypi.org/simple"
+url = "https://pypi.acme.com/simple"
 verify_ssl = true
 
 [dev-packages]
