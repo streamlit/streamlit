@@ -137,7 +137,7 @@ export function getColumns(
   }
 
   const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length
+  const numColumns = data.columns?.[0]?.length ?? 0
 
   for (let i = 0; i < numIndices; i++) {
     const quiverType = data.types.index[i]
@@ -379,7 +379,7 @@ function DataFrame({
 
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   let maxHeight = Math.max(
-    (numRows + 1) * ROW_HEIGHT + 1 + 2,
+    (numRows + 1) * ROW_HEIGHT + 1 + 3,
     MIN_TABLE_HEIGHT
   )
   let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
@@ -466,7 +466,7 @@ function DataFrame({
         enable={{
           top: false,
           right: false,
-          bottom: true,
+          bottom: false,
           left: false,
           topRight: false,
           bottomRight: true,
