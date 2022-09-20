@@ -18,7 +18,7 @@ from urllib.parse import quote, unquote_plus
 import tornado.web
 
 from streamlit.logger import get_logger
-from streamlit.runtime.media_file_storage import MediaFileKind
+from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import (
     get_extension_for_mimetype,
     MemoryMediaFileStorage,
@@ -86,7 +86,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
     def validate_absolute_path(self, root: str, absolute_path: str) -> str:
         try:
             self._storage.get_file(absolute_path)
-        except KeyError:
+        except MediaFileStorageError:
             LOGGER.error("MediaFileHandler: Missing file %s", absolute_path)
             raise tornado.web.HTTPError(404, "not found")
 
