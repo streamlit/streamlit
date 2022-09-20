@@ -24,7 +24,6 @@ export const StyledResizableContainer = styled.div(({ theme }) => ({
   position: "relative",
   display: "inline-block",
   overflow: "hidden",
-  border: `1px solid ${theme.colors.fadedText05}`,
 
   "& .glideDataEditor": {
     height: "100%",
