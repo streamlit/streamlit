@@ -51,11 +51,15 @@ class UploadedFile(io.BytesIO):
         self.name = record.name
         self.type = record.type
         self.size = len(record.data)
+        self._record_hash = hash(record)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, UploadedFile):
             return NotImplemented
         return self.id == other.id
+
+    def __hash__(self) -> int:
+        return self._record_hash
 
     def __repr__(self) -> str:
         return util.repr_(self)
