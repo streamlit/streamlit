@@ -292,7 +292,6 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
         mock_get_option = testutil.build_mock_config_get_option(
             {
-                "server.headless": False,
                 "server.address": "unix://mysocket.sock",
                 "global.developmentMode": False,
             }
