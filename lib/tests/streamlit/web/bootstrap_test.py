@@ -285,6 +285,26 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)
         self.assertTrue("Network URL: http://internal-ip:8501/foo" not in out)
 
+    def test_print_socket(self):
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False}
+        )
+
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.address": "unix://mysocket.sock",
+                "global.developmentMode": False,
+            }
+        )
+
+        with patch.object(config, "get_option", new=mock_get_option), patch.object(
+            config, "is_manually_set", new=mock_is_manually_set
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        self.assertIn("Unix Socket: unix://mysocket.sock", out)
+
     @patch("streamlit.web.bootstrap.GitRepo")
     def test_print_old_git_warning(self, mock_git_repo):
         mock_git_repo.return_value.is_valid.return_value = False

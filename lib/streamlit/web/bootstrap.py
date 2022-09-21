@@ -228,6 +228,11 @@ def _print_url(is_running_hello: bool) -> None:
             ("URL", server_util.get_url(config.get_option("server.address"))),
         ]
 
+    elif server_address_is_unix_socket():
+        named_urls = [
+            ("Unix Socket", config.get_option("server.address")),
+        ]
+
     elif config.get_option("server.headless"):
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
