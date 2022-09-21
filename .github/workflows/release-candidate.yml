@@ -11,19 +11,15 @@ on:
 
 jobs:
   run-python-tests:
-    needs: create-nightly-tag
     uses: ./.github/workflows/python-versions.yml
 
   run-javascript-tests:
-    needs: create-nightly-tag
     uses: ./.github/workflows/js-tests.yml
 
   run-py-prod-deps-smoke-test:
-    needs: create-nightly-tag
     uses: ./.github/workflows/py-prod-deps-smoke-test.yml
 
   run-cypress-tests:
-    needs: create-nightly-tag
     uses: ./.github/workflows/cypress.yml
 
   build-release-candidate:
@@ -87,9 +83,10 @@ jobs:
             echo -e "[pypi]" >> ~/.pypirc
             echo -e 'username = "$STREAMLIT_PYPI_USERNAME"' >> ~/.pypirc
             echo -e 'password = "$STREAMLIT_PYPI_API_TOKEN"' >> ~/.pypirc
-      - name: Upload to PyPI
-        run: |
-          make distribute
+      # TODO: Gate upload step as precaution for now
+      # - name: Upload to PyPI
+      #   run: |
+      #     make distribute
       # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
       - name: Successful Release Candidate Slack Message
         if: ${{ success() }}
