@@ -17,6 +17,9 @@ jobs:
       # Additional permission needed to generate tag
       contents: write
 
+    outputs:
+      TAG: ${{ steps.create_tag.outputs.tag }}
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
@@ -28,15 +31,16 @@ jobs:
           python-version: "3.10"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make init develop
-        run: make init develop
+      - name: Run make develop
+        run: make develop
       - name: Create tag
+        id: create_tag
         run: |
           git config --global user.email "core+streamlitbot-github@streamlit.io"
           git config --global user.name "Streamlit Bot"
 
           TAG="$(./scripts/pypi_nightly_create_tag.py)"
-          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "::set-output name=tag::$TAG"
 
           ./scripts/update_version.py $TAG
           ./scripts/update_name.py streamlit-nightly
@@ -100,7 +104,7 @@ jobs:
   create-nightly-build:
     runs-on: ubuntu-latest
 
-    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+    needs: [create-nightly-tag, run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
     defaults:
       run:
@@ -110,6 +114,7 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with: 
+          ref: ${{needs.create-nightly-tag.outputs.tag}}
           persist-credentials: false
           submodules: 'recursive'
       - name: Set up Python 3.10
@@ -118,7 +123,11 @@ jobs:
           python-version: "3.10"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: make develop
       - name: Verify git tag vs. version
+        env:
+          TAG: ${{needs.create-nightly-tag.outputs.tag}}
         run: |
           cd lib
           python setup.py verify
