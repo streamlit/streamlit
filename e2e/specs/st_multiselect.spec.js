@@ -215,7 +215,6 @@ describe("st.multiselect", () => {
   });
 
   describe("when using max_selections for st.multiselect", () => {
-    
     describe("test out of a form", () => {
       afterEach(() => {
         delFromKthMultiselect("male", 8)
@@ -259,7 +258,6 @@ describe("st.multiselect", () => {
           .should("have.text", "You can only select up to 1 option. Remove an option first.")
       });
     })
-  })
 
     it("should display an error when options > max selections set during session state", () => {
       cy.get(".stCheckbox")
@@ -273,5 +271,6 @@ describe("st.multiselect", () => {
         `Multiselect has 2 options selected but max_selections\nis set to 1.`
       );
     });
+  })
   });
 });
