@@ -45,7 +45,8 @@ INSTALL_REQUIRES = [
     "packaging>=14.1",
     "pandas>=0.21.0",
     "pillow>=6.2.0",
-    "protobuf<4,>=3.12",
+    # protobuf 3.20.2 is broken: https://github.com/protocolbuffers/protobuf/issues/10571
+    "protobuf<4,>=3.12,!=3.20.2",
     "pyarrow>=4.0",
     "pydeck>=0.1.dev5",
     "pympler>=0.9",
