@@ -29,4 +29,5 @@ message MultiSelect {
   bool set_value = 8;
   bool disabled = 9;
   LabelVisibilityMessage label_visibility = 10;
+  int32 max_selections = 11;
 }

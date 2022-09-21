@@ -288,4 +288,109 @@ describe("Multiselect widget", () => {
       }
     )
   })
+  describe("properly invalidates going over max selections", () => {
+    it("has correct noResultsMsg when maxSelections is not passed", () => {
+      const props = getProps(
+        MultiSelectProto.create({
+          id: "1",
+          label: "Label",
+          default: [0],
+          options: ["a", "b", "c"],
+        })
+      )
+      const wrapper = mount(<Multiselect {...props} />)
+
+      expect(wrapper.find(UISelect).props()).toHaveProperty(
+        "noResultsMsg",
+        "No results"
+      )
+    })
+
+    it("has correct noResultsMsg when maxSelections is passed", () => {
+      const props = getProps(
+        MultiSelectProto.create({
+          id: "1",
+          label: "Label",
+          default: [0, 1],
+          options: ["a", "b", "c"],
+          maxSelections: 2,
+        })
+      )
+      const wrapper = mount(<Multiselect {...props} />)
+
+      expect(wrapper.find(UISelect).props()).toHaveProperty(
+        "noResultsMsg",
+        "You can only select up to 2 options. Remove an option first."
+      )
+    })
+
+    it("has correct noResultsMsg when maxSelections === 1", () => {
+      const props = getProps(
+        MultiSelectProto.create({
+          id: "1",
+          label: "Label",
+          default: [0, 1],
+          options: ["a", "b", "c"],
+          maxSelections: 1,
+        })
+      )
+      const wrapper = mount(<Multiselect {...props} />)
+
+      expect(wrapper.find(UISelect).prop("noResultsMsg")).toBe(
+        "You can only select up to 1 option. Remove an option first."
+      )
+    })
+
+    it("does not allow for more selection when an option is picked", () => {
+      const props = getProps(
+        MultiSelectProto.create({
+          id: "1",
+          label: "Label",
+          default: [0],
+          options: ["a", "b", "c"],
+          maxSelections: 1,
+        })
+      )
+      const wrapper = mount(<Multiselect {...props} />)
+
+      // @ts-ignore
+      wrapper.find(UISelect).prop("onChange")({
+        type: "select",
+        option: {
+          value: 1,
+        },
+      })
+      wrapper.update()
+
+      expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
+        { label: "a", value: "0" },
+      ])
+    })
+
+    it("does allow an option to be removed when we are at max selections", () => {
+      const props = getProps(
+        MultiSelectProto.create({
+          id: "1",
+          label: "Label",
+          default: [0, 1],
+          options: ["a", "b", "c"],
+          maxSelections: 2,
+        })
+      )
+      const wrapper = mount(<Multiselect {...props} />)
+
+      // @ts-ignore
+      wrapper.find(UISelect).prop("onChange")({
+        type: "remove",
+        option: {
+          value: 1,
+        },
+      })
+      wrapper.update()
+
+      expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
+        { label: "a", value: "0" },
+      ])
+    })
+  })
 })

@@ -19,7 +19,6 @@ from typing import (
     Callable,
     cast,
     Generic,
-    Iterable,
     Optional,
     overload,
     List,
@@ -40,6 +39,7 @@ from streamlit.type_util import (
     T,
     LabelVisibility,
     maybe_raise_label_warnings,
+    is_iterable,
 )
 
 from streamlit.runtime.state import (
@@ -70,13 +70,13 @@ def _check_and_convert_to_indices(  # type: ignore[misc]
 
 @overload
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Iterable[Any], Any]
+    opt: Sequence[Any], default_values: Union[Sequence[Any], Any]
 ) -> List[int]:
     ...
 
 
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Iterable[Any], Any, None]
+    opt: Sequence[Any], default_values: Union[Sequence[Any], Any, None]
 ) -> Optional[List[int]]:
     """Perform validation checks and return indices based on the default values."""
     if default_values is None and None not in opt:
@@ -89,7 +89,7 @@ def _check_and_convert_to_indices(
         if is_type(default_values, "numpy.ndarray") or is_type(
             default_values, "pandas.core.series.Series"
         ):
-            default_values = list(cast(Iterable[Any], default_values))
+            default_values = list(cast(Sequence[Any], default_values))
         elif not default_values or default_values in opt:
             default_values = [default_values]
         else:
@@ -102,6 +102,26 @@ def _check_and_convert_to_indices(
             )
 
     return [opt.index(value) for value in default_values]
+
+
+def _get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
+    if default is None:
+        return 0
+    if not is_iterable(default):
+        return 1
+    return len(cast(Sequence[Any], default))
+
+
+def _get_over_max_options_message(current_selections: int, max_selections: int):
+    curr_selections_noun = "option" if current_selections == 1 else "options"
+    max_selections_noun = "option" if max_selections == 1 else "options"
+    return f"""
+Multiselect has {current_selections} {curr_selections_noun} selected but `max_selections`
+is set to {max_selections}. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most {max_selections} {max_selections_noun}.
+"""
 
 
 @dataclass
@@ -139,6 +159,7 @@ class MultiSelectMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        max_selections: Optional[int] = None,
     ) -> List[T]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -182,6 +203,9 @@ class MultiSelectMixin:
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
+        max_selections : int
+            The max selections that can be selected at a time.
+            This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -216,13 +240,14 @@ class MultiSelectMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             ctx=ctx,
+            max_selections=max_selections,
         )
 
     def _multiselect(
         self,
         label: str,
         options: OptionSequence[T],
-        default: Union[Iterable[Any], Any, None] = None,
+        default: Union[Sequence[Any], Any, None] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -233,6 +258,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
+        max_selections: Optional[int] = None,
     ) -> List[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -248,6 +274,7 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
+        multiselect_proto.max_selections = max_selections or 0
         if help is not None:
             multiselect_proto.help = dedent(help)
 
@@ -264,6 +291,12 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        default_count = _get_default_count(widget_state.value)
+        if max_selections and default_count > max_selections:
+            raise StreamlitAPIException(
+                _get_over_max_options_message(default_count, max_selections)
+            )
+
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
