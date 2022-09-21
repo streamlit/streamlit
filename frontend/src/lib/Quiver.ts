@@ -17,7 +17,14 @@
 // Private members use _.
 /* eslint-disable no-underscore-dangle */
 
-import { StructRow, Table, Vector, tableFromIPC, Null } from "apache-arrow"
+import {
+  StructRow,
+  Table,
+  Vector,
+  tableFromIPC,
+  Null,
+  Field,
+} from "apache-arrow"
 import { immerable, produce } from "immer"
 import { range, unzip, zip } from "lodash"
 import moment from "moment-timezone"
@@ -99,7 +106,7 @@ export interface Type {
 }
 
 // type IntervalData = "int64" | "uint64" | "float64" | "datetime64[ns]"
-// type IntervalClosed = "left" | "right" | "both" | "neither"
+type IntervalClosed = "left" | "right" | "both" | "neither"
 // type IntervalIndex = `interval[${IntervalData}, ${IntervalClosed}]`
 
 // Our current Typescript version (3.9.5) doesn't support template literal types,
@@ -264,6 +271,9 @@ export interface DataFrameCell {
   // For "blank" cells "contentType" is undefined.
   contentType?: Type
 
+  /** The cell's field. */
+  field?: Field
+
   /**
    * The cell's formatted content string, if the DataFrame was created with a Styler.
    * If the DataFrame is unstyled, displayContent will be undefined, and display
@@ -294,6 +304,9 @@ export class Quiver {
   /** DataFrame's data. */
   private _data: Data
 
+  /** Definition for DataFrame's fields. */
+  private _fields: Field[]
+
   /** Types for DataFrame's index and data. */
   private _types: Types
 
@@ -304,6 +317,7 @@ export class Quiver {
     const table = tableFromIPC(element.data)
     const schema = Quiver.parseSchema(table)
     const rawColumns = Quiver.getRawColumns(schema)
+    const fields = table.schema.fields || []
 
     const index = Quiver.parseIndex(table, schema)
     const columns = Quiver.parseColumns(schema)
@@ -319,6 +333,7 @@ export class Quiver {
     this._columns = columns
     this._data = data
     this._types = types
+    this._fields = fields
     this._styler = styler
   }
 
@@ -667,27 +682,34 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   /** Formats an interval index. */
-  private static formatIntervalIndex(
+  private static formatIntervalType(
     data: StructRow,
     typeName: IntervalIndex
   ): string {
+    const match = typeName.match(/interval\[(.+), (both|left|right|neither)\]/)
+    if (match === null) {
+      throw new Error(`Invalid interval type: ${typeName}`)
+    }
+    const [, subtype, closed] = match
+    return this.formatInterval(data, subtype, closed as IntervalClosed)
+  }
+
+  private static formatInterval(
+    data: StructRow,
+    subtype: string,
+    closed: IntervalClosed
+  ): string {
     const interval = data.toJSON() as Interval
 
-    const match = typeName.match(/interval\[(.+), (.+)\]/)
-    if (match === null) {
-      throw new Error("Invalid interval type.")
-    }
-    const [, type, bracket] = match
-
-    const leftBracket = bracket === "both" || bracket === "left" ? "[" : "("
-    const rightBracket = bracket === "both" || bracket === "right" ? "]" : ")"
+    const leftBracket = closed === "both" || closed === "left" ? "[" : "("
+    const rightBracket = closed === "both" || closed === "right" ? "]" : ")"
     const leftInterval = Quiver.format(interval.left, {
-      pandas_type: type,
-      numpy_type: type,
+      pandas_type: subtype,
+      numpy_type: subtype,
     })
     const rightInterval = Quiver.format(interval.right, {
-      pandas_type: type,
-      numpy_type: type,
+      pandas_type: subtype,
+      numpy_type: subtype,
     })
 
     return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`
@@ -701,7 +723,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   /** Takes the data and it's type and nicely formats it. */
-  public static format(x: DataType, type?: Type): string {
+  public static format(x: DataType, type?: Type, field?: Field): string {
     const typeName = type && Quiver.getTypeName(type)
 
     if (x == null) {
@@ -736,10 +758,22 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName?.startsWith("interval")) {
-      return Quiver.formatIntervalIndex(
+      return Quiver.formatIntervalType(
         x as StructRow,
         typeName as IntervalIndex
       )
+    }
+
+    if (typeName === "categorical") {
+      if (field?.metadata.get("ARROW:extension:name") === "pandas.interval") {
+        const { subtype, closed } = JSON.parse(
+          field?.metadata.get("ARROW:extension:metadata") as string
+        )
+        return Quiver.formatInterval(x as StructRow, subtype, closed)
+        // TODO: We should add support for pandas.Period here.
+        //  See: https://github.com/streamlit/streamlit/issues/5392
+      }
+      return String(x)
     }
 
     // Nested arrays and objects.
@@ -953,6 +987,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     ].join(" ")
 
     const contentType = this._types.data[dataColumnIndex]
+    const field = this._fields[dataColumnIndex]
     const content = this.getDataValue(dataRowIndex, dataColumnIndex)
     const displayContent = this._styler?.displayValues
       ? (this._styler.displayValues.getCell(rowIndex, columnIndex)
@@ -966,6 +1001,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       content,
       contentType,
       displayContent,
+      field,
     }
   }
 
