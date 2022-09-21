@@ -377,9 +377,9 @@ function DataFrame({
     [sort, columns]
   )
 
-  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
+  // Automatic table height calculation: numRows +1 because of header, and +2 pixels for borders
   let maxHeight = Math.max(
-    (numRows + 1) * ROW_HEIGHT + 1 + 3,
+    (numRows + 1) * ROW_HEIGHT + 1 + 2,
     MIN_TABLE_HEIGHT
   )
   let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)

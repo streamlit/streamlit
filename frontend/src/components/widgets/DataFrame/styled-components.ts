@@ -20,10 +20,9 @@ import styled from "@emotion/styled"
 /**
  * A resizable data grid container component.
  */
-export const StyledResizableContainer = styled.div(({ theme }) => ({
+export const StyledResizableContainer = styled.div(() => ({
   position: "relative",
   display: "inline-block",
-  overflow: "hidden",
 
   "& .glideDataEditor": {
     height: "100%",
