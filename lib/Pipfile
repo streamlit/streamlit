@@ -11,7 +11,7 @@ hypothesis = ">=6.17.4"
 mypy = ">=0.930"
 mypy-protobuf = ">=3.2"
 parameterized = "*"
-pipenv = "*"
+pipenv = "!=2022.9.20"
 # Lower protobuf versions cause mypy issues during development builds
 protobuf = ">=3.19, <4"
 pytest = "*"
