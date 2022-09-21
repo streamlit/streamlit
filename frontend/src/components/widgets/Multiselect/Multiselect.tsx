@@ -66,14 +66,14 @@ class Multiselect extends React.PureComponent<Props, State> {
     value: this.initialValue,
   }
 
-  public overMaxSelections(): boolean {
+  private overMaxSelections(): boolean {
     return (
       this.props.element.maxSelections > 0 &&
       this.state.value.length >= this.props.element.maxSelections
     )
   }
 
-  public getNoResultsMsg(): string {
+  private getNoResultsMsg(): string {
     const option =
       this.props.element.maxSelections !== 1 ? "options" : "option"
     return `You can only select up to ${this.props.element.maxSelections} ${option}. Remove an option first.`

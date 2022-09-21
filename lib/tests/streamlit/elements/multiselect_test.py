@@ -21,7 +21,10 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import StreamlitAPIException
-from streamlit.elements.multiselect import get_default_count, get_options_message
+from streamlit.elements.multiselect import (
+    _get_default_count,
+    _get_over_max_options_message,
+)
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
 
@@ -304,7 +307,7 @@ Please select at most 2 options.
         ]
     )
     def test_get_default_count(self, default, expected_count):
-        self.assertEqual(get_default_count(default), expected_count)
+        self.assertEqual(_get_default_count(default), expected_count)
 
     @parameterized.expand(
         [
@@ -354,9 +357,10 @@ Please select at most 2 options.
             ),
         ]
     )
-    def test_get_options_message(
+    def test_get_over_max_options_message(
         self, current_selections, max_selections, expected_msg
     ):
         self.assertEqual(
-            get_options_message(current_selections, max_selections), expected_msg
+            _get_over_max_options_message(current_selections, max_selections),
+            expected_msg,
         )

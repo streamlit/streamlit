@@ -104,7 +104,7 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
+def _get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
     if default is None:
         return 0
     if not is_iterable(default):
@@ -112,7 +112,7 @@ def get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
     return len(cast(Sequence[Any], default))
 
 
-def get_options_message(current_selections: int, max_selections: int):
+def _get_over_max_options_message(current_selections: int, max_selections: int):
     curr_selections_noun = "option" if current_selections == 1 else "options"
     max_selections_noun = "option" if max_selections == 1 else "options"
     return f"""
@@ -274,9 +274,9 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
+        multiselect_proto.max_selections = max_selections or 0
         if help is not None:
             multiselect_proto.help = dedent(help)
-        multiselect_proto.max_selections = max_selections or 0
 
         serde = MultiSelectSerde(opt, default_value)
 
@@ -291,15 +291,12 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-        if max_selections is not None:
-            if get_default_count(widget_state.value) > max_selections:
-                raise StreamlitAPIException(
-                    get_options_message(
-                        get_default_count(widget_state.value), max_selections
-                    )
+        if max_selections and _get_default_count(widget_state.value) > max_selections:
+            raise StreamlitAPIException(
+                _get_over_max_options_message(
+                    _get_default_count(widget_state.value), max_selections
                 )
-            else:
-                multiselect_proto.max_selections = max_selections
+            )
 
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.

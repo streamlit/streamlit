@@ -15,17 +15,32 @@
  * limitations under the License.
  */
 
- function selectNthOptionForKthMultiselect(n, k) {
+ function selectNthOptionForKthMultiselectNoClose(n, k) {
   cy.getIndexed(".stMultiSelect", k)
     .find("input")
     .click();
   cy
-    .get("li")
-    .eq(n)
+    .getIndexed("li", n)
     .click();
   // close the multiselect
   cy.getIndexed(".stMultiSelect", k)
     .find("input")
+    .click();
+}
+
+function selectNthOptionForKthMultiselectClose(n, k) {
+  cy.getIndexed(".stMultiSelect", k)
+    .find("input")
+    .click();
+  cy
+    .getIndexed("li", n)
+    .click();
+}
+
+function delNthOptionForKthMultiselect(n, k) {
+  cy.getIndexed('.stMultiSelect', k)
+    // (n + 1) * 2 - 1 because there are two spans: option text and x
+    .getIndexed('span[data-baseweb="tag"] span', (n + 1) * 2 - 1)
     .click();
 }
 
@@ -79,44 +94,38 @@ describe("st.multiselect", () => {
         );
       });
     });
-  });
 
   describe("when clicking on the input", () => {
     it("should show values correctly in the dropdown menu", () => {
-      cy.getIndexed(".stMultiSelect", 0).then(el => {
-        return cy
-          .wrap(el)
-          .find("input")
-          .click()
-          .get("li")
-          .should("have.length", 2)
-          .should("have.text", "malefemale")
-          .each((el, idx) => {
-            return cy
-              .wrap(el)
-              .matchImageSnapshot("multiselect-dropdown-" + idx);
-          });
+      cy.getIndexed(".stMultiSelect", 0)
+        .find("input")
+        .click()
+        .get("li")
+        .should("have.length", 2)
+        .should("have.text", "malefemale")
+        .each((el, idx) => {
+          return cy
+            .wrap(el)
+            .matchImageSnapshot("multiselect-dropdown-" + idx);
+        });
       });
     });
+    
     it("should show long values correctly (with ellipses) in the dropdown menu", () => {
-      cy.getIndexed(".stMultiSelect", 4).then(el => {
-        return cy
-          .wrap(el)
-          .find("input")
-          .click()
-          .get("li")
-          .should("have.length", 5)
-          .each((el, idx) => {
-            return cy
-              .wrap(el)
-              .matchImageSnapshot("multiselect-dropdown-long-label-" + idx);
-          });
+      cy.getIndexed(".stMultiSelect", 4)
+        .find("input")
+        .click()
+        .get("li")
+        .should("have.length", 5)
+        .each((el, idx) => {
+          return cy
+            .wrap(el)
+            .matchImageSnapshot("multiselect-dropdown-long-label-" + idx);
       });
     });
-  });
 
   describe("when the user makes a selection", () => {
-    beforeEach(() => selectNthOptionForKthMultiselect(1, 1));
+    beforeEach(() => selectNthOptionForKthMultiselectNoClose(1, 1));
 
     it("sets the value correctly", () => {
       cy.getIndexed(".stMultiSelect span", 1).should("have.text", "Female");
@@ -142,7 +151,7 @@ describe("st.multiselect", () => {
     });
 
     describe("when the user picks a second option", () => {
-      beforeEach(() => selectNthOptionForKthMultiselect(0, 1));
+      beforeEach(() => selectNthOptionForKthMultiselectNoClose(0, 1));
 
       it("outputs the correct value", () => {
         cy.get("[data-testid='stText']")
@@ -155,10 +164,9 @@ describe("st.multiselect", () => {
       describe("when the user deselects the first option", () => {
         beforeEach(() => {
           // this is the 'close button' element for 'Male'
-          cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
-            .eq(0)
-            .click();
+          delNthOptionForKthMultiselect(0, 0)
         });
+        
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
             .should(
@@ -170,10 +178,10 @@ describe("st.multiselect", () => {
 
       describe("when the user click the clear button", () => {
         beforeEach(() => {
-          cy.get('.stMultiSelect [role="button"][aria-label="Clear all"]')
-            .eq(0)
+          cy.getIndexed('.stMultiSelect [role="button"][aria-label="Clear all"]', 0)
             .click();
         });
+
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
             .should(
@@ -199,10 +207,8 @@ describe("st.multiselect", () => {
       cy.getIndexed(".stMultiSelect", 10)
         .find("input")
         .click();
-      cy.get("li")
-        .first()
+      cy.getIndexed("li", 0)
         .click();
-
       cy.get("[data-testid='stText']")
         .should(
           "contain.text",
@@ -215,75 +221,47 @@ describe("st.multiselect", () => {
   describe("when using max_selections for st.multiselect", () => {
     beforeEach(() => {
       // this is the 'close button' element for 'Male'
-      cy.get('.stMultiSelect span[data-baseweb="tag"] span:last-child')
-        .eq(0)
-        .click();
+      delNthOptionForKthMultiselect(0, 1)
     });
+
     it("should show the correct text when maxSelections is reached not within a form and closing input", () => {
-      selectNthOptionForKthMultiselect(0, 8)
-      cy.getIndexed(".stMultiSelect", 8).then(el => {
-        cy
-          .wrap(el)
-          // recheck that we have hit the limit
-          .find("input")
-          .click()
-          .get("li")
-          .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      selectNthOptionForKthMultiselectNoClose(0, 8)
+      cy.getIndexed(".stMultiSelect", 8)
+        .find("input")
+        .click()
+        .get("li")
+        .should("have.text", "You can only select up to 1 option. Remove an option first.")
       });
     });
 
     it("should show the correct text when maxSelections is reached not within a form and not closing input", () => {
+      selectNthOptionForKthMultiselectClose(0, 8)
       cy.getIndexed(".stMultiSelect", 8)
-        .find("input")
-        .click();
-      cy
-        .get("li")
-        .eq(0)
-        .click();
-      cy.getIndexed(".stMultiSelect", 8).then(el => {
-        cy
-          .wrap(el)
-          .get("li")
-          .first()
-          .should("have.text", "You can only select up to 1 option. Remove an option first.")
-      });
+        .getIndexed("li", 0)
+        .should("have.text", "You can only select up to 1 option. Remove an option first.")
     });
 
     it("should show the correct text when maxSelections is reached in a form when closing input", () => {
-      selectNthOptionForKthMultiselect(0, 9)
-      cy.getIndexed(".stMultiSelect", 9).then(el => {
-        cy
-          .wrap(el)
-          .find("input")
-          .click()
-          .get("li")
-          .should("have.text", "You can only select up to 1 option. Remove an option first.")
-      });
+      selectNthOptionForKthMultiselectNoClose(0, 9)
+      cy.getIndexed(".stMultiSelect", 9)
+        .find("input")
+        .click()
+        .get("li")
+        .should("have.text", "You can only select up to 1 option. Remove an option first.")
     });
 
     it("should show the correct text when maxSelections is reached in a form without closing after selecting", () => {
+      selectNthOptionForKthMultiselectClose(0, 9)
       cy.getIndexed(".stMultiSelect", 9)
-        .find("input")
-        .click();
-      cy
-        .get("li")
-        .eq(0)
-        .click();
-      cy.getIndexed(".stMultiSelect", 9).then(el => {
-        cy
-          .wrap(el)
-          .get("li")
-          .first()
-          .should("have.text", "You can only select up to 1 option. Remove an option first.")
-      });
+        .getIndexed("li", 0)
+        .should("have.text", "You can only select up to 1 option. Remove an option first.")
     });
 
     it("should display an error when options > max selections set during session state", () => {
       cy.get(".stCheckbox")
         .first()
         // For whatever reason both click() and click({ force: true }) don't want
-        // to work here, so we use {multiple: true} even though we only take a
-        // snapshot of one of the checkboxes below.
+        // to work here, so we use {multiple: true}
         .click({ multiple: true });
 
       cy.get(".element-container .stException").should(
@@ -291,5 +269,5 @@ describe("st.multiselect", () => {
         `Multiselect has 2 options selected but max_selections\nis set to 1.`
       );
     });
-  })
+  });
 });

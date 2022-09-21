@@ -300,12 +300,10 @@ describe("Multiselect widget", () => {
       )
       const wrapper = mount(<Multiselect {...props} />)
 
-      expect(
-        wrapper
-          .find(UISelect)
-          .prop("noResultsMsg")
-          ?.toString()
-      ).toBe("No results")
+      expect(wrapper.find(UISelect).props()).toHaveProperty(
+        "noResultsMsg",
+        "No results"
+      )
     })
 
     it("has correct noResultsMsg when maxSelections is passed", () => {
@@ -320,12 +318,10 @@ describe("Multiselect widget", () => {
       )
       const wrapper = mount(<Multiselect {...props} />)
 
-      expect(
-        wrapper
-          .find(UISelect)
-          .prop("noResultsMsg")
-          ?.toString()
-      ).toBe(`You can only select up to 2 options. Remove an option first.`)
+      expect(wrapper.find(UISelect).props()).toHaveProperty(
+        "noResultsMsg",
+        "You can only select up to 2 options. Remove an option first."
+      )
     })
 
     it("has correct noResultsMsg when maxSelections === 1", () => {
@@ -340,12 +336,9 @@ describe("Multiselect widget", () => {
       )
       const wrapper = mount(<Multiselect {...props} />)
 
-      expect(
-        wrapper
-          .find(UISelect)
-          .prop("noResultsMsg")
-          ?.toString()
-      ).toBe(`You can only select up to 1 option. Remove an option first.`)
+      expect(wrapper.find(UISelect).prop("noResultsMsg")).toBe(
+        "You can only select up to 1 option. Remove an option first."
+      )
     })
 
     it("does not allow for more selection when an option is picked", () => {
