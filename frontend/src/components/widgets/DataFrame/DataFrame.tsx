@@ -465,7 +465,7 @@ function DataFrame({
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
-        size={resizableSize}
+        defaultSize={resizableSize}
         style={{
           border: `1px solid ${theme.colors.fadedText05}`,
         }}
@@ -485,6 +485,7 @@ function DataFrame({
         }}
         grid={[1, ROW_HEIGHT]}
         snapGap={ROW_HEIGHT / 3}
+        size={resizableSize}
         onResizeStop={(_event, _direction, _ref, _delta) => {
           if (resizableRef.current) {
             setResizableSize({
