@@ -421,6 +421,9 @@ function DataFrame({
     width: initialWidth || "100%",
     height: initialHeight,
   })
+  if (resizableSize.height !== initialHeight) {
+    setResizableSize({ width: initialWidth || "100%", height: initialHeight })
+  }
 
   React.useLayoutEffect(() => {
     if (resizableRef.current) {
@@ -455,7 +458,7 @@ function DataFrame({
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
-        defaultSize={resizableSize}
+        size={resizableSize}
         style={{
           border: `1px solid ${theme.colors.fadedText05}`,
         }}
@@ -475,7 +478,6 @@ function DataFrame({
         }}
         grid={[1, ROW_HEIGHT]}
         snapGap={ROW_HEIGHT / 3}
-        size={resizableSize}
         onResizeStop={(_event, _direction, _ref, _delta) => {
           if (resizableRef.current) {
             setResizableSize({
