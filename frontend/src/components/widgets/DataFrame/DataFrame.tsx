@@ -421,9 +421,16 @@ function DataFrame({
     width: initialWidth || "100%",
     height: initialHeight,
   })
-  if (resizableSize.height !== initialHeight) {
-    setResizableSize({ width: initialWidth || "100%", height: initialHeight })
-  }
+
+  React.useLayoutEffect(() => {
+    if (resizableRef.current) {
+      // Reset the height if the number of rows changes (e.g. via add_rows)
+      setResizableSize({
+        width: resizableSize.width,
+        height: initialHeight,
+      })
+    }
+  }, [numRows])
 
   React.useLayoutEffect(() => {
     if (resizableRef.current) {
