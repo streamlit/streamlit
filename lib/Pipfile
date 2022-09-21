@@ -13,7 +13,8 @@ mypy-protobuf = ">=3.2"
 parameterized = "*"
 pipenv = "*"
 # Lower protobuf versions cause mypy issues during development builds
-protobuf = ">=3.19, <4"
+# protobuf 3.20.2 is broken: https://github.com/protocolbuffers/protobuf/issues/10571
+protobuf = ">=3.19, <4, !=3.20.2"
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
