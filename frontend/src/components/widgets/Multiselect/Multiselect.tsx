@@ -74,6 +74,9 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private getNoResultsMsg(): string {
+    if (this.props.element.maxSelections === 0) {
+      return "No results"
+    }
     const option =
       this.props.element.maxSelections !== 1 ? "options" : "option"
     return `You can only select up to ${this.props.element.maxSelections} ${option}. Remove an option first.`
@@ -179,9 +182,9 @@ class Multiselect extends React.PureComponent<Props, State> {
     ) {
       return
     }
-    this.setState(this.generateNewState(params), () =>
+    this.setState(this.generateNewState(params), () => {
       this.commitWidgetValue({ fromUi: true })
-    )
+    })
   }
 
   private filterOptions = (
@@ -256,11 +259,7 @@ class Multiselect extends React.PureComponent<Props, State> {
             value={this.valueFromState}
             disabled={disabled}
             size={"compact"}
-            noResultsMsg={
-              this.props.element.maxSelections !== 0
-                ? this.getNoResultsMsg()
-                : "No results"
-            }
+            noResultsMsg={this.getNoResultsMsg()}
             filterOptions={this.filterOptions}
             closeOnSelect={false}
             overrides={{

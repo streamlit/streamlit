@@ -291,11 +291,10 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-        if max_selections and _get_default_count(widget_state.value) > max_selections:
+        default_count = _get_default_count(widget_state.value)
+        if max_selections and default_count > max_selections:
             raise StreamlitAPIException(
-                _get_over_max_options_message(
-                    _get_default_count(widget_state.value), max_selections
-                )
+                _get_over_max_options_message(default_count, max_selections)
             )
 
         # This needs to be done after register_widget because we don't want

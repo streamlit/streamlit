@@ -15,32 +15,27 @@
  * limitations under the License.
  */
 
- function selectNthOptionForKthMultiselectNoClose(n, k) {
+ function selectForKthMultiselect(optionText, k, closeAfterSelecting) {
   cy.getIndexed(".stMultiSelect", k)
     .find("input")
     .click();
   cy
-    .getIndexed("li", n)
+    .get("li")
+    .contains(optionText)
     .click();
-  // close the multiselect
-  cy.getIndexed(".stMultiSelect", k)
-    .find("input")
-    .click();
+  if (closeAfterSelecting) {
+    cy.getIndexed(".stMultiSelect", k)
+      .find("input")
+      .click();
+  }
 }
 
-function selectNthOptionForKthMultiselectClose(n, k) {
-  cy.getIndexed(".stMultiSelect", k)
-    .find("input")
-    .click();
-  cy
-    .getIndexed("li", n)
-    .click();
-}
-
-function delNthOptionForKthMultiselect(n, k) {
+function delFromKthMultiselect(optionText, k) {
   cy.getIndexed('.stMultiSelect', k)
-    // (n + 1) * 2 - 1 because there are two spans: option text and x
-    .getIndexed('span[data-baseweb="tag"] span', (n + 1) * 2 - 1)
+    .get('span[data-baseweb="tag"] span')
+    .contains(optionText)
+    .get('span[role="presentation"]')
+    .first()
     .click();
 }
 
@@ -126,7 +121,7 @@ describe("st.multiselect", () => {
     });
 
   describe("when the user makes a selection", () => {
-    beforeEach(() => selectNthOptionForKthMultiselectNoClose(1, 1));
+    beforeEach(() => selectForKthMultiselect("Female", 1, true));
 
     it("sets the value correctly", () => {
       cy.getIndexed(".stMultiSelect span", 1).should("have.text", "Female");
@@ -152,7 +147,7 @@ describe("st.multiselect", () => {
     });
 
     describe("when the user picks a second option", () => {
-      beforeEach(() => selectNthOptionForKthMultiselectNoClose(0, 1));
+      beforeEach(() => selectForKthMultiselect("Male", 1, true));
 
       it("outputs the correct value", () => {
         cy.get("[data-testid='stText']")
@@ -164,8 +159,7 @@ describe("st.multiselect", () => {
 
       describe("when the user deselects the first option", () => {
         beforeEach(() => {
-          // this is the 'close button' element for 'Male'
-          delNthOptionForKthMultiselect(0, 0)
+          delFromKthMultiselect("Female", 1)
         });
         
         it("outputs the correct value", () => {
@@ -220,43 +214,51 @@ describe("st.multiselect", () => {
   });
 
   describe("when using max_selections for st.multiselect", () => {
-    beforeEach(() => {
-      // this is the 'close button' element for 'Male'
-      delNthOptionForKthMultiselect(0, 1)
-    });
+    
+    describe("test out of a form", () => {
+      afterEach(() => {
+        delFromKthMultiselect("male", 8)
+      });
 
-    it("should show the correct text when maxSelections is reached not within a form and closing input", () => {
-      selectNthOptionForKthMultiselectNoClose(0, 8)
-      cy.getIndexed(".stMultiSelect", 8)
-        .find("input")
-        .click()
-        .get("li")
-        .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      it("should show the correct text when maxSelections is reached and closing input", () => {
+        selectForKthMultiselect("male", 8, true)
+          cy.getIndexed(".stMultiSelect", 8)
+            .find("input")
+            .click()
+            .get("li")
+            .should("have.text", "You can only select up to 1 option. Remove an option first.")
+        });
+
+      it("should show the correct text when maxSelections is reached not within a form and not closing input", () => {
+        selectForKthMultiselect("male", 8, false)
+        cy.getIndexed(".stMultiSelect", 8)
+          .getIndexed("li", 0)
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
       });
     });
 
-    it("should show the correct text when maxSelections is reached not within a form and not closing input", () => {
-      selectNthOptionForKthMultiselectClose(0, 8)
-      cy.getIndexed(".stMultiSelect", 8)
-        .getIndexed("li", 0)
-        .should("have.text", "You can only select up to 1 option. Remove an option first.")
-    });
+    describe("test in a form", () => {
+      afterEach(() => {
+        delFromKthMultiselect("male", 9)
+      });
 
-    it("should show the correct text when maxSelections is reached in a form when closing input", () => {
-      selectNthOptionForKthMultiselectNoClose(0, 9)
-      cy.getIndexed(".stMultiSelect", 9)
-        .find("input")
-        .click()
-        .get("li")
-        .should("have.text", "You can only select up to 1 option. Remove an option first.")
-    });
+      it("should show the correct text when maxSelections is reached in a form when closing input", () => {
+        selectForKthMultiselect("male", 9, true)
+        cy.getIndexed(".stMultiSelect", 9)
+          .find("input")
+          .click()
+          .get("li")
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      });
 
-    it("should show the correct text when maxSelections is reached in a form without closing after selecting", () => {
-      selectNthOptionForKthMultiselectClose(0, 9)
-      cy.getIndexed(".stMultiSelect", 9)
-        .getIndexed("li", 0)
-        .should("have.text", "You can only select up to 1 option. Remove an option first.")
-    });
+      it("should show the correct text when maxSelections is reached in a form without closing after selecting", () => {
+        selectForKthMultiselect("male", 9, false)
+        cy.getIndexed(".stMultiSelect", 9)
+          .getIndexed("li", 0)
+          .should("have.text", "You can only select up to 1 option. Remove an option first.")
+      });
+    })
+  })
 
     it("should display an error when options > max selections set during session state", () => {
       cy.get(".stCheckbox")
