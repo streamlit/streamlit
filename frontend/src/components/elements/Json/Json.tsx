@@ -16,14 +16,13 @@
  */
 
 import React, { ReactElement } from "react"
-import { getLuminance } from "color2k"
 import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
 import ErrorElement from "src/components/shared/ErrorElement"
 
 import { Json as JsonProto } from "src/autogen/proto"
-import { Theme } from "src/theme"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 import { ensureError } from "src/lib/ErrorHandling"
 
 export interface JsonProps {
@@ -56,8 +55,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
 
   // Try to pick a reasonable ReactJson theme based on whether the streamlit
   // theme's background is light or dark.
-  const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
-  const jsonTheme = hasLightBg ? "rjv-default" : "monokai"
+  const jsonTheme = hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
 
   return (
     <div data-testid="stJson" style={styleProp}>
