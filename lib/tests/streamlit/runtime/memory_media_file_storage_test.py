@@ -219,6 +219,6 @@ class MemoryMediaFileStorageUtilTest(unittest.TestCase):
             ("image/jpeg", ".jpg"),
         ]
     )
-    def test_get_extension_for_mimetype(self, mimetype: str, extension: str):
+    def test_get_extension_for_mimetype(self, mimetype: str, expected_extension: str):
         result = get_extension_for_mimetype(mimetype)
-        self.assertEqual(extension, result)
+        self.assertEqual(expected_extension, result)
