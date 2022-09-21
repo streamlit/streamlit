@@ -26,6 +26,7 @@ import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
+from typing_extensions import Final
 
 from streamlit import config
 from streamlit import file_util
@@ -34,6 +35,7 @@ from streamlit import util
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime import (
     Runtime,
     RuntimeConfig,
@@ -80,6 +82,9 @@ MAX_PORT_SEARCH_RETRIES = 100
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
+
+# The endpoint we serve media files from.
+MEDIA_ENDPOINT: Final = "/media"
 
 
 class RetriesExceeded(Exception):
@@ -169,12 +174,19 @@ class Server:
 
         self._main_script_path = main_script_path
 
+        # Initialize MediaFileStorage and its associated endpoint
+        media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
+        MediaFileHandler.initialize_storage(media_file_storage)
+
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
+                media_file_storage=media_file_storage,
             ),
         )
+
+        self._runtime.stats_mgr.register_provider(media_file_storage)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -245,7 +257,11 @@ class Server:
                 AssetsFileHandler,
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
-            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler, {"path": ""}),
+            (
+                make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
+                MediaFileHandler,
+                {"path": ""},
+            ),
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,

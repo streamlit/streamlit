@@ -23,11 +23,14 @@ import pytest
 
 import streamlit.runtime.app_session as app_session
 from streamlit import config
-from streamlit.runtime.app_session import AppSession, AppSessionState
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import media_file_manager
+from streamlit.runtime.app_session import AppSession, AppSessionState
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -69,6 +72,16 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
     MagicMock(spec=LocalSourcesWatcher),
 )
 class AppSessionTest(unittest.TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        media_file_manager._media_file_manager = MediaFileManager(
+            MemoryMediaFileStorage("/mock/media")
+        )
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        media_file_manager._media_file_manager = None
+
     @patch("streamlit.runtime.app_session.secrets._file_change_listener.disconnect")
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""

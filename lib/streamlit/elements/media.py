@@ -19,10 +19,11 @@ from typing_extensions import Final, TypeAlias
 
 from validators import url
 
+import streamlit
 from streamlit import type_util
-from streamlit.runtime.media_file_manager import media_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
+from streamlit.runtime.media_file_manager import get_media_file_manager
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Data: TypeAlias = Union[
+MediaData: TypeAlias = Union[
     str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
 ]
 
@@ -42,7 +43,7 @@ class MediaMixin:
     @gather_metrics
     def audio(
         self,
-        data: Data,
+        data: MediaData,
         format: str = "audio/wav",
         start_time: int = 0,
     ) -> "DeltaGenerator":
@@ -81,7 +82,7 @@ class MediaMixin:
     @gather_metrics
     def video(
         self,
-        data: Data,
+        data: MediaData,
         format: str = "video/mp4",
         start_time: int = 0,
     ) -> "DeltaGenerator":
@@ -169,7 +170,7 @@ def _reshape_youtube_url(url: str) -> Optional[str]:
 def _marshall_av_media(
     coordinates: str,
     proto: Union[AudioProto, VideoProto],
-    data: Data,
+    data: MediaData,
     mimetype: str,
 ) -> None:
     """Fill audio or video proto based on contents of data.
@@ -179,45 +180,48 @@ def _marshall_av_media(
 
     Load data either from file or through bytes-processing methods into a
     MediaFile object.  Pack proto with generated Tornado-based URL.
+
+    (When running in "raw" mode, we won't actually load data into the
+    MediaFileManager, and we'll return an empty URL.)
     """
     # Audio and Video methods have already checked if this is a URL by this point.
 
-    if isinstance(data, str):
-        # Assume it's a filename or blank.  Allow OS-based file errors.
-        with open(data, "rb") as fh:
-            this_file = media_file_manager.add(fh.read(), mimetype, coordinates)
-            proto.url = this_file.url
-            return
-
-    data_as_bytes: bytes
     if data is None:
         # Allow empty values so media players can be shown without media.
         return
-    elif isinstance(data, bytes):
-        data_as_bytes = data
+
+    data_or_filename: Union[bytes, str]
+    if isinstance(data, (str, bytes)):
+        # Pass strings and bytes through unchanged
+        data_or_filename = data
     elif isinstance(data, io.BytesIO):
         data.seek(0)
-        data_as_bytes = data.getvalue()
+        data_or_filename = data.getvalue()
     elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
         data.seek(0)
         read_data = data.read()
         if read_data is None:
             return
         else:
-            data_as_bytes = read_data
+            data_or_filename = read_data
     elif type_util.is_type(data, "numpy.ndarray"):
-        data_as_bytes = data.tobytes()
+        data_or_filename = data.tobytes()
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = media_file_manager.add(data_as_bytes, mimetype, coordinates)
-    proto.url = this_file.url
+    if streamlit._is_running_with_streamlit:
+        file_url = get_media_file_manager().add(data_or_filename, mimetype, coordinates)
+    else:
+        # When running in "raw mode", we can't access the MediaFileManager.
+        file_url = ""
+
+    proto.url = file_url
 
 
 def marshall_video(
     coordinates: str,
     proto: VideoProto,
-    data: Data,
+    data: MediaData,
     mimetype: str = "video/mp4",
     start_time: int = 0,
 ) -> None:
@@ -260,7 +264,7 @@ def marshall_video(
 def marshall_audio(
     coordinates: str,
     proto: AudioProto,
-    data: Data,
+    data: MediaData,
     mimetype: str = "audio/wav",
     start_time: int = 0,
 ) -> None:

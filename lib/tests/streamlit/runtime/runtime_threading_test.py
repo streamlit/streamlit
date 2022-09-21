@@ -15,6 +15,7 @@
 import asyncio
 import threading
 from queue import Queue
+from unittest.mock import MagicMock
 
 from streamlit.runtime.runtime import Runtime, RuntimeConfig
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
@@ -43,7 +44,9 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                 # Create a Runtime instance and put it in the (thread-safe) queue,
                 # so that the main thread can retrieve it safely. If Runtime
                 # creation fails, we'll stick an Exception in the queue instead.
-                config = RuntimeConfig("mock/script/path.py", "")
+                config = RuntimeConfig(
+                    "mock/script/path.py", "", media_file_storage=MagicMock()
+                )
                 queue.put(Runtime(config))
             except BaseException as e:
                 queue.put(e)

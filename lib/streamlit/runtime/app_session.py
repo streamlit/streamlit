@@ -37,7 +37,7 @@ from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.watcher import LocalSourcesWatcher
 from . import caching, legacy_caching
 from .credentials import Credentials
-from .media_file_manager import media_file_manager
+from .media_file_manager import get_media_file_manager
 from .metrics_util import Installation
 from .scriptrunner import (
     RerunData,
@@ -183,8 +183,8 @@ class AppSession:
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
-            media_file_manager.clear_session_refs(self.id)
-            media_file_manager.remove_orphaned_files()
+            get_media_file_manager().clear_session_refs(self.id)
+            get_media_file_manager().remove_orphaned_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -529,7 +529,7 @@ class AppSession:
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
                 # session is actually shutting down.
-                media_file_manager.clear_session_refs(self.id)
+                get_media_file_manager().clear_session_refs(self.id)
 
             self._client_state = client_state
             self._scriptrunner = None

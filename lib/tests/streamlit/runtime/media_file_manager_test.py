@@ -14,13 +14,17 @@
 
 """Unit tests for MediaFileManager"""
 
+from typing import Optional
 from unittest import mock, TestCase
 import random
+from unittest.mock import mock_open, MagicMock, call
 
-from streamlit.runtime.media_file_manager import (
-    MediaFileManager,
+from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.media_file_storage import MediaFileKind
+from streamlit.runtime.memory_media_file_storage import (
     _calculate_file_id,
-    MediaFile,
+    MemoryMediaFileStorage,
+    MemoryFile,
 )
 
 
@@ -90,12 +94,21 @@ ALL_FIXTURES.update(TEXT_FIXTURES)
 class MediaFileManagerTest(TestCase):
     def setUp(self):
         super().setUp()
-        self.media_file_manager = MediaFileManager()
+        self.storage = MemoryMediaFileStorage("/mock/endpoint")
+        self.media_file_manager = MediaFileManager(self.storage)
         random.seed(1337)
 
-    def tearDown(self):
-        self.media_file_manager._files_by_id.clear()
-        self.media_file_manager._files_by_session_and_coord.clear()
+    def _add_file_and_get_object(
+        self,
+        content: bytes,
+        mimetype: str,
+        coordinates: str,
+        filename: Optional[str] = None,
+    ) -> MemoryFile:
+        """Add a new file to our test manager and return its MediaFile object."""
+        file_id = _calculate_file_id(content, mimetype, filename)
+        self.media_file_manager.add(content, mimetype, coordinates, filename)
+        return self.storage.get_file(file_id)
 
     def test_calculate_file_id(self):
         """Test that file_id generation from data works as expected."""
@@ -114,8 +127,8 @@ class MediaFileManagerTest(TestCase):
 
         # Make sure we get different file ids for files with same bytes and mimetypes but diff't filenames.
         self.assertNotEqual(
-            _calculate_file_id(fake_bytes, "audio/wav", file_name="name1.wav"),
-            _calculate_file_id(fake_bytes, "audio/wav", file_name="name2.wav"),
+            _calculate_file_id(fake_bytes, "audio/wav", filename="name1.wav"),
+            _calculate_file_id(fake_bytes, "audio/wav", filename="name2.wav"),
         )
 
     @mock.patch(
@@ -124,48 +137,87 @@ class MediaFileManagerTest(TestCase):
     )
     def test_reject_null_files(self, _):
         """MediaFileManager.add raises a TypeError if it's passed None."""
-        coord = random_coordinates()
         with self.assertRaises(TypeError):
-            self.media_file_manager.add(None, "media/any", coord)
+            self.media_file_manager.add(None, "media/any", random_coordinates())
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        return_value="mock_session",
     )
-    def test_add_files(self, _):
-        """Test that MediaFileManager.add works as expected."""
+    def test_add_binary_files(self, _):
+        """Test that we can add binary files to the manager."""
+        storage_load_spy = MagicMock(side_effect=self.storage.load_and_get_id)
+        self.storage.load_and_get_id = storage_load_spy
+
         sample_coords = set()
         while len(sample_coords) < len(ALL_FIXTURES):
             sample_coords.add(random_coordinates())
 
         for sample in ALL_FIXTURES.values():
-            f = self.media_file_manager.add(
-                sample["content"], sample["mimetype"], sample_coords.pop()
+            content = sample["content"]
+            self.assertIsInstance(content, bytes)
+            mimetype = sample["mimetype"]
+            media_file = self._add_file_and_get_object(
+                content, mimetype, sample_coords.pop()
             )
-            self.assertTrue(f.id in self.media_file_manager)
+            self.assertIsNotNone(media_file)
+
+            # Ensure MediaFileStorage.load_and_get_id was called as expected.
+            storage_load_spy.assert_called_once_with(
+                content, mimetype, MediaFileKind.MEDIA, None
+            )
+            storage_load_spy.reset_mock()
 
         # There should be as many files in MFM as we added.
-        self.assertEqual(len(self.media_file_manager), len(ALL_FIXTURES))
+        self.assertEqual(len(self.media_file_manager._file_metadata), len(ALL_FIXTURES))
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
+        return_value="mock_session",
+    )
+    @mock.patch(
+        "streamlit.runtime.memory_media_file_storage.open",
+        mock_open(read_data=b"mock_test_file"),
+        create=True,
+    )
+    def test_add_file_by_name(self, _1):
+        """Test that we can add files by filename."""
+        storage_load_spy = MagicMock(side_effect=self.storage.load_and_get_id)
+        self.storage.load_and_get_id = storage_load_spy
+
+        self.media_file_manager.add(
+            "mock/file/path.png", "image/png", random_coordinates()
+        )
+
+        # We should have a single file in the MFM.
+        self.assertEqual(len(self.media_file_manager._file_metadata), 1)
+
+        # And it should be registered to our session
+        self.assertEqual(
+            len(self.media_file_manager._files_by_session_and_coord["mock_session"]), 1
+        )
+
+        # Ensure MediaFileStorage.load_and_get_id was called as expected.
+        storage_load_spy.assert_called_once_with(
+            "mock/file/path.png", "image/png", MediaFileKind.MEDIA, None
+        )
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
         return_value="mock_session_id",
     )
     def test_add_files_same_coord(self, _):
-        """Test that MediaFileManager.add works as expected."""
+        """We can add multiple files that share the same coordinate."""
         coord = random_coordinates()
 
         for sample in ALL_FIXTURES.values():
-            f = self.media_file_manager.add(
-                sample["content"], sample["mimetype"], coord
-            )
-            self.assertTrue(f.id in self.media_file_manager)
+            self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
 
         # There should be 6 files in MFM.
-        self.assertEqual(len(self.media_file_manager), len(ALL_FIXTURES))
+        self.assertEqual(len(self.media_file_manager._file_metadata), len(ALL_FIXTURES))
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
@@ -180,7 +232,7 @@ class MediaFileManagerTest(TestCase):
         self.media_file_manager.remove_orphaned_files()
 
         # There should be only 0 file in MFM.
-        self.assertEqual(len(self.media_file_manager), 0)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 0)
 
         # There should only be 0 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
@@ -190,21 +242,21 @@ class MediaFileManagerTest(TestCase):
         return_value="mock_session_id",
     )
     def test_add_file_already_exists_same_coord(self, _):
+        """Adding a file that already exists results in just a single file in
+        the manager.
+        """
         sample = IMAGE_FIXTURES["png"]
         coord = random_coordinates()
 
         self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
         file_id = _calculate_file_id(sample["content"], sample["mimetype"])
-        self.assertTrue(file_id in self.media_file_manager)
+        self.assertTrue(file_id in self.media_file_manager._file_metadata)
 
-        mediafile = self.media_file_manager.add(
-            sample["content"], sample["mimetype"], coord
-        )
-        self.assertTrue(file_id in self.media_file_manager)
-        self.assertEqual(mediafile.id, file_id)
+        self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
+        self.assertTrue(file_id in self.media_file_manager._file_metadata)
 
         # There should only be 1 file in MFM.
-        self.assertEqual(len(self.media_file_manager), 1)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 1)
 
         # There should only be 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
@@ -214,46 +266,24 @@ class MediaFileManagerTest(TestCase):
         return_value="mock_session_id",
     )
     def test_add_file_already_exists_different_coord(self, _):
+        """Adding a file that already exists, but with different coordinates,
+        results in just a single file in the manager.
+        """
         sample = IMAGE_FIXTURES["png"]
 
         coord = random_coordinates()
         self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
         file_id = _calculate_file_id(sample["content"], sample["mimetype"])
-        self.assertTrue(file_id in self.media_file_manager)
+        self.assertTrue(file_id in self.media_file_manager._file_metadata)
 
         coord = random_coordinates()
-        mediafile = self.media_file_manager.add(
-            sample["content"], sample["mimetype"], coord
-        )
-        self.assertTrue(file_id in self.media_file_manager)
-        self.assertEqual(mediafile.id, file_id)
+        self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
+        self.assertTrue(file_id in self.media_file_manager._file_metadata)
 
         # There should only be 1 file in MFM.
-        self.assertEqual(len(self.media_file_manager), 1)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 1)
 
         # There should only be 1 session with registered files.
-        self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
-
-    @mock.patch(
-        "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
-    )
-    def test_add_file_different_mimetypes(self, _):
-        """Test that we create a new file if new mimetype, even with same bytes for content."""
-        coord = random_coordinates()
-
-        sample = AUDIO_FIXTURES["mp3"]
-        f1 = self.media_file_manager.add(sample["content"], "audio/mp3", coord)
-        self.assertTrue(f1.id in self.media_file_manager)
-
-        f2 = self.media_file_manager.add(sample["content"], "video/mp4", coord)
-        self.assertNotEqual(f1.id, f2.id)
-        self.assertTrue(f2.id in self.media_file_manager)
-
-        # There should be only 2 files in MFM, one for each mimetye.
-        self.assertEqual(len(self.media_file_manager), 2)
-
-        # There should be only 1 session with registered files.
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 1)
 
     @mock.patch(
@@ -264,20 +294,30 @@ class MediaFileManagerTest(TestCase):
         """Calling clear_session_refs/remove_orphaned_files in an empty manager
         is a no-op.
         """
-        self.assertEqual(len(self.media_file_manager), 0)
+        storage_delete_spy = MagicMock(side_effect=self.storage.delete_file)
+        self.storage.delete_file = storage_delete_spy
+
+        self.assertEqual(len(self.media_file_manager._file_metadata), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
 
         self.media_file_manager.clear_session_refs()
         self.media_file_manager.remove_orphaned_files()
 
-        self.assertEqual(len(self.media_file_manager), 0)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 0)
         self.assertEqual(len(self.media_file_manager._files_by_session_and_coord), 0)
+
+        # MediaFileStorage.delete_file should not have been called, because
+        # no files were actually deleted.
+        storage_delete_spy.assert_not_called()
 
     @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
     def test_remove_orphaned_files_multiple_sessions(self, mock_get_session_id):
         """clear_session_refs/remove_orphaned_files behaves correctly when multiple
         sessions are referencing some of the same files.
         """
+        storage_delete_spy = MagicMock(side_effect=self.storage.delete_file)
+        self.storage.delete_file = storage_delete_spy
+
         # Have two sessions add the same set of files
         for session_id in ("mock_session_1", "mock_session_2"):
             mock_get_session_id.return_value = session_id
@@ -287,7 +327,11 @@ class MediaFileManagerTest(TestCase):
                     sample["content"], sample["mimetype"], coord
                 )
 
-        self.assertEqual(len(self.media_file_manager), len(VIDEO_FIXTURES))
+        self.assertEqual(
+            len(self.media_file_manager._file_metadata), len(VIDEO_FIXTURES)
+        )
+
+        file_ids = list(self.media_file_manager._file_metadata.keys())
 
         # Remove session1's references
         mock_get_session_id.return_value = "mock_session_1"
@@ -295,7 +339,12 @@ class MediaFileManagerTest(TestCase):
         self.media_file_manager.remove_orphaned_files()
 
         # The files are all still referenced by session_2
-        self.assertEqual(len(self.media_file_manager), len(VIDEO_FIXTURES))
+        self.assertEqual(
+            len(self.media_file_manager._file_metadata), len(VIDEO_FIXTURES)
+        )
+
+        # MediaFileStorage.delete_file should not have been called yet...
+        storage_delete_spy.assert_not_called()
 
         # Remove session2's references, but don't call "remove_orphaned_files" yet...
         mock_get_session_id.return_value = "mock_session_2"
@@ -303,35 +352,19 @@ class MediaFileManagerTest(TestCase):
 
         # The files still exist, because they've only been de-referenced and not
         # removed.
-        self.assertEqual(len(self.media_file_manager), len(VIDEO_FIXTURES))
+        self.assertEqual(
+            len(self.media_file_manager._file_metadata), len(VIDEO_FIXTURES)
+        )
+
+        # MediaFileStorage.delete_file should not have been called yet...
+        storage_delete_spy.assert_not_called()
 
         # After a final call to remove_orphaned_files, the files should be gone.
         self.media_file_manager.remove_orphaned_files()
-        self.assertEqual(len(self.media_file_manager), 0)
+        self.assertEqual(len(self.media_file_manager._file_metadata), 0)
 
-    def test_media_file_url(self):
-        self.assertEqual(MediaFile("abcd", b"", "audio/wav").url, "/media/abcd.wav")
-        self.assertEqual(MediaFile("abcd", b"", "image/jpeg").url, "/media/abcd.jpeg")
-        self.assertEqual(MediaFile("abcd", b"", "video/mp4").url, "/media/abcd.mp4")
-        self.assertEqual(MediaFile("abcd", b"", "video/webm").url, "/media/abcd.webm")
-
-    @mock.patch(
-        "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
-    )
-    def test_stats_provider(self, _):
-        manager = self.media_file_manager
-        assert len(manager.get_stats()) == 0
-
-        for sample in VIDEO_FIXTURES.values():
-            coord = random_coordinates()
-            self.media_file_manager.add(sample["content"], sample["mimetype"], coord)
-
-        stats = manager.get_stats()
-        assert len(stats) == 2
-        assert stats[0].category_name == "st_media_file_manager"
-        assert sum(stat.byte_length for stat in stats) == 232
-
-        manager.clear_session_refs("mock_session_id")
-        manager.remove_orphaned_files()
-        assert len(manager.get_stats()) == 0
+        # MediaFileStorage.delete_file should have been called once for each
+        # file.
+        storage_delete_spy.assert_has_calls(
+            [call(file_id) for file_id in file_ids], any_order=True
+        )
