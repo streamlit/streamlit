@@ -18,7 +18,9 @@ import contextlib
 import hashlib
 import mimetypes
 import os.path
-from typing import Union, NamedTuple, Dict, Optional, List, Final
+from typing import Union, NamedTuple, Dict, Optional, List
+
+from typing_extensions import Final
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import (
