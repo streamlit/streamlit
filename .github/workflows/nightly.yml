@@ -5,11 +5,6 @@ on:
   #   # Run job at 10.30pm PST or 11.30pm PDT
   #   - cron:  '30 6 * * *'
 
-  # FOR TESTING ONLY:
-  # push:
-  #   branches:
-  #     - '**'
-
 jobs:
   create-nightly-tag:
     runs-on: ubuntu-latest
@@ -18,11 +13,14 @@ jobs:
       run:
         shell: bash -ileo pipefail {0}
 
+    permissions:
+      # Additional permission needed to generate tag
+      contents: write
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
-          persist-credentials: false
+        with:
           submodules: 'recursive'
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -30,16 +28,15 @@ jobs:
           python-version: "3.10"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: make develop
-      # TODO: Avoid creating unnecessary tags, gated for now
-      - if: ${{ 'true' == 'false' }}
-        name: Create tag
+      - name: Run make init develop
+        run: make init develop
+      - name: Create tag
         run: |
-          git config user.email "core+streamlitbot-github@streamlit.io"
-          git config user.name "Streamlit Bot"
+          git config --global user.email "core+streamlitbot-github@streamlit.io"
+          git config --global user.name "Streamlit Bot"
 
           TAG="$(./scripts/pypi_nightly_create_tag.py)"
+          echo "TAG=$TAG" >> $GITHUB_ENV
 
           ./scripts/update_version.py $TAG
           ./scripts/update_name.py streamlit-nightly
@@ -125,9 +122,7 @@ jobs:
         run: |
           cd lib
           python setup.py verify
-      # TODO: Added the if statement to gate for now
-      - if: ${{ 'true' == 'false' }}
-        name: Initialize .pypirc
+      - name: Initialize .pypirc
         env:
           NIGHTLY_PYPI_USERNAME: ${{ secrets.NIGHTLY_PYPI_USERNAME }}
           NIGHTLY_PYPI_API_TOKEN: ${{ secrets.NIGHTLY_PYPI_API_TOKEN }}
@@ -136,12 +131,12 @@ jobs:
           echo -e "[pypi]" >> ~/.pypirc
           echo -e "username = "$NIGHTLY_PYPI_USERNAME"" >> ~/.pypirc
           echo -e "password = "$NIGHTLY_PYPI_API_TOKEN"" >> ~/.pypirc
-      - if: ${{ 'true' == 'false' }}
-        name: Build Package
+      - name: Build Package
         timeout-minutes: 120
         run: |
           sudo apt install rsync
           make package
+      # TODO: Added the if statement to gate for now
       - if: ${{ 'true' == 'false' }}
         name: Upload to PyPI
         run: |
