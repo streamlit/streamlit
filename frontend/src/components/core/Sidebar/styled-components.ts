@@ -163,7 +163,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
-      color: theme.colors.bodyText,
+      color: isActive ? theme.colors.bodyText : theme.colors.fadedText60,
       fontWeight: isActive ? 600 : 400,
     }
 
