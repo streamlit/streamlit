@@ -34,6 +34,7 @@ function delFromKthMultiselect(optionText, k) {
   cy.getIndexed('.stMultiSelect', k)
     .get('span[data-baseweb="tag"] span')
     .contains(optionText)
+    // the actual x
     .get('span[role="presentation"]')
     .first()
     .click();
@@ -220,7 +221,7 @@ describe("st.multiselect", () => {
         delFromKthMultiselect("male", 8)
       });
 
-      it("should show the correct text when maxSelections is reached and closing input", () => {
+      it("should show the correct text when maxSelections is reached and closing after selecting", () => {
         selectForKthMultiselect("male", 8, true)
           cy.getIndexed(".stMultiSelect", 8)
             .find("input")
@@ -229,7 +230,7 @@ describe("st.multiselect", () => {
             .should("have.text", "You can only select up to 1 option. Remove an option first.")
         });
 
-      it("should show the correct text when maxSelections is reached not within a form and not closing input", () => {
+      it("should show the correct text when maxSelections is reached and not closing after selecting", () => {
         selectForKthMultiselect("male", 8, false)
         cy.getIndexed(".stMultiSelect", 8)
           .getIndexed("li", 0)
@@ -242,7 +243,7 @@ describe("st.multiselect", () => {
         delFromKthMultiselect("male", 9)
       });
 
-      it("should show the correct text when maxSelections is reached in a form when closing input", () => {
+      it("should show the correct text when maxSelections is reached when closing after selecting", () => {
         selectForKthMultiselect("male", 9, true)
         cy.getIndexed(".stMultiSelect", 9)
           .find("input")
@@ -251,7 +252,7 @@ describe("st.multiselect", () => {
           .should("have.text", "You can only select up to 1 option. Remove an option first.")
       });
 
-      it("should show the correct text when maxSelections is reached in a form without closing after selecting", () => {
+      it("should show the correct text when maxSelections is reached without closing after selecting", () => {
         selectForKthMultiselect("male", 9, false)
         cy.getIndexed(".stMultiSelect", 9)
           .getIndexed("li", 0)
