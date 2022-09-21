@@ -86,6 +86,7 @@ describe("st.multiselect", () => {
           .should("have.text", "multiselect 1Choose an optionopen");
       });
     });
+    
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
         cy.getIndexed(".stMultiSelect", 2).should(
