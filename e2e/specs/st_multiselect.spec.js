@@ -271,6 +271,7 @@ describe("st.multiselect", () => {
         `Multiselect has 2 options selected but max_selections\nis set to 1.`
       );
     });
-  })
+    
+    })
   });
 });
