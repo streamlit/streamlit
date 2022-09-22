@@ -27,6 +27,7 @@ import { mount } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 
+import { Resizable } from "re-resizable"
 import DataFrame, {
   DataFrameProps,
   useDataLoader,
@@ -86,20 +87,16 @@ describe("DataFrame widget", () => {
     const wrapper = mount(
       <DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />
     )
-    const dataFrameContainer = wrapper
-      .find(StyledResizableContainer)
-      .props() as any
-    expect(dataFrameContainer.width).toBe(700)
-    expect(dataFrameContainer.height).toBe(400)
+    const dataFrameContainer = wrapper.find(Resizable).props() as any
+    expect(dataFrameContainer.size.width).toBe(700)
+    expect(dataFrameContainer.size.height).toBe(400)
   })
 
   it("grid container should render with specific size", () => {
     const wrapper = mount(<DataFrame {...props} />)
-    const dataFrameContainer = wrapper
-      .find(StyledResizableContainer)
-      .props() as any
-    expect(dataFrameContainer.width).toBe(400)
-    expect(dataFrameContainer.height).toBe(400)
+    const dataFrameContainer = wrapper.find(Resizable).props() as any
+    expect(dataFrameContainer.size.width).toBe(400)
+    expect(dataFrameContainer.size.height).toBe(400)
   })
 
   it("Test column resizing function.", () => {
