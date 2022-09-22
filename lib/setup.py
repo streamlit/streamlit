@@ -107,7 +107,8 @@ setuptools.setup(
     author_email="hello@streamlit.io",
     license="Apache License 2.0",
     classifiers=[
-        "Development Status :: 5 - Production/Stable" "Environment :: Console",
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
         "Environment :: Web Environment",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
@@ -119,8 +120,8 @@ setuptools.setup(
         "Topic :: Database :: Front-Ends",
         "Topic :: Office/Business :: Financial :: Spreadsheet",
         "Topic :: Scientific/Engineering :: Information Analysis",
-        "Topic :: Scientific/Engineering :: Visualization"
-        "Topic :: Software Development :: Libraries :: Application Frameworks"
+        "Topic :: Scientific/Engineering :: Visualization",
+        "Topic :: Software Development :: Libraries :: Application Frameworks",
         "Topic :: Software Development :: Widget Sets",
     ],
     # We exclude Python 3.9.7 from our compatible versions due to a bug in that version
