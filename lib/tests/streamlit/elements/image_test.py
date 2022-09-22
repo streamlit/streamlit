@@ -110,7 +110,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             (IMAGES["img_32_32_3_rgba"]["np"], "jpeg"),
         ]
     )
-    def test_marshall_images(self, data_in, format: str):
+    def test_marshall_images(self, data_in: image.AtomicImage, format: str):
         """Test streamlit.image.marshall_images.
         Need to test the following:
         * if list
@@ -152,7 +152,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         ]
     )
     def test_marshall_images_with_auto_output_format(
-        self, data_in, expected_extension: str
+        self, data_in: image.AtomicImage, expected_extension: str
     ):
         """Test streamlit.image.marshall_images.
         with auto output_format
