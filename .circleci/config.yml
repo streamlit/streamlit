@@ -4,7 +4,7 @@
 #
 version: 2.1
 orbs:
-  slack: circleci/slack@4.10.1
+  slack: circleci/slack@3.4.2
 commands:
   update-submodules:
     steps:
@@ -616,9 +616,9 @@ jobs:
           <<: *generate_protobufs
 
       - run:
-          name: Run make init develop
+          name: Run make develop
           command: |
-            make init develop
+            make develop
 
       - run:
           name: CLI smoke tests
