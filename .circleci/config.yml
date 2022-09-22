@@ -493,9 +493,9 @@ jobs:
       - make-init
 
       - run: &make_develop
-          name: Run make develop
+          name: Run make init develop
           command: |
-            make develop
+            make init develop
 
       - run:
           name: Run linters
