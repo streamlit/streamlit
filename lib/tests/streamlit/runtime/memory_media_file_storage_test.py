@@ -24,6 +24,7 @@ from streamlit.runtime.media_file_storage import MediaFileStorageError, MediaFil
 from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     MemoryFile,
+    get_extension_for_mimetype,
 )
 
 
@@ -131,13 +132,11 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
             ("video/mp4", ".mp4"),
             ("audio/wav", ".wav"),
             ("image/png", ".png"),
-            ("image/jpeg", ".jpeg"),
+            ("image/jpeg", ".jpg"),
         ]
     )
     def test_get_url(self, mimetype, extension):
-        """URLs should be formatted correctly, and have the right extension for
-        the file's mimetype.
-        """
+        """URLs should be formatted correctly, and have the expected extension."""
         file_id = self.storage.load_and_get_id(
             b"mock_bytes", mimetype=mimetype, kind=MediaFileKind.MEDIA
         )
@@ -207,3 +206,19 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
             self.storage.delete_file(file_id)
 
         self.assertEqual(0, len(self.storage.get_stats()))
+
+
+class MemoryMediaFileStorageUtilTest(unittest.TestCase):
+    """Unit tests for utility functions in memory_media_file_storage.py"""
+
+    @parameterized.expand(
+        [
+            ("video/mp4", ".mp4"),
+            ("audio/wav", ".wav"),
+            ("image/png", ".png"),
+            ("image/jpeg", ".jpg"),
+        ]
+    )
+    def test_get_extension_for_mimetype(self, mimetype: str, expected_extension: str):
+        result = get_extension_for_mimetype(mimetype)
+        self.assertEqual(expected_extension, result)
