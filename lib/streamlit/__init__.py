@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# isort: skip_file
+
 """Streamlit.
 
 How to use Streamlit in 3 seconds:

@@ -27,6 +27,13 @@ repos:
           # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
           - --target-version=py37
         files: \.py$|\.pyi$
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+        args:
+          - --filter-files
+        exclude: ^lib/streamlit/__init__\.py$
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
