@@ -493,9 +493,9 @@ jobs:
       - make-init
 
       - run: &make_develop
-          name: Run make init develop
+          name: Run make develop
           command: |
-            make init develop
+            make develop
 
       - run:
           name: Run linters
@@ -616,9 +616,9 @@ jobs:
           <<: *generate_protobufs
 
       - run:
-          name: Run make develop
+          name: Run make init develop
           command: |
-            make develop
+            make init develop
 
       - run:
           name: CLI smoke tests
