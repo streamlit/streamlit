@@ -214,7 +214,9 @@ class Slider extends React.PureComponent<Props, State> {
   private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
     (props: SharedProps, ref): JSX.Element => {
       const { $value, $thumbIndex } = props
-      const formattedValue = this.formatValue($value[$thumbIndex])
+      const formattedValue = $value
+        ? this.formatValue($value[$thumbIndex as number])
+        : ""
       const passThrough = pick(props, [
         "role",
         "style",
@@ -240,7 +242,7 @@ class Slider extends React.PureComponent<Props, State> {
       return (
         <StyledThumb
           {...passThrough}
-          disabled={props.$disabled}
+          disabled={props.$disabled === true}
           ref={ref}
           aria-valuetext={formattedValue}
           aria-label={this.props.element.label}
@@ -248,7 +250,7 @@ class Slider extends React.PureComponent<Props, State> {
           <StyledThumbValue
             className="StyledThumbValue"
             data-testid="stThumbValue"
-            disabled={props.$disabled}
+            disabled={props.$disabled === true}
             ref={this.thumbValueRef}
           >
             {formattedValue}

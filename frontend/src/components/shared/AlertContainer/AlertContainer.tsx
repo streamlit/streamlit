@@ -26,7 +26,13 @@ export enum Kind {
   WARNING = "warning",
 }
 
-function getNotificationKind(kind: Kind): KIND[keyof KIND] {
+function getNotificationKind(
+  kind: Kind
+):
+  | typeof KIND.negative
+  | typeof KIND.info
+  | typeof KIND.positive
+  | typeof KIND.warning {
   switch (kind) {
     case Kind.ERROR:
       return KIND.negative
@@ -70,6 +76,8 @@ export default function AlertContainer({
           style: {
             marginTop: 0,
             marginBottom: 0,
+            marginLeft: 0,
+            marginRight: 0,
             width: width ? width.toString() : undefined,
             border: 0,
           },

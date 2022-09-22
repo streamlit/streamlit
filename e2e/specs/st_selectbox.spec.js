@@ -45,14 +45,14 @@ describe("st.selectbox", () => {
   });
 
   it("formats display values", () => {
-    cy.getIndexed(".stSelectbox div[aria-selected]", 1).should(
+    cy.getIndexed(".stSelectbox div", 3).should(
       "have.text",
-      "Male"
+      "female"
     );
   });
 
   it("handles no options", () => {
-    cy.getIndexed(".stSelectbox div[aria-selected]", 2).should(
+    cy.getIndexed(".stSelectbox div", 16).should(
       "have.text",
       "No options to select."
     );

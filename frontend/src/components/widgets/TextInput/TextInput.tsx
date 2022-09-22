@@ -121,7 +121,9 @@ class TextInput extends React.PureComponent<Props, State> {
     }
   }
 
-  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  private onChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void => {
     const { value } = e.target
     const { element } = this.props
     const { maxChars } = element
@@ -148,7 +150,9 @@ class TextInput extends React.PureComponent<Props, State> {
     )
   }
 
-  private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+  private onKeyPress = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void => {
     if (e.key === "Enter" && this.state.dirty) {
       this.commitWidgetValue({ fromUi: true })
     }
