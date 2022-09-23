@@ -374,7 +374,7 @@ class MemoAPI:
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
-                ttl=ttl,
+                ttl=cast(float, ttl),
             )
         )
 
