@@ -23,7 +23,6 @@ import imghdr
 import io
 import mimetypes
 import re
-import warnings
 from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union, Tuple
 from urllib.parse import urlparse
 
@@ -399,7 +398,7 @@ def _check_if_svg_can_be_rendered_as_img(image: str) -> bool:
         return False
     root_idx = image.find(">")
     root = image[:root_idx]
-    if root.find("width") == -1 and not _get_svg_width(image):
+    if "width" not in root and not _get_svg_width(image):
         return False
     return True
 
@@ -423,7 +422,7 @@ def _get_svg_width(image: str) -> Optional[str]:
 def _add_svg_attr(image: str, attr_name: str, attr_value: str) -> str:
     root_idx = image.find(">")
     root = image[:root_idx]
-    if root.find(attr_name) == -1:
+    if attr_name not in root:
         width = f'{attr_name}="{attr_value}"'
         image = f"{root} {width}{image[root_idx:]}"
     return image
@@ -436,9 +435,9 @@ def _normalize_svg(image: str) -> str:
     root_idx = image.find(">")
     root = image[:root_idx]
     svg_width = _get_svg_width(image)
-    if root.find("width") == -1 and svg_width:
+    if "width" not in root and svg_width:
         image = _add_svg_attr(image, "width", svg_width)
-    if root.find("xmlns") == -1:
+    if "xmlns" not in root:
         image = _add_svg_attr(image, "xmlns", "http://www.w3.org/2000/svg")
     return f"{prefix}{image}"
 
@@ -550,7 +549,7 @@ def marshall_images(
                     try:
                         proto_img.url = f"data:image/svg+xml,{_normalize_svg(image)}"
                     except Exception as e:
-                        warnings.warn(
+                        LOGGER.warning(
                             f"Warning! The following exception occurred during SVG image normalization: {e}"
                         )
                         proto_img.markup = f"data:image/svg+xml,{image}"
