@@ -178,9 +178,11 @@ export const CustomHeading: FunctionComponent<HeadingProps> = ({
 }) => {
   const anchor = rest["data-anchor"]
   return (
-    <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
-      {children}
-    </HeadingWithAnchor>
+    <StyledHeaderContainer>
+      <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
+        {children}
+      </HeadingWithAnchor>
+    </StyledHeaderContainer>
   )
 }
 export interface RenderedMarkdownProps {
