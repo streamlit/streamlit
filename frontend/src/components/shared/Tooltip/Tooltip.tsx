@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +16,7 @@
 
 import React, { ReactElement, ReactNode } from "react"
 import { useTheme } from "@emotion/react"
-import { Theme } from "src/theme"
+import { Theme, hasLightBackgroundColor } from "src/theme"
 import { StatefulTooltip, ACCESSIBILITY_TYPE, PLACEMENT } from "baseui/tooltip"
 import { StyledTooltipContentWrapper } from "./styled-components"
 
@@ -83,13 +82,14 @@ function Tooltip({
             paddingLeft: "0 !important",
             paddingRight: "0 !important",
 
-            border: `1px solid ${colors.fadedText10}`,
-            backgroundColor: colors.bgColor,
+            backgroundColor: "transparent",
           },
         },
         Inner: {
           style: {
-            backgroundColor: colors.bgColor,
+            backgroundColor: hasLightBackgroundColor(theme)
+              ? colors.bgColor
+              : colors.secondaryBg,
             color: colors.bodyText,
             fontSize: fontSizes.sm,
             fontWeight: "normal",

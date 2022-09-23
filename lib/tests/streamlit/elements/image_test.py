@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,20 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit test for image."""
+"""Unit tests for st.image and other image.py utility code."""
 
-import pytest
-from PIL import Image, ImageDraw
-from parameterized import parameterized
+from unittest import mock
 
-from streamlit.errors import StreamlitAPIException
-from tests import testutil
+import PIL.Image as Image
 import cv2
 import numpy as np
+import pytest
+from PIL import ImageDraw
+from parameterized import parameterized
 
 import streamlit as st
 import streamlit.elements.image as image
+from streamlit.elements.image import _np_array_to_bytes, _PIL_to_bytes
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.runtime.memory_media_file_storage import (
+    _calculate_file_id,
+    get_extension_for_mimetype,
+)
+from streamlit.web.server.server import MEDIA_ENDPOINT
+from tests import testutil
 
 
 def create_image(size, format="RGB", add_alpha=True):
@@ -102,7 +110,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             (IMAGES["img_32_32_3_rgba"]["np"], "jpeg"),
         ]
     )
-    def test_marshall_images(self, data_in, format):
+    def test_marshall_images(self, data_in: image.AtomicImage, format: str):
         """Test streamlit.image.marshall_images.
         Need to test the following:
         * if list
@@ -116,34 +124,36 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
-        from streamlit.runtime.in_memory_file_manager import _calculate_file_id
-        from streamlit.elements.image import _np_array_to_bytes
-
+        mimetype = f"image/{format}"
         file_id = _calculate_file_id(
             _np_array_to_bytes(data_in, output_format=format),
-            mimetype="image/" + format,
+            mimetype=mimetype,
         )
 
         st.image(data_in, output_format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
-        self.assertTrue(imglist.imgs[0].url.startswith("/media"))
-        self.assertTrue(imglist.imgs[0].url.endswith(f".{format}"))
+        self.assertTrue(imglist.imgs[0].url.startswith(MEDIA_ENDPOINT))
+        self.assertTrue(
+            imglist.imgs[0].url.endswith(get_extension_for_mimetype(mimetype))
+        )
         self.assertTrue(file_id in imglist.imgs[0].url)
 
     @parameterized.expand(
         [
-            (IMAGES["img_32_32_3_rgb"]["np"], "jpeg"),
-            (IMAGES["img_32_32_3_bgr"]["np"], "jpeg"),
-            (IMAGES["img_64_64_rgb"]["np"], "jpeg"),
-            (IMAGES["img_32_32_3_rgba"]["np"], "png"),
-            (IMAGES["img_32_32_3_rgb"]["pil"], "jpeg"),
-            (IMAGES["img_32_32_3_bgr"]["pil"], "jpeg"),
-            (IMAGES["img_64_64_rgb"]["pil"], "jpeg"),
-            (IMAGES["img_32_32_3_rgba"]["pil"], "png"),
+            (IMAGES["img_32_32_3_rgb"]["np"], ".jpg"),
+            (IMAGES["img_32_32_3_bgr"]["np"], ".jpg"),
+            (IMAGES["img_64_64_rgb"]["np"], ".jpg"),
+            (IMAGES["img_32_32_3_rgba"]["np"], ".png"),
+            (IMAGES["img_32_32_3_rgb"]["pil"], ".jpg"),
+            (IMAGES["img_32_32_3_bgr"]["pil"], ".jpg"),
+            (IMAGES["img_64_64_rgb"]["pil"], ".jpg"),
+            (IMAGES["img_32_32_3_rgba"]["pil"], ".png"),
         ]
     )
-    def test_marshall_images_with_auto_output_format(self, data_in, expected_format):
+    def test_marshall_images_with_auto_output_format(
+        self, data_in: image.AtomicImage, expected_extension: str
+    ):
         """Test streamlit.image.marshall_images.
         with auto output_format
         """
@@ -151,7 +161,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         st.image(data_in, output_format="auto")
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
-        self.assertTrue(imglist.imgs[0].url.endswith(f".{expected_format}"))
+        self.assertTrue(imglist.imgs[0].url.endswith(expected_extension))
 
     @parameterized.expand(
         [
@@ -170,6 +180,49 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             image_id="blah",
         )
         self.assertTrue(url.startswith(expected_prefix))
+
+    @parameterized.expand(
+        [
+            ("foo.png", "image/png", False),
+            ("path/to/foo.jpg", "image/jpeg", False),
+            ("foo.unknown_extension", "application/octet-stream", False),
+            ("foo", "application/octet-stream", False),
+            ("https://foo.png", "image/png", True),
+        ]
+    )
+    def test_image_to_url_adds_filenames_to_media_file_mgr(
+        self, input_string: str, expected_mimetype: str, is_url: bool
+    ):
+        """if `image_to_url` is unable to open an image passed by name, it
+        still passes the filename to MediaFileManager. (MediaFileManager may have a
+        storage backend that's able to open the file, so it's up to the manager -
+        and not image_to_url - to throw an error.)
+        """
+        with mock.patch(
+            "streamlit.runtime.media_file_manager.MediaFileManager.add"
+        ) as mock_mfm_add:
+            mock_mfm_add.return_value = "https://mockoutputurl.com"
+
+            result = image.image_to_url(
+                input_string,
+                width=-1,
+                clamp=False,
+                channels="RGB",
+                output_format="JPEG",
+                image_id="mock_image_id",
+            )
+
+            if is_url:
+                # URLs should be returned as-is, and should not result in a call to
+                # MediaFileManager.add
+                self.assertEqual(input_string, result)
+                mock_mfm_add.assert_not_called()
+            else:
+                # Other strings should be passed to MediaFileManager.add
+                self.assertEqual("https://mockoutputurl.com", result)
+                mock_mfm_add.assert_called_once_with(
+                    input_string, expected_mimetype, "mock_image_id"
+                )
 
     @parameterized.expand(
         [
@@ -241,3 +294,86 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
     def test_image_may_have_alpha_channel(self, format: str, expected_alpha: bool):
         img = Image.new(format, (1, 1))
         self.assertEqual(image._image_may_have_alpha_channel(img), expected_alpha)
+
+    def test_st_image_PIL_image(self):
+        """Test st.image with PIL image."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, caption="some caption", width=100, output_format="PNG")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, 100)
+        self.assertEqual(el.imgs.imgs[0].caption, "some caption")
+
+        # locate resultant file in the file manager and check its metadata.
+        file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
+        media_file = self.media_file_storage.get_file(file_id)
+        self.assertIsNotNone(media_file)
+        self.assertEqual(media_file.mimetype, "image/png")
+        self.assertEqual(self.media_file_storage.get_url(file_id), el.imgs.imgs[0].url)
+
+    def test_st_image_PIL_array(self):
+        """Test st.image with a PIL array."""
+        imgs = [
+            Image.new("RGB", (64, 64), color="red"),
+            Image.new("RGB", (64, 64), color="blue"),
+            Image.new("RGB", (64, 64), color="green"),
+        ]
+
+        st.image(
+            imgs,
+            caption=["some caption"] * 3,
+            width=200,
+            use_column_width=True,
+            clamp=True,
+            output_format="PNG",
+        )
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, -2)
+
+        # locate resultant file in the file manager and check its metadata.
+        for idx in range(len(imgs)):
+            file_id = _calculate_file_id(
+                _PIL_to_bytes(imgs[idx], format="PNG"), "image/png"
+            )
+            self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
+            media_file = self.media_file_storage.get_file(file_id)
+            self.assertIsNotNone(media_file)
+            self.assertEqual(media_file.mimetype, "image/png")
+            self.assertEqual(
+                self.media_file_storage.get_url(file_id), el.imgs.imgs[idx].url
+            )
+
+    def test_st_image_with_single_url(self):
+        """Test st.image with single url."""
+        url = "http://server/fake0.jpg"
+
+        st.image(url, caption="some caption", width=300)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, 300)
+        self.assertEqual(el.imgs.imgs[0].caption, "some caption")
+        self.assertEqual(el.imgs.imgs[0].url, url)
+
+    def test_st_image_with_list_of_urls(self):
+        """Test st.image with list of urls."""
+        urls = [
+            "http://server/fake0.jpg",
+            "http://server/fake1.jpg",
+            "http://server/fake2.jpg",
+        ]
+        st.image(urls, caption=["some caption"] * 3, width=300)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, 300)
+        for idx, url in enumerate(urls):
+            self.assertEqual(el.imgs.imgs[idx].caption, "some caption")
+            self.assertEqual(el.imgs.imgs[idx].url, url)
+
+    def test_st_image_bad_width(self):
+        """Test st.image with bad width."""
+        with self.assertRaises(StreamlitAPIException) as ctx:
+            st.image("does/not/exist", width=-1234)
+
+        self.assertTrue("Image width must be positive." in str(ctx.exception))

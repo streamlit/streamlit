@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,8 +18,8 @@ import threading
 import types
 from contextlib import contextmanager
 from enum import Enum
-from typing import Dict, Optional, Callable
 from timeit import default_timer as timer
+from typing import Dict, Optional, Callable
 
 from blinker import Signal
 
@@ -30,13 +30,13 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.media_file_manager import get_media_file_manager
 from streamlit.runtime.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
 )
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from . import magic
 from .script_requests import (
     ScriptRequests,
@@ -413,7 +413,7 @@ class ScriptRunner:
         start_time: float = timer()
 
         # Reset DeltaGenerators, widgets, media files.
-        in_memory_file_manager.clear_session_files()
+        get_media_file_manager().clear_session_refs()
 
         main_script_path = self._main_script_path
         pages = source_util.get_pages(main_script_path)
@@ -623,9 +623,9 @@ class ScriptRunner:
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Delete expired files now that the script has run and files in use
+        # Remove orphaned files now that the script has run and files in use
         # are marked as active.
-        in_memory_file_manager.del_expired_files()
+        get_media_file_manager().remove_orphaned_files()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

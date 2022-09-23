@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -306,6 +305,24 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   )
 }
 
+function makeMarkdownHeading(tag: string, markdown: string): string {
+  switch (tag.toLowerCase()) {
+    // willhuang1997: TODO: could be refactored to Enums
+    case "h1": {
+      return `# ${markdown}`
+    }
+    case "h2": {
+      return `## ${markdown}`
+    }
+    case "h3": {
+      return `### ${markdown}`
+    }
+    default: {
+      throw new Error(`Unrecognized tag for header: ${tag}`)
+    }
+  }
+}
+
 export function Heading(props: HeadingProtoProps): ReactElement {
   const { width } = props
   const { tag, anchor, body } = props.element
@@ -319,7 +336,7 @@ export function Heading(props: HeadingProtoProps): ReactElement {
       <StyledHeaderContainer>
         <HeadingWithAnchor tag={tag} anchor={anchor}>
           <RenderedMarkdown
-            source={heading}
+            source={makeMarkdownHeading(tag, heading)}
             allowHTML={false}
             // this is purely an inline string
             overrideComponents={{

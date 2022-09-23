@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -50,12 +50,22 @@ Number = Union[int, float]
 @dataclass
 class NumberInputSerde:
     value: Union[int, float]
+    data_type: int
 
     def serialize(self, v: Number) -> Number:
         return v
 
     def deserialize(self, ui_value: Optional[Number], widget_id: str = "") -> Number:
-        return ui_value if ui_value is not None else self.value
+        if ui_value is not None:
+            val = ui_value
+        else:
+            # Widget has not been used; fallback to the original value,
+            val = self.value
+
+        if self.data_type == NumberInputProto.INT:
+            val = int(val)
+
+        return val
 
 
 class NumberInputMixin:
@@ -290,10 +300,10 @@ class NumberInputMixin:
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
+        data_type = NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
+
         number_input_proto = NumberInputProto()
-        number_input_proto.data_type = (
-            NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
-        )
+        number_input_proto.data_type = data_type
         number_input_proto.label = label
         number_input_proto.default = value
         number_input_proto.form_id = current_form_id(self.dg)
@@ -314,7 +324,7 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        serde = NumberInputSerde(value)
+        serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
             "number_input",
             number_input_proto,
