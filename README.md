@@ -2,7 +2,7 @@
 
 **The fastest way to build and share data apps.**
 
-Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app!
+Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app!
 
 ![Example of live coding an app in Streamlit|635x380](https://github.com/streamlit/docs/raw/main/public/images/Streamlit_overview.gif)
 
@@ -51,7 +51,7 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 ## More Information
 
 - Our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace?source=friends_link&sk=f7774c54571148b33cde3ba6c6310086) explaining why we created Streamlit
-- Our [Cloud platform announcement](https://blog.streamlit.io/introducing-streamlit-cloud)
+- Our [Community Cloud platform announcement](https://blog.streamlit.io/introducing-streamlit-cloud)
 - Our amazing [community](https://discuss.streamlit.io/) where Streamlit users share apps, ask questions, and help each other out
 - Streamlit [documentation](https://docs.streamlit.io/) and [blog](https://blog.streamlit.io) for the latest Streamlit info
 - More [demo projects](https://github.com/streamlit/) to inspire you
