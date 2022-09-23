@@ -389,7 +389,7 @@ def image_to_url(
 
 def _check_if_svg_can_be_rendered_as_img(image: str) -> bool:
     """SVG needs to has either viewBox or width provided to make it possible to render it as img tag"""
-    if image.find("xlink") != -1:
+    if "xlink" in image:
         """
         When svg contains xlink namespace it uses deprecated, no longer recommended feature, see
         https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xlink:href
