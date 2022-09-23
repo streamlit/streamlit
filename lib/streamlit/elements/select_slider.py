@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,9 +14,21 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Any, Callable, Optional, cast
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TYPE_CHECKING,
+    Union,
+    cast,
+)
 
-import streamlit
+from typing_extensions import TypeGuard
+
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -31,6 +43,7 @@ from streamlit.type_util import (
     OptionSequence,
     ensure_indexable,
     to_key,
+    T,
     LabelVisibility,
     maybe_raise_label_warnings,
 )
@@ -44,44 +57,50 @@ from .utils import (
     get_label_visibility_proto_value,
 )
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+
+def _is_range_value(value: Union[T, Sequence[T]]) -> TypeGuard[Sequence[T]]:
+    return isinstance(value, (list, tuple))
+
 
 @dataclass
-class SelectSliderSerde:
-    options: OptionSequence
-    value: Any
+class SelectSliderSerde(Generic[T]):
+    options: Sequence[T]
+    value: List[int]
     is_range_value: bool
 
-    def deserialize(self, ui_value, widget_id=""):
+    def serialize(self, v: object) -> List[int]:
+        return self._as_index_list(v)
+
+    def deserialize(
+        self,
+        ui_value: Optional[List[int]],
+        widget_id: str = "",
+    ) -> Union[T, Tuple[T, T]]:
         if not ui_value:
             # Widget has not been used; fallback to the original value,
             ui_value = self.value
 
         # The widget always returns floats, so convert to ints before indexing
-        return_value = list(map(lambda x: self.options[int(x)], ui_value))  # type: ignore[no-any-return]
+        return_value: Tuple[T, T] = cast(
+            Tuple[T, T],
+            tuple(map(lambda x: self.options[int(x)], ui_value)),
+        )
 
         # If the original value was a list/tuple, so will be the output (and vice versa)
-        return tuple(return_value) if self.is_range_value else return_value[0]
+        return return_value if self.is_range_value else return_value[0]
 
-    def serialize(self, v):
-        return self.as_index_list(v)
-
-    def as_index_list(self, v):
-        is_range_value = isinstance(v, (list, tuple))
-        if is_range_value:
+    def _as_index_list(self, v: object) -> List[int]:
+        if _is_range_value(v):
             slider_value = [index_(self.options, val) for val in v]
             start, end = slider_value
             if start > end:
                 slider_value = [end, start]
             return slider_value
         else:
-            # Simplify future logic by always making value a list
-            try:
-                return [index_(self.options, v)]
-            except ValueError:
-                if self.value is not None:
-                    raise
-
-                return [0]
+            return [index_(self.options, v)]
 
 
 class SelectSliderMixin:
@@ -89,8 +108,8 @@ class SelectSliderMixin:
     def select_slider(
         self,
         label: str,
-        options: OptionSequence = (),
-        value: Any = None,
+        options: OptionSequence[T] = (),
+        value: object = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -100,7 +119,7 @@ class SelectSliderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Any:
+    ) -> Union[T, Tuple[T, T]]:
         """
         Display a slider widget to select items from a list.
 
@@ -200,8 +219,8 @@ class SelectSliderMixin:
     def _select_slider(
         self,
         label: str,
-        options: OptionSequence = (),
-        value: Any = None,
+        options: OptionSequence[T] = (),
+        value: object = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -211,7 +230,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Any:
+    ) -> Union[T, Tuple[T, T]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -221,11 +240,8 @@ class SelectSliderMixin:
         if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
-        is_range_value = isinstance(value, (list, tuple))
-
-        def as_index_list(v):
-            is_range_value = isinstance(v, (list, tuple))
-            if is_range_value:
+        def as_index_list(v: object) -> List[int]:
+            if _is_range_value(v):
                 slider_value = [index_(opt, val) for val in v]
                 start, end = slider_value
                 if start > end:
@@ -257,7 +273,7 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = dedent(help)
 
-        serde = SelectSliderSerde(opt, slider_value, is_range_value)
+        serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
 
         widget_state = register_widget(
             "slider",
@@ -285,6 +301,6 @@ class SelectSliderMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

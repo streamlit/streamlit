@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,9 +14,8 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Generic, Optional, Sequence, cast, TYPE_CHECKING
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -32,6 +31,7 @@ from streamlit.type_util import (
     OptionSequence,
     ensure_indexable,
     to_key,
+    T,
     maybe_raise_label_warnings,
 )
 
@@ -45,18 +45,25 @@ from .utils import (
     get_label_visibility_proto_value,
 )
 
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
 
 @dataclass
-class RadioSerde:
-    options: OptionSequence
+class RadioSerde(Generic[T]):
+    options: Sequence[T]
     index: int
 
-    def serialize(self, v):
+    def serialize(self, v: object) -> int:
         if len(self.options) == 0:
             return 0
         return index_(self.options, v)
 
-    def deserialize(self, ui_value, widget_id=""):
+    def deserialize(
+        self,
+        ui_value: Optional[int],
+        widget_id: str = "",
+    ) -> Optional[T]:
         idx = ui_value if ui_value is not None else self.index
 
         return (
@@ -71,7 +78,7 @@ class RadioMixin:
     def radio(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[T],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -83,7 +90,7 @@ class RadioMixin:
         disabled: bool = False,
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Any:
+    ) -> Optional[T]:
         """Display a radio button widget.
 
         Parameters
@@ -172,7 +179,7 @@ class RadioMixin:
     def _radio(
         self,
         label: str,
-        options: OptionSequence,
+        options: OptionSequence[T],
         index: int = 0,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -185,7 +192,7 @@ class RadioMixin:
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext],
-    ) -> Any:
+    ) -> Optional[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
@@ -240,6 +247,6 @@ class RadioMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

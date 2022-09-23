@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,9 +21,9 @@ import { RenderData, Streamlit, Theme } from "./streamlit";
 /**
  * Props passed to custom Streamlit components.
  */
-export interface ComponentProps {
+export interface ComponentProps<ArgType=any> {
   /** Named dictionary of arguments passed from Python. */
-  args: any;
+  args: ArgType;
 
   /** The component's width. */
   width: number;
@@ -48,8 +47,8 @@ export interface ComponentProps {
  * `componentDidMount` and `componentDidUpdate` functions in your own class,
  * so that your plugin properly resizes.
  */
-export class StreamlitComponentBase<S = {}> extends React.PureComponent<
-  ComponentProps,
+export class StreamlitComponentBase<S = {}, ArgType=any> extends React.PureComponent<
+  ComponentProps<ArgType>,
   S
 > {
   public componentDidMount(): void {
@@ -69,13 +68,13 @@ export class StreamlitComponentBase<S = {}> extends React.PureComponent<
  *
  * Bootstraps the communication interface between Streamlit and the component.
  */
-export function withStreamlitConnection(
+export function withStreamlitConnection<ArgType=any>(
   WrappedComponent: React.ComponentType<ComponentProps>
 ): React.ComponentType {
   interface WrapperProps {}
 
   interface WrapperState {
-    renderData?: RenderData;
+    renderData?: RenderData<ArgType>;
     componentError?: Error;
   }
 
@@ -136,7 +135,7 @@ export function withStreamlitConnection(
      */
     private onRenderEvent = (event: Event): void => {
       // Update our state with the newest render data
-      const renderEvent = event as CustomEvent<RenderData>;
+      const renderEvent = event as CustomEvent<RenderData<ArgType>>;
       this.setState({ renderData: renderEvent.detail });
     };
 

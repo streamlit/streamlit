@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -95,11 +95,11 @@ class MarkdownMixin:
         body : str
             The string to display as code.
 
-        language : str
+        language : str or None
             The language that the code is written in, for syntax highlighting.
-            If omitted, the code will be unstyled.
+            If ``None``, the code will be unstyled. Defaults to ``"python"``.
 
-            For a list of available ``language`` imports, see:
+            For a list of available ``language`` values, see:
 
             https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
 

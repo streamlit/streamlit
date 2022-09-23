@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,8 +29,8 @@ export interface Theme {
 }
 
 /** Data sent in the custom Streamlit render event. */
-export interface RenderData {
-  args: any;
+export interface RenderData<ArgType=any> {
+  args: ArgType;
   disabled: boolean;
   theme?: Theme;
 }
@@ -168,13 +167,13 @@ export class Streamlit {
    * Handle an untyped Streamlit render event and redispatch it as a
    * StreamlitRenderEvent.
    */
-  private static onRenderMessage = (data: any): void => {
+  private static onRenderMessage = <ArgType=any, >(data: {args: ArgType, dfs?: ArgsDataframe[], disabled?: boolean, theme?: Theme}): void => {
     let args = data["args"];
     if (args == null) {
       console.error(
         `Got null args in onRenderMessage. This should never happen`
       );
-      args = {};
+      args = {} as ArgType;
     }
 
     // Parse our dataframe arguments with arrow, and merge them into our args dict
@@ -196,7 +195,7 @@ export class Streamlit {
 
     // Dispatch a render event!
     const eventData = { disabled, args, theme };
-    const event = new CustomEvent<RenderData>(Streamlit.RENDER_EVENT, {
+    const event = new CustomEvent<RenderData<ArgType>>(Streamlit.RENDER_EVENT, {
       detail: eventData
     });
     Streamlit.events.dispatchEvent(event);

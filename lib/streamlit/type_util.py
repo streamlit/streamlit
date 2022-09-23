@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,6 +35,7 @@ from typing import (
 from typing_extensions import (
     Final,
     Literal,
+    Protocol,
     TypeAlias,
     TypeGuard,
     get_args,
@@ -48,9 +49,9 @@ from streamlit import logger as _logger
 
 if TYPE_CHECKING:
     import graphviz
-    import numpy as np
     import sympy
     from pandas import DataFrame, Series, Index
+    from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure
     from pydeck import Deck
@@ -99,18 +100,36 @@ ValueFieldName: TypeAlias = Literal[
     "trigger_value",
 ]
 
-OptionSequence: TypeAlias = Union[
-    Sequence[Any],
-    "DataFrame",
-    "Series",
-    "Index",
-    "np.ndarray",
-]
-
-Key: TypeAlias = Union[str, int]
-
+V_co = TypeVar(
+    "V_co",
+    covariant=True,  # https://peps.python.org/pep-0484/#covariance-and-contravariance
+)
 
 T = TypeVar("T")
+
+
+class DataFrameGenericAlias(Protocol[V_co]):
+    """Technically not a GenericAlias, but serves the same purpose in
+    OptionSequence below, in that it is a type which admits DataFrame,
+    but is generic. This allows OptionSequence to be a fully generic type,
+    significantly increasing its usefulness.
+
+    We can't use types.GenericAlias, as it is only available from python>=3.9,
+    and isn't easily back-ported.
+    """
+
+    @property
+    def iloc(self) -> _iLocIndexer:
+        ...
+
+
+OptionSequence: TypeAlias = Union[
+    Iterable[V_co],
+    DataFrameGenericAlias[V_co],
+]
+
+
+Key: TypeAlias = Union[str, int]
 
 LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
@@ -172,9 +191,7 @@ def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
 
 def get_fqn(the_type: type) -> str:
     """Get module.type_name for a given type."""
-    module = the_type.__module__
-    name = the_type.__qualname__
-    return "%s.%s" % (module, name)
+    return f"{the_type.__module__}.{the_type.__qualname__}"
 
 
 def get_fqn_type(obj: object) -> str:
@@ -435,7 +452,7 @@ Offending object:
 
 
 @overload
-def ensure_iterable(obj: Iterable[T]) -> Iterable[T]:
+def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
     ...
 
 
@@ -444,7 +461,7 @@ def ensure_iterable(obj: DataFrame) -> Iterable[Any]:
     ...
 
 
-def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
+def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -460,6 +477,9 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
 
     """
     if is_dataframe(obj):
+        # Return first column as a pd.Series
+        # The type of the elements in this column is not known up front, hence
+        # the Iterable[Any] return type.
         return cast(Iterable[Any], obj.iloc[:, 0])
 
     if is_iterable(obj):
@@ -470,17 +490,7 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[T]]) -> Iterable[Any]:
     )
 
 
-@overload
-def ensure_indexable(obj: Sequence[T]) -> Sequence[T]:
-    ...
-
-
-@overload
-def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
-    ...
-
-
-def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
+def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     """Try to ensure a value is an indexable Sequence. If the collection already
     is one, it has the index method that we need. Otherwise, convert it to a list.
     """
@@ -489,7 +499,7 @@ def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
     if callable(index_fn):
-        return it  # type: ignore
+        return it  # type: ignore[return-value]
     else:
         return list(it)
 
