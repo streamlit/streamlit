@@ -19,6 +19,7 @@ import shutil
 import threading
 import time
 import types
+from datetime import timedelta
 from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload, Union
 
 import math
@@ -220,7 +221,7 @@ class MemoAPI:
         show_spinner: bool = True,
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
-        ttl: Optional[float] = None,
+        ttl: Optional[Union[float, timedelta]] = None,
     ) -> Callable[[F], F]:
         ...
 
@@ -236,7 +237,7 @@ class MemoAPI:
         show_spinner: bool = True,
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
-        ttl: Optional[float] = None,
+        ttl: Optional[Union[float, timedelta]] = None,
     ):
         """Function decorator to memoize function executions.
 
@@ -269,7 +270,7 @@ class MemoAPI:
             for an unbounded cache. (When a new entry is added to a full cache,
             the oldest cached entry will be removed.) The default is None.
 
-        ttl : float or None
+        ttl : float or timedelta or  None
             The maximum number of seconds to keep an entry in the cache, or
             None if cache entries should not expire. The default is None.
             Note that ttl is incompatible with `persist="disk"` - `ttl` will be
@@ -338,6 +339,9 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
+        if isinstance(ttl, timedelta):
+            ttl = ttl.seconds
+
         def wrapper(f):
             # We use wrapper function here instead of lambda function to be able to log
             # warning in case both persist="disk" and ttl parameters specified
@@ -353,7 +357,7 @@ class MemoAPI:
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
-                    ttl=ttl,
+                    ttl=cast(float, ttl),
                 )
             )
 
