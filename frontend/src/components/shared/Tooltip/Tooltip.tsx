@@ -52,7 +52,7 @@ function Tooltip({
   style,
 }: TooltipProps): ReactElement {
   const theme: Theme = useTheme()
-  const { colors, fontSizes } = theme
+  const { colors, fontSizes, radii } = theme
 
   return (
     <StatefulTooltip
@@ -72,10 +72,10 @@ function Tooltip({
             // shorthand version `borderRadius` is used here since the long
             // names are used by BaseWeb and mixing the two is apparently
             // bad :(
-            borderTopLeftRadius: "0.25rem",
-            borderTopRightRadius: "0.25rem",
-            borderBottomLeftRadius: "0.25rem",
-            borderBottomRightRadius: "0.25rem",
+            borderTopLeftRadius: radii.md,
+            borderTopRightRadius: radii.md,
+            borderBottomLeftRadius: radii.md,
+            borderBottomRightRadius: radii.md,
 
             paddingTop: "0 !important",
             paddingBottom: "0 !important",

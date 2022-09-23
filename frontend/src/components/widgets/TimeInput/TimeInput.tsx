@@ -107,8 +107,14 @@ class TimeInput extends PureComponent<Props, State> {
     )
   }
 
-  private handleChange = (newDate: Date): void => {
-    const value = this.dateToString(newDate)
+  private handleChange = (newDate: Date | null): void => {
+    let value: string
+    if (newDate === null) {
+      // This case is not supposed to happen since time picker cannot be cleared.
+      value = this.initialValue
+    } else {
+      value = this.dateToString(newDate)
+    }
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 

@@ -17,7 +17,7 @@
 import React from "react"
 import moment from "moment"
 import { withTheme } from "@emotion/react"
-import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import { Datepicker as UIDatePicker, DENSITY } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 import { DateInput as DateInputProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
@@ -142,11 +142,34 @@ class DateInput extends React.PureComponent<Props, State> {
     )
   }
 
-  private handleChange = ({ date }: { date: Date | Date[] }): void => {
+  private handleChange = ({
+    date,
+  }: {
+    date: Date | (Date | null | undefined)[] | null | undefined
+  }): void => {
+    if (date === null || date === undefined) {
+      this.setState({
+        values: [],
+        isEmpty: true,
+      })
+      return
+    }
+
+    const values: Date[] = []
+    if (Array.isArray(date)) {
+      date.forEach((dt: Date | null | undefined) => {
+        if (dt) {
+          values.push(dt)
+        }
+      })
+    } else {
+      values.push(date)
+    }
+
     this.setState(
       {
-        values: Array.isArray(date) ? date : [date],
-        isEmpty: !date,
+        values,
+        isEmpty: !values,
       },
       () => {
         if (!this.state.isEmpty) this.commitWidgetValue({ fromUi: true })
@@ -178,7 +201,7 @@ class DateInput extends React.PureComponent<Props, State> {
   public render(): React.ReactNode {
     const { width, element, disabled, theme, widgetMgr } = this.props
     const { values, isRange } = this.state
-    const { colors, fontSizes } = theme
+    const { colors, fontSizes, lineHeights } = theme
 
     const style = { width }
     const minDate = moment(element.min, DATE_FORMAT).toDate()
@@ -210,6 +233,7 @@ class DateInput extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UIDatePicker
+          density={DENSITY.high}
           formatString="yyyy/MM/dd"
           disabled={disabled}
           onChange={this.handleChange}
@@ -230,6 +254,10 @@ class DateInput extends React.PureComponent<Props, State> {
             CalendarContainer: {
               style: {
                 fontSize: fontSizes.sm,
+                paddingRight: theme.spacing.sm,
+                paddingLeft: theme.spacing.sm,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
               },
             },
             Week: {
@@ -238,11 +266,13 @@ class DateInput extends React.PureComponent<Props, State> {
               },
             },
             Day: {
-              style: () => ({
+              style: {
+                fontSize: fontSizes.sm,
+                lineHeight: lineHeights.base,
                 "::after": {
                   borderColor: colors.transparent,
                 },
-              }),
+              },
             },
             PrevButton: {
               style: () => ({

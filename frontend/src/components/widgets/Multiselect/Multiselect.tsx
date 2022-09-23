@@ -267,15 +267,14 @@ class Multiselect extends React.PureComponent<Props, State> {
                   paddingRight: ".5rem",
                 }),
               },
-
               ControlContainer: {
-                style: () => ({
+                style: {
                   // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                   borderLeftWidth: "1px",
                   borderRightWidth: "1px",
                   borderTopWidth: "1px",
                   borderBottomWidth: "1px",
-                }),
+                },
               },
 
               ValueContainer: {
@@ -297,8 +296,14 @@ class Multiselect extends React.PureComponent<Props, State> {
                 }),
               },
               ClearIcon: {
-                style: {
-                  color: theme.colors.darkGray,
+                props: {
+                  overrides: {
+                    Svg: {
+                      style: {
+                        color: theme.colors.darkGray,
+                      },
+                    },
+                  },
                 },
               },
               SearchIcon: {
@@ -325,6 +330,18 @@ class Multiselect extends React.PureComponent<Props, State> {
                     Action: {
                       style: {
                         paddingLeft: 0,
+                      },
+                    },
+                    ActionIcon: {
+                      props: {
+                        overrides: {
+                          Svg: {
+                            style: {
+                              width: "10px",
+                              height: "10px",
+                            },
+                          },
+                        },
                       },
                     },
                     Text: {

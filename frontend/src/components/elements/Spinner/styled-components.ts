@@ -15,10 +15,10 @@
  */
 
 import styled from "@emotion/styled"
-import { StyledSpinnerNext } from "baseui/spinner"
+import { Spinner } from "baseui/spinner"
 import isPropValid from "@emotion/is-prop-valid"
 
-export const ThemedStyledSpinner = styled(StyledSpinnerNext, {
+export const ThemedStyledSpinner = styled(Spinner, {
   shouldForwardProp: isPropValid,
 })(({ theme, $usingCustomTheme }) => {
   return {
