@@ -270,9 +270,10 @@ class MemoAPI:
             for an unbounded cache. (When a new entry is added to a full cache,
             the oldest cached entry will be removed.) The default is None.
 
-        ttl : float or timedelta or  None
+        ttl : float or timedelta or None
             The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. The default is None.
+            None if cache entries should not expire. If timedelta object, total number
+            of seconds will be used. The default is None.
             Note that ttl is incompatible with `persist="disk"` - `ttl` will be
             ignored if `persist` is specified.
 
