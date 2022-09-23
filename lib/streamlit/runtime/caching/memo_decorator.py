@@ -340,7 +340,7 @@ class MemoAPI:
             )
 
         if isinstance(ttl, timedelta):
-            ttl = ttl.seconds
+            ttl = ttl.total_seconds()
 
         def wrapper(f):
             # We use wrapper function here instead of lambda function to be able to log
