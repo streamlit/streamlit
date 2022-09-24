@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Explicitly re-export public symbols from runtime.py
+# Explicitly re-export public symbols from runtime.py and session_manager.py
 from .runtime import (
     Runtime as Runtime,
     RuntimeState as RuntimeState,
+    RuntimeConfig as RuntimeConfig,
+)
+from .session_manager import (
     SessionClient as SessionClient,
     SessionClientDisconnectedError as SessionClientDisconnectedError,
-    RuntimeConfig as RuntimeConfig,
 )
 
 

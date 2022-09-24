@@ -25,17 +25,19 @@ import pytest
 import streamlit
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime import (
     RuntimeState,
-    SessionClient,
     Runtime,
     RuntimeConfig,
     RuntimeStoppedError,
-    SessionClientDisconnectedError,
     AsyncObjects,
 )
+from streamlit.runtime.session_manager import (
+    SessionClient,
+    SessionClientDisconnectedError,
+)
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
     create_dataframe_msg,

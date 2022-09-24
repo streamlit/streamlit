@@ -46,7 +46,7 @@ from streamlit.type_util import ValueFieldName
 from streamlit.type_util import is_array_value_field_name
 
 if TYPE_CHECKING:
-    from streamlit.runtime.runtime import SessionInfo
+    from streamlit.runtime.session_manager import SessionInfo
 
 
 T = TypeVar("T")
