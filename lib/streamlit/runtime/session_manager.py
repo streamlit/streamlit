@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import abstractmethod
 from typing_extensions import Protocol
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -25,12 +26,14 @@ class SessionClientDisconnectedError(Exception):
 class SessionClient(Protocol):
     """Interface for sending data to a session's client."""
 
+    @abstractmethod
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Deliver a ForwardMsg to the client.
 
         If the SessionClient has been disconnected, it should raise a
         SessionClientDisconnectedError.
         """
+        raise NotImplementedError
 
 
 class SessionInfo:
