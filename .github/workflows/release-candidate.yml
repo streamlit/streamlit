@@ -38,7 +38,6 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with: 
-          ref: ${{ github.ref_name }}
           persist-credentials: false
           submodules: 'recursive'
       - name: Set up Python 3.10
