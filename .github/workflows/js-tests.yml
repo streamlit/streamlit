@@ -6,18 +6,21 @@ on:
   push:
     branches:
       - '**'
+  # Allows workflow to be called from other workflows
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
 
 # Avoid duplicate workflows on same branch
 concurrency: 
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-javascript
   cancel-in-progress: true
 
 jobs:
   js_tests:
     runs-on: ubuntu-latest
-
-    permissions:
-      actions: read
 
     defaults:
       run:
@@ -27,6 +30,7 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with: 
+          ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
       - name: Set up Python 3.10
