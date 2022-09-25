@@ -1,27 +1,30 @@
 name: Release Candidate
 
 on:
-  # Manual Trigger thru GH CLI -> gh workflow run workflow --ref <branch-name>
+  # Manual Trigger thru GH CLI -> gh workflow run release-candidate.yml --ref <branch-name>
   workflow_dispatch:
-
-  # FOR TESTING ONLY:
-  # push:
-  #   branches:
-  #     - '**'
 
 jobs:
   run-python-tests:
     uses: ./.github/workflows/python-versions.yml
+    with:
+      ref: ${{ github.ref_name }}
 
   run-javascript-tests:
     uses: ./.github/workflows/js-tests.yml
+    with:
+      ref: ${{ github.ref_name }}
 
   run-py-prod-deps-smoke-test:
     uses: ./.github/workflows/py-prod-deps-smoke-test.yml
-
+    with:
+      ref: ${{ github.ref_name }}
+      
   run-cypress-tests:
     uses: ./.github/workflows/cypress.yml
-
+    with:
+      ref: ${{ github.ref_name }}
+      
   build-release-candidate:
     runs-on: ubuntu-latest
 
@@ -35,6 +38,7 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with: 
+          ref: ${{ github.ref_name }}
           persist-credentials: false
           submodules: 'recursive'
       - name: Set up Python 3.10
@@ -68,12 +72,12 @@ jobs:
         run: |
           sudo apt install rsync
           make package
-      - name: Run CLI regression tests
-        run: make cli-regression-tests
       - name: Store Package
         uses: actions/upload-artifact@v3
         with:
           path: lib/dist
+      - name: Run CLI regression tests
+        run: make cli-regression-tests
       - name: Initialize .pypirc
         env:
           STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
