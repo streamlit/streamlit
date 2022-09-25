@@ -1,12 +1,8 @@
 name: Build Release
 
 on: 
+  # Manual Trigger thru GH CLI -> gh workflow run release.yml --ref <branch-name>
   workflow_dispatch:
-
-  # FOR TESTING ONLY:
-  # push:
-  #   branches:
-  #     - '**'
 
 jobs:
   build-release:
@@ -19,7 +15,7 @@ jobs:
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           persist-credentials: false
           submodules: 'recursive'
       - name: Set up Python 3.10
@@ -71,12 +67,12 @@ jobs:
         run: |
           sudo apt install rsync
           make package
-      - name: Run CLI regression tests
-        run: make cli-regression-tests
       - name: Store Package
         uses: actions/upload-artifact@v3
         with:
           path: lib/dist
+      - name: Run CLI regression tests
+        run: make cli-regression-tests
       - name: Initialize .pypirc
         env:
           STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
