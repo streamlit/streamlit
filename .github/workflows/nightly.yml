@@ -4,6 +4,8 @@ on:
   # schedule:
   #   # Run job at 10.30pm PST or 11.30pm PDT
   #   - cron:  '30 6 * * *'
+  # FOR TESTING ONLY - gh workflow run nightly.yml --ref <branch_name>:
+  workflow_dispatch:
 
 jobs:
   create-nightly-tag:
@@ -66,18 +68,26 @@ jobs:
   run-python-tests:
     needs: create-nightly-tag
     uses: ./.github/workflows/python-versions.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
 
   run-javascript-tests:
     needs: create-nightly-tag
     uses: ./.github/workflows/js-tests.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
 
   run-py-prod-deps-smoke-test:
     needs: create-nightly-tag
     uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
 
   run-cypress-tests:
     needs: create-nightly-tag
     uses: ./.github/workflows/cypress.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
 
   test-status-notification:
     runs-on: ubuntu-latest
