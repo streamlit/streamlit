@@ -25,8 +25,8 @@ from streamlit.logger import get_logger
 from streamlit.runtime.stats import CacheStatsProvider, CacheStat
 from streamlit.runtime.metrics_util import gather_metrics
 
-from .cache_errors import CacheKeyNotFoundError, CacheType
-from .cache_utils import (
+from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError, CacheType
+from streamlit.runtime.caching.cache_utils import (
     Cache,
     CacheMessagesCallStack,
     CachedResult,

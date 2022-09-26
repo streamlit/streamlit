@@ -42,7 +42,7 @@ from tests.streamlit.message_mocks import (
     create_script_finished_message,
 )
 from tests.testutil import patch_config_options
-from .runtime_test_case import RuntimeTestCase
+from tests.streamlit.runtime.runtime_test_case import RuntimeTestCase
 
 
 class MockSessionClient(SessionClient):

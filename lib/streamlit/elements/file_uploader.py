@@ -35,13 +35,13 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 
-from .form import current_form_id
-from ..proto.Common_pb2 import (
+from streamlit.elements.form import current_form_id
+from streamlit.proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
     UploadedFileInfo as UploadedFileInfoProto,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
-from .utils import (
+from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,

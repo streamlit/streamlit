@@ -24,8 +24,8 @@ from typing_extensions import Final
 import streamlit as st
 from streamlit import logger as _logger
 from streamlit.type_util import Key
-from .safe_session_state import SafeSessionState
-from .session_state import SessionState, require_valid_user_key
+from streamlit.runtime.state.safe_session_state import SafeSessionState
+from streamlit.runtime.state.session_state import SessionState, require_valid_user_key
 
 LOGGER: Final = _logger.get_logger(__name__)
 

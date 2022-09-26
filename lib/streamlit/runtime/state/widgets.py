@@ -40,7 +40,7 @@ from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 from streamlit.type_util import ValueFieldName
 
-from .session_state import (
+from streamlit.runtime.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     WidgetMetadata,
     WidgetSerializer,

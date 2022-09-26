@@ -43,8 +43,8 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 
-from .arrow import Data
-from .utils import last_index_for_melted_dataframes
+from streamlit.elements.arrow import Data
+from streamlit.elements.utils import last_index_for_melted_dataframes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

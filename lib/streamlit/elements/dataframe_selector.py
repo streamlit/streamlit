@@ -22,7 +22,7 @@ from streamlit import config
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from .arrow import Data
+    from streamlit.elements.arrow import Data
     from streamlit.delta_generator import DeltaGenerator
     from altair.vegalite.v4.api import Chart
 

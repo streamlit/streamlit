@@ -29,20 +29,26 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.watcher import LocalSourcesWatcher
-from .app_session import AppSession
-from .caching import get_memo_stats_provider, get_singleton_stats_provider
-from .forward_msg_cache import (
+from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.caching import (
+    get_memo_stats_provider,
+    get_singleton_stats_provider,
+)
+from streamlit.runtime.forward_msg_cache import (
     ForwardMsgCache,
     populate_hash_if_needed,
     create_reference_msg,
 )
-from .legacy_caching.caching import _mem_caches
-from .media_file_manager import MediaFileManager
-from .media_file_storage import MediaFileStorage
-from .session_data import SessionData
-from .state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
-from .stats import StatsManager
-from .uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.legacy_caching.caching import _mem_caches
+from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.media_file_storage import MediaFileStorage
+from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.state import (
+    SessionStateStatProvider,
+    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+)
+from streamlit.runtime.stats import StatsManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60

@@ -34,13 +34,17 @@ from streamlit.runtime.state import (
     SafeSessionState,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from . import magic
-from .script_requests import (
+from streamlit.runtime.scriptrunner import magic
+from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequests,
     RerunData,
     ScriptRequestType,
 )
-from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import (
+    ScriptRunContext,
+    add_script_run_ctx,
+    get_script_run_ctx,
+)
 
 LOGGER = get_logger(__name__)
 

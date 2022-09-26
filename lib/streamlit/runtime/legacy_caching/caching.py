@@ -52,7 +52,11 @@ from streamlit.logger import get_logger
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from streamlit.runtime.metrics_util import gather_metrics
 
-from .hashing import update_hash, HashFuncsDict, HashReason
+from streamlit.runtime.legacy_caching.hashing import (
+    update_hash,
+    HashFuncsDict,
+    HashReason,
+)
 
 _LOGGER = get_logger(__name__)
 

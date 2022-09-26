@@ -20,7 +20,7 @@ from blinker import Signal
 
 from streamlit import util
 from streamlit.logger import get_logger
-from .stats import CacheStatsProvider, CacheStat
+from streamlit.runtime.stats import CacheStatsProvider, CacheStat
 
 LOGGER = get_logger(__name__)
 

@@ -54,10 +54,10 @@ from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
 )
-from .browser_websocket_handler import BrowserWebSocketHandler
-from .component_request_handler import ComponentRequestHandler
-from .media_file_handler import MediaFileHandler
-from .stats_request_handler import StatsRequestHandler
+from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+from streamlit.web.server.component_request_handler import ComponentRequestHandler
+from streamlit.web.server.media_file_handler import MediaFileHandler
+from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
 LOGGER = get_logger(__name__)
 

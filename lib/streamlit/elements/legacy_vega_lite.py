@@ -25,7 +25,7 @@ from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProt
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from .arrow import Data
+    from streamlit.elements.arrow import Data
     from streamlit.delta_generator import DeltaGenerator
 
 LOGGER: Final = get_logger(__name__)

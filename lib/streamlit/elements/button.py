@@ -33,8 +33,8 @@ from streamlit.runtime.state import (
 from streamlit.type_util import Key, to_key
 from streamlit.runtime.metrics_util import gather_metrics
 
-from .form import current_form_id, is_in_form
-from .utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.form import current_form_id, is_in_form
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

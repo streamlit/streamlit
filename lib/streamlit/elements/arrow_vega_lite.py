@@ -25,8 +25,8 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 
-from . import arrow
-from .arrow import Data
+from streamlit.elements import arrow
+from streamlit.elements.arrow import Data
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

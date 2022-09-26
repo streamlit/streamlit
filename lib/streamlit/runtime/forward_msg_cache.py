@@ -20,10 +20,10 @@ from streamlit import config
 from streamlit import util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from .stats import CacheStatsProvider, CacheStat
+from streamlit.runtime.stats import CacheStatsProvider, CacheStat
 
 if TYPE_CHECKING:
-    from .app_session import AppSession
+    from streamlit.runtime.app_session import AppSession
 
 LOGGER = get_logger(__name__)
 

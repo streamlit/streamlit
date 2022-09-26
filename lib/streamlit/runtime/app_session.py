@@ -36,21 +36,17 @@ from streamlit.proto.NewSession_pb2 import (
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
-from . import caching, legacy_caching
-from .credentials import Credentials
-from .metrics_util import Installation
-from .scriptrunner import (
-    RerunData,
-    ScriptRunner,
-    ScriptRunnerEvent,
-)
-from .secrets import secrets_singleton
-from .session_data import SessionData
-from .uploaded_file_manager import UploadedFileManager
+from streamlit.runtime import caching, legacy_caching
+from streamlit.runtime.credentials import Credentials
+from streamlit.runtime.metrics_util import Installation
+from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
+from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
-    from .state import SessionState
+    from streamlit.runtime.state import SessionState
 
 
 class AppSessionState(Enum):

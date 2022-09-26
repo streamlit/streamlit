@@ -38,8 +38,8 @@ from streamlit.type_util import (
 from streamlit.util import index_
 from streamlit.runtime.metrics_util import gather_metrics
 
-from .form import current_form_id
-from .utils import (
+from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,

@@ -29,14 +29,14 @@ import altair as alt
 import pandas as pd
 import pyarrow as pa
 
-from .utils import last_index_for_melted_dataframes
+from streamlit.elements.utils import last_index_for_melted_dataframes
 
 if TYPE_CHECKING:
     from altair.vegalite.v4.api import Chart
 
     from streamlit.delta_generator import DeltaGenerator
 
-    from .arrow import Data
+    from streamlit.elements.arrow import Data
 
 
 class LegacyAltairMixin:

@@ -39,7 +39,7 @@ from streamlit.web.server.server import (
     start_listening,
 )
 from tests.streamlit.message_mocks import create_dataframe_msg
-from .server_test_case import ServerTestCase
+from tests.streamlit.web.server.server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)
 

@@ -19,7 +19,7 @@ import threading
 from typing import Dict, Set, Optional, Union
 
 from streamlit.logger import get_logger
-from .media_file_storage import MediaFileStorage, MediaFileKind
+from streamlit.runtime.media_file_storage import MediaFileStorage, MediaFileKind
 
 LOGGER = get_logger(__name__)
 

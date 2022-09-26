@@ -27,8 +27,8 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 
-from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 
 
 if TYPE_CHECKING:

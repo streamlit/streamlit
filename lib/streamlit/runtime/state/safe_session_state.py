@@ -18,7 +18,7 @@ from typing import Any, Dict, Optional, List, Set
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 
-from .session_state import (
+from streamlit.runtime.state.session_state import (
     SessionState,
     WidgetMetadata,
     RegisterWidgetResult,
