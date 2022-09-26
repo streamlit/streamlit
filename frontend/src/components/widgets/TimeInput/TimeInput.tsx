@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,6 +25,8 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
+
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -106,8 +107,14 @@ class TimeInput extends PureComponent<Props, State> {
     )
   }
 
-  private handleChange = (newDate: Date): void => {
-    const value = this.dateToString(newDate)
+  private handleChange = (newDate: Date | null): void => {
+    let value: string
+    if (newDate === null) {
+      // This case is not supposed to happen since time picker cannot be cleared.
+      value = this.initialValue
+    } else {
+      value = this.dateToString(newDate)
+    }
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
@@ -203,7 +210,13 @@ class TimeInput extends PureComponent<Props, State> {
 
     return (
       <div className="stTimeInput" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -219,6 +232,7 @@ class TimeInput extends PureComponent<Props, State> {
           onChange={this.handleChange}
           overrides={selectOverrides}
           creatable
+          aria-label={element.label}
         />
       </div>
     )

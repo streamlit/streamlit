@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,7 +24,6 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
@@ -43,82 +42,6 @@ def identity(x):
 register_widget = functools.partial(
     w.register_widget, deserializer=lambda x, s: x, serializer=identity
 )
-
-
-class FakeDeltaGenerator(object):
-    """Fake DeltaGenerator class.
-
-    The methods in this class are specifically here as to not use the
-    one in the actual delta generator.  This purely exists just to test the
-    DeltaGenerator Decorators without relying on the actual
-    DeltaGenerator methods.
-    """
-
-    def __init__(self):
-        """Constructor."""
-        pass
-
-    def __getattr__(self, name):
-        streamlit_methods = [
-            method_name for method_name in dir(st) if callable(getattr(st, method_name))
-        ]
-
-        def wrapper(*args, **kwargs):
-            if name in streamlit_methods:
-                if self._container == "sidebar":
-                    message = (
-                        "Method `%(name)s()` does not exist for "
-                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
-                    )
-                else:
-                    message = (
-                        "Method `%(name)s()` does not exist for "
-                        "`DeltaGenerator` objects. Did you mean "
-                        "`st.%(name)s()`?" % {"name": name}
-                    )
-            else:
-                message = "`%(name)s()` is not a valid Streamlit command." % {
-                    "name": name
-                }
-
-            raise AttributeError(message)
-
-        return wrapper
-
-    def fake_text(self, element, body):
-        """Fake text delta generator."""
-        element.text.body = str(body)
-
-    def fake_dataframe(self, arg0, data=None):
-        """Fake dataframe."""
-        return (arg0, data)
-
-    def fake_text_raise_exception(self, element, body):
-        """Fake text that raises exception."""
-        raise Exception("Exception in fake_text_raise_exception")
-
-    def exception(self, e):
-        """Create fake exception handler.
-
-        The real DeltaGenerator exception is more complicated.  We use
-        this so _with_element can find the exception method.  The real
-        exception method will be tested later on.
-        """
-        self._exception_msg = str(e)
-
-    def _enqueue(self, delta_type, element_proto):
-        delta = Delta()
-        el_proto = getattr(delta.new_element, delta_type)
-        el_proto.CopyFrom(element_proto)
-        return delta
-
-
-class MockQueue(object):
-    def __init__(self):
-        self._deltas = []
-
-    def __call__(self, data):
-        self._deltas.append(data)
 
 
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):

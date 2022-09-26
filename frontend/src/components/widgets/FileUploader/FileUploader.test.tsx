@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +22,7 @@ import { mount, shallow } from "src/lib/test_util"
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
@@ -160,6 +160,30 @@ describe("FileUploader widget", () => {
     const wrapper = mount(<FileUploader {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = mount(<FileUploader {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<FileUploader {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    )
   })
 
   it("uploads a single selected file", async () => {

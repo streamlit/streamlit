@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,7 +27,12 @@ from typing import (
 )
 
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from typing_extensions import Final, TypeAlias
 from textwrap import dedent
 
@@ -42,8 +47,14 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -80,7 +91,6 @@ SliderReturn: TypeAlias = Union[
 
 SECONDS_TO_MICROS: Final = 1000 * 1000
 DAYS_TO_MICROS: Final = 24 * 60 * 60 * SECONDS_TO_MICROS
-
 
 UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
@@ -165,6 +175,7 @@ class SliderSerde:
 
 
 class SliderMixin:
+    @gather_metrics
     def slider(
         self,
         label: str,
@@ -180,6 +191,7 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         # TODO(harahu): Add overload definitions. The return type is
         #  `SliderReturn`, in reality, but the return type is left as `Any`
         #  until we have proper overload definitions in place. Otherwise the
@@ -202,6 +214,9 @@ class SliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         min_value : a supported type or None
             The minimum permitted value.
             Defaults to 0 if the value is an int, 0.0 if a float,
@@ -243,6 +258,12 @@ class SliderMixin:
         disabled : bool
             An optional boolean, which disables the slider if set to True. The
             default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
+
 
         Returns
         -------
@@ -298,6 +319,7 @@ class SliderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -316,11 +338,14 @@ class SliderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> SliderReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+
+        maybe_raise_label_warnings(label, label_visibility)
 
         if value is None:
             # Set value from session_state if exists.
@@ -512,20 +537,17 @@ class SliderMixin:
         orig_tz = None
         # Convert dates or times into datetimes
         if data_type == SliderProto.TIME:
-
             value = list(map(_time_to_datetime, value))
             min_value = _time_to_datetime(min_value)
             max_value = _time_to_datetime(max_value)
 
         if data_type == SliderProto.DATE:
-
             value = list(map(_date_to_datetime, value))
             min_value = _date_to_datetime(min_value)
             max_value = _date_to_datetime(max_value)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
-
             # Restore times/datetimes to original timezone (dates are always naive)
             orig_tz = (
                 value[0].tzinfo
@@ -573,6 +595,10 @@ class SliderMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         slider_proto.disabled = disabled
+        slider_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True

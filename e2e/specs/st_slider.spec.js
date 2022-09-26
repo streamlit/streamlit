@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,16 +29,26 @@ describe("st.slider", () => {
     cy.getIndexed(".stSlider", 5).matchThemedSnapshots("disabled-slider");
   });
 
+  it("looks right when label hidden", () => {
+    cy.getIndexed(".stSlider", 6).matchThemedSnapshots("hidden-label-slider");
+  });
+
+  it("looks right when label collapsed", () => {
+    cy.getIndexed(".stSlider", 7).matchThemedSnapshots("collapsed-label-slider");
+  });
+
   it("shows labels", () => {
     cy.get(".stSlider label").should(
       "have.text",
       "Label A" +
-        "Label B" +
-        "Label 1" +
-        "Label 2" +
-        "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
-        "Label 4" +
-        "Label 5"
+      "Label B" +
+      "Label 1" +
+      "Label 2" +
+      "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
+      "Label 4" +
+      "Label 5" +
+      "Label 6" +
+      "Label 7"
     );
   });
 
@@ -61,13 +70,15 @@ describe("st.slider", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "Value A: 12345678" +
-        "Value B: 10000" +
-        "Value 1: 25" +
-        "Value 2: (25.0, 75.0)" +
-        "Value 3: 1" +
-        "Value 4: 10000" +
-        "Value 5: 25" +
-        "Slider changed: False"
+      "Value B: 10000" +
+      "Value 1: 25" +
+      "Value 2: (25.0, 75.0)" +
+      "Value 3: 1" +
+      "Value 4: 10000" +
+      "Value 5: 25" +
+      "Value 6: 36" +
+      "Value 7: 25" +
+      "Slider changed: False"
     );
   });
 
@@ -83,7 +94,7 @@ describe("st.slider", () => {
   it("increments the value on right arrow key press", () => {
     cy.getIndexed('.stSlider [role="slider"]', 2)
       .click()
-      .type("{rightarrow}", { force: true });
+      .type("{rightarrow}", {force: true});
 
     cy.getIndexed(".stMarkdown", 2).should("have.text", "Value 1: 26");
   });
@@ -91,7 +102,7 @@ describe("st.slider", () => {
   it("decrements the value on left arrow key press", () => {
     cy.getIndexed('.stSlider [role="slider"]', 2)
       .click()
-      .type("{leftarrow}", { force: true });
+      .type("{leftarrow}", {force: true});
 
     cy.getIndexed(".stMarkdown", 2).should("have.text", "Value 1: 24");
   });
@@ -99,7 +110,7 @@ describe("st.slider", () => {
   it("maintains its state on rerun", () => {
     cy.getIndexed('.stSlider [role="slider"]', 2)
       .click()
-      .type("{leftarrow}", { force: true });
+      .type("{leftarrow}", {force: true});
 
     cy.rerunScript();
 
@@ -109,17 +120,17 @@ describe("st.slider", () => {
   it("calls callback if one is registered", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 5: 25" + "Slider changed: False"
+      "Value 7: 25" + "Slider changed: False"
     );
 
     cy.get('.stSlider [role="slider"]')
       .last()
       .click()
-      .type("{rightarrow}", { force: true });
+      .type("{rightarrow}", {force: true});
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 5: 26" + "Slider changed: True"
+      "Value 7: 26" + "Slider changed: True"
     );
   });
 });

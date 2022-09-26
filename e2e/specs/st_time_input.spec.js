@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,25 +17,47 @@
 describe("st.time_input", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
+    cy.prepForElementSnapshots();
   });
 
   it("shows labels", () => {
     cy.get(".stTimeInput label").should(
       "have.text",
-      "Label 1" + "Label 2" + "Label 3" + "Label 4"
+      "Label 1" +
+      "Label 2" +
+      "Label 3" +
+      "Label 4" +
+      "Label 5" +
+      "Label 6"
     );
   });
 
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 1: 08:45:00" + "Value 2: 21:15:00" + "Value 3: 08:45:00"
+      "Value 1: 08:45:00" +
+      "Value 2: 21:15:00" +
+      "Value 3: 08:45:00" +
+      "Value 4: 08:45:00" +
+      "Value 5: 08:45:00"
     );
   });
 
   it("shows disabled widget correctly", () => {
     cy.getIndexed(".stTimeInput", 2).matchThemedSnapshots(
       "disabled time input"
+    );
+  });
+
+  it("looks right when label hidden", () => {
+    cy.getIndexed(".stTimeInput", 3).matchThemedSnapshots(
+      "hidden-label-time-input"
+    );
+  });
+
+  it("looks right when label collapsed", () => {
+    cy.getIndexed(".stTimeInput", 4).matchThemedSnapshots(
+      "collapsed-label-time-input"
     );
   });
 

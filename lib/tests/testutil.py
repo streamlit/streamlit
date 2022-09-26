@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,11 +19,14 @@ from contextlib import contextmanager
 from typing import Any, Dict, List
 from unittest.mock import patch
 
+import streamlit
 from streamlit import config
-from streamlit.runtime.app_session import AppSession
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import media_file_manager
+from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
@@ -31,6 +34,8 @@ from streamlit.runtime.scriptrunner import (
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.web.server.server import MEDIA_ENDPOINT
 
 
 @contextmanager
@@ -100,10 +105,23 @@ class DeltaGeneratorTestCase(unittest.TestCase):
 
         self.app_session = FakeAppSession()
 
+        # Create a MemoryMediaFileStorage instance, and the MediaFileManager
+        # singleton.
+        self.media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
+        media_file_manager._media_file_manager = MediaFileManager(
+            self.media_file_storage
+        )
+
+        # Accessing the MediaFileManager requires that _is_running_with_streamlit
+        # is True.
+        streamlit._is_running_with_streamlit = True
+
     def tearDown(self):
         self.clear_queue()
         if self.override_root:
             add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
+        media_file_manager._media_file_manager = None
+        streamlit._is_running_with_streamlit = False
 
     def get_message_from_queue(self, index=-1) -> ForwardMsg:
         """Get a ForwardMsg proto from the queue, by index."""

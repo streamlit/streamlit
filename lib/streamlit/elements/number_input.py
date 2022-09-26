@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,12 @@
 from dataclasses import dataclass
 import numbers
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import (
+    LabelVisibility,
+    Key,
+    to_key,
+    maybe_raise_label_warnings,
+)
 from textwrap import dedent
 from typing import Optional, Union, cast
 
@@ -30,8 +35,14 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 Number = Union[int, float]
 
@@ -39,15 +50,26 @@ Number = Union[int, float]
 @dataclass
 class NumberInputSerde:
     value: Union[int, float]
+    data_type: int
 
     def serialize(self, v: Number) -> Number:
         return v
 
     def deserialize(self, ui_value: Optional[Number], widget_id: str = "") -> Number:
-        return ui_value if ui_value is not None else self.value
+        if ui_value is not None:
+            val = ui_value
+        else:
+            # Widget has not been used; fallback to the original value,
+            val = self.value
+
+        if self.data_type == NumberInputProto.INT:
+            val = int(val)
+
+        return val
 
 
 class NumberInputMixin:
+    @gather_metrics
     def number_input(
         self,
         label: str,
@@ -63,6 +85,7 @@ class NumberInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Number:
         """Display a numeric input widget.
 
@@ -70,6 +93,9 @@ class NumberInputMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         min_value : int or float or None
             The minimum permitted value.
             If None, there will be no minimum.
@@ -104,6 +130,11 @@ class NumberInputMixin:
             An optional boolean, which disables the number input if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -135,6 +166,7 @@ class NumberInputMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -153,6 +185,7 @@ class NumberInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> Number:
         key = to_key(key)
@@ -160,7 +193,7 @@ class NumberInputMixin:
         check_session_state_rules(
             default_value=None if isinstance(value, NoValue) else value, key=key
         )
-
+        maybe_raise_label_warnings(label, label_visibility)
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
@@ -246,9 +279,13 @@ class NumberInputMixin:
         try:
             if all_ints:
                 if min_value is not None:
-                    JSNumber.validate_int_bounds(min_value, "`min_value`")  # type: ignore
+                    JSNumber.validate_int_bounds(
+                        min_value, "`min_value`"  # type: ignore
+                    )
                 if max_value is not None:
-                    JSNumber.validate_int_bounds(max_value, "`max_value`")  # type: ignore
+                    JSNumber.validate_int_bounds(
+                        max_value, "`max_value`"  # type: ignore
+                    )
                 if step is not None:
                     JSNumber.validate_int_bounds(step, "`step`")  # type: ignore
                 JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
@@ -263,10 +300,10 @@ class NumberInputMixin:
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
+        data_type = NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
+
         number_input_proto = NumberInputProto()
-        number_input_proto.data_type = (
-            NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
-        )
+        number_input_proto.data_type = data_type
         number_input_proto.label = label
         number_input_proto.default = value
         number_input_proto.form_id = current_form_id(self.dg)
@@ -287,7 +324,7 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        serde = NumberInputSerde(value)
+        serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
             "number_input",
             number_input_proto,
@@ -303,6 +340,10 @@ class NumberInputMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         number_input_proto.disabled = disabled
+        number_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if widget_state.value_changed:
             number_input_proto.value = widget_state.value
             number_input_proto.set_value = True

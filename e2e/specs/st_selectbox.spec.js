@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,7 +22,7 @@ describe("st.selectbox", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stSelectbox").should("have.length", 6);
+    cy.get(".stSelectbox").should("have.length", 8);
 
     cy.get(".stSelectbox").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("selectbox" + idx);
@@ -38,20 +37,22 @@ describe("st.selectbox", () => {
         "value 3: None" +
         "value 4: e2e/scripts/components_iframe.py" +
         "value 5: male" +
-        "value 6: female" +
+        "value 6: male" +
+        "value 7: male" +
+        "value 8: female" +
         "select box changed: False"
     );
   });
 
   it("formats display values", () => {
-    cy.getIndexed(".stSelectbox div[aria-selected]", 1).should(
+    cy.getIndexed(".stSelectbox div", 3).should(
       "have.text",
-      "Male"
+      "female"
     );
   });
 
   it("handles no options", () => {
-    cy.getIndexed(".stSelectbox div[aria-selected]", 2).should(
+    cy.getIndexed(".stSelectbox div", 16).should(
       "have.text",
       "No options to select."
     );
@@ -76,7 +77,9 @@ describe("st.selectbox", () => {
         "value 3: None" +
         "value 4: e2e/scripts/components_iframe.py" +
         "value 5: male" +
-        "value 6: female" +
+        "value 6: male" +
+        "value 7: male" +
+        "value 8: female" +
         "select box changed: False"
     );
   });
@@ -113,7 +116,7 @@ describe("st.selectbox", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cy.getIndexed(".stSelectbox", 5).then(el => {
+    cy.getIndexed(".stSelectbox", 7).then(el => {
       cy.wrap(el)
         .find("input")
         .click();
@@ -130,6 +133,8 @@ describe("st.selectbox", () => {
         "value 4: e2e/scripts/components_iframe.py" +
         "value 5: male" +
         "value 6: male" +
+        "value 7: male" +
+        "value 8: male" +
         "select box changed: True"
     );
   });

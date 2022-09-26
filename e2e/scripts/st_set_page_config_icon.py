@@ -1,35 +1,24 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from pathlib import Path
+
 import streamlit as st
-import os, fnmatch
 
+icon_path = Path(__file__).parent.parent.joinpath("assets/favicon.ico")
+if not icon_path.is_file():
+    print(f"Missing favicon at {str(icon_path)}")
+    exit(1)
 
-def is_assets_favicon_path(path):
-    if "assets/favicon.ico" in path:
-        return path
-
-
-def filter_nones(l):
-    return list(filter(None, l))
-
-
-def find(pattern, path):
-    result = []
-    for root, dirs, files in os.walk(path):
-        for name in files:
-            if fnmatch.fnmatch(name, pattern):
-                result.append(os.path.join(root, name))
-    return result
-
-
-# We want to find the file from 2 directories behind for circle ci
-# and for local testing if you are in the e2e/scripts folder
-# if you are in the root streamlit directory,
-# this script still work but will be slower likely.
-paths = find("favicon.ico", "../..")
-filtered_paths = filter_nones(list(map(is_assets_favicon_path, paths)))
-
-if len(filtered_paths) != 1:
-    print("Can't seem to find assets/favicon.ico in the directory you're in.")
-else:
-    st.set_page_config(
-        page_icon=filtered_paths[0],
-    )
+st.set_page_config(page_icon=str(icon_path))

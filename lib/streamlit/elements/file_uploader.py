@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,14 +13,18 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
 from typing_extensions import Literal
 
 import streamlit
 from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -29,15 +33,19 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
 from ..proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
     UploadedFileInfo as UploadedFileInfoProto,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
-from .utils import check_callback_rules, check_session_state_rules
-
-LOGGER = get_logger(__name__)
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
 
@@ -135,6 +143,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[List[UploadedFile]]:
         ...
 
@@ -153,6 +162,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[UploadedFile]:
         ...
 
@@ -176,6 +186,7 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[List[UploadedFile]]:
         ...
 
@@ -194,9 +205,11 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> Optional[UploadedFile]:
         ...
 
+    @gather_metrics
     def file_uploader(
         self,
         label: str,
@@ -209,6 +222,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
@@ -220,6 +234,9 @@ class FileUploaderMixin:
         ----------
         label : str
             A short label explaining to the user what this file uploader is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
 
         type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
@@ -253,6 +270,11 @@ class FileUploaderMixin:
             An optional boolean, which disables the file uploader if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -313,6 +335,7 @@ class FileUploaderMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -327,12 +350,14 @@ class FileUploaderMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ):
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        maybe_raise_label_warnings(label, label_visibility)
 
         if type:
             if isinstance(type, str):
@@ -376,6 +401,9 @@ class FileUploaderMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         file_uploader_proto.disabled = disabled
+        file_uploader_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         file_uploader_state = serde.serialize(widget_state.value)
         uploaded_file_info = file_uploader_state.uploaded_file_info

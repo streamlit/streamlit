@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +20,7 @@ import { mount, shallow } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
+import { LabelVisibilityOptions } from "src/lib/utils"
 import ColorPicker, { Props } from "./ColorPicker"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -48,6 +48,26 @@ describe("ColorPicker widget", () => {
     const wrapper = mount(<ColorPicker {...props} />)
     const wrappedDiv = wrapper.find("StyledColorPicker")
     expect(wrappedDiv.find("StyledWidgetLabel").text()).toBe(props.label)
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: LabelVisibilityOptions.Hidden,
+    })
+    const wrapper = mount(<ColorPicker {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityOptions.Hidden
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: LabelVisibilityOptions.Collapsed,
+    })
+    const wrapper = mount(<ColorPicker {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityOptions.Collapsed
+    )
   })
 
   it("should have correct style", () => {

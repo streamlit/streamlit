@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,6 +24,7 @@ from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -40,6 +41,7 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
 
 
 class WriteMixin:
+    @gather_metrics
     def write(self, *args: Any, **kwargs: Any) -> None:
         """Write arguments to the app.
 

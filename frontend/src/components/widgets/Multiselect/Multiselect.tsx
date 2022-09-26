@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,6 +35,7 @@ import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import { Theme } from "src/theme"
 
 export interface Props {
@@ -63,6 +63,22 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   public state: State = {
     value: this.initialValue,
+  }
+
+  private overMaxSelections(): boolean {
+    return (
+      this.props.element.maxSelections > 0 &&
+      this.state.value.length >= this.props.element.maxSelections
+    )
+  }
+
+  private getNoResultsMsg(): string {
+    if (this.props.element.maxSelections === 0) {
+      return "No results"
+    }
+    const option =
+      this.props.element.maxSelections !== 1 ? "options" : "option"
+    return `You can only select up to ${this.props.element.maxSelections} ${option}. Remove an option first.`
   }
 
   get initialValue(): number[] {
@@ -139,13 +155,17 @@ class Multiselect extends React.PureComponent<Props, State> {
 
     switch (data.type) {
       case "remove": {
-        return { value: without(this.state.value, getIndex()) }
+        return {
+          value: without(this.state.value, getIndex()),
+        }
       }
       case "clear": {
         return { value: [] }
       }
       case "select": {
-        return { value: this.state.value.concat([getIndex()]) }
+        return {
+          value: this.state.value.concat([getIndex()]),
+        }
       }
       default: {
         throw new Error(`State transition is unknown: ${data.type}`)
@@ -154,14 +174,25 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private onChange = (params: OnChangeParams): void => {
-    const newState = this.generateNewState(params)
-    this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
+    if (
+      this.props.element.maxSelections &&
+      params.type === "select" &&
+      this.state.value.length >= this.props.element.maxSelections
+    ) {
+      return
+    }
+    this.setState(this.generateNewState(params), () => {
+      this.commitWidgetValue({ fromUi: true })
+    })
   }
 
   private filterOptions = (
     options: readonly Option[],
     filterValue: string
   ): readonly Option[] => {
+    if (this.overMaxSelections()) {
+      return []
+    }
     // We need to manually filter for previously selected options here
     const unselectedOptions = options.filter(
       option => !this.state.value.includes(Number(option.value))
@@ -198,7 +229,13 @@ class Multiselect extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stMultiSelect" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -213,6 +250,7 @@ class Multiselect extends React.PureComponent<Props, State> {
             options={selectOptions}
             labelKey="label"
             valueKey="value"
+            aria-label={element.label}
             placeholder={placeholder}
             type={TYPE.select}
             multi
@@ -220,22 +258,23 @@ class Multiselect extends React.PureComponent<Props, State> {
             value={this.valueFromState}
             disabled={disabled}
             size={"compact"}
+            noResultsMsg={this.getNoResultsMsg()}
             filterOptions={this.filterOptions}
+            closeOnSelect={false}
             overrides={{
               IconsContainer: {
                 style: () => ({
                   paddingRight: ".5rem",
                 }),
               },
-
               ControlContainer: {
-                style: () => ({
+                style: {
                   // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                   borderLeftWidth: "1px",
                   borderRightWidth: "1px",
                   borderTopWidth: "1px",
                   borderBottomWidth: "1px",
-                }),
+                },
               },
 
               ValueContainer: {
@@ -257,8 +296,14 @@ class Multiselect extends React.PureComponent<Props, State> {
                 }),
               },
               ClearIcon: {
-                style: {
-                  color: theme.colors.darkGray,
+                props: {
+                  overrides: {
+                    Svg: {
+                      style: {
+                        color: theme.colors.darkGray,
+                      },
+                    },
+                  },
                 },
               },
               SearchIcon: {
@@ -285,6 +330,18 @@ class Multiselect extends React.PureComponent<Props, State> {
                     Action: {
                       style: {
                         paddingLeft: 0,
+                      },
+                    },
+                    ActionIcon: {
+                      props: {
+                        overrides: {
+                          Svg: {
+                            style: {
+                              width: "10px",
+                              height: "10px",
+                            },
+                          },
+                        },
                       },
                     },
                     Text: {

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +23,8 @@ from pympler import asizeof
 import streamlit as st
 from streamlit.logger import get_logger
 from streamlit.runtime.stats import CacheStatsProvider, CacheStat
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import (
     Cache,
@@ -147,6 +149,7 @@ class SingletonAPI:
     # __call__ should be a static method, but there's a mypy bug that
     # breaks type checking for overloaded static functions:
     # https://github.com/python/mypy/issues/7781
+    @gather_metrics
     def __call__(
         self,
         func: Optional[F] = None,
@@ -246,6 +249,7 @@ class SingletonAPI:
         )
 
     @staticmethod
+    @gather_metrics
     def clear() -> None:
         """Clear all singleton caches."""
         _singleton_caches.clear_all()
@@ -271,6 +275,7 @@ class SingletonCache(Cache):
             else:
                 raise CacheKeyNotFoundError()
 
+    @gather_metrics
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         main_id = st._main.id

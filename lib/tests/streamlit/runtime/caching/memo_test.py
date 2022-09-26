@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.memo unit tests."""
+import logging
 import pickle
 import re
 import unittest
@@ -308,6 +309,25 @@ class MemoPersistTest(DeltaGeneratorTestCase):
 
         # Executes normally, without raising any errors
         foo(1)
+
+    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
+    def test_warning_memo_ttl_persist(self, _):
+        """Using @st.experimental_memo with ttl and persist produces a warning."""
+        with self.assertLogs(
+            "streamlit.runtime.caching.memo_decorator", level=logging.WARNING
+        ) as logs:
+
+            @st.experimental_memo(ttl=60, persist="disk")
+            def user_function():
+                return 42
+
+            st.write(user_function())
+
+            output = "".join(logs.output)
+            self.assertIn(
+                "The memoized function 'user_function' has a TTL that will be ignored.",
+                output,
+            )
 
 
 class MemoStatsProviderTest(unittest.TestCase):

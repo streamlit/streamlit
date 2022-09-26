@@ -466,6 +466,8 @@ jobs:
     docker:
       - image: circleci/python:3.10.1
 
+    resource_class: large
+
     working_directory: ~/repo
 
     steps:
@@ -614,9 +616,9 @@ jobs:
           <<: *generate_protobufs
 
       - run:
-          name: Run make develop
+          name: Run make init develop
           command: |
-            make develop
+            make init develop
 
       - run:
           name: CLI smoke tests

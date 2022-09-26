@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -364,8 +364,8 @@ class DeltaGenerator(
         """Returns the element's delta path as a string like "[0, 2, 3, 1]".
 
         This uniquely identifies the element's position in the front-end,
-        which allows (among other potential uses) the InMemoryFileManager to maintain
-        session-specific maps of InMemoryFile objects placed with their "coordinates".
+        which allows (among other potential uses) the MediaFileManager to maintain
+        session-specific maps of MediaFile objects placed with their "coordinates".
 
         This way, users can (say) use st.image with a stream of different images,
         and Streamlit will expire the older images and replace them in place.

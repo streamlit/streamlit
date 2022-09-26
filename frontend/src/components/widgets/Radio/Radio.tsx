@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +19,7 @@ import UIRadio from "src/components/shared/Radio"
 import { Radio as RadioProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -108,7 +108,7 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { disabled, element, width, widgetMgr } = this.props
-    const { horizontal, options, label, help } = element
+    const { horizontal, options, label, labelVisibility, help } = element
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -125,6 +125,9 @@ class Radio extends React.PureComponent<Props, State> {
         width={width}
         disabled={disabled}
         horizontal={horizontal}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value
+        )}
         value={this.state.value}
         help={help}
       />

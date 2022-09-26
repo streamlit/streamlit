@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -77,16 +77,19 @@ from streamlit.runtime.scriptrunner import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
+from streamlit.runtime.metrics_util import gather_metrics
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 
 from streamlit.echo import echo as echo
-from streamlit.runtime.legacy_caching import cache as cache
+from streamlit.runtime.legacy_caching import cache as _cache
 from streamlit.runtime.caching import (
     singleton as experimental_singleton,
     memo as experimental_memo,
 )
+
+cache = gather_metrics(_cache)
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -206,11 +209,12 @@ experimental_user = UserInfoProxy()
 
 # Beta APIs
 
-beta_container = _main.beta_container
-beta_expander = _main.beta_expander
-beta_columns = _main.beta_columns
+beta_container = gather_metrics(_main.beta_container)
+beta_expander = gather_metrics(_main.beta_expander)
+beta_columns = gather_metrics(_main.beta_columns)
 
 
+@gather_metrics
 def set_option(key: str, value: Any) -> None:
     """Set config option.
 
@@ -250,6 +254,7 @@ def set_option(key: str, value: Any) -> None:
     )
 
 
+@gather_metrics
 def experimental_show(*args: Any) -> None:
     """Write arguments and *argument names* to your app for debugging purposes.
 
@@ -296,8 +301,9 @@ def experimental_show(*args: Any) -> None:
             warning("`show` not enabled in the shell")
             return
 
-        if current_frame.f_back is not None:
-            lines = inspect.getframeinfo(current_frame.f_back)[3]
+        # Use two f_back because of telemetry decorator
+        if current_frame.f_back is not None and current_frame.f_back.f_back is not None:
+            lines = inspect.getframeinfo(current_frame.f_back.f_back)[3]
         else:
             lines = None
 
@@ -330,6 +336,7 @@ def experimental_show(*args: Any) -> None:
         exception(exc)
 
 
+@gather_metrics
 def experimental_get_query_params() -> Dict[str, List[str]]:
     """Return the query parameters that is currently showing in the browser's URL bar.
 
@@ -360,6 +367,7 @@ def experimental_get_query_params() -> Dict[str, List[str]]:
     return _parse.parse_qs(ctx.query_string)
 
 
+@gather_metrics
 def experimental_set_query_params(**query_params: Any) -> None:
     """Set the query parameters that are shown in the browser's URL bar.
 
@@ -451,6 +459,7 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
                 message.empty()
 
 
+@gather_metrics
 def _transparent_write(*args: Any) -> Any:
     """This is just st.write, but returns the arguments you passed to it."""
     write(*args)

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,7 @@ from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, cast
 from typing_extensions import Final
 
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from pydeck import Deck
@@ -32,6 +33,7 @@ EMPTY_MAP: Final[Mapping[str, Any]] = {
 
 
 class PydeckMixin:
+    @gather_metrics
     def pydeck_chart(
         self,
         pydeck_obj: Optional["Deck"] = None,

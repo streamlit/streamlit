@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,12 @@
 from dataclasses import dataclass
 import re
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import (
+    Key,
+    to_key,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+)
 from textwrap import dedent
 from typing import Optional, cast
 
@@ -28,8 +33,14 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 
 
 @dataclass
@@ -44,6 +55,7 @@ class ColorPickerSerde:
 
 
 class ColorPickerMixin:
+    @gather_metrics
     def color_picker(
         self,
         label: str,
@@ -55,6 +67,7 @@ class ColorPickerMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> str:
         """Display a color picker widget.
 
@@ -62,6 +75,9 @@ class ColorPickerMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : str
             The hex value of this widget when it first renders. If None,
             defaults to black.
@@ -83,6 +99,11 @@ class ColorPickerMixin:
             An optional boolean, which disables the color picker if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -109,6 +130,7 @@ class ColorPickerMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -123,11 +145,13 @@ class ColorPickerMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
+        maybe_raise_label_warnings(label, label_visibility)
 
         # set value default
         if value is None:
@@ -179,6 +203,9 @@ class ColorPickerMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         color_picker_proto.disabled = disabled
+        color_picker_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True

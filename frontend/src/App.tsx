@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -63,6 +62,7 @@ import {
   PageInfo,
   PageNotFound,
   PagesChanged,
+  PageProfile,
   SessionEvent,
   WidgetStates,
   SessionState,
@@ -144,6 +144,7 @@ interface State {
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
+  latestRunTime: number
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -218,6 +219,7 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
+      latestRunTime: performance.now(),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -425,6 +427,8 @@ export class App extends PureComponent<Props, State> {
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleScriptFinished(status),
+        pageProfile: (pageProfile: PageProfile) =>
+          this.handlePageProfileMsg(pageProfile),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -442,7 +446,11 @@ export class App extends PureComponent<Props, State> {
       menuItems,
     } = pageConfig
 
-    MetricsManager.current.enqueue("pageConfigChanged", pageConfig)
+    MetricsManager.current.enqueue("pageConfigChanged", {
+      favicon,
+      layout,
+      initialSidebarState,
+    })
 
     if (title) {
       this.props.s4aCommunication.sendMessage({
@@ -513,6 +521,21 @@ export class App extends PureComponent<Props, State> {
         type: "SET_APP_PAGES",
         appPages,
       })
+    })
+  }
+
+  handlePageProfileMsg = (pageProfile: PageProfile): void => {
+    MetricsManager.current.enqueue("pageProfile", {
+      ...PageProfile.toObject(pageProfile),
+      appId: SessionInfo.current.appId,
+      numPages: this.state.appPages?.length,
+      sessionId: SessionInfo.current.sessionId,
+      pythonVersion: SessionInfo.current.pythonVersion,
+      pageScriptHash: this.state.currentPageScriptHash,
+      activeTheme: this.props.theme?.activeTheme?.name,
+      totalLoadTime: Math.round(
+        (performance.now() - this.state.latestRunTime) * 1000
+      ),
     })
   }
 
@@ -672,6 +695,7 @@ export class App extends PureComponent<Props, State> {
         hideSidebarNav: config.hideSidebarNav,
         appPages: newSessionProto.appPages,
         currentPageScriptHash: newPageScriptHash,
+        latestRunTime: performance.now(),
       },
       () => {
         this.props.s4aCommunication.sendMessage({

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,7 @@
 import asyncio
 import threading
 from queue import Queue
+from unittest.mock import MagicMock
 
 from streamlit.runtime.runtime import Runtime, RuntimeConfig
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
@@ -43,7 +44,9 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                 # Create a Runtime instance and put it in the (thread-safe) queue,
                 # so that the main thread can retrieve it safely. If Runtime
                 # creation fails, we'll stick an Exception in the queue instead.
-                config = RuntimeConfig("mock/script/path.py", "")
+                config = RuntimeConfig(
+                    "mock/script/path.py", "", media_file_storage=MagicMock()
+                )
                 queue.put(Runtime(config))
             except BaseException as e:
                 queue.put(e)

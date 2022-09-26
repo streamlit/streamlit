@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,7 +22,7 @@ import { sprintf } from "sprintf-js"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { Slider as SliderProto } from "src/autogen/proto"
-import { debounce } from "src/lib/utils"
+import { debounce, labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import moment from "moment"
 import {
   WidgetLabel,
@@ -215,7 +214,9 @@ class Slider extends React.PureComponent<Props, State> {
   private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
     (props: SharedProps, ref): JSX.Element => {
       const { $value, $thumbIndex } = props
-      const formattedValue = this.formatValue($value[$thumbIndex])
+      const formattedValue = $value
+        ? this.formatValue($value[$thumbIndex as number])
+        : ""
       const passThrough = pick(props, [
         "role",
         "style",
@@ -241,14 +242,15 @@ class Slider extends React.PureComponent<Props, State> {
       return (
         <StyledThumb
           {...passThrough}
-          disabled={props.$disabled}
+          disabled={props.$disabled === true}
           ref={ref}
           aria-valuetext={formattedValue}
+          aria-label={this.props.element.label}
         >
           <StyledThumbValue
             className="StyledThumbValue"
             data-testid="stThumbValue"
-            disabled={props.$disabled}
+            disabled={props.$disabled === true}
             ref={this.thumbValueRef}
           >
             {formattedValue}
@@ -288,7 +290,13 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

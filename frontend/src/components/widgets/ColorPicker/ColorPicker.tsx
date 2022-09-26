@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +19,7 @@ import { ColorPicker as ColorPickerProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UIColorPicker from "src/components/shared/ColorPicker"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -120,6 +120,9 @@ class ColorPicker extends React.PureComponent<Props, State> {
     return (
       <UIColorPicker
         label={element.label}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          element.labelVisibility?.value
+        )}
         help={element.help}
         onChange={this.onColorClose}
         disabled={disabled}

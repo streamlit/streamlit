@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,7 +22,10 @@ import {
   UserInfo,
 } from "src/autogen/proto"
 
+import { hashString } from "src/lib/utils"
+
 export interface Args {
+  appId: string
   sessionId: string
   streamlitVersion: string
   pythonVersion: string
@@ -37,6 +39,8 @@ export interface Args {
 
 export class SessionInfo {
   // Fields that don't change during the lifetime of a session (i.e. a browser tab).
+  public readonly appId: string
+
   public readonly sessionId: string
 
   public readonly streamlitVersion: string
@@ -101,6 +105,7 @@ export class SessionInfo {
     const environmentInfo = initialize.environmentInfo as EnvironmentInfo
 
     return new SessionInfo({
+      appId: hashString(userInfo.installationIdV3 + newSession.mainScriptPath),
       sessionId: initialize.sessionId,
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
@@ -114,6 +119,7 @@ export class SessionInfo {
   }
 
   public constructor({
+    appId,
     sessionId,
     streamlitVersion,
     pythonVersion,
@@ -125,6 +131,7 @@ export class SessionInfo {
     userMapboxToken,
   }: Args) {
     if (
+      appId == null ||
       sessionId == null ||
       streamlitVersion == null ||
       pythonVersion == null ||
@@ -138,6 +145,7 @@ export class SessionInfo {
       throw new Error("SessionInfo arguments must be non-null")
     }
 
+    this.appId = appId
     this.sessionId = sessionId
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion

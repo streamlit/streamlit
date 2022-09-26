@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -39,19 +39,25 @@ st.write("Value 3:", w3)
 w4 = st.slider("Label 4", 10000, 25000, 10000, disabled=True)
 st.write("Value 4:", w4)
 
+w5 = st.slider("Label 5", 0, 100, 25, 1, label_visibility="hidden")
+st.write("Value 5:", w5)
+
+w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed")
+st.write("Value 6:", w6)
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.slider_changed = True
 
     st.slider(
-        "Label 5",
+        "Label 7",
         min_value=0,
         max_value=100,
         value=25,
         step=1,
-        key="slider5",
+        key="slider7",
         on_change=on_change,
     )
-    st.write("Value 5:", st.session_state.slider5)
+    st.write("Value 7:", st.session_state.slider7)
     st.write("Slider changed:", "slider_changed" in st.session_state)

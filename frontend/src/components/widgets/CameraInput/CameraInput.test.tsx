@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,7 +20,10 @@ import { enableFetchMocks } from "jest-fetch-mock"
 
 import { mount, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { CameraInput as CameraInputProto } from "src/autogen/proto"
+import {
+  CameraInput as CameraInputProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+} from "src/autogen/proto"
 import CameraInput, { Props, State } from "./CameraInput"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent from "./WebcamComponent"
@@ -38,7 +40,7 @@ jest.mock("react-device-detect", () => {
 
 const INITIAL_SERVER_FILE_ID = 1
 
-const getProps = (elementProps: Partial<Props> = {}): Props => {
+const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
   let mockServerFileIdCounter = INITIAL_SERVER_FILE_ID
   return {
     element: CameraInputProto.create({
@@ -99,6 +101,30 @@ describe("CameraInput widget", () => {
     const wrapper = shallow(<CameraInput {...props} />)
     expect(wrapper.find(WidgetLabel).props().label).toEqual(
       props.element.label
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = mount(<CameraInput {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<CameraInput {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
     )
   })
 

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,7 @@ from typing import Dict
 from typing import cast, Optional, TYPE_CHECKING, Union, Sequence
 
 from streamlit import config
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from .arrow import Data
@@ -34,6 +35,7 @@ def _use_arrow() -> bool:
 
 
 class DataFrameSelectorMixin:
+    @gather_metrics
     def dataframe(
         self,
         data: "Data" = None,
@@ -107,6 +109,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_dataframe(data, width, height)
 
+    @gather_metrics
     def table(self, data: "Data" = None) -> "DeltaGenerator":
         """Display a static table.
 
@@ -140,6 +143,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_table(data)
 
+    @gather_metrics
     def line_chart(
         self,
         data: "Data" = None,
@@ -222,6 +226,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
+    @gather_metrics
     def area_chart(
         self,
         data: "Data" = None,
@@ -304,6 +309,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
+    @gather_metrics
     def bar_chart(
         self,
         data: "Data" = None,
@@ -387,6 +393,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
+    @gather_metrics
     def altair_chart(
         self,
         altair_chart: "Chart",
@@ -433,6 +440,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_altair_chart(altair_chart, use_container_width)
 
+    @gather_metrics
     def vega_lite_chart(
         self,
         data: "Data" = None,
@@ -502,6 +510,7 @@ class DataFrameSelectorMixin:
                 data, spec, use_container_width, **kwargs
             )
 
+    @gather_metrics
     def add_rows(self, data: "Data" = None, **kwargs) -> Optional["DeltaGenerator"]:
         """Concatenate a dataframe to the bottom of the current one.
 

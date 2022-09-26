@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,6 +31,7 @@ import streamlit.web.server.server
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import media_file_manager
 from streamlit.runtime.runtime import RuntimeState
 from streamlit.web.server.server import (
     MAX_PORT_SEARCH_RETRIES,
@@ -345,6 +346,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
+        media_file_manager._media_file_manager = None
         super().tearDown()
 
     def get_app(self):
@@ -372,6 +374,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
+        media_file_manager._media_file_manager = None
         super().tearDown()
 
     def get_app(self):

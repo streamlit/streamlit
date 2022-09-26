@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,6 +41,7 @@ from streamlit import type_util
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
+from streamlit.runtime.metrics_util import gather_metrics
 
 from .arrow import Data
 from .utils import last_index_for_melted_dataframes
@@ -65,6 +66,7 @@ class ChartType(Enum):
 
 
 class ArrowAltairMixin:
+    @gather_metrics
     def _arrow_line_chart(
         self,
         data: Data = None,
@@ -133,6 +135,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
 
+    @gather_metrics
     def _arrow_area_chart(
         self,
         data: Data = None,
@@ -200,6 +203,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
 
+    @gather_metrics
     def _arrow_bar_chart(
         self,
         data: Data = None,
@@ -268,6 +272,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
 
+    @gather_metrics
     def _arrow_altair_chart(
         self,
         altair_chart: Chart,

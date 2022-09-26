@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +23,7 @@ import pyarrow as pa
 
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -31,6 +32,7 @@ Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]
 
 
 class ArrowMixin:
+    @gather_metrics
     def _arrow_dataframe(
         self,
         data: Data = None,
@@ -97,6 +99,7 @@ class ArrowMixin:
         marshall(proto, data, default_uuid)
         return self.dg._enqueue("arrow_data_frame", proto)
 
+    @gather_metrics
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 

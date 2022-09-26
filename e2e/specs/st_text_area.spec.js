@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,7 +22,7 @@ describe("st.text_area", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 8);
+    cy.get(".stTextArea").should("have.length", 10);
 
     cy.get(".stTextArea").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("text_area" + idx);
@@ -40,7 +39,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -59,7 +60,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -78,7 +81,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -97,7 +102,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -117,7 +124,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -136,7 +145,9 @@ describe("st.text_area", () => {
         'value 5: " test area! "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: "  "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: "  "' +
         "text area changed: False"
     );
   });
@@ -156,7 +167,9 @@ describe("st.text_area", () => {
         'value 5: "  "' +
         'value 6: "  "' +
         'value 7: " default text "' +
-        'value 8: " text area! "' +
+        'value 8: " default text "' +
+        'value 9: " default text "' +
+        'value 10: " text area! "' +
         "text area changed: True"
     );
   });

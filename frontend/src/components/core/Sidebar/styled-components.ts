@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -290,27 +289,14 @@ export const StyledSidebarCollapsedControl = styled.div<
   },
 }))
 
-export const StyledResizeHandleMargin = styled.div(({ theme }) => ({
-  // Avoids resize handle & scrollbar showing simultaneously
-  position: "absolute",
-  width: "20px",
-  height: "100%",
-  top: "0px",
-  right: "5px",
-  cursor: "default",
-  overflow: "hidden",
-}))
-
 export const StyledResizeHandle = styled.div(({ theme }) => ({
   position: "absolute",
-  width: "10px",
+  width: "8px",
   height: "100%",
-  top: "0px",
-  right: "0px",
   cursor: "col-resize",
   zIndex: theme.zIndices.sidebarMobile,
 
   "&:hover": {
-    backgroundImage: `linear-gradient(to right, transparent 42%, ${theme.colors.fadedText20} 50%, transparent 58%)`,
+    backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.fadedText20} 28%, transparent 36%)`,
   },
 }))

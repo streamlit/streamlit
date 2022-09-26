@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@ from typing import cast, List, Sequence, TYPE_CHECKING, Union, Optional
 from streamlit.beta_util import function_beta_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -25,6 +26,7 @@ SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
+    @gather_metrics
     def container(self) -> "DeltaGenerator":
         """Insert a multi-element container.
 
@@ -69,6 +71,7 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
+    @gather_metrics
     def columns(
         self, spec: SpecType, *, gap: Optional[str] = "small"
     ) -> List["DeltaGenerator"]:
@@ -193,6 +196,7 @@ class LayoutsMixin:
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
+    @gather_metrics
     def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
         """Insert containers separated into tabs.
 
@@ -280,6 +284,7 @@ class LayoutsMixin:
         tab_container = self.dg._block(block_proto)
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
+    @gather_metrics
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
         """Insert a multi-element container that can be expanded/collapsed.
 

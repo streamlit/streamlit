@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +19,7 @@ import { Selectbox as SelectboxProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UISelectbox from "src/components/shared/Dropdown"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -105,7 +105,13 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { options, help, label, formId } = this.props.element
+    const {
+      options,
+      help,
+      label,
+      labelVisibility,
+      formId,
+    } = this.props.element
     const { disabled, widgetMgr } = this.props
 
     // Manage our form-clear event handler.
@@ -118,6 +124,9 @@ class Selectbox extends React.PureComponent<Props, State> {
     return (
       <UISelectbox
         label={label}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value
+        )}
         options={options}
         disabled={disabled}
         width={this.props.width}

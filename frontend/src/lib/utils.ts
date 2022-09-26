@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +14,11 @@
  * limitations under the License.
  */
 
-import { Alert as AlertProto, Element } from "src/autogen/proto"
+import {
+  Alert as AlertProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Element,
+} from "src/autogen/proto"
 import _ from "lodash"
 import url from "url"
 import xxhash from "xxhashjs"
@@ -179,4 +182,25 @@ export function isValidFormId(formId?: string): formId is string {
 /** True if the given widget element is part of a form. */
 export function isInForm(widget: { formId?: string }): boolean {
   return isValidFormId(widget.formId)
+}
+
+export enum LabelVisibilityOptions {
+  Visible,
+  Hidden,
+  Collapsed,
+}
+
+export function labelVisibilityProtoValueToEnum(
+  value: LabelVisibilityMessageProto.LabelVisibilityOptions | null | undefined
+): LabelVisibilityOptions {
+  switch (value) {
+    case LabelVisibilityMessageProto.LabelVisibilityOptions.VISIBLE:
+      return LabelVisibilityOptions.Visible
+    case LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN:
+      return LabelVisibilityOptions.Hidden
+    case LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED:
+      return LabelVisibilityOptions.Collapsed
+    default:
+      return LabelVisibilityOptions.Visible
+  }
 }

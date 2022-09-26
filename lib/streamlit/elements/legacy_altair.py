@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +23,8 @@ from typing import cast, TYPE_CHECKING
 from streamlit import errors, type_util
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 import streamlit.elements.legacy_vega_lite as vega_lite
+from streamlit.runtime.metrics_util import gather_metrics
+
 import altair as alt
 import pandas as pd
 import pyarrow as pa
@@ -38,6 +40,7 @@ if TYPE_CHECKING:
 
 
 class LegacyAltairMixin:
+    @gather_metrics
     def _legacy_line_chart(
         self,
         data: "Data" = None,
@@ -94,6 +97,7 @@ class LegacyAltairMixin:
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )
 
+    @gather_metrics
     def _legacy_area_chart(
         self,
         data: "Data" = None,
@@ -149,6 +153,7 @@ class LegacyAltairMixin:
             "area_chart", vega_lite_chart_proto, last_index=last_index
         )
 
+    @gather_metrics
     def _legacy_bar_chart(
         self,
         data: "Data" = None,
@@ -204,6 +209,7 @@ class LegacyAltairMixin:
             "bar_chart", vega_lite_chart_proto, last_index=last_index
         )
 
+    @gather_metrics
     def _legacy_altair_chart(
         self, altair_chart: "Chart", use_container_width: bool = False
     ) -> "DeltaGenerator":

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,12 +14,14 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
+import contextlib
 import inspect
 from typing import Any, cast, TYPE_CHECKING
 from typing_extensions import Final
 
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -38,6 +40,7 @@ CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
+    @gather_metrics
     def help(self, obj: Any) -> "DeltaGenerator":
         """Display object's doc string, nicely formatted.
 
@@ -121,28 +124,16 @@ def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
 
 def _get_signature(f):
     is_delta_gen = False
-    try:
+    with contextlib.suppress(AttributeError):
         is_delta_gen = f.__module__ == "streamlit.delta_generator"
-
-        if is_delta_gen:
-            # DeltaGenerator functions are doubly wrapped, and their function
-            # signatures are useless unless we unwrap them.
-            f = _unwrap_decorated_func(f)
-
-    # Functions such as numpy.minimum don't have a __module__ attribute,
-    # since we're only using it to check if its a DeltaGenerator, its ok
-    # to continue
-    except AttributeError:
-        pass
+        # Functions such as numpy.minimum don't have a __module__ attribute,
+        # since we're only using it to check if its a DeltaGenerator, its ok
+        # to continue
 
     sig = ""
 
-    try:
+    with contextlib.suppress(ValueError):
         sig = str(inspect.signature(f))
-    except ValueError:
-        # f is a builtin.
-        pass
-
     if is_delta_gen:
         for prefix in CONFUSING_STREAMLIT_SIG_PREFIXES:
             if sig.startswith(prefix):
@@ -150,20 +141,3 @@ def _get_signature(f):
                 break
 
     return sig
-
-
-def _unwrap_decorated_func(f):
-    if hasattr(f, "__wrapped__"):
-        try:
-            while getattr(f, "__wrapped__"):
-                contents = f.__wrapped__
-                if not callable(contents):
-                    break
-                f = contents
-            return f
-        except AttributeError:
-            pass
-
-    # Fall back to original function, though it's unlikely we'll reach
-    # this part of the code.
-    return f

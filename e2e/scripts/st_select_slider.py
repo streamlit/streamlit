@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -57,6 +57,22 @@ w5 = st.select_slider(
 )
 st.write("Value 5:", w5)
 
+w6 = st.select_slider(
+    "Label 6",
+    options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+    label_visibility="hidden",
+)
+
+st.write("Value 6:", w6)
+
+
+w7 = st.select_slider(
+    "Label 7",
+    options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+    label_visibility="collapsed",
+)
+
+st.write("Value 7:", w7)
 
 if st._is_running_with_streamlit:
 
@@ -64,10 +80,10 @@ if st._is_running_with_streamlit:
         st.session_state.select_slider_changed = True
 
     st.select_slider(
-        "Label 6",
+        "Label 8",
         options=np.array([1, 2, 3, 4, 5]),
-        key="select_slider6",
+        key="select_slider8",
         on_change=on_change,
     )
-    st.write("Value 6:", st.session_state.select_slider6)
+    st.write("Value 8:", st.session_state.select_slider8)
     st.write("Select slider changed:", "select_slider_changed" in st.session_state)

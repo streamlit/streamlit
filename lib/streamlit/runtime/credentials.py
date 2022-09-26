@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -78,6 +78,10 @@ _TELEMETRY_TEXT = """
     "link": click.style("https://streamlit.io/privacy-policy", underline=True),
     "config": click.style(_CONFIG_FILE_PATH),
 }
+
+_TELEMETRY_HEADLESS_TEXT = """
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to False.
+"""
 
 # IMPORTANT: Break the text below at 80 chars.
 _INSTRUCTIONS_TEXT = """
@@ -282,5 +286,8 @@ def check_credentials():
     from streamlit import config
 
     if not _check_credential_file_exists() and config.get_option("server.headless"):
+        if not config.is_manually_set("browser.gatherUsageStats"):
+            # If not manually defined, show short message about usage stats gathering.
+            click.secho(_TELEMETRY_HEADLESS_TEXT)
         return
     Credentials.get_current()._check_activated()

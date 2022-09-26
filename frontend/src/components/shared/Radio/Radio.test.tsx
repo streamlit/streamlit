@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +18,7 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 
 import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
+import { LabelVisibilityOptions } from "src/lib/utils"
 import { lightTheme } from "src/theme"
 import Radio, { Props } from "./Radio"
 
@@ -48,6 +48,26 @@ describe("Radio widget", () => {
     const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find(RadioGroup).length).toBe(1)
     expect(wrapper.find(UIRadio).length).toBe(3)
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: LabelVisibilityOptions.Hidden,
+    })
+    const wrapper = mount(<Radio {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityOptions.Hidden
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: LabelVisibilityOptions.Collapsed,
+    })
+    const wrapper = mount(<Radio {...props} />)
+    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
+      LabelVisibilityOptions.Collapsed
+    )
   })
 
   it("has correct className and style", () => {

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,7 @@ import threading
 import types
 from contextlib import contextmanager
 from enum import Enum
+from timeit import default_timer as timer
 from typing import Dict, Optional, Callable
 
 from blinker import Signal
@@ -29,13 +30,13 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.media_file_manager import get_media_file_manager
 from streamlit.runtime.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
 )
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from . import magic
 from .script_requests import (
     ScriptRequests,
@@ -283,6 +284,7 @@ class ScriptRunner:
             uploaded_file_mgr=self._uploaded_file_mgr,
             page_script_hash=self._client_state.page_script_hash,
             user_info=self._user_info,
+            gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -408,14 +410,17 @@ class ScriptRunner:
 
         LOGGER.debug("Running script %s", rerun_data)
 
+        start_time: float = timer()
+
         # Reset DeltaGenerators, widgets, media files.
-        in_memory_file_manager.clear_session_files()
+        get_media_file_manager().clear_session_refs()
 
         main_script_path = self._main_script_path
         pages = source_util.get_pages(main_script_path)
         # Safe because pages will at least contain the app's main page.
         main_page_info = list(pages.values())[0]
         current_page_info = None
+        uncaught_exception = None
 
         if rerun_data.page_script_hash:
             current_page_info = pages.get(rerun_data.page_script_hash, None)
@@ -553,6 +558,7 @@ class ScriptRunner:
                     self._session_state.on_script_will_rerun(rerun_data.widget_states)
 
                 ctx.on_script_start()
+                prep_time = timer() - start_time
                 exec(code, module.__dict__)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
@@ -563,13 +569,38 @@ class ScriptRunner:
 
         except BaseException as e:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
-            handle_uncaught_app_exception(e)
+            uncaught_exception = e
+            handle_uncaught_app_exception(uncaught_exception)
 
         finally:
             if rerun_exception_data:
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
             else:
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+
+            if ctx.gather_usage_stats:
+                try:
+                    # Prevent issues with circular import
+                    from streamlit.runtime.metrics_util import (
+                        create_page_profile_message,
+                        to_microseconds,
+                    )
+
+                    # Create and send page profile information
+                    ctx.enqueue(
+                        create_page_profile_message(
+                            ctx.tracked_commands,
+                            exec_time=to_microseconds(timer() - start_time),
+                            prep_time=to_microseconds(prep_time),
+                            uncaught_exception=type(uncaught_exception).__name__
+                            if uncaught_exception
+                            else None,
+                        )
+                    )
+                except Exception as ex:
+                    # Always capture all exceptions since we want to make sure that
+                    # the telemetry never causes any issues.
+                    LOGGER.debug("Failed to create page profile", exc_info=ex)
             self._on_script_finished(ctx, finished_event)
 
         # Use _log_if_error() to make sure we never ever ever stop running the
@@ -592,9 +623,9 @@ class ScriptRunner:
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Delete expired files now that the script has run and files in use
+        # Remove orphaned files now that the script has run and files in use
         # are marked as active.
-        in_memory_file_manager.del_expired_files()
+        get_media_file_manager().remove_orphaned_files()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

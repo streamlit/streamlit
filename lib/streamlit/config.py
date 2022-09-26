@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -279,15 +279,13 @@ _create_option(
     replaced_by="logger.level",
 )
 
-
-@_create_option("global.unitTest", visibility="hidden", type_=bool)
-def _global_unit_test() -> bool:
-    """Are we in a unit test?
-
-    This option defaults to False.
-    """
-    return False
-
+_create_option(
+    "global.unitTest",
+    description="Are we in a unit test?",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
 
 _create_option(
     "global.suppressDeprecationWarnings",
@@ -540,22 +538,24 @@ def _server_headless() -> bool:
     return False
 
 
-@_create_option("server.runOnSave", type_=bool)
-def _server_run_on_save() -> bool:
-    """Automatically rerun script when the file is modified on disk.
+_create_option(
+    "server.runOnSave",
+    description="""
+        Automatically rerun script when the file is modified on disk.
+        """,
+    default_val=False,
+    type_=bool,
+)
 
-    Default: false
-    """
-    return False
-
-
-@_create_option("server.allowRunOnSave", type_=bool, visibility="hidden")
-def _server_allow_run_on_save() -> bool:
-    """Allows users to automatically rerun when app is updated.
-
-    Default: true
-    """
-    return True
+_create_option(
+    "server.allowRunOnSave",
+    description="""
+        Allows users to automatically rerun when app is updated.
+        """,
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
+)
 
 
 @_create_option("server.address")
@@ -570,15 +570,13 @@ def _server_address() -> Optional[str]:
     return None
 
 
-@_create_option("server.port", type_=int)
-def _server_port() -> int:
-    """The port where the server will listen for browser
-    connections.
-
-    Default: 8501
-    """
-    return 8501
-
+_create_option(
+    "server.port",
+    description="""
+        The port where the server will listen for browser connections.""",
+    default_val=8501,
+    type_=int,
+)
 
 _create_option(
     "server.scriptHealthCheckEnabled",
@@ -604,59 +602,58 @@ _create_option(
     type_=str,
 )
 
-
 # TODO: Rename to server.enableCorsProtection.
-@_create_option("server.enableCORS", type_=bool)
-def _server_enable_cors() -> bool:
-    """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+_create_option(
+    "server.enableCORS",
+    description="""
+    Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
 
     Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
     `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
-
-    Default: true
-    """
-    return True
-
-
-@_create_option("server.enableXsrfProtection", type_=bool)
-def _server_enable_xsrf_protection() -> bool:
-    """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
-
-    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
-    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
-
-    Default: true
-    """
-    return True
+    """,
+    default_val=True,
+    type_=bool,
+)
 
 
-@_create_option("server.maxUploadSize", type_=int)
-def _server_max_upload_size() -> int:
-    """Max size, in megabytes, for files uploaded with the file_uploader.
+_create_option(
+    "server.enableXsrfProtection",
+    description="""
+        Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
 
-    Default: 200
-    """
-    # If this default is changed, please also update the docstring
-    # for `DeltaGenerator.file_uploader`.
-    return 200
+        Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
+        `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+        """,
+    default_val=True,
+    type_=bool,
+)
 
+_create_option(
+    "server.maxUploadSize",
+    description="""
+        Max size, in megabytes, for files uploaded with the file_uploader.
+        """,
+    default_val=200,  # If this default is changed, please also update the docstring for `DeltaGenerator.file_uploader`.
+    type_=int,
+)
 
-@_create_option("server.maxMessageSize", type_=int)
-def _server_max_message_size() -> int:
-    """Max size, in megabytes, of messages that can be sent via the WebSocket connection.
+_create_option(
+    "server.maxMessageSize",
+    description="""
+        Max size, in megabytes, of messages that can be sent via the WebSocket connection.
+        """,
+    default_val=200,
+    type_=int,
+)
 
-    Default: 200
-    """
-    return 200
-
-
-@_create_option("server.enableWebsocketCompression", type_=bool)
-def _server_enable_websocket_compression() -> bool:
-    """Enables support for websocket compression.
-
-    Default: false
-    """
-    return False
+_create_option(
+    "server.enableWebsocketCompression",
+    description="""
+        Enables support for websocket compression.
+        """,
+    default_val=False,
+    type_=bool,
+)
 
 
 # Config Section: Browser #
@@ -664,28 +661,30 @@ def _server_enable_websocket_compression() -> bool:
 _create_section("browser", "Configuration of non-UI browser options.")
 
 
-@_create_option("browser.serverAddress")
-def _browser_server_address() -> str:
-    """Internet address where users should point their browsers in order to
-    connect to the app. Can be IP address or DNS name and path.
+_create_option(
+    "browser.serverAddress",
+    description="""
+        Internet address where users should point their browsers in order to
+        connect to the app. Can be IP address or DNS name and path.
 
-    This is used to:
-    - Set the correct URL for CORS and XSRF protection purposes.
-    - Show the URL on the terminal
-    - Open the browser
+        This is used to:
+        - Set the correct URL for CORS and XSRF protection purposes.
+        - Show the URL on the terminal
+        - Open the browser
+        """,
+    default_val="localhost",
+    type_=str,
+)
 
-    Default: 'localhost'
-    """
-    return "localhost"
 
-
-@_create_option("browser.gatherUsageStats", type_=bool)
-def _gather_usage_stats() -> bool:
-    """Whether to send usage statistics to Streamlit.
-
-    Default: true
-    """
-    return True
+_create_option(
+    "browser.gatherUsageStats",
+    description="""
+        Whether to send usage statistics to Streamlit.
+        """,
+    default_val=True,
+    type_=bool,
+)
 
 
 @_create_option("browser.serverPort", type_=int)

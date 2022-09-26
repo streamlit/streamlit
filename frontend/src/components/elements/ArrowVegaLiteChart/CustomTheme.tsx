@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,12 +15,10 @@
  */
 
 import { merge, mergeWith, isArray } from "lodash"
-import { getLuminance } from "color2k"
 
-import { Theme } from "src/theme"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 
 export function applyStreamlitTheme(config: any, theme: Theme): any {
-  const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
   // This theming config contains multiple hard coded spacing values.
   // The reason is that we currently only have rem values in our spacing
   // definitions and vega lite requires numerical (pixel) values.
@@ -83,7 +80,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       // TODO: Eventually, we might want to move those color schemes to our theme.
       // But For now, this is specifically defined for vega lite based charts.
       // Ramp & heatmap are both using the sequential color scheme.
-      ...(hasLightBg
+      ...(hasLightBackgroundColor(theme)
         ? {
             category: [
               "#0068C9",
@@ -200,7 +197,9 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
     },
     mark: {
       tooltip: true,
-      ...(hasLightBg ? { color: "#0068C9" } : { color: "#83C9FF" }),
+      ...(hasLightBackgroundColor(theme)
+        ? { color: "#0068C9" }
+        : { color: "#83C9FF" }),
     },
     bar: {
       binSpacing: 4,

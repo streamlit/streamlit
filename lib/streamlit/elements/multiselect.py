@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,20 +18,29 @@ from typing import (
     Any,
     Callable,
     cast,
-    Iterable,
+    Generic,
     Optional,
     overload,
     List,
     Sequence,
     Union,
-    TypeVar,
+    TYPE_CHECKING,
 )
 
-import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, to_key
+from streamlit.type_util import (
+    Key,
+    OptionSequence,
+    ensure_indexable,
+    is_type,
+    to_key,
+    T,
+    LabelVisibility,
+    maybe_raise_label_warnings,
+    is_iterable,
+)
 
 from streamlit.runtime.state import (
     register_widget,
@@ -39,10 +48,17 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from .form import current_form_id
-from .utils import check_callback_rules, check_session_state_rules
+from streamlit.runtime.metrics_util import gather_metrics
 
-T = TypeVar("T")
+from .form import current_form_id
+from .utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 @overload
@@ -54,13 +70,13 @@ def _check_and_convert_to_indices(  # type: ignore[misc]
 
 @overload
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Iterable[Any], Any]
+    opt: Sequence[Any], default_values: Union[Sequence[Any], Any]
 ) -> List[int]:
     ...
 
 
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Iterable[Any], Any, None]
+    opt: Sequence[Any], default_values: Union[Sequence[Any], Any, None]
 ) -> Optional[List[int]]:
     """Perform validation checks and return indices based on the default values."""
     if default_values is None and None not in opt:
@@ -73,7 +89,7 @@ def _check_and_convert_to_indices(
         if is_type(default_values, "numpy.ndarray") or is_type(
             default_values, "pandas.core.series.Series"
         ):
-            default_values = list(cast(Iterable[Any], default_values))
+            default_values = list(cast(Sequence[Any], default_values))
         elif not default_values or default_values in opt:
             default_values = [default_values]
         else:
@@ -88,29 +104,51 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
+def _get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
+    if default is None:
+        return 0
+    if not is_iterable(default):
+        return 1
+    return len(cast(Sequence[Any], default))
+
+
+def _get_over_max_options_message(current_selections: int, max_selections: int):
+    curr_selections_noun = "option" if current_selections == 1 else "options"
+    max_selections_noun = "option" if max_selections == 1 else "options"
+    return f"""
+Multiselect has {current_selections} {curr_selections_noun} selected but `max_selections`
+is set to {max_selections}. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most {max_selections} {max_selections_noun}.
+"""
+
+
 @dataclass
-class MultiSelectSerde:
-    options: Sequence[Any]
+class MultiSelectSerde(Generic[T]):
+    options: Sequence[T]
     default_value: List[int]
 
+    def serialize(self, value: List[T]) -> List[int]:
+        return _check_and_convert_to_indices(self.options, value)
+
     def deserialize(
-        self, ui_value: Optional[List[int]], widget_id: str = ""
-    ) -> List[Any]:
+        self,
+        ui_value: Optional[List[int]],
+        widget_id: str = "",
+    ) -> List[T]:
         current_value: List[int] = (
             ui_value if ui_value is not None else self.default_value
         )
         return [self.options[i] for i in current_value]
 
-    def serialize(self, value: List[Any]) -> List[int]:
-        return _check_and_convert_to_indices(self.options, value)
-
 
 class MultiSelectMixin:
-    @overload
+    @gather_metrics
     def multiselect(
         self,
         label: str,
-        options: Sequence[T],
+        options: OptionSequence[T],
         default: Optional[Any] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
@@ -120,40 +158,9 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        max_selections: Optional[int] = None,
     ) -> List[T]:
-        ...
-
-    @overload
-    def multiselect(
-        self,
-        label: str,
-        options: OptionSequence,
-        default: Optional[Any] = None,
-        format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        *,  # keyword-only arguments:
-        disabled: bool = False,
-    ) -> List[Any]:
-        ...
-
-    def multiselect(
-        self,
-        label: str,
-        options: OptionSequence,
-        default: Optional[Any] = None,
-        format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        *,  # keyword-only arguments:
-        disabled: bool = False,
-    ) -> List[Any]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -161,6 +168,9 @@ class MultiSelectMixin:
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         options : Sequence[V], numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the select options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
@@ -188,6 +198,14 @@ class MultiSelectMixin:
             An optional boolean, which disables the multiselect widget if set
             to True. The default is False. This argument can only be supplied
             by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn’t show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
+        max_selections : int
+            The max selections that can be selected at a time.
+            This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -220,14 +238,16 @@ class MultiSelectMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
+            max_selections=max_selections,
         )
 
     def _multiselect(
         self,
         label: str,
-        options: OptionSequence,
-        default: Union[Iterable[Any], Any, None] = None,
+        options: OptionSequence[T],
+        default: Union[Sequence[Any], Any, None] = None,
         format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -236,13 +256,16 @@ class MultiSelectMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ) -> List[Any]:
+        max_selections: Optional[int] = None,
+    ) -> List[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
 
         opt = ensure_indexable(options)
+        maybe_raise_label_warnings(label, label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
         multiselect_proto = MultiSelectProto()
@@ -251,6 +274,7 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
+        multiselect_proto.max_selections = max_selections or 0
         if help is not None:
             multiselect_proto.help = dedent(help)
 
@@ -267,9 +291,18 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        default_count = _get_default_count(widget_state.value)
+        if max_selections and default_count > max_selections:
+            raise StreamlitAPIException(
+                _get_over_max_options_message(default_count, max_selections)
+            )
+
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         multiselect_proto.disabled = disabled
+        multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if widget_state.value_changed:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)
             multiselect_proto.set_value = True
@@ -278,6 +311,6 @@ class MultiSelectMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

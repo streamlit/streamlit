@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,6 +25,7 @@ from streamlit.errors import StreamlitAPIWarning
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -43,6 +44,7 @@ _STREAMLIT_DIR: Final = os.path.join(
 
 
 class ExceptionMixin:
+    @gather_metrics
     def exception(self, exception: BaseException) -> "DeltaGenerator":
         """Display an exception.
 

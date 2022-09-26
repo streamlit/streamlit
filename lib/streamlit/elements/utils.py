@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import textwrap
 from typing import Any, cast, Hashable, Optional, TYPE_CHECKING, Union
 
 import streamlit
 from streamlit import type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state import get_session_state, WidgetCallback
 
 if TYPE_CHECKING:
@@ -79,3 +79,18 @@ def check_session_state_rules(
             " also had its value set via the Session State API."
         )
         _shown_default_value_warning = True
+
+
+def get_label_visibility_proto_value(
+    label_visibility_string: type_util.LabelVisibility,
+) -> Any:
+    """
+    Returns one of LabelVisibilityMessage enum constants based on string value
+    """
+
+    if label_visibility_string == "visible":
+        return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+    elif label_visibility_string == "hidden":
+        return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
+    elif label_visibility_string == "collapsed":
+        return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED

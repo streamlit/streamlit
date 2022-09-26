@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,11 +44,17 @@ st.write("value 4:", i4)
 i5 = st.selectbox("selectbox 5", options, disabled=True)
 st.write("value 5:", i5)
 
+i6 = st.selectbox("selectbox 6", options, label_visibility="hidden")
+st.write("value 6:", i6)
+
+i7 = st.selectbox("selectbox 7", options, label_visibility="collapsed")
+st.write("value 7:", i7)
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.selectbox_changed = True
 
-    st.selectbox("selectbox 6", options, 1, key="selectbox6", on_change=on_change)
-    st.write("value 6:", st.session_state.selectbox6)
+    st.selectbox("selectbox 8", options, 1, key="selectbox8", on_change=on_change)
+    st.write("value 8:", st.session_state.selectbox8)
     st.write("select box changed:", "selectbox_changed" in st.session_state)

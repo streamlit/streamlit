@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,6 +65,8 @@ class ConfigOption:
     where_defined : str
         Indicates which file set this config option.
         ConfigOption.DEFAULT_DEFINITION means this file.
+    is_default: bool
+        True if the config value is equal to its default value.
     visibility : {"visible", "hidden"}
         See __init__.
     scriptable : bool
@@ -163,6 +165,7 @@ class ConfigOption:
         self.default_val = default_val
         self.deprecated = deprecated
         self.replaced_by = replaced_by
+        self.is_default = True
         self._get_val_func: Optional[Callable[[], Any]] = None
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
@@ -231,6 +234,8 @@ class ConfigOption:
             self.where_defined = ConfigOption.DEFAULT_DEFINITION
         else:
             self.where_defined = where_defined
+
+        self.is_default = value == self.default_val
 
         if self.deprecated and self.where_defined != ConfigOption.DEFAULT_DEFINITION:
 

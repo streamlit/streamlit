@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -46,6 +45,15 @@ describe("st.file_uploader", () => {
     cy.getIndexed("[data-testid='stFileUploader']", 2).matchThemedSnapshots(
       "multi_file_uploader"
     );
+
+    cy.getIndexed("[data-testid='stFileUploader']", 4).matchThemedSnapshots(
+      "hidden_label_file_uploader"
+    );
+
+    cy.getIndexed("[data-testid='stFileUploader']", 5).matchThemedSnapshots(
+      "collapsed_label_file_uploader"
+    );
+
   });
 
   it("shows error message for disallowed files", () => {
@@ -396,7 +404,7 @@ describe("st.file_uploader", () => {
   // regression test for https://github.com/streamlit/streamlit/issues/4256 bug
   it("does not call a callback when not changed", () => {
     const fileName1 = "file1.txt";
-    const uploaderIndex = 4;
+    const uploaderIndex = 6;
 
     cy.fixture(fileName1).then(file1 => {
       const files = [

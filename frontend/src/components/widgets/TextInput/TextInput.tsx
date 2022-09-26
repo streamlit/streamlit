@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,7 +26,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { isInForm } from "src/lib/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import { StyledTextInput } from "./styled-components"
 
 export interface Props {
@@ -122,7 +121,9 @@ class TextInput extends React.PureComponent<Props, State> {
     }
   }
 
-  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  private onChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void => {
     const { value } = e.target
     const { element } = this.props
     const { maxChars } = element
@@ -149,7 +150,9 @@ class TextInput extends React.PureComponent<Props, State> {
     )
   }
 
-  private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+  private onKeyPress = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void => {
     if (e.key === "Enter" && this.state.dirty) {
       this.commitWidgetValue({ fromUi: true })
     }
@@ -175,7 +178,13 @@ class TextInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledTextInput className="row-widget stTextInput" width={width}>
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -191,6 +200,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
+          aria-label={element.label}
           disabled={disabled}
           type={this.getTypeString()}
           autoComplete={element.autocomplete}

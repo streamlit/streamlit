@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -50,6 +50,8 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.metrics_util import gather_metrics
+
 from .hashing import update_hash, HashFuncsDict, HashReason
 
 _LOGGER = get_logger(__name__)
@@ -345,6 +347,7 @@ def _read_from_cache(
         raise e
 
 
+@gather_metrics
 def _write_to_cache(
     mem_cache: MemCache,
     key: str,

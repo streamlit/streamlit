@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +20,7 @@ from typing_extensions import TypeAlias, Literal
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.string_util import clean_text
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import numpy as np
@@ -39,6 +40,7 @@ class MetricColorAndDirection:
 
 
 class MetricMixin:
+    @gather_metrics
     def metric(
         self,
         label: str,

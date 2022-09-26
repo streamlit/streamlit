@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@ from typing import cast, Optional, TYPE_CHECKING, Union
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.string_util import clean_text
 from streamlit.type_util import SupportsStr, is_sympy_expession
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import sympy
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
 
 
 class MarkdownMixin:
+    @gather_metrics
     def markdown(
         self, body: SupportsStr, unsafe_allow_html: bool = False
     ) -> "DeltaGenerator":
@@ -80,6 +82,7 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
+    @gather_metrics
     def code(
         self, body: SupportsStr, language: Optional[str] = "python"
     ) -> "DeltaGenerator":
@@ -92,11 +95,11 @@ class MarkdownMixin:
         body : str
             The string to display as code.
 
-        language : str
+        language : str or None
             The language that the code is written in, for syntax highlighting.
-            If omitted, the code will be unstyled.
+            If ``None``, the code will be unstyled. Defaults to ``"python"``.
 
-            For a list of available ``language`` imports, see:
+            For a list of available ``language`` values, see:
 
             https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
 
@@ -112,6 +115,7 @@ class MarkdownMixin:
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
+    @gather_metrics
     def caption(
         self, body: SupportsStr, unsafe_allow_html: bool = False
     ) -> "DeltaGenerator":
@@ -157,6 +161,7 @@ class MarkdownMixin:
         caption_proto.is_caption = True
         return self.dg._enqueue("markdown", caption_proto)
 
+    @gather_metrics
     def latex(self, body: Union[SupportsStr, "sympy.Expr"]) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.

@@ -1,18 +1,18 @@
-/**
- * Copyright 2018-2022 Streamlit Inc.
+/**!
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 syntax = "proto3";
 
@@ -21,6 +21,7 @@ import "streamlit/proto/GitInfo.proto";
 import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
+import "streamlit/proto/PageProfile.proto";
 import "streamlit/proto/PageNotFound.proto";
 import "streamlit/proto/PagesChanged.proto";
 import "streamlit/proto/SessionEvent.proto";
@@ -55,6 +56,7 @@ message ForwardMsg {
     PageConfig page_config_changed = 13;
     ScriptFinishedStatus script_finished = 6;
     GitInfo git_info_changed = 14;
+    PageProfile page_profile = 18;
 
     // State change and event messages.
     SessionState session_state_changed = 9;
@@ -77,7 +79,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 18
+  // Next: 19
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

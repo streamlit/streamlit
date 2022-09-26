@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,15 +17,28 @@
 describe("st.select_slider", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
+    cy.prepForElementSnapshots();
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stSlider").should("have.length", 6);
+    cy.get(".element-container .stSlider").should("have.length", 8);
   });
 
   it("looks right when disabled", () => {
     cy.getIndexed(".stSlider", 4).matchThemedSnapshots(
       "disabled-select-slider"
+    );
+  });
+
+  it("looks right when label hidden", () => {
+    cy.getIndexed(".stSlider", 5).matchThemedSnapshots(
+      "hidden-label-select-slider"
+    );
+  });
+
+  it("looks right when label collapsed", () => {
+    cy.getIndexed(".stSlider", 6).matchThemedSnapshots(
+      "collapsed-label-select-slider"
     );
   });
 
@@ -61,9 +73,9 @@ describe("st.select_slider", () => {
       "Value 5: ('orange', 'blue')"
     );
 
-    cy.getIndexed(".stMarkdown", 5).should("have.text", "Value 6: 1");
+    cy.getIndexed(".stMarkdown", 7).should("have.text", "Value 8: 1");
 
-    cy.getIndexed(".stMarkdown", 6).should(
+    cy.getIndexed(".stMarkdown", 8).should(
       "have.text",
       "Select slider changed: False"
     );
@@ -144,14 +156,14 @@ describe("st.select_slider", () => {
 
   it("calls callback if one is registered", () => {
     // This selects the slider ends, so range sliders have two, and this is the
-    // ninth element in the list.
-    cy.getIndexed('.stSlider [role="slider"]', 8)
+    // 11th element in the list.
+    cy.getIndexed('.stSlider [role="slider"]', 10)
       .click()
       .type("{rightarrow}", { force: true });
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 6: 2" + "Select slider changed: True"
+      "Value 8: 2" + "Select slider changed: True"
     );
   });
 });

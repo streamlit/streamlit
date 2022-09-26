@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,6 +35,7 @@ import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError } from "src/lib/log"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
@@ -363,7 +363,13 @@ class CameraInput extends React.PureComponent<Props, State> {
         className="row-widget"
         data-testid="stCameraInput"
       >
-        <WidgetLabel label={element.label} disabled={disabled}>
+        <WidgetLabel
+          label={element.label}
+          disabled={disabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+        >
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,7 +31,6 @@ import {
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledResizeHandle,
-  StyledResizeHandleMargin,
 } from "./styled-components"
 import IsSidebarContext from "./IsSidebarContext"
 import SidebarNav from "./SidebarNav"
@@ -225,13 +223,9 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             bottom: false,
             left: false,
           }}
+          handleStyles={{ right: { width: "8px", right: "-6px" } }}
           handleComponent={{
-            right: (
-              <>
-                <StyledResizeHandleMargin />
-                <StyledResizeHandle onClick={this.resetSidebarWidth} />
-              </>
-            ),
+            right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
           }}
           size={{ width: sidebarWidth, height: "100%" }}
           as={StyledSidebar}
