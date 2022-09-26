@@ -102,6 +102,7 @@ setuptools.setup(
         "Release notes": "https://docs.streamlit.io/library/changelog",
         "Documentation": "https://docs.streamlit.io/",
         "Community": "https://discuss.streamlit.io/",
+        "Twitter": "https://twitter.com/streamlit",
     },
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
