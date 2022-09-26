@@ -63,7 +63,7 @@ export function determineColumnType(quiverType: QuiverType): ColumnType {
 export function getDisplayContent(quiverCell: DataFrameCell): string {
   const displayContent =
     quiverCell.displayContent ||
-    Quiver.format(quiverCell.content, quiverCell.contentType)
+    Quiver.format(quiverCell.content, quiverCell.contentType, quiverCell.field)
 
   // Remove all line breaks
   return displayContent.replace(/(\r\n|\n|\r)/gm, " ")
