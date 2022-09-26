@@ -127,8 +127,8 @@ def main(report: bool = False, verbose: bool = False) -> None:
     args.extend(paths)
 
     if verbose:
-      shell_command = shlex_join(itertools.chain(['mypy'], args))
-      print("Executing command:", shell_command)
+        shell_command = shlex_join(itertools.chain(['mypy'], args))
+        print("Executing command:", shell_command)
     mypy_main.main(stdout=sys.stdout, stderr=sys.stderr, args=args)
     if report:
         process_report(os.path.join(tempdir.name, "lineprecision.txt"))
