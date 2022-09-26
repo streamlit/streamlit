@@ -18,9 +18,9 @@ import sys
 
 from setuptools.command.install import install
 
-VERSION = "1.13.0"  # PEP-440
+VERSION = "1.13.1.dev20220925"  # PEP-440
 
-NAME = "streamlit"
+NAME = "streamlit-nightly"
 
 DESCRIPTION = "The fastest way to build data apps in Python"
 
