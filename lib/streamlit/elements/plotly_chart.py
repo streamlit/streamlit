@@ -15,12 +15,14 @@
 """Streamlit support for Plotly charts."""
 
 import json
+import string
 import urllib.parse
 from typing import Any, cast, Dict, List, Set, TYPE_CHECKING, Union
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit.runtime.legacy_caching import caching
 from streamlit import type_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -71,6 +73,7 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
+        theme: string or None = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display an interactive Plotly chart.
@@ -139,8 +142,17 @@ class PlotlyMixin:
         # keep it in sync with what Plotly calls it.
 
         plotly_chart_proto = PlotlyChartProto()
+        if theme != "streamlit" and theme != None:
+            raise StreamlitAPIException(
+                f"""You set theme={theme} while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme. """
+            )
         marshall(
-            plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
+            plotly_chart_proto,
+            figure_or_data,
+            use_container_width,
+            sharing,
+            theme,
+            **kwargs,
         )
         return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
@@ -155,6 +167,7 @@ def marshall(
     figure_or_data: FigureOrData,
     use_container_width: bool,
     sharing: SharingMode,
+    theme: string or None,
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
@@ -196,6 +209,7 @@ def marshall(
             figure, sharing=sharing, auto_open=False, **kwargs
         )
         proto.url = _get_embed_url(url)
+    proto.theme = theme
 
 
 @caching.cache

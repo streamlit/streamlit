@@ -23,6 +23,8 @@ import {
 } from "src/autogen/proto"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
+import { assign } from "lodash"
+import { applyStreamlitTheme } from "./CustomTheme"
 
 export interface PlotlyChartProps {
   width: number
@@ -47,6 +49,20 @@ export function PlotlyChart({
 
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
+    console.log(spec)
+
+    for (const index in spec.layout.template.data) {
+      spec.layout.template.data[index] = assign(
+        { autocolorscale: true },
+        spec.layout.template.data[index][0]
+      )
+      console.log(spec.layout.template.data[index])
+    }
+
+    for (const index in spec.data) {
+      spec.data[index] = assign({ autocolorscale: true }, spec.data[index])
+      console.log(spec.layout.template.data[index])
+    }
 
     if (isFullScreen()) {
       spec.layout.width = propWidth
@@ -56,13 +72,25 @@ export function PlotlyChart({
     }
 
     const theme: Theme = useTheme()
-    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+
+    if (element.theme === "streamlit") {
+      // should this be the same name as applyStreamlitTheme because there are duplicates?
+      console.log(spec.layout)
+      spec.layout.template.layout = applyStreamlitTheme(
+        spec.layout.template.layout,
+        theme
+      )
+    } else {
+      // Apply minor theming improvements to work better with Streamlit
+      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    }
 
     return spec
   }
 
   const renderFigure = (figure: FigureProto): ReactElement => {
     const config = JSON.parse(figure.config)
+    console.log(config)
     const { data, layout, frames } = generateSpec(figure)
 
     return (
