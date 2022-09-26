@@ -20,7 +20,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
 
 import streamlit.elements.exception as exception_utils
-from streamlit import __version__, config, source_util, secrets
+from streamlit import config, source_util, secrets
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -34,6 +34,7 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
+from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 from . import caching, legacy_caching
 from .credentials import Credentials
@@ -582,7 +583,7 @@ class AppSession:
 
         _populate_user_info_msg(imsg.user_info)
 
-        imsg.environment_info.streamlit_version = __version__
+        imsg.environment_info.streamlit_version = STREAMLIT_VERSION_STRING
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
 
         imsg.session_state.run_on_save = self._run_on_save

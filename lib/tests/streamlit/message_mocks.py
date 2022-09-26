@@ -14,11 +14,11 @@
 
 """Shared protobuf message mocking utilities."""
 
-from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.elements import legacy_data_frame
 from streamlit.elements.arrow import Data
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.RootContainer_pb2 import RootContainer
 
 
 def create_dataframe_msg(df: Data, id: int = 1) -> ForwardMsg:
