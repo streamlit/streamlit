@@ -14,7 +14,7 @@
 
 import os
 import threading
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Final
 
 import toml
 from blinker import Signal
@@ -250,3 +250,6 @@ class Secrets(Mapping[str, Any]):
 
     def __iter__(self):
         return iter(self._parse(True))
+
+
+secrets_singleton: Final = Secrets(SECRETS_FILE_LOC)
