@@ -14,10 +14,11 @@
 
 import os
 import threading
-from typing import Any, Mapping, Optional, Final
+from typing import Any, Mapping, Optional
 
 import toml
 from blinker import Signal
+from typing_extensions import Final
 
 import streamlit as st
 import streamlit.watcher.path_watcher
