@@ -20,6 +20,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
 
 import streamlit.elements.exception as exception_utils
+import streamlit.runtime as runtime
 from streamlit import config, source_util
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
@@ -39,7 +40,6 @@ from streamlit.watcher import LocalSourcesWatcher
 from . import caching, legacy_caching
 from .credentials import Credentials
 from .metrics_util import Installation
-from .runtime import Runtime
 from .scriptrunner import (
     RerunData,
     ScriptRunner,
@@ -185,8 +185,8 @@ class AppSession:
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
-            Runtime.instance().media_file_mgr.clear_session_refs(self.id)
-            Runtime.instance().media_file_mgr.remove_orphaned_files()
+            runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -533,7 +533,7 @@ class AppSession:
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
                 # session is actually shutting down.
-                Runtime.instance().media_file_mgr.clear_session_refs(self.id)
+                runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
 
             self._client_state = client_state
             self._scriptrunner = None

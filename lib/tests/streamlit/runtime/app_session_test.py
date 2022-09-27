@@ -26,7 +26,7 @@ from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import media_file_manager
+from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
@@ -74,13 +74,15 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
 class AppSessionTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
-        media_file_manager._media_file_manager = MediaFileManager(
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
         super().tearDown()
-        media_file_manager._media_file_manager = None
+        Runtime._instance = None
 
     @patch("streamlit.runtime.app_session.secrets._file_change_listener.disconnect")
     def test_shutdown(self, patched_disconnect):

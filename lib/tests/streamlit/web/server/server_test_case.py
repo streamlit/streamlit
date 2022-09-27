@@ -21,7 +21,7 @@ import tornado.websocket
 from tornado.websocket import WebSocketClientConnection
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import media_file_manager
+from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession
 from streamlit.web.server import Server
 
@@ -41,10 +41,10 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self) -> None:
         super().tearDown()
-        # Server._create_app() will create the MediaFileManager singleton.
+        # Server._create_app() will create the Runtime singleton.
         # We null it out in tearDown() so that it doesn't interfere with
         # future tests.
-        media_file_manager._media_file_manager = None
+        Runtime._instance = None
 
     def get_app(self) -> tornado.web.Application:
         self.server = Server(

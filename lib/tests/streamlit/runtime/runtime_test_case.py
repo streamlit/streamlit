@@ -16,10 +16,9 @@ import asyncio
 from unittest import mock
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import media_file_manager
 from streamlit.runtime.app_session import AppSession
-from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 
@@ -35,13 +34,14 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
         )
         self.runtime = Runtime(config)
+        Runtime._instance = self.runtime
 
     async def asyncTearDown(self):
         # Stop the runtime, and return when it's stopped
         if self.runtime.state != RuntimeState.INITIAL:
             self.runtime.stop()
             await self.runtime.stopped
-        media_file_manager._media_file_manager = None
+        Runtime._instance = None
 
     @staticmethod
     async def tick_runtime_loop() -> None:
