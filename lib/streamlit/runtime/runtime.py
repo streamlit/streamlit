@@ -159,9 +159,9 @@ class Runtime:
         config
             Config options.
         """
-        if self._instance is not None:
+        if Runtime._instance is not None:
             raise RuntimeError("Runtime instance already exists!")
-        self._instance = self
+        Runtime._instance = self
 
         # Will be created when we start.
         self._async_objs: Optional[AsyncObjects] = None
