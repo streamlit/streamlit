@@ -79,9 +79,9 @@ jobs:
           echo -e "[pypi]" >> ~/.pypirc
           echo -e 'username = "$STREAMLIT_PYPI_USERNAME"' >> ~/.pypirc
           echo -e 'password = "$STREAMLIT_PYPI_API_TOKEN"' >> ~/.pypirc
-      # - name: Upload to PyPI
-      #   run: |
-      #     make distribute
+      - name: Upload to PyPI
+        run: |
+          make distribute
       - name: Commit version updates
         env:
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}

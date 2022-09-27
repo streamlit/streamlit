@@ -1,4 +1,4 @@
-name: "Set GIT_TAG env variables"
+name: "Set GIT_TAG & GH_REPO env variables"
 
 inputs:
   tag_name:
