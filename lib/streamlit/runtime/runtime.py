@@ -20,7 +20,7 @@ from asyncio import Future
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Tuple, Awaitable
 
-from typing_extensions import Final, Protocol
+from typing_extensions import Final
 
 import streamlit
 from streamlit import config
