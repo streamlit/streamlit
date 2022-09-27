@@ -14,6 +14,6 @@ runs:
         GIT_TAG: ${{ inputs.tag_name }}
         GH_REPO: ${{ inputs.repo }}
       run: |
-        echo 'GIT_TAG="$GIT_TAG"' >> $GITHUB_ENV
-        echo 'GH_REPO="$REPO"' >> $GITHUB_ENV
+        echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
+        echo "GH_REPO=$GH_REPO" >> $GITHUB_ENV
       shell: bash -ileo pipefail {0}

@@ -1,7 +1,7 @@
 name: Build Release
 
 on: 
-  # Manual Trigger GH CLI -> gh workflow run release.yml --ref <branch-name>
+  # Manual Trigger GH CLI -> gh workflow run release.yml --ref <tag>
   workflow_dispatch:
 
 jobs:
@@ -34,14 +34,20 @@ jobs:
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install gh
       - name: Look up the related GitHub PR number and branch name
+        # Need GH Token to use gh CLI
         env:
           GH_REPO: ${{ env.GH_REPO }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          echo 'GH_PR_BRANCH=$(gh api repos/"$GH_REPO"/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')' >> $GITHUB_ENV
+          echo "GH_PR_BRANCH=$(gh api repos/"$GH_REPO"/pulls | jq -r '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
       - name: Ensure that version tag matches branch version
+        env: 
+          GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
         run: |
-          if [ '$(echo "$GH_PR_BRANCH" | tr -d 'release/')' != "$GIT_TAG" ]
+          BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | tr -d 'release/' )
+
+          if [ "$BRANCH_VERSION" != "$GIT_TAG" ]
           then
             echo "ERROR: Version number from tag does not match the version number from the branch name."
             exit 1
@@ -54,7 +60,9 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Set release version from tag name
-        run: echo 'STREAMLIT_RELEASE_VERSION=$(echo "$GIT_TAG")' >> GITHUB_ENV
+        env:
+          GIT_TAG: ${{ env.GIT_TAG }}
+        run: echo "STREAMLIT_RELEASE_VERSION=$GIT_TAG" >> $GITHUB_ENV
       - name: Update version
         env:
           STREAMLIT_RELEASE_VERSION: ${{ env.STREAMLIT_RELEASE_VERSION }}
@@ -69,6 +77,7 @@ jobs:
       - name: Store Package
         uses: actions/upload-artifact@v3
         with:
+          name: Release
           path: lib/dist
       - name: Initialize .pypirc
         env:
