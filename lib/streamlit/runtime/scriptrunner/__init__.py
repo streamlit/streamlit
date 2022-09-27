@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Explicitly export public symbols
 from streamlit.runtime.scriptrunner.script_requests import RerunData as RerunData
 from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext as ScriptRunContext,
@@ -22,8 +23,6 @@ from streamlit.runtime.scriptrunner.script_run_context import (
 from streamlit.runtime.scriptrunner.script_run_context import (
     get_script_run_ctx as get_script_run_ctx,
 )
-
-# Explicitly export public symbols
 from streamlit.runtime.scriptrunner.script_runner import (
     RerunException as RerunException,
 )
