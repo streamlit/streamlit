@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import {
   createTheme as createBaseTheme,
   lightThemePrimitives as lightBaseThemePrimitives,
@@ -118,9 +118,6 @@ export const createBaseThemePrimitives = (
     mono800: colors.bodyText, // Selectbox text
     mono900: colors.bodyText, // Not used, but just in case.
     mono1000: colors.black,
-
-    rating200: "#FFE1A5",
-    rating400: "#FFC043",
   }
 }
 
@@ -192,7 +189,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       tagPrimarySolidBackground: colors.primary,
       tagPrimaryFontDisabled: colors.fadedText40,
       tagPrimaryOutlinedDisabled: colors.transparent,
-      borderFocus: colors.primary,
+      borderSelected: colors.primary,
       contentPrimary: colors.bodyText,
       inputPlaceholder: colors.fadedText60,
       tickFillDisabled: colors.fadedText40,

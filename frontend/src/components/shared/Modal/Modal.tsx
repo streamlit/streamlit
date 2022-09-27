@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -50,6 +49,7 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         borderBottom: `1px solid ${colors.fadedText10}`,
         fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.lg,
+        fontWeight: 500,
         margin: spacing.none,
         lineHeight: 1.5,
         textTransform: "none",
@@ -125,7 +125,7 @@ const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
 )
 
 function Modal(props: ModalProps): ReactElement {
-  const { spacing, colors }: Theme = useTheme()
+  const { spacing, colors, radii }: Theme = useTheme()
   const defaultOverrides = {
     DialogContainer: {
       style: {
@@ -136,6 +136,10 @@ function Modal(props: ModalProps): ReactElement {
     Dialog: {
       style: {
         border: `1px solid ${colors.fadedText10}`,
+        borderTopLeftRadius: radii.md,
+        borderTopRightRadius: radii.md,
+        borderBottomRightRadius: radii.md,
+        borderBottomLeftRadius: radii.md,
       },
     },
     Close: {
@@ -148,22 +152,7 @@ function Modal(props: ModalProps): ReactElement {
 
   const mergedOverrides = merge(defaultOverrides, props.overrides)
 
-  return (
-    <UIModal
-      {...props}
-      // From https://baseweb.design/components/modal:
-      // Makes modal scrollable while cursor is over the modal's backdrop.
-      // Will be removed and implemented as the default behavior in the
-      // next major version.
-      autoFocus={false}
-      // From https://baseweb.design/components/modal:
-      // Makes modal scrollable while cursor is over the modal's backdrop.
-      // Will be removed and implemented as the default behavior in the
-      // next major version.
-      unstable_ModalBackdropScroll={true}
-      overrides={mergedOverrides}
-    />
-  )
+  return <UIModal {...props} overrides={mergedOverrides} />
 }
 
 export default Modal

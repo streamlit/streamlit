@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +14,7 @@
 
 """st.memo/singleton hashing tests."""
 
+from enum import Enum, auto
 import functools
 import hashlib
 import os
@@ -280,6 +281,15 @@ class HashTest(unittest.TestCase):
         bar = Data("bar")
 
         assert get_hash(bar)
+
+    def test_enum(self):
+        class EnumClass(Enum):
+            ENUM_1 = auto()
+            ENUM_2 = auto()
+
+        enum_1 = EnumClass.ENUM_1
+
+        assert get_hash(enum_1)
 
 
 class NotHashableTest(unittest.TestCase):

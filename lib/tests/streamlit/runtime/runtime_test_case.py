@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +16,10 @@ import asyncio
 from unittest import mock
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import media_file_manager
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 
@@ -27,7 +29,11 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
     _next_session_id = 0
 
     async def asyncSetUp(self):
-        config = RuntimeConfig("mock/script/path.py", "")
+        config = RuntimeConfig(
+            script_path="mock/script/path.py",
+            command_line="",
+            media_file_storage=MemoryMediaFileStorage("/mock/media"),
+        )
         self.runtime = Runtime(config)
 
     async def asyncTearDown(self):
@@ -35,6 +41,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
         if self.runtime.state != RuntimeState.INITIAL:
             self.runtime.stop()
             await self.runtime.stopped
+        media_file_manager._media_file_manager = None
 
     @staticmethod
     async def tick_runtime_loop() -> None:

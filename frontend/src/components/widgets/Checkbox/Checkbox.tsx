@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -146,10 +145,6 @@ class Checkbox extends React.PureComponent<Props, State> {
                 marginTop: 0,
                 paddingRight: spacing.twoThirdsSmFont,
                 backgroundColor: $isFocusVisible ? colors.darkenedBgMix25 : "",
-                borderTopLeftRadius: radii.md,
-                borderTopRightRadius: radii.md,
-                borderBottomLeftRadius: radii.md,
-                borderBottomRightRadius: radii.md,
                 display: "flex",
                 alignItems: "start",
               }),
@@ -182,6 +177,10 @@ class Checkbox extends React.PureComponent<Props, State> {
                   borderRightWidth: "2px",
                   borderTopWidth: "2px",
                   borderBottomWidth: "2px",
+                  borderTopLeftRadius: radii.md,
+                  borderTopRightRadius: radii.md,
+                  borderBottomLeftRadius: radii.md,
+                  borderBottomRightRadius: radii.md,
                   borderLeftColor: borderColor,
                   borderRightColor: borderColor,
                   borderTopColor: borderColor,

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,17 +22,17 @@ import numpy as np
 from scipy.io import wavfile
 
 import streamlit as st
-from streamlit.runtime.media_file_manager import (
+from streamlit.runtime.media_file_storage import MediaFileStorageError
+from streamlit.runtime.memory_media_file_storage import (
     _calculate_file_id,
-    media_file_manager,
-    STATIC_MEDIA_ENDPOINT,
 )
+from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests import testutil
 
 
 class AudioTest(testutil.DeltaGeneratorTestCase):
-    def test_st_audio(self):
-        """Test st.audio."""
+    def test_st_audio_from_bytes(self):
+        """Test st.audio using fake audio bytes."""
 
         # Fake audio data: expect the resultant mimetype to be audio default.
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
@@ -43,22 +43,21 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
 
         # locate resultant file in InMemoryFileManager and test its properties.
         file_id = _calculate_file_id(fake_audio_data, "audio/wav")
-        self.assertTrue(file_id in media_file_manager)
+        media_file = self.media_file_storage.get_file(file_id)
+        self.assertIsNotNone(media_file)
+        self.assertEqual(media_file.mimetype, "audio/wav")
+        self.assertEqual(self.media_file_storage.get_url(file_id), el.audio.url)
 
-        afile = media_file_manager.get(file_id)
-        self.assertEqual(afile.mimetype, "audio/wav")
-        self.assertEqual(afile.url, el.audio.url)
-
-        # Test using generated data in a file-like object.
-
+    def test_st_audio_from_file(self):
+        """Test st.audio using generated data in a file-like object."""
         sampleRate = 44100
         frequency = 440
         length = 5
 
-        t = np.linspace(
-            0, length, sampleRate * length
-        )  #  Produces a 5 second Audio-File
-        y = np.sin(frequency * 2 * np.pi * t)  #  Has frequency of 440Hz
+        # Produces a 5 second Audio-File
+        t = np.linspace(0, length, sampleRate * length)
+        # Has frequency of 440Hz
+        y = np.sin(frequency * 2 * np.pi * t)
 
         wavfile.write("test.wav", sampleRate, y)
 
@@ -70,6 +69,8 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
 
         os.remove("test.wav")
 
+    def test_st_audio_from_url(self):
+        """We can pass a URL directly to st.audio."""
         # Test using a URL instead of data
         some_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
         st.audio(some_url)
@@ -77,17 +78,21 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.url, some_url)
 
-        # Test that a non-URL string is assumed to be a filename
-        bad_filename = "blah"
-        with self.assertRaises(FileNotFoundError):
-            st.audio(bad_filename)
+    def test_st_audio_raises_on_bad_filename(self):
+        """A non-URL string is assumed to be a filename. A file we can't
+        open will result in an error.
+        """
+        with self.assertRaises(MediaFileStorageError):
+            st.audio("not/a/real/file")
 
-        # Test that we can use an empty/None value without error.
+    def test_st_audio_from_none(self):
+        """st.audio(None) is not an error."""
         st.audio(None)
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.url, "")
 
-        # Test that our other data types don't result in an error.
+    def test_st_audio_other_inputs(self):
+        """Test that our other data types don't result in an error."""
         st.audio(b"bytes_data")
         st.audio("str_data".encode("utf-8"))
         st.audio(BytesIO(b"bytesio_data"))
@@ -100,5 +105,5 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.start_time, 10)
-        self.assertTrue(el.audio.url.startswith(STATIC_MEDIA_ENDPOINT))
+        self.assertTrue(el.audio.url.startswith(MEDIA_ENDPOINT))
         self.assertTrue(_calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url)

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,8 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import streamlit as st
-from streamlit import StreamlitAPIException, file_util
+from streamlit import file_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.caching import memo_decorator
 from streamlit.runtime.caching.cache_errors import CacheError

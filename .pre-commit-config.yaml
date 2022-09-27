@@ -1,6 +1,20 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Pre-commit configuration file,
 # when Streamlit's pre-commit detects that one of the linters has failed,
-# it automatically lints the files and does not allow the commit to pass. 
+# it automatically lints the files and does not allow the commit to pass.
 # Please review the changes after lint has failed and commit them again,
 # the second commit should pass,
 # because the files were linted after trying to do the first commit.
@@ -37,4 +51,80 @@ repos:
         files: ^frontend/src/.*(.js|\.jsx|\.ts|\.tsx)$
         language: node
         pass_filenames: true
-
+      - id: license-headers
+        name: Checks that all files have the required license headers
+        entry: ./scripts/check_license_headers.py
+        language: system
+        always_run: true
+        pass_filenames: false
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.2.0
+    hooks:
+      - id: insert-license
+        name: Add license for all (S)CSS/JS(X)/TS(X) files
+        files: \.(s?css|jsx?|tsx?)$
+        args:
+          - --comment-style
+          - "/**| *| */"
+          - --license-filepath
+          - scripts/license-template.txt
+          - --fuzzy-match-generates-todo
+        exclude: |
+          (?x)
+          /vendor/
+          |^component-lib/declarations/apache-arrow
+          |^frontend/src/assets/css/variables\.scss
+      - id: insert-license
+        name: Add license for all Proto files
+        files: \.proto$
+        args:
+          - --comment-style
+          - "/**!| *| */"
+          - --license-filepath
+          - scripts/license-template.txt
+          - --fuzzy-match-generates-todo
+        exclude: |
+          (?x)
+          /vendor/
+          |^component-lib/declarations/apache-arrow
+          |^proto/streamlit/proto/openmetrics_data_model\.proto
+      - id: insert-license
+        name: Add license for all shell files
+        files: \.sh$
+        args:
+          - --comment-style
+          - "|#|"
+          - --license-filepath
+          - scripts/license-template.txt
+          - --fuzzy-match-generates-todo
+        exclude: |
+          (?x)
+          /vendor/
+          |^component-lib/declarations/apache-arrow
+      - id: insert-license
+        name: Add license for all Python files
+        files: \.py$|\.pyi$
+        args:
+          - --comment-style
+          - "|#|"
+          - --license-filepath
+          - scripts/license-template.txt
+          - --fuzzy-match-generates-todo
+        exclude: |
+          (?x)
+          /vendor/
+          |^component-lib/declarations/apache-arrow
+          |^lib/tests/isolated_asyncio_test_case\.py$
+      - id: insert-license
+        name: Add license for all HTML files
+        files: \.html$
+        args:
+          - --comment-style
+          - "<!--||-->"
+          - --license-filepath
+          - scripts/license-template.txt
+          - --fuzzy-match-generates-todo
+        exclude: |
+          (?x)
+          /vendor/
+          |^component-lib/declarations/apache-arrow

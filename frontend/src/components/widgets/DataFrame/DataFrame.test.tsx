@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,6 +27,7 @@ import { mount } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 
+import { Resizable } from "re-resizable"
 import DataFrame, {
   DataFrameProps,
   useDataLoader,
@@ -87,20 +87,16 @@ describe("DataFrame widget", () => {
     const wrapper = mount(
       <DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />
     )
-    const dataFrameContainer = wrapper
-      .find(StyledResizableContainer)
-      .props() as any
-    expect(dataFrameContainer.width).toBe(700)
-    expect(dataFrameContainer.height).toBe(400)
+    const dataFrameContainer = wrapper.find(Resizable).props() as any
+    expect(dataFrameContainer.size.width).toBe(700)
+    expect(dataFrameContainer.size.height).toBe(400)
   })
 
   it("grid container should render with specific size", () => {
     const wrapper = mount(<DataFrame {...props} />)
-    const dataFrameContainer = wrapper
-      .find(StyledResizableContainer)
-      .props() as any
-    expect(dataFrameContainer.width).toBe(400)
-    expect(dataFrameContainer.height).toBe(400)
+    const dataFrameContainer = wrapper.find(Resizable).props() as any
+    expect(dataFrameContainer.size.width).toBe(400)
+    expect(dataFrameContainer.size.height).toBe(400)
   })
 
   it("Test column resizing function.", () => {

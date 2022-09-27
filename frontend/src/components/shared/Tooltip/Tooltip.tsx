@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -53,7 +52,7 @@ function Tooltip({
   style,
 }: TooltipProps): ReactElement {
   const theme: Theme = useTheme()
-  const { colors, fontSizes } = theme
+  const { colors, fontSizes, radii } = theme
 
   return (
     <StatefulTooltip
@@ -73,10 +72,10 @@ function Tooltip({
             // shorthand version `borderRadius` is used here since the long
             // names are used by BaseWeb and mixing the two is apparently
             // bad :(
-            borderTopLeftRadius: "0.25rem",
-            borderTopRightRadius: "0.25rem",
-            borderBottomLeftRadius: "0.25rem",
-            borderBottomRightRadius: "0.25rem",
+            borderTopLeftRadius: radii.md,
+            borderTopRightRadius: radii.md,
+            borderBottomLeftRadius: radii.md,
+            borderBottomRightRadius: radii.md,
 
             paddingTop: "0 !important",
             paddingBottom: "0 !important",

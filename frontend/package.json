@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "1.12.2",
+  "version": "1.13.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -46,9 +46,10 @@
     "@luma.gl/engine": "8.3.3",
     "@luma.gl/gltools": "8.3.3",
     "@luma.gl/webgl": "8.3.3",
+    "@testing-library/react": "^11.2.7",
     "apache-arrow": "^8.0.0",
     "axios": "^0.21.4",
-    "baseui": "9.116.3",
+    "baseui": "12.1.2",
     "camelcase": "^6.2.0",
     "classnames": "^2.3.1",
     "clipboard": "^2.0.8",
@@ -59,6 +60,7 @@
     "decamelize": "^4.0.0",
     "deck.gl": "^8.2.5",
     "dompurify": "^2.2.8",
+    "enzyme": "^3.11.0",
     "fzy.js": "^0.4.1",
     "gl-matrix": "^3.2.1",
     "hoist-non-react-statics": "^3.3.2",
@@ -111,9 +113,7 @@
     "vega": "^5.17.3",
     "vega-embed": "^6.10.0",
     "vega-lite": "^5.2.0",
-    "xxhashjs": "^0.2.2",
-    "enzyme": "^3.11.0",
-    "@testing-library/react": "^11.2.7"
+    "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
     "@babel/core": "^7.12.3",

@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,7 +30,7 @@ import mypy.main as mypy_main
 
 
 PATHS = ["lib/streamlit/", "scripts/*", "e2e/scripts/*"]
-EXCLUDE_FILES = {"scripts/add_license_headers.py", "e2e/scripts/st_reuse_label.py"}
+EXCLUDE_FILES = {"scripts/add_license_headers.py", "e2e/scripts/st_reuse_label.py", "scripts/license-template.txt"}
 
 
 def shlex_join(split_command: Iterable[str]):
@@ -127,9 +127,9 @@ def main(report: bool = False, verbose: bool = False) -> None:
     args.extend(paths)
 
     if verbose:
-      shell_command = shlex_join(itertools.chain(['mypy'], args))
-      print("Executing command:", shell_command)
-    mypy_main.main(None, sys.stdout, sys.stderr, args=args)
+        shell_command = shlex_join(itertools.chain(['mypy'], args))
+        print("Executing command:", shell_command)
+    mypy_main.main(stdout=sys.stdout, stderr=sys.stderr, args=args)
     if report:
         process_report(os.path.join(tempdir.name, "lineprecision.txt"))
 
