@@ -61,7 +61,7 @@ jobs:
       - name: Set release version from tag name
         env:
           GIT_TAG: ${{ env.GIT_TAG }}
-        run: echo 'STREAMLIT_RELEASE_VERSION=$(echo "$GIT_TAG")' >> GITHUB_ENV
+        run: echo "STREAMLIT_RELEASE_VERSION=$GIT_TAG" >> $GITHUB_ENV
       - name: Update version
         env:
           STREAMLIT_RELEASE_VERSION: ${{ env.STREAMLIT_RELEASE_VERSION }}
