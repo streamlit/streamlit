@@ -21,7 +21,8 @@ from datetime import timedelta
 from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import streamlit as st
-from streamlit import StreamlitAPIException, file_util
+from streamlit import file_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.caching import memo_decorator
 from streamlit.runtime.caching.cache_errors import CacheError

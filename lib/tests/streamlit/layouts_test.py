@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException
 
 from tests import testutil
 

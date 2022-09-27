@@ -20,11 +20,11 @@ import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import StreamlitAPIException
 from streamlit.elements.multiselect import (
     _get_default_count,
     _get_over_max_options_message,
 )
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
 
