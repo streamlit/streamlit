@@ -1,7 +1,7 @@
 name: Build Release
 
 on: 
-  # Manual Trigger GH CLI -> gh workflow run release.yml --ref <branch-name>
+  # Manual Trigger GH CLI -> gh workflow run release.yml --ref <tag>
   workflow_dispatch:
 
 jobs:
@@ -36,9 +36,10 @@ jobs:
       - name: Look up the related GitHub PR number and branch name
         env:
           GH_REPO: ${{ env.GH_REPO }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          echo "GH_PR_BRANCH=$(gh api repos/$GH_REPO/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
+          echo "GH_PR_BRANCH=$(gh api repos/streamlit/streamlit/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
       - name: Ensure that version tag matches branch version
         run: |
           if [ '$(echo "$GH_PR_BRANCH" | tr -d 'release/')' != "$GIT_TAG" ]
