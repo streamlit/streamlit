@@ -46,9 +46,10 @@ jobs:
         run: |
           echo "$GH_PR_BRANCH"
           echo "Adjusted:"
-          echo '$(echo "$GH_PR_BRANCH" | tr -d 'release/')'
+          ADJUSTED=$(echo "$GH_PR_BRANCH" | tr -d 'release/')
+          echo "$ADJUSTED"
           echo "$GIT_TAG"
-          
+
           if [ '$(echo "$GH_PR_BRANCH" | tr -d 'release/')' != "$GIT_TAG" ]
           then
             echo "ERROR: Version number from tag does not match the version number from the branch name."
