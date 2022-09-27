@@ -1,7 +1,7 @@
 name: Build Release
 
 on: 
-  # Manual Trigger thru GH CLI -> gh workflow run release.yml --ref <branch-name>
+  # Manual Trigger GH CLI -> gh workflow run release.yml --ref <branch-name>
   workflow_dispatch:
 
 jobs:
@@ -22,20 +22,17 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - name: Set GIT_TAG env variable
-        uses: ./.github/actions/tag
+      - name: Set GIT_TAG & GH_REPO env variable
+        uses: ./.github/actions/tag&repo
         with:
           tag_name: ${{ github.ref_name }}
+          repo: ${{ github.repository }}
       - name: Install GitHub CLI tool and related dependencies
         run: |
           sudo apt install jq
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install gh
-      - name: Configure GitHub CLI Settings
-        env:
-          REPO: ${{ github.repository }}
-        run: echo 'GH_REPO="$REPO"' >> $GITHUB_ENV
       - name: Look up the related GitHub PR number and branch name
         env:
           GH_REPO: ${{ env.GH_REPO }}
@@ -67,12 +64,12 @@ jobs:
         run: |
           sudo apt install rsync
           make package
+      - name: Run CLI regression tests
+        run: make cli-regression-tests
       - name: Store Package
         uses: actions/upload-artifact@v3
         with:
           path: lib/dist
-      - name: Run CLI regression tests
-        run: make cli-regression-tests
       - name: Initialize .pypirc
         env:
           STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
@@ -82,9 +79,9 @@ jobs:
           echo -e "[pypi]" >> ~/.pypirc
           echo -e 'username = "$STREAMLIT_PYPI_USERNAME"' >> ~/.pypirc
           echo -e 'password = "$STREAMLIT_PYPI_API_TOKEN"' >> ~/.pypirc
-      - name: Upload to PyPI
-        run: |
-          make distribute
+      # - name: Upload to PyPI
+      #   run: |
+      #     make distribute
       - name: Commit version updates
         env:
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
