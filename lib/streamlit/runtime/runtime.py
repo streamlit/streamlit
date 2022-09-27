@@ -29,7 +29,7 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.watcher import LocalSourcesWatcher
-import streamlit.runtime.app_session as app_session
+from .app_session import AppSession
 from .caching import get_memo_stats_provider, get_singleton_stats_provider
 from .forward_msg_cache import (
     ForwardMsgCache,
@@ -91,7 +91,7 @@ class SessionInfo:
     the ForwardMsgCache.
     """
 
-    def __init__(self, client: SessionClient, session: app_session.AppSession):
+    def __init__(self, client: SessionClient, session: AppSession):
         """Initialize a SessionInfo instance.
 
         Parameters
@@ -344,7 +344,7 @@ class Runtime:
 
         async_objs = self._get_async_objs()
 
-        session = app_session.AppSession(
+        session = AppSession(
             event_loop=async_objs.eventloop,
             session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
@@ -474,7 +474,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        session = app_session.AppSession(
+        session = AppSession(
             event_loop=self._get_async_objs().eventloop,
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
