@@ -30,7 +30,6 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 LOGGER = get_logger(__name__)
 
@@ -213,6 +212,9 @@ F = TypeVar("F", bound=Callable[..., Any])
 def gather_metrics(callable: F) -> F:
     @wraps(callable)
     def wrap(*args, **kwargs):
+        # Avoid circular import
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
         ctx = get_script_run_ctx()
 
         tracking_activated = (

@@ -21,8 +21,8 @@ from typing_extensions import Final
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.runtime.media_file_manager import get_media_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
+from streamlit.runtime.runtime import Runtime
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     register_widget,
@@ -409,7 +409,7 @@ def marshall_file(
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
     if streamlit._is_running_with_streamlit:
-        file_url = get_media_file_manager().add(
+        file_url = Runtime.instance().media_file_mgr.add(
             data_as_bytes,
             mimetype,
             coordinates,
