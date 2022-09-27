@@ -613,6 +613,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 session_info.session, session_info.script_run_count
             )
 
+        assert (
+            session_info.client is not None
+        ), "SessionClient should never be None here!"
         # Ship it off!
         session_info.client.write_forward_msg(msg_to_send)
 
