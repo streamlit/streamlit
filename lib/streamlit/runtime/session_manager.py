@@ -145,7 +145,7 @@ class SessionManager(Protocol):
     """SessionManagers are responsible for encapsulating all session lifecycle behavior
     that the Streamlit Runtime may care about.
 
-    A minimally defined SessionManager must define the following methods:
+    A SessionManager must define the following required methods:
       * __init__
       * connect_session
       * close_session
@@ -166,10 +166,11 @@ class SessionManager(Protocol):
     When active session-related methods are left undefined, their default
     implementations are the naturally corresponding required methods.
 
-    The Runtime, unless there is a good reason to do otherwise, should generally work
-    with the active-session versions of a SessionManager's methods. Different
-    SessionClient implementations, on the other hand, are likely to care about whether a
-    session is active or inactive.
+    The Runtime, unless there's a good reason to do otherwise, should generally work
+    with the active-session versions of a SessionManager's methods. There isn't currently
+    a need for us to be able to operate on inactive sessions stored in SessionStorage
+    outside of the SessionManager itself. However, it's highly likely that we'll
+    eventually have to do so, which is why the abstractions allow for this now.
 
     Notes
     -----
@@ -266,6 +267,9 @@ class SessionManager(Protocol):
     def num_sessions(self) -> int:
         """Return the number of sessions tracked by this SessionManager.
 
+        Subclasses of SessionManager shouldn't provide their own implementation of this
+        method without a *very* good reason.
+
         Returns
         -------
         int
@@ -324,6 +328,9 @@ class SessionManager(Protocol):
 
     def num_active_sessions(self) -> int:
         """Return the number of active sessions tracked by this SessionManager.
+
+        Subclasses of SessionManager shouldn't provide their own implementation of this
+        method without a *very* good reason.
 
         Returns
         -------
