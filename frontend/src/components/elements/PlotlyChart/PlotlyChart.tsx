@@ -24,7 +24,7 @@ import {
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 import { assign } from "lodash"
-import { applyStreamlitTheme } from "./CustomTheme"
+import { applyStreamlitThemeData, applyStreamlitThemeLayout } from "./CustomTheme"
 
 export interface PlotlyChartProps {
   width: number
@@ -49,20 +49,17 @@ export function PlotlyChart({
 
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
-    console.log(spec)
+    // console.log(spec)
+    
+    const theme: Theme = useTheme()
 
-    for (const index in spec.layout.template.data) {
-      spec.layout.template.data[index] = assign(
-        { autocolorscale: true },
-        spec.layout.template.data[index][0]
-      )
-      console.log(spec.layout.template.data[index])
-    }
-
-    for (const index in spec.data) {
-      spec.data[index] = assign({ autocolorscale: true }, spec.data[index])
-      console.log(spec.layout.template.data[index])
-    }
+    // for (const index in spec.layout.template.data) {
+    //   spec.layout.template.data[index][0] = applyStreamlitThemeData(
+    //     spec.layout.template.data[index][0],
+    //     theme
+    //   )
+    //   // console.log(spec.layout.template.data[index][0])
+    // }
 
     if (isFullScreen()) {
       spec.layout.width = propWidth
@@ -71,12 +68,12 @@ export function PlotlyChart({
       spec.layout.width = propWidth
     }
 
-    const theme: Theme = useTheme()
+    
 
     if (element.theme === "streamlit") {
       // should this be the same name as applyStreamlitTheme because there are duplicates?
       console.log(spec.layout)
-      spec.layout.template.layout = applyStreamlitTheme(
+      spec.layout.template.layout = applyStreamlitThemeLayout(
         spec.layout.template.layout,
         theme
       )
@@ -84,13 +81,14 @@ export function PlotlyChart({
       // Apply minor theming improvements to work better with Streamlit
       spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
+    console.log(spec)
 
     return spec
   }
 
   const renderFigure = (figure: FigureProto): ReactElement => {
     const config = JSON.parse(figure.config)
-    console.log(config)
+    // console.log(config)
     const { data, layout, frames } = generateSpec(figure)
 
     return (

@@ -18,7 +18,23 @@ import { merge, mergeWith, isArray, assign } from "lodash"
 
 import { hasLightBackgroundColor, Theme } from "src/theme"
 
-export function applyStreamlitTheme(layout: any, theme: Theme): any {
+export function applyStreamlitThemeData(data: any, theme: Theme): any {
+  // This theming config contains multiple hard coded spacing values.
+  // The reason is that we currently only have rem values in our spacing
+  // definitions and vega lite requires numerical (pixel) values.
+  const { genericFonts, colors, fontSizes, fontWeights } = theme
+  const streamlitTheme = {
+    autocolorscale: true,
+  }
+
+  if (!data) {
+    return streamlitTheme
+  }
+
+  return assign(data, streamlitTheme)
+}
+
+export function applyStreamlitThemeLayout(layout: any, theme: Theme): any {
   // This theming config contains multiple hard coded spacing values.
   // The reason is that we currently only have rem values in our spacing
   // definitions and vega lite requires numerical (pixel) values.
@@ -27,7 +43,6 @@ export function applyStreamlitTheme(layout: any, theme: Theme): any {
     font: {
       family: genericFonts.bodyFont,
     },
-    autocolorscale: true,
     title: {
       font: {
         family: genericFonts.bodyFont,
@@ -39,6 +54,30 @@ export function applyStreamlitTheme(layout: any, theme: Theme): any {
         t: 26,
       },
     },
+    colorway: hasLightBackgroundColor(theme)
+    ? [
+      "#0068C9",
+      "#83C9FF",
+      "#FF2B2B",
+      "#FFABAB",
+      "#29B09D",
+      "#7DEFA1",
+      "#FF8700",
+      "#FFD16A",
+      "#6D3FC0",
+      "#D5DAE5",
+    ] : 
+    [ "#83C9FF",
+    "#0068C9",
+    "#FFABAB",
+    "#FF2B2B",
+    "#7DEFA1",
+    "#29B09D",
+    "#FFD16A",
+    "#FF8700",
+    "#6D3FC0",
+    "#D5DAE5",
+  ],
     legend: {
       font: {
         size: fontSizes.smPx,
@@ -49,6 +88,88 @@ export function applyStreamlitTheme(layout: any, theme: Theme): any {
           size: fontSizes.smPx,
           color: colors.fadedText60,
         },
+      },
+    },
+    coloraxis: {
+      colorscale: {
+        ...(hasLightBackgroundColor(theme)
+        ? {
+            diverging: [
+              [0.1, "#004280"],
+              [0.2, "#0054A3"],
+              [0.3, "#1C83E1"],
+              [0.4, "#60B4FF"],
+              [0.5, "#A6DCFF"],
+              [0.6, "#FFC7C7"],
+              [0.7, "#FF8C8C"],
+              [0.8, "#FF4B4B"],
+              [0.9, "#BD4043"],
+              [1.0, "#7D353B"],
+            ],
+            sequential: [
+              [0, "#E4F5FF"],
+              [0.1111111111111111, "#C7EBFF"],
+              [0.2222222222222222, "#A6DCFF"],
+              [0.3333333333333333, "#83C9FF"],
+              [0.4444444444444444, "#60B4FF"],
+              [0.5555555555555556, "#3D9DF3"],
+              [0.6666666666666666, "#1C83E1"],
+              [0.7777777777777778, "#0068C9"],
+              [0.8888888888888888, "#0054A3"],
+              [1, "#004280"],
+            ],
+            sequentialminus: [
+              [0, "#004280"],
+              [0.1111111111111111, "#0054A3"],
+              [0.2222222222222222, "#0068C9"],
+              [0.3333333333333333, "#1C83E1"],
+              [0.4444444444444444, "#3D9DF3"],
+              [0.5555555555555556, "#60B4FF"],
+              [0.6666666666666666, "#83C9FF"],
+              [0.7777777777777778, "#A6DCFF"],
+              [0.8888888888888888, "#C7EBFF"],
+              [1, "#E4F5FF"],
+            ],
+          }
+        : {
+            diverging: [
+              [0, "#A6DCFF"],
+              [0.1, "#A6DCFF"],
+              [0.2, "#60B4FF"],
+              [0.3, "#1C83E1"],
+              [0.4, "#0054A3"],
+              [0.5, "#004280"],
+              [0.6, "#7D353B"],
+              [0.7, "#BD4043"],
+              [0.8, "#FF4B4B"],
+              [0.9, "#FF8C8C"],
+              [1.0, "#FFC7C7"],
+            ],
+            sequential: [
+              [0, "#004280"],
+              [0.1111111111111111, "#0054A3"],
+              [0.2222222222222222, "#0068C9"],
+              [0.3333333333333333, "#1C83E1"],
+              [0.4444444444444444, "#3D9DF3"],
+              [0.5555555555555556, "#60B4FF"],
+              [0.6666666666666666, "#83C9FF"],
+              [0.7777777777777778, "#A6DCFF"],
+              [0.8888888888888888, "#C7EBFF"],
+              [1, "#E4F5FF"],
+            ],
+            sequentialminus: [
+              [0, "#E4F5FF"],
+              [0.1111111111111111, "#C7EBFF"],
+              [0.2222222222222222, "#A6DCFF"],
+              [0.3333333333333333, "#83C9FF"],
+              [0.4444444444444444, "#60B4FF"],
+              [0.5555555555555556, "#3D9DF3"],
+              [0.6666666666666666, "#1C83E1"],
+              [0.7777777777777778, "#0068C9"],
+              [0.8888888888888888, "#0054A3"],
+              [1, "#004280"],
+            ],
+          }),
       },
     },
     colorscale: {
@@ -107,18 +228,6 @@ export function applyStreamlitTheme(layout: any, theme: Theme): any {
             ],
           }
         : {
-            // category: [
-            //     [0.1, "#83C9FF"],
-            //     [0.2, "#0068C9"],
-            //     [0.3, "#FFABAB"],
-            //     [0.4, "#FF2B2B"],
-            //     [0.5, "#7DEFA1"],
-            //     [0.6, "#29B09D"],
-            //     [0.7, "#FFD16A"],
-            //     [0.8, "#FF8700"],
-            //     [0.9, "#6D3FC0"],
-            //     [1.0, "#D5DAE5"],
-            // ],
             diverging: [
               [0, "#A6DCFF"],
               [0.1, "#A6DCFF"],
