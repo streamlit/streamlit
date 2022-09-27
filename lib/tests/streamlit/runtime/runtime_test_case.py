@@ -34,7 +34,6 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
         )
         self.runtime = Runtime(config)
-        Runtime._instance = self.runtime
 
     async def asyncTearDown(self):
         # Stop the runtime, and return when it's stopped

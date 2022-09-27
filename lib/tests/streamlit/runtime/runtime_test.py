@@ -521,8 +521,6 @@ class ScriptCheckTest(RuntimeTestCase):
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
         )
         self.runtime = Runtime(config)
-        Runtime._instance = self.runtime
-
         await self.runtime.start()
 
     def tearDown(self) -> None:
