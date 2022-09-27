@@ -84,7 +84,9 @@ class AppSessionTest(unittest.TestCase):
         super().tearDown()
         Runtime._instance = None
 
-    @patch("streamlit.runtime.app_session.secrets._file_change_listener.disconnect")
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
+    )
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
         session = _create_test_session()
@@ -145,7 +147,9 @@ class AppSessionTest(unittest.TestCase):
         clear_memo_cache.assert_called_once()
         clear_legacy_cache.assert_called_once()
 
-    @patch("streamlit.runtime.app_session.secrets._file_change_listener.connect")
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.connect"
+    )
     def test_request_rerun_on_secrets_file_change(self, patched_connect):
         """AppSession should add a secrets listener on creation."""
         session = _create_test_session()

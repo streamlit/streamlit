@@ -18,6 +18,7 @@ from typing import Any, Mapping, Optional, Final
 
 import toml
 from blinker import Signal
+from typing_extensions import Final
 
 import streamlit as st
 import streamlit.watcher.path_watcher
