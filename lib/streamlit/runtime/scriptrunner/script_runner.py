@@ -23,14 +23,11 @@ from typing import Dict, Optional, Callable
 
 from blinker import Signal
 
-from streamlit import config
-from streamlit import source_util
-from streamlit import util
+from streamlit import config, runtime, source_util, util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-import streamlit.runtime.runtime as runtime
 from streamlit.runtime.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
@@ -413,7 +410,7 @@ class ScriptRunner:
         start_time: float = timer()
 
         # Reset DeltaGenerators, widgets, media files.
-        runtime.Runtime.instance().media_file_mgr.clear_session_refs()
+        runtime.get_instance().media_file_mgr.clear_session_refs()
 
         main_script_path = self._main_script_path
         pages = source_util.get_pages(main_script_path)
@@ -625,7 +622,7 @@ class ScriptRunner:
 
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.
-        runtime.Runtime.instance().media_file_mgr.remove_orphaned_files()
+        runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

@@ -16,9 +16,9 @@ import asyncio
 from unittest import mock
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 

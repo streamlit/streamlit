@@ -35,7 +35,7 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.runtime import (
+from streamlit.runtime import (
     Runtime,
     SessionClient,
     SessionClientDisconnectedError,

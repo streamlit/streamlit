@@ -31,8 +31,7 @@ import streamlit.web.server.server
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import media_file_manager
-from streamlit.runtime.runtime import RuntimeState, Runtime
+from streamlit.runtime import RuntimeState, Runtime
 from streamlit.web.server.server import (
     MAX_PORT_SEARCH_RETRIES,
     RetriesExceeded,
