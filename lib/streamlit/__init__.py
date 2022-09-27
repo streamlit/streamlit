@@ -76,10 +76,7 @@ from streamlit.errors import StreamlitAPIException as _StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
-from streamlit.runtime.secrets import (
-    Secrets as _Secrets,
-    SECRETS_FILE_LOC as _SECRETS_FILE_LOC,
-)
+from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
 from streamlit.user_info import UserInfoProxy as _UserInfoProxy
 
@@ -116,7 +113,7 @@ _config.on_config_parsed(_update_logger, True)
 _main = _DeltaGenerator(root_container=_RootContainer.MAIN)
 sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
 
-secrets = _Secrets(_SECRETS_FILE_LOC)
+secrets = _secrets_singleton
 
 # DeltaGenerator methods:
 

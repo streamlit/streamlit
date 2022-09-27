@@ -20,7 +20,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
 
 import streamlit.elements.exception as exception_utils
-from streamlit import config, source_util, secrets
+from streamlit import config, source_util
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -45,6 +45,7 @@ from .scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
 )
+from .secrets import secrets_singleton
 from .session_data import SessionData
 from .uploaded_file_manager import UploadedFileManager
 
@@ -142,7 +143,7 @@ class AppSession:
         )
 
         # The script should rerun when the `secrets.toml` file has been changed.
-        secrets._file_change_listener.connect(self._on_secrets_file_changed)
+        secrets_singleton._file_change_listener.connect(self._on_secrets_file_changed)
 
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -199,7 +200,9 @@ class AppSession:
                 self._stop_config_listener()
             if self._stop_pages_listener is not None:
                 self._stop_pages_listener()
-            secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
+            secrets_singleton._file_change_listener.disconnect(
+                self._on_secrets_file_changed
+            )
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
