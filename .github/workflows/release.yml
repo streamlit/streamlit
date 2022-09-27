@@ -44,13 +44,11 @@ jobs:
         env: 
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
         run: |
-          echo "$GH_PR_BRANCH"
-          echo "Adjusted:"
-          ADJUSTED=$(echo "$GH_PR_BRANCH" | tr -d '"release/' )
-          echo "$ADJUSTED"
+          BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | tr -d '"release/' )
+          echo "$BRANCH_VERSION"
           echo "$GIT_TAG"
 
-          if [ '$(echo "$GH_PR_BRANCH" | tr -d '"release/')' != "$GIT_TAG" ]
+          if [ "$BRANCH_VERSION" != "$GIT_TAG" ]
           then
             echo "ERROR: Version number from tag does not match the version number from the branch name."
             exit 1
