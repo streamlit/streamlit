@@ -63,7 +63,6 @@ _TTLCACHE_TIMER = time.monotonic
 # items have a different extension, so they don't overlap.)
 _CACHE_DIR_NAME = "cache"
 
-
 MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
 MEMO_MESSAGES_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
 
@@ -272,8 +271,7 @@ class MemoAPI:
 
         ttl : float or timedelta or None
             The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. If timedelta object, total number
-            of seconds will be used. The default is None.
+            None if cache entries should not expire. The default is None.
             Note that ttl is incompatible with `persist="disk"` - `ttl` will be
             ignored if `persist` is specified.
 
@@ -340,8 +338,12 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
+        ttl_seconds: Optional[float]
+
         if isinstance(ttl, timedelta):
-            ttl = ttl.total_seconds()
+            ttl_seconds = ttl.total_seconds()
+        else:
+            ttl_seconds = ttl
 
         def wrapper(f):
             # We use wrapper function here instead of lambda function to be able to log
@@ -358,7 +360,7 @@ class MemoAPI:
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
-                    ttl=cast(float, ttl),
+                    ttl=ttl_seconds,
                 )
             )
 
@@ -374,7 +376,7 @@ class MemoAPI:
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
-                ttl=cast(float, ttl),
+                ttl=ttl_seconds,
             )
         )
 
