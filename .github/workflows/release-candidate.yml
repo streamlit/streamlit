@@ -1,7 +1,7 @@
 name: Release Candidate
 
 on:
-  # Manual Trigger thru GH CLI -> gh workflow run release-candidate.yml --ref <branch-name>
+  # Manual Trigger GH CLI -> gh workflow run release-candidate.yml --ref <branch-name>
   workflow_dispatch:
 
 jobs:
@@ -65,18 +65,19 @@ jobs:
           if [ "$LATEST_MATCHING_RC" != "null" ]; then python scripts/update_version.py "$LATEST_MATCHING_RC"; fi
 
           STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py "$DESIRED_VERSION")
+          echo "STREAMLIT_RELEASE_VERSION=$(echo "$STREAMLIT_RELEASE_SEMVER" | sed s/\-rc\./rc/)" >> $GITHUB_ENV
           python scripts/update_version.py "$STREAMLIT_RELEASE_SEMVER"
       - name: Create Package
         timeout-minutes: 120
         run: |
           sudo apt install rsync
           make package
+      - name: Run CLI regression tests
+        run: make cli-regression-tests
       - name: Store Package
         uses: actions/upload-artifact@v3
         with:
           path: lib/dist
-      - name: Run CLI regression tests
-        run: make cli-regression-tests
       - name: Initialize .pypirc
         env:
           STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
