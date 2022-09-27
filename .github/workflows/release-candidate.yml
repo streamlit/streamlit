@@ -77,6 +77,7 @@ jobs:
       - name: Store Package
         uses: actions/upload-artifact@v3
         with:
+          name: Release-Candidate
           path: lib/dist
       - name: Initialize .pypirc
         env:
