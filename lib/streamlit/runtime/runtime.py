@@ -144,14 +144,17 @@ class Runtime:
 
     @classmethod
     def instance(cls) -> "Runtime":
+        """Return the singleton Runtime instance. Raise an Error if the
+        Runtime hasn't been created yet.
+        """
         if cls._instance is None:
             raise RuntimeError("Runtime hasn't been created!")
         return cls._instance
 
     def __init__(self, config: RuntimeConfig):
-        """Create a StreamlitRuntime. It won't be started yet.
+        """Create a Runtime instance. It won't be started yet.
 
-        StreamlitRuntime is *not* thread-safe. Its public methods are generally
+        Runtime is *not* thread-safe. Its public methods are generally
         safe to call only on the same thread that its event loop runs on.
 
         Parameters
