@@ -111,7 +111,7 @@
     "styletron-react": "^5.2.6",
     "typed-signals": "^2.2.0",
     "vega": "^5.17.3",
-    "vega-embed": "^6.10.0",
+    "vega-embed": "^6.21.0",
     "vega-lite": "^5.2.0",
     "xxhashjs": "^0.2.2"
   },
