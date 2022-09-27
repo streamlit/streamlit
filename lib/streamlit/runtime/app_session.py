@@ -20,8 +20,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
 
 import streamlit.elements.exception as exception_utils
-import streamlit.runtime as runtime
-from streamlit import config, source_util
+from streamlit import config, source_util, runtime
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
