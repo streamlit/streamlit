@@ -39,14 +39,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          echo "GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
+          echo "GH_PR_BRANCH=$(gh api repos/${GH_REPO}/pulls | jq -r '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
       - name: Ensure that version tag matches branch version
         env: 
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
         run: |
-          BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | tr -d '"release/' )
-          echo "$BRANCH_VERSION"
-          echo "$GIT_TAG"
+          BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | tr -d 'release/' )
 
           if [ "$BRANCH_VERSION" != "$GIT_TAG" ]
           then
