@@ -210,10 +210,11 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 
 def gather_metrics(callable: F) -> F:
+    # Avoid circular import
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+
     @wraps(callable)
     def wrap(*args, **kwargs):
-        # Avoid circular import
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
 
         ctx = get_script_run_ctx()
 
