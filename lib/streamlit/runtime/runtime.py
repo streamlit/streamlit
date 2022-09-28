@@ -37,7 +37,7 @@ from .forward_msg_cache import (
     create_reference_msg,
 )
 from .legacy_caching.caching import _mem_caches
-from .media_file_manager import MediaFileManager, set_media_file_manager
+from .media_file_manager import MediaFileManager
 from .media_file_storage import MediaFileStorage
 from .session_data import SessionData
 from .state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
@@ -140,10 +140,21 @@ class AsyncObjects(NamedTuple):
 
 
 class Runtime:
-    def __init__(self, config: RuntimeConfig):
-        """Create a StreamlitRuntime. It won't be started yet.
+    _instance: Optional["Runtime"] = None
 
-        StreamlitRuntime is *not* thread-safe. Its public methods are generally
+    @classmethod
+    def instance(cls) -> "Runtime":
+        """Return the singleton Runtime instance. Raise an Error if the
+        Runtime hasn't been created yet.
+        """
+        if cls._instance is None:
+            raise RuntimeError("Runtime hasn't been created!")
+        return cls._instance
+
+    def __init__(self, config: RuntimeConfig):
+        """Create a Runtime instance. It won't be started yet.
+
+        Runtime is *not* thread-safe. Its public methods are generally
         safe to call only on the same thread that its event loop runs on.
 
         Parameters
@@ -151,6 +162,10 @@ class Runtime:
         config
             Config options.
         """
+        if Runtime._instance is not None:
+            raise RuntimeError("Runtime instance already exists!")
+        Runtime._instance = self
+
         # Will be created when we start.
         self._async_objs: Optional[AsyncObjects] = None
 
@@ -170,8 +185,7 @@ class Runtime:
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
-        self._media_file_manager = MediaFileManager(storage=config.media_file_storage)
-        set_media_file_manager(self._media_file_manager)
+        self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
 
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_memo_stats_provider())
@@ -194,6 +208,10 @@ class Runtime:
     @property
     def uploaded_file_mgr(self) -> UploadedFileManager:
         return self._uploaded_file_mgr
+
+    @property
+    def media_file_mgr(self) -> MediaFileManager:
+        return self._media_file_mgr
 
     @property
     def stats_mgr(self) -> StatsManager:

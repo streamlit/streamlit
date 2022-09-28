@@ -16,6 +16,7 @@ import asyncio
 import os
 import shutil
 import tempfile
+import unittest
 from typing import List
 from unittest.mock import MagicMock, patch
 
@@ -52,6 +53,33 @@ class MockSessionClient(SessionClient):
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         self.forward_msgs.append(msg)
+
+
+class RuntimeSingletonTest(unittest.TestCase):
+    def tearDown(self) -> None:
+        Runtime._instance = None
+
+    def test_runtime_constructor_sets_instance(self):
+        """Creating a Runtime instance sets Runtime.instance"""
+        self.assertIsNone(Runtime._instance)
+        _ = Runtime(MagicMock())
+        self.assertIsNotNone(Runtime._instance)
+
+    def test_multiple_runtime_error(self):
+        """Creating multiple Runtimes raises an error."""
+        r1 = Runtime(MagicMock())
+        with self.assertRaises(RuntimeError):
+            r2 = Runtime(MagicMock())
+
+    def test_instance_class_method(self):
+        """Runtime.instance() returns our singleton instance."""
+        with self.assertRaises(RuntimeError):
+            # No Runtime: error
+            instance = Runtime.instance()
+
+        # Runtime instantiated: no error
+        _ = Runtime(MagicMock())
+        instance = Runtime.instance()
 
 
 class RuntimeTest(RuntimeTestCase):
