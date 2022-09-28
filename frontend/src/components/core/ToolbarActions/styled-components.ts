@@ -34,7 +34,7 @@ export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
 
     // NOTE: We intentionally don't use any of the preset theme iconSizes here
     // so that icon scaling is unchanged from what we receive from the
-    // withS4ACommunication hoc.
+    // withHostCommunication hoc.
     width: "1rem",
     height: "1rem",
   })
