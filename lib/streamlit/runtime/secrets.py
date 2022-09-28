@@ -14,7 +14,7 @@
 
 import os
 import threading
-from typing import Any, Mapping, Optional, Final
+from typing import Any, Mapping, Optional
 
 import toml
 from blinker import Signal
