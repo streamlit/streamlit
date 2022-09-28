@@ -169,7 +169,7 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
 
 
 def _image_is_gif(image: PILImage) -> bool:
-    if isinstance(image, GifImagePlugin.GifImageFile):
+    if image.format == "GIF":
         return True
     else:
         return False
