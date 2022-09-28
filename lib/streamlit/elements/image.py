@@ -23,11 +23,11 @@ import imghdr
 import io
 import mimetypes
 import re
-from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
 
 import numpy as np
-from PIL import Image, ImageFile
+from PIL import GifImagePlugin, Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
 
 import streamlit
@@ -38,8 +38,10 @@ from streamlit.runtime.media_file_manager import get_media_file_manager
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    import numpy.typing as npt
     from typing import Any
+
+    import numpy.typing as npt
+
     from streamlit.delta_generator import DeltaGenerator
 
 LOGGER: Final = get_logger(__name__)
@@ -50,7 +52,9 @@ LOGGER: Final = get_logger(__name__)
 # DPI.
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
-PILImage: TypeAlias = Union[ImageFile.ImageFile, Image.Image]
+PILImage: TypeAlias = Union[
+    ImageFile.ImageFile, Image.Image, GifImagePlugin.GifImageFile
+]
 AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
@@ -164,15 +168,22 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
         return False
 
 
+def _image_is_gif(image: PILImage) -> bool:
+    if isinstance(image, GifImagePlugin.GifImageFile):
+        return True
+    else:
+        return False
+
+
 def _validate_image_format_string(
     image_data: Union[bytes, PILImage], format: str
 ) -> ImageFormat:
-    """Return either "JPEG" or "PNG", based on the input `format` string.
+    """Return either "JPEG", "PNG", or "GIF", based on the input `format` string.
 
     - If `format` is "JPEG" or "JPG" (or any capitalization thereof), return "JPEG"
     - If `format` is "PNG" (or any capitalization thereof), return "PNG"
     - For all other strings, return "PNG" if the image has an alpha channel,
-      and "JPEG" otherwise.
+    "GIF" if the image is a GIF, and "JPEG" otherwise.
     """
     format = format.upper()
     if format == "JPEG" or format == "PNG":
@@ -186,6 +197,9 @@ def _validate_image_format_string(
         pil_image = Image.open(io.BytesIO(image_data))
     else:
         pil_image = image_data
+
+    if _image_is_gif(pil_image):
+        return "GIF"
 
     if _image_may_have_alpha_channel(pil_image):
         return "PNG"
