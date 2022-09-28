@@ -14,12 +14,15 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from typing_extensions import Protocol
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from .app_session import AppSession
+
+if TYPE_CHECKING:
+    from .runtime import Runtime
 
 
 class SessionClientDisconnectedError(Exception):
@@ -179,13 +182,15 @@ class SessionManager(Protocol):
     """
 
     @abstractmethod
-    def __init__(self, session_storage: SessionStorage) -> None:
+    def __init__(self, session_storage: SessionStorage, runtime: "Runtime") -> None:
         """Initialize a SessionManager with the given SessionStorage.
 
         Parameters
         ----------
         session_storage
             The SessionStorage instance backing this SessionManager.
+        runtime
+            A backpointer to the Runtime that owns this SessionManager.
         """
         raise NotImplementedError
 

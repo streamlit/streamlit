@@ -26,7 +26,7 @@ class UnimplementedSessionManager(SessionManager):
 
 
 class MinimalSessionManager(SessionManager):
-    def __init__(self, _session_storage):
+    def __init__(self, _session_storage, _runtime):
         pass
 
     def connect_session(self, _client, _user_info, _existing_session_id):
@@ -48,7 +48,7 @@ class SessionManagerProtocolTests(unittest.TestCase):
             UnimplementedSessionManager()
 
     def test_instantiate_minimal_session_manager(self):
-        MinimalSessionManager(MagicMock())
+        MinimalSessionManager(MagicMock(), MagicMock())
 
     @parameterized.expand(
         [
@@ -62,7 +62,7 @@ class SessionManagerProtocolTests(unittest.TestCase):
     def test_session_manager_default_methods(
         self, active_session_method_name, default_impl_method_name, arg
     ):
-        session_mgr = MinimalSessionManager(MagicMock())
+        session_mgr = MinimalSessionManager(MagicMock(), MagicMock())
 
         # Spy on the method called in the active session version's default
         # implementation.
