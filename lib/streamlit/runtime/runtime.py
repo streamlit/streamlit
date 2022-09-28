@@ -457,6 +457,9 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        # NOTE: We create an AppSession directly here instead of using the
+        # SessionManager intentionally. This isn't a "real" session and is only being
+        # used to test that the script runs without error.
         session = AppSession(
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
