@@ -22,25 +22,18 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      # Uses action to safely process user input (branch name) to prevent script injection attacks
       - name: Set GIT_TAG & GH_REPO env variable
-        uses: ./.github/actions/tag&repo
+        uses: ./.github/actions/tag_and_repo
         with:
           tag_name: ${{ github.ref_name }}
           repo: ${{ github.repository }}
-      - name: Install GitHub CLI tool and related dependencies
-        run: |
-          sudo apt install jq
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          brew install gh
-      - name: Look up the related GitHub PR number and branch name
-        # Need GH Token to use gh CLI
+      - name: Look up the related GitHub PR branch name
+        # Need GH Token to use gh api
         env:
-          GH_REPO: ${{ env.GH_REPO }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          echo "GH_PR_BRANCH=$(gh api repos/"$GH_REPO"/pulls | jq -r '[.[] | select(.head.label | contains("release/"))] | .[0] | .head.ref')" >> $GITHUB_ENV
+          echo "GH_PR_BRANCH=$(python scripts/get_release_branch.py)" >> $GITHUB_ENV
       - name: Ensure that version tag matches branch version
         env: 
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
@@ -72,23 +65,15 @@ jobs:
         run: |
           sudo apt install rsync
           make package
-      - name: Run CLI regression tests
-        run: make cli-regression-tests
       - name: Store Package
         uses: actions/upload-artifact@v3
         with:
           name: Release
           path: lib/dist
-      - name: Initialize .pypirc
-        env:
-          STREAMLIT_PYPI_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
-          STREAMLIT_PYPI_API_TOKEN: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
-        run: |
-          cd lib
-          echo -e "[pypi]" >> ~/.pypirc
-          echo -e 'username = "$STREAMLIT_PYPI_USERNAME"' >> ~/.pypirc
-          echo -e 'password = "$STREAMLIT_PYPI_API_TOKEN"' >> ~/.pypirc
       - name: Upload to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
         run: |
           make distribute
       - name: Commit version updates
