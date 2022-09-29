@@ -22,6 +22,7 @@ import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
+import { Placement, OverflowTooltip } from "src/components/shared/Tooltip"
 import Icon, { EmojiIcon } from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 
@@ -138,7 +139,12 @@ const SidebarNav = ({
                     <StyledSidebarLinkText
                       isActive={pageScriptHash === currentPageScriptHash}
                     >
-                      {pageName.replace(/_/g, " ")}
+                      <OverflowTooltip
+                        content={pageName.replace(/_/g, " ")}
+                        placement={Placement.RIGHT}
+                      >
+                        {pageName.replace(/_/g, " ")}
+                      </OverflowTooltip>
                     </StyledSidebarLinkText>
                   </StyledSidebarNavLink>
                 </StyledSidebarNavLinkContainer>
