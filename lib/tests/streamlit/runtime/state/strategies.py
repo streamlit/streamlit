@@ -16,8 +16,8 @@ from hypothesis import strategies as hst
 
 from streamlit.runtime.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
-    WidgetMetadata,
     SessionState,
+    WidgetMetadata,
 )
 
 ASCII = list("abcdefghijklmnopqrstuvwxyz0123456789_-")

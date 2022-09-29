@@ -18,17 +18,13 @@ import copy
 import os
 import secrets
 import threading
-import toml
 from collections import OrderedDict
-from typing import Any, Callable, cast, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
+import toml
 from blinker import Signal
 
-from streamlit import config_util
-from streamlit import development
-from streamlit import env_util
-from streamlit import file_util
-from streamlit import util
+from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 
 # Config System Global State #

@@ -13,41 +13,21 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from datetime import date, time, datetime, timedelta, timezone, tzinfo
+from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from textwrap import dedent
 from typing import (
+    TYPE_CHECKING,
     Any,
     List,
     Optional,
     Sequence,
     Tuple,
-    Union,
-    TYPE_CHECKING,
     TypeVar,
+    Union,
     cast,
 )
 
-from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import (
-    Key,
-    to_key,
-    LabelVisibility,
-    maybe_raise_label_warnings,
-)
 from typing_extensions import Final, TypeAlias
-from textwrap import dedent
-
-from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber
-from streamlit.js_number import JSNumberBoundsException
-from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.runtime.state import (
-    get_session_state,
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
-from streamlit.runtime.metrics_util import gather_metrics
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -55,6 +35,19 @@ from streamlit.elements.utils import (
     check_session_state_rules,
     get_label_visibility_proto_value,
 )
+from streamlit.errors import StreamlitAPIException
+from streamlit.js_number import JSNumber, JSNumberBoundsException
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+    get_session_state,
+    register_widget,
+)
+from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

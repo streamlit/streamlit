@@ -14,12 +14,10 @@
 
 """date_input unit test."""
 
-from datetime import date
-from datetime import datetime
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 
-from pytest import raises
 from parameterized import parameterized
+from pytest import raises
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException

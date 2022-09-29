@@ -17,7 +17,6 @@
 import functools
 import hashlib
 import os
-import pytest
 import re
 import socket
 import tempfile
@@ -25,40 +24,40 @@ import time
 import types
 import unittest
 import urllib
-from io import BytesIO
-from io import StringIO
-from unittest.mock import patch, Mock, MagicMock
+from io import BytesIO, StringIO
+from unittest.mock import MagicMock, Mock, patch
 
 import altair.vegalite.v3
 import cffi
 import numpy as np
 import pandas as pd
+import pytest
 import sqlalchemy as db
 from parameterized import parameterized
 
 try:
     import keras
     import tensorflow as tf
-    import torchvision
     import torch
+    import torchvision
 
     HAS_TENSORFLOW = True
 except ImportError:
     HAS_TENSORFLOW = False
 
 
+import streamlit as st
 from streamlit.runtime.legacy_caching.hashing import (
-    InternalHashError,
     _FFI_TYPE_NAMES,
+    _NP_SIZE_LARGE,
+    _PANDAS_ROWS_LARGE,
+    InternalHashError,
     UnhashableTypeError,
     UserHashError,
     _CodeHasher,
-    _NP_SIZE_LARGE,
-    _PANDAS_ROWS_LARGE,
 )
-from streamlit.type_util import is_type, get_fqn_type
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
-import streamlit as st
+from streamlit.type_util import get_fqn_type, is_type
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -528,8 +527,8 @@ class HashTest(unittest.TestCase):
     def test_compiled_ffi(self):
         self._build_cffi("foo")
         self._build_cffi("bar")
-        from cffi_bin._foo import ffi as foo
         from cffi_bin._bar import ffi as bar
+        from cffi_bin._foo import ffi as foo
 
         # Note: We've verified that all properties on CompiledFFI objects
         # are global, except have not verified `error` either way.

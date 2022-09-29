@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import pandas as pd
+
+import streamlit as st
 
 df = pd.DataFrame({"str": ["2020-04-14 00:00:00"]})
 df["notz"] = pd.to_datetime(df["str"])

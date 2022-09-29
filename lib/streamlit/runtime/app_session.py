@@ -17,10 +17,10 @@ import sys
 import uuid
 from asyncio import AbstractEventLoop
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
 
 import streamlit.elements.exception as exception_utils
-from streamlit import config, source_util, runtime
+from streamlit import config, runtime, source_util
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -34,8 +34,6 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
-from streamlit.version import STREAMLIT_VERSION_STRING
-from streamlit.watcher import LocalSourcesWatcher
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.credentials import Credentials
 from streamlit.runtime.metrics_util import Installation
@@ -43,6 +41,8 @@ from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunner
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.version import STREAMLIT_VERSION_STRING
+from streamlit.watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:

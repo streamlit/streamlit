@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, cast
 
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from streamlit.runtime.metrics_util import gather_metrics

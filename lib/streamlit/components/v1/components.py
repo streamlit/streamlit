@@ -19,17 +19,17 @@ import threading
 from typing import Any, Dict, Optional, Type, Union
 
 import streamlit
-from streamlit import type_util
-from streamlit import util
+from streamlit import type_util, util
 from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
+from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
+from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import NoValue, register_widget
 from streamlit.type_util import to_bytes
-from streamlit.runtime.metrics_util import gather_metrics
 
 LOGGER = get_logger(__name__)
 
@@ -114,6 +114,7 @@ class CustomComponent:
 
         try:
             import pyarrow
+
             from streamlit.components.v1 import component_arrow
         except ImportError:
             raise StreamlitAPIException(

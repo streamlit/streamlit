@@ -16,7 +16,8 @@
 
 import hashlib
 import json
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
+
 from typing_extensions import Final
 
 from streamlit.errors import StreamlitAPIException
@@ -25,6 +26,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from bokeh.plotting.figure import Figure
+
     from streamlit.delta_generator import DeltaGenerator
 
 ST_BOKEH_VERSION: Final = "2.4.3"

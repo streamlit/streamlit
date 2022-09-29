@@ -19,14 +19,14 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+
+import streamlit as st
 from streamlit.type_util import (
     bytes_to_data_frame,
     is_pandas_version_less_than,
     pyarrow_table_to_bytes,
 )
 from tests import testutil
-
-import streamlit as st
 
 # In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
 if is_pandas_version_less_than("1.3.0"):

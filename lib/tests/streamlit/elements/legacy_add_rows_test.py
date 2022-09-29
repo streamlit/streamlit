@@ -16,16 +16,15 @@
 from typing import Optional
 
 import pandas as pd
-import pytest
 import pyarrow as pa
+import pytest
 
+import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DataFrame_pb2 import DataFrame
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-import streamlit as st
 from tests import testutil
-
 
 DATAFRAME = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
 DATAFRAME_WITH_INDEX = pd.DataFrame({"a": [1, 2], "b": [10, 20]}).set_index("a")

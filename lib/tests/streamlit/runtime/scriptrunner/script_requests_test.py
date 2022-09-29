@@ -15,12 +15,12 @@
 import unittest
 from typing import Optional
 
-from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner.script_requests import (
-    ScriptRequests,
-    ScriptRequestType,
     RerunData,
     ScriptRequest,
+    ScriptRequests,
+    ScriptRequestType,
 )
 
 

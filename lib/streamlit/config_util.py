@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import toml
 from typing import Dict
 
 import click
+import toml
 
 from streamlit.config_option import ConfigOption
 

@@ -17,7 +17,7 @@ import logging
 import os
 import socket
 import sys
-from typing import Any, Optional, List, Awaitable
+from typing import Any, Awaitable, List, Optional
 
 import click
 import tornado.concurrent
@@ -28,20 +28,16 @@ import tornado.websocket
 from tornado.httpserver import HTTPServer
 from typing_extensions import Final
 
-from streamlit import config
-from streamlit import file_util
-from streamlit import source_util
-from streamlit import util
+from streamlit import config, file_util, source_util, util
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
+from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime import (
-    Runtime,
-    RuntimeConfig,
-    RuntimeState,
-)
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
+from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+from streamlit.web.server.component_request_handler import ComponentRequestHandler
+from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
     AssetsFileHandler,
@@ -50,14 +46,11 @@ from streamlit.web.server.routes import (
     StaticFileHandler,
 )
 from streamlit.web.server.server_util import make_url_path_regex
-from streamlit.web.server.upload_file_request_handler import (
-    UploadFileRequestHandler,
-    UPLOAD_FILE_ROUTE,
-)
-from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
-from streamlit.web.server.component_request_handler import ComponentRequestHandler
-from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.upload_file_request_handler import (
+    UPLOAD_FILE_ROUTE,
+    UploadFileRequestHandler,
+)
 
 LOGGER = get_logger(__name__)
 

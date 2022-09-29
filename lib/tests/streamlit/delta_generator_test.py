@@ -20,18 +20,17 @@ import json
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.delta_generator import DeltaGenerator
+import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
-from streamlit.errors import DuplicateWidgetID
-from streamlit.errors import StreamlitAPIException
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Element_pb2 import Element
-from streamlit.proto.TextArea_pb2 import TextArea
-from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.proto.TextArea_pb2 import TextArea
+from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.runtime.state.widgets import _build_duplicate_widget_message
-import streamlit.runtime.state.widgets as w
 from tests import testutil
 
 

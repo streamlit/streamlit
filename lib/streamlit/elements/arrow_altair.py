@@ -19,15 +19,15 @@ a nice JSON schema for expressing graphs and charts."""
 from datetime import date
 from enum import Enum
 from typing import (
-    cast,
     TYPE_CHECKING,
-    Union,
-    Dict,
     Any,
-    Sequence,
+    Dict,
     List,
-    Tuple,
     Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
 )
 
 import altair as alt
@@ -35,16 +35,15 @@ import pandas as pd
 from altair.vegalite.v4.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
 
-from streamlit.errors import StreamlitAPIException
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
+from streamlit.elements.arrow import Data
+from streamlit.elements.utils import last_index_for_melted_dataframes
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-
-from streamlit.elements.arrow import Data
-from streamlit.elements.utils import last_index_for_melted_dataframes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

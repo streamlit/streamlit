@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import pandas as pd
 import pydeck as pdk
+
+import streamlit as st
 
 H3_HEX_DATA = [
     {"hex": "88283082b9fffff", "count": 10},

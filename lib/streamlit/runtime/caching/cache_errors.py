@@ -17,10 +17,7 @@ import types
 from typing import Any, Optional
 
 from streamlit import type_util
-from streamlit.errors import (
-    StreamlitAPIWarning,
-    StreamlitAPIException,
-)
+from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 
 
 class CacheType(enum.Enum):

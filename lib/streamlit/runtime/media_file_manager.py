@@ -16,10 +16,10 @@
 
 import collections
 import threading
-from typing import Dict, Set, Optional, Union
+from typing import Dict, Optional, Set, Union
 
 from streamlit.logger import get_logger
-from streamlit.runtime.media_file_storage import MediaFileStorage, MediaFileKind
+from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
 
 LOGGER = get_logger(__name__)
 

@@ -12,18 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Explicitly export public symbols
-from streamlit.runtime.scriptrunner.script_runner import (
-    ScriptRunner as ScriptRunner,
-    ScriptRunnerEvent as ScriptRunnerEvent,
-    StopException as StopException,
-    RerunException as RerunException,
-)
-
+from streamlit.runtime.scriptrunner.script_requests import RerunData as RerunData
 from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext as ScriptRunContext,
-    get_script_run_ctx as get_script_run_ctx,
+)
+from streamlit.runtime.scriptrunner.script_run_context import (
     add_script_run_ctx as add_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner.script_run_context import (
+    get_script_run_ctx as get_script_run_ctx,
+)
 
-from streamlit.runtime.scriptrunner.script_requests import RerunData as RerunData
+# Explicitly export public symbols
+from streamlit.runtime.scriptrunner.script_runner import (
+    RerunException as RerunException,
+)
+from streamlit.runtime.scriptrunner.script_runner import ScriptRunner as ScriptRunner
+from streamlit.runtime.scriptrunner.script_runner import (
+    ScriptRunnerEvent as ScriptRunnerEvent,
+)
+from streamlit.runtime.scriptrunner.script_runner import StopException as StopException

@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import inspect
 import textwrap
 import time
+
 import numpy as np
+
+import streamlit as st
 from streamlit.hello.utils import show_code
 
 

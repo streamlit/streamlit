@@ -14,13 +14,13 @@
 
 """Keras unit test."""
 
-from unittest.mock import patch
 import unittest
+from unittest.mock import patch
 
 try:
-    from tensorflow.python.keras.utils import vis_utils
+    from tensorflow.python.keras.layers import Conv2D, Dense, Flatten, MaxPooling2D
     from tensorflow.python.keras.models import Sequential
-    from tensorflow.python.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
+    from tensorflow.python.keras.utils import vis_utils
 
     HAS_KERAS = True
 except ImportError:

@@ -25,14 +25,14 @@ if TYPE_CHECKING:
 from streamlit.runtime.caching.memo_decorator import (
     MEMO_CALL_STACK,
     MEMO_MESSAGES_CALL_STACK,
-    _memo_caches,
     MemoAPI,
+    _memo_caches,
 )
 from streamlit.runtime.caching.singleton_decorator import (
     SINGLETON_CALL_STACK,
     SINGLETON_MESSAGE_CALL_STACK,
-    _singleton_caches,
     SingletonAPI,
+    _singleton_caches,
 )
 
 

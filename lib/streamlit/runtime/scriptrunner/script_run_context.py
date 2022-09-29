@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
 import threading
-from typing import Dict, Optional, List, Callable, Set
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Set
+
 from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.proto.PageProfile_pb2 import Command
 
 LOGGER: Final = get_logger(__name__)
 

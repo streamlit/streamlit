@@ -14,10 +14,12 @@
 
 """This script demonstrates animation in streamlit."""
 
-import streamlit as st
-import numpy as np
 import time
+
+import numpy as np
 import pandas as pd
+
+import streamlit as st
 
 # import shapefile
 

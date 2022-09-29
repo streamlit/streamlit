@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, cast
+
 from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException

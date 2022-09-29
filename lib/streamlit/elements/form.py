@@ -13,13 +13,13 @@
 # limitations under the License.
 
 import textwrap
-from typing import cast, Optional, NamedTuple
+from typing import NamedTuple, Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
-from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 
 
 class FormData(NamedTuple):

@@ -18,7 +18,7 @@ import time
 import traceback
 from asyncio import Future
 from enum import Enum
-from typing import Optional, Dict, NamedTuple, Tuple, Awaitable
+from typing import Awaitable, Dict, NamedTuple, Optional, Tuple
 
 from typing_extensions import Final, Protocol
 
@@ -27,8 +27,6 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.runtime_util import is_cacheable_msg
-from streamlit.watcher import LocalSourcesWatcher
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching import (
     get_memo_stats_provider,
@@ -36,19 +34,21 @@ from streamlit.runtime.caching import (
 )
 from streamlit.runtime.forward_msg_cache import (
     ForwardMsgCache,
-    populate_hash_if_needed,
     create_reference_msg,
+    populate_hash_if_needed,
 )
 from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorage
+from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.state import (
-    SessionStateStatProvider,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    SessionStateStatProvider,
 )
 from streamlit.runtime.stats import StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.watcher import LocalSourcesWatcher
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60

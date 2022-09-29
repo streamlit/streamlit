@@ -20,10 +20,10 @@ from unittest.mock import mock_open
 
 from parameterized import parameterized
 
-from streamlit.runtime.media_file_storage import MediaFileStorageError, MediaFileKind
+from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import (
-    MemoryMediaFileStorage,
     MemoryFile,
+    MemoryMediaFileStorage,
     get_extension_for_mimetype,
 )
 

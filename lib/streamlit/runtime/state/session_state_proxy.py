@@ -12,20 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (
-    Any,
-    Dict,
-    Iterator,
-    MutableMapping,
-)
+from typing import Any, Dict, Iterator, MutableMapping
 
 from typing_extensions import Final
 
 import streamlit as st
 from streamlit import logger as _logger
-from streamlit.type_util import Key
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState, require_valid_user_key
+from streamlit.type_util import Key
 
 LOGGER: Final = _logger.get_logger(__name__)
 

@@ -12,26 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
+import inspect
 import os
+import sys
 import threading
 import uuid
-import contextlib
-import sys
-import inspect
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
-from typing import Any, Callable, List, Optional, TypeVar, cast, Set
+from typing import Any, Callable, List, Optional, Set, TypeVar, cast
 
 from typing_extensions import Final
 
-from streamlit import util
-from streamlit import config
+from streamlit import config, util
 from streamlit.logger import get_logger
-from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-
 
 LOGGER = get_logger(__name__)
 

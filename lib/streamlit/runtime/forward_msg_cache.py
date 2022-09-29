@@ -13,14 +13,13 @@
 # limitations under the License.
 
 import hashlib
-from typing import MutableMapping, Dict, Optional, TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Dict, List, MutableMapping, Optional
 from weakref import WeakKeyDictionary
 
-from streamlit import config
-from streamlit import util
+from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.stats import CacheStatsProvider, CacheStat
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 if TYPE_CHECKING:
     from streamlit.runtime.app_session import AppSession

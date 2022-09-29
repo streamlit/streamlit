@@ -13,34 +13,8 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from streamlit.type_util import (
-    Key,
-    to_key,
-    LabelVisibility,
-    maybe_raise_label_warnings,
-)
-
 from textwrap import dedent
-from typing import Optional, cast, List, TYPE_CHECKING
-
-from streamlit.proto.CameraInput_pb2 import (
-    CameraInput as CameraInputProto,
-)
-
-from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
-from streamlit.runtime.metrics_util import gather_metrics
-
-from streamlit.proto.Common_pb2 import (
-    FileUploaderState as FileUploaderStateProto,
-    UploadedFileInfo as UploadedFileInfoProto,
-)
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from typing import TYPE_CHECKING, List, Optional, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -48,6 +22,19 @@ from streamlit.elements.utils import (
     check_session_state_rules,
     get_label_visibility_proto_value,
 )
+from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
+from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
+from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+    register_widget,
+)
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
