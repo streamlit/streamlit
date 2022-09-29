@@ -128,7 +128,10 @@ class CachedFunction:
     """
 
     def __init__(
-        self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
+        self,
+        func: types.FunctionType,
+        show_spinner: Union[bool, str],
+        suppress_st_warning: bool,
     ):
         self.func = func
         self.show_spinner = show_spinner
@@ -211,10 +214,13 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
         name = func.__qualname__
 
-        if len(args) == 0 and len(kwargs) == 0:
-            message = f"Running `{name}()`."
+        if isinstance(cached_func.show_spinner, bool):
+            if len(args) == 0 and len(kwargs) == 0:
+                message = f"Running `{name}()`."
+            else:
+                message = f"Running `{name}(...)`."
         else:
-            message = f"Running `{name}(...)`."
+            message = cached_func.show_spinner
 
         def get_or_create_cached_value():
             # Generate the key for the cached value. This is based on the
@@ -246,7 +252,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
             return return_value
 
-        if cached_func.show_spinner:
+        if cached_func.show_spinner or isinstance(cached_func.show_spinner, str):
             with st.spinner(message):
                 return get_or_create_cached_value()
         else:
