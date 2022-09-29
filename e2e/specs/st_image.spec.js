@@ -16,6 +16,8 @@
 
 describe("st.image", () => {
   before(() => {
+    // Increasing timeout since we're waiting for the GIF to load.
+    Cypress.config("defaultCommandTimeout", 10000);
     cy.loadApp("http://localhost:3000/");
 
     cy.prepForElementSnapshots();
@@ -102,5 +104,25 @@ describe("st.image", () => {
       "contain",
       "I am prefixed with some meta tags"
     );
+  });
+
+  // Write tests for GIFs here.
+  it("displays a GIF image", () => {
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 11)
+      .should("have.css", "height", "100px")
+      .should("have.css", "width", "100px")
+      .should("have.attr", "src")
+      .should("match", /^.*\.gif$/);
+  });
+
+  it("displays a GIF image and a caption together", () => {
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 12)
+      .matchImageSnapshot("gif-with-caption");
+  });
+
+  it("displays a GIF as PNG", () => {
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 13)
+      .should("have.attr", "src")
+      .should("match", /^.*\.png$/);
   });
 });

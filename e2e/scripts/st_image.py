@@ -12,12 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+import io
+
 import numpy as np
+from PIL import Image, ImageDraw
+
+import streamlit as st
+
+
+def create_gif(size):
+    # Create grayscale image.
+    im = Image.new("L", (size, size), "white")
+
+    images = []
+
+    # Make 32 frames with the circle of a constant size, moving across the
+    # principal diagonal of a 64x64 image, looping once.
+    for i in range(0, 32):
+        frame = im.copy()
+        draw = ImageDraw.Draw(frame)
+        pos = (i, i)
+        circle_size = size / 2
+        draw.ellipse([pos, tuple(p + circle_size for p in pos)], "black")
+        images.append(frame.copy())
+
+    # Save the frames as an animated GIF
+    data = io.BytesIO()
+    images[0].save(
+        data,
+        format="GIF",
+        save_all=True,
+        append_images=images[1:],
+        duration=100,
+        loop=1,
+    )
+
+    return data.getvalue()
+
 
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)
-
+gif = create_gif(64)
 
 st.image(img, caption="Black Square as JPEG", output_format="JPEG", width=100)
 
@@ -67,3 +102,7 @@ st.image(
     </svg>
 """
 )
+
+st.image(gif, width=100)
+st.image(gif, caption="Black Circle as GIF", width=100)
+st.image(gif, caption="GIF as PNG", output_format="PNG", width=100)
