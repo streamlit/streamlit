@@ -20,7 +20,7 @@ from asyncio import Future
 from enum import Enum
 from typing import Awaitable, Dict, NamedTuple, Optional, Tuple
 
-from typing_extensions import Final, Protocol
+from typing_extensions import Final
 
 from streamlit import config
 from streamlit.logger import get_logger
@@ -41,6 +41,11 @@ from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorage
 from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.session_manager import (
+    SessionClient,
+    SessionClientDisconnectedError,
+    SessionInfo,
+)
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
@@ -55,23 +60,8 @@ SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
 LOGGER: Final = get_logger(__name__)
 
 
-class SessionClientDisconnectedError(Exception):
-    """Raised by operations on a disconnected SessionClient."""
-
-
 class RuntimeStoppedError(Exception):
     """Raised by operations on a Runtime instance that is stopped."""
-
-
-class SessionClient(Protocol):
-    """Interface for sending data to a session's client."""
-
-    def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Deliver a ForwardMsg to the client.
-
-        If the SessionClient has been disconnected, it should raise a
-        SessionClientDisconnectedError.
-        """
 
 
 class RuntimeConfig(NamedTuple):
@@ -86,29 +76,6 @@ class RuntimeConfig(NamedTuple):
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
-
-
-class SessionInfo:
-    """Type stored in our _session_info_by_id dict.
-
-    For each AppSession, the Runtime tracks that session's
-    script_run_count. This is used to track the age of messages in
-    the ForwardMsgCache.
-    """
-
-    def __init__(self, client: SessionClient, session: AppSession):
-        """Initialize a SessionInfo instance.
-
-        Parameters
-        ----------
-        session : AppSession
-            The AppSession object.
-        client : SessionClient
-            The concrete SessionClient for this session.
-        """
-        self.session = session
-        self.client = client
-        self.script_run_count = 0
 
 
 class RuntimeState(Enum):
@@ -676,6 +643,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 session_info.session, session_info.script_run_count
             )
 
+        assert (
+            session_info.client is not None
+        ), "SessionClient should never be None here!"
         # Ship it off!
         session_info.client.write_forward_msg(msg_to_send)
 

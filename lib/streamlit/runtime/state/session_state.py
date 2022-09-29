@@ -44,7 +44,7 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
 if TYPE_CHECKING:
-    from streamlit.runtime.runtime import SessionInfo
+    from streamlit.runtime.session_manager import SessionInfo
 
 
 T = TypeVar("T")
