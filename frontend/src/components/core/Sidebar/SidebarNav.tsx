@@ -18,11 +18,7 @@ import React, { ReactElement, useCallback, useRef, useState } from "react"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
-import {
-  ExpandMore,
-  ExpandLess,
-  Description,
-} from "@emotion-icons/material-outlined"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
@@ -33,6 +29,7 @@ import {
   StyledSidebarNavContainer,
   StyledSidebarNavItems,
   StyledSidebarNavLink,
+  StyledSidebarLinkText,
   StyledSidebarNavLinkContainer,
   StyledSidebarNavSeparatorContainer,
 } from "./styled-components"
@@ -135,16 +132,14 @@ const SidebarNav = ({
                       }
                     }}
                   >
-                    {pageIcon && pageIcon.length ? (
+                    {pageIcon && pageIcon.length && (
                       <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
-                    ) : (
-                      <Icon
-                        color="darkenedBgMix100"
-                        content={Description}
-                        size="lg"
-                      />
                     )}
-                    <span>{pageName.replace(/_/g, " ")}</span>
+                    <StyledSidebarLinkText
+                      isActive={pageScriptHash === currentPageScriptHash}
+                    >
+                      {pageName.replace(/_/g, " ")}
+                    </StyledSidebarLinkText>
                   </StyledSidebarNavLink>
                 </StyledSidebarNavLinkContainer>
               </li>

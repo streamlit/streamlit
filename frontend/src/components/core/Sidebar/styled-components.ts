@@ -162,7 +162,6 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
-      color: theme.colors.bodyText,
       fontWeight: isActive ? 600 : 400,
     }
 
@@ -172,9 +171,14 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.sm,
+      borderRadius: theme.spacing.twoXS,
 
-      paddingLeft: theme.spacing.lg,
-      paddingRight: theme.spacing.lg,
+      paddingLeft: theme.spacing.sm,
+      paddingRight: theme.spacing.sm,
+      marginLeft: theme.spacing.lg,
+      marginRight: theme.spacing.lg,
+      marginTop: theme.spacing.threeXS,
+      marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
 
       backgroundColor: isActive ? theme.colors.darkenedBgMix15 : "transparent",
@@ -198,6 +202,12 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       },
     }
   }
+)
+
+export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
+  ({ isActive, theme }) => ({
+    color: isActive ? theme.colors.bodyText : theme.colors.fadedText60,
+  })
 )
 
 export interface StyledSidebarUserContentProps {
