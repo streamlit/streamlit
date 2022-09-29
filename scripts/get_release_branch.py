@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Retrieve the branch name from the release PR."""
+"""Retrieve the branch name from the release PR"""
 import json
 import requests
 

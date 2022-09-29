@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: "3.10"
       # Uses action to safely process user input (branch name) to prevent script injection attacks
-      - name: Set GIT_TAG & GH_REPO env variable
+      - name: Set GIT_TAG & GH_REPO env variables
         uses: ./.github/actions/tag_and_repo
         with:
           tag_name: ${{ github.ref_name }}
@@ -59,7 +59,8 @@ jobs:
       - name: Update version
         env:
           STREAMLIT_RELEASE_VERSION: ${{ env.STREAMLIT_RELEASE_VERSION }}
-        run: python scripts/update_version.py "$STREAMLIT_RELEASE_VERSION"
+        run: |
+          python scripts/update_version.py "$STREAMLIT_RELEASE_VERSION"
       - name: Create Package
         timeout-minutes: 120
         run: |
@@ -90,9 +91,9 @@ jobs:
       - name: Create GitHub Release
         env:
           GIT_TAG: ${{ env.GIT_TAG }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          gh release create "$GIT_TAG" -n "" -t "$GIT_TAG"
+          python scripts/create_release.py
       # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
       - name: Successful Release Slack Message
         if: ${{ success() }}
