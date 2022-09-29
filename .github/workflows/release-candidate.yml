@@ -46,6 +46,7 @@ jobs:
           python-version: "3.10"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+      # Uses action to safely process user input (branch name) to prevent script injection attacks
       - name: Set Environment Variables
         uses: ./.github/actions/branch
         with:
@@ -59,10 +60,8 @@ jobs:
         env: 
           DESIRED_VERSION: ${{ env.DESIRED_VERSION }}
         run: |
-          # Start at the latest existing RC for this version if one exists,
-          # so the following update will increment to the right RC version
-          LATEST_MATCHING_RC=$(curl https://pypi.org/pypi/streamlit/json | jq ".releases | keys | map(select(contains(\"rc\"))) | map(select(contains(\"$DESIRED_VERSION\"))) | sort | .[-1]" | sed 's/^"//' | sed 's/"$//')
-          if [ "$LATEST_MATCHING_RC" != "null" ]; then python scripts/update_version.py "$LATEST_MATCHING_RC"; fi
+          LATEST_MATCHING_RC=$(python scripts/get_latest_release_candidate.py)
+          if [ "$LATEST_MATCHING_RC" != "None" ]; then python scripts/update_version.py "$LATEST_MATCHING_RC"; fi
 
           STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py "$DESIRED_VERSION")
           echo "STREAMLIT_RELEASE_VERSION=$(echo "$STREAMLIT_RELEASE_SEMVER" | sed s/\-rc\./rc/)" >> $GITHUB_ENV
