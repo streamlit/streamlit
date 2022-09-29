@@ -21,7 +21,7 @@ import tornado.web
 import tornado.websocket
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.runtime import SessionClientDisconnectedError, Runtime
+from streamlit.runtime import SessionClientDisconnectedError, Runtime
 from streamlit.web.server.server import BrowserWebSocketHandler
 from .server_test_case import ServerTestCase
 

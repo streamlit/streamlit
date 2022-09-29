@@ -14,6 +14,7 @@
 
 """st.memo/singleton hashing tests."""
 
+from enum import Enum, auto
 import functools
 import hashlib
 import os
@@ -280,6 +281,15 @@ class HashTest(unittest.TestCase):
         bar = Data("bar")
 
         assert get_hash(bar)
+
+    def test_enum(self):
+        class EnumClass(Enum):
+            ENUM_1 = auto()
+            ENUM_2 = auto()
+
+        enum_1 = EnumClass.ENUM_1
+
+        assert get_hash(enum_1)
 
 
 class NotHashableTest(unittest.TestCase):

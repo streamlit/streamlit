@@ -118,9 +118,6 @@ export const createBaseThemePrimitives = (
     mono800: colors.bodyText, // Selectbox text
     mono900: colors.bodyText, // Not used, but just in case.
     mono1000: colors.black,
-
-    rating200: "#FFE1A5",
-    rating400: "#FFC043",
   }
 }
 
@@ -192,7 +189,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       tagPrimarySolidBackground: colors.primary,
       tagPrimaryFontDisabled: colors.fadedText40,
       tagPrimaryOutlinedDisabled: colors.transparent,
-      borderFocus: colors.primary,
+      borderSelected: colors.primary,
       contentPrimary: colors.bodyText,
       inputPlaceholder: colors.fadedText60,
       tickFillDisabled: colors.fadedText40,

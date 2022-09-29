@@ -57,7 +57,7 @@ class GraphvizMixin:
         -------
 
         >>> import streamlit as st
-        >>> import graphviz as graphviz
+        >>> import graphviz
         >>>
         >>> # Create a graphlib graph object
         >>> graph = graphviz.Digraph()

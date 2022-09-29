@@ -15,6 +15,7 @@
 """Hashing for st.memo and st.singleton."""
 import collections
 import dataclasses
+from enum import Enum
 import functools
 import hashlib
 import inspect
@@ -264,6 +265,9 @@ class _CacheFuncHasher:
 
         elif dataclasses.is_dataclass(obj):
             return self.to_bytes(dataclasses.asdict(obj))
+
+        elif isinstance(obj, Enum):
+            return (str(obj._value_) + str(obj._name_)).encode()
 
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame") or type_util.is_type(
             obj, "pandas.core.series.Series"

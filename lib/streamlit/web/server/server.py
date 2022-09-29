@@ -36,7 +36,7 @@ from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime.runtime import (
+from streamlit.runtime import (
     Runtime,
     RuntimeConfig,
     RuntimeState,

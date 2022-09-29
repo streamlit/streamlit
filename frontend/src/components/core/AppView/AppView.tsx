@@ -23,7 +23,7 @@ import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunication"
+import { sendMessageToHost } from "src/hocs/withHostCommunication"
 
 import AppContext from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
@@ -88,7 +88,7 @@ function AppView(props: AppViewProps): ReactElement {
 
   React.useEffect(() => {
     const listener = (): void => {
-      sendS4AMessage({
+      sendMessageToHost({
         type: "UPDATE_HASH",
         hash: window.location.hash,
       })
