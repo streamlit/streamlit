@@ -1,4 +1,10 @@
-name: "Set BRANCH env variables"
+name: "Set BRANCH env variable"
+
+# Using an action to process user input (branch name) as an argument
+# is the recommended approach for mitigating script injection attacks.
+# It is not vulnerable to injection attacks, as the context value is not used
+# to generate a shell script, but is instead passed to the action as an argument
+# https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#good-practices-for-mitigating-script-injection-attacks
 
 inputs:
   branch:
