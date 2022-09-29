@@ -14,14 +14,17 @@
 
 """Unit tests for st.image and other image.py utility code."""
 
+import io
+import random
 from unittest import mock
 
-import PIL.Image as Image
 import cv2
 import numpy as np
+import PIL.Image as Image
 import pytest
-from PIL import ImageDraw
 from parameterized import parameterized
+from PIL import ImageDraw
+from tests import testutil
 
 import streamlit as st
 import streamlit.elements.image as image
@@ -33,7 +36,6 @@ from streamlit.runtime.memory_media_file_storage import (
     get_extension_for_mimetype,
 )
 from streamlit.web.server.server import MEDIA_ENDPOINT
-from tests import testutil
 
 
 def create_image(size, format="RGB", add_alpha=True):
@@ -79,6 +81,36 @@ def create_image(size, format="RGB", add_alpha=True):
         return image
 
 
+def create_gif(size):
+    # Create grayscale image.
+    im = Image.new("L", (size, size), "white")
+
+    images = []
+
+    # Make ten frames with the circle of a random size and location
+    random.seed(0)
+    for i in range(0, 10):
+        frame = im.copy()
+        draw = ImageDraw.Draw(frame)
+        pos = (random.randrange(0, size), random.randrange(0, size))
+        circle_size = random.randrange(10, size / 2)
+        draw.ellipse([pos, tuple(p + circle_size for p in pos)], "black")
+        images.append(frame.copy())
+
+    # Save the frames as an animated GIF
+    data = io.BytesIO()
+    images[0].save(
+        data,
+        format="GIF",
+        save_all=True,
+        append_images=images[1:],
+        duration=100,
+        loop=0,
+    )
+
+    return data.getvalue()
+
+
 IMAGES = {
     "img_32_32_3_rgb": {
         "pil": create_image(32, "RGB", add_alpha=False),
@@ -96,6 +128,9 @@ IMAGES = {
         "pil": Image.new("RGB", (64, 64), color="red"),
         "np": np.array(Image.new("RGB", (64, 64), color="red")),
     },
+    "gif_64_64": {
+        "gif": create_gif(64),
+    },
 }
 
 
@@ -108,6 +143,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             (IMAGES["img_32_32_3_bgr"]["np"], "png"),
             (IMAGES["img_64_64_rgb"]["np"], "jpeg"),
             (IMAGES["img_32_32_3_rgba"]["np"], "jpeg"),
+            (IMAGES["gif_64_64"]["gif"], "gif"),
         ]
     )
     def test_marshall_images(self, data_in: image.AtomicImage, format: str):
@@ -125,10 +161,13 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Bytes
         """
         mimetype = f"image/{format}"
-        file_id = _calculate_file_id(
-            _np_array_to_bytes(data_in, output_format=format),
-            mimetype=mimetype,
-        )
+        if isinstance(data_in, bytes):
+            file_id = _calculate_file_id(data_in, mimetype=mimetype)
+        else:
+            file_id = _calculate_file_id(
+                _np_array_to_bytes(data_in, output_format=format),
+                mimetype=mimetype,
+            )
 
         st.image(data_in, output_format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
@@ -149,6 +188,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             (IMAGES["img_32_32_3_bgr"]["pil"], ".jpg"),
             (IMAGES["img_64_64_rgb"]["pil"], ".jpg"),
             (IMAGES["img_32_32_3_rgba"]["pil"], ".png"),
+            (IMAGES["gif_64_64"]["gif"], ".gif"),
         ]
     )
     def test_marshall_images_with_auto_output_format(
@@ -166,11 +206,12 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (IMAGES["img_32_32_3_rgb"]["np"], "/media/"),
+            (IMAGES["gif_64_64"]["gif"], "/media/"),
             ("https://streamlit.io/test.png", "https://streamlit.io/test.png"),
             ("https://streamlit.io/test.svg", "https://streamlit.io/test.svg"),
         ]
     )
-    def test_image_to_url(self, img, expected_prefix):
+    def test_image_to_url_prefix(self, img, expected_prefix):
         url = image.image_to_url(
             img,
             width=-1,
@@ -183,11 +224,32 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            (IMAGES["img_32_32_3_rgb"]["np"], ".jpg"),
+            (IMAGES["gif_64_64"]["gif"], ".gif"),
+            ("https://streamlit.io/test.png", ".png"),
+            ("https://streamlit.io/test.svg", ".svg"),
+        ]
+    )
+    def test_image_to_url_suffix(self, img, expected_suffix):
+        url = image.image_to_url(
+            img,
+            width=-1,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="blah",
+        )
+        self.assertTrue(url.endswith(expected_suffix))
+
+    @parameterized.expand(
+        [
             ("foo.png", "image/png", False),
             ("path/to/foo.jpg", "image/jpeg", False),
+            ("path/to/foo.gif", "image/gif", False),
             ("foo.unknown_extension", "application/octet-stream", False),
             ("foo", "application/octet-stream", False),
             ("https://foo.png", "image/png", True),
+            ("https://foo.gif", "image/gif", True),
         ]
     )
     def test_image_to_url_adds_filenames_to_media_file_mgr(
@@ -208,7 +270,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 width=-1,
                 clamp=False,
                 channels="RGB",
-                output_format="JPEG",
+                output_format="auto",
                 image_id="mock_image_id",
             )
 
@@ -360,8 +422,8 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         """Test st.image with list of urls."""
         urls = [
             "http://server/fake0.jpg",
-            "http://server/fake1.jpg",
-            "http://server/fake2.jpg",
+            "http://server/fake1.png",
+            "http://server/fake2.gif",
         ]
         st.image(urls, caption=["some caption"] * 3, width=300)
 
