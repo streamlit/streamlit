@@ -16,7 +16,7 @@
 
 describe("st.image", () => {
   before(() => {
-    // Increasing timeout since we're waiting for the GIF to load.
+    // Increasing timeout since we're waiting for the GIFs to load.
     Cypress.config("defaultCommandTimeout", 10000);
     cy.loadApp("http://localhost:3000/");
 
@@ -116,7 +116,7 @@ describe("st.image", () => {
 
   it("displays a GIF image and a caption together", () => {
     cy.get(".element-container [data-testid='stImage']")
-      .eq(12)
+      .eq(15)
       .matchImageSnapshot("gif-with-caption");
   });
 
