@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
-import { Theme } from "src/theme"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
@@ -24,7 +24,10 @@ import {
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 import { assign } from "lodash"
-import { applyStreamlitThemeData, applyStreamlitThemeLayout } from "./CustomTheme"
+import {
+  applyStreamlitThemeData,
+  applyStreamlitThemeLayout,
+} from "./CustomTheme"
 
 export interface PlotlyChartProps {
   width: number
@@ -47,19 +50,103 @@ export function PlotlyChart({
 
   const isFullScreen = (): boolean => !!propHeight
 
+  const theme: Theme = useTheme()
+  const categoryColors = hasLightBackgroundColor(theme)
+    ? [
+        "#0068C9",
+        "#83C9FF",
+        "#FF2B2B",
+        "#FFABAB",
+        "#29B09D",
+        "#7DEFA1",
+        "#FF8700",
+        "#FFD16A",
+        "#6D3FC0",
+        "#D5DAE5",
+      ]
+    : [
+        "#83C9FF",
+        "#0068C9",
+        "#FFABAB",
+        "#FF2B2B",
+        "#7DEFA1",
+        "#29B09D",
+        "#FFD16A",
+        "#FF8700",
+        "#6D3FC0",
+        "#D5DAE5",
+      ]
+
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
-    // console.log(spec)
-    
-    const theme: Theme = useTheme()
 
-    // for (const index in spec.layout.template.data) {
-    //   spec.layout.template.data[index][0] = applyStreamlitThemeData(
-    //     spec.layout.template.data[index][0],
-    //     theme
-    //   )
-    //   // console.log(spec.layout.template.data[index][0])
-    // }
+    const legendGroupIndexes = new Map<string, number[]>()
+    spec.data.forEach((entry: any, index: number) => {
+      if (entry.legendgroup === undefined) {
+      } else if (legendGroupIndexes.has(entry.legendgroup)) {
+        // @ts-ignore
+        legendGroupIndexes.set(
+          entry.legendgroup,
+          legendGroupIndexes.get(entry.legendgroup).concat(index)
+        )
+      } else {
+        legendGroupIndexes.set(entry.legendgroup, [index])
+      }
+    })
+    console.log(legendGroupIndexes)
+    let counter = 0
+    legendGroupIndexes.forEach((value: number[], key: string) => {
+      value.forEach((index: number) => {
+        if (typeof spec.data[index].marker.color !== "string") {
+          return
+        }
+        // console.log(console.log(assign({color: categoryColors[counter % categoryColors.length]}, spec.data[index].marker)))
+        console.log(categoryColors[counter % categoryColors.length])
+        if (spec.data[index].line !== undefined) {
+          spec.data[index].line = assign(spec.data[index].line, {
+            color: categoryColors[counter % categoryColors.length],
+          })
+        } else {
+          spec.data[index].marker = assign(spec.data[index].marker, {
+            color: categoryColors[counter % categoryColors.length],
+          })
+        }
+      })
+      counter++
+    })
+
+    console.log(spec)
+
+    //   for (const index in spec.data) {
+    //     spec.data[index] = assign(
+    //       {marker: true
+    //   ? [
+    //     "#0068C9",
+    //     "#83C9FF",
+    //     "#FF2B2B",
+    //     "#FFABAB",
+    //     "#29B09D",
+    //     "#7DEFA1",
+    //     "#FF8700",
+    //     "#FFD16A",
+    //     "#6D3FC0",
+    //     "#D5DAE5",
+    //   ] :
+    //   [ "#83C9FF",
+    //   "#0068C9",
+    //   "#FFABAB",
+    //   "#FF2B2B",
+    //   "#7DEFA1",
+    //   "#29B09D",
+    //   "#FFD16A",
+    //   "#FF8700",
+    //   "#6D3FC0",
+    //   "#D5DAE5",
+    // ]},
+    //       spec.layout.template.data[index][0]
+    //     )
+    //     // console.log(spec.layout.template.data[index][0])
+    //   }
 
     if (isFullScreen()) {
       spec.layout.width = propWidth
@@ -68,20 +155,51 @@ export function PlotlyChart({
       spec.layout.width = propWidth
     }
 
-    
-
     if (element.theme === "streamlit") {
       // should this be the same name as applyStreamlitTheme because there are duplicates?
-      console.log(spec.layout)
       spec.layout.template.layout = applyStreamlitThemeLayout(
         spec.layout.template.layout,
         theme
       )
+      spec.layout = assign(
+        {
+          colorway: true
+            ? [
+                "#0068C9",
+                "#83C9FF",
+                "#FF2B2B",
+                "#FFABAB",
+                "#29B09D",
+                "#7DEFA1",
+                "#FF8700",
+                "#FFD16A",
+                "#6D3FC0",
+                "#D5DAE5",
+              ]
+            : [
+                "#83C9FF",
+                "#0068C9",
+                "#FFABAB",
+                "#FF2B2B",
+                "#7DEFA1",
+                "#29B09D",
+                "#FFD16A",
+                "#FF8700",
+                "#6D3FC0",
+                "#D5DAE5",
+              ],
+        },
+        spec.layout
+      )
+      // if ("title" in spec.layout) {
+      //   spec.layout.title = assign({text: `<b>${spec.layout.title.text}</b>`})
+      // }
+      // console.log(spec.layout)
     } else {
       // Apply minor theming improvements to work better with Streamlit
       spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
-    console.log(spec)
+    // console.log(spec)
 
     return spec
   }
