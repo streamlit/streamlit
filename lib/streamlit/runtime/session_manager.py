@@ -85,7 +85,9 @@ class SessionStorage(Protocol):
         Raises
         ------
         SessionStorageError
-            Raised if an error occurs while attempting to fetch the session.
+            Raised if an error occurs while attempting to fetch the session. This will
+            generally happen if there is an error with the underlying storage backend
+            (e.g. if we lose our connection to it).
         """
         raise NotImplementedError
 
