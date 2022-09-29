@@ -17,11 +17,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { matchers } from "@emotion/jest"
-import {
-  ExpandMore,
-  ExpandLess,
-  Description,
-} from "@emotion-icons/material-outlined"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 import React from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
@@ -31,6 +27,7 @@ import { useIsOverflowing } from "src/lib/Hooks"
 import { mount, shallow } from "src/lib/test_util"
 import { BaseUriParts } from "src/lib/UriUtil"
 
+import { OverflowTooltip, Placement } from "src/components/shared/Tooltip"
 import SidebarNav, { Props } from "./SidebarNav"
 import {
   StyledSidebarNavItems,
@@ -90,12 +87,17 @@ describe("SidebarNav", () => {
   })
 
   it("replaces underscores with spaces in pageName", () => {
-    const wrapper = shallow(<SidebarNav {...getProps()} />)
+    const pageName = "streamlit_app"
+    const wrapper = shallow(
+      <OverflowTooltip
+        placement={Placement.AUTO}
+        content={pageName.replace(/_/g, " ")}
+      >
+        {pageName.replace(/_/g, " ")}
+      </OverflowTooltip>
+    )
 
-    const links = wrapper.find(StyledSidebarNavLink).find("span")
-
-    expect(links.at(0).text()).toBe("streamlit app")
-    expect(links.at(1).text()).toBe("my other page")
+    expect(wrapper.props().content).toBe("streamlit app")
   })
 
   describe("page links", () => {
@@ -419,14 +421,6 @@ describe("SidebarNav", () => {
     })
 
     const wrapper = shallow(<SidebarNav {...props} />)
-
-    expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(0)
-        .find("Icon")
-        .prop("content")
-    ).toBe(Description)
 
     expect(
       wrapper

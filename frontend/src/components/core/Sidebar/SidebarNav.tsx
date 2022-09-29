@@ -141,7 +141,7 @@ const SidebarNav = ({
                     >
                       <OverflowTooltip
                         content={pageName.replace(/_/g, " ")}
-                        placement={Placement.RIGHT}
+                        placement={Placement.AUTO}
                       >
                         {pageName.replace(/_/g, " ")}
                       </OverflowTooltip>
