@@ -87,6 +87,16 @@ describe("SidebarNav", () => {
   })
 
   it("replaces underscores with spaces in pageName", () => {
+    const useRefSpy = jest.spyOn(React, "useRef").mockReturnValue({
+      current: {
+        // Pretend the body is smaller than its onscreen area.
+        offsetWidth: 100,
+        scrollWidth: 200,
+      },
+    })
+
+    jest.spyOn(React, "useEffect").mockImplementation(f => f())
+
     const pageName = "streamlit_app"
     const wrapper = shallow(
       <OverflowTooltip
@@ -98,6 +108,9 @@ describe("SidebarNav", () => {
     )
 
     expect(wrapper.props().content).toBe("streamlit app")
+
+    expect(useRefSpy).toBeCalledWith(null)
+    expect(wrapper).toMatchSnapshot()
   })
 
   describe("page links", () => {
