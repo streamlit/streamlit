@@ -59,7 +59,7 @@ AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
-ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
+ImageFormat: TypeAlias = Literal["JPEG", "PNG"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
@@ -169,10 +169,7 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
 
 
 def _image_is_gif(image: PILImage) -> bool:
-    if image.format == "GIF":
-        return True
-    else:
-        return False
+    return bool(image.format == "GIF")
 
 
 def _validate_image_format_string(
