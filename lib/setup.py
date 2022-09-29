@@ -104,7 +104,7 @@ setuptools.setup(
         "Community": "https://discuss.streamlit.io/",
         "Twitter": "https://twitter.com/streamlit",
     },
-    author="Streamlit Inc",
+    author="Snowflake Inc",
     author_email="hello@streamlit.io",
     license="Apache License 2.0",
     classifiers=[
