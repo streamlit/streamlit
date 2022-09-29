@@ -168,7 +168,7 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
         return False
 
 
-def _image_is_gif(image: PILImage) -> bool:
+def _image_is_gif(image: PILImage) -> Any:
     return image.format == "GIF"
 
 
