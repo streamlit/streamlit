@@ -91,22 +91,18 @@ jobs:
     # added as we'd like this job to run whether or not tests pass & slack us regarding failing tests.
     needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
+    env:
+      SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
+
     steps:
-      # Need to checkout the code to get access to the slack notifications action
-      - name: Checkout Streamlit code
-        uses: actions/checkout@v3
-        with: 
-          persist-credentials: false
-          submodules: 'recursive'
-      - name: Send Slack notifications for failing tests
-        uses: ./.github/actions/slack
-        env:
-          SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
-        with:
-          python_result: ${{ needs.run-python-tests.result }}
-          javascript_result: ${{ needs.run-javascript-tests.result }}
-          py_prod_deps_result: ${{ needs.run-py-prod-deps-smoke-test.result }}
-          cypress_result: ${{ needs.run-cypress-tests.result }}
+      - if: ${{ needs.run-python-tests.result == 'failure' }}
+        run: python scripts/slack_notifications.py python
+      - if: ${{ needs.run-javascript-tests.result == 'failure' }}
+        run: python scripts/slack_notifications.py js
+      - if: ${{ needs.run-py-prod-deps-smoke-test.result == 'failure' }}
+        run: python scripts/slack_notifications.py py_prod
+      - if: ${{ needs.run-cypress-tests.result == 'failure' }}
+        run: python scripts/slack_notifications.py cypress
   
   create-nightly-build:
     runs-on: ubuntu-latest
@@ -158,4 +154,4 @@ jobs:
         env: 
           SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly build failed to release"}' "$SLACK_WEBHOOK"
+          python scripts/slack_notifications.py build
