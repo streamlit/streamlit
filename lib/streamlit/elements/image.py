@@ -23,6 +23,7 @@ import imghdr
 import io
 import mimetypes
 import re
+import xml.etree.ElementTree as ET
 from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union
 from urllib.parse import urlparse
 
@@ -386,6 +387,67 @@ def image_to_url(
         return ""
 
 
+def _check_if_svg_can_be_rendered_as_img(image: str) -> bool:
+    """SVG needs to has either viewBox or width provided to make it possible to render it as img tag"""
+    if "xlink" in image:
+        # When svg contains xlink namespace it uses deprecated, no longer recommended feature, see
+        # https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xlink:href
+        # It makes it impossible to render such SVG as img tag,
+        # xlink tag cannot be both in namespace definition and as a xlink:href reference within SVG
+        return False
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    try:
+        root = ET.fromstring(image)
+    except ET.ParseError:
+        return False
+    if "width" not in root.attrib and not _get_svg_width(root):
+        return False
+    return True
+
+
+def _get_svg_width(image):
+    if "viewBox" not in image.attrib:
+        return None
+    view_box = image.attrib.get("viewBox", "")
+    if "," in view_box:
+        view_box = view_box.replace(" ", "").split(",")
+        if len(view_box) > 2:
+            return view_box[2]
+    else:
+        view_box = view_box.split(" ")
+        if len(view_box) > 2:
+            return view_box[2]
+    return None
+
+
+def _get_svg_namespaces(image: str):
+    return dict(
+        [
+            node
+            for (_, node) in ET.iterparse(
+                io.BytesIO(image.encode("UTF-8")), events=["start-ns"]
+            )
+        ]
+    )
+
+
+def _has_svg_namespace(image: str) -> bool:
+    return "http://www.w3.org/2000/svg" in [
+        ns[1] for ns in _get_svg_namespaces(image).items()
+    ]
+
+
+def _normalize_svg(image: str):
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    root = ET.fromstring(image)
+    svg_width = _get_svg_width(root)
+    if not root.attrib.get("width") and svg_width:
+        root.attrib["width"] = svg_width
+    if not _has_svg_namespace(image):
+        root.attrib["xmlns"] = "http://www.w3.org/2000/svg"
+    return ET.tostring(root, encoding="utf-8", method="xml").decode("utf-8")
+
+
 def marshall_images(
     coordinates: str,
     image: ImageOrImageList,
@@ -488,8 +550,17 @@ def marshall_images(
                     image = textfile.read()
 
             # Following regex allows svg image files to start either via a "<?xml...>" tag eventually followed by a "<svg...>" tag or directly starting with a "<svg>" tag
-            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s)", image):
-                proto_img.markup = f"data:image/svg+xml,{image}"
+            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s|^\s?<svg>\s)", image):
+                if _check_if_svg_can_be_rendered_as_img(image):
+                    try:
+                        proto_img.url = f"data:image/svg+xml,{_normalize_svg(image)}"
+                    except Exception as e:
+                        LOGGER.warning(
+                            f"Warning! The following exception occurred during SVG image normalization: {e}"
+                        )
+                        proto_img.markup = f"data:image/svg+xml,{image}"
+                else:
+                    proto_img.markup = f"data:image/svg+xml,{image}"
                 is_svg = True
         if not is_svg:
             proto_img.url = image_to_url(

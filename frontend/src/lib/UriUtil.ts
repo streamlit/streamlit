@@ -30,6 +30,7 @@ export interface BaseUriParts {
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
+const SVG_PREFIX = "data:image/svg+xml,"
 
 /**
  * Return the BaseUriParts for the global window
@@ -141,7 +142,6 @@ function isHttps(): boolean {
  * Run SVG strings through DOMPurify to prevent Javascript execution
  */
 export function xssSanitizeSvg(uri: string): string {
-  const SVG_PREFIX = "data:image/svg+xml,"
   const unsafe = uri.substring(SVG_PREFIX.length)
   return DOMPurify.sanitize(unsafe, {})
 }
@@ -154,6 +154,9 @@ export function buildMediaUri(
   uri: string,
   baseUriParts?: BaseUriParts
 ): string {
+  if (uri.startsWith(SVG_PREFIX)) {
+    return `${SVG_PREFIX}${xssSanitizeSvg(uri)}`
+  }
   if (!baseUriParts) {
     baseUriParts = getWindowBaseUriParts()
   }

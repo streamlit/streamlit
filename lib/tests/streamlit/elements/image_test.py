@@ -20,6 +20,7 @@ import PIL.Image as Image
 import cv2
 import numpy as np
 import pytest
+import xml.etree.ElementTree as ET
 from PIL import ImageDraw
 from parameterized import parameterized
 
@@ -34,6 +35,7 @@ from streamlit.runtime.memory_media_file_storage import (
 )
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests import testutil
+from typing import Optional
 
 
 def create_image(size, format="RGB", add_alpha=True):
@@ -97,6 +99,96 @@ IMAGES = {
         "np": np.array(Image.new("RGB", (64, 64), color="red")),
     },
 }
+
+
+class SvgTestCase:
+    def __init__(
+        self,
+        image_markup: str,
+        normalized_markup: str = "",
+        can_be_rendered_as_img: bool = False,
+        width_from_viewbox: Optional[str] = None,
+    ):
+        self.image_markup = image_markup
+        self.normalized_markup = normalized_markup
+        self.can_be_rendered_as_img = can_be_rendered_as_img
+        self.width_from_viewbox = width_from_viewbox
+
+
+SVG_TEST_CASES = [
+    SvgTestCase(
+        "<svg fake></svg>",
+        '<svg fake xmlns="http://www.w3.org/2000/svg"></svg>',
+        False,
+        None,
+    ),
+    SvgTestCase(
+        "<svg\nfake></svg>",
+        '<svg\nfake xmlns="http://www.w3.org/2000/svg"></svg>',
+        False,
+        None,
+    ),
+    SvgTestCase(
+        "\n<svg fake></svg>",
+        '\n<svg fake xmlns="http://www.w3.org/2000/svg"></svg>',
+        False,
+        None,
+    ),
+    SvgTestCase(
+        '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
+        '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake xmlns="http://www.w3.org/2000/svg"></svg>',
+        False,
+        None,
+    ),
+    SvgTestCase(
+        '<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
+        '<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake xmlns="http://www.w3.org/2000/svg"></svg>',
+        False,
+        None,
+    ),
+    SvgTestCase(
+        '\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
+        '\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake xmlns="http://www.w3.org/2000/svg"></svg>',
+        False,
+        None,
+    ),
+    SvgTestCase(
+        '<svg height="100" width="100"> <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" /></svg>',
+        '<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg"> <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" /></svg>',
+        True,
+        None,
+    ),
+    SvgTestCase(
+        '<svg> <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" /></svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg"> <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" /></svg>',
+        False,
+        None,
+    ),
+    SvgTestCase(
+        '<svg viewBox="{x} 0 100 90" xmlns="http://www.w3.org/2000/svg"> <rect x="0" y="0" width="100" height="90" fill="yellow" /> <rect x="100" y="0" width="100" height="90" fill="green" /> </svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="{x} 0 100 90" width="100"> <rect x="0" y="0" width="100" height="90" fill="yellow" /> <rect x="100" y="0" width="100" height="90" fill="green" /> </svg>',
+        True,
+        "100",
+    ),
+    SvgTestCase(
+        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100"> <clipPath id="clipCircle"> <circle r="25" cx="25" cy="25"/> </clipPath> <image href="https://avatars.githubusercontent.com/karriebear" width="50" height="50" clip-path="url(#clipCircle)"/> </svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100"> <clipPath id="clipCircle"> <circle r="25" cx="25" cy="25"/> </clipPath> <image href="https://avatars.githubusercontent.com/karriebear" width="50" height="50" clip-path="url(#clipCircle)"/> </svg>',
+        False,
+        None,
+    ),
+    SvgTestCase(
+        '<svg viewBox="0 0 160 40" xmlns="http://www.w3.org/2000/svg"> <a xlink:href="https://developer.mozilla.org/"> <text x="10" y="25">MDN Web Docs</text> </a> </svg>',
+        '<svg viewBox="0 0 160 40" xmlns="http://www.w3.org/2000/svg" width="160"> <a xlink:href="https://developer.mozilla.org/"> <text x="10" y="25">MDN Web Docs</text> </a> </svg>',
+        False,
+        "160",
+    ),
+    SvgTestCase(
+        '<svg viewBox="0 0 160 40" xmlns="http://www.w3.org/2000/svg"> <a href="https://developer.mozilla.org/"> <text x="10" y="25">MDN Web Docs</text> </a> </svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" width="160"> <a href="https://developer.mozilla.org/"> <text x="10" y="25">MDN Web Docs</text> </a> </svg>',
+        True,
+        "160",
+    ),
+]
 
 
 class ImageProtoTest(testutil.DeltaGeneratorTestCase):
@@ -226,24 +318,43 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("<svg fake></svg>", "data:image/svg+xml,<svg fake></svg>"),
-            ("<svg\nfake></svg>", "data:image/svg+xml,<svg\nfake></svg>"),
-            ("\n<svg fake></svg>", "data:image/svg+xml,\n<svg fake></svg>"),
-            (
-                '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
-                'data:image/svg+xml,<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
-            ),
-            (
-                '<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
-                'data:image/svg+xml,<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
-            ),
-            (
-                '\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
-                'data:image/svg+xml,\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
-            ),
+            (svg_test_case.image_markup, svg_test_case.can_be_rendered_as_img)
+            for svg_test_case in SVG_TEST_CASES
         ]
     )
-    def test_marshall_svg(self, image_markup: str, expected_prefix: str):
+    def test_check_if_svg_can_be_rendered_as_img(
+        self, image_markup: str, expected_result: bool
+    ):
+        self.assertEqual(
+            image._check_if_svg_can_be_rendered_as_img(image_markup), expected_result
+        )
+
+    @parameterized.expand(
+        [
+            (svg_test_case.image_markup, svg_test_case.width_from_viewbox)
+            for svg_test_case in SVG_TEST_CASES
+        ]
+    )
+    def test_get_svg_width(self, image_markup: str, expected_width: Optional[str]):
+        if image._check_if_svg_can_be_rendered_as_img(image_markup):
+            self.assertEqual(
+                image._get_svg_width(ET.fromstring(image_markup)), expected_width
+            )
+
+    @parameterized.expand(
+        [
+            (svg_test_case.image_markup, svg_test_case.normalized_markup)
+            for svg_test_case in SVG_TEST_CASES
+        ]
+    )
+    def test_normalize_svg(self, image_markup: str, normalized_markup: str):
+        if image._check_if_svg_can_be_rendered_as_img(image_markup):
+            self.assertEqual(image._normalize_svg(image_markup), normalized_markup)
+
+    @parameterized.expand(
+        [(svg_test_case.image_markup,) for svg_test_case in SVG_TEST_CASES]
+    )
+    def test_marshall_svg(self, image_markup: str):
         image_list_proto = ImageListProto()
         image.marshall_images(
             None,
@@ -254,7 +365,12 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             False,
         )
         img = image_list_proto.imgs[0]
-        self.assertTrue(img.markup.startswith(expected_prefix))
+        expect = "data:image/svg+xml"
+        if image._check_if_svg_can_be_rendered_as_img(image_markup):
+            self.assertEqual(len(img.markup), 0)
+            self.assertTrue(img.url.startswith(expect))
+        else:
+            self.assertTrue(img.markup.startswith(expect))
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image.BytesIO_to_bytes."""
