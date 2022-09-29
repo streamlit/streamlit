@@ -106,7 +106,6 @@ describe("st.image", () => {
     );
   });
 
-  // Write tests for GIFs here.
   it("displays a GIF image", () => {
     cy.getIndexed(".element-container [data-testid='stImage'] img", 11)
       .should("have.css", "height", "100px")
@@ -116,7 +115,8 @@ describe("st.image", () => {
   });
 
   it("displays a GIF image and a caption together", () => {
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 12)
+    cy.get(".element-container [data-testid='stImage']")
+      .eq(12)
       .matchImageSnapshot("gif-with-caption");
   });
 
