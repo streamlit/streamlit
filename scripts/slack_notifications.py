@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Send slack notifications"""
-import json
 import os
 import requests
 import sys
@@ -42,26 +41,21 @@ def send_notification():
 
     if workflow == "nightly":
         failure = nightly_slack_messages[message_key]
-        message = {"text": ":blobonfire: Nightly build failed %s" % failure}
+        payload = {"text": f":blobonfire: Nightly build failed {failure}"}
 
     if workflow == "candidate":
         if message_key == "success":
-            message = {"text": ":rocket: Release Candidate was successful!"}
+            payload = {"text": ":rocket: Release Candidate was successful!"}
         else:
-            message = {"text": ":blobonfire: Release Candidate failed"}
+            payload = {"text": ":blobonfire: Release Candidate failed"}
 
-    payload = json.dumps(message)
-
-    response = requests.post(webhook, payload)
+    response = requests.post(webhook, json=payload)
 
     if response.status_code != 200:
-        raise Exception(
-            "Unable to send slack message, HTTP response: %s" % response.text
-        )
+        raise Exception(f"Unable to send slack message, HTTP response: {response.text}")
 
 
 def main():
-    """Run main loop."""
 
     send_notification()
 

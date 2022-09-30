@@ -30,15 +30,14 @@ def check_last_rc():
     current_version = os.getenv("DESIRED_VERSION")
 
     url = "https://pypi.org/pypi/streamlit/json"
-    response = requests.get(url).text
-    result = json.loads(response)
-    all_releases = result["releases"].keys()
-    all_release_candidates = [x for x in all_releases if "rc" in x]
-    current_version_candidates = [
-        x for x in all_release_candidates if current_version in x
-    ]
+    response = requests.get(url).json()
+    all_releases = response["releases"].keys()
+
+    current_version_candidates = sorted(
+        [x for x in all_releases if "rc" in x and current_version in x]
+    )
+
     if current_version_candidates:
-        current_version_candidates.sort()
         latest_release_candidate = current_version_candidates[-1]
         return latest_release_candidate
     else:
@@ -46,10 +45,8 @@ def check_last_rc():
 
 
 def main():
-    """Run main loop."""
 
-    last_rc = check_last_rc()
-    print(last_rc)
+    print(check_last_rc())
 
 
 if __name__ == "__main__":

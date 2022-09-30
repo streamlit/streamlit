@@ -19,7 +19,7 @@ jobs:
     uses: ./.github/workflows/py-prod-deps-smoke-test.yml
     with:
       ref: ${{ github.ref_name }}
-      
+
   run-cypress-tests:
     uses: ./.github/workflows/cypress.yml
     with:
