@@ -15,10 +15,12 @@
 from streamlit import runtime
 from typing import Optional, Dict
 
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 
 
+@gather_metrics
 def _get_websocket_headers() -> Optional[Dict[str, str]]:
     """Return a copy of the HTTP request headers for the current session's
     WebSocket connection. If there's no active session, return None instead.
