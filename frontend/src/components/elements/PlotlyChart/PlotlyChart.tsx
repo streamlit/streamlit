@@ -79,14 +79,20 @@ export function PlotlyChart({
 
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
+    // console.log(JSON.stringify(spec.data))
+    // spec.data.forEach((entry: any, index: number) => {
+    //   if (spec.data[index].marker !== undefined) {
+    //     delete spec.data[index].marker["color"]
+    //   }
+    // })
 
     const legendGroupIndexes = new Map<string, number[]>()
     spec.data.forEach((entry: any, index: number) => {
       if (entry.legendgroup === undefined) {
       } else if (legendGroupIndexes.has(entry.legendgroup)) {
-        // @ts-ignore
         legendGroupIndexes.set(
           entry.legendgroup,
+          // @ts-ignore
           legendGroupIndexes.get(entry.legendgroup).concat(index)
         )
       } else {
@@ -97,15 +103,14 @@ export function PlotlyChart({
     let counter = 0
     legendGroupIndexes.forEach((value: number[], key: string) => {
       value.forEach((index: number) => {
-        if (typeof spec.data[index].marker.color !== "string") {
-          return
-        }
         // console.log(console.log(assign({color: categoryColors[counter % categoryColors.length]}, spec.data[index].marker)))
-        console.log(categoryColors[counter % categoryColors.length])
+        // console.log(categoryColors[counter % categoryColors.length])
+        console.log(spec.data[index].line !== undefined)
         if (spec.data[index].line !== undefined) {
           spec.data[index].line = assign(spec.data[index].line, {
             color: categoryColors[counter % categoryColors.length],
           })
+        } else if (typeof spec.data[index].marker.color !== "string") {
         } else {
           spec.data[index].marker = assign(spec.data[index].marker, {
             color: categoryColors[counter % categoryColors.length],
@@ -165,7 +170,7 @@ export function PlotlyChart({
         {
           colorway: true
             ? [
-                "#0068C9",
+                "#111111",
                 "#83C9FF",
                 "#FF2B2B",
                 "#FFABAB",
@@ -191,9 +196,11 @@ export function PlotlyChart({
         },
         spec.layout
       )
-      // if ("title" in spec.layout) {
-      //   spec.layout.title = assign({text: `<b>${spec.layout.title.text}</b>`})
-      // }
+      if ("title" in spec.layout) {
+        spec.layout.title = assign({
+          text: `<b>${spec.layout.title.text}</b>`,
+        })
+      }
       // console.log(spec.layout)
     } else {
       // Apply minor theming improvements to work better with Streamlit
