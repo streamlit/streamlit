@@ -80,12 +80,13 @@ jobs:
           name: Release-Candidate
           path: lib/dist
       # TODO: Gate upload step as precaution for now
-      # - name: Upload to PyPI
-      #   env:
-      #     TWINE_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
-      #     TWINE_PASSWORD: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
-      #   run: |
-      #     make distribute
+      - if: ${{ 'true' == 'false' }}
+        name: Upload to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
+        run: |
+          make distribute
       # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
       - name: Successful Release Candidate Slack Message
         if: ${{ success() }}

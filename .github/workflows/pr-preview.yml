@@ -16,9 +16,6 @@ jobs:
   pr-preview:
     runs-on: ubuntu-latest
 
-    permissions:
-      actions: read
-
     defaults:
       run:
         shell: bash -ileo pipefail {0}
@@ -40,6 +37,7 @@ jobs:
         run: |
           sudo apt install rsync
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
+      # Uses action to safely process user input (branch name) to prevent script injection attacks
       - name: Set Environment Variables
         uses: ./.github/actions/preview_branch
         with:

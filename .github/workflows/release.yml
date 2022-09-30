@@ -77,7 +77,9 @@ jobs:
         with:
           name: Release
           path: lib/dist
-      - name: Upload to PyPI
+      # TODO: Gate upload step as precaution for now
+      - if: ${{ 'true' == 'false' }}
+        name: Upload to PyPI
         env:
           TWINE_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}

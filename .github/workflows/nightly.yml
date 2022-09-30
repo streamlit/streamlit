@@ -1,6 +1,7 @@
 name: Nightly Build
 
 on:
+  # TODO: Comment in when switched to GHA
   # schedule:
   #   # Run job at 10.30pm PST or 11.30pm PDT
   #   - cron:  '30 6 * * *'
@@ -57,7 +58,6 @@ jobs:
         env: 
           SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py nightly tag
-
 
   run-python-tests:
     needs: create-nightly-tag
