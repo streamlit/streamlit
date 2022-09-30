@@ -1,0 +1,113 @@
+name: Build Release
+
+on: 
+  # Manual Trigger GH CLI -> gh workflow run release.yml --ref <tag>
+  workflow_dispatch:
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    permissions: 
+    # Additional permission needed to generate release
+      contents: write
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      # Uses action to safely process user input (branch name) to prevent script injection attacks
+      - name: Set GIT_TAG & GH_REPO env variables
+        uses: ./.github/actions/tag_and_repo
+        with:
+          tag_name: ${{ github.ref_name }}
+          repo: ${{ github.repository }}
+      - name: Look up the related GitHub PR branch name
+        # Need GH Token to use gh api
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install requests
+          echo "GH_PR_BRANCH=$(python scripts/get_release_branch.py)" >> $GITHUB_ENV
+      - name: Ensure that version tag matches branch version
+        env: 
+          GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
+        run: |
+          BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | sed 's/release\///' )
+
+          if [ "$BRANCH_VERSION" != "$GIT_TAG" ]
+          then
+            echo "ERROR: Version number from tag does not match the version number from the branch name."
+            exit 1
+          fi
+      - name: Checkout head of branch
+        env:
+          GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
+        run: |
+          git pull origin "$GH_PR_BRANCH" --ff-only
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Set release version from tag name
+        env:
+          GIT_TAG: ${{ env.GIT_TAG }}
+        run: echo "STREAMLIT_RELEASE_VERSION=$GIT_TAG" >> $GITHUB_ENV
+      - name: Update version
+        env:
+          STREAMLIT_RELEASE_VERSION: ${{ env.STREAMLIT_RELEASE_VERSION }}
+        run: |
+          python scripts/update_version.py "$STREAMLIT_RELEASE_VERSION"
+      - name: Create Package
+        timeout-minutes: 120
+        run: |
+          sudo apt install rsync
+          make package
+      - name: Store Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: Release
+          path: lib/dist
+      - name: Upload to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
+        run: |
+          make distribute
+      - name: Commit version updates
+        env:
+          GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
+          STREAMLIT_RELEASE_VERSION: ${{ env.STREAMLIT_RELEASE_VERSION }}
+        run: |
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
+
+          git switch -c "$GH_PR_BRANCH"
+
+          git commit -am 'Up version to "$STREAMLIT_RELEASE_VERSION"' && git push origin "$GH_PR_BRANCH" || echo "No changes to commit"
+      - name: Create GitHub Release
+        env:
+          GIT_TAG: ${{ env.GIT_TAG }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/create_release.py
+      # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
+      - name: Successful Release Slack Message
+        if: ${{ success() }}
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
+        run: python scripts/slack_notifications.py release success
+      - name: Failed Release Slack Message
+        if: ${{ failure() }}
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
+        run: python scripts/slack_notifications.py release failure
