@@ -53,7 +53,7 @@ class WebSocketHeadersTest(ServerTestCase):
                 self.assertEqual(headers, dict(session_info.client.request.headers))
 
                 # Assert the presence of some (arbitrary) headers that should always
-                # be present in a WebSocket request.
+                # be in a WebSocket request.
                 self.assertIn("Host", headers)
                 self.assertIn("Upgrade", headers)
                 self.assertIn("Connection", headers)
