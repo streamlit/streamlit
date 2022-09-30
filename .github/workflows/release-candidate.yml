@@ -20,15 +20,15 @@ jobs:
     with:
       ref: ${{ github.ref_name }}
       
-  run-cypress-tests:
-    uses: ./.github/workflows/cypress.yml
-    with:
-      ref: ${{ github.ref_name }}
+  # run-cypress-tests:
+  #   uses: ./.github/workflows/cypress.yml
+  #   with:
+  #     ref: ${{ github.ref_name }}
       
   build-release-candidate:
     runs-on: ubuntu-latest
 
-    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test]
 
     defaults:
       run:
