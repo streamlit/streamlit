@@ -15,7 +15,6 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
-import time
 from typing import List
 from unittest.mock import patch
 
@@ -589,8 +588,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         @cache_decorator(show_spinner=False)
         def function_without_spinner(x: int) -> int:
-            # Without the timeout, the spinner is sometimes not available
-            time.sleep(0.2)
             return x
 
         function_without_spinner(3)
@@ -609,8 +606,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         @cache_decorator(show_spinner=True)
         def function_with_spinner(x: int) -> int:
-            # Without the timeout, the spinner is sometimes not available
-            time.sleep(0.2)
             return x
 
         function_with_spinner(3)
@@ -629,8 +624,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         @cache_decorator(show_spinner="CUSTOM_TEXT")
         def function_with_spinner_custom_text(x: int) -> int:
-            # Without the timeout, the spinner is sometimes not available
-            time.sleep(0.2)
             return x
 
         function_with_spinner_custom_text(3)
@@ -649,8 +642,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         @cache_decorator(show_spinner="")
         def function_with_spinner_empty_text(x: int) -> int:
-            # Without the timeout, the spinner is sometimes not available
-            time.sleep(0.2)
             return x
 
         function_with_spinner_empty_text(3)
