@@ -49,17 +49,12 @@ jobs:
         env:
           BRANCH: ${{ env.BRANCH }}
           PREVIEW_BRANCH: ${{ env.PREVIEW_BRANCH }}
-          CORE_PREVIEWS_S3_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
-          CORE_PREVIEWS_S3_SECRET_KEY: ${{ secrets.CORE_PREVIEWS_S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+          AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CORE_PREVIEWS_S3_SECRET_KEY }}
+        # TODO: Add explanation on streamlit-11.11.11 convention
         run: |
           sudo apt install -y awscli
-
-          aws configure set aws_access_key_id "$CORE_PREVIEWS_S3_KEY_ID"
-          aws configure set aws_secret_access_key "$CORE_PREVIEWS_S3_SECRET_KEY"
-
-          # GitHub upgraded ubuntu-latest environment from 18.04 to 20.04 which upgraded aws-cli
-          # from v1 to v2. When running in GH env, v2 of aws-cli throws an error if no region is specified.
-          aws configure set region us-west-2
 
           cd lib/dist
           export WHEELFILE="$(ls -t *.whl | head -n 1)"

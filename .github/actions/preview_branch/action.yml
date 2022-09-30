@@ -18,6 +18,10 @@ runs:
   using: composite
   steps:
     - name: Set PREVIEW_BRANCH & BRANCH
+      env:
+        PR_NUMBER: ${{ inputs.pull_request_number }}
+        REF_TYPE: ${{ inputs.ref_type }}
+        BRANCH_NAME: ${{ inputs.branch }}
       run: |
         echo "PREVIEW_BRANCH=$(
           if [[ -n "$PR_NUMBER" ]]
@@ -34,8 +38,4 @@ runs:
           fi
         )" >> $GITHUB_ENV
         echo "BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
-      env:
-        PR_NUMBER: ${{ inputs.pull_request_number }}
-        REF_TYPE: ${{ inputs.ref_type }}
-        BRANCH_NAME: ${{ inputs.branch }}
       shell: bash -ileo pipefail {0}

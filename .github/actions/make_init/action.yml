@@ -30,17 +30,15 @@ runs:
       shell: bash -ileo pipefail {0}
     - name: Install Dependencies
       run: |
+        echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
+        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
         sudo apt update
         # protobuf, pyodbc, dot, & graphviz dependencies
         sudo apt install -y gnupg \
             unixodbc-dev \
             graphviz \
-            libgvc6
-
-        echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
-        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-        sudo apt update
-        sudo apt install -y protobuf-compiler
+            libgvc6 \
+            protobuf-compiler
       shell: bash -ileo pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.
