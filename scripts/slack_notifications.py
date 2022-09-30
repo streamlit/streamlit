@@ -28,7 +28,8 @@ def send_notification():
     if not webhook:
         raise Exception("Unable to retrieve SLACK_WEBHOOK")
 
-    slack_messages = {
+    nightly_slack_messages = {
+        "tag": "to create a tag",
         "python": "on python tests",
         "js": "on javascript tests",
         "py_prod": "on python prod dependencies test",
@@ -36,9 +37,13 @@ def send_notification():
         "build": "to release",
     }
 
-    message_key = sys.argv[1]
-    failure = slack_messages[message_key]
-    message = {"text": ":blobonfire: Nightly build failed %s" % failure}
+    workflow = sys.argv[1]
+    message_key = sys.argv[2]
+
+    if workflow == "nightly":
+        failure = nightly_slack_messages[message_key]
+        message = {"text": ":blobonfire: Nightly build failed %s" % failure}
+
     payload = json.dumps(message)
 
     response = requests.post(webhook, payload)

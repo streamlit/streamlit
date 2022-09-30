@@ -56,8 +56,8 @@ jobs:
         name: Nightly Tag Failure Slack Message
         env: 
           SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Nightly job failed to create a tag"}' "$SLACK_WEBHOOK"
+        run: python scripts/slack_notifications.py nightly tag
+
 
   run-python-tests:
     needs: create-nightly-tag
@@ -96,13 +96,13 @@ jobs:
 
     steps:
       - if: ${{ needs.run-python-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py python
+        run: python scripts/slack_notifications.py nightly python
       - if: ${{ needs.run-javascript-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py js
+        run: python scripts/slack_notifications.py nightly js
       - if: ${{ needs.run-py-prod-deps-smoke-test.result == 'failure' }}
-        run: python scripts/slack_notifications.py py_prod
+        run: python scripts/slack_notifications.py nightly py_prod
       - if: ${{ needs.run-cypress-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py cypress
+        run: python scripts/slack_notifications.py nightly cypress
   
   create-nightly-build:
     runs-on: ubuntu-latest
@@ -153,5 +153,4 @@ jobs:
         name: Nightly Build Failure Slack Message
         env: 
           SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
-        run: |
-          python scripts/slack_notifications.py build
+        run: python scripts/slack_notifications.py nightly build
