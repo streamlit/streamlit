@@ -1,8 +1,6 @@
 name: Python Prod Deps Smoke Test
 
 on:
-  pull_request:
-    types: [opened]
   push:
     branches:
       - '**'

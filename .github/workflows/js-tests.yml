@@ -1,8 +1,6 @@
 name: Javascript Tests
 
 on:
-  pull_request:
-    types: [opened]
   push:
     branches:
       - '**'
