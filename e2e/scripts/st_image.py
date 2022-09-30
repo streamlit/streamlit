@@ -27,7 +27,8 @@ def create_gif(size):
     images = []
 
     # Make 32 frames with the circle of a constant size, moving across the
-    # principal diagonal of a 64x64 image, looping once.
+    # principal diagonal of a 64x64 image. The GIF will not loop and stops
+    # animating after 3200ms.
     for i in range(0, 32):
         frame = im.copy()
         draw = ImageDraw.Draw(frame)
