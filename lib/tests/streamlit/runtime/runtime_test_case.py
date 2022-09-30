@@ -19,6 +19,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 
@@ -32,6 +33,9 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
             script_path="mock/script/path.py",
             command_line="",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            # TODO(vdonato): Replace this with a new MockSessionManager class so that
+            # runtime tests don't rely on a real SessionManager implementation.
+            session_manager_class=WebsocketSessionManager,
         )
         self.runtime = Runtime(config)
 
@@ -58,7 +62,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
         to the client on the next iteration through the run loop. (You can
         use `await self.tick_runtime_loop()` to tick the run loop.)
         """
-        session_info = self.runtime._get_session_info(session_id)
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
         if session_info is None:
             return
         session_info.session._enqueue_forward_msg(msg)
@@ -68,7 +72,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
         actual sessions to be instantiated, or scripts to be run.
         """
         return mock.patch(
-            "streamlit.runtime.runtime.AppSession",
+            "streamlit.runtime.websocket_session_manager.AppSession",
             # new_callable must return a function, not an object, or else
             # there will only be a single AppSession mock. Hence the lambda.
             new_callable=lambda: self._create_mock_app_session,

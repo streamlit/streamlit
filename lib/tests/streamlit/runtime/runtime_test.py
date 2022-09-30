@@ -124,7 +124,9 @@ class RuntimeTest(RuntimeTestCase):
             session_id = self.runtime.create_session(
                 client=MockSessionClient(), user_info=MagicMock()
             )
-            app_session = self.runtime._get_session_info(session_id).session
+            app_session = self.runtime._session_mgr.get_active_session_info(
+                session_id
+            ).session
 
             # Close the session. AppSession.shutdown should be called.
             self.runtime.close_session(session_id)
@@ -194,7 +196,9 @@ class RuntimeTest(RuntimeTestCase):
                 session_id = self.runtime.create_session(
                     MockSessionClient(), MagicMock()
                 )
-                app_session = self.runtime._get_session_info(session_id).session
+                app_session = self.runtime._session_mgr.get_active_session_info(
+                    session_id
+                ).session
                 app_sessions.append(app_session)
 
             # Sanity check
@@ -221,7 +225,9 @@ class RuntimeTest(RuntimeTestCase):
             back_msg = MagicMock()
             self.runtime.handle_backmsg(session_id, back_msg)
 
-            app_session = self.runtime._get_session_info(session_id).session
+            app_session = self.runtime._session_mgr.get_active_session_info(
+                session_id
+            ).session
             app_session.handle_backmsg.assert_called_once_with(back_msg)
 
     async def test_handle_backmsg_invalid_session(self):
@@ -242,7 +248,9 @@ class RuntimeTest(RuntimeTestCase):
             exception = MagicMock()
             self.runtime.handle_backmsg_deserialization_exception(session_id, exception)
 
-            app_session = self.runtime._get_session_info(session_id).session
+            app_session = self.runtime._session_mgr.get_active_session_info(
+                session_id
+            ).session
             app_session.handle_backmsg_exception.assert_called_once_with(exception)
 
     async def test_handle_backmsg_exception_invalid_session(self):
@@ -514,6 +522,7 @@ class ScriptCheckTest(RuntimeTestCase):
             script_path=self._path,
             command_line="mock command line",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            session_manager_class=MagicMock,
         )
         self.runtime = Runtime(config)
         await self.runtime.start()

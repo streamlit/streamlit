@@ -38,7 +38,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get our connected BrowserWebSocketHandler
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
             websocket_handler = session_info.client
             self.assertIsInstance(websocket_handler, BrowserWebSocketHandler)
 
@@ -70,8 +70,8 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.server.start()
             await self.ws_connect()
 
-            # Get our BrowserWebSocketHandler
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            # Get our connected BrowserWebSocketHandler
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
             websocket_handler: BrowserWebSocketHandler = session_info.client
 
             mock_runtime = MagicMock(spec=Runtime)
