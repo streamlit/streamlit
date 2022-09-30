@@ -1,8 +1,8 @@
 name: Test Python Versions
 
 on:
-  pull_request:
-    types: [opened]
+  # pull_request:
+  #   types: [opened]
   push:
     branches:
       - '**'
