@@ -21,7 +21,7 @@ from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandl
 
 def _get_websocket_headers() -> Optional[Dict[str, str]]:
     """Return a copy of the HTTP request headers for the current session's
-    WebSocket connection.
+    WebSocket connection. If there's no active session, return None instead.
 
     Raise an error if the server is not running.
 
