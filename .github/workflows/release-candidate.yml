@@ -90,11 +90,9 @@ jobs:
         if: ${{ success() }}
         env: 
           SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":rocket: Release Candidate was successful!"}' "$SLACK_WEBHOOK"
+        run: python scripts/slack_notifications.py candidate success
       - name: Failed Release Candidate Slack Message
         if: ${{ failure() }}
         env: 
           SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":":blobonfire: Release Candidate failed"}' "$SLACK_WEBHOOK"
+        run: python scripts/slack_notifications.py candidate failure

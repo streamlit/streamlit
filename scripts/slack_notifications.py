@@ -44,6 +44,12 @@ def send_notification():
         failure = nightly_slack_messages[message_key]
         message = {"text": ":blobonfire: Nightly build failed %s" % failure}
 
+    if workflow == "candidate":
+        if message_key == "success":
+            message = {"text": ":rocket: Release Candidate was successful!"}
+        else:
+            message = {"text": ":blobonfire: Release Candidate failed"}
+
     payload = json.dumps(message)
 
     response = requests.post(webhook, payload)
