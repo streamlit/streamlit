@@ -42,9 +42,9 @@ from streamlit.runtime.media_file_storage import MediaFileStorage
 from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.session_manager import (
+    ActiveSessionInfo,
     SessionClient,
     SessionClientDisconnectedError,
-    SessionInfo,
     SessionManager,
 )
 from streamlit.runtime.state import (
@@ -528,14 +528,14 @@ class Runtime:
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
 
-                    for session_info in self._session_mgr.list_active_sessions():
-                        msg_list = session_info.session.flush_browser_queue()
+                    for active_session_info in self._session_mgr.list_active_sessions():
+                        msg_list = active_session_info.session.flush_browser_queue()
                         for msg in msg_list:
                             try:
-                                self._send_message(session_info, msg)
+                                self._send_message(active_session_info, msg)
                             except SessionClientDisconnectedError:
                                 self._session_mgr.disconnect_session(
-                                    session_info.session.id
+                                    active_session_info.session.id
                                 )
 
                             # Yield for a tick after sending a message.
@@ -558,10 +558,10 @@ class Runtime:
                 )
 
             # Shut down all AppSessions.
-            # NOTE: We want to fully shut down sessions when the runtime stops for now,
-            # but this may change in the future if/when our notion of a session is no
-            # longer so tightly coupled to a browser tab.
             for session_info in self._session_mgr.list_sessions():
+                # NOTE: We want to fully shut down sessions when the runtime stops for
+                # now, but this may change in the future if/when our notion of a session
+                # is no longer so tightly coupled to a browser tab.
                 self._session_mgr.close_session(session_info.session.id)
 
             self._set_state(RuntimeState.STOPPED)
@@ -576,7 +576,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
             )
 
-    def _send_message(self, session_info: SessionInfo, msg: ForwardMsg) -> None:
+    def _send_message(self, session_info: ActiveSessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
 
         If the client is likely to have already cached the message, we may
@@ -585,8 +585,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         Parameters
         ----------
-        session_info : SessionInfo
-            The SessionInfo associated with websocket
+        session_info : ActiveSessionInfo
+            The ActiveSessionInfo associated with websocket
         msg : ForwardMsg
             The message to send to the client
 
@@ -632,9 +632,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 session_info.session, session_info.script_run_count
             )
 
-        assert (
-            session_info.client is not None
-        ), "SessionClient should never be None here!"
         # Ship it off!
         session_info.client.write_forward_msg(msg_to_send)
 
