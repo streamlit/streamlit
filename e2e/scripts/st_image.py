@@ -43,8 +43,7 @@ def create_gif(size):
         format="GIF",
         save_all=True,
         append_images=images[1:],
-        duration=100,
-        loop=1,
+        duration=1,
     )
 
     return data.getvalue()
