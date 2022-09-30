@@ -12,6 +12,10 @@ jobs:
       run:
         shell: bash -ileo pipefail {0}
 
+    permissions: 
+    # Additional permission needed to generate release
+      contents: write
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
@@ -39,7 +43,7 @@ jobs:
         env: 
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
         run: |
-          BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | tr -d 'release/' )
+          BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | sed 's/release\///' )
 
           if [ "$BRANCH_VERSION" != "$GIT_TAG" ]
           then
@@ -94,6 +98,7 @@ jobs:
           GIT_TAG: ${{ env.GIT_TAG }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          pip install requests
           python scripts/create_release.py
       # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
       - name: Successful Release Slack Message

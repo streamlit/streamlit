@@ -14,25 +14,22 @@
 # limitations under the License.
 
 """Retrieve the branch name from the release PR"""
-import json
 import requests
 
 
+# Assumes there is only one open pull request with a release/ branch
 def check_for_release_pr(pull):
     label = pull["head"]["label"]
 
     if label.find("release/") != -1:
         return pull["head"]["ref"]
-    else:
-        pass
 
 
 def get_release_branch():
     """Retrieve the release branch from the release PR"""
 
     url = "https://api.github.com/repos/streamlit/streamlit/pulls"
-    response = requests.get(url).text
-    result = json.loads(response)
+    response = requests.get(url).json()
 
     # Response is in an array, must map over each pull (dict)
     for pull in result:
@@ -42,10 +39,8 @@ def get_release_branch():
 
 
 def main():
-    """Run main loop."""
 
-    release_branch = get_release_branch()
-    print(release_branch)
+    print(get_release_branch())
 
 
 if __name__ == "__main__":
