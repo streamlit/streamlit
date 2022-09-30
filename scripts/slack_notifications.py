@@ -49,6 +49,12 @@ def send_notification():
         else:
             payload = {"text": ":blobonfire: Release Candidate failed"}
 
+    if workflow == "release":
+        if message_key == "success":
+            payload = {"text": ":rocket: Release was successful!"}
+        else:
+            payload = {"text": ":blobonfire: Release failed"}
+
     response = requests.post(webhook, json=payload)
 
     if response.status_code != 200:
