@@ -38,6 +38,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          pip install requests
           echo "GH_PR_BRANCH=$(python scripts/get_release_branch.py)" >> $GITHUB_ENV
       - name: Ensure that version tag matches branch version
         env: 
@@ -98,7 +99,6 @@ jobs:
           GIT_TAG: ${{ env.GIT_TAG }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pip install requests
           python scripts/create_release.py
       # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
       - name: Successful Release Slack Message
