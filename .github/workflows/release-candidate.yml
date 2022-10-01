@@ -1,0 +1,100 @@
+name: Release Candidate
+
+on:
+  # Manual Trigger GH CLI -> gh workflow run release-candidate.yml --ref <branch-name>
+  workflow_dispatch:
+
+jobs:
+  run-python-tests:
+    uses: ./.github/workflows/python-versions.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-javascript-tests:
+    uses: ./.github/workflows/js-tests.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-py-prod-deps-smoke-test:
+    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-cypress-tests:
+    uses: ./.github/workflows/cypress.yml
+    with:
+      ref: ${{ github.ref_name }}
+      
+  build-release-candidate:
+    runs-on: ubuntu-latest
+
+    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      # Uses action to safely process user input (branch name) to prevent script injection attacks
+      - name: Set Environment Variables
+        uses: ./.github/actions/branch
+        with:
+          branch: ${{ github.ref_name }}
+      - name: Set desired version from branch name
+        env:
+          BRANCH: ${{ env.BRANCH }}
+        run: |
+          echo "DESIRED_VERSION=$(echo "${BRANCH}" | sed 's/release\///')" >> $GITHUB_ENV
+      - name: Set final versions for pre-release and update version
+        env: 
+          DESIRED_VERSION: ${{ env.DESIRED_VERSION }}
+        run: |
+          LATEST_MATCHING_RC=$(python scripts/get_latest_release_candidate.py)
+          if [ "$LATEST_MATCHING_RC" != "None" ]; then python scripts/update_version.py "$LATEST_MATCHING_RC"; fi
+
+          STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py "$DESIRED_VERSION")
+          echo "STREAMLIT_RELEASE_VERSION=$(echo "$STREAMLIT_RELEASE_SEMVER" | sed s/\-rc\./rc/)" >> $GITHUB_ENV
+          python scripts/update_version.py "$STREAMLIT_RELEASE_SEMVER"
+      - name: Create Package
+        timeout-minutes: 120
+        run: |
+          sudo apt install rsync
+          make package
+      - name: Run CLI regression tests
+        run: make cli-regression-tests
+      - name: Store Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: Release-Candidate
+          path: lib/dist
+      # TODO: Gate upload step as precaution for now
+      - if: ${{ 'true' == 'false' }}
+        name: Upload to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
+        run: |
+          make distribute
+      # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
+      - name: Successful Release Candidate Slack Message
+        if: ${{ success() }}
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
+        run: python scripts/slack_notifications.py candidate success
+      - name: Failed Release Candidate Slack Message
+        if: ${{ failure() }}
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
+        run: python scripts/slack_notifications.py candidate failure
