@@ -131,8 +131,8 @@ type Event =
   | "FATAL_ERROR" // Unrecoverable error. This should never happen!
 
 /**
- * This class is the "brother" of StaticConnection. The class connects to the
- * server and gets deltas over a websocket connection.
+ * This class connects to the server and gets deltas over a websocket connection.
+ *
  */
 export class WebsocketConnection {
   private readonly args: Args
