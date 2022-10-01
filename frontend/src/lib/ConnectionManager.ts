@@ -44,6 +44,12 @@ interface Props {
    * Called when our ConnectionState is changed.
    */
   connectionStateChanged: (connectionState: ConnectionState) => void
+
+  /**
+   * Function to get the auth token set by the host of this app (if in a
+   * relevant deployment scenario).
+   */
+  getHostAuthToken: () => string | undefined
 }
 
 /**
@@ -145,6 +151,7 @@ export class ConnectionManager {
       onMessage: this.props.onMessage,
       onConnectionStateChange: this.setConnectionState,
       onRetry: this.showRetryError,
+      getHostAuthToken: this.props.getHostAuthToken,
     })
   }
 }

@@ -15,7 +15,14 @@
 import base64
 import binascii
 import json
-from typing import Any, Awaitable, Dict, Optional, Union
+from typing import (
+    Any,
+    Awaitable,
+    Dict,
+    List,
+    Optional,
+    Union,
+)
 
 import tornado.concurrent
 import tornado.locks
@@ -60,6 +67,16 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             self.write_message(serialize_forward_msg(msg), binary=True)
         except tornado.websocket.WebSocketClosedError as e:
             raise SessionClientDisconnectedError from e
+
+    def select_subprotocol(self, subprotocols: List[str]) -> Optional[str]:
+        """Return the first subprotocol in the given list.
+
+        TODO: finish docstring and write test.
+        """
+        if subprotocols:
+            return subprotocols[0]
+
+        return None
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
         # Extract user info from the X-Streamlit-User header

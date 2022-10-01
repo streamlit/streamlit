@@ -96,6 +96,12 @@ interface Args {
    * Function called when we receive a new message.
    */
   onMessage: OnMessage
+
+  /**
+   * Function to get the auth token set by the host of this app (if in a
+   * relevant deployment scenario).
+   */
+  getHostAuthToken: () => string | undefined
 }
 
 interface MessageQueue {
@@ -346,7 +352,13 @@ export class WebsocketConnection {
     }
 
     logMessage(LOG, "creating WebSocket")
-    this.websocket = new WebSocket(uri)
+
+    // TODO(vdonato): Explanatory comment
+    const hostAuthToken = this.args.getHostAuthToken()
+    this.websocket = new WebSocket(uri, [
+      "streamlit",
+      ...(hostAuthToken ? [hostAuthToken] : []),
+    ])
     this.websocket.binaryType = "arraybuffer"
 
     this.setConnectionTimeout(uri)

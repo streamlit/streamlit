@@ -280,12 +280,17 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
+      // TODO(vdonato): Test for this function
+      getHostAuthToken: () =>
+        this.props.hostCommunication.currentState.authToken,
     })
 
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
     }
 
+    // TODO(vdonato): Test that this message is sent.
+    this.props.hostCommunication.connect() // TODO: Verify that this is safe to move here (I'm pretty sure it is)
     this.props.hostCommunication.sendMessage({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
@@ -760,7 +765,6 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.props.hostCommunication.connect()
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
