@@ -242,6 +242,30 @@ describe("withHostCommunication HOC", () => {
     )
   })
 
+  it("can process a received SET_AUTH_TOKEN message", () => {
+    const dispatchEvent = mockEventListeners()
+    const wrapper = mount(<TestComponent />)
+
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "SET_AUTH_TOKEN",
+            authToken: "i am an auth token",
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
+    expect(props.currentState.authToken).toBe("i am an auth token")
+  })
+
   describe("Test different origins", () => {
     it("exact pattern", () => {
       const dispatchEvent = mockEventListeners()
