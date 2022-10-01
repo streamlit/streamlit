@@ -47,22 +47,26 @@ const NUM_BALLOON_TYPES = BALLOON_IMAGES.length
 
 export interface Props {
   scriptRunId: string
+  isVisible: boolean
 }
 
 const Balloon: FC<ParticleProps> = ({ particleType }) => (
   <StyledBalloon src={BALLOON_IMAGES[particleType]} />
 )
 
-const Balloons: FC<Props> = ({ scriptRunId }) => (
+const Balloons: FC<Props> = ({ scriptRunId, isVisible }) =>
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  <Particles
-    className="balloons"
-    scriptRunId={scriptRunId}
-    numParticleTypes={NUM_BALLOON_TYPES}
-    numParticles={NUM_BALLOONS}
-    ParticleComponent={Balloon}
-  />
-)
+  isVisible ? (
+    <Particles
+      className="balloons"
+      scriptRunId={scriptRunId}
+      numParticleTypes={NUM_BALLOON_TYPES}
+      numParticles={NUM_BALLOONS}
+      ParticleComponent={Balloon}
+    />
+  ) : (
+    <></>
+  )
 
 export default memo(Balloons)

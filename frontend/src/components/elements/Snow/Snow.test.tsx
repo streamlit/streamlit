@@ -17,10 +17,12 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 
-import Snow, { SnowProps, NUM_FLAKES } from "src/components/elements/Snow"
+import Snow, { NUM_FLAKES, SnowProps } from "src/components/elements/Snow"
 
-const getProps = (): SnowProps => ({
+const getProps = (props: Partial<SnowProps> = {}): SnowProps => ({
   scriptRunId: "51522269",
+  isVisible: true,
+  ...props,
 })
 
 describe("Snow element", () => {
@@ -48,5 +50,12 @@ describe("Snow element", () => {
     const wrapper = mount(<Snow {...props} />)
 
     expect(wrapper.find("div").prop("className")).toContain("stHidden")
+  })
+
+  it("renders as empty element when isVisible prop equal to false", () => {
+    const props = getProps({ isVisible: false })
+    const wrapper = mount(<Snow {...props} />)
+
+    expect(wrapper.find("div")).toHaveLength(0)
   })
 })
