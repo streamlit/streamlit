@@ -70,8 +70,8 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
                 )
 
             try:
-                # Check that the value can be encoded in the default encoding
-                # for headers.
+                # Check that the value can be encoded in latin1. Latin1 is
+                # the default encoding for headers.
                 filename.encode("latin1")
                 file_expr = 'filename="{}"'.format(filename)
             except UnicodeEncodeError:
