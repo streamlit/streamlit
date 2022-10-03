@@ -119,11 +119,14 @@ const SidebarNav = ({
               pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
             }
 
+            const tooltipContent = pageName.replace(/_/g, " ")
+            const isActive = pageScriptHash === currentPageScriptHash
+
             return (
               <li key={pageName}>
                 <StyledSidebarNavLinkContainer>
                   <StyledSidebarNavLink
-                    isActive={pageScriptHash === currentPageScriptHash}
+                    isActive={isActive}
                     href={pageUrl}
                     onClick={e => {
                       e.preventDefault()
@@ -136,14 +139,12 @@ const SidebarNav = ({
                     {pageIcon && pageIcon.length && (
                       <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
                     )}
-                    <StyledSidebarLinkText
-                      isActive={pageScriptHash === currentPageScriptHash}
-                    >
+                    <StyledSidebarLinkText isActive={isActive}>
                       <OverflowTooltip
-                        content={pageName.replace(/_/g, " ")}
+                        content={tooltipContent}
                         placement={Placement.AUTO}
                       >
-                        {pageName.replace(/_/g, " ")}
+                        {tooltipContent}
                       </OverflowTooltip>
                     </StyledSidebarLinkText>
                   </StyledSidebarNavLink>
