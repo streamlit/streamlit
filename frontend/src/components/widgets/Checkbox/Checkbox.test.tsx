@@ -134,9 +134,11 @@ describe("Checkbox widget", () => {
     wrapper.update()
 
     expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
-    expect(
-      props.widgetMgr.setBoolValue
-    ).toHaveBeenLastCalledWith(props.element, true, { fromUi: true })
+    expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+      props.element,
+      true,
+      { fromUi: true }
+    )
 
     // "Submit" the form
     props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })

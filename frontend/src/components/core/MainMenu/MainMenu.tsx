@@ -281,12 +281,8 @@ const SubMenu = ({
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
   const onClickDeployApp = useCallback((): void => {
-    const {
-      showDeployError,
-      closeDialog,
-      isDeployErrorModalOpen,
-      gitInfo,
-    } = props
+    const { showDeployError, closeDialog, isDeployErrorModalOpen, gitInfo } =
+      props
 
     if (!gitInfo) {
       const dialog = NoRepositoryDetected()

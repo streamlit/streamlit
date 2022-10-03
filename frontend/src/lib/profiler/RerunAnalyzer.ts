@@ -67,9 +67,8 @@ class RerunAnalyzer {
     }
 
     // Analyze each message in the run
-    const sortedMessageIndexes = Array.from(messageIndexes).sort(
-      compareNumbers
-    )
+    const sortedMessageIndexes =
+      Array.from(messageIndexes).sort(compareNumbers)
 
     // Get the total duration of the run
     const lastRerunEvent = this.rerunEvents[this.rerunEvents.length - 1]

@@ -169,8 +169,7 @@ export const StyledFileUploader = styled.div(({ theme }) => {
   }
 
   return {
-    [`@media (max-width: ${theme.breakpoints.sm})`]: compactFileUploader(
-      theme
-    ),
+    [`@media (max-width: ${theme.breakpoints.sm})`]:
+      compactFileUploader(theme),
   }
 })

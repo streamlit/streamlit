@@ -221,10 +221,7 @@ describe("SidebarNav", () => {
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
     expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(Icon)
-        .exists()
+      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).exists()
     ).toBe(false)
   })
 
@@ -235,10 +232,7 @@ describe("SidebarNav", () => {
     )
 
     expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(Icon)
-        .props()
+      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
     ).toHaveProperty("content", ExpandMore)
   })
 
@@ -255,10 +249,7 @@ describe("SidebarNav", () => {
       mockClickEvent
     )
     expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(Icon)
-        .props()
+      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
     ).toHaveProperty("content", ExpandLess)
   })
 
@@ -274,10 +265,7 @@ describe("SidebarNav", () => {
       mockClickEvent
     )
     expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(Icon)
-        .props()
+      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
     ).toHaveProperty("content", ExpandLess)
   })
 
@@ -421,20 +409,11 @@ describe("SidebarNav", () => {
     const wrapper = shallow(<SidebarNav {...props} />)
 
     expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(0)
-        .find("Icon")
-        .prop("content")
+      wrapper.find(StyledSidebarNavLink).at(0).find("Icon").prop("content")
     ).toBe(Description)
 
     expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(1)
-        .find("EmojiIcon")
-        .dive()
-        .text()
+      wrapper.find(StyledSidebarNavLink).at(1).find("EmojiIcon").dive().text()
     ).toBe("🦈")
   })
 
@@ -443,17 +422,11 @@ describe("SidebarNav", () => {
 
     const wrapper = shallow(<SidebarNav {...props} />)
 
-    expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(0)
-        .prop("isActive")
-    ).toBe(false)
-    expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(1)
-        .prop("isActive")
-    ).toBe(true)
+    expect(wrapper.find(StyledSidebarNavLink).at(0).prop("isActive")).toBe(
+      false
+    )
+    expect(wrapper.find(StyledSidebarNavLink).at(1).prop("isActive")).toBe(
+      true
+    )
   })
 })

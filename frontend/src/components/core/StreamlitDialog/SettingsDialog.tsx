@@ -172,10 +172,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleThemeChange = (index: number): void => {
-    const {
-      activeTheme: oldTheme,
-      availableThemes,
-    }: AppContextProps = this.context
+    const { activeTheme: oldTheme, availableThemes }: AppContextProps =
+      this.context
     const newTheme = availableThemes[index]
 
     MetricsManager.current.enqueue("themeChanged", {

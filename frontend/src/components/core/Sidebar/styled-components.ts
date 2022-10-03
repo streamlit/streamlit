@@ -121,33 +121,34 @@ const bounceAnimation = keyframes`
   }
 `
 
-export const StyledSidebarNavSeparatorContainer = styled.div<
-  StyledSidebarNavSeparatorContainerProps
->(({ isExpanded, isOverflowing, theme }) => ({
-  cursor: isExpanded || isOverflowing ? "pointer" : "default",
-  position: "absolute",
-  height: theme.spacing.lg,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: theme.colors.fadedText60,
-  borderBottom: `1px solid ${theme.colors.fadedText10}`,
-  transition: "color 500ms",
+export const StyledSidebarNavSeparatorContainer =
+  styled.div<StyledSidebarNavSeparatorContainerProps>(
+    ({ isExpanded, isOverflowing, theme }) => ({
+      cursor: isExpanded || isOverflowing ? "pointer" : "default",
+      position: "absolute",
+      height: theme.spacing.lg,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: theme.colors.fadedText60,
+      borderBottom: `1px solid ${theme.colors.fadedText10}`,
+      transition: "color 500ms",
 
-  ...((isExpanded || isOverflowing) && {
-    "&:hover": {
-      color: theme.colors.bodyText,
-      background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
+      ...((isExpanded || isOverflowing) && {
+        "&:hover": {
+          color: theme.colors.bodyText,
+          background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
 
-      "& > *": {
-        animation: `${bounceAnimation} 0.5s ease infinite`,
-      },
-    },
-  }),
-}))
+          "& > *": {
+            animation: `${bounceAnimation} 0.5s ease infinite`,
+          },
+        },
+      }),
+    })
+  )
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -204,43 +205,44 @@ export interface StyledSidebarUserContentProps {
   hasPageNavAbove: boolean
 }
 
-export const StyledSidebarUserContent = styled.div<
-  StyledSidebarUserContentProps
->(({ hasPageNavAbove, theme }) => ({
-  paddingTop: hasPageNavAbove ? theme.spacing.lg : theme.sizes.sidebarTopSpace,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
+export const StyledSidebarUserContent =
+  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
+    paddingTop: hasPageNavAbove
+      ? theme.spacing.lg
+      : theme.sizes.sidebarTopSpace,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
 
-  "& h1": {
-    fontSize: theme.fontSizes.xl,
-    fontWeight: 600,
-  },
+    "& h1": {
+      fontSize: theme.fontSizes.xl,
+      fontWeight: 600,
+    },
 
-  "& h2": {
-    fontSize: theme.fontSizes.lg,
-    fontWeight: 600,
-  },
+    "& h2": {
+      fontSize: theme.fontSizes.lg,
+      fontWeight: 600,
+    },
 
-  "& h3": {
-    fontSize: theme.fontSizes.mdLg,
-    fontWeight: 600,
-  },
+    "& h3": {
+      fontSize: theme.fontSizes.mdLg,
+      fontWeight: 600,
+    },
 
-  "& h4": {
-    fontSize: theme.fontSizes.md,
-    fontWeight: 600,
-  },
+    "& h4": {
+      fontSize: theme.fontSizes.md,
+      fontWeight: 600,
+    },
 
-  "& h5": {
-    fontSize: theme.fontSizes.sm,
-    fontWeight: 600,
-  },
+    "& h5": {
+      fontSize: theme.fontSizes.sm,
+      fontWeight: 600,
+    },
 
-  "& h6": {
-    fontSize: theme.fontSizes.twoSm,
-    fontWeight: 600,
-  },
-}))
+    "& h6": {
+      fontSize: theme.fontSizes.twoSm,
+      fontWeight: 600,
+    },
+  }))
 
 export interface StyledSidebarContentProps {
   hideScrollbar: boolean
@@ -271,23 +273,24 @@ export interface StyledSidebarCollapsedControlProps {
   isCollapsed: boolean
 }
 
-export const StyledSidebarCollapsedControl = styled.div<
-  StyledSidebarCollapsedControlProps
->(({ chevronDownshift, isCollapsed, theme }) => ({
-  position: "fixed",
-  top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
-  left: isCollapsed ? theme.spacing.twoXS : `-${theme.spacing.twoXS}`,
-  zIndex: theme.zIndices.header,
+export const StyledSidebarCollapsedControl =
+  styled.div<StyledSidebarCollapsedControlProps>(
+    ({ chevronDownshift, isCollapsed, theme }) => ({
+      position: "fixed",
+      top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
+      left: isCollapsed ? theme.spacing.twoXS : `-${theme.spacing.twoXS}`,
+      zIndex: theme.zIndices.header,
 
-  transition: "left 300ms",
-  transitionDelay: "left 300ms",
+      transition: "left 300ms",
+      transitionDelay: "left 300ms",
 
-  color: theme.colors.bodyText,
+      color: theme.colors.bodyText,
 
-  [`@media (max-width: ${theme.breakpoints.md})`]: {
-    color: theme.colors.bodyText,
-  },
-}))
+      [`@media (max-width: ${theme.breakpoints.md})`]: {
+        color: theme.colors.bodyText,
+      },
+    })
+  )
 
 export const StyledResizeHandle = styled.div(({ theme }) => ({
   position: "absolute",
