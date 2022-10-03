@@ -20,8 +20,8 @@ import tornado.web
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import (
-    get_extension_for_mimetype,
     MemoryMediaFileStorage,
+    get_extension_for_mimetype,
 )
 from streamlit.string_util import generate_download_filename_from_title
 from streamlit.web.server import allow_cross_origin_requests

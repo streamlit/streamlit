@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import os
-import setuptools
 import sys
 from pathlib import Path
 
+import setuptools
 from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
@@ -80,7 +80,8 @@ class VerifyVersionCommand(install):
     description = "verify that the git tag matches our version"
 
     def run(self):
-        tag = os.getenv("CIRCLE_TAG")
+        # Todo: CIRCLE_TAG exclusive to CircleCI - remove once converted
+        tag = os.getenv("CIRCLE_TAG") or os.getenv("TAG")
 
         if tag != VERSION:
             info = "Git tag: {0} does not match the version of this app: {1}".format(
@@ -104,7 +105,7 @@ setuptools.setup(
         "Community": "https://discuss.streamlit.io/",
         "Twitter": "https://twitter.com/streamlit",
     },
-    author="Streamlit Inc",
+    author="Snowflake Inc",
     author_email="hello@streamlit.io",
     license="Apache License 2.0",
     classifiers=[

@@ -14,7 +14,8 @@
 
 import os
 import re
-from typing import Optional, Tuple, Any
+from typing import Any, Optional, Tuple
+
 from streamlit import util
 
 # Github has two URLs, one that is https and one that is ssh

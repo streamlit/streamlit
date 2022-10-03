@@ -14,14 +14,14 @@
 
 from unittest import mock
 
-from parameterized import parameterized, param
+from parameterized import param, parameterized
 
 import streamlit as st
 from streamlit.commands.page_config import (
-    valid_url,
     ENG_EMOJIS,
     RANDOM_EMOJIS,
     PageIcon,
+    valid_url,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto

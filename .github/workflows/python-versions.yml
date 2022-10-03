@@ -1,0 +1,57 @@
+name: Test Python Versions
+
+on:
+  push:
+    branches:
+      - '**'
+  # Allows workflow to be called from other workflows
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+
+# Avoid duplicate workflows on same branch
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}-python
+  cancel-in-progress: true
+
+jobs:
+  python_tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.10"]
+    
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: make develop
+      - name: Run Linters
+        run: |
+          PRE_COMMIT_NO_CONCURRENCY=true pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+      - name: Run Type Checkers
+        run: scripts/mypy --report
+      - name: Run Python Tests
+        run: make pycoverage
+      - name: Run Integration Tests
+        run: make integration-tests
+      - name: CLI Smoke Tests
+        run: make cli-smoke-tests

@@ -16,8 +16,8 @@
 
 import graphviz as graphviz
 
-from tests import testutil
 import streamlit as st
+from tests import testutil
 
 
 class GraphvizTest(testutil.DeltaGeneratorTestCase):

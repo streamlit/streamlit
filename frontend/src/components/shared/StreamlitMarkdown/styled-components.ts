@@ -136,6 +136,12 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   },
 }))
 
+export const StyledHeaderContainer = styled.div(({ theme }) => ({
+  "h1, h2, h3, h4, h5, h6, span": {
+    scrollMarginTop: theme.spacing.threeXL,
+  },
+}))
+
 export const StyledHeaderContent = styled.span(() => ({
   position: "relative",
   flex: "1",

@@ -14,8 +14,8 @@
 
 """button unit test."""
 
-from tests import testutil
 import streamlit as st
+from tests import testutil
 
 
 class ButtonTest(testutil.DeltaGeneratorTestCase):

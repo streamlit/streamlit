@@ -19,8 +19,8 @@ import re
 import textwrap
 from typing import Any, Callable, Optional
 
-from streamlit.errors import DeprecationError
 from streamlit import util
+from streamlit.errors import DeprecationError
 
 
 class ConfigOption:

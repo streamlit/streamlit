@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime, time
+
 import streamlit as st
-from datetime import datetime
-from datetime import time
 
 w1 = st.time_input("Label 1", time(8, 45))
 st.write("Value 1:", w1)

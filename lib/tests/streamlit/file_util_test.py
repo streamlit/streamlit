@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, mock_open, MagicMock
 import errno
 import os
-import pytest
 import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
-from streamlit import file_util
-from streamlit import util
+import pytest
 
+from streamlit import file_util, util
 
 FILENAME = "/some/cache/file"
 mock_get_path = MagicMock(return_value=FILENAME)

@@ -16,11 +16,9 @@ from typing import List
 
 import tornado.web
 
-from streamlit.proto.openmetrics_data_model_pb2 import (
-    MetricSet as MetricSetProto,
-    GAUGE,
-)
-from streamlit.runtime.stats import StatsManager, CacheStat
+from streamlit.proto.openmetrics_data_model_pb2 import GAUGE
+from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
+from streamlit.runtime.stats import CacheStat, StatsManager
 
 
 class StatsRequestHandler(tornado.web.RequestHandler):

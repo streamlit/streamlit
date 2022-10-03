@@ -16,7 +16,7 @@
 
 import copy
 import json
-from typing import Any, Dict, Iterable, Optional, Union, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Union, cast
 
 import pandas as pd
 from typing_extensions import Final, TypeAlias

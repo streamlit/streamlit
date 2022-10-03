@@ -27,6 +27,13 @@ repos:
           # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
           - --target-version=py37
         files: \.py$|\.pyi$
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+        args:
+          - --filter-files
+        exclude: ^lib/streamlit/__init__\.py$
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
@@ -57,6 +64,13 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
+      - id: no-relative-imports
+        language: pygrep
+        name: No relative imports
+        description: Streamlit style is to use absolute imports only (except docs building)
+        entry: "^\\s*from\\s+\\."
+        pass_filenames: true
+        files: \.py$
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.2.0
     hooks:

@@ -15,14 +15,14 @@
 """st.caching unit tests."""
 import threading
 import types
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.runtime.legacy_caching import hashing, caching
 from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from streamlit.runtime.legacy_caching import caching, hashing
 from tests import testutil
 
 

@@ -17,7 +17,7 @@
 import os
 import sys
 import time
-from typing import List, Any, Optional
+from typing import Any, List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,23 +30,23 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import (
-    ScriptRunner,
-    ScriptRunnerEvent,
     RerunData,
     RerunException,
+    ScriptRunner,
+    ScriptRunnerEvent,
     StopException,
 )
 from streamlit.runtime.scriptrunner.script_requests import (
-    ScriptRequestType,
-    ScriptRequests,
     ScriptRequest,
+    ScriptRequests,
+    ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager

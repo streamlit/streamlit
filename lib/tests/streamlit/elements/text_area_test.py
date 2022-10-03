@@ -16,12 +16,13 @@
 
 import re
 from unittest.mock import patch
+
 from parameterized import parameterized
 
-from tests import testutil
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from tests import testutil
 
 
 class TextAreaTest(testutil.DeltaGeneratorTestCase):

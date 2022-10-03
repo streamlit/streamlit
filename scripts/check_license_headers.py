@@ -49,6 +49,7 @@ IGNORE_PATTERN = re.compile(
     r"|^frontend/(\.dockerignore|\.eslintrc)$"
     r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
     r"|^lib/(test-requirements-with-tensorflow\.txt|test-requirements\.txt)$"
+    r"|\.isort\.cfg$"
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|vendor|test_data|data)/"
     # Exclude vendored files.

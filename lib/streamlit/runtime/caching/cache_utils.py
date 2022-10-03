@@ -24,14 +24,14 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Dict,
-    List,
     Iterator,
+    List,
+    Optional,
     Set,
     Tuple,
-    Optional,
-    Any,
     Union,
 )
 
@@ -39,18 +39,18 @@ from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import util
-from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.elements import NONWIDGET_ELEMENTS
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
-from .cache_errors import (
+from streamlit.runtime.caching.cache_errors import (
+    CachedStFunctionWarning,
+    CacheKeyNotFoundError,
     CacheReplayClosureError,
     CacheType,
-    CachedStFunctionWarning,
     UnhashableParamError,
     UnhashableTypeError,
 )
-from .hashing import update_hash
+from streamlit.runtime.caching.hashing import update_hash
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

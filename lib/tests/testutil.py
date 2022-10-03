@@ -17,24 +17,24 @@ import threading
 import unittest
 from contextlib import contextmanager
 from typing import Any, Dict, List
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import streamlit
 from streamlit import config
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import media_file_manager, Runtime
+from streamlit.runtime import Runtime, media_file_manager
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import (
+    ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
-    ScriptRunContext,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.web.server.server import MEDIA_ENDPOINT
 
 

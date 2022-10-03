@@ -21,17 +21,14 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.runtime.caching import (
-    MEMO_CALL_STACK,
-    SINGLETON_CALL_STACK,
-)
+from streamlit.runtime.caching import MEMO_CALL_STACK, SINGLETON_CALL_STACK
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
+    ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
     script_run_context,
-    ScriptRunContext,
 )
 from streamlit.runtime.state import SessionState
 from tests.testutil import DeltaGeneratorTestCase

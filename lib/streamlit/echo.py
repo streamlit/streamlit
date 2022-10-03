@@ -16,7 +16,7 @@ import contextlib
 import re
 import textwrap
 import traceback
-from typing import List, Iterable, Optional
+from typing import Iterable, List, Optional
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -43,7 +43,7 @@ def echo(code_location="above"):
 
     """
 
-    from streamlit import code, warning, empty, source_util
+    from streamlit import code, empty, source_util, warning
 
     if code_location == "below":
         show_code = code

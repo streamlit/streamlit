@@ -20,14 +20,13 @@ import glob
 import itertools
 import os
 import os.path
+import shlex
 import sys
 import tempfile
-import shlex
-from typing import List, Iterable
+from typing import Iterable, List
 
 import click
 import mypy.main as mypy_main
-
 
 PATHS = ["lib/streamlit/", "scripts/*", "e2e/scripts/*"]
 EXCLUDE_FILES = {"scripts/add_license_headers.py", "e2e/scripts/st_reuse_label.py", "scripts/license-template.txt"}
