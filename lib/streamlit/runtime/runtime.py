@@ -558,7 +558,7 @@ class Runtime:
             # NOTE: We want to fully shut down sessions when the runtime stops for now,
             # but this may change in the future if/when our notion of a session is no
             # longer so tightly coupled to a browser tab.
-            for session_info in self._session_mgr.list_active_sessions():
+            for session_info in self._session_mgr.list_sessions():
                 self._session_mgr.close_session(session_info.session.id)
 
             self._set_state(RuntimeState.STOPPED)

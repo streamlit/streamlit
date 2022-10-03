@@ -185,6 +185,8 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session(session_id)
         self.assertFalse(self.runtime.is_active_session(session_id))
 
+    # TODO(vdonato): Change this test to verify that *all* AppSessions (both active and
+    # inactive) are shut down when the Runtime stops.
     async def test_shutdown_appsessions_on_stop(self):
         """When the Runtime stops, it should shut down open AppSessions."""
         with self.patch_app_session():
