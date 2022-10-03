@@ -104,6 +104,8 @@ pylint:
 # Fix Python files that are not properly formatted.
 pyformat:
 	pre-commit run black --all-files
+	pre-commit run isort --all-files
+	pre-commit run no-relative-imports --all-files
 
 .PHONY: pytest
 # Run Python unit tests.
