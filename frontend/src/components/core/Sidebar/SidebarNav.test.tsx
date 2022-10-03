@@ -27,12 +27,13 @@ import { useIsOverflowing } from "src/lib/Hooks"
 import { mount, shallow } from "src/lib/test_util"
 import { BaseUriParts } from "src/lib/UriUtil"
 
-import { OverflowTooltip, Placement } from "src/components/shared/Tooltip"
+import { OverflowTooltip } from "src/components/shared/Tooltip"
 import SidebarNav, { Props } from "./SidebarNav"
 import {
   StyledSidebarNavItems,
   StyledSidebarNavSeparatorContainer,
   StyledSidebarNavLink,
+  StyledSidebarLinkText,
 } from "./styled-components"
 
 expect.extend(matchers)
@@ -87,30 +88,12 @@ describe("SidebarNav", () => {
   })
 
   it("replaces underscores with spaces in pageName", () => {
-    const useRefSpy = jest.spyOn(React, "useRef").mockReturnValue({
-      current: {
-        // Pretend the body is smaller than its onscreen area.
-        offsetWidth: 100,
-        scrollWidth: 200,
-      },
-    })
+    const wrapper = shallow(<SidebarNav {...getProps()} />)
 
-    jest.spyOn(React, "useEffect").mockImplementation(f => f())
+    const links = wrapper.find(StyledSidebarNavLink).find(OverflowTooltip)
 
-    const pageName = "streamlit_app"
-    const wrapper = shallow(
-      <OverflowTooltip
-        placement={Placement.AUTO}
-        content={pageName.replace(/_/g, " ")}
-      >
-        {pageName.replace(/_/g, " ")}
-      </OverflowTooltip>
-    )
-
-    expect(wrapper.props().content).toBe("streamlit app")
-
-    expect(useRefSpy).toBeCalledWith(null)
-    expect(wrapper).toMatchSnapshot()
+    expect(links.at(0).props().content).toBe("streamlit app")
+    expect(links.at(1).props().content).toBe("my other page")
   })
 
   describe("page links", () => {
@@ -462,5 +445,17 @@ describe("SidebarNav", () => {
         .at(1)
         .prop("isActive")
     ).toBe(true)
+  })
+
+  it("changes the text color when the page is active", () => {
+    const props = getProps({ currentPageScriptHash: "other_page_hash" })
+
+    const wrapper = mount(<SidebarNav {...props} />)
+    const activeLink = wrapper.find(StyledSidebarNavLink).at(1)
+
+    expect(activeLink.find(StyledSidebarLinkText)).toHaveStyleRule(
+      "color",
+      "#31333F"
+    )
   })
 })
