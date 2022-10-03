@@ -23,6 +23,7 @@ in the future.
 import time
 
 import pandas as pd
+
 import streamlit as st
 
 current_time = pd.to_datetime("08:00:00 2021-01-01", utc=True)

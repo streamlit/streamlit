@@ -18,7 +18,7 @@ import pickle
 import re
 import unittest
 from datetime import timedelta
-from unittest.mock import patch, mock_open, MagicMock, Mock
+from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import streamlit as st
 from streamlit import file_util

@@ -14,91 +14,87 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
-    cast,
     Dict,
     Hashable,
-    Optional,
-    overload,
     Iterable,
     NoReturn,
+    Optional,
     Tuple,
     Type,
     TypeVar,
-    TYPE_CHECKING,
     Union,
+    cast,
+    overload,
 )
 
 from typing_extensions import Final, Literal
 
 import streamlit as st
-from streamlit import cursor
-from streamlit.runtime import caching, legacy_caching
-from streamlit import type_util
-from streamlit import util
+from streamlit import cursor, type_util, util
 from streamlit.cursor import Cursor
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.errors import StreamlitAPIException
-from streamlit.errors import NoSessionContext
-from streamlit.proto import Block_pb2
-from streamlit.proto import ForwardMsg_pb2
-from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.logger import get_logger
-
-from streamlit.elements.balloons import BalloonsMixin
-from streamlit.elements.button import ButtonMixin
-from streamlit.elements.markdown import MarkdownMixin
-from streamlit.elements.heading import HeadingMixin
-from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
-from streamlit.elements.json import JsonMixin
-from streamlit.elements.doc_string import HelpMixin
-from streamlit.elements.exception import ExceptionMixin
-from streamlit.elements.bokeh_chart import BokehMixin
-from streamlit.elements.graphviz_chart import GraphvizMixin
-from streamlit.elements.plotly_chart import PlotlyMixin
-from streamlit.elements.deck_gl_json_chart import PydeckMixin
-from streamlit.elements.map import MapMixin
-from streamlit.elements.iframe import IframeMixin
-from streamlit.elements.media import MediaMixin
-from streamlit.elements.checkbox import CheckboxMixin
-from streamlit.elements.multiselect import MultiSelectMixin
-from streamlit.elements.metric import MetricMixin
-from streamlit.elements.radio import RadioMixin
-from streamlit.elements.selectbox import SelectboxMixin
-from streamlit.elements.text_widgets import TextWidgetsMixin
-from streamlit.elements.time_widgets import TimeWidgetsMixin
-from streamlit.elements.progress import ProgressMixin
-from streamlit.elements.empty import EmptyMixin
-from streamlit.elements.number_input import NumberInputMixin
-from streamlit.elements.camera_input import CameraInputMixin
-from streamlit.elements.color_picker import ColorPickerMixin
-from streamlit.elements.file_uploader import FileUploaderMixin
-from streamlit.elements.select_slider import SelectSliderMixin
-from streamlit.elements.slider import SliderMixin
-from streamlit.elements.snow import SnowMixin
-from streamlit.elements.image import ImageMixin
-from streamlit.elements.pyplot import PyplotMixin
-from streamlit.elements.write import WriteMixin
-from streamlit.elements.layouts import LayoutsMixin
-from streamlit.elements.form import FormMixin, FormData, current_form_id
-from streamlit.runtime.state import NoValue
 
 # DataFrame elements come in two flavors: "Legacy" and "Arrow".
 # We select between them with the DataFrameElementSelectorMixin.
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.arrow_altair import ArrowAltairMixin
 from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
-from streamlit.elements.legacy_data_frame import LegacyDataFrameMixin
-from streamlit.elements.legacy_altair import LegacyAltairMixin
-from streamlit.elements.legacy_vega_lite import LegacyVegaLiteMixin
+from streamlit.elements.balloons import BalloonsMixin
+from streamlit.elements.bokeh_chart import BokehMixin
+from streamlit.elements.button import ButtonMixin
+from streamlit.elements.camera_input import CameraInputMixin
+from streamlit.elements.checkbox import CheckboxMixin
+from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
+from streamlit.elements.deck_gl_json_chart import PydeckMixin
+from streamlit.elements.doc_string import HelpMixin
+from streamlit.elements.empty import EmptyMixin
+from streamlit.elements.exception import ExceptionMixin
+from streamlit.elements.file_uploader import FileUploaderMixin
+from streamlit.elements.form import FormData, FormMixin, current_form_id
+from streamlit.elements.graphviz_chart import GraphvizMixin
+from streamlit.elements.heading import HeadingMixin
+from streamlit.elements.iframe import IframeMixin
+from streamlit.elements.image import ImageMixin
+from streamlit.elements.json import JsonMixin
+from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.legacy_altair import LegacyAltairMixin
+from streamlit.elements.legacy_data_frame import LegacyDataFrameMixin
+from streamlit.elements.legacy_vega_lite import LegacyVegaLiteMixin
+from streamlit.elements.map import MapMixin
+from streamlit.elements.markdown import MarkdownMixin
+from streamlit.elements.media import MediaMixin
+from streamlit.elements.metric import MetricMixin
+from streamlit.elements.multiselect import MultiSelectMixin
+from streamlit.elements.number_input import NumberInputMixin
+from streamlit.elements.plotly_chart import PlotlyMixin
+from streamlit.elements.progress import ProgressMixin
+from streamlit.elements.pyplot import PyplotMixin
+from streamlit.elements.radio import RadioMixin
+from streamlit.elements.select_slider import SelectSliderMixin
+from streamlit.elements.selectbox import SelectboxMixin
+from streamlit.elements.slider import SliderMixin
+from streamlit.elements.snow import SnowMixin
+from streamlit.elements.text import TextMixin
+from streamlit.elements.text_widgets import TextWidgetsMixin
+from streamlit.elements.time_widgets import TimeWidgetsMixin
+from streamlit.elements.write import WriteMixin
+from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.logger import get_logger
+from streamlit.proto import Block_pb2, ForwardMsg_pb2
+from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.runtime import caching, legacy_caching
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import NoValue
 
 if TYPE_CHECKING:
+    from google.protobuf.message import Message
     from numpy import typing as npt
     from pandas import DataFrame, Series
-    from google.protobuf.message import Message
+
     from streamlit.elements.arrow import Data
 
 

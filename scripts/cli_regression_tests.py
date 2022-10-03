@@ -22,7 +22,6 @@ from typing import Optional
 
 import pytest
 
-
 CONFIG_FILE_PATH: str
 CREDENTIALS_FILE_PATH: str
 REPO_ROOT: str

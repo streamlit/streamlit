@@ -16,6 +16,7 @@
 
 import io
 from typing import TYPE_CHECKING, Any, Optional, cast
+
 from typing_extensions import Final
 
 import streamlit.elements.image as image_utils

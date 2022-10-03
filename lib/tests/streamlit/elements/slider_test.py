@@ -14,21 +14,17 @@
 
 """slider unit test."""
 
+from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import patch
+
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.js_number import JSNumber
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
-
-from datetime import date
-from datetime import datetime
-from datetime import time
-from datetime import timedelta
-from datetime import timezone
 
 
 class SliderTest(testutil.DeltaGeneratorTestCase):

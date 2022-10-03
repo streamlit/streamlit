@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import matplotlib.pyplot as plt
-import streamlit as st
 import pandas as pd
+
+import streamlit as st
 
 data = pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]})
 

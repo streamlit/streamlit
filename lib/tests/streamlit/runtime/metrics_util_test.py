@@ -15,7 +15,7 @@
 import datetime
 import unittest
 from typing import Callable
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
 from parameterized import parameterized

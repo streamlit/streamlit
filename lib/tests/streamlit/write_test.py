@@ -14,11 +14,10 @@
 
 """Streamlit Unit test."""
 
-from collections import namedtuple
-from unittest.mock import call, patch, Mock, PropertyMock
-
 import time
 import unittest
+from collections import namedtuple
+from unittest.mock import Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd

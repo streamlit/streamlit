@@ -16,10 +16,10 @@ import textwrap
 from typing import Any, cast
 
 import matplotlib.pyplot as plt
-import seaborn as sns
-import streamlit as st
 import numpy as np
+import seaborn as sns
 
+import streamlit as st
 
 # Plot labels
 title = "An Extremely and Really Really Long Long Long Title"

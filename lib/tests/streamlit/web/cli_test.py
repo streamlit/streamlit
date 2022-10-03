@@ -33,7 +33,6 @@ from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials
 from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
-
 from tests import testutil
 
 

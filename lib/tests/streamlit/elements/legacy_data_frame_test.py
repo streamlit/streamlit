@@ -14,20 +14,19 @@
 
 """Unit tests for _legacy_data_frame."""
 
-from unittest.mock import patch
 import json
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
-import pytest
 import pyarrow as pa
-import streamlit.elements.legacy_data_frame as data_frame
-
+import pytest
 from google.protobuf import json_format
 
+import streamlit.elements.legacy_data_frame as data_frame
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.DataFrame_pb2 import AnyArray, CSSStyle, Index, Table, DataFrame
+from streamlit.proto.DataFrame_pb2 import AnyArray, CSSStyle, DataFrame, Index, Table
 
 
 def _css_style(prop, value):

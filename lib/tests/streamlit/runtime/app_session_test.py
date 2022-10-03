@@ -16,7 +16,7 @@ import asyncio
 import threading
 import unittest
 from asyncio import AbstractEventLoop
-from typing import List, Any, Callable, cast, Optional
+from typing import Any, Callable, List, Optional, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,13 +32,13 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import (
+    RerunData,
     ScriptRunContext,
+    ScriptRunner,
+    ScriptRunnerEvent,
     add_script_run_ctx,
     get_script_run_ctx,
-    ScriptRunner,
-    RerunData,
 )
-from streamlit.runtime.scriptrunner import ScriptRunnerEvent
 from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager

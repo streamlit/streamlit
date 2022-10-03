@@ -13,13 +13,13 @@
 # limitations under the License.
 
 import textwrap
-from typing import cast, Optional, NamedTuple
+from typing import NamedTuple, Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
-from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 
 
 class FormData(NamedTuple):
@@ -171,7 +171,7 @@ class FormMixin:
         >>> form.form_submit_button("Submit")
 
         """
-        from .utils import check_session_state_rules
+        from streamlit.elements.utils import check_session_state_rules
 
         if is_in_form(self.dg):
             raise StreamlitAPIException("Forms cannot be nested in other forms.")

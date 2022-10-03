@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+import streamlit as st
 
 st.header("Empty tables")
 st._arrow_table()

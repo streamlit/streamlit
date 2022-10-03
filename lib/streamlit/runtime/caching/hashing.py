@@ -15,7 +15,6 @@
 """Hashing for st.memo and st.singleton."""
 import collections
 import dataclasses
-from enum import Enum
 import functools
 import hashlib
 import inspect
@@ -27,16 +26,13 @@ import tempfile
 import threading
 import unittest.mock
 import weakref
-from typing import Any, Pattern, Optional, Dict, List
+from enum import Enum
+from typing import Any, Dict, List, Optional, Pattern
 
-from streamlit import type_util
-from streamlit import util
+from streamlit import type_util, util
 from streamlit.logger import get_logger
+from streamlit.runtime.caching.cache_errors import CacheType, UnhashableTypeError
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-from .cache_errors import (
-    CacheType,
-    UnhashableTypeError,
-)
 
 _LOGGER = get_logger(__name__)
 

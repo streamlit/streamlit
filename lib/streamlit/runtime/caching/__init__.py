@@ -22,17 +22,17 @@ from streamlit.proto.Block_pb2 import Block
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-from .memo_decorator import (
+from streamlit.runtime.caching.memo_decorator import (
     MEMO_CALL_STACK,
     MEMO_MESSAGES_CALL_STACK,
-    _memo_caches,
     MemoAPI,
+    _memo_caches,
 )
-from .singleton_decorator import (
+from streamlit.runtime.caching.singleton_decorator import (
     SINGLETON_CALL_STACK,
     SINGLETON_MESSAGE_CALL_STACK,
-    _singleton_caches,
     SingletonAPI,
+    _singleton_caches,
 )
 
 
@@ -77,10 +77,10 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 # Explicitly export public symbols
-from .memo_decorator import (
+from streamlit.runtime.caching.memo_decorator import (
     get_memo_stats_provider as get_memo_stats_provider,
 )
-from .singleton_decorator import (
+from streamlit.runtime.caching.singleton_decorator import (
     get_singleton_stats_provider as get_singleton_stats_provider,
 )
 

@@ -15,12 +15,13 @@
 """Session state unit tests."""
 import unittest
 from copy import deepcopy
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from typing import Any, List, Tuple
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from hypothesis import given, strategies as hst
+from hypothesis import given
+from hypothesis import strategies as hst
 
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
@@ -30,11 +31,11 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.session_state import (
-    WStates,
-    WidgetMetadata,
+    GENERATED_WIDGET_KEY_PREFIX,
     Serialized,
     Value,
-    GENERATED_WIDGET_KEY_PREFIX,
+    WidgetMetadata,
+    WStates,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from tests import testutil

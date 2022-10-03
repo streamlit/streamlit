@@ -16,12 +16,12 @@
 
 from unittest import mock
 
-import PIL.Image as Image
 import cv2
 import numpy as np
+import PIL.Image as Image
 import pytest
-from PIL import ImageDraw
 from parameterized import parameterized
+from PIL import ImageDraw
 
 import streamlit as st
 import streamlit.elements.image as image

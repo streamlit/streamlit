@@ -17,9 +17,9 @@ Global pytest fixtures. This file is automatically run by pytest before tests
 are executed.
 """
 
-from unittest.mock import patch, mock_open
-import os
 import logging
+import os
+from unittest.mock import mock_open, patch
 
 # Do not import any Streamlit modules here! See below for details.
 
@@ -41,10 +41,7 @@ with patch(
     # first importing a file. We disallow this because doing so means that we
     # miss config options set via flag or environment variable.
     import streamlit as st
-
-    from streamlit import config
-    from streamlit import file_util
-    from streamlit import source_util
+    from streamlit import config, file_util, source_util
 
     assert (
         not config._config_options

@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
 from streamlit.type_util import SupportsStr, is_sympy_expession
-from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import sympy

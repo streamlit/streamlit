@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import pytest
-from tests import testutil
-from streamlit.runtime.scriptrunner import StopException
+
 import streamlit as st
+from streamlit.runtime.scriptrunner import StopException
+from tests import testutil
 
 
 class StopTest(testutil.DeltaGeneratorTestCase):

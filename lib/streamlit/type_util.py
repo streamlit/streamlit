@@ -19,30 +19,22 @@ from __future__ import annotations
 import re
 import types
 from typing import (
+    TYPE_CHECKING,
     Any,
     Iterable,
+    List,
     NamedTuple,
     Optional,
     Sequence,
     TypeVar,
-    TYPE_CHECKING,
     Union,
     cast,
     overload,
-    List,
-)
-
-from typing_extensions import (
-    Final,
-    Literal,
-    Protocol,
-    TypeAlias,
-    TypeGuard,
-    get_args,
 )
 
 import pyarrow as pa
 from pandas.api.types import infer_dtype
+from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 from streamlit import errors
 from streamlit import logger as _logger
@@ -50,7 +42,7 @@ from streamlit import logger as _logger
 if TYPE_CHECKING:
     import graphviz
     import sympy
-    from pandas import DataFrame, Series, Index
+    from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure

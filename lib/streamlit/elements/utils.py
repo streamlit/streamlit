@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, cast, Hashable, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Hashable, Optional, Union, cast
 
 import streamlit
 from streamlit import type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.runtime.state import get_session_state, WidgetCallback
+from streamlit.runtime.state import WidgetCallback, get_session_state
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

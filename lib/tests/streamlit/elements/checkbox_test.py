@@ -15,10 +15,11 @@
 """checkbox unit tests."""
 
 from unittest.mock import patch
+
 from parameterized import parameterized
 
-from tests import testutil
 import streamlit as st
+from tests import testutil
 
 
 class SomeObj(object):
