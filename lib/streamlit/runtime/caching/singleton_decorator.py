@@ -16,7 +16,7 @@
 
 import threading
 import types
-from typing import Any, Callable, Dict, List, Optional, TypeVar, cast, overload
+from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, cast, overload
 
 from pympler import asizeof
 
@@ -140,7 +140,7 @@ class SingletonAPI:
     def __call__(
         self,
         *,
-        show_spinner: bool = True,
+        show_spinner: Union[bool, str] = True,
         suppress_st_warning=False,
     ) -> Callable[[F], F]:
         ...
@@ -153,7 +153,7 @@ class SingletonAPI:
         self,
         func: Optional[F] = None,
         *,
-        show_spinner: bool = True,
+        show_spinner: Union[bool, str] = True,
         suppress_st_warning=False,
     ):
         """Function decorator to store singleton objects.
@@ -173,9 +173,10 @@ class SingletonAPI:
             The function that creates the singleton. Streamlit hashes the
             function's source code.
 
-        show_spinner : boolean
+        show_spinner : boolean or string
             Enable the spinner. Default is True to show a spinner when there is
-            a "cache miss" and the singleton is being created.
+            a "cache miss" and the singleton is being created. If string,
+            value of show_spinner param will be used for spinner text.
 
         suppress_st_warning : boolean
             Suppress warnings about calling Streamlit functions from within
