@@ -14,8 +14,9 @@
 # limitations under the License.
 
 """Create a release using Github API"""
-import requests
 import os
+
+import requests
 
 
 def create_release():

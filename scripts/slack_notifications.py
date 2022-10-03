@@ -15,8 +15,9 @@
 
 """Send slack notifications"""
 import os
-import requests
 import sys
+
+import requests
 
 
 def send_notification():

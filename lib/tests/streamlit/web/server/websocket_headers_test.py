@@ -21,7 +21,7 @@ import tornado.websocket
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.web.server import websocket_headers
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
-from .server_test_case import ServerTestCase
+from tests.streamlit.web.server.server_test_case import ServerTestCase
 
 
 class WebSocketHeadersTest(ServerTestCase):
