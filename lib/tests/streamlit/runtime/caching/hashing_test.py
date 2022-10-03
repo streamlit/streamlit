@@ -291,6 +291,23 @@ class HashTest(unittest.TestCase):
 
         assert get_hash(enum_1)
 
+    def test_different_enums(self):
+        class EnumClassA(Enum):
+            ENUM_1 = "hello"
+            ENUM_2 = "world"
+
+        class EnumClassB(Enum):
+            ENUM_1 = "hello"
+            ENUM_2 = "world"
+
+        enum_a = EnumClassA.ENUM_1
+        enum_b = EnumClassB.ENUM_1
+
+        assert get_hash(enum_a)
+        assert get_hash(enum_b)
+
+        self.assertNotEqual(get_hash(enum_a), get_hash(enum_b))
+
 
 class NotHashableTest(unittest.TestCase):
     """Tests for various unhashable types. Many of these types *are*
