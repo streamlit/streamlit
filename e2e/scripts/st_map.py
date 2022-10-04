@@ -27,9 +27,9 @@ st.map()
 
 # Cast is needed due to mypy not understanding the outcome of dividing
 # an array by a list of numbers.
+np.random.seed(1000)
 coords: "np.typing.NDArray[np.float_]" = cast(
     Any,
-    np.random.seed(1000),
     np.random.randn(1000, 2) / [50, 50],
 ) + [37.76, -122.4]
 df = pd.DataFrame(coords, columns=["lat", "lon"])
