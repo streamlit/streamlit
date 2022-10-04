@@ -18,9 +18,15 @@ from unittest.mock import patch
 
 import pandas as pd
 import plotly.graph_objs as go
+from pandas.api.types import infer_dtype
 
 from streamlit import type_util
-from streamlit.type_util import data_frame_to_bytes, is_bytes_like, to_bytes
+from streamlit.type_util import (
+    data_frame_to_bytes,
+    fix_unsupported_column_types,
+    is_bytes_like,
+    to_bytes,
+)
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -90,7 +96,7 @@ class TypeUtilTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             to_bytes(string_obj)
 
-    def test_data_frame_to_bytes_numpy_dtype_exception(self):
+    def test_data_frame_with_dtype_values_to_bytes(self):
         df1 = pd.DataFrame(["foo", "bar"])
         df2 = pd.DataFrame(df1.dtypes)
 
@@ -98,3 +104,34 @@ class TypeUtilTest(unittest.TestCase):
             data_frame_to_bytes(df2)
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
+
+    def test_fix_unsupported_column_types(self):
+        df = pd.DataFrame(
+            {
+                "mixed-integer": [1, "foo", 3],
+                "mixed": [1.0, "foo", 3],
+                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            }
+        )
+
+        fixed_df = fix_unsupported_column_types(df)
+
+        self.assertEqual(infer_dtype(fixed_df["mixed-integer"]), "string")
+        self.assertEqual(infer_dtype(fixed_df["mixed"]), "string")
+        self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
+        self.assertEqual(infer_dtype(fixed_df["integer"]), "integer")
+        self.assertEqual(infer_dtype(fixed_df["float"]), "floating")
+        self.assertEqual(infer_dtype(fixed_df["string"]), "string")
+        self.assertEqual(
+            str(fixed_df.dtypes),
+            """mixed-integer     object
+mixed             object
+complex           object
+integer            int64
+float            float64
+string            object
+dtype: object""",
+        )
