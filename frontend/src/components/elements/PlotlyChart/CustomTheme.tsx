@@ -108,10 +108,6 @@ export function applyStreamlitThemeLayout(layout: any, theme: Theme): any {
       yanchor: "bottom",
       xanchor: "left",
       y: -0.375,
-      font: {
-        size: fontSizes.smPx,
-        color: colors.bodyText,
-      },
       title: {
         font: {
           size: fontSizes.smPx,
@@ -119,9 +115,11 @@ export function applyStreamlitThemeLayout(layout: any, theme: Theme): any {
         },
         side: "top",
       },
-      tracegroupgap: 200,
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
+      bordercolor: colors.transparent,
+      borderwidth: 0,
+      // tracegroupgap: 200,
+      labelColor: colors.fadedText60,
+      titleColor: colors.fadedText60,
       ...themeFonts,
     },
     paper_bgcolor: colors.bgColor,
@@ -160,15 +158,59 @@ export function applyStreamlitThemeLayout(layout: any, theme: Theme): any {
       nticks: 10,
       ticklabelposition: "outside",
       // automargin: "left",
+      zeroline: false,
+      title: {
+        font: {
+          color: colors.fadedText60,
+        },
+      },
+      tickfont: {
+        color: colors.fadedText60,
+      },
     },
     xaxis: {
+      standoff: 100,
       nticks: 8,
       showgrid: false,
+      rangeselector: {
+        bordercolor: colors.transparent,
+        borderwidth: 0,
+      },
+      tickfont: {
+        color: colors.fadedText60,
+      },
+      title: {
+        font: {
+          color: colors.fadedText60,
+        },
+      },
+      zeroline: false,
     },
     margin: {
-      pad: 20,
+      pad: 5,
+      r: 10,
+      // t: 0,
+    },
+    hoverlabel: {
+      bgcolor: colors.bgColor,
+      borderColor: colors.gray70,
+      font: {
+        color: theme.colors.fadedText60,
+      },
     },
     coloraxis: {
+      colorbar: {
+        outlinecolor: colors.transparent,
+        outlinewidth: 0,
+        title: {
+          font: {
+            color: colors.fadedText60,
+          },
+        },
+        tickfont: {
+          color: colors.fadedText60,
+        },
+      },
       colorscale: {
         ...(hasLightBackgroundColor(theme)
           ? {

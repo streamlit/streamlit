@@ -184,6 +184,11 @@ def marshall(
         figure = plotly.tools.mpl_to_plotly(figure_or_data)
 
     else:
+        if theme == "streamlit":
+            import plotly.io as pio
+            import streamlit.mythemes
+
+            # pio.templates.default = "draft"
         figure = plotly.tools.return_figure_from_figure_or_data(
             figure_or_data, validate_figure=True
         )
@@ -202,6 +207,8 @@ def marshall(
         config.setdefault("linkText", kwargs.get("link_text", False))
 
         proto.figure.spec = json.dumps(figure, cls=plotly.utils.PlotlyJSONEncoder)
+        # import pprint as pp
+        # pp.pprint(figure)
         proto.figure.config = json.dumps(config)
 
     else:
@@ -209,7 +216,7 @@ def marshall(
             figure, sharing=sharing, auto_open=False, **kwargs
         )
         proto.url = _get_embed_url(url)
-    proto.theme = theme
+    proto.theme = theme or ""
 
 
 @caching.cache

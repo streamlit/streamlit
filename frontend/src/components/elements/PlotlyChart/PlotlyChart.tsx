@@ -24,6 +24,7 @@ import {
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 import { assign } from "lodash"
+import { colors } from "src/theme/primitives"
 import {
   applyStreamlitThemeData,
   applyStreamlitThemeLayout,
@@ -37,20 +38,7 @@ export interface PlotlyChartProps {
 
 export const DEFAULT_HEIGHT = 450
 
-export function PlotlyChart({
-  width: propWidth,
-  element,
-  height: propHeight,
-}: PlotlyChartProps): ReactElement {
-  const renderIFrame = (url: string): ReactElement => {
-    const height = propHeight || DEFAULT_HEIGHT
-    const width = propWidth
-    return <iframe title="Plotly" src={url} style={{ width, height }} />
-  }
-
-  const isFullScreen = (): boolean => !!propHeight
-
-  const theme: Theme = useTheme()
+export function changeDiscreteColors(spec: any, theme: Theme) {
   const categoryColors = hasLightBackgroundColor(theme)
     ? [
         "#0068C9",
@@ -77,81 +65,70 @@ export function PlotlyChart({
         "#D5DAE5",
       ]
 
+  const legendGroupIndexes = new Map<string, number[]>()
+  spec.data.forEach((entry: any, index: number) => {
+    if (entry.legendgroup === undefined) {
+      // do nothing
+    } else if (legendGroupIndexes.has(entry.legendgroup)) {
+      legendGroupIndexes.set(
+        entry.legendgroup,
+        // @ts-ignore
+        legendGroupIndexes.get(entry.legendgroup).concat(index)
+      )
+    } else {
+      legendGroupIndexes.set(entry.legendgroup, [index])
+    }
+  })
+
+  let counter = 0
+  legendGroupIndexes.forEach((value: number[], key: string) => {
+    value.forEach((index: number) => {
+      if (spec.data[index].line !== undefined) {
+        spec.data[index].line = assign(spec.data[index].line, {
+          color: categoryColors[counter % categoryColors.length],
+        })
+      } else if (
+        spec.data[index].marker !== undefined &&
+        typeof spec.data[index].marker.color !== "string"
+      ) {
+        // empty
+      } else {
+        spec.data[index].marker = assign(spec.data[index].marker, {
+          color: categoryColors[counter % categoryColors.length],
+        })
+        spec.data[index].marker.line = assign(spec.data[index].marker.line, {
+          width: 0,
+          color: colors.transparent,
+        })
+      }
+    })
+    counter++
+  })
+  return spec.data
+}
+
+export function PlotlyChart({
+  width: propWidth,
+  element,
+  height: propHeight,
+}: PlotlyChartProps): ReactElement {
+  const renderIFrame = (url: string): ReactElement => {
+    const height = propHeight || DEFAULT_HEIGHT
+    const width = propWidth
+    return <iframe title="Plotly" src={url} style={{ width, height }} />
+  }
+
+  const isFullScreen = (): boolean => !!propHeight
+
+  const theme: Theme = useTheme()
+
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
-    // console.log(JSON.stringify(spec.data))
     // spec.data.forEach((entry: any, index: number) => {
     //   if (spec.data[index].marker !== undefined) {
     //     delete spec.data[index].marker["color"]
     //   }
     // })
-
-    const legendGroupIndexes = new Map<string, number[]>()
-    spec.data.forEach((entry: any, index: number) => {
-      if (entry.legendgroup === undefined) {
-      } else if (legendGroupIndexes.has(entry.legendgroup)) {
-        legendGroupIndexes.set(
-          entry.legendgroup,
-          // @ts-ignore
-          legendGroupIndexes.get(entry.legendgroup).concat(index)
-        )
-      } else {
-        legendGroupIndexes.set(entry.legendgroup, [index])
-      }
-    })
-    console.log(legendGroupIndexes)
-    let counter = 0
-    legendGroupIndexes.forEach((value: number[], key: string) => {
-      value.forEach((index: number) => {
-        // console.log(console.log(assign({color: categoryColors[counter % categoryColors.length]}, spec.data[index].marker)))
-        // console.log(categoryColors[counter % categoryColors.length])
-        console.log(spec.data[index].line !== undefined)
-        if (spec.data[index].line !== undefined) {
-          spec.data[index].line = assign(spec.data[index].line, {
-            color: categoryColors[counter % categoryColors.length],
-          })
-        } else if (typeof spec.data[index].marker.color !== "string") {
-        } else {
-          spec.data[index].marker = assign(spec.data[index].marker, {
-            color: categoryColors[counter % categoryColors.length],
-          })
-        }
-      })
-      counter++
-    })
-
-    console.log(spec)
-
-    //   for (const index in spec.data) {
-    //     spec.data[index] = assign(
-    //       {marker: true
-    //   ? [
-    //     "#0068C9",
-    //     "#83C9FF",
-    //     "#FF2B2B",
-    //     "#FFABAB",
-    //     "#29B09D",
-    //     "#7DEFA1",
-    //     "#FF8700",
-    //     "#FFD16A",
-    //     "#6D3FC0",
-    //     "#D5DAE5",
-    //   ] :
-    //   [ "#83C9FF",
-    //   "#0068C9",
-    //   "#FFABAB",
-    //   "#FF2B2B",
-    //   "#7DEFA1",
-    //   "#29B09D",
-    //   "#FFD16A",
-    //   "#FF8700",
-    //   "#6D3FC0",
-    //   "#D5DAE5",
-    // ]},
-    //       spec.layout.template.data[index][0]
-    //     )
-    //     // console.log(spec.layout.template.data[index][0])
-    //   }
 
     if (isFullScreen()) {
       spec.layout.width = propWidth
@@ -161,6 +138,7 @@ export function PlotlyChart({
     }
 
     if (element.theme === "streamlit") {
+      spec.data = assign(changeDiscreteColors(spec, theme), spec.data)
       // should this be the same name as applyStreamlitTheme because there are duplicates?
       spec.layout.template.layout = applyStreamlitThemeLayout(
         spec.layout.template.layout,
@@ -170,7 +148,7 @@ export function PlotlyChart({
         {
           colorway: true
             ? [
-                "#111111",
+                "#0068C9",
                 "#83C9FF",
                 "#FF2B2B",
                 "#FFABAB",
@@ -201,19 +179,17 @@ export function PlotlyChart({
           text: `<b>${spec.layout.title.text}</b>`,
         })
       }
-      // console.log(spec.layout)
+      console.log(spec)
     } else {
       // Apply minor theming improvements to work better with Streamlit
       spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
-    // console.log(spec)
 
     return spec
   }
 
   const renderFigure = (figure: FigureProto): ReactElement => {
     const config = JSON.parse(figure.config)
-    // console.log(config)
     const { data, layout, frames } = generateSpec(figure)
 
     return (
