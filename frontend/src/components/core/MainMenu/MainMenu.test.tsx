@@ -221,10 +221,7 @@ describe("App", () => {
 
       // @ts-ignore
       const menuWrapper = mount(popoverContent(() => {}))
-      const items: any = menuWrapper
-        .find("StatefulMenu")
-        .at(1)
-        .prop("items")
+      const items: any = menuWrapper.find("StatefulMenu").at(1).prop("items")
 
       const deployOption = items.find(
         // @ts-ignore

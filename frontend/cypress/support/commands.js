@@ -79,12 +79,8 @@ Cypress.Commands.add("openSettings", () => {
 Cypress.Commands.add("changeTheme", theme => {
   cy.openSettings()
   cy.get('[data-baseweb="modal"] .stSelectbox').then(el => {
-    cy.wrap(el)
-      .find("input")
-      .click()
-    cy.get("li")
-      .contains(theme)
-      .click()
+    cy.wrap(el).find("input").click()
+    cy.get("li").contains(theme).click()
   })
   cy.get('[data-baseweb="modal"] [aria-label="Close"]').click()
 })

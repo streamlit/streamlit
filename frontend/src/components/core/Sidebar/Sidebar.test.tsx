@@ -71,10 +71,7 @@ describe("Sidebar Component", () => {
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
 
-    wrapper
-      .find("StyledSidebarCloseButton")
-      .find("button")
-      .simulate("click")
+    wrapper.find("StyledSidebarCloseButton").find("button").simulate("click")
     expect(wrapper.find("Resizable").prop("isCollapsed")).toBe(true)
   })
 

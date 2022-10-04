@@ -183,7 +183,7 @@ class MockComponent {
 describe("ComponentInstance", () => {
   beforeEach(() => {
     // Clear our class mocks
-    const mockWidgetStateManager = (WidgetStateManager as unknown) as jest.Mock
+    const mockWidgetStateManager = WidgetStateManager as unknown as jest.Mock
     mockWidgetStateManager.mockClear()
 
     const mockLog = logWarning as jest.Mock

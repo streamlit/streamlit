@@ -18,10 +18,7 @@ import React from "react"
 import { IDeployErrorDialog } from "./types"
 
 function UncommittedChanges(repository: string): IDeployErrorDialog {
-  const repoName = repository
-    .split("/")
-    .slice(1)
-    .join("/")
+  const repoName = repository.split("/").slice(1).join("/")
 
   return {
     title: "Unable to deploy app",

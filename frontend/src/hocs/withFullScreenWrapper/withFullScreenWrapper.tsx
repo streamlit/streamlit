@@ -31,8 +31,9 @@ function withFullScreenWrapper(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   class ComponentWithFullScreenWrapper extends PureComponent<AppElementProps> {
-    static readonly displayName = `withFullScreenWrapper(${WrappedComponent.displayName ||
-      WrappedComponent.name})`
+    static readonly displayName = `withFullScreenWrapper(${
+      WrappedComponent.displayName || WrappedComponent.name
+    })`
 
     render(): ReactNode {
       const { width, height, ...passThroughProps } = this.props

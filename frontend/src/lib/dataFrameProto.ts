@@ -491,12 +491,7 @@ export function addRows(element: any, namedDataSet: any): any {
 
   let newDataFrame
 
-  if (
-    dataframeToModify
-      .get("data")
-      .get("cols")
-      .isEmpty()
-  ) {
+  if (dataframeToModify.get("data").get("cols").isEmpty()) {
     newDataFrame = newRows
   } else {
     newDataFrame = dataframeToModify

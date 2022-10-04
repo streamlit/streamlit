@@ -98,11 +98,10 @@ describe("Tooltip element", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
     const connectSpy = jest.fn()
     const disconnectSpy = jest.fn()
-    sessionEventDispatcher.onSessionEvent.connect = connectSpy.mockImplementation(
-      () => ({
+    sessionEventDispatcher.onSessionEvent.connect =
+      connectSpy.mockImplementation(() => ({
         disconnect: disconnectSpy,
-      })
-    )
+      }))
 
     const wrapper = mount(
       <StatusWidget {...getProps({ sessionEventDispatcher })} />
@@ -148,10 +147,7 @@ describe("Tooltip element", () => {
 
     expect(wrapper.find("Button").length).toEqual(2)
 
-    wrapper
-      .find("Button")
-      .at(0)
-      .simulate("click")
+    wrapper.find("Button").at(0).simulate("click")
     expect(rerunScript).toBeCalledWith(false)
   })
 
@@ -179,10 +175,7 @@ describe("Tooltip element", () => {
 
     expect(wrapper.find("Button").length).toEqual(2)
 
-    wrapper
-      .find("Button")
-      .at(1)
-      .simulate("click")
+    wrapper.find("Button").at(1).simulate("click")
     expect(rerunScript).toBeCalledWith(true)
   })
 
