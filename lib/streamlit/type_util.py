@@ -564,7 +564,7 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
     try:
         table = pa.Table.from_pandas(df)
     except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError):
-        _LOGGER.warning(
+        _LOGGER.info(
             "Applying automatic fixes for column types to make the dataframe Arrow-compatible."
         )
         df = fix_unsupported_column_types(df)
