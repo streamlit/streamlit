@@ -105,12 +105,25 @@ class TypeUtilTest(unittest.TestCase):
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
-    def test_fix_unsupported_column_types(self):
+    def test_fix_complex_column_type(self):
+        df = pd.DataFrame(
+            {
+                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
+                "integer": [1, 2, 3],
+                "string": ["foo", "bar", None],
+            }
+        )
+
+        self.assertEqual(infer_dtype(df["complex"]), "complex")
+
+        fixed_df = fix_unsupported_column_types(df)
+        self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
+
+    def test_fix_mixed_column_types(self):
         df = pd.DataFrame(
             {
                 "mixed-integer": [1, "foo", 3],
                 "mixed": [1.0, "foo", 3],
-                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
                 "integer": [1, 2, 3],
                 "float": [1.0, 2.1, 3.2],
                 "string": ["foo", "bar", None],
@@ -122,7 +135,6 @@ class TypeUtilTest(unittest.TestCase):
 
         self.assertEqual(infer_dtype(fixed_df["mixed-integer"]), "string")
         self.assertEqual(infer_dtype(fixed_df["mixed"]), "string")
-        self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
         self.assertEqual(infer_dtype(fixed_df["integer"]), "integer")
         self.assertEqual(infer_dtype(fixed_df["float"]), "floating")
         self.assertEqual(infer_dtype(fixed_df["string"]), "string")
@@ -132,7 +144,6 @@ class TypeUtilTest(unittest.TestCase):
             str(fixed_df.dtypes),
             """mixed-integer     object
 mixed             object
-complex           object
 integer            int64
 float            float64
 string            object
