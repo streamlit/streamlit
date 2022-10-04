@@ -532,21 +532,54 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
+def _is_colum_type_unsupported(column: Union[Series, Index]) -> bool:
+    """Return True if the column type is known to cause issues during Arrow conversion."""
+
+    # Check all columns for mixed types and complex128 type
+    # The dtype of mixed type columns is always object, the actual type of the column
+    # values can be determined via the infer_dtype function:
+    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
+
+    if (
+        column.dtype == "object" and infer_dtype(column) in ["mixed", "mixed-integer"]
+    ) or column.dtype == "complex128":
+        return True
+
+
 def fix_unsupported_column_types(
     df: DataFrame, selected_columns: Optional[List[str]] = None
 ) -> DataFrame:
-    for col in selected_columns or df.columns:
-        column = df[col]
-        if (
-            column.dtype == "object" and infer_dtype(column).startswith("mixed")
-        ) or column.dtype == "complex128":
-            df[col] = column.astype(str)
+    """Fix column types that are not supported by Arrow table.
 
-    # Fix the index in case it uses mixed type
+    This includes mixed types (e.g. mix of integers and strings)
+    as well as complex numbers (complex128 type). These types will cause
+    errors during conversion of the dataframe to an Arrow table.
+    It is fixed by converting all values of the column to strings
+    This is sufficient for displaying the data on the frontend.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A dataframe to fix.
+
+    selected_columns: Optional[List[str]]
+        A list of columns to fix. If None, all columns are evaluated.
+    """
+
+    for col in selected_columns or df.columns:
+        if _is_colum_type_unsupported(df[col]):
+            df[col] = df[col].astype(str)
+
+    # The index can also contain mixed types
+    # causing Arrow issues during conversion.
+    # Skipping multi-indices since they won't return
+    # the correct value from infer_dtype
     if not selected_columns and (
-        not isinstance(df.index, MultiIndex)
-        and df.index.dtype == "object"
-        and infer_dtype(df.index).startswith("mixed")
+        not isinstance(
+            df.index,
+            MultiIndex,
+        )
+        and _is_colum_type_unsupported(df.index)
     ):
         df.index = df.index.astype(str)
     return df
