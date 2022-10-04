@@ -23,7 +23,7 @@ from pandas.api.types import infer_dtype
 from streamlit import type_util
 from streamlit.type_util import (
     data_frame_to_bytes,
-    fix_unsupported_column_types,
+    fix_arrow_incompatible_column_types,
     is_bytes_like,
     to_bytes,
 )
@@ -119,11 +119,11 @@ class TypeUtilTest(unittest.TestCase):
 
         self.assertEqual(infer_dtype(df["complex"]), "complex")
 
-        fixed_df = fix_unsupported_column_types(df)
+        fixed_df = fix_arrow_incompatible_column_types(df)
         self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
 
     def test_fix_mixed_column_types(self):
-        """Test that `fix_unsupported_column_types` correctly fixes
+        """Test that `fix_arrow_incompatible_column_types` correctly fixes
         columns containing mixed types by converting them to string.
         """
         df = pd.DataFrame(
@@ -137,7 +137,7 @@ class TypeUtilTest(unittest.TestCase):
             index=[1.0, "foo", 3],
         )
 
-        fixed_df = fix_unsupported_column_types(df)
+        fixed_df = fix_arrow_incompatible_column_types(df)
 
         self.assertEqual(infer_dtype(fixed_df["mixed-integer"]), "string")
         self.assertEqual(infer_dtype(fixed_df["mixed"]), "string")

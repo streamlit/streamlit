@@ -532,7 +532,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def _is_colum_type_unsupported(column: Union[Series, Index]) -> bool:
+def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
 
     # Check all columns for mixed types and complex128 type
@@ -545,7 +545,7 @@ def _is_colum_type_unsupported(column: Union[Series, Index]) -> bool:
     ) or column.dtype == "complex128"
 
 
-def fix_unsupported_column_types(
+def fix_arrow_incompatible_column_types(
     df: DataFrame, selected_columns: Optional[List[str]] = None
 ) -> DataFrame:
     """Fix column types that are not supported by Arrow table.
@@ -563,10 +563,14 @@ def fix_unsupported_column_types(
 
     selected_columns: Optional[List[str]]
         A list of columns to fix. If None, all columns are evaluated.
+
+    Returns
+    -------
+    The fixed dataframe.
     """
 
     for col in selected_columns or df.columns:
-        if _is_colum_type_unsupported(df[col]):
+        if _is_colum_type_arrow_incompatible(df[col]):
             df[col] = df[col].astype(str)
 
     # The index can also contain mixed types
@@ -578,7 +582,7 @@ def fix_unsupported_column_types(
             df.index,
             MultiIndex,
         )
-        and _is_colum_type_unsupported(df.index)
+        and _is_colum_type_arrow_incompatible(df.index)
     ):
         df.index = df.index.astype(str)
     return df
@@ -599,7 +603,7 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         _LOGGER.info(
             "Applying automatic fixes for column types to make the dataframe Arrow-compatible."
         )
-        df = fix_unsupported_column_types(df)
+        df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)
     return pyarrow_table_to_bytes(table)
 

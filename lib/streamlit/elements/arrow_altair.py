@@ -380,7 +380,7 @@ def _melt_data(
 
     # Arrow has problems with object types after melting two different dtypes
     # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-    data_df = type_util.fix_unsupported_column_types(
+    data_df = type_util.fix_arrow_incompatible_column_types(
         data_df, selected_columns=[x_column, color_column, y_column]
     )
 
