@@ -544,9 +544,9 @@ def fix_unsupported_column_types(
 
     # Fix the index in case it uses mixed type
     if not selected_columns and (
-        df.index.dtype == "object"
+        not isinstance(df.index, MultiIndex)
+        and df.index.dtype == "object"
         and infer_dtype(df.index).startswith("mixed")
-        and not isinstance(df.index, MultiIndex)
     ):
         df.index = df.index.astype(str)
     return df
