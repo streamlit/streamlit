@@ -267,15 +267,6 @@ class RuntimeTest(RuntimeTestCase):
         with self.assertRaises(RuntimeStoppedError):
             self.runtime.handle_backmsg("not_a_session_id", MagicMock())
 
-    async def test_sets_is_running_with_streamlit_flag(self):
-        """Runtime should set streamlit._is_running_with_streamlit when it
-        starts.
-        """
-        # This will frequently be True from other tests
-        streamlit._is_running_with_streamlit = False
-        await self.runtime.start()
-        self.assertTrue(streamlit._is_running_with_streamlit)
-
     async def test_handle_session_client_disconnected(self):
         """Runtime should gracefully handle `SessionClient.write_forward_msg`
         raising a `SessionClientDisconnectedError`.
