@@ -232,9 +232,6 @@ def _main_run(file, args=None, flag_options=None):
 
     command_line = _get_command_line_as_string()
 
-    # Set a global flag indicating that we're "within" streamlit.
-    streamlit._is_running_with_streamlit = True
-
     check_credentials()
 
     bootstrap.run(file, command_line, args, flag_options)

@@ -22,7 +22,6 @@ from typing import Awaitable, Dict, NamedTuple, Optional, Tuple
 
 from typing_extensions import Final, Protocol
 
-import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -287,7 +286,6 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        streamlit._is_running_with_streamlit = True
 
         # Create our AsyncObjects. We need to have a running eventloop to
         # instantiate our various synchronization primitives.

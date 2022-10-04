@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
 
 from typing_extensions import Final
 
-import streamlit
 from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
@@ -328,7 +327,7 @@ class ButtonMixin:
         # every form). We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
-        if streamlit._is_running_with_streamlit:
+        if runtime.is_running():
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
                     f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
@@ -408,7 +407,7 @@ def marshall_file(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    if streamlit._is_running_with_streamlit:
+    if runtime.is_running():
         file_url = runtime.get_instance().media_file_mgr.add(
             data_as_bytes,
             mimetype,
