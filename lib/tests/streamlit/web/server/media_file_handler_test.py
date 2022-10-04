@@ -14,9 +14,9 @@
 
 from unittest import mock
 
-from parameterized import parameterized
 import tornado.testing
 import tornado.web
+from parameterized import parameterized
 from typing_extensions import Final
 
 from streamlit.runtime.media_file_manager import MediaFileManager
