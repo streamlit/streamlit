@@ -20,7 +20,6 @@ import pandas as pd
 import plotly.graph_objs as go
 
 from streamlit import type_util
-from streamlit.errors import NumpyDtypeException
 from streamlit.type_util import data_frame_to_bytes, is_bytes_like, to_bytes
 
 
@@ -95,5 +94,7 @@ class TypeUtilTest(unittest.TestCase):
         df1 = pd.DataFrame(["foo", "bar"])
         df2 = pd.DataFrame(df1.dtypes)
 
-        with self.assertRaises(NumpyDtypeException):
+        try:
             data_frame_to_bytes(df2)
+        except Exception as ex:
+            self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
