@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     if st.checkbox("checkbox 1"):
         if st.checkbox("checkbox 2"):

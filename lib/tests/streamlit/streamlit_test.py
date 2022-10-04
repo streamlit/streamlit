@@ -96,7 +96,8 @@ class StreamlitTest(unittest.TestCase):
         with self.assertLogs(level=logging.WARNING) as logs:
             st._use_warning_has_been_displayed = False
             st.write("Using delta generator")
-            # assertLogs is being used as a context manager, but it also checks that some log output was captured, so we have to let it capture something
+            # assertLogs is being used as a context manager, but it also checks
+            # that some log output was captured, so we have to let it capture something
             get_logger("root").warning("irrelevant warning so assertLogs passes")
             self.assertNotRegex("".join(logs.output), r"streamlit run")
 

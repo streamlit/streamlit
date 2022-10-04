@@ -15,6 +15,7 @@
 from datetime import date, datetime
 
 import streamlit as st
+from streamlit import runtime
 
 d1 = st.date_input("Single date", date(1970, 1, 1), min_value=date(1970, 1, 1))
 st.write("Value 1:", d1)
@@ -44,7 +45,7 @@ d8 = st.date_input(
 )
 st.write("Value 8:", d8)
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_change():
         st.session_state.date_input_changed = True

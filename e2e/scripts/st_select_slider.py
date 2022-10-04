@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+from streamlit import runtime
 
 w1 = st.select_slider(
     "Label 1",
@@ -74,7 +75,7 @@ w7 = st.select_slider(
 
 st.write("Value 7:", w7)
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_change():
         st.session_state.select_slider_changed = True

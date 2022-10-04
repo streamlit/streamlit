@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 # st.session_state can only be used in streamlit
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_click(x, y):
         if "click_count" not in st.session_state:

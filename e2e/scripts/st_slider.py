@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 s1 = st.sidebar.slider("Label A", 0, 12345678, 12345678)
 st.sidebar.write("Value A:", s1)
@@ -45,7 +46,7 @@ st.write("Value 5:", w5)
 w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed")
 st.write("Value 6:", w6)
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_change():
         st.session_state.slider_changed = True

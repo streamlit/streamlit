@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 options = ("male", "female")
 i1 = st.selectbox("selectbox 1", options, 1)
@@ -50,7 +51,7 @@ st.write("value 6:", i6)
 i7 = st.selectbox("selectbox 7", options, label_visibility="collapsed")
 st.write("value 7:", i7)
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_change():
         st.session_state.selectbox_changed = True

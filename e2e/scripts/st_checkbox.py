@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 i1 = st.checkbox("checkbox 1", True)
 st.write("value 1:", i1)
@@ -23,7 +24,7 @@ st.write("value 2:", i2)
 i3 = st.checkbox("checkbox 3")
 st.write("value 3:", i3)
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_change():
         st.session_state.checkbox_clicked = True

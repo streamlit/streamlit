@@ -15,6 +15,7 @@
 import pandas as pd
 
 import streamlit as st
+from streamlit import runtime
 
 options = ("female", "male")
 i1 = st.radio("radio 1", options, 1)
@@ -42,7 +43,7 @@ i8 = st.radio("radio 8", options, label_visibility="collapsed")
 st.write("value 8:", i8)
 
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_change():
         st.session_state.radio_changed = True

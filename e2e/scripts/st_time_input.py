@@ -15,6 +15,7 @@
 from datetime import datetime, time
 
 import streamlit as st
+from streamlit import runtime
 
 w1 = st.time_input("Label 1", time(8, 45))
 st.write("Value 1:", w1)
@@ -31,7 +32,7 @@ st.write("Value 4:", w4)
 w5 = st.time_input("Label 5", time(8, 45), label_visibility="collapsed")
 st.write("Value 5:", w5)
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_change():
         st.session_state.time_input_changed = True

@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
     if "checkbox1" not in st.session_state:
         st.session_state.checkbox1 = True
 

@@ -15,6 +15,7 @@
 from typing import Any, List
 
 import streamlit as st
+from streamlit import runtime
 
 
 def set_multiselect_9_to_have_bad_state():
@@ -70,7 +71,7 @@ with st.form("my_max_selections_ms_in_form"):
     st.text(f"value 10: {i10}")
     submitted = st.form_submit_button("Submit")
 
-if st._is_running_with_streamlit:
+if runtime.is_running():
 
     def on_change():
         st.session_state.multiselect_changed = True
