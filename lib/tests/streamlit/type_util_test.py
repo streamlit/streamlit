@@ -106,6 +106,9 @@ class TypeUtilTest(unittest.TestCase):
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
     def test_fix_complex_column_type(self):
+        """Test that `fix_unsupported_column_types` correctly fixes
+        columns containing complex types by converting them to string.
+        """
         df = pd.DataFrame(
             {
                 "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
@@ -120,6 +123,9 @@ class TypeUtilTest(unittest.TestCase):
         self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
 
     def test_fix_mixed_column_types(self):
+        """Test that `fix_unsupported_column_types` correctly fixes
+        columns containing mixed types by converting them to string.
+        """
         df = pd.DataFrame(
             {
                 "mixed-integer": [1, "foo", 3],
@@ -151,6 +157,9 @@ dtype: object""",
         )
 
     def test_data_frame_with_unsupported_column_types(self):
+        """Test that `data_frame_to_bytes` correctly handles dataframes
+        with unsupported column types by converting those types to string.
+        """
         df = pd.DataFrame(
             {
                 "mixed-integer": [1, "foo", 3],
