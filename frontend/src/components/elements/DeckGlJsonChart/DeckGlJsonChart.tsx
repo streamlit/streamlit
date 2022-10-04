@@ -59,6 +59,7 @@ interface DeckObject {
   }
   layers: Record<string, unknown>[]
   mapStyle?: string | Array<string>
+  mapTheme: string
 }
 
 const configuration = {
@@ -149,6 +150,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
     if (!notNullOrUndefined(json.mapStyle)) {
       const mapTheme = hasLightBackgroundColor(theme) ? "light" : "dark"
+      json.mapTheme = mapTheme
       json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
     }
 
@@ -240,7 +242,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             }
             mapboxApiAccessToken={this.props.mapboxToken}
           />
-          <StyledNavigationControlContainer>
+          <StyledNavigationControlContainer mapTheme={deck.mapTheme}>
             <NavigationControl className="zoomButton" showCompass={false} />
           </StyledNavigationControlContainer>
           )

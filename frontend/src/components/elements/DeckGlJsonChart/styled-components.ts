@@ -21,6 +21,10 @@ export interface StyledDeckGlChartProps {
   height: number
 }
 
+export interface StyledNavigationControlContainerProps {
+  mapTheme: string
+}
+
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
   ({ width, height, theme }) => ({
     marginTop: theme.spacing.sm,
@@ -30,9 +34,25 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
   })
 )
 
-export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
-  position: "absolute",
-  right: "2.625rem",
-  top: theme.spacing.md,
-  zIndex: 1,
-}))
+export const StyledNavigationControlContainer =
+  styled.div<StyledNavigationControlContainerProps>(({ theme, mapTheme }) => ({
+    position: "absolute",
+    right: "2.625rem",
+    top: theme.spacing.md,
+    zIndex: 1,
+
+    // Update zoom buttons based on the active theme
+    "button:not(:disabled)": {
+      background: theme.colors.bgColor,
+
+      // Add a separator between buttons
+      "& + button": {
+        borderTopColor: theme.colors.secondaryBg,
+      },
+
+      // On dark backgrounds, invert the color for the + and - symbols
+      "& span": {
+        filter: mapTheme === "dark" ? "invert(100%)" : "",
+      },
+    },
+  }))
