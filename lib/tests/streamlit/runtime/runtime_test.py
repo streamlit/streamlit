@@ -81,6 +81,12 @@ class RuntimeSingletonTest(unittest.TestCase):
         _ = Runtime(MagicMock())
         instance = Runtime.instance()
 
+    def test_is_running(self):
+        """Runtime.is_running() returns True iff the Runtime singleton exists."""
+        self.assertFalse(Runtime.is_running())
+        _ = Runtime(MagicMock())
+        self.assertTrue(Runtime.is_running())
+
 
 class RuntimeTest(RuntimeTestCase):
     async def test_start_stop(self):
