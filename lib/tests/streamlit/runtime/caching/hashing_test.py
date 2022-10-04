@@ -282,13 +282,33 @@ class HashTest(unittest.TestCase):
         assert get_hash(bar)
 
     def test_enum(self):
+        """The hashing function returns the same result when called with the same
+        Enum members."""
+
         class EnumClass(Enum):
             ENUM_1 = auto()
             ENUM_2 = auto()
 
-        enum_1 = EnumClass.ENUM_1
+        # Hash values should be stable
+        self.assertEqual(get_hash(EnumClass.ENUM_1), get_hash(EnumClass.ENUM_1))
 
-        assert get_hash(enum_1)
+        # Different enum values should produce different hashes
+        self.assertNotEqual(get_hash(EnumClass.ENUM_1), get_hash(EnumClass.ENUM_2))
+
+    def test_different_enums(self):
+        """Different enum classes should have different hashes, even when the enum
+        values are the same."""
+
+        class EnumClassA(Enum):
+            ENUM_1 = "hello"
+
+        class EnumClassB(Enum):
+            ENUM_1 = "hello"
+
+        enum_a = EnumClassA.ENUM_1
+        enum_b = EnumClassB.ENUM_1
+
+        self.assertNotEqual(get_hash(enum_a), get_hash(enum_b))
 
 
 class NotHashableTest(unittest.TestCase):

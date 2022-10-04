@@ -263,7 +263,7 @@ class _CacheFuncHasher:
             return self.to_bytes(dataclasses.asdict(obj))
 
         elif isinstance(obj, Enum):
-            return (str(obj._value_) + str(obj._name_)).encode()
+            return str(obj).encode()
 
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame") or type_util.is_type(
             obj, "pandas.core.series.Series"
