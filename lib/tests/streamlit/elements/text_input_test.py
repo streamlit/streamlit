@@ -18,7 +18,7 @@ import re
 from unittest.mock import patch
 from parameterized import parameterized
 
-from streamlit import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextInput_pb2 import TextInput
 from tests import testutil
 import streamlit as st

@@ -30,6 +30,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.memory_media_file_storage import (
     _calculate_file_id,
+    get_extension_for_mimetype,
 )
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests import testutil
@@ -109,7 +110,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             (IMAGES["img_32_32_3_rgba"]["np"], "jpeg"),
         ]
     )
-    def test_marshall_images(self, data_in, format):
+    def test_marshall_images(self, data_in: image.AtomicImage, format: str):
         """Test streamlit.image.marshall_images.
         Need to test the following:
         * if list
@@ -123,31 +124,36 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
+        mimetype = f"image/{format}"
         file_id = _calculate_file_id(
             _np_array_to_bytes(data_in, output_format=format),
-            mimetype="image/" + format,
+            mimetype=mimetype,
         )
 
         st.image(data_in, output_format=format)
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
         self.assertTrue(imglist.imgs[0].url.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(imglist.imgs[0].url.endswith(f".{format}"))
+        self.assertTrue(
+            imglist.imgs[0].url.endswith(get_extension_for_mimetype(mimetype))
+        )
         self.assertTrue(file_id in imglist.imgs[0].url)
 
     @parameterized.expand(
         [
-            (IMAGES["img_32_32_3_rgb"]["np"], "jpeg"),
-            (IMAGES["img_32_32_3_bgr"]["np"], "jpeg"),
-            (IMAGES["img_64_64_rgb"]["np"], "jpeg"),
-            (IMAGES["img_32_32_3_rgba"]["np"], "png"),
-            (IMAGES["img_32_32_3_rgb"]["pil"], "jpeg"),
-            (IMAGES["img_32_32_3_bgr"]["pil"], "jpeg"),
-            (IMAGES["img_64_64_rgb"]["pil"], "jpeg"),
-            (IMAGES["img_32_32_3_rgba"]["pil"], "png"),
+            (IMAGES["img_32_32_3_rgb"]["np"], ".jpg"),
+            (IMAGES["img_32_32_3_bgr"]["np"], ".jpg"),
+            (IMAGES["img_64_64_rgb"]["np"], ".jpg"),
+            (IMAGES["img_32_32_3_rgba"]["np"], ".png"),
+            (IMAGES["img_32_32_3_rgb"]["pil"], ".jpg"),
+            (IMAGES["img_32_32_3_bgr"]["pil"], ".jpg"),
+            (IMAGES["img_64_64_rgb"]["pil"], ".jpg"),
+            (IMAGES["img_32_32_3_rgba"]["pil"], ".png"),
         ]
     )
-    def test_marshall_images_with_auto_output_format(self, data_in, expected_format):
+    def test_marshall_images_with_auto_output_format(
+        self, data_in: image.AtomicImage, expected_extension: str
+    ):
         """Test streamlit.image.marshall_images.
         with auto output_format
         """
@@ -155,7 +161,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         st.image(data_in, output_format="auto")
         imglist = self.get_delta_from_queue().new_element.imgs
         self.assertEqual(len(imglist.imgs), 1)
-        self.assertTrue(imglist.imgs[0].url.endswith(f".{expected_format}"))
+        self.assertTrue(imglist.imgs[0].url.endswith(expected_extension))
 
     @parameterized.expand(
         [

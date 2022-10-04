@@ -215,7 +215,7 @@ describe("st.date_input", () => {
 
     // value should be reset to 1970-01-01
     cy.get(".stMarkdown").should(
-      "contain.text",
+      "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
@@ -224,8 +224,8 @@ describe("st.date_input", () => {
         "Value 6: ()" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
-        "Value 9: 1970-01-01"
-        // removed "Date Input Changed:" line due to resulting flakiness
+        "Value 9: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 

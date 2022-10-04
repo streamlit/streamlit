@@ -17,9 +17,10 @@
 import unittest
 from unittest.mock import MagicMock
 
-from streamlit import config, RootContainer
+from streamlit import config
 from streamlit.elements import legacy_data_frame as data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import app_session
 from streamlit.runtime.forward_msg_cache import (
     ForwardMsgCache,

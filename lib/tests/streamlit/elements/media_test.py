@@ -20,9 +20,9 @@ from unittest import mock
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.elements.media import MediaData
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from tests import testutil
 
 

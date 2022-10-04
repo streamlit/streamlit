@@ -99,10 +99,11 @@ function generateTableCell(
     content,
     contentType,
     displayContent,
+    field,
   } = table.getCell(rowIndex, columnIndex)
 
   const formattedContent =
-    displayContent || Quiver.format(content, contentType)
+    displayContent || Quiver.format(content, contentType, field)
 
   const { headerColumns } = table.dimensions
   const cellDataType =

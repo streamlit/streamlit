@@ -11,3 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Explicitly re-export public symbols from runtime.py
+from .runtime import (
+    Runtime as Runtime,
+    RuntimeState as RuntimeState,
+    SessionClient as SessionClient,
+    SessionClientDisconnectedError as SessionClientDisconnectedError,
+    RuntimeConfig as RuntimeConfig,
+)
+
+
+def get_instance() -> Runtime:
+    """Return the singleton Runtime instance."""
+    return Runtime.instance()

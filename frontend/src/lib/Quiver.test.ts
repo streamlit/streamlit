@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { vectorFromArray } from "apache-arrow"
+import { Field, Utf8, vectorFromArray } from "apache-arrow"
 import { cloneDeep } from "lodash"
 
 import { IndexTypeName, Quiver } from "src/lib/Quiver"
@@ -39,6 +39,7 @@ import {
   DISPLAY_VALUES,
   FEWER_COLUMNS,
   DIFFERENT_COLUMN_TYPES,
+  CATEGORICAL_INTERVAL,
 } from "src/lib/mocks/arrow"
 
 describe("Quiver", () => {
@@ -156,6 +157,7 @@ describe("Quiver", () => {
             numpy_type: "object",
             meta: null,
           },
+          field: new Field("c2", new Utf8(), true, new Map([])),
           displayContent: undefined,
         })
       })
@@ -442,6 +444,16 @@ describe("Quiver", () => {
         ).toEqual("(0, 1]")
       })
 
+      test("categorical interval", () => {
+        const mockElement = { data: CATEGORICAL_INTERVAL }
+        const q = new Quiver(mockElement)
+        const { content, contentType, field } = q.getCell(1, 1)
+
+        expect(Quiver.format(content, contentType, field)).toEqual(
+          "(23.535, 256.5]"
+        )
+      })
+
       test("invalid interval type", () => {
         const mockElement = { data: INTERVAL_INT64 }
         const INVALID_TYPE = "interval"
@@ -453,7 +465,7 @@ describe("Quiver", () => {
             pandas_type: "object",
             numpy_type: INVALID_TYPE,
           })
-        ).toThrow("Invalid interval type.")
+        ).toThrow("Invalid interval type: interval")
       })
 
       test("list[unicode]", () => {

@@ -45,15 +45,12 @@ For more detailed info, see https://docs.streamlit.io.
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
-from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.runtime.secrets import Secrets, SECRETS_FILE_LOC
+from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
 
 _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
-from importlib_metadata import version as _version
-
-__version__: str = _version("streamlit")
+__version__ = _STREAMLIT_VERSION_STRING
 
 from typing import Any, Dict, Iterator, List, NoReturn
 import contextlib as _contextlib
@@ -75,9 +72,13 @@ from streamlit.runtime.scriptrunner import (
     RerunException as _RerunException,
     RerunData as _RerunData,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException as _StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
-from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
+from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
+from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
+from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
+from streamlit.user_info import UserInfoProxy as _UserInfoProxy
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -89,7 +90,7 @@ from streamlit.runtime.caching import (
     memo as experimental_memo,
 )
 
-cache = gather_metrics(_cache)
+cache = _gather_metrics(_cache)
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -109,10 +110,10 @@ def _update_logger() -> None:
 _config.on_config_parsed(_update_logger, True)
 
 
-_main = _DeltaGenerator(root_container=RootContainer.MAIN)
-sidebar = _DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=_main)
+_main = _DeltaGenerator(root_container=_RootContainer.MAIN)
+sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
 
-secrets = Secrets(SECRETS_FILE_LOC)
+secrets = _secrets_singleton
 
 # DeltaGenerator methods:
 
@@ -199,22 +200,16 @@ get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config as set_page_config
 
 # Session State
-
-from streamlit.runtime.state import SessionStateProxy
-from streamlit.user_info import UserInfoProxy
-
-session_state = SessionStateProxy()
-experimental_user = UserInfoProxy()
-
+session_state = _SessionStateProxy()
+experimental_user = _UserInfoProxy()
 
 # Beta APIs
+beta_container = _gather_metrics(_main.beta_container)
+beta_expander = _gather_metrics(_main.beta_expander)
+beta_columns = _gather_metrics(_main.beta_columns)
 
-beta_container = gather_metrics(_main.beta_container)
-beta_expander = gather_metrics(_main.beta_expander)
-beta_columns = gather_metrics(_main.beta_columns)
 
-
-@gather_metrics
+@_gather_metrics
 def set_option(key: str, value: Any) -> None:
     """Set config option.
 
@@ -240,21 +235,21 @@ def set_option(key: str, value: Any) -> None:
     try:
         opt = _config._config_options_template[key]
     except KeyError as ke:
-        raise StreamlitAPIException(
+        raise _StreamlitAPIException(
             "Unrecognized config option: {key}".format(key=key)
         ) from ke
     if opt.scriptable:
         _config.set_option(key, value)
         return
 
-    raise StreamlitAPIException(
+    raise _StreamlitAPIException(
         "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
             key=key
         )
     )
 
 
-@gather_metrics
+@_gather_metrics
 def experimental_show(*args: Any) -> None:
     """Write arguments and *argument names* to your app for debugging purposes.
 
@@ -336,7 +331,7 @@ def experimental_show(*args: Any) -> None:
         exception(exc)
 
 
-@gather_metrics
+@_gather_metrics
 def experimental_get_query_params() -> Dict[str, List[str]]:
     """Return the query parameters that is currently showing in the browser's URL bar.
 
@@ -367,7 +362,7 @@ def experimental_get_query_params() -> Dict[str, List[str]]:
     return _parse.parse_qs(ctx.query_string)
 
 
-@gather_metrics
+@_gather_metrics
 def experimental_set_query_params(**query_params: Any) -> None:
     """Set the query parameters that are shown in the browser's URL bar.
 
@@ -459,7 +454,7 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
                 message.empty()
 
 
-@gather_metrics
+@_gather_metrics
 def _transparent_write(*args: Any) -> Any:
     """This is just st.write, but returns the arguments you passed to it."""
     write(*args)

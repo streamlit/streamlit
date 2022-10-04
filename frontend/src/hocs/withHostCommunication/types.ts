@@ -17,7 +17,7 @@
 import { IAppPage } from "src/autogen/proto"
 import { ExportedTheme } from "src/theme"
 
-export type StreamlitShareMetadata = {
+export type DeployedAppMetadata = {
   hostedAt?: string
   creatorId?: string
   owner?: string
@@ -27,7 +27,7 @@ export type StreamlitShareMetadata = {
   isOwner?: boolean
 }
 
-export interface S4ACommunicationState {
+export interface HostCommunicationState {
   forcedModalClose: boolean
   hideSidebarNav: boolean
   isOwner: boolean
@@ -36,7 +36,7 @@ export interface S4ACommunicationState {
   queryParams: string
   requestedPageScriptHash: string | null
   sidebarChevronDownshift: number
-  streamlitShareMetadata: StreamlitShareMetadata
+  deployedAppMetadata: DeployedAppMetadata
   toolbarItems: IToolbarItem[]
 }
 
@@ -77,7 +77,7 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "SET_METADATA"
-      metadata: StreamlitShareMetadata
+      metadata: DeployedAppMetadata
     }
   | {
       type: "SET_PAGE_LINK_BASE_URL"

@@ -14,4 +14,7 @@
  * limitations under the License.
  */
 
-export { default } from "./withS4ACommunication"
+import { HostCommunicationHOC as _HostCommunicationHOC } from "./withHostCommunication"
+
+export { default, sendMessageToHost } from "./withHostCommunication"
+export type HostCommunicationHOC = _HostCommunicationHOC

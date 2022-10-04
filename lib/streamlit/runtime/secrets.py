@@ -18,6 +18,7 @@ from typing import Any, Mapping, Optional
 
 import toml
 from blinker import Signal
+from typing_extensions import Final
 
 import streamlit as st
 import streamlit.watcher.path_watcher
@@ -250,3 +251,6 @@ class Secrets(Mapping[str, Any]):
 
     def __iter__(self):
         return iter(self._parse(True))
+
+
+secrets_singleton: Final = Secrets(SECRETS_FILE_LOC)

@@ -45,7 +45,7 @@ describe("st.image", () => {
     cy.get(".element-container [data-testid='stImage'] img")
       .eq(0)
       .should("have.attr", "src")
-      .should("match", /^.*\.jpeg$/);
+      .should("match", /^.*\.jpg$/);
   });
 
   it("displays a PNG image when specified", () => {
@@ -57,7 +57,7 @@ describe("st.image", () => {
   it("displays a JPEG image when not specified with no alpha channel", () => {
     cy.getIndexed(".element-container [data-testid='stImage'] img", 2)
       .should("have.attr", "src")
-      .should("match", /^.*\.jpeg$/);
+      .should("match", /^.*\.jpg$/);
   });
 
   it("displays a PNG image when not specified with alpha channel", () => {

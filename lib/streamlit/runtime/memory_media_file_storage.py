@@ -20,6 +20,8 @@ import mimetypes
 import os.path
 from typing import Union, NamedTuple, Dict, Optional, List
 
+from typing_extensions import Final
+
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import (
     MediaFileStorage,
@@ -30,8 +32,11 @@ from streamlit.runtime.stats import CacheStatsProvider, CacheStat
 
 LOGGER = get_logger(__name__)
 
-PREFERRED_MIMETYPE_EXTENSION_MAP = {
-    "image/jpeg": ".jpeg",
+# Mimetype -> filename extension map for the `get_extension_for_mimetype`
+# function. We use Python's `mimetypes.guess_extension` for most mimetypes,
+# but (as of Python 3.9) `mimetypes.guess_extension("audio/wav")` returns None,
+# so we handle it ourselves.
+PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
     "audio/wav": ".wav",
 }
 
@@ -61,15 +66,10 @@ def _calculate_file_id(
 
 
 def get_extension_for_mimetype(mimetype: str) -> str:
-    # Python mimetypes preference was changed in Python versions, so we specify
-    # a preference first and let Python's mimetypes library guess the rest.
-    # See https://bugs.python.org/issue4963
-    #
-    # Note: Removing Python 3.6 support would likely eliminate this code
     if mimetype in PREFERRED_MIMETYPE_EXTENSION_MAP:
         return PREFERRED_MIMETYPE_EXTENSION_MAP[mimetype]
 
-    extension = mimetypes.guess_extension(mimetype)
+    extension = mimetypes.guess_extension(mimetype, strict=False)
     if extension is None:
         return ""
 
