@@ -540,10 +540,9 @@ def _is_colum_type_unsupported(column: Union[Series, Index]) -> bool:
     # values can be determined via the infer_dtype function:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
 
-    if (
+    return (
         column.dtype == "object" and infer_dtype(column) in ["mixed", "mixed-integer"]
-    ) or column.dtype == "complex128":
-        return True
+    ) or column.dtype == "complex128"
 
 
 def fix_unsupported_column_types(
