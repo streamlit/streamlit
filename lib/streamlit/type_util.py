@@ -33,6 +33,7 @@ from typing import (
 )
 
 import pyarrow as pa
+from pandas import MultiIndex
 from pandas.api.types import infer_dtype
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
@@ -531,13 +532,23 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def convert_mixed_columns_to_string(
+def fix_unsupported_column_types(
     df: DataFrame, selected_columns: Optional[List[str]] = None
 ) -> DataFrame:
     for col in selected_columns or df.columns:
         column = df[col]
-        if column.dtype == "object" and "mixed" in infer_dtype(column):
+        if (
+            column.dtype == "object" and infer_dtype(column).startswith("mixed")
+        ) or column.dtype == "complex128":
             df[col] = column.astype(str)
+
+    # Fix the index in case it uses mixed type
+    if not selected_columns and (
+        df.index.dtype == "object"
+        and infer_dtype(df.index).startswith("mixed")
+        and not isinstance(df.index, MultiIndex)
+    ):
+        df.index = df.index.astype(str)
     return df
 
 
@@ -551,25 +562,14 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
 
     """
     try:
-        try:
-            table = pa.Table.from_pandas(df)
-        except pa.ArrowTypeError:
-            # Fallback: Convert all object types to string
-            df = convert_mixed_columns_to_string(df)
-            table = pa.Table.from_pandas(df)
-        return pyarrow_table_to_bytes(table)
-    except Exception as e:
-        _NUMPY_DTYPE_ERROR_MESSAGE = "Could not convert dtype"
-        if _NUMPY_DTYPE_ERROR_MESSAGE in str(e):
-            raise errors.NumpyDtypeException(
-                """
-Unable to convert `numpy.dtype` to `pyarrow.DataType`.
-This is likely due to a bug in Arrow (see https://issues.apache.org/jira/browse/ARROW-14087).
-As a temporary workaround, you can convert the DataFrame cells to strings with `df.astype(str)`.
-"""
-            )
-        else:
-            raise errors.StreamlitAPIException(e)
+        table = pa.Table.from_pandas(df)
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError):
+        _LOGGER.warning(
+            "Applying automatic fixes for column types to make the dataframe Arrow-compatible."
+        )
+        df = fix_unsupported_column_types(df)
+        table = pa.Table.from_pandas(df)
+    return pyarrow_table_to_bytes(table)
 
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
