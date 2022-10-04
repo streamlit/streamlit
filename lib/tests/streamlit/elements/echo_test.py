@@ -75,6 +75,59 @@ class MyClass(object):
 
         self.clear_queue()
 
+    @parameterized.expand(
+        [
+            ("code_location default", {}, 0, 1),
+            ("code_location above", {"location": "above"}, 0, 1),
+            ("code_location below", {"location": "below"}, 1, 0),
+        ]
+    )
+    def test_echo_unindent(
+        self,
+        _,
+        echo_kwargs_very_very_long_name_very_long_very_very_very_very_very_very_long,
+        echo_index,
+        output_index,
+    ):
+        with st.echo(
+            **echo_kwargs_very_very_long_name_very_long_very_very_very_very_very_very_long
+        ):
+            st.write("Hello")
+            "hi"
+
+            def foo(x):
+                y = x + 10
+
+                print(y)
+
+            class MyClass(object):
+                def do_x(self):
+                    pass
+
+                def do_y(self):
+                    pass
+
+        echo_str = """```python
+st.write("Hello")
+"hi"
+def foo(x):
+    y = x + 10
+    print(y)
+class MyClass(object):
+    def do_x(self):
+        pass
+    def do_y(self):
+        pass
+```"""
+
+        element = self.get_delta_from_queue(echo_index).new_element
+        self.assertEqual(echo_str, element.markdown.body)
+
+        element = self.get_delta_from_queue(output_index).new_element
+        self.assertEqual("Hello", element.markdown.body)
+
+        self.clear_queue()
+
     def test_root_level_echo(self):
         import tests.streamlit.echo_test_data.root_level_echo
 
