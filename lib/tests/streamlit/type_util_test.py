@@ -114,7 +114,8 @@ class TypeUtilTest(unittest.TestCase):
                 "integer": [1, 2, 3],
                 "float": [1.0, 2.1, 3.2],
                 "string": ["foo", "bar", None],
-            }
+            },
+            index=[1.0, "foo", 3],
         )
 
         fixed_df = fix_unsupported_column_types(df)
@@ -125,6 +126,8 @@ class TypeUtilTest(unittest.TestCase):
         self.assertEqual(infer_dtype(fixed_df["integer"]), "integer")
         self.assertEqual(infer_dtype(fixed_df["float"]), "floating")
         self.assertEqual(infer_dtype(fixed_df["string"]), "string")
+        self.assertEqual(infer_dtype(fixed_df.index), "string")
+
         self.assertEqual(
             str(fixed_df.dtypes),
             """mixed-integer     object
@@ -145,7 +148,8 @@ dtype: object""",
                 "integer": [1, 2, 3],
                 "float": [1.0, 2.1, 3.2],
                 "string": ["foo", "bar", None],
-            }
+            },
+            index=[1.0, "foo", 3],
         )
 
         try:
