@@ -18,10 +18,15 @@ from unittest.mock import patch
 
 import pandas as pd
 import plotly.graph_objs as go
+from pandas.api.types import infer_dtype
 
 from streamlit import type_util
-from streamlit.errors import NumpyDtypeException
-from streamlit.type_util import data_frame_to_bytes, is_bytes_like, to_bytes
+from streamlit.type_util import (
+    data_frame_to_bytes,
+    fix_arrow_incompatible_column_types,
+    is_bytes_like,
+    to_bytes,
+)
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -91,9 +96,86 @@ class TypeUtilTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             to_bytes(string_obj)
 
-    def test_data_frame_to_bytes_numpy_dtype_exception(self):
+    def test_data_frame_with_dtype_values_to_bytes(self):
         df1 = pd.DataFrame(["foo", "bar"])
         df2 = pd.DataFrame(df1.dtypes)
 
-        with self.assertRaises(NumpyDtypeException):
+        try:
             data_frame_to_bytes(df2)
+        except Exception as ex:
+            self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
+
+    def test_fix_complex_column_type(self):
+        """Test that `fix_unsupported_column_types` correctly fixes
+        columns containing complex types by converting them to string.
+        """
+        df = pd.DataFrame(
+            {
+                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
+                "integer": [1, 2, 3],
+                "string": ["foo", "bar", None],
+            }
+        )
+
+        self.assertEqual(infer_dtype(df["complex"]), "complex")
+
+        fixed_df = fix_arrow_incompatible_column_types(df)
+        self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
+
+    def test_fix_mixed_column_types(self):
+        """Test that `fix_arrow_incompatible_column_types` correctly fixes
+        columns containing mixed types by converting them to string.
+        """
+        df = pd.DataFrame(
+            {
+                "mixed-integer": [1, "foo", 3],
+                "mixed": [1.0, "foo", 3],
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        fixed_df = fix_arrow_incompatible_column_types(df)
+
+        self.assertEqual(infer_dtype(fixed_df["mixed-integer"]), "string")
+        self.assertEqual(infer_dtype(fixed_df["mixed"]), "string")
+        self.assertEqual(infer_dtype(fixed_df["integer"]), "integer")
+        self.assertEqual(infer_dtype(fixed_df["float"]), "floating")
+        self.assertEqual(infer_dtype(fixed_df["string"]), "string")
+        self.assertEqual(infer_dtype(fixed_df.index), "string")
+
+        self.assertEqual(
+            str(fixed_df.dtypes),
+            """mixed-integer     object
+mixed             object
+integer            int64
+float            float64
+string            object
+dtype: object""",
+        )
+
+    def test_data_frame_with_unsupported_column_types(self):
+        """Test that `data_frame_to_bytes` correctly handles dataframes
+        with unsupported column types by converting those types to string.
+        """
+        df = pd.DataFrame(
+            {
+                "mixed-integer": [1, "foo", 3],
+                "mixed": [1.0, "foo", 3],
+                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        try:
+            data_frame_to_bytes(df)
+        except Exception as ex:
+            self.fail(
+                "No exception should have been thrown here. "
+                f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
+            )
