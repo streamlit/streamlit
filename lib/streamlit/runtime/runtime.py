@@ -157,6 +157,17 @@ class Runtime:
             raise RuntimeError("Runtime hasn't been created!")
         return cls._instance
 
+    @classmethod
+    def is_running(cls) -> bool:
+        """True if the singleton Runtime instance has been created.
+
+        When a Streamlit app is running in "raw mode" - that is, when the
+        app is run via `python app.py` instead of `streamlit run app.py` -
+        the Runtime will not exist, and various Streamlit functions need
+        to adapt.
+        """
+        return cls._instance is not None
+
     def __init__(self, config: RuntimeConfig):
         """Create a Runtime instance. It won't be started yet.
 

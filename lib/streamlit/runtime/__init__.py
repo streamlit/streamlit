@@ -23,5 +23,18 @@ from streamlit.runtime.runtime import (
 
 
 def get_instance() -> Runtime:
-    """Return the singleton Runtime instance."""
+    """Return the singleton Runtime instance. Raise an Error if the
+    Runtime hasn't been created yet.
+    """
     return Runtime.instance()
+
+
+def is_running() -> bool:
+    """True if the singleton Runtime instance has been created.
+
+    When a Streamlit app is running in "raw mode" - that is, when the
+    app is run via `python app.py` instead of `streamlit run app.py` -
+    the Runtime will not exist, and various Streamlit functions need
+    to adapt.
+    """
+    return Runtime.is_running()
