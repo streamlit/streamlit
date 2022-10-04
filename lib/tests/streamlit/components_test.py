@@ -374,8 +374,8 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
-    def test_inside_form(self):
+    @patch("streamlit.runtime.is_running", return_value=True)
+    def test_inside_form(self, _):
         """Test that form id is marshalled correctly inside of a form."""
 
         with st.form("foo"):
