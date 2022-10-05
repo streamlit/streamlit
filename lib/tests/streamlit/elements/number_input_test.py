@@ -220,7 +220,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
@@ -251,7 +251,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(number_input_proto.step, 1.0)
         self.assertEqual(number_input_proto.default, 0)
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
     @patch("streamlit.elements.utils.get_session_state")
     def test_no_warning_with_value_set_in_state(self, patched_get_session_state):
         mock_session_state = MagicMock()

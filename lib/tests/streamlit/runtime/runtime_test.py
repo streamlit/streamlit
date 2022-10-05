@@ -22,7 +22,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import streamlit
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -80,6 +79,12 @@ class RuntimeSingletonTest(unittest.TestCase):
         # Runtime instantiated: no error
         _ = Runtime(MagicMock())
         instance = Runtime.instance()
+
+    def test_exists(self):
+        """Runtime.exists() returns True iff the Runtime singleton exists."""
+        self.assertFalse(Runtime.exists())
+        _ = Runtime(MagicMock())
+        self.assertTrue(Runtime.exists())
 
 
 class RuntimeTest(RuntimeTestCase):
@@ -266,15 +271,6 @@ class RuntimeTest(RuntimeTestCase):
 
         with self.assertRaises(RuntimeStoppedError):
             self.runtime.handle_backmsg("not_a_session_id", MagicMock())
-
-    async def test_sets_is_running_with_streamlit_flag(self):
-        """Runtime should set streamlit._is_running_with_streamlit when it
-        starts.
-        """
-        # This will frequently be True from other tests
-        streamlit._is_running_with_streamlit = False
-        await self.runtime.start()
-        self.assertTrue(streamlit._is_running_with_streamlit)
 
     async def test_handle_session_client_disconnected(self):
         """Runtime should gracefully handle `SessionClient.write_forward_msg`

@@ -22,7 +22,6 @@ from typing import Awaitable, Dict, NamedTuple, Optional, Tuple
 
 from typing_extensions import Final, Protocol
 
-import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -157,6 +156,17 @@ class Runtime:
             raise RuntimeError("Runtime hasn't been created!")
         return cls._instance
 
+    @classmethod
+    def exists(cls) -> bool:
+        """True if the singleton Runtime instance has been created.
+
+        When a Streamlit app is running in "raw mode" - that is, when the
+        app is run via `python app.py` instead of `streamlit run app.py` -
+        the Runtime will not exist, and various Streamlit functions need
+        to adapt.
+        """
+        return cls._instance is not None
+
     def __init__(self, config: RuntimeConfig):
         """Create a Runtime instance. It won't be started yet.
 
@@ -276,7 +286,6 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        streamlit._is_running_with_streamlit = True
 
         # Create our AsyncObjects. We need to have a running eventloop to
         # instantiate our various synchronization primitives.

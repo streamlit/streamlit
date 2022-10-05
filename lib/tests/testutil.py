@@ -19,11 +19,10 @@ from contextlib import contextmanager
 from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
 
-import streamlit
 from streamlit import config
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import Runtime, media_file_manager
+from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
@@ -113,16 +112,11 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
         Runtime._instance = mock_runtime
 
-        # Accessing the MediaFileManager requires that _is_running_with_streamlit
-        # is True.
-        streamlit._is_running_with_streamlit = True
-
     def tearDown(self):
         self.clear_queue()
         if self.override_root:
             add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
         Runtime._instance = None
-        streamlit._is_running_with_streamlit = False
 
     def get_message_from_queue(self, index=-1) -> ForwardMsg:
         """Get a ForwardMsg proto from the queue, by index."""

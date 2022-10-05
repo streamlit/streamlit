@@ -15,7 +15,7 @@
 """slider unit test."""
 
 from datetime import date, datetime, time, timedelta, timezone
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -216,7 +216,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.slider
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 

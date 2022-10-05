@@ -30,7 +30,6 @@ import numpy as np
 from PIL import Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
 
-import streamlit
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -381,7 +380,7 @@ def image_to_url(
     image_data = _ensure_image_size_and_format(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
-    if streamlit._is_running_with_streamlit:
+    if runtime.exists():
         return runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
