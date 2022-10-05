@@ -27,7 +27,7 @@ st.map()
 
 # Cast is needed due to mypy not understanding the outcome of dividing
 # an array by a list of numbers.
-np.random.seed(1000)
+np.random.seed(0)
 coords: "np.typing.NDArray[np.float_]" = cast(
     Any,
     np.random.randn(1000, 2) / [50, 50],
