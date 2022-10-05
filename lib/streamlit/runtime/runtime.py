@@ -367,7 +367,6 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         session = AppSession(
-            event_loop=async_objs.eventloop,
             session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -497,7 +496,6 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session = AppSession(
-            event_loop=self._get_async_objs().eventloop,
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
