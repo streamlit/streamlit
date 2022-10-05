@@ -20,7 +20,6 @@ import os
 import re
 import sys
 import textwrap
-import time
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -463,14 +462,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.progress.value, 51)
-
-    def test_st_spinner(self):
-        """Test st.spinner."""
-        with st.spinner("some text"):
-            # Without the timeout, the spinner is sometimes not available
-            time.sleep(0.2)
-            el = self.get_delta_from_queue().new_element
-            self.assertEqual(el.spinner.text, "some text")
 
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
