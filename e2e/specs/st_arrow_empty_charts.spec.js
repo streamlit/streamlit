@@ -63,10 +63,9 @@ describe("handles arrow empty charts", () => {
       "ValueError: Vega-Lite charts require a non-empty spec dict."
     );
 
-    // Github Action testing env renders this error message slightly differently, so use contain vs. have
     cy.getIndexed(".stException .message", 4).should(
-      "contain.text",
-      "TypeError: _arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
+      "have.text",
+      "TypeError: ArrowAltairMixin._arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
     );
   });
 });
