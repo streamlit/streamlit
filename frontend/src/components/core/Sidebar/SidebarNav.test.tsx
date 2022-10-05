@@ -407,12 +407,7 @@ describe("SidebarNav", () => {
     const wrapper = shallow(<SidebarNav {...props} />)
 
     expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(1)
-        .find("EmojiIcon")
-        .dive()
-        .text()
+      wrapper.find(StyledSidebarNavLink).at(1).find("EmojiIcon").dive().text()
     ).toBe("🦈")
   })
 
