@@ -28,6 +28,7 @@ import {
 } from "src/lib/mocks/arrow"
 import { Quiver } from "src/lib/Quiver"
 import { darkTheme, lightTheme } from "src/theme"
+// import { expressionInterpreter } from "vega-interpreter"
 import {
   PropsWithHeight,
   ArrowVegaLiteChart,
@@ -65,6 +66,18 @@ describe("VegaLiteChart Element", () => {
     const wrapper = mount(<ArrowVegaLiteChart {...props} />)
 
     expect(wrapper.find("StyledVegaLiteChartContainer").length).toBe(1)
+  })
+
+  it("sets embed options compliant with CSP", async () => {
+    // const props = getProps()
+    // const wrapper = mount(<ArrowVegaLiteChart {...props} />)
+    // const options = {
+    //   defaultStyle: true,
+    //   ast: true,
+    //   expr: expressionInterpreter,
+    // }
+    // TODO: figure out how to test that embed is called
+    // expect().toHaveBeenCalledWith(options)
   })
 
   it("pulls default config values from theme", () => {

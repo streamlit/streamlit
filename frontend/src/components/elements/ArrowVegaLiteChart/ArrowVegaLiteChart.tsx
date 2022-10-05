@@ -18,7 +18,7 @@ import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import embed from "vega-embed"
 import * as vega from "vega"
-import * as vegaInterpreter from "vega-interpreter"
+import { expressionInterpreter } from "vega-interpreter"
 
 import { logMessage } from "src/lib/log"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
@@ -322,7 +322,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       defaultStyle: true,
       // Adds interpreter support for Vega expressions that is compliant with CSP
       ast: true,
-      expr: vegaInterpreter.expressionInterpreter,
+      expr: expressionInterpreter,
     }
 
     const { vgSpec, view, finalize } = await embed(this.element, spec, options)

@@ -21,6 +21,7 @@ import { VegaLiteChart as VegaLiteChartProto } from "src/autogen/proto"
 import { darkTheme, lightTheme } from "src/theme"
 import { tableGetRowsAndCols } from "src/lib/dataFrameProto"
 
+// import { expressionInterpreter } from "vega-interpreter"
 import mock from "./mock"
 import {
   PropsWithHeight,
@@ -163,6 +164,17 @@ describe("VegaLiteChart Element", () => {
         )
       ).toEqual(expected)
     })
+  })
+
+  it("sets embed options compliant with CSP", async () => {
+    // const props = getProps()
+    // const wrapper = mount(<VegaLiteChart {...props} />)
+    // const options = {
+    //   ast: true,
+    //   expr: expressionInterpreter,
+    // }
+    // TODO: figure out how to test that embed is called
+    // expect().toHaveBeenCalledWith(options)
   })
 
   it("pulls default config values from theme", () => {
