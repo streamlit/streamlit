@@ -64,16 +64,12 @@ class FakeStat(object):
 
 
 class PathModificationTimeTests(unittest.TestCase):
-    @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
-    )
+    @patch("streamlit.watcher.util.os.stat", MagicMock(return_value=FakeStat(101.0)))
     @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=True))
     def test_st_mtime_if_file_exists(self):
         assert util.path_modification_time("foo") == 101.0
 
-    @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
-    )
+    @patch("streamlit.watcher.util.os.stat", MagicMock(return_value=FakeStat(101.0)))
     @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=True))
     def test_st_mtime_if_file_exists_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 101.0

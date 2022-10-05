@@ -43,7 +43,7 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session_id"),
+        MagicMock(return_value="mock_session_id"),
     )
     def test_media_file(self) -> None:
         """Requests for media files in MediaFileManager should succeed."""
@@ -67,7 +67,7 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     )
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session_id"),
+        MagicMock(return_value="mock_session_id"),
     )
     def test_downloadable_file(self, file_name, content_disposition_header) -> None:
         """Downloadable files get an additional 'Content-Disposition' header

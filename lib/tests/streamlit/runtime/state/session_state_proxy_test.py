@@ -42,7 +42,7 @@ def _create_mock_session_state(
 
 @patch(
     "streamlit.runtime.state.session_state_proxy.get_session_state",
-    new=MagicMock(return_value=_create_mock_session_state({"foo": "bar"})),
+    MagicMock(return_value=_create_mock_session_state({"foo": "bar"})),
 )
 class SessionStateProxyTests(unittest.TestCase):
     reserved_key = f"{GENERATED_WIDGET_KEY_PREFIX}-some_key"
@@ -106,7 +106,7 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
 
     @patch(
         "streamlit.runtime.state.session_state_proxy.get_session_state",
-        new=MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
+        MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
     )
     def test_delattr(self):
         del self.session_state_proxy.foo
@@ -114,14 +114,14 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
 
     @patch(
         "streamlit.runtime.state.session_state_proxy.get_session_state",
-        new=MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
+        MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
     )
     def test_getattr(self):
         assert self.session_state_proxy.foo == "bar"
 
     @patch(
         "streamlit.runtime.state.session_state_proxy.get_session_state",
-        new=MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
+        MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
     )
     def test_getattr_error(self):
         with pytest.raises(AttributeError):
@@ -129,7 +129,7 @@ class SessionStateProxyAttributeTests(unittest.TestCase):
 
     @patch(
         "streamlit.runtime.state.session_state_proxy.get_session_state",
-        new=MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
+        MagicMock(return_value=SessionState(_new_session_state={"foo": "bar"})),
     )
     def test_setattr(self):
         self.session_state_proxy.corge = "grault2"

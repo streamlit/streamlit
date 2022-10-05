@@ -280,7 +280,7 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
 
     @patch(
         "streamlit.elements.button.register_widget",
-        new=MagicMock(return_value=RegisterWidgetResult(True, False)),
+        MagicMock(return_value=RegisterWidgetResult(True, False)),
     )
     def test_return_true_when_submitted(self):
         with st.form("form"):

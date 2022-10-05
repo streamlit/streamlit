@@ -125,7 +125,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
 
     @patch(
         "streamlit.type_util.is_pandas_version_less_than",
-        new=MagicMock(return_value=True),
+        MagicMock(return_value=True),
     )
     @patch.object(Styler, "_translate")
     def test_pandas_version_below_1_3_0(self, mock_styler_translate):
@@ -138,7 +138,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
 
     @patch(
         "streamlit.type_util.is_pandas_version_less_than",
-        new=MagicMock(return_value=False),
+        MagicMock(return_value=False),
     )
     @patch.object(Styler, "_translate")
     def test_pandas_version_1_3_0_and_above(self, mock_styler_translate):

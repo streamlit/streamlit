@@ -133,7 +133,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session_id"),
+        MagicMock(return_value="mock_session_id"),
     )
     def test_reject_null_files(self):
         """MediaFileManager.add raises a TypeError if it's passed None."""
@@ -142,7 +142,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session"),
+        MagicMock(return_value="mock_session"),
     )
     def test_add_binary_files(self):
         """Test that we can add binary files to the manager."""
@@ -176,7 +176,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session"),
+        MagicMock(return_value="mock_session"),
     )
     @mock.patch(
         "streamlit.runtime.memory_media_file_storage.open",
@@ -207,7 +207,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session_id"),
+        MagicMock(return_value="mock_session_id"),
     )
     def test_add_files_same_coord(self):
         """We can add multiple files that share the same coordinate."""
@@ -239,7 +239,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session_id"),
+        MagicMock(return_value="mock_session_id"),
     )
     def test_add_file_already_exists_same_coord(self):
         """Adding a file that already exists results in just a single file in
@@ -263,7 +263,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session_id"),
+        MagicMock(return_value="mock_session_id"),
     )
     def test_add_file_already_exists_different_coord(self):
         """Adding a file that already exists, but with different coordinates,
@@ -288,7 +288,7 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        new=MagicMock(return_value="mock_session_id"),
+        MagicMock(return_value="mock_session_id"),
     )
     def test_remove_orphaned_files_in_empty_manager(self):
         """Calling clear_session_refs/remove_orphaned_files in an empty manager
