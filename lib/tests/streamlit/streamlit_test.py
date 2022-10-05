@@ -463,6 +463,16 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.progress.value, 51)
 
+    def test_st_spinner(self):
+        """Test that `spinner` is in the `st` package.
+
+        This test will fail if we accidentally move the spinner import
+        out of __init__.py.
+
+        (spinner functionality is tested in `spinner_test.py`).
+        """
+        st.spinner("some_text")
+
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
         import plotly.graph_objs as go
