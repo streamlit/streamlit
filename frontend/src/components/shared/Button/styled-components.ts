@@ -96,13 +96,13 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
 export const StyledPrimaryButton = styled(
   StyledBaseButton
 )<RequiredButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.primary,
-  color: theme.colors.lightenedBg05,
-  border: `1px solid ${theme.colors.fadedText40}`,
+  // backgroundColor: theme.colors.primary,
+  // color: theme.colors.lightenedBg05,
+  // border: `1px solid ${theme.colors.fadedText40}`,
   "&:hover": {
-    borderColor: theme.colors.fadedText60,
-    color: theme.colors.black,
-    opacity: "75%",
+    // borderColor: theme.colors.fadedText60,
+    // color: theme.colors.black,
+    // opacity: "75%",
   },
   "&:active": {
     // color: theme.colors.white,
@@ -110,16 +110,16 @@ export const StyledPrimaryButton = styled(
     // backgroundColor: theme.colors.fadedText60,
   },
   "&:focus:not(:active)": {
-    borderColor: theme.colors.fadedText60,
-    color: theme.colors.black,
-    opacity: "75%",
+    // borderColor: theme.colors.fadedText60,
+    // color: theme.colors.black,
+    // opacity: "75%",
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText40,
-    backgroundColor: theme.colors.primary,
-    color: theme.colors.black,
-    opacity: "30%",
-    cursor: "not-allowed",
+    // borderColor: theme.colors.fadedText40,
+    // backgroundColor: theme.colors.primary,
+    // color: theme.colors.black,
+    // opacity: "30%",
+    // cursor: "not-allowed",
   },
 }))
 
