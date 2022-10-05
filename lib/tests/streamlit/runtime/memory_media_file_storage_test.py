@@ -16,7 +16,7 @@
 
 import unittest
 from unittest import mock
-from unittest.mock import mock_open
+from unittest.mock import MagicMock, mock_open
 
 from parameterized import parameterized
 
@@ -115,9 +115,10 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         self.assertNotEqual(file_id1, changed_filename)
 
     @mock.patch(
-        "streamlit.runtime.memory_media_file_storage.open", side_effect=Exception
+        "streamlit.runtime.memory_media_file_storage.open",
+        MagicMock(side_effect=Exception),
     )
-    def test_load_with_bad_path(self, _):
+    def test_load_with_bad_path(self):
         """Adding a file by path raises a MediaFileStorageError if the file can't be read."""
         with self.assertRaises(MediaFileStorageError):
             self.storage.load_and_get_id(
