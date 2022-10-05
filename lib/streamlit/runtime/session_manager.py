@@ -14,15 +14,15 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from typing_extensions import Protocol
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
-
-if TYPE_CHECKING:
-    from streamlit.runtime import Runtime
+from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.watcher import LocalSourcesWatcher
 
 
 class SessionClientDisconnectedError(Exception):
@@ -42,9 +42,6 @@ class SessionClient(Protocol):
         raise NotImplementedError
 
 
-# TODO(vdonato): We may want to consider either coming up with a better name for this or
-# consolidating it with the SessionData class since the two names are similar enough
-# to be confusing right now.
 @dataclass
 class SessionInfo:
     """Type containing data related to an AppSession.
@@ -184,22 +181,34 @@ class SessionManager(Protocol):
     """
 
     @abstractmethod
-    def __init__(self, session_storage: SessionStorage, runtime: "Runtime") -> None:
+    def __init__(
+        self,
+        session_storage: SessionStorage,
+        uploaded_file_manager: UploadedFileManager,
+        message_enqueued_callback: Optional[Callable[[], None]],
+    ) -> None:
         """Initialize a SessionManager with the given SessionStorage.
 
         Parameters
         ----------
         session_storage
             The SessionStorage instance backing this SessionManager.
-        runtime
-            A backpointer to the Runtime that owns this SessionManager.
+
+        uploaded_file_manager
+            Used to manage files uploaded by users via the Streamlit web client.
+
+        message_enqueued_callback
+            A callback invoked after a message is enqueued to be sent to a web client.
         """
         raise NotImplementedError
 
+    # NOTE: The session_data parameter name will be changed as we'll be renaming the
+    # SessionData class before merging this feature branch into develop.
     @abstractmethod
     def connect_session(
         self,
         client: SessionClient,
+        session_data: SessionData,
         user_info: Dict[str, Optional[str]],
         existing_session_id: Optional[str] = None,
     ) -> str:
@@ -210,6 +219,9 @@ class SessionManager(Protocol):
         client
             A concrete SessionClient implementation for communicating with
             the session's client.
+        session_data
+            Contains parameters related to running a script, along with the
+            ForwardMsgQueue of a browser tab.
         user_info
             A dict that contains information about the session's user. For now,
             it only (optionally) contains the user's email address.

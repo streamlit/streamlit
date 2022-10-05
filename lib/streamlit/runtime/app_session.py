@@ -86,7 +86,7 @@ class AppSession:
             Object storing parameters related to running a script
 
         uploaded_file_manager : UploadedFileManager
-            The server's UploadedFileManager.
+            Used to manage files uploaded by users via the Streamlit web client.
 
         message_enqueued_callback : Callable[[], None]
             After enqueuing a message, this callable notification will be invoked.
