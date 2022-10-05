@@ -17,7 +17,11 @@
 import unittest
 
 from streamlit.runtime.stats import CacheStat
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import (
+    UploadedFile,
+    UploadedFileManager,
+    UploadedFileRec,
+)
 
 FILE_1 = UploadedFileRec(id=0, name="file1", type="type", data=b"file1")
 FILE_2 = UploadedFileRec(id=0, name="file2", type="type", data=b"file222")
@@ -38,6 +42,34 @@ class UploadedFileManagerTest(unittest.TestCase):
         f2 = self.mgr.add_file("session", "widget", FILE_1)
         self.assertNotEqual(FILE_1.id, f1.id)
         self.assertNotEqual(f1.id, f2.id)
+
+    def test_added_file_hash(self):
+        """The hash should be equal iff it's the same file."""
+        f1 = UploadedFile(self.mgr.add_file("session", "widget", FILE_1))
+        self.assertEqual(
+            hash(f1),
+            hash(
+                UploadedFile(
+                    UploadedFileRec(id=1, name="file1", type="type", data=b"file1")
+                )
+            ),
+        )
+        self.assertNotEqual(
+            hash(f1),
+            hash(
+                UploadedFile(
+                    UploadedFileRec(id=10, name="file1", type="type", data=b"file1")
+                )
+            ),
+        )
+        self.assertNotEqual(
+            hash(f1),
+            hash(
+                UploadedFile(
+                    UploadedFileRec(id=1, name="file1", type="type", data=b"other")
+                )
+            ),
+        )
 
     def test_added_file_properties(self):
         """An added file should maintain all its source properties
