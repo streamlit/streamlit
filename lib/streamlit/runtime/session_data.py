@@ -23,6 +23,8 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 LOGGER = get_logger(__name__)
 
 
+# TODO(vdonato): We should really figure out a better name for SessionData before this
+# feature branch is merged into develop given how similar this name is to SessionInfo.
 @dataclass(init=False)
 class SessionData:
     """
