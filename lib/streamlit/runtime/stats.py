@@ -16,9 +16,7 @@ import typing
 from abc import abstractmethod
 from typing import List
 
-from streamlit.proto.openmetrics_data_model_pb2 import (
-    Metric as MetricProto,
-)
+from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
 
 
 class CacheStat(typing.NamedTuple):

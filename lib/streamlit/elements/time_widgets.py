@@ -13,37 +13,31 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from datetime import datetime, date, time
+from datetime import date, datetime, time
 from textwrap import dedent
-from typing import Any, cast, List, Optional, Sequence, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union, cast
 
 from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
-from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.type_util import (
-    Key,
-    to_key,
-    LabelVisibility,
-    maybe_raise_label_warnings,
-)
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
-from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.runtime.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
-from streamlit.runtime.metrics_util import gather_metrics
-
-from .form import current_form_id
-from .utils import (
+from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
 )
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
+from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+    register_widget,
+)
+from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

@@ -14,13 +14,12 @@
 
 import io
 import re
-from typing import cast, Optional, TYPE_CHECKING, Union
-from typing_extensions import Final, TypeAlias
+from typing import TYPE_CHECKING, Optional, Union, cast
 
+from typing_extensions import Final, TypeAlias
 from validators import url
 
-import streamlit
-from streamlit import type_util, runtime
+from streamlit import runtime, type_util
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -208,7 +207,7 @@ def _marshall_av_media(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    if streamlit._is_running_with_streamlit:
+    if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(
             data_or_filename, mimetype, coordinates
         )

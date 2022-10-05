@@ -49,19 +49,13 @@ describe("Pagination widget", () => {
 
   it("should be able to go to previous page", () => {
     const wrapper = shallow(<Pagination {...props} />)
-    wrapper
-      .find(Button)
-      .at(0)
-      .simulate("click")
+    wrapper.find(Button).at(0).simulate("click")
     expect(props.onPrevious).toHaveBeenCalledTimes(1)
   })
 
   it("should be able to go to next page", () => {
     const wrapper = shallow(<Pagination {...props} />)
-    wrapper
-      .find(Button)
-      .at(1)
-      .simulate("click")
+    wrapper.find(Button).at(1).simulate("click")
     expect(props.onNext).toHaveBeenCalledTimes(1)
   })
 })

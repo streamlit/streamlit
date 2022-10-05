@@ -17,7 +17,7 @@ import subprocess
 import sys
 import textwrap
 from pathlib import Path
-from typing import Tuple, List
+from typing import List, Tuple
 
 if __name__ not in ("__main__", "__mp_main__"):
     raise SystemExit(

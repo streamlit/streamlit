@@ -18,10 +18,10 @@ import json
 
 import numpy as np
 import pandas as pd
-from tests import testutil
 
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
+from tests import testutil
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 

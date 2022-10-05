@@ -18,11 +18,11 @@
 
 Increment the version number, add a dev suffix and add todays date
 """
+import sys
+from datetime import datetime
+
 import packaging.version
 import pytz
-import sys
-
-from datetime import datetime
 
 import streamlit.version
 

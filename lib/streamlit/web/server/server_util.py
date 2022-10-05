@@ -16,9 +16,7 @@
 
 from typing import Optional
 
-from streamlit import config
-from streamlit import net_util
-from streamlit import url_util
+from streamlit import config, net_util, url_util
 
 
 def is_url_from_allowed_origins(url: str) -> bool:

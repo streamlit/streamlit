@@ -51,6 +51,7 @@ NONWIDGET_ELEMENTS = [
     "empty",
     "exception",
     "graphviz_chart",
+    "heading",
     "iframe",
     "json",
     "legacy_altair",

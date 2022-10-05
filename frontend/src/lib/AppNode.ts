@@ -264,10 +264,11 @@ export class ElementNode implements AppNode {
         break
       }
       case "arrowVegaLiteChart": {
-        newNode.lazyVegaLiteChartElement = ElementNode.vegaLiteChartAddRowsHelper(
-          this.vegaLiteChartElement,
-          namedDataSet
-        )
+        newNode.lazyVegaLiteChartElement =
+          ElementNode.vegaLiteChartAddRowsHelper(
+            this.vegaLiteChartElement,
+            namedDataSet
+          )
         break
       }
       default: {

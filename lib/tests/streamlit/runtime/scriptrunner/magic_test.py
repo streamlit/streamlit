@@ -14,8 +14,8 @@
 
 """Magic unit test."""
 
-import unittest
 import ast
+import unittest
 
 import streamlit.runtime.scriptrunner.magic as magic
 

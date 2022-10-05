@@ -93,30 +93,28 @@ export function ImageList({
 
   return (
     <StyledImageList style={{ width }}>
-      {element.imgs.map(
-        (iimage: IImage, idx: number): ReactElement => {
-          const image = iimage as ImageProto
-          return (
-            <StyledImageContainer key={idx} data-testid="stImage">
-              {image.markup ? (
-                // SVGs are received unsanitized
-                ReactHtmlParser(xssSanitizeSvg(image.markup))
-              ) : (
-                <img
-                  style={imgStyle}
-                  src={buildMediaUri(image.url, getBaseUriParts())}
-                  alt={idx.toString()}
-                />
-              )}
-              {image.caption && (
-                <StyledCaption data-testid="caption" style={imgStyle}>
-                  {` ${image.caption} `}
-                </StyledCaption>
-              )}
-            </StyledImageContainer>
-          )
-        }
-      )}
+      {element.imgs.map((iimage: IImage, idx: number): ReactElement => {
+        const image = iimage as ImageProto
+        return (
+          <StyledImageContainer key={idx} data-testid="stImage">
+            {image.markup ? (
+              // SVGs are received unsanitized
+              ReactHtmlParser(xssSanitizeSvg(image.markup))
+            ) : (
+              <img
+                style={imgStyle}
+                src={buildMediaUri(image.url, getBaseUriParts())}
+                alt={idx.toString()}
+              />
+            )}
+            {image.caption && (
+              <StyledCaption data-testid="caption" style={imgStyle}>
+                {` ${image.caption} `}
+              </StyledCaption>
+            )}
+          </StyledImageContainer>
+        )
+      })}
     </StyledImageList>
   )
 }

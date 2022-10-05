@@ -12,26 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
-import json
-
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from typing import (
     TYPE_CHECKING,
     Any,
-    KeysView,
+    Callable,
     Dict,
     Generic,
     Iterator,
+    KeysView,
+    List,
     MutableMapping,
     Optional,
-    Union,
-    Tuple,
-    Callable,
     Set,
-    List,
+    Tuple,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -42,8 +40,8 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.type_util import ValueFieldName
-from streamlit.type_util import is_array_value_field_name
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
 if TYPE_CHECKING:
     from streamlit.runtime.runtime import SessionInfo

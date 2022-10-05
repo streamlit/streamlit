@@ -147,9 +147,7 @@ describe("DataFrame widget", () => {
     }
 
     expect(Array.from(sortedData)).toEqual(
-      Array.from(sortedData)
-        .sort()
-        .reverse()
+      Array.from(sortedData).sort().reverse()
     )
   })
 

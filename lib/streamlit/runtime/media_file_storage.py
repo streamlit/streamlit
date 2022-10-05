@@ -14,7 +14,7 @@
 
 from abc import abstractmethod
 from enum import Enum
-from typing import Union, Optional
+from typing import Optional, Union
 
 from typing_extensions import Protocol
 

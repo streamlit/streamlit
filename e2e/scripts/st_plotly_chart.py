@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import numpy as np
-import streamlit as st
 from plotly import figure_factory
+
+import streamlit as st
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)

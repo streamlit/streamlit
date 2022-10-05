@@ -14,10 +14,11 @@
 
 import random
 
-import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pyarrow as pa
+
+import streamlit as st
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
@@ -140,7 +141,7 @@ st._arrow_dataframe(styled_df)
 
 st.header("Various data types")
 
-from string import ascii_uppercase, ascii_lowercase, digits
+from string import ascii_lowercase, ascii_uppercase, digits
 
 n_rows = 30
 random_int = np.random.randint(30, 50)

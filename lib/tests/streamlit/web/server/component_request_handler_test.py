@@ -17,10 +17,7 @@ from unittest import mock
 import tornado.testing
 import tornado.web
 
-from streamlit.components.v1.components import (
-    ComponentRegistry,
-    declare_component,
-)
+from streamlit.components.v1.components import ComponentRegistry, declare_component
 from streamlit.web.server import ComponentRequestHandler
 
 URL = "http://not.a.real.url:3001"

@@ -14,9 +14,9 @@
 
 """download_button unit test."""
 
-import streamlit as st
-
 from parameterized import parameterized
+
+import streamlit as st
 from tests import testutil
 
 

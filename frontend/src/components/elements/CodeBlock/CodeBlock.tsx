@@ -44,9 +44,7 @@ export const CodeTag: FunctionComponent<CodeTagProps> = ({
   ...props
 }) => {
   const match = /language-(\w+)/.exec(className || "")
-  const codeText = String(children)
-    .trim()
-    .replace(/\n$/, "")
+  const codeText = String(children).trim().replace(/\n$/, "")
 
   return !inline ? (
     <>

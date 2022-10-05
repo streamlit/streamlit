@@ -18,31 +18,36 @@ import time
 import traceback
 from asyncio import Future
 from enum import Enum
-from typing import Optional, Dict, NamedTuple, Tuple, Awaitable
+from typing import Awaitable, Dict, NamedTuple, Optional, Tuple
 
 from typing_extensions import Final, Protocol
 
-import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.runtime_util import is_cacheable_msg
-from streamlit.watcher import LocalSourcesWatcher
-from .app_session import AppSession
-from .caching import get_memo_stats_provider, get_singleton_stats_provider
-from .forward_msg_cache import (
-    ForwardMsgCache,
-    populate_hash_if_needed,
-    create_reference_msg,
+from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.caching import (
+    get_memo_stats_provider,
+    get_singleton_stats_provider,
 )
-from .legacy_caching.caching import _mem_caches
-from .media_file_manager import MediaFileManager
-from .media_file_storage import MediaFileStorage
-from .session_data import SessionData
-from .state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
-from .stats import StatsManager
-from .uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.forward_msg_cache import (
+    ForwardMsgCache,
+    create_reference_msg,
+    populate_hash_if_needed,
+)
+from streamlit.runtime.legacy_caching.caching import _mem_caches
+from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.media_file_storage import MediaFileStorage
+from streamlit.runtime.runtime_util import is_cacheable_msg
+from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.state import (
+    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    SessionStateStatProvider,
+)
+from streamlit.runtime.stats import StatsManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.watcher import LocalSourcesWatcher
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
@@ -151,6 +156,17 @@ class Runtime:
             raise RuntimeError("Runtime hasn't been created!")
         return cls._instance
 
+    @classmethod
+    def exists(cls) -> bool:
+        """True if the singleton Runtime instance has been created.
+
+        When a Streamlit app is running in "raw mode" - that is, when the
+        app is run via `python app.py` instead of `streamlit run app.py` -
+        the Runtime will not exist, and various Streamlit functions need
+        to adapt.
+        """
+        return cls._instance is not None
+
     def __init__(self, config: RuntimeConfig):
         """Create a Runtime instance. It won't be started yet.
 
@@ -222,6 +238,19 @@ class Runtime:
         """A Future that completes when the Runtime's run loop has exited."""
         return self._get_async_objs().stopped
 
+    def get_client(self, session_id: str) -> Optional[SessionClient]:
+        """Get the SessionClient for the given session_id, or None
+        if no such session exists.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
+        """
+        session_info = self._get_session_info(session_id)
+        if session_info is None:
+            return None
+        return session_info.client
+
     def _on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
         Ensures that uploaded files from stale sessions get deleted.
@@ -257,7 +286,6 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        streamlit._is_running_with_streamlit = True
 
         # Create our AsyncObjects. We need to have a running eventloop to
         # instantiate our various synchronization primitives.
@@ -348,7 +376,6 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         session = AppSession(
-            event_loop=async_objs.eventloop,
             session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -478,7 +505,6 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session = AppSession(
-            event_loop=self._get_async_objs().eventloop,
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,

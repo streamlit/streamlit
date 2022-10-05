@@ -71,9 +71,10 @@ const SidebarNav = ({
     }
   }, [isOverflowing, hideParentScrollbar])
 
-  const onMouseOut = useCallback(() => hideParentScrollbar(false), [
-    hideParentScrollbar,
-  ])
+  const onMouseOut = useCallback(
+    () => hideParentScrollbar(false),
+    [hideParentScrollbar]
+  )
 
   const toggleExpanded = useCallback(() => {
     if (!expanded && isOverflowing) {

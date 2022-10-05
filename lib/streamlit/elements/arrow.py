@@ -13,13 +13,22 @@
 # limitations under the License.
 
 from collections.abc import Iterable
-from typing import Any, Dict, List, Mapping, Optional, Union, cast, TYPE_CHECKING
-from typing import TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
+import pyarrow as pa
 from numpy import ndarray
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
-import pyarrow as pa
 
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto

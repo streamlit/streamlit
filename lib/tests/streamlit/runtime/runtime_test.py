@@ -22,27 +22,26 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import streamlit
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime import (
-    RuntimeState,
-    SessionClient,
+    AsyncObjects,
     Runtime,
     RuntimeConfig,
+    RuntimeState,
     RuntimeStoppedError,
+    SessionClient,
     SessionClientDisconnectedError,
-    AsyncObjects,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
     create_dataframe_msg,
     create_script_finished_message,
 )
+from tests.streamlit.runtime.runtime_test_case import RuntimeTestCase
 from tests.testutil import patch_config_options
-from .runtime_test_case import RuntimeTestCase
 
 
 class MockSessionClient(SessionClient):
@@ -80,6 +79,12 @@ class RuntimeSingletonTest(unittest.TestCase):
         # Runtime instantiated: no error
         _ = Runtime(MagicMock())
         instance = Runtime.instance()
+
+    def test_exists(self):
+        """Runtime.exists() returns True iff the Runtime singleton exists."""
+        self.assertFalse(Runtime.exists())
+        _ = Runtime(MagicMock())
+        self.assertTrue(Runtime.exists())
 
 
 class RuntimeTest(RuntimeTestCase):
@@ -266,15 +271,6 @@ class RuntimeTest(RuntimeTestCase):
 
         with self.assertRaises(RuntimeStoppedError):
             self.runtime.handle_backmsg("not_a_session_id", MagicMock())
-
-    async def test_sets_is_running_with_streamlit_flag(self):
-        """Runtime should set streamlit._is_running_with_streamlit when it
-        starts.
-        """
-        # This will frequently be True from other tests
-        streamlit._is_running_with_streamlit = False
-        await self.runtime.start()
-        self.assertTrue(streamlit._is_running_with_streamlit)
 
     async def test_handle_session_client_disconnected(self):
         """Runtime should gracefully handle `SessionClient.write_forward_msg`

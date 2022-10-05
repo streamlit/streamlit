@@ -16,13 +16,14 @@
 
 import json
 import urllib.parse
-from typing import Any, cast, Dict, List, Set, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
+
 from typing_extensions import Final, Literal, TypeAlias
 
-from streamlit.runtime.legacy_caching import caching
 from streamlit import type_util
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
+from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:

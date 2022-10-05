@@ -13,15 +13,28 @@
 # limitations under the License.
 
 # Explicitly re-export public symbols from runtime.py
-from .runtime import (
-    Runtime as Runtime,
-    RuntimeState as RuntimeState,
-    SessionClient as SessionClient,
+from streamlit.runtime.runtime import Runtime as Runtime
+from streamlit.runtime.runtime import RuntimeConfig as RuntimeConfig
+from streamlit.runtime.runtime import RuntimeState as RuntimeState
+from streamlit.runtime.runtime import SessionClient as SessionClient
+from streamlit.runtime.runtime import (
     SessionClientDisconnectedError as SessionClientDisconnectedError,
-    RuntimeConfig as RuntimeConfig,
 )
 
 
 def get_instance() -> Runtime:
-    """Return the singleton Runtime instance."""
+    """Return the singleton Runtime instance. Raise an Error if the
+    Runtime hasn't been created yet.
+    """
     return Runtime.instance()
+
+
+def exists() -> bool:
+    """True if the singleton Runtime instance has been created.
+
+    When a Streamlit app is running in "raw mode" - that is, when the
+    app is run via `python app.py` instead of `streamlit run app.py` -
+    the Runtime will not exist, and various Streamlit functions need
+    to adapt.
+    """
+    return Runtime.exists()

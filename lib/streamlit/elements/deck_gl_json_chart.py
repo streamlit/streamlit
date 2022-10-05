@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import json
-from typing import Any, Dict, Mapping, Optional, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, cast
 
 from typing_extensions import Final
 

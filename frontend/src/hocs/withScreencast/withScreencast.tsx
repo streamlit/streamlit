@@ -57,8 +57,9 @@ function withScreencast(
     WithScreenCastProps,
     WithScreenCastState
   > {
-    static readonly displayName = `withScreencast(${WrappedComponent.displayName ||
-      WrappedComponent.name})`
+    static readonly displayName = `withScreencast(${
+      WrappedComponent.displayName || WrappedComponent.name
+    })`
 
     recorder?: ScreenCastRecorder | null
 

@@ -75,28 +75,31 @@ export interface StyledAppViewBlockContainerProps {
   isEmbedded: boolean
 }
 
-export const StyledAppViewBlockContainer = styled.div<
-  StyledAppViewBlockContainerProps
->(({ isWideMode, isEmbedded, theme }) => {
-  const topEmbedPadding = isEmbedded ? "1rem" : "6rem"
-  const bottomEmbedPadding = isEmbedded ? "1rem" : "10rem"
-  const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
-  return {
-    flex: 1,
-    width: theme.sizes.full,
-    paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
-    paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
-    // Increase side padding, if layout = wide and we're not on mobile
-    "@media (min-width: 576px)": {
-      paddingLeft: theme.inSidebar ? theme.spacing.none : wideSidePadding,
-      paddingRight: theme.inSidebar ? theme.spacing.none : wideSidePadding,
-    },
-    paddingTop: theme.inSidebar ? theme.spacing.none : topEmbedPadding,
-    paddingBottom: theme.inSidebar ? theme.spacing.none : bottomEmbedPadding,
-    minWidth: isWideMode ? "auto" : undefined,
-    maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
-  }
-})
+export const StyledAppViewBlockContainer =
+  styled.div<StyledAppViewBlockContainerProps>(
+    ({ isWideMode, isEmbedded, theme }) => {
+      const topEmbedPadding = isEmbedded ? "1rem" : "6rem"
+      const bottomEmbedPadding = isEmbedded ? "1rem" : "10rem"
+      const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
+      return {
+        flex: 1,
+        width: theme.sizes.full,
+        paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
+        paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
+        // Increase side padding, if layout = wide and we're not on mobile
+        "@media (min-width: 576px)": {
+          paddingLeft: theme.inSidebar ? theme.spacing.none : wideSidePadding,
+          paddingRight: theme.inSidebar ? theme.spacing.none : wideSidePadding,
+        },
+        paddingTop: theme.inSidebar ? theme.spacing.none : topEmbedPadding,
+        paddingBottom: theme.inSidebar
+          ? theme.spacing.none
+          : bottomEmbedPadding,
+        minWidth: isWideMode ? "auto" : undefined,
+        maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
+      }
+    }
+  )
 
 export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   color: theme.colors.fadedText60,

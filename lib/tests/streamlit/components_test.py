@@ -17,7 +17,7 @@ import os
 import unittest
 from typing import Any
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -25,10 +25,7 @@ import pytest
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.components.v1 import component_arrow
-from streamlit.components.v1.components import (
-    ComponentRegistry,
-    CustomComponent,
-)
+from streamlit.components.v1.components import ComponentRegistry, CustomComponent
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
@@ -377,7 +374,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 

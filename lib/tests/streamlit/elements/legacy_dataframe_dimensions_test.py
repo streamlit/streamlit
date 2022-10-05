@@ -16,8 +16,8 @@
 
 import pandas as pd
 
-from tests import testutil
 import streamlit as st
+from tests import testutil
 
 
 class LegacyDataFrameDimensionsTest(testutil.DeltaGeneratorTestCase):

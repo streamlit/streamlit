@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 import threading
+from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, cast
 

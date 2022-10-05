@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, cast, Hashable, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Hashable, Optional, Union, cast
 
 import streamlit
-from streamlit import type_util
+from streamlit import runtime, type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.runtime.state import get_session_state, WidgetCallback
+from streamlit.runtime.state import WidgetCallback, get_session_state
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -41,11 +41,7 @@ def last_index_for_melted_dataframes(
 def check_callback_rules(
     dg: "DeltaGenerator", on_change: Optional[WidgetCallback]
 ) -> None:
-    if (
-        streamlit._is_running_with_streamlit
-        and is_in_form(dg)
-        and on_change is not None
-    ):
+    if runtime.exists() and is_in_form(dg) and on_change is not None:
         raise StreamlitAPIException(
             "With forms, callbacks can only be defined on the `st.form_submit_button`."
             " Defining callbacks on other widgets inside a form is not allowed."
@@ -60,7 +56,7 @@ def check_session_state_rules(
 ) -> None:
     global _shown_default_value_warning
 
-    if key is None or not streamlit._is_running_with_streamlit:
+    if key is None or not runtime.exists():
         return
 
     session_state = get_session_state()

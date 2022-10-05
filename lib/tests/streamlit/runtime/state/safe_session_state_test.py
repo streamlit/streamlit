@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import unittest
-from typing import Tuple, Dict, Any
+from typing import Any, Dict, Tuple
 from unittest.mock import MagicMock, Mock, PropertyMock
 
-from streamlit.runtime.state import SessionState, SafeSessionState
+from streamlit.runtime.state import SafeSessionState, SessionState
 
 
 def _create_state_spy(

@@ -14,10 +14,11 @@
 
 from typing import Any, cast
 
-import streamlit as st
 import numpy as np
 import pandas as pd
 import pydeck as pdk
+
+import streamlit as st
 
 # Empty chart.
 

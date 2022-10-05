@@ -109,13 +109,8 @@ export const getDimensions = (
   element: ImmutableMap<string, any>,
   cellContentsGetter: CellContentsGetter
 ): Dimensions => {
-  const {
-    headerRows,
-    headerCols,
-    dataRows,
-    cols,
-    rows,
-  } = dataFrameGetDimensions(element)
+  const { headerRows, headerCols, dataRows, cols, rows } =
+    dataFrameGetDimensions(element)
 
   // Rendering constants.
   const headerHeight = ROW_HEIGHT * headerRows

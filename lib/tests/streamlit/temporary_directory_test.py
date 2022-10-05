@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import os
-
 import unittest
+
 from testfixtures import tempdir
 
 from streamlit.temporary_directory import TemporaryDirectory
