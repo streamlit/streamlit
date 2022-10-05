@@ -71,7 +71,7 @@ with st.form("my_max_selections_ms_in_form"):
     st.text(f"value 10: {i10}")
     submitted = st.form_submit_button("Submit")
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.multiselect_changed = True

@@ -16,7 +16,7 @@ import streamlit as st
 from streamlit import runtime
 
 # st.session_state can only be used in streamlit
-if runtime.is_running():
+if runtime.exists():
 
     def on_click(x, y):
         if "click_count" not in st.session_state:

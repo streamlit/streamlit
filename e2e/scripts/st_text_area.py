@@ -42,7 +42,7 @@ st.write('value 8: "', i8, '"')
 i9 = st.text_area("text area 9", "default text", label_visibility="collapsed")
 st.write('value 9: "', i9, '"')
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.text_area_changed = True

@@ -29,7 +29,7 @@ def get_instance() -> Runtime:
     return Runtime.instance()
 
 
-def is_running() -> bool:
+def exists() -> bool:
     """True if the singleton Runtime instance has been created.
 
     When a Streamlit app is running in "raw mode" - that is, when the
@@ -37,4 +37,4 @@ def is_running() -> bool:
     the Runtime will not exist, and various Streamlit functions need
     to adapt.
     """
-    return Runtime.is_running()
+    return Runtime.exists()

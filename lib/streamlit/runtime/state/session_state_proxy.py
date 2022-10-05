@@ -45,7 +45,7 @@ def get_session_state() -> SafeSessionState:
     if ctx is None:
         if not _state_use_warning_already_displayed:
             _state_use_warning_already_displayed = True
-            if not runtime.is_running():
+            if not runtime.exists():
                 LOGGER.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )

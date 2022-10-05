@@ -45,7 +45,7 @@ d8 = st.date_input(
 )
 st.write("Value 8:", d8)
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.date_input_changed = True

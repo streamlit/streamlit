@@ -32,7 +32,7 @@ st.write("Value 4:", w4)
 w5 = st.time_input("Label 5", time(8, 45), label_visibility="collapsed")
 st.write("Value 5:", w5)
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.time_input_changed = True

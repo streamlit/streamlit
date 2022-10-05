@@ -207,7 +207,7 @@ def _marshall_av_media(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    if runtime.is_running():
+    if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(
             data_or_filename, mimetype, coordinates
         )

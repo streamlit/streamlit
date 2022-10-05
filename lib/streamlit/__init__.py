@@ -483,7 +483,7 @@ def _maybe_print_use_warning() -> None:
                 f"\n  {warning} to view a Streamlit app on a browser, use Streamlit in a file and\n  run it with the following command:\n\n    streamlit run [FILE_NAME] [ARGUMENTS]"
             )
 
-        elif not runtime.is_running() and _config.get_option(
+        elif not runtime.exists() and _config.get_option(
             "global.showWarningOnDirectExecution"
         ):
             script_name = _sys.argv[0]

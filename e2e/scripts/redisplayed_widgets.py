@@ -15,7 +15,7 @@
 import streamlit as st
 from streamlit import runtime
 
-if runtime.is_running():
+if runtime.exists():
 
     if st.checkbox("checkbox 1"):
         if st.checkbox("checkbox 2"):

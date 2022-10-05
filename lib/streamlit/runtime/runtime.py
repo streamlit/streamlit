@@ -157,7 +157,7 @@ class Runtime:
         return cls._instance
 
     @classmethod
-    def is_running(cls) -> bool:
+    def exists(cls) -> bool:
         """True if the singleton Runtime instance has been created.
 
         When a Streamlit app is running in "raw mode" - that is, when the

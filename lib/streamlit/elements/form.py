@@ -39,7 +39,7 @@ def _current_form(
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
-    if not runtime.is_running():
+    if not runtime.exists():
         return None
 
     if this_dg._form_data is not None:

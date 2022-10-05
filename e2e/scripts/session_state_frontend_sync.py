@@ -15,7 +15,7 @@
 import streamlit as st
 from streamlit import runtime
 
-if runtime.is_running():
+if runtime.exists():
     if "checkbox1" not in st.session_state:
         st.session_state.checkbox1 = True
 

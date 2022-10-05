@@ -327,7 +327,7 @@ class ButtonMixin:
         # every form). We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
-        if runtime.is_running():
+        if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
                     f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
@@ -407,7 +407,7 @@ def marshall_file(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    if runtime.is_running():
+    if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(
             data_as_bytes,
             mimetype,

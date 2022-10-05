@@ -46,7 +46,7 @@ st.write("Value 5:", w5)
 w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed")
 st.write("Value 6:", w6)
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.slider_changed = True

@@ -39,7 +39,7 @@ st.write('value 7: "', i7, '"')
 i8 = st.text_input("text input 8", "default text", label_visibility="collapsed")
 st.write('value 8: "', i8, '"')
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.text_input_changed = True

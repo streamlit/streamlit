@@ -39,7 +39,7 @@ st.write('value 7: "', i7, '"')
 i8 = st.number_input("number input 8", label_visibility="collapsed")
 st.write('value 8: "', i8, '"')
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.number_input_changed = True

@@ -75,7 +75,7 @@ w7 = st.select_slider(
 
 st.write("Value 7:", w7)
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.select_slider_changed = True

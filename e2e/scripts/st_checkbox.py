@@ -24,7 +24,7 @@ st.write("value 2:", i2)
 i3 = st.checkbox("checkbox 3")
 st.write("value 3:", i3)
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.checkbox_clicked = True

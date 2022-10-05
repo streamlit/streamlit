@@ -51,7 +51,7 @@ st.write("value 6:", i6)
 i7 = st.selectbox("selectbox 7", options, label_visibility="collapsed")
 st.write("value 7:", i7)
 
-if runtime.is_running():
+if runtime.exists():
 
     def on_change():
         st.session_state.selectbox_changed = True
