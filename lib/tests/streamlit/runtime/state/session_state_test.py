@@ -210,7 +210,7 @@ class WStateTests(unittest.TestCase):
         metadata.callback.assert_called_once_with(1, y=2)
 
 
-@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):
     def test_widget_creation_updates_state(self):
         state = st.session_state
@@ -229,7 +229,7 @@ class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):
         assert c == True
 
 
-@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateTest(testutil.DeltaGeneratorTestCase):
     def test_widget_presence(self):
         state = st.session_state
@@ -295,7 +295,7 @@ def check_roundtrip(widget_id: str, value: Any) -> None:
     assert deserializer(serializer(value), "") == value
 
 
-@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
     def test_checkbox_serde(self):
         cb = st.checkbox("cb", key="cb")

@@ -67,18 +67,18 @@ class PathModificationTimeTests(unittest.TestCase):
     @patch(
         "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
     )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=True))
     def test_st_mtime_if_file_exists(self):
         assert util.path_modification_time("foo") == 101.0
 
     @patch(
         "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
     )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=True))
     def test_st_mtime_if_file_exists_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 101.0
 
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=False))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=False))
     def test_zero_if_file_nonexistent_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 0.0
 
