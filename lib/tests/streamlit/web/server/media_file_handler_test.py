@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from unittest import mock
+from unittest.mock import MagicMock
 
 import tornado.testing
 import tornado.web
@@ -42,9 +43,9 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        new=MagicMock(return_value="mock_session_id"),
     )
-    def test_media_file(self, _) -> None:
+    def test_media_file(self) -> None:
         """Requests for media files in MediaFileManager should succeed."""
         # Add a media file and read it back
         url = self.media_file_manager.add(b"mock_data", "video/mp4", "mock_coords")
@@ -66,9 +67,9 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     )
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        new=MagicMock(return_value="mock_session_id"),
     )
-    def test_downloadable_file(self, file_name, content_disposition_header, _) -> None:
+    def test_downloadable_file(self, file_name, content_disposition_header) -> None:
         """Downloadable files get an additional 'Content-Disposition' header
         that includes their user-specified filename.
         """
