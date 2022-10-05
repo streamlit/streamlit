@@ -57,14 +57,17 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
     if event_loop is None:
         event_loop = MagicMock()
 
-    return AppSession(
-        event_loop=event_loop,
-        session_data=SessionData("/fake/script_path.py", "fake_command_line"),
-        uploaded_file_manager=MagicMock(),
-        message_enqueued_callback=None,
-        local_sources_watcher=MagicMock(),
-        user_info={"email": "test@test.com"},
-    )
+    with patch(
+        "streamlit.runtime.app_session.asyncio.get_running_loop",
+        return_value=event_loop,
+    ):
+        return AppSession(
+            session_data=SessionData("/fake/script_path.py", "fake_command_line"),
+            uploaded_file_manager=MagicMock(),
+            message_enqueued_callback=None,
+            local_sources_watcher=MagicMock(),
+            user_info={"email": "test@test.com"},
+        )
 
 
 @patch(
@@ -476,8 +479,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
     async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
-        event_loop = asyncio.get_running_loop()
-        session = _create_test_session(event_loop)
+        session = _create_test_session(asyncio.get_running_loop())
 
         handle_event_spy = MagicMock(
             side_effect=session._handle_scriptrunner_event_on_event_loop
