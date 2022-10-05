@@ -24,7 +24,7 @@ from tests import testutil
 NO_FORM_ID = ""
 
 
-@patch("streamlit.runtime.is_running", new=MagicMock(return_value=True))
+@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
 class FormAssociationTest(testutil.DeltaGeneratorTestCase):
     """Tests for every flavor of form/deltagenerator association."""
 
@@ -164,7 +164,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("form", self._get_last_checkbox_form_id())
 
 
-@patch("streamlit.runtime.is_running", new=MagicMock(return_value=True))
+@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
 class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall form protos."""
 
@@ -240,7 +240,7 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("bar", form_data.form_id)
 
 
-@patch("streamlit.runtime.is_running", new=MagicMock(return_value=True))
+@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
 class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
     """Test form submit button."""
 
@@ -288,7 +288,7 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(submitted, True)
 
 
-@patch("streamlit.runtime.is_running", new=MagicMock(return_value=True))
+@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
 class FormStateInteractionTest(testutil.DeltaGeneratorTestCase):
     def test_exception_for_callbacks_on_widgets(self):
         with self.assertRaises(StreamlitAPIException):

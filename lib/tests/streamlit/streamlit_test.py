@@ -82,7 +82,7 @@ class StreamlitTest(unittest.TestCase):
         with self.assertRaises(StreamlitAPIException):
             st.set_option("server.enableCORS", False)
 
-    @patch("streamlit.runtime.is_running", new=MagicMock(return_value=False))
+    @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=False))
     def test_run_warning_presence(self):
         """Using Streamlit without `streamlit run` produces a warning."""
         with self.assertLogs(level=logging.WARNING) as logs:
@@ -92,7 +92,7 @@ class StreamlitTest(unittest.TestCase):
             # Warning produced exactly once
             self.assertEqual(len(re.findall(r"streamlit run", output)), 1)
 
-    @patch("streamlit.runtime.is_running", new=MagicMock(return_value=True))
+    @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
     def test_run_warning_absence(self):
         """Using Streamlit through the CLI results in a Runtime being instantiated,
         so it produces no usage warning."""
