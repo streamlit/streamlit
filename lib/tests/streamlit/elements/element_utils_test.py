@@ -22,19 +22,19 @@ from streamlit.errors import StreamlitAPIException
 
 
 class ElementUtilsTest(unittest.TestCase):
-    @patch("streamlit.elements.utils.is_in_form", return_value=False)
+    @patch("streamlit.elements.utils.is_in_form", new=MagicMock(return_value=False))
     @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
-    def test_check_callback_rules_not_in_form(self, _):
+    def test_check_callback_rules_not_in_form(self):
         check_callback_rules(None, lambda x: x)
 
-    @patch("streamlit.elements.utils.is_in_form", return_value=True)
+    @patch("streamlit.elements.utils.is_in_form", new=MagicMock(return_value=True))
     @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
-    def test_check_callback_rules_in_form(self, _):
+    def test_check_callback_rules_in_form(self):
         check_callback_rules(None, None)
 
-    @patch("streamlit.elements.utils.is_in_form", return_value=True)
+    @patch("streamlit.elements.utils.is_in_form", new=MagicMock(return_value=True))
     @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
-    def test_check_callback_rules_error(self, _):
+    def test_check_callback_rules_error(self):
         with pytest.raises(StreamlitAPIException) as e:
             check_callback_rules(None, lambda x: x)
 
