@@ -34,11 +34,13 @@ function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
 
+  const kind = element.style === "primary" ? Kind.PRIMARY : Kind.SECONDARY
+
   return (
     <div className="row-widget stButton" style={style}>
       <ButtonTooltip help={element.help}>
         <UIButton
-          kind={Kind.PRIMARY}
+          kind={kind}
           size={Size.SMALL}
           disabled={disabled}
           onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}

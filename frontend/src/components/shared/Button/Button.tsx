@@ -25,6 +25,7 @@ import {
   StyledMinimalButton,
   StyledPrimaryButton,
   StyledSecondaryButton,
+  StyledTertiaryButton,
   StyledFormSubmitButton,
   StyledHeaderButton,
 } from "./styled-components"
@@ -42,6 +43,8 @@ function Button({
 
   if (kind === Kind.SECONDARY) {
     ComponentType = StyledSecondaryButton
+  } else if (kind === Kind.TERTIARY) {
+    ComponentType = StyledTertiaryButton
   } else if (kind === Kind.LINK) {
     ComponentType = StyledLinkButton
   } else if (kind === Kind.ICON) {

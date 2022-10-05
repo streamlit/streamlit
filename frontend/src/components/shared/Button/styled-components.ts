@@ -22,6 +22,7 @@ import { Theme } from "src/theme"
 export enum Kind {
   PRIMARY = "primary",
   SECONDARY = "secondary",
+  TERTIARY = "tertiary",
   LINK = "link",
   ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
@@ -95,6 +96,36 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
 export const StyledPrimaryButton = styled(
   StyledBaseButton
 )<RequiredButtonProps>(({ theme }) => ({
+  backgroundColor: theme.colors.primary,
+  color: theme.colors.lightenedBg05,
+  border: `1px solid ${theme.colors.fadedText40}`,
+  "&:hover": {
+    borderColor: theme.colors.fadedText60,
+    color: theme.colors.black,
+    opacity: "75%",
+  },
+  "&:active": {
+    // color: theme.colors.white,
+    // borderColor: theme.colors.fadedText60,
+    // backgroundColor: theme.colors.fadedText60,
+  },
+  "&:focus:not(:active)": {
+    borderColor: theme.colors.fadedText60,
+    color: theme.colors.black,
+    opacity: "75%",
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    borderColor: theme.colors.fadedText40,
+    backgroundColor: theme.colors.primary,
+    color: theme.colors.black,
+    opacity: "30%",
+    cursor: "not-allowed",
+  },
+}))
+
+export const StyledSecondaryButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   border: `1px solid ${theme.colors.fadedText10}`,
   "&:hover": {
@@ -118,7 +149,7 @@ export const StyledPrimaryButton = styled(
   },
 }))
 
-export const StyledSecondaryButton = styled(
+export const StyledTertiaryButton = styled(
   StyledBaseButton
 )<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
