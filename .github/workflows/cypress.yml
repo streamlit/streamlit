@@ -86,3 +86,19 @@ jobs:
         with:
           name: cypress_snapshots
           path: frontend/cypress/snapshots
+
+  summary:
+    runs-on: ubuntu-latest
+
+    # Consolidates cypress test matrix results for a single pass/fail status check
+    if: ${{ always() }}
+    needs: e2e_tests
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Check Cypress test matrix status
+        if: ${{ needs.e2e_tests.result == 'failure' }}
+        run: exit 1

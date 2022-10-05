@@ -1,7 +1,6 @@
 name: Nightly Build
 
 on:
-  # TODO: Comment in when switched to GHA
   # schedule:
   #   # Run job at 10.30pm PST or 11.30pm PDT
   #   - cron:  '30 6 * * *'
@@ -52,11 +51,10 @@ jobs:
 
           git tag -a $TAG -m "Streamlit nightly $TAG"
           git push origin $TAG
-      # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
       - if: ${{ failure() }}
         name: Nightly Tag Failure Slack Message
         env: 
-          SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py nightly tag
 
   run-python-tests:
@@ -92,7 +90,7 @@ jobs:
     needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
     env:
-      SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
     steps:
       - if: ${{ needs.run-python-tests.result == 'failure' }}
@@ -140,17 +138,14 @@ jobs:
         run: |
           sudo apt install rsync
           make package
-      # TODO: Added the if statement to gate for now
-      - if: ${{ 'true' == 'false' }}
-        name: Upload to PyPI
+      - name: Upload to PyPI
         env:
           TWINE_USERNAME: ${{ secrets.NIGHTLY_PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.NIGHTLY_PYPI_API_TOKEN }}
         run: |
           make distribute
-      # TODO: Using testing webhook, switch to actual st-open-source channel webhook later
       - if: ${{ failure() }}
         name: Nightly Build Failure Slack Message
         env: 
-          SLACK_WEBHOOK: ${{ secrets.TEST_SLACK_WEBHOOK }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py nightly build
