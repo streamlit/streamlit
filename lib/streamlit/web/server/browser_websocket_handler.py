@@ -15,14 +15,7 @@
 import base64
 import binascii
 import json
-from typing import (
-    Any,
-    Awaitable,
-    Dict,
-    List,
-    Optional,
-    Union,
-)
+from typing import Any, Awaitable, Dict, List, Optional, Union
 
 import tornado.concurrent
 import tornado.locks
@@ -71,7 +64,16 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     def select_subprotocol(self, subprotocols: List[str]) -> Optional[str]:
         """Return the first subprotocol in the given list.
 
-        TODO: finish docstring and write test.
+        NOTE: We repurpose the Sec-WebSocket-Protocol header here in a slightly
+        unfortunate (but necessary) way. The browser WebSocket API doesn't allow us to
+        set arbitrary HTTP headers, and this header is the only one where we have the
+        ability to set it to arbitrary values, so we use it to pass an auth token from
+        client to server as the *second* value in the list.
+
+        The reason why the auth token is set as the second value is that, when
+        Sec-WebSocket-Protocol is set, many clients expect the server to respond with a
+        selected subprotocol to use. We don't want that reply to be the auth token, so
+        we just hard-code it to "streamlit".
         """
         if subprotocols:
             return subprotocols[0]
