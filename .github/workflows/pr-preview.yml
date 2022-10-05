@@ -70,6 +70,7 @@ jobs:
 
           cd ../..
           echo -e "S3_URL=https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}" >> $GITHUB_ENV
+      # TODO: Remove gate
       - if: ${{ 'true' == 'false' }}
         name: Setup preview repo
         env:
@@ -89,6 +90,7 @@ jobs:
           git add .
           git commit -m "Prepare core preview: ${PREVIEW_BRANCH}"
           git push -f origin ${PREVIEW_BRANCH}
+      # TODO: Remove gate
       - if: ${{ 'true' == 'false' }}
         name: Ready to deploy!
         env:
