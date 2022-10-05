@@ -59,7 +59,6 @@ interface DeckObject {
   }
   layers: Record<string, unknown>[]
   mapStyle?: string | Array<string>
-  mapTheme: string
 }
 
 const configuration = {
@@ -146,14 +145,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     const { element, width, height, theme } = props
     const json = JSON.parse(element.json)
 
-    // To determine the correct theme for both the map style (if unset),
-    // and the zoom buttons
-    const mapTheme = hasLightBackgroundColor(theme) ? "light" : "dark"
-    json.mapTheme = mapTheme
-
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
     if (!notNullOrUndefined(json.mapStyle)) {
+      const mapTheme = hasLightBackgroundColor(theme) ? "light" : "dark"
       json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
     }
 
@@ -245,7 +240,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             }
             mapboxApiAccessToken={this.props.mapboxToken}
           />
-          <StyledNavigationControlContainer mapTheme={deck.mapTheme}>
+          <StyledNavigationControlContainer>
             <NavigationControl className="zoomButton" showCompass={false} />
           </StyledNavigationControlContainer>
           )
