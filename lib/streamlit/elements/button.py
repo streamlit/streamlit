@@ -68,7 +68,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
-        style: str = "secondary",
+        type: str = "secondary",
         disabled: bool = False,
     ) -> bool:
         """Display a button widget.
@@ -91,7 +91,7 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
-        style : string ("primary" or "secondary")
+        type : string ("primary" or "secondary")
             An optional string, which specifies the button type. Can be “primary” to
             fill the button with color or “secondary” for a normal button (default).
             This argument can only be supplied by keyword.
@@ -118,22 +118,21 @@ class ButtonMixin:
 
         """
 
-        def button_type(style):
+        def button_type(type):
+            valid_kinds = ["primary", "secondary"]
+            kind = type.lower()
 
-            if type(style) == str:
-                kind = style.lower()
-                valid_kinds = ["primary", "secondary"]
-
-                if kind in valid_kinds:
-                    return kind
+            if kind in valid_kinds:
+                return kind
 
             raise StreamlitAPIException(
                 'The type argument to st.button must be "primary" or "secondary". \n'
-                f"The argument passed was {style}."
+                f"The argument passed was {type}."
             )
 
         key = to_key(key)
         ctx = get_script_run_ctx()
+        type = button_type(str(type))
 
         return self.dg._button(
             label,
@@ -144,7 +143,7 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
-            style=button_type(style),
+            type=type,
             ctx=ctx,
         )
 
@@ -337,7 +336,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
-        style: str = "secondary",
+        type: str = "secondary",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
@@ -365,7 +364,7 @@ class ButtonMixin:
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
-        button_proto.style = style
+        button_proto.type = type
         if help is not None:
             button_proto.help = dedent(help)
 

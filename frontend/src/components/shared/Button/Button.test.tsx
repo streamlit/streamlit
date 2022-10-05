@@ -20,7 +20,7 @@ import { shallow } from "src/lib/test_util"
 import Button, { Size, Kind, ButtonProps } from "./Button"
 
 const getProps = (propOverrides: Partial<ButtonProps> = {}): ButtonProps => ({
-  kind: Kind.PRIMARY,
+  kind: Kind.SECONDARY,
   size: Size.MEDIUM,
   onClick: () => {},
   disabled: false,

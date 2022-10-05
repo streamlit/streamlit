@@ -34,7 +34,7 @@ function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
 
-  const kind = element.style === "primary" ? Kind.PRIMARY : Kind.SECONDARY
+  const kind = element.type === "primary" ? Kind.PRIMARY : Kind.SECONDARY
 
   return (
     <div className="row-widget stButton" style={style}>
