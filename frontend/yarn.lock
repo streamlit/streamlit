@@ -1719,30 +1719,30 @@
     minimatch "^3.0.4"
     strip-json-comments "^3.1.1"
 
-"@glideapps/glide-data-grid-cells@5.1.0":
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-5.1.0.tgz#32618507e6b949d98869293172cc242941e70c08"
-  integrity sha512-uPNWyVM7dqrj1Ud+T9AcIEsmk4LOH31t/Uxu+e3urmd4GPsZRBAPyTbpk4D/zfyPeo+S91kCHyZ8JhgvbU8mMA==
+"@glideapps/glide-data-grid-cells@5.1.4":
+  version "5.1.4"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-5.1.4.tgz#488bd97c1f38c53e404d63ded4840963d513ba47"
+  integrity sha512-yFuY2TiMg5kT2Mgd85vrS8c8XO09/xbTQOkWdw1mBUIeU3eALTwdVa+sWdyJQkUsrH5Pxx5a0s/WEpC16LXcPw==
   dependencies:
-    "@glideapps/glide-data-grid" "5.1.0"
+    "@glideapps/glide-data-grid" "5.1.4"
     "@toast-ui/editor" "3.1.10"
     "@toast-ui/react-editor" "3.1.10"
     react-select "^5.2.2"
 
-"@glideapps/glide-data-grid-source@5.1.0":
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-5.1.0.tgz#4308c1240bd17e386bde3cdfbe118665277e90e7"
-  integrity sha512-aZtNZuBt2WCloN5axAwyMgTs6nCmyYyT2wi4othNimMih+xwsKM+KkvkPa2R1g5EVbzklDvIVy7wfu9ta+TQvQ==
+"@glideapps/glide-data-grid-source@5.1.4":
+  version "5.1.4"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-5.1.4.tgz#b3596020452f0cc20372e7f60c90daa35e8b6c88"
+  integrity sha512-I5CYkaW/r8UgPiLe5cI7sXlxdqG+KCfRRtNRTLvDPWQqr/UyNlLjiEr6HThBMdS84ulYzpGmJBcM1HfbbEgmyg==
   dependencies:
-    "@glideapps/glide-data-grid" "5.1.0"
+    "@glideapps/glide-data-grid" "5.1.4"
 
-"@glideapps/glide-data-grid@5.1.0":
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-5.1.0.tgz#f9ef31422e0d1cbe6b4595e4423efe3efcdb2465"
-  integrity sha512-sEv0IqlcJTh4IVluSodV90l/iCxC4Cjse0d3qDI72uJ+zs5QFmWgRD/k3mdPAMwsVd+va+1ioC1xEnXil2jydg==
+"@glideapps/glide-data-grid@5.1.4":
+  version "5.1.4"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-5.1.4.tgz#4a4f64baa8e9ad6c2645579f04d0ca2e6e37082d"
+  integrity sha512-YQ2fpIg1DdYumJcbokGH6zYc4+cOIyoWcVwO3GMiu6Tg1D2BsvTVf76m6QGICobHefqWeP0PMaBOENuTIUp9pg==
   dependencies:
-    canvas-hypertxt "^0.0.3"
-    react-number-format "^4.4.1"
+    canvas-hypertxt "^0.0.7"
+    react-number-format "^5.0.0"
 
 "@hapi/address@2.x.x":
   version "2.1.4"
@@ -5345,10 +5345,10 @@ canvas-fit@^1.5.0:
   dependencies:
     element-size "^1.1.1"
 
-canvas-hypertxt@^0.0.3:
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/canvas-hypertxt/-/canvas-hypertxt-0.0.3.tgz#2d09f3f8bae812d2d2aeba77162ac69ff3b8deb8"
-  integrity sha512-Wmi0bfM+T6BAwFg3wZ1q3vXmltAcO/zPPfHSblJkOeuO9fwhSDMCIbaBLok71PONoOQHYnsk4CQ/GS1Ai7+OnQ==
+canvas-hypertxt@^0.0.7:
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/canvas-hypertxt/-/canvas-hypertxt-0.0.7.tgz#7daf5419e39fc75342d5e2569911eb8098cce11c"
+  integrity sha512-XPXJvvaEQddHl0KaDdnnEowcCiYiL2gJz4M8ANK1GvZPcZimgvjRubnChtUospZWFSiNJtE06VkLnQs2vve5tQ==
 
 capture-exit@^2.0.0:
   version "2.0.0"
@@ -15407,10 +15407,10 @@ react-multi-ref@^1.0.0:
   dependencies:
     "@babel/runtime" "^7.1.2"
 
-react-number-format@^4.4.1:
-  version "4.9.4"
-  resolved "https://registry.yarnpkg.com/react-number-format/-/react-number-format-4.9.4.tgz#013ae526000e676e491763ce14da66fb330a9bd8"
-  integrity sha512-Gq20Z3ugqPLFgeaidnx5on9cNpbQZntPN3QgNAL/WJrNNlQnNznY0LCx7g8xtssmRBw0/hw+SCqw6zAcajooiA==
+react-number-format@^5.0.0:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/react-number-format/-/react-number-format-5.0.1.tgz#23a3a693c978c7be328fa9c00dee5135111ca32b"
+  integrity sha512-Tyv5Ygb77ZbC5vUNNAfXwE+zQKaN0LsTo7GwjudU/MckXa7beVAlFddq7QQnGobEglyq+4zsBltKvM9HMQD0GA==
   dependencies:
     prop-types "^15.7.2"
 
