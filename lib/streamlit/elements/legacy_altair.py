@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,26 +17,23 @@ Altair is a Python visualization library based on Vega-Lite,
 a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
-from typing import Hashable
-from typing import cast, TYPE_CHECKING
-
-from streamlit import errors, type_util
-from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
-import streamlit.elements.legacy_vega_lite as vega_lite
-from streamlit.runtime.metrics_util import gather_metrics
+from typing import TYPE_CHECKING, Hashable, cast
 
 import altair as alt
 import pandas as pd
 import pyarrow as pa
 
-from .utils import last_index_for_melted_dataframes
+import streamlit.elements.legacy_vega_lite as vega_lite
+from streamlit import errors, type_util
+from streamlit.elements.utils import last_index_for_melted_dataframes
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from altair.vegalite.v4.api import Chart
 
     from streamlit.delta_generator import DeltaGenerator
-
-    from .arrow import Data
+    from streamlit.elements.arrow import Data
 
 
 class LegacyAltairMixin:

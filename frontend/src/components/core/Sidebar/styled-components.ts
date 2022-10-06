@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -122,33 +121,34 @@ const bounceAnimation = keyframes`
   }
 `
 
-export const StyledSidebarNavSeparatorContainer = styled.div<
-  StyledSidebarNavSeparatorContainerProps
->(({ isExpanded, isOverflowing, theme }) => ({
-  cursor: isExpanded || isOverflowing ? "pointer" : "default",
-  position: "absolute",
-  height: theme.spacing.lg,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: theme.colors.fadedText60,
-  borderBottom: `1px solid ${theme.colors.fadedText10}`,
-  transition: "color 500ms",
+export const StyledSidebarNavSeparatorContainer =
+  styled.div<StyledSidebarNavSeparatorContainerProps>(
+    ({ isExpanded, isOverflowing, theme }) => ({
+      cursor: isExpanded || isOverflowing ? "pointer" : "default",
+      position: "absolute",
+      height: theme.spacing.lg,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: theme.colors.fadedText60,
+      borderBottom: `1px solid ${theme.colors.fadedText10}`,
+      transition: "color 500ms",
 
-  ...((isExpanded || isOverflowing) && {
-    "&:hover": {
-      color: theme.colors.bodyText,
-      background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
+      ...((isExpanded || isOverflowing) && {
+        "&:hover": {
+          color: theme.colors.bodyText,
+          background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
 
-      "& > *": {
-        animation: `${bounceAnimation} 0.5s ease infinite`,
-      },
-    },
-  }),
-}))
+          "& > *": {
+            animation: `${bounceAnimation} 0.5s ease infinite`,
+          },
+        },
+      }),
+    })
+  )
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -163,7 +163,6 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
-      color: theme.colors.bodyText,
       fontWeight: isActive ? 600 : 400,
     }
 
@@ -173,9 +172,14 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.sm,
+      borderRadius: theme.spacing.twoXS,
 
-      paddingLeft: theme.spacing.lg,
-      paddingRight: theme.spacing.lg,
+      paddingLeft: theme.spacing.sm,
+      paddingRight: theme.spacing.sm,
+      marginLeft: theme.spacing.lg,
+      marginRight: theme.spacing.lg,
+      marginTop: theme.spacing.threeXS,
+      marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
 
       backgroundColor: isActive ? theme.colors.darkenedBgMix15 : "transparent",
@@ -201,47 +205,54 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   }
 )
 
+export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
+  ({ isActive, theme }) => ({
+    color: isActive ? theme.colors.bodyText : theme.colors.fadedText60,
+  })
+)
+
 export interface StyledSidebarUserContentProps {
   hasPageNavAbove: boolean
 }
 
-export const StyledSidebarUserContent = styled.div<
-  StyledSidebarUserContentProps
->(({ hasPageNavAbove, theme }) => ({
-  paddingTop: hasPageNavAbove ? theme.spacing.lg : theme.sizes.sidebarTopSpace,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
+export const StyledSidebarUserContent =
+  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
+    paddingTop: hasPageNavAbove
+      ? theme.spacing.lg
+      : theme.sizes.sidebarTopSpace,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
 
-  "& h1": {
-    fontSize: theme.fontSizes.xl,
-    fontWeight: 600,
-  },
+    "& h1": {
+      fontSize: theme.fontSizes.xl,
+      fontWeight: 600,
+    },
 
-  "& h2": {
-    fontSize: theme.fontSizes.lg,
-    fontWeight: 600,
-  },
+    "& h2": {
+      fontSize: theme.fontSizes.lg,
+      fontWeight: 600,
+    },
 
-  "& h3": {
-    fontSize: theme.fontSizes.mdLg,
-    fontWeight: 600,
-  },
+    "& h3": {
+      fontSize: theme.fontSizes.mdLg,
+      fontWeight: 600,
+    },
 
-  "& h4": {
-    fontSize: theme.fontSizes.md,
-    fontWeight: 600,
-  },
+    "& h4": {
+      fontSize: theme.fontSizes.md,
+      fontWeight: 600,
+    },
 
-  "& h5": {
-    fontSize: theme.fontSizes.sm,
-    fontWeight: 600,
-  },
+    "& h5": {
+      fontSize: theme.fontSizes.sm,
+      fontWeight: 600,
+    },
 
-  "& h6": {
-    fontSize: theme.fontSizes.twoSm,
-    fontWeight: 600,
-  },
-}))
+    "& h6": {
+      fontSize: theme.fontSizes.twoSm,
+      fontWeight: 600,
+    },
+  }))
 
 export interface StyledSidebarContentProps {
   hideScrollbar: boolean
@@ -272,45 +283,33 @@ export interface StyledSidebarCollapsedControlProps {
   isCollapsed: boolean
 }
 
-export const StyledSidebarCollapsedControl = styled.div<
-  StyledSidebarCollapsedControlProps
->(({ chevronDownshift, isCollapsed, theme }) => ({
-  position: "fixed",
-  top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
-  left: isCollapsed ? theme.spacing.twoXS : `-${theme.spacing.twoXS}`,
-  zIndex: theme.zIndices.header,
+export const StyledSidebarCollapsedControl =
+  styled.div<StyledSidebarCollapsedControlProps>(
+    ({ chevronDownshift, isCollapsed, theme }) => ({
+      position: "fixed",
+      top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
+      left: isCollapsed ? theme.spacing.twoXS : `-${theme.spacing.twoXS}`,
+      zIndex: theme.zIndices.header,
 
-  transition: "left 300ms",
-  transitionDelay: "left 300ms",
+      transition: "left 300ms",
+      transitionDelay: "left 300ms",
 
-  color: theme.colors.bodyText,
+      color: theme.colors.bodyText,
 
-  [`@media (max-width: ${theme.breakpoints.md})`]: {
-    color: theme.colors.bodyText,
-  },
-}))
-
-export const StyledResizeHandleMargin = styled.div(({ theme }) => ({
-  // Avoids resize handle & scrollbar showing simultaneously
-  position: "absolute",
-  width: "20px",
-  height: "100%",
-  top: "0px",
-  right: "5px",
-  cursor: "default",
-  overflow: "hidden",
-}))
+      [`@media (max-width: ${theme.breakpoints.md})`]: {
+        color: theme.colors.bodyText,
+      },
+    })
+  )
 
 export const StyledResizeHandle = styled.div(({ theme }) => ({
   position: "absolute",
-  width: "10px",
+  width: "8px",
   height: "100%",
-  top: "0px",
-  right: "0px",
   cursor: "col-resize",
   zIndex: theme.zIndices.sidebarMobile,
 
   "&:hover": {
-    backgroundImage: `linear-gradient(to right, transparent 42%, ${theme.colors.fadedText20} 50%, transparent 58%)`,
+    backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.fadedText20} 28%, transparent 36%)`,
   },
 }))

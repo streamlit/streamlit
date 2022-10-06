@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,22 +16,23 @@ import asyncio
 import os
 import shutil
 import tempfile
+import unittest
 from typing import List
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-import streamlit
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime import (
-    RuntimeState,
-    SessionClient,
+    AsyncObjects,
     Runtime,
     RuntimeConfig,
+    RuntimeState,
     RuntimeStoppedError,
+    SessionClient,
     SessionClientDisconnectedError,
-    AsyncObjects,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.watcher import event_based_path_watcher
@@ -39,8 +40,8 @@ from tests.streamlit.message_mocks import (
     create_dataframe_msg,
     create_script_finished_message,
 )
+from tests.streamlit.runtime.runtime_test_case import RuntimeTestCase
 from tests.testutil import patch_config_options
-from .runtime_test_case import RuntimeTestCase
 
 
 class MockSessionClient(SessionClient):
@@ -51,6 +52,39 @@ class MockSessionClient(SessionClient):
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         self.forward_msgs.append(msg)
+
+
+class RuntimeSingletonTest(unittest.TestCase):
+    def tearDown(self) -> None:
+        Runtime._instance = None
+
+    def test_runtime_constructor_sets_instance(self):
+        """Creating a Runtime instance sets Runtime.instance"""
+        self.assertIsNone(Runtime._instance)
+        _ = Runtime(MagicMock())
+        self.assertIsNotNone(Runtime._instance)
+
+    def test_multiple_runtime_error(self):
+        """Creating multiple Runtimes raises an error."""
+        r1 = Runtime(MagicMock())
+        with self.assertRaises(RuntimeError):
+            r2 = Runtime(MagicMock())
+
+    def test_instance_class_method(self):
+        """Runtime.instance() returns our singleton instance."""
+        with self.assertRaises(RuntimeError):
+            # No Runtime: error
+            instance = Runtime.instance()
+
+        # Runtime instantiated: no error
+        _ = Runtime(MagicMock())
+        instance = Runtime.instance()
+
+    def test_exists(self):
+        """Runtime.exists() returns True iff the Runtime singleton exists."""
+        self.assertFalse(Runtime.exists())
+        _ = Runtime(MagicMock())
+        self.assertTrue(Runtime.exists())
 
 
 class RuntimeTest(RuntimeTestCase):
@@ -237,15 +271,6 @@ class RuntimeTest(RuntimeTestCase):
 
         with self.assertRaises(RuntimeStoppedError):
             self.runtime.handle_backmsg("not_a_session_id", MagicMock())
-
-    async def test_sets_is_running_with_streamlit_flag(self):
-        """Runtime should set streamlit._is_running_with_streamlit when it
-        starts.
-        """
-        # This will frequently be True from other tests
-        streamlit._is_running_with_streamlit = False
-        await self.runtime.start()
-        self.assertTrue(streamlit._is_running_with_streamlit)
 
     async def test_handle_session_client_disconnected(self):
         """Runtime should gracefully handle `SessionClient.write_forward_msg`
@@ -483,7 +508,14 @@ class ScriptCheckTest(RuntimeTestCase):
         super().setUp()
 
     async def asyncSetUp(self):
-        config = RuntimeConfig(script_path=self._path, command_line="mock command line")
+        # We don't call super().asyncSetUp() here. (Our superclass creates
+        # its own Runtime instance with a mock script_path, but we want
+        # to specify a non-mocked path.)
+        config = RuntimeConfig(
+            script_path=self._path,
+            command_line="mock command line",
+            media_file_storage=MemoryMediaFileStorage("/mock/media"),
+        )
         self.runtime = Runtime(config)
         await self.runtime.start()
 

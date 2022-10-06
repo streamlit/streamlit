@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,21 +14,21 @@
 
 """An example of monitoring a neural net as it trains."""
 
-import streamlit as st
-from streamlit import config
+import math
+import time
 
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tensorflow import keras
 from tensorflow.keras.datasets import mnist
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
+from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.utils import to_categorical
-from tensorflow import keras
-import math
-import numpy as np
-import pandas as pd
-import time
 
-import tensorflow as tf
+import streamlit as st
+from streamlit import config
 
 # dynamically grow the memory used on the GPU
 # this option is fine on non gpus as well.

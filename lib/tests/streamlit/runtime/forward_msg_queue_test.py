@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,11 +20,11 @@ from typing import Tuple
 
 from parameterized import parameterized
 
-from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.elements import legacy_data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 
 # For the messages below, we don't really care about their contents so much as
 # their general type.

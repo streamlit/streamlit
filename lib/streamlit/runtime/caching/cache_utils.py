@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,14 +24,14 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Dict,
-    List,
     Iterator,
+    List,
+    Optional,
     Set,
     Tuple,
-    Optional,
-    Any,
     Union,
 )
 
@@ -39,23 +39,23 @@ from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import util
-from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
+from streamlit.runtime.caching.cache_errors import (
+    CachedStFunctionWarning,
+    CacheKeyNotFoundError,
+    CacheReplayClosureError,
+    CacheType,
+    UnhashableParamError,
+    UnhashableTypeError,
+)
+from streamlit.runtime.caching.hashing import update_hash
 from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
 )
 from streamlit.runtime.state.session_state import WidgetMetadata
-from .cache_errors import (
-    CacheReplayClosureError,
-    CacheType,
-    CachedStFunctionWarning,
-    UnhashableParamError,
-    UnhashableTypeError,
-)
-from .hashing import update_hash
 
 _LOGGER = get_logger(__name__)
 
@@ -226,7 +226,10 @@ class CachedFunction:
     """
 
     def __init__(
-        self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
+        self,
+        func: types.FunctionType,
+        show_spinner: Union[bool, str],
+        suppress_st_warning: bool,
     ):
         self.func = func
         self.show_spinner = show_spinner
@@ -315,10 +318,13 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
         name = func.__qualname__
 
-        if len(args) == 0 and len(kwargs) == 0:
-            message = f"Running `{name}()`."
+        if isinstance(cached_func.show_spinner, bool):
+            if len(args) == 0 and len(kwargs) == 0:
+                message = f"Running `{name}()`."
+            else:
+                message = f"Running `{name}(...)`."
         else:
-            message = f"Running `{name}(...)`."
+            message = cached_func.show_spinner
 
         def get_or_create_cached_value():
             # Generate the key for the cached value. This is based on the
@@ -350,7 +356,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
             return return_value
 
-        if cached_func.show_spinner:
+        if cached_func.show_spinner or isinstance(cached_func.show_spinner, str):
             with st.spinner(message):
                 return get_or_create_cached_value()
         else:

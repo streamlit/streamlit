@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,17 +14,16 @@
 
 """Selects between our two DataFrame serialization methods ("legacy" and
 "arrow") based on a config option"""
-from typing import Any
-from typing import Dict
-from typing import cast, Optional, TYPE_CHECKING, Union, Sequence
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
 from streamlit import config
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from .arrow import Data
-    from streamlit.delta_generator import DeltaGenerator
     from altair.vegalite.v4.api import Chart
+
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.arrow import Data
 
 
 def _use_arrow() -> bool:

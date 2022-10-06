@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime, time
+
 import streamlit as st
-from datetime import datetime
-from datetime import time
+from streamlit import runtime
 
 w1 = st.time_input("Label 1", time(8, 45))
 st.write("Value 1:", w1)
@@ -31,7 +32,7 @@ st.write("Value 4:", w4)
 w5 = st.time_input("Label 5", time(8, 45), label_visibility="collapsed")
 st.write("Value 5:", w5)
 
-if st._is_running_with_streamlit:
+if runtime.exists():
 
     def on_change():
         st.session_state.time_input_changed = True

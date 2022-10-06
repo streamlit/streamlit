@@ -1,11 +1,12 @@
 #!/usr/bin/env python
-# Copyright 2018-2022 Streamlit Inc.
+
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,51 +14,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Update project name across the entire repo"""
+"""Update project name across the entire repo.
+
+The streamlit-nightly CI job uses this to set the project name to "streamlit-nightly".
+"""
+
 import fileinput
-import logging
 import os
 import re
 import sys
+from typing import Dict
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-# Warning: Advanced regex foo.
-# If another file has a project name that needs updating, add it here.
-# These regex's are super greedy in that it actually matches everything
-# but the project name so we can throw any string in there
-PYTHON = {
-    "lib/setup.py": r"(?P<pre>.*NAME = \").*(?P<post>\")",
-    "lib/streamlit/__init__.py": r"(?P<pre>.*_version\(\").*(?P<post>\"\)$)",
+# A dict of [filename:regex]. For each filename, we modify all lines
+# matched by the regex.
+#
+# Regexes should start with a "<pre_match>" named group and end with a
+# "<post_match>" named group. Text between these pre- and post-match
+# groups will be replaced with the specified project_name text.
+FILES_AND_REGEXES = {
+    "lib/setup.py": r"(?P<pre_match>.*NAME = \").*(?P<post_match>\")",
+    "lib/streamlit/version.py": r"(?P<pre_match>.*_version\(\").*(?P<post_match>\"\)$)",
 }
 
 
-def update_files(data, python=True):
+def update_files(project_name: str, files: Dict[str, str]) -> None:
     """Update files with new project name."""
-
-    if len(sys.argv) != 2:
-        e = Exception('Specify project name: "%s streamlit"' % sys.argv[0])
-        raise (e)
-
-    project_name = sys.argv[1]
-
-    for filename, regex in data.items():
+    for filename, regex in files.items():
         filename = os.path.join(BASE_DIR, filename)
         matched = False
         pattern = re.compile(regex)
         for line in fileinput.input(filename, inplace=True):
-            if pattern.match(line.rstrip()):
+            line = line.rstrip()
+            if pattern.match(line):
+                line = re.sub(
+                    regex, rf"\g<pre_match>{project_name}\g<post_match>", line
+                )
                 matched = True
-            line = re.sub(regex, r"\g<pre>%s\g<post>" % project_name, line.rstrip())
             print(line)
         if not matched:
-            raise Exception('In file "%s", did not find regex "%s"' % (filename, regex))
+            raise Exception(f'In file "{filename}", did not find regex "{regex}"')
 
 
-def main():
-    """Run main loop."""
-
-    update_files(PYTHON)
+def main() -> None:
+    if len(sys.argv) != 2:
+        raise Exception(f'Specify project name, e.g: "{sys.argv[0]} streamlit-nightly"')
+    project_name = sys.argv[1]
+    update_files(project_name, FILES_AND_REGEXES)
 
 
 if __name__ == "__main__":

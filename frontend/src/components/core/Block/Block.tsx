@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -125,32 +124,33 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   return (
     <>
-      {props.node.children.map(
-        (node: AppNode, index: number): ReactElement => {
-          // Base case: render a leaf node.
-          if (node instanceof ElementNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = { ...props, node: node as ElementNode }
+      {props.node.children &&
+        props.node.children.map(
+          (node: AppNode, index: number): ReactElement => {
+            // Base case: render a leaf node.
+            if (node instanceof ElementNode) {
+              // Put node in childProps instead of passing as a node={node} prop in React to
+              // guarantee it doesn't get overwritten by {...childProps}.
+              const childProps = { ...props, node: node as ElementNode }
 
-            const key = getElementWidgetID(node.element) || index
-            return <ElementNodeRenderer key={key} {...childProps} />
+              const key = getElementWidgetID(node.element) || index
+              return <ElementNodeRenderer key={key} {...childProps} />
+            }
+
+            // Recursive case: render a block, which can contain other blocks
+            // and elements.
+            if (node instanceof BlockNode) {
+              // Put node in childProps instead of passing as a node={node} prop in React to
+              // guarantee it doesn't get overwritten by {...childProps}.
+              const childProps = { ...props, node: node as BlockNode }
+
+              return <BlockNodeRenderer key={index} {...childProps} />
+            }
+
+            // We don't have any other node types!
+            throw new Error(`Unrecognized AppNode: ${node}`)
           }
-
-          // Recursive case: render a block, which can contain other blocks
-          // and elements.
-          if (node instanceof BlockNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = { ...props, node: node as BlockNode }
-
-            return <BlockNodeRenderer key={index} {...childProps} />
-          }
-
-          // We don't have any other node types!
-          throw new Error(`Unrecognized AppNode: ${node}`)
-        }
-      )}
+        )}
     </>
   )
 }

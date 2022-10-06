@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,14 +15,13 @@
  */
 
 import React, { ReactElement } from "react"
-import { getLuminance } from "color2k"
 import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
 import ErrorElement from "src/components/shared/ErrorElement"
 
 import { Json as JsonProto } from "src/autogen/proto"
-import { Theme } from "src/theme"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 import { ensureError } from "src/lib/ErrorHandling"
 
 export interface JsonProps {
@@ -56,8 +54,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
 
   // Try to pick a reasonable ReactJson theme based on whether the streamlit
   // theme's background is light or dark.
-  const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
-  const jsonTheme = hasLightBg ? "rjv-default" : "monokai"
+  const jsonTheme = hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
 
   return (
     <div data-testid="stJson" style={styleProp}>

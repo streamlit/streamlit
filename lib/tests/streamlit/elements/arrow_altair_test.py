@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,17 +17,17 @@ from datetime import date
 from functools import reduce
 from typing import Callable
 
-import pytest
 import altair as alt
 import pandas as pd
-from tests import testutil
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType
+from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame
-from streamlit import StreamlitAPIException
+from tests import testutil
 
 
 def _deep_get(dictionary, *keys):

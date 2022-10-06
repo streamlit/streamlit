@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,12 +29,12 @@ import {
   PageNotFound,
   PagesChanged,
 } from "src/autogen/proto"
-import { S4ACommunicationHOC } from "src/hocs/withS4ACommunication/withS4ACommunication"
+import { HostCommunicationHOC } from "src/hocs/withHostCommunication"
 import {
   IMenuItem,
   IToolbarItem,
-  S4ACommunicationState,
-} from "src/hocs/withS4ACommunication/types"
+  HostCommunicationState,
+} from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
@@ -55,9 +54,9 @@ import ToolbarActions from "./components/core/ToolbarActions"
 
 jest.mock("src/lib/ConnectionManager")
 
-const getS4ACommunicationState = (
-  extend?: Partial<S4ACommunicationState>
-): S4ACommunicationState => ({
+const getHostCommunicationState = (
+  extend?: Partial<HostCommunicationState>
+): HostCommunicationState => ({
   forcedModalClose: false,
   hideSidebarNav: false,
   isOwner: true,
@@ -66,19 +65,19 @@ const getS4ACommunicationState = (
   queryParams: "",
   requestedPageScriptHash: null,
   sidebarChevronDownshift: 0,
-  streamlitShareMetadata: {},
+  deployedAppMetadata: {},
   toolbarItems: [],
   ...extend,
 })
 
-const getS4ACommunicationProp = (
-  extend?: Partial<S4ACommunicationHOC>
-): S4ACommunicationHOC => ({
+const getHostCommunicationProp = (
+  extend?: Partial<HostCommunicationHOC>
+): HostCommunicationHOC => ({
   connect: jest.fn(),
   sendMessage: jest.fn(),
   onModalReset: jest.fn(),
   onPageChanged: jest.fn(),
-  currentState: getS4ACommunicationState({}),
+  currentState: getHostCommunicationState({}),
   ...extend,
 })
 
@@ -89,7 +88,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     startRecording: jest.fn(),
     stopRecording: jest.fn(),
   },
-  s4aCommunication: getS4ACommunicationProp({}),
+  hostCommunication: getHostCommunicationProp({}),
   theme: {
     activeTheme: lightTheme,
     availableThemes: [],
@@ -187,10 +186,7 @@ describe("App", () => {
       scriptName: "scriptName",
     })
 
-    wrapper
-      .find(MainMenu)
-      .props()
-      .screencastCallback()
+    wrapper.find(MainMenu).props().screencastCallback()
 
     expect(props.screenCast.startRecording).toHaveBeenCalledWith(
       "streamlit-scriptName-date"
@@ -207,12 +203,12 @@ describe("App", () => {
     expect(props.screenCast.stopRecording).toBeCalled()
   })
 
-  it("shows s4aMenuItems", () => {
+  it("shows hostMenuItems", () => {
     const props = getProps({
-      s4aCommunication: getS4ACommunicationProp({
+      hostCommunication: getHostCommunicationProp({
         connect: jest.fn(),
         sendMessage: jest.fn(),
-        currentState: getS4ACommunicationState({
+        currentState: getHostCommunicationState({
           queryParams: "",
           menuItems: [
             {
@@ -227,17 +223,17 @@ describe("App", () => {
     })
     const wrapper = shallow(<App {...props} />)
 
-    expect(wrapper.find(MainMenu).prop("s4aMenuItems")).toStrictEqual([
+    expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
       { type: "separator" },
     ])
   })
 
-  it("shows s4aToolbarItems", () => {
+  it("shows hostToolbarItems", () => {
     const props = getProps({
-      s4aCommunication: getS4ACommunicationProp({
+      hostCommunication: getHostCommunicationProp({
         connect: jest.fn(),
         sendMessage: jest.fn(),
-        currentState: getS4ACommunicationState({
+        currentState: getHostCommunicationState({
           queryParams: "",
           toolbarItems: [
             {
@@ -251,14 +247,14 @@ describe("App", () => {
     const wrapper = shallow(<App {...props} />)
     wrapper.setState({ hideTopBar: false })
 
-    expect(wrapper.find(ToolbarActions).prop("s4aToolbarItems")).toStrictEqual(
-      [
-        {
-          key: "favorite",
-          icon: "star.svg",
-        },
-      ]
-    )
+    expect(
+      wrapper.find(ToolbarActions).prop("hostToolbarItems")
+    ).toStrictEqual([
+      {
+        key: "favorite",
+        icon: "star.svg",
+      },
+    ])
   })
 
   it("closes modals when the modal closure message has been received", () => {
@@ -272,8 +268,8 @@ describe("App", () => {
     const onModalReset = jest.fn()
     wrapper.setProps(
       getProps({
-        s4aCommunication: getS4ACommunicationProp({
-          currentState: getS4ACommunicationState({ forcedModalClose: true }),
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({ forcedModalClose: true }),
           onModalReset,
         }),
       })
@@ -287,8 +283,8 @@ describe("App", () => {
     const wrapper = shallow(
       <App
         {...getProps({
-          s4aCommunication: getS4ACommunicationProp({
-            currentState: getS4ACommunicationState({
+          hostCommunication: getHostCommunicationProp({
+            currentState: getHostCommunicationState({
               menuItems: [],
               queryParams: "",
               forcedModalClose: false,
@@ -301,8 +297,8 @@ describe("App", () => {
     )
     wrapper.setProps(
       getProps({
-        s4aCommunication: getS4ACommunicationProp({
-          currentState: getS4ACommunicationState({ forcedModalClose: true }),
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({ forcedModalClose: true }),
           onModalReset,
         }),
       })
@@ -310,8 +306,8 @@ describe("App", () => {
     expect(onModalReset).toBeCalled()
     wrapper.setProps(
       getProps({
-        s4aCommunication: getS4ACommunicationProp({
-          currentState: getS4ACommunicationState({ forcedModalClose: false }),
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({ forcedModalClose: false }),
           onModalReset,
         }),
       })
@@ -329,7 +325,7 @@ describe("App", () => {
     shallow(<App {...props} />)
 
     // @ts-ignore
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(lightTheme.emotion),
     })
@@ -347,7 +343,7 @@ describe("App", () => {
     expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
 
     // @ts-ignore
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(darkTheme.emotion),
     })
@@ -386,7 +382,7 @@ describe("App", () => {
     instance.handleMessage(msg)
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
 
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_APP_PAGES",
       appPages,
     })
@@ -400,8 +396,8 @@ describe("App", () => {
 
     wrapper.setProps(
       getProps({
-        s4aCommunication: getS4ACommunicationProp({
-          currentState: getS4ACommunicationState({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
             requestedPageScriptHash: "hash1",
           }),
         }),
@@ -411,7 +407,7 @@ describe("App", () => {
 
     expect(instance.onPageChange).toHaveBeenCalledWith("hash1")
     expect(
-      props.s4aCommunication.currentState.requestedPageScriptHash
+      props.hostCommunication.currentState.requestedPageScriptHash
     ).toBeNull()
   })
 })
@@ -738,11 +734,11 @@ describe("App.handleNewSession", () => {
       "hash1"
     )
     expect(document.title).toBe("page1 · Streamlit")
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_APP_PAGES",
       appPages,
     })
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_CURRENT_PAGE_NAME",
       currentPageName: "",
       currentPageScriptHash: "hash1",
@@ -781,7 +777,7 @@ describe("App.handleNewSession", () => {
     expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 
-  it("sets hideSidebarNav based on the server config option and s4a setting", () => {
+  it("sets hideSidebarNav based on the server config option and host setting", () => {
     const wrapper = shallow(<App {...getProps()} />)
 
     // hideSidebarNav initializes to true.
@@ -792,11 +788,11 @@ describe("App.handleNewSession", () => {
     instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
     expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(false)
 
-    // Have s4a override the server config option.
+    // Have the host override the server config option.
     wrapper.setProps(
       getProps({
-        s4aCommunication: getS4ACommunicationProp({
-          currentState: getS4ACommunicationState({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
             hideSidebarNav: true,
           }),
         }),
@@ -1109,7 +1105,7 @@ describe("App.handlePageNotFound", () => {
       "Page not found",
       expect.stringMatching("You have requested page /nonexistentPage")
     )
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_CURRENT_PAGE_NAME",
       currentPageName: "",
       currentPageScriptHash: "page_hash",
@@ -1137,7 +1133,7 @@ describe("App.handlePageNotFound", () => {
         "The page that you have requested does not seem to exist"
       )
     )
-    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_CURRENT_PAGE_NAME",
       currentPageName: "",
       currentPageScriptHash: "page_hash",
@@ -1159,8 +1155,8 @@ describe("Test Main Menu shortcut functionality", () => {
 
   it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
     const props = getProps({
-      s4aCommunication: getS4ACommunicationProp({
-        currentState: getS4ACommunicationState({
+      hostCommunication: getHostCommunicationProp({
+        currentState: getHostCommunicationState({
           isOwner: false,
         }),
         sendMessage: jest.fn(),

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,8 +17,7 @@
 import unittest
 
 from streamlit.runtime.stats import CacheStat
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 
 FILE_1 = UploadedFileRec(id=0, name="file1", type="type", data=b"file1")
 FILE_2 = UploadedFileRec(id=0, name="file2", type="type", data=b"file222")

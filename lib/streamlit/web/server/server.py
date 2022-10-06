@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,7 @@ import logging
 import os
 import socket
 import sys
-from typing import Any, Optional, List, Awaitable
+from typing import Any, Awaitable, List, Optional
 
 import click
 import tornado.concurrent
@@ -26,36 +26,31 @@ import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
+from typing_extensions import Final
 
-from streamlit import config
-from streamlit import file_util
-from streamlit import source_util
-from streamlit import util
+from streamlit import config, file_util, source_util, util
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
-from streamlit.runtime.runtime import (
-    Runtime,
-    RuntimeConfig,
-    RuntimeState,
-)
+from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
+from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+from streamlit.web.server.component_request_handler import ComponentRequestHandler
+from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
     AssetsFileHandler,
     HealthHandler,
-    MediaFileHandler,
     MessageCacheHandler,
     StaticFileHandler,
 )
 from streamlit.web.server.server_util import make_url_path_regex
+from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import (
-    UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
+    UploadFileRequestHandler,
 )
-from .browser_websocket_handler import BrowserWebSocketHandler
-from .component_request_handler import ComponentRequestHandler
-from .stats_request_handler import StatsRequestHandler
 
 LOGGER = get_logger(__name__)
 
@@ -80,6 +75,9 @@ MAX_PORT_SEARCH_RETRIES = 100
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
+
+# The endpoint we serve media files from.
+MEDIA_ENDPOINT: Final = "/media"
 
 
 class RetriesExceeded(Exception):
@@ -169,12 +167,19 @@ class Server:
 
         self._main_script_path = main_script_path
 
+        # Initialize MediaFileStorage and its associated endpoint
+        media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
+        MediaFileHandler.initialize_storage(media_file_storage)
+
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
+                media_file_storage=media_file_storage,
             ),
         )
+
+        self._runtime.stats_mgr.register_provider(media_file_storage)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -245,7 +250,11 @@ class Server:
                 AssetsFileHandler,
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
-            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler, {"path": ""}),
+            (
+                make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
+                MediaFileHandler,
+                {"path": ""},
+            ),
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,

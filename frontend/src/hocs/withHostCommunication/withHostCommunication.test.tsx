@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,20 +19,20 @@ import { act } from "react-dom/test-utils"
 
 import { shallow, mount } from "src/lib/test_util"
 
-import withS4ACommunication, {
-  S4ACommunicationHOC,
-  S4A_COMM_VERSION,
-} from "./withS4ACommunication"
+import withHostCommunication, {
+  HostCommunicationHOC,
+  HOST_COMM_VERSION,
+} from "./withHostCommunication"
 
 const TestComponentNaked = (props: {
-  s4aCommunication: S4ACommunicationHOC
+  hostCommunication: HostCommunicationHOC
 }): ReactElement => {
-  props.s4aCommunication.connect()
+  props.hostCommunication.connect()
 
   return <div>test</div>
 }
 
-const TestComponent = withS4ACommunication(TestComponentNaked)
+const TestComponent = withHostCommunication(TestComponentNaked)
 
 function mockEventListeners(): (type: string, event: any) => void {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
@@ -48,26 +47,26 @@ function mockEventListeners(): (type: string, event: any) => void {
   return dispatchEvent
 }
 
-describe("withS4ACommunication HOC", () => {
+describe("withHostCommunication HOC", () => {
   it("renders without crashing", () => {
     const wrapper = shallow(<TestComponent />)
 
     expect(wrapper.html()).not.toBeNull()
   })
 
-  it("wrapped component should have s4aCommunication prop", () => {
+  it("wrapped component should have hostCommunication prop", () => {
     const wrapper = shallow(<TestComponent />)
     expect(
-      wrapper.find(TestComponentNaked).prop("s4aCommunication")
+      wrapper.find(TestComponentNaked).prop("hostCommunication")
     ).toBeDefined()
   })
 
-  it("s4a should receive a GUEST_READY message", done => {
+  it("host should receive a GUEST_READY message", done => {
     shallow(<TestComponent />)
 
     const listener = (event: MessageEvent): void => {
       expect(event.data).toStrictEqual({
-        stCommVersion: S4A_COMM_VERSION,
+        stCommVersion: HOST_COMM_VERSION,
         type: "GUEST_READY",
       })
 
@@ -87,7 +86,7 @@ describe("withS4ACommunication HOC", () => {
       "message",
       new MessageEvent("message", {
         data: {
-          stCommVersion: S4A_COMM_VERSION,
+          stCommVersion: HOST_COMM_VERSION,
           type: "UPDATE_HASH",
           hash: "#somehash",
         },
@@ -107,7 +106,7 @@ describe("withS4ACommunication HOC", () => {
         "message",
         new MessageEvent("message", {
           data: {
-            stCommVersion: S4A_COMM_VERSION,
+            stCommVersion: HOST_COMM_VERSION,
             type: "SET_TOOLBAR_ITEMS",
             items: [
               {
@@ -125,7 +124,7 @@ describe("withS4ACommunication HOC", () => {
 
     wrapper.update()
 
-    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
     expect(props.currentState.toolbarItems).toEqual([
       {
         borderless: true,
@@ -145,7 +144,7 @@ describe("withS4ACommunication HOC", () => {
         "message",
         new MessageEvent("message", {
           data: {
-            stCommVersion: S4A_COMM_VERSION,
+            stCommVersion: HOST_COMM_VERSION,
             type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT",
             sidebarChevronDownshift: 50,
           },
@@ -156,7 +155,7 @@ describe("withS4ACommunication HOC", () => {
 
     wrapper.update()
 
-    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
     expect(props.currentState.sidebarChevronDownshift).toBe(50)
   })
 
@@ -169,7 +168,7 @@ describe("withS4ACommunication HOC", () => {
         "message",
         new MessageEvent("message", {
           data: {
-            stCommVersion: S4A_COMM_VERSION,
+            stCommVersion: HOST_COMM_VERSION,
             type: "SET_SIDEBAR_NAV_VISIBILITY",
             hidden: true,
           },
@@ -180,7 +179,7 @@ describe("withS4ACommunication HOC", () => {
 
     wrapper.update()
 
-    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
     expect(props.currentState.hideSidebarNav).toBe(true)
   })
 
@@ -193,7 +192,7 @@ describe("withS4ACommunication HOC", () => {
         "message",
         new MessageEvent("message", {
           data: {
-            stCommVersion: S4A_COMM_VERSION,
+            stCommVersion: HOST_COMM_VERSION,
             type: "REQUEST_PAGE_CHANGE",
             pageScriptHash: "hash1",
           },
@@ -204,16 +203,16 @@ describe("withS4ACommunication HOC", () => {
     wrapper.update()
 
     const innerComponent = wrapper.find(TestComponentNaked)
-    const props = innerComponent.prop("s4aCommunication")
+    const props = innerComponent.prop("hostCommunication")
     expect(props.currentState.requestedPageScriptHash).toBe("hash1")
 
     act(() => {
-      innerComponent.prop("s4aCommunication").onPageChanged()
+      innerComponent.prop("hostCommunication").onPageChanged()
     })
     wrapper.update()
 
     const innerComponent2 = wrapper.find(TestComponentNaked)
-    const props2 = innerComponent2.prop("s4aCommunication")
+    const props2 = innerComponent2.prop("hostCommunication")
     expect(props2.currentState.requestedPageScriptHash).toBe(null)
   })
 
@@ -226,7 +225,7 @@ describe("withS4ACommunication HOC", () => {
         "message",
         new MessageEvent("message", {
           data: {
-            stCommVersion: S4A_COMM_VERSION,
+            stCommVersion: HOST_COMM_VERSION,
             type: "SET_PAGE_LINK_BASE_URL",
             pageLinkBaseUrl: "https://share.streamlit.io/vdonato/foo/bar",
           },
@@ -237,7 +236,7 @@ describe("withS4ACommunication HOC", () => {
 
     wrapper.update()
 
-    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
     expect(props.currentState.pageLinkBaseUrl).toBe(
       "https://share.streamlit.io/vdonato/foo/bar"
     )
@@ -253,7 +252,7 @@ describe("withS4ACommunication HOC", () => {
         "message",
         new MessageEvent("message", {
           data: {
-            stCommVersion: S4A_COMM_VERSION,
+            stCommVersion: HOST_COMM_VERSION,
             type: "UPDATE_HASH",
             hash: "#somehash",
           },
@@ -272,7 +271,7 @@ describe("withS4ACommunication HOC", () => {
         "message",
         new MessageEvent("message", {
           data: {
-            stCommVersion: S4A_COMM_VERSION,
+            stCommVersion: HOST_COMM_VERSION,
             type: "UPDATE_HASH",
             hash: "#somehash",
           },

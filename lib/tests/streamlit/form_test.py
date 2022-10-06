@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
 
 """Form unit tests."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -24,7 +24,7 @@ from tests import testutil
 NO_FORM_ID = ""
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class FormAssociationTest(testutil.DeltaGeneratorTestCase):
     """Tests for every flavor of form/deltagenerator association."""
 
@@ -164,7 +164,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("form", self._get_last_checkbox_form_id())
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall form protos."""
 
@@ -240,7 +240,7 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("bar", form_data.form_id)
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
     """Test form submit button."""
 
@@ -280,15 +280,15 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
 
     @patch(
         "streamlit.elements.button.register_widget",
-        return_value=RegisterWidgetResult(True, False),
+        MagicMock(return_value=RegisterWidgetResult(True, False)),
     )
-    def test_return_true_when_submitted(self, _):
+    def test_return_true_when_submitted(self):
         with st.form("form"):
             submitted = st.form_submit_button("Submit")
             self.assertEqual(submitted, True)
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class FormStateInteractionTest(testutil.DeltaGeneratorTestCase):
     def test_exception_for_callbacks_on_widgets(self):
         with self.assertRaises(StreamlitAPIException):

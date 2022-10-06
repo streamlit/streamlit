@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -108,8 +107,14 @@ class TimeInput extends PureComponent<Props, State> {
     )
   }
 
-  private handleChange = (newDate: Date): void => {
-    const value = this.dateToString(newDate)
+  private handleChange = (newDate: Date | null): void => {
+    let value: string
+    if (newDate === null) {
+      // This case is not supposed to happen since time picker cannot be cleared.
+      value = this.initialValue
+    } else {
+      value = this.dateToString(newDate)
+    }
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
@@ -124,14 +129,8 @@ class TimeInput extends PureComponent<Props, State> {
   }
 
   private dateToString = (value: Date): string => {
-    const hours = value
-      .getHours()
-      .toString()
-      .padStart(2, "0")
-    const minutes = value
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")
+    const hours = value.getHours().toString().padStart(2, "0")
+    const minutes = value.getMinutes().toString().padStart(2, "0")
 
     return `${hours}:${minutes}`
   }

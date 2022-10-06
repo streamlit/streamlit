@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -68,9 +67,8 @@ class RerunAnalyzer {
     }
 
     // Analyze each message in the run
-    const sortedMessageIndexes = Array.from(messageIndexes).sort(
-      compareNumbers
-    )
+    const sortedMessageIndexes =
+      Array.from(messageIndexes).sort(compareNumbers)
 
     // Get the total duration of the run
     const lastRerunEvent = this.rerunEvents[this.rerunEvents.length - 1]

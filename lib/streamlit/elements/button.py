@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,29 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 import io
-from typing import cast, Optional, Union, BinaryIO, TextIO, TYPE_CHECKING
+from dataclasses import dataclass
 from textwrap import dedent
+from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
+
 from typing_extensions import Final
 
-import streamlit
+from streamlit import runtime
+from streamlit.elements.form import current_form_id, is_in_form
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
-    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    register_widget,
 )
 from streamlit.type_util import Key, to_key
-from streamlit.runtime.metrics_util import gather_metrics
-
-from .form import current_form_id, is_in_form
-from .utils import check_callback_rules, check_session_state_rules
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -328,7 +327,7 @@ class ButtonMixin:
         # every form). We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
-        if streamlit._is_running_with_streamlit:
+        if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
                     f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
@@ -408,11 +407,16 @@ def marshall_file(
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = in_memory_file_manager.add(
-        data_as_bytes,
-        mimetype,
-        coordinates,
-        file_name=file_name,
-        is_for_static_download=True,
-    )
-    proto_download_button.url = this_file.url
+    if runtime.exists():
+        file_url = runtime.get_instance().media_file_mgr.add(
+            data_as_bytes,
+            mimetype,
+            coordinates,
+            file_name=file_name,
+            is_for_static_download=True,
+        )
+    else:
+        # When running in "raw mode", we can't access the MediaFileManager.
+        file_url = ""
+
+    proto_download_button.url = file_url

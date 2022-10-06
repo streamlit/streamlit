@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -141,10 +140,7 @@ describe("StreamlitMarkdown", () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
     const wrapper = mount(<StreamlitMarkdown source={source} allowHTML />)
     expect(
-      wrapper
-        .find(HeadingWithAnchor)
-        .find("h1")
-        .prop("data-test")
+      wrapper.find(HeadingWithAnchor).find("h1").prop("data-test")
     ).toEqual("lol")
   })
 
@@ -187,5 +183,44 @@ describe("Heading", () => {
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello")
     expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(0)
+  })
+
+  it("does not render ol block", () => {
+    const props = getHeadingProps({ body: "1) hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual("1) hello")
+    expect(wrapper.find("ol")).toHaveLength(0)
+  })
+
+  it("does not render ul block", () => {
+    const props = getHeadingProps({ body: "* hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual("* hello")
+    expect(wrapper.find("ul")).toHaveLength(0)
+  })
+
+  it("does not render blockquote with >", () => {
+    const props = getHeadingProps({ body: ">hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual(">hello")
+    expect(wrapper.find("blockquote")).toHaveLength(0)
+  })
+
+  it("does not render tables", () => {
+    const props = getHeadingProps({
+      body: `| Syntax | Description |
+    | ----------- | ----------- |
+    | Header      | Title       |
+    | Paragraph   | Text        |`,
+    })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual(`| Syntax | Description |`)
+    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+      `| ----------- | ----------- |
+| Header      | Title       |
+| Paragraph   | Text        |
+`
+    )
+    expect(wrapper.find("table")).toHaveLength(0)
   })
 })

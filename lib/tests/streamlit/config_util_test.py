@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,15 +14,14 @@
 
 """Config Util Unittest."""
 import copy
-import textwrap
 import re
+import textwrap
 import unittest
 from unittest.mock import patch
 
 from parameterized import parameterized
 
-from streamlit import config_util
-from streamlit import config
+from streamlit import config, config_util
 
 CONFIG_OPTIONS_TEMPLATE = config._config_options_template
 CONFIG_SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)

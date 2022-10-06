@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 s1 = st.sidebar.slider("Label A", 0, 12345678, 12345678)
 st.sidebar.write("Value A:", s1)
@@ -45,7 +46,7 @@ st.write("Value 5:", w5)
 w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed")
 st.write("Value 6:", w6)
 
-if st._is_running_with_streamlit:
+if runtime.exists():
 
     def on_change():
         st.session_state.slider_changed = True

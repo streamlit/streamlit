@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,7 @@
 """number_input unit test."""
 
 from unittest.mock import MagicMock, patch
+
 import pytest
 from parameterized import parameterized
 
@@ -24,6 +25,7 @@ from streamlit.js_number import JSNumber
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.WidgetStates_pb2 import WidgetState
 from tests import testutil
 
 
@@ -218,7 +220,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
@@ -249,7 +251,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(number_input_proto.step, 1.0)
         self.assertEqual(number_input_proto.default, 0)
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch("streamlit.elements.utils.get_session_state")
     def test_no_warning_with_value_set_in_state(self, patched_get_session_state):
         mock_session_state = MagicMock()
@@ -288,3 +290,24 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
                 "Unsupported label_visibility option 'wrong_value'. Valid values are "
                 "'visible', 'hidden' or 'collapsed'.",
             )
+
+    def test_should_keep_type_of_return_value_after_rerun(self):
+        # Generate widget id and reset context
+        st.number_input("a number", min_value=1, max_value=100, key="number")
+        widget_id = self.new_script_run_ctx.session_state.get_widget_states()[0].id
+        self.new_script_run_ctx.reset()
+
+        # Set the state of the widgets to the test state
+        widget_state = WidgetState()
+        widget_state.id = widget_id
+        widget_state.double_value = 42.0
+        self.new_script_run_ctx.session_state._state._new_widget_state.set_widget_from_proto(
+            widget_state
+        )
+
+        # Render widget again with the same parameters
+        number = st.number_input("a number", min_value=1, max_value=100, key="number")
+
+        # Assert output
+        self.assertEqual(number, 42)
+        self.assertEqual(type(number), int)

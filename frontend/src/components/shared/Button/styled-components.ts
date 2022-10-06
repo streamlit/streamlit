@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -93,9 +92,9 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
   })
 )
 
-export const StyledPrimaryButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ theme }) => ({
+export const StyledPrimaryButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   border: `1px solid ${theme.colors.fadedText10}`,
   "&:hover": {
@@ -119,9 +118,9 @@ export const StyledPrimaryButton = styled(StyledBaseButton)<
   },
 }))
 
-export const StyledSecondaryButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ theme }) => ({
+export const StyledSecondaryButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: `1px solid ${theme.colors.transparent}`,
   "&:hover": {
@@ -166,9 +165,9 @@ export const StyledLinkButton = styled(StyledBaseButton)<RequiredButtonProps>(
   })
 )
 
-export const StyledMinimalButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ theme }) => ({
+export const StyledMinimalButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: "none",
   boxShadow: "none",
@@ -178,9 +177,8 @@ export const StyledMinimalButton = styled(StyledBaseButton)<
   },
 }))
 
-export const StyledFormSubmitButton = styled(StyledPrimaryButton)<
-  RequiredButtonProps
->()
+export const StyledFormSubmitButton =
+  styled(StyledPrimaryButton)<RequiredButtonProps>()
 
 export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   ({ size, theme }) => {
@@ -216,9 +214,9 @@ export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   }
 )
 
-export const StyledHeaderButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ theme }) => {
+export const StyledHeaderButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => {
   return {
     backgroundColor: theme.colors.transparent,
     border: "none",
@@ -245,9 +243,9 @@ export const StyledHeaderButton = styled(StyledBaseButton)<
   }
 })
 
-export const StyledBorderlessIconButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ size, theme }) => {
+export const StyledBorderlessIconButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ size, theme }) => {
   const iconPadding: Record<Size, string> = {
     [Size.XSMALL]: theme.spacing.threeXS,
     [Size.SMALL]: theme.spacing.twoXS,

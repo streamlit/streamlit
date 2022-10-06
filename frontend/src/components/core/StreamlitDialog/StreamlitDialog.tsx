@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -132,7 +131,7 @@ function aboutDialog(props: AboutProps): ReactElement {
     const StreamlitInfo = [
       `Made with Streamlit v${SessionInfo.current.streamlitVersion}`,
       STREAMLIT_HOME_URL,
-      `Copyright ${new Date().getFullYear()} Streamlit Inc. All rights reserved.`,
+      `Copyright ${new Date().getFullYear()} Snowflake Inc. All rights reserved.`,
     ].join(newLineMarkdown)
 
     const source = `${props.aboutSectionMd} ${newLineMarkdown} ${newLineMarkdown} ${StreamlitInfo}`
@@ -166,7 +165,7 @@ function aboutDialog(props: AboutProps): ReactElement {
           <br />
           <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
           <br />
-          Copyright {new Date().getFullYear()} Streamlit Inc. All rights
+          Copyright {new Date().getFullYear()} Snowflake Inc. All rights
           reserved.
         </div>
       </ModalBody>

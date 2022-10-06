@@ -1,16 +1,17 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import asyncio
 import os
 import signal
@@ -20,21 +21,14 @@ from typing import Any, Dict, List, Optional
 
 import click
 
-from streamlit import config
-from streamlit import env_util
-from streamlit import net_util
-from streamlit import secrets
-from streamlit import url_util
-from streamlit import util
-from streamlit import version
+from streamlit import config, env_util, net_util, secrets, url_util, util, version
 from streamlit.config import CONFIG_FILENAMES
-from streamlit.git_util import GitRepo, MIN_GIT_VERSION
+from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
 from streamlit.runtime.secrets import SECRETS_FILE_LOC
 from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
-from streamlit.web.server import Server, server_address_is_unix_socket
-from streamlit.web.server import server_util
+from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
 LOGGER = get_logger(__name__)
 
@@ -225,6 +219,11 @@ def _print_url(is_running_hello: bool) -> None:
     ):
         named_urls = [
             ("URL", server_util.get_url(config.get_option("server.address"))),
+        ]
+
+    elif server_address_is_unix_socket():
+        named_urls = [
+            ("Unix Socket", config.get_option("server.address")),
         ]
 
     elif config.get_option("server.headless"):

@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,14 +18,11 @@ import React, { ReactElement, useCallback, useRef, useState } from "react"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
-import {
-  ExpandMore,
-  ExpandLess,
-  Description,
-} from "@emotion-icons/material-outlined"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
+import { Placement, OverflowTooltip } from "src/components/shared/Tooltip"
 import Icon, { EmojiIcon } from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 
@@ -34,6 +30,7 @@ import {
   StyledSidebarNavContainer,
   StyledSidebarNavItems,
   StyledSidebarNavLink,
+  StyledSidebarLinkText,
   StyledSidebarNavLinkContainer,
   StyledSidebarNavSeparatorContainer,
 } from "./styled-components"
@@ -74,9 +71,10 @@ const SidebarNav = ({
     }
   }, [isOverflowing, hideParentScrollbar])
 
-  const onMouseOut = useCallback(() => hideParentScrollbar(false), [
-    hideParentScrollbar,
-  ])
+  const onMouseOut = useCallback(
+    () => hideParentScrollbar(false),
+    [hideParentScrollbar]
+  )
 
   const toggleExpanded = useCallback(() => {
     if (!expanded && isOverflowing) {
@@ -122,11 +120,14 @@ const SidebarNav = ({
               pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
             }
 
+            const tooltipContent = pageName.replace(/_/g, " ")
+            const isActive = pageScriptHash === currentPageScriptHash
+
             return (
               <li key={pageName}>
                 <StyledSidebarNavLinkContainer>
                   <StyledSidebarNavLink
-                    isActive={pageScriptHash === currentPageScriptHash}
+                    isActive={isActive}
                     href={pageUrl}
                     onClick={e => {
                       e.preventDefault()
@@ -136,16 +137,17 @@ const SidebarNav = ({
                       }
                     }}
                   >
-                    {pageIcon && pageIcon.length ? (
+                    {pageIcon && pageIcon.length && (
                       <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
-                    ) : (
-                      <Icon
-                        color="darkenedBgMix100"
-                        content={Description}
-                        size="lg"
-                      />
                     )}
-                    <span>{pageName.replace(/_/g, " ")}</span>
+                    <StyledSidebarLinkText isActive={isActive}>
+                      <OverflowTooltip
+                        content={tooltipContent}
+                        placement={Placement.AUTO}
+                      >
+                        {tooltipContent}
+                      </OverflowTooltip>
+                    </StyledSidebarLinkText>
                   </StyledSidebarNavLink>
                 </StyledSidebarNavLinkContainer>
               </li>

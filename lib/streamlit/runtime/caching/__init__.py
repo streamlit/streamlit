@@ -1,16 +1,17 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import contextlib
 from typing import TYPE_CHECKING, Any, Iterator
 
@@ -22,17 +23,17 @@ from streamlit.runtime.state.session_state import WidgetMetadata
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-from .memo_decorator import (
+from streamlit.runtime.caching.memo_decorator import (
     MEMO_CALL_STACK,
     MEMO_MESSAGES_CALL_STACK,
-    _memo_caches,
     MemoAPI,
+    _memo_caches,
 )
-from .singleton_decorator import (
+from streamlit.runtime.caching.singleton_decorator import (
     SINGLETON_CALL_STACK,
     SINGLETON_MESSAGE_CALL_STACK,
-    _singleton_caches,
     SingletonAPI,
+    _singleton_caches,
 )
 
 
@@ -93,10 +94,10 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 # Explicitly export public symbols
-from .memo_decorator import (
+from streamlit.runtime.caching.memo_decorator import (
     get_memo_stats_provider as get_memo_stats_provider,
 )
-from .singleton_decorator import (
+from streamlit.runtime.caching.singleton_decorator import (
     get_singleton_stats_provider as get_singleton_stats_provider,
 )
 

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,46 +13,42 @@
 # limitations under the License.
 
 """@st.memo: pickle-based caching"""
+import math
 import os
 import pickle
 import shutil
 import threading
 import time
 import types
-from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload, Union
+from datetime import timedelta
+from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, cast, overload
 
-import math
 from cachetools import TTLCache
 
 import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
-from streamlit.file_util import (
-    streamlit_read,
-    streamlit_write,
-    get_streamlit_file_path,
-)
+from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.runtime.stats import CacheStatsProvider, CacheStat
-from streamlit.runtime.metrics_util import gather_metrics
-
-from .cache_errors import (
+from streamlit.runtime.caching.cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
     CacheType,
 )
-from .cache_utils import (
+from streamlit.runtime.caching.cache_utils import (
     Cache,
+    CachedFunction,
     CachedResult,
+    CacheMessagesCallStack,
+    CacheWarningCallStack,
+    ElementMsgData,
     InitialCachedResults,
     MsgData,
     create_cache_wrapper,
-    CacheWarningCallStack,
-    CachedFunction,
-    CacheMessagesCallStack,
-    ElementMsgData,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
 
@@ -65,7 +61,6 @@ _TTLCACHE_TIMER = time.monotonic
 # items have a different extension, so they don't overlap.)
 _CACHE_DIR_NAME = "cache"
 
-
 MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
 MEMO_MESSAGES_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
 
@@ -76,7 +71,7 @@ class MemoizedFunction(CachedFunction):
     def __init__(
         self,
         func: types.FunctionType,
-        show_spinner: bool,
+        show_spinner: Union[bool, str],
         suppress_st_warning: bool,
         persist: Optional[str],
         max_entries: Optional[int],
@@ -220,10 +215,10 @@ class MemoAPI:
         self,
         *,
         persist: Optional[str] = None,
-        show_spinner: bool = True,
+        show_spinner: Union[bool, str] = True,
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
-        ttl: Optional[float] = None,
+        ttl: Optional[Union[float, timedelta]] = None,
     ) -> Callable[[F], F]:
         ...
 
@@ -236,10 +231,10 @@ class MemoAPI:
         func: Optional[F] = None,
         *,
         persist: Optional[str] = None,
-        show_spinner: bool = True,
+        show_spinner: Union[bool, str] = True,
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
-        ttl: Optional[float] = None,
+        ttl: Optional[Union[float, timedelta]] = None,
     ):
         """Function decorator to memoize function executions.
 
@@ -272,7 +267,7 @@ class MemoAPI:
             for an unbounded cache. (When a new entry is added to a full cache,
             the oldest cached entry will be removed.) The default is None.
 
-        ttl : float or None
+        ttl : float or timedelta or None
             The maximum number of seconds to keep an entry in the cache, or
             None if cache entries should not expire. The default is None.
             Note that ttl is incompatible with `persist="disk"` - `ttl` will be
@@ -341,6 +336,13 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
+        ttl_seconds: Optional[float]
+
+        if isinstance(ttl, timedelta):
+            ttl_seconds = ttl.total_seconds()
+        else:
+            ttl_seconds = ttl
+
         def wrapper(f):
             # We use wrapper function here instead of lambda function to be able to log
             # warning in case both persist="disk" and ttl parameters specified
@@ -356,7 +358,7 @@ class MemoAPI:
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
-                    ttl=ttl,
+                    ttl=ttl_seconds,
                 )
             )
 
@@ -372,7 +374,7 @@ class MemoAPI:
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
-                ttl=ttl,
+                ttl=ttl_seconds,
             )
         )
 

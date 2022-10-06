@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,8 +14,7 @@
 
 import random
 from textwrap import dedent
-from typing import Mapping
-from typing import cast, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Mapping, Optional, Union, cast
 from urllib.parse import urlparse
 
 from typing_extensions import Final, Literal, TypeAlias
@@ -24,10 +23,10 @@ from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.string_util import is_emoji
 from streamlit.util import lower_clean_dict_keys
-from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from typing_extensions import TypeGuard

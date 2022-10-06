@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,16 +26,13 @@ import tempfile
 import threading
 import unittest.mock
 import weakref
-from typing import Any, Pattern, Optional, Dict, List
+from enum import Enum
+from typing import Any, Dict, List, Optional, Pattern
 
-from streamlit import type_util
-from streamlit import util
+from streamlit import type_util, util
 from streamlit.logger import get_logger
+from streamlit.runtime.caching.cache_errors import CacheType, UnhashableTypeError
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-from .cache_errors import (
-    CacheType,
-    UnhashableTypeError,
-)
 
 _LOGGER = get_logger(__name__)
 
@@ -264,6 +261,9 @@ class _CacheFuncHasher:
 
         elif dataclasses.is_dataclass(obj):
             return self.to_bytes(dataclasses.asdict(obj))
+
+        elif isinstance(obj, Enum):
+            return str(obj).encode()
 
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame") or type_util.is_type(
             obj, "pandas.core.series.Series"

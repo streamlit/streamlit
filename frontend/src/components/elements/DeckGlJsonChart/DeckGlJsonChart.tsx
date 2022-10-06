@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,10 +17,9 @@
 import React, { PureComponent, ReactNode } from "react"
 import DeckGL from "deck.gl"
 import isEqual from "lodash/isEqual"
-import { StaticMap } from "react-map-gl"
+import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"
-import { Theme } from "src/theme"
-import { getLuminance } from "color2k"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 // We don't have Typescript defs for these imports, which makes ESLint unhappy
 /* eslint-disable import/no-extraneous-dependencies */
 import * as layers from "@deck.gl/layers"
@@ -41,7 +39,10 @@ import withMapboxToken from "src/hocs/withMapboxToken"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
-import { StyledDeckGlChart } from "./styled-components"
+import {
+  StyledDeckGlChart,
+  StyledNavigationControlContainer,
+} from "./styled-components"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 
@@ -147,8 +148,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
     if (!notNullOrUndefined(json.mapStyle)) {
-      const hasLightBg = getLuminance(theme.colors.bgColor) > 0.5
-      const mapTheme = hasLightBg ? "light" : "dark"
+      const mapTheme = hasLightBackgroundColor(theme) ? "light" : "dark"
       json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
     }
 
@@ -226,6 +226,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
+          ContextProvider={MapContext.Provider}
           controller
         >
           <StaticMap
@@ -239,6 +240,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             }
             mapboxApiAccessToken={this.props.mapboxToken}
           />
+          <StyledNavigationControlContainer>
+            <NavigationControl className="zoomButton" showCompass={false} />
+          </StyledNavigationControlContainer>
+          )
         </DeckGL>
       </StyledDeckGlChart>
     )

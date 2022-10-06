@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,23 +21,26 @@
 
 import imghdr
 import io
+import mimetypes
 import re
-from typing import cast, List, Optional, Sequence, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
 
 import numpy as np
 from PIL import Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
 
+from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
-from streamlit.runtime.in_memory_file_manager import in_memory_file_manager
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    import numpy.typing as npt
     from typing import Any
+
+    import numpy.typing as npt
+
     from streamlit.delta_generator import DeltaGenerator
 
 LOGGER: Final = get_logger(__name__)
@@ -302,9 +305,38 @@ def image_to_url(
     """Return a URL that an image can be served from.
     If `image` is already a URL, return it unmodified.
     Otherwise, add the image to the MediaFileManager and return the URL.
+
+    (When running in "raw" mode, we won't actually load data into the
+    MediaFileManager, and we'll return an empty URL.)
     """
+
+    image_data: bytes
+
+    # Strings
+    if isinstance(image, str):
+        # If it's a url, return it directly.
+        try:
+            p = urlparse(image)
+            if p.scheme:
+                return image
+        except UnicodeDecodeError:
+            pass
+
+        # Otherwise, try to open it as a file.
+        try:
+            with open(image, "rb") as f:
+                image_data = f.read()
+        except:
+            # When we aren't able to open the image file, we still pass the path to
+            # the MediaFileManager - its storage backend may have access to files
+            # that Streamlit does not.
+            mimetype, _ = mimetypes.guess_type(image)
+            if mimetype is None:
+                mimetype = "application/octet-stream"
+            return runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
+
     # PIL Images
-    if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
+    elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
         format = _validate_image_format_string(image, output_format)
         image_data = _PIL_to_bytes(image, format)
 
@@ -339,20 +371,6 @@ def image_to_url(
             output_format=output_format,
         )
 
-    # Strings
-    elif isinstance(image, str):
-        # If it's a url, return it directly.
-        try:
-            p = urlparse(image)
-            if p.scheme:
-                return image
-        except UnicodeDecodeError:
-            pass
-
-        # Otherwise, open it as a file.
-        with open(image, "rb") as f:
-            image_data = f.read()
-
     # Raw bytes
     else:
         image_data = image
@@ -362,8 +380,11 @@ def image_to_url(
     image_data = _ensure_image_size_and_format(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
-    this_file = in_memory_file_manager.add(image_data, mimetype, image_id)
-    return this_file.url
+    if runtime.exists():
+        return runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
+    else:
+        # When running in "raw mode", we can't access the MediaFileManager.
+        return ""
 
 
 def marshall_images(
@@ -457,7 +478,7 @@ def marshall_images(
             proto_img.caption = str(caption)
 
         # We use the index of the image in the input image list to identify this image inside
-        # InMemoryFileManager. For this, we just add the index to the image's "coordinates".
+        # MediaFileManager. For this, we just add the index to the image's "coordinates".
         image_id = "%s-%i" % (coordinates, coord_suffix)
 
         is_svg = False
@@ -468,8 +489,11 @@ def marshall_images(
                     image = textfile.read()
 
             # Following regex allows svg image files to start either via a "<?xml...>" tag eventually followed by a "<svg...>" tag or directly starting with a "<svg>" tag
-            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s)", image):
-                proto_img.markup = f"data:image/svg+xml,{image}"
+            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s|^\s?<svg>\s)", image):
+                if "xlink" in image or "xmlns" not in image:
+                    proto_img.markup = f"data:image/svg+xml,{image}"
+                else:
+                    proto_img.url = f"data:image/svg+xml,{image}"
                 is_svg = True
         if not is_svg:
             proto_img.url = image_to_url(

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,23 +13,17 @@
 # limitations under the License.
 
 import os
-import setuptools
 import sys
+from pathlib import Path
 
+import setuptools
 from setuptools.command.install import install
 
-VERSION = "1.12.2"  # PEP-440
+THIS_DIRECTORY = Path(__file__).parent
+
+VERSION = "1.13.0"  # PEP-440
 
 NAME = "streamlit"
-
-DESCRIPTION = "The fastest way to build data apps in Python"
-
-LONG_DESCRIPTION = (
-    "Streamlit's open-source app framework is the easiest way "
-    "for data scientists and machine learning engineers to "
-    "create beautiful, performant apps in only a few hours! "
-    "All in pure Python. All for free."
-)
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible.
@@ -85,7 +79,8 @@ class VerifyVersionCommand(install):
     description = "verify that the git tag matches our version"
 
     def run(self):
-        tag = os.getenv("CIRCLE_TAG")
+        # Todo: CIRCLE_TAG exclusive to CircleCI - remove once converted
+        tag = os.getenv("CIRCLE_TAG") or os.getenv("TAG")
 
         if tag != VERSION:
             info = "Git tag: {0} does not match the version of this app: {1}".format(
@@ -97,19 +92,43 @@ class VerifyVersionCommand(install):
 setuptools.setup(
     name=NAME,
     version=VERSION,
-    description=DESCRIPTION,
-    long_description=LONG_DESCRIPTION,
+    description="The fastest way to build data apps in Python",
+    long_description=(THIS_DIRECTORY / ".." / "README.md").read_text(),
+    long_description_content_type="text/markdown",
     url="https://streamlit.io",
     project_urls={
-        "Source": "https://github.com/streamlit/streamlit",
+        "Source Code": "https://github.com/streamlit/streamlit",
+        "Bug Tracker": "https://github.com/streamlit/streamlit/issues",
+        "Release notes": "https://docs.streamlit.io/library/changelog",
+        "Documentation": "https://docs.streamlit.io/",
+        "Community": "https://discuss.streamlit.io/",
+        "Twitter": "https://twitter.com/streamlit",
     },
-    author="Streamlit Inc",
+    author="Snowflake Inc",
     author_email="hello@streamlit.io",
+    license="Apache License 2.0",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
+        "Environment :: Web Environment",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Topic :: Database :: Front-Ends",
+        "Topic :: Office/Business :: Financial :: Spreadsheet",
+        "Topic :: Scientific/Engineering :: Information Analysis",
+        "Topic :: Scientific/Engineering :: Visualization",
+        "Topic :: Software Development :: Libraries :: Application Frameworks",
+        "Topic :: Software Development :: Widget Sets",
+    ],
     # We exclude Python 3.9.7 from our compatible versions due to a bug in that version
     # with typing.Protocol. See https://github.com/streamlit/streamlit/issues/5140 and
     # https://bugs.python.org/issue45121
     python_requires=">=3.7, !=3.9.7",
-    license="Apache 2",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
     package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,17 +18,13 @@ import copy
 import os
 import secrets
 import threading
-import toml
 from collections import OrderedDict
-from typing import Any, Callable, cast, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
+import toml
 from blinker import Signal
 
-from streamlit import config_util
-from streamlit import development
-from streamlit import env_util
-from streamlit import file_util
-from streamlit import util
+from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 
 # Config System Global State #

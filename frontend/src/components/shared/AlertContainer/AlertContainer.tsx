@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,7 +26,13 @@ export enum Kind {
   WARNING = "warning",
 }
 
-function getNotificationKind(kind: Kind): KIND[keyof KIND] {
+function getNotificationKind(
+  kind: Kind
+):
+  | typeof KIND.negative
+  | typeof KIND.info
+  | typeof KIND.positive
+  | typeof KIND.warning {
   switch (kind) {
     case Kind.ERROR:
       return KIND.negative
@@ -71,6 +76,8 @@ export default function AlertContainer({
           style: {
             marginTop: 0,
             marginBottom: 0,
+            marginLeft: 0,
+            marginRight: 0,
             width: width ? width.toString() : undefined,
             border: 0,
           },

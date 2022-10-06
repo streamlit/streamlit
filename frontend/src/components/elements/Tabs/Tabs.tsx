@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -107,79 +106,77 @@ function Tabs(props: Props): ReactElement {
         }}
         activateOnFocus
       >
-        {node.children.map(
-          (appNode: AppNode, index: number): ReactElement => {
-            const childProps = {
-              ...props,
-              node: appNode as BlockNode,
-            }
-            let nodeLabel = index.toString()
-            if (childProps.node.deltaBlock?.tab?.label) {
-              nodeLabel = childProps.node.deltaBlock.tab.label
-            }
-            const isSelected = activeKey.toString() === index.toString()
-            const isLast = index === node.children.length - 1
+        {node.children.map((appNode: AppNode, index: number): ReactElement => {
+          const childProps = {
+            ...props,
+            node: appNode as BlockNode,
+          }
+          let nodeLabel = index.toString()
+          if (childProps.node.deltaBlock?.tab?.label) {
+            nodeLabel = childProps.node.deltaBlock.tab.label
+          }
+          const isSelected = activeKey.toString() === index.toString()
+          const isLast = index === node.children.length - 1
 
-            return (
-              <UITab
-                title={nodeLabel}
-                key={index}
-                overrides={{
-                  TabPanel: {
-                    style: () => ({
-                      paddingLeft: theme.spacing.none,
-                      paddingRight: theme.spacing.none,
-                      paddingBottom: theme.spacing.none,
-                      paddingTop: theme.spacing.lg,
-                    }),
-                  },
-                  Tab: {
-                    style: () => ({
-                      height: TAB_HEIGHT,
-                      whiteSpace: "nowrap",
-                      paddingLeft: theme.spacing.none,
-                      paddingRight: theme.spacing.none,
-                      paddingTop: theme.spacing.none,
-                      paddingBottom: theme.spacing.none,
-                      fontSize: theme.fontSizes.sm,
+          return (
+            <UITab
+              title={nodeLabel}
+              key={index}
+              overrides={{
+                TabPanel: {
+                  style: () => ({
+                    paddingLeft: theme.spacing.none,
+                    paddingRight: theme.spacing.none,
+                    paddingBottom: theme.spacing.none,
+                    paddingTop: theme.spacing.lg,
+                  }),
+                },
+                Tab: {
+                  style: () => ({
+                    height: TAB_HEIGHT,
+                    whiteSpace: "nowrap",
+                    paddingLeft: theme.spacing.none,
+                    paddingRight: theme.spacing.none,
+                    paddingTop: theme.spacing.none,
+                    paddingBottom: theme.spacing.none,
+                    fontSize: theme.fontSizes.sm,
+                    color: widgetsDisabled
+                      ? theme.colors.fadedText40
+                      : theme.colors.bodyText,
+                    ":focus": {
+                      outline: "none",
                       color: widgetsDisabled
                         ? theme.colors.fadedText40
-                        : theme.colors.bodyText,
-                      ":focus": {
-                        outline: "none",
-                        color: widgetsDisabled
-                          ? theme.colors.fadedText40
-                          : theme.colors.primary,
-                        background: "none",
-                      },
-                      ":hover": {
-                        color: widgetsDisabled
-                          ? theme.colors.fadedText40
-                          : theme.colors.primary,
-                        background: "none",
-                      },
-                      ...(isSelected
-                        ? {
-                            color: widgetsDisabled
-                              ? theme.colors.fadedText40
-                              : theme.colors.primary,
-                          }
-                        : {}),
-                      ...(isOverflowing && isLast
-                        ? {
-                            // Add minimal required padding to hide the overscroll gradient
-                            paddingRight: "0.6rem",
-                          }
-                        : {}),
-                    }),
-                  },
-                }}
-              >
-                <VerticalBlock {...childProps}></VerticalBlock>
-              </UITab>
-            )
-          }
-        )}
+                        : theme.colors.primary,
+                      background: "none",
+                    },
+                    ":hover": {
+                      color: widgetsDisabled
+                        ? theme.colors.fadedText40
+                        : theme.colors.primary,
+                      background: "none",
+                    },
+                    ...(isSelected
+                      ? {
+                          color: widgetsDisabled
+                            ? theme.colors.fadedText40
+                            : theme.colors.primary,
+                        }
+                      : {}),
+                    ...(isOverflowing && isLast
+                      ? {
+                          // Add minimal required padding to hide the overscroll gradient
+                          paddingRight: "0.6rem",
+                        }
+                      : {}),
+                  }),
+                },
+              }}
+            >
+              <VerticalBlock {...childProps}></VerticalBlock>
+            </UITab>
+          )
+        })}
       </UITabs>
     </StyledTabContainer>
   )

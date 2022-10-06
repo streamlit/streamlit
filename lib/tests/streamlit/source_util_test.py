@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -93,7 +93,7 @@ class PageHelperFunctionTests(unittest.TestCase):
     def test_page_icon_and_name(self, path_str, expected):
         assert source_util.page_icon_and_name(Path(path_str)) == expected
 
-    @patch("streamlit.source_util._on_pages_changed", new=MagicMock())
+    @patch("streamlit.source_util._on_pages_changed", MagicMock())
     @patch("streamlit.source_util._cached_pages", new="Some pages")
     def test_invalidate_pages_cache(self):
         source_util.invalidate_pages_cache()
@@ -101,7 +101,7 @@ class PageHelperFunctionTests(unittest.TestCase):
         assert source_util._cached_pages is None
         source_util._on_pages_changed.send.assert_called_once()
 
-    @patch("streamlit.source_util._on_pages_changed", new=MagicMock())
+    @patch("streamlit.source_util._on_pages_changed", MagicMock())
     def test_register_pages_changed_callback(self):
         callback = lambda: None
 

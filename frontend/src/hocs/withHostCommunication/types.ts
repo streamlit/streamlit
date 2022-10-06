@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +17,7 @@
 import { IAppPage } from "src/autogen/proto"
 import { ExportedTheme } from "src/theme"
 
-export type StreamlitShareMetadata = {
+export type DeployedAppMetadata = {
   hostedAt?: string
   creatorId?: string
   owner?: string
@@ -28,7 +27,7 @@ export type StreamlitShareMetadata = {
   isOwner?: boolean
 }
 
-export interface S4ACommunicationState {
+export interface HostCommunicationState {
   forcedModalClose: boolean
   hideSidebarNav: boolean
   isOwner: boolean
@@ -37,7 +36,7 @@ export interface S4ACommunicationState {
   queryParams: string
   requestedPageScriptHash: string | null
   sidebarChevronDownshift: number
-  streamlitShareMetadata: StreamlitShareMetadata
+  deployedAppMetadata: DeployedAppMetadata
   toolbarItems: IToolbarItem[]
 }
 
@@ -78,7 +77,7 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "SET_METADATA"
-      metadata: StreamlitShareMetadata
+      metadata: DeployedAppMetadata
     }
   | {
       type: "SET_PAGE_LINK_BASE_URL"

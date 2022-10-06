@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,9 +15,10 @@
 """Tests widget-related functionality"""
 
 import unittest
+from unittest.mock import MagicMock, call, patch
+
 import pytest
 from parameterized import parameterized
-from unittest.mock import call, MagicMock, patch
 
 import streamlit as st
 from streamlit import errors
@@ -26,12 +27,11 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import coalesce_widget_states
 from streamlit.runtime.state.session_state import (
-    WidgetMetadata,
-    SessionState,
     GENERATED_WIDGET_KEY_PREFIX,
+    SessionState,
+    WidgetMetadata,
 )
 from streamlit.runtime.state.widgets import _get_widget_id, user_key_from_widget_id
-
 from tests import testutil
 
 
@@ -313,7 +313,7 @@ class WidgetIdDisabledTests(testutil.DeltaGeneratorTestCase):
             widget_func("my_widget", options, disabled=True)
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
+@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
 class WidgetUserKeyTests(testutil.DeltaGeneratorTestCase):
     def test_get_widget_user_key(self):
         state = get_script_run_ctx().session_state._state

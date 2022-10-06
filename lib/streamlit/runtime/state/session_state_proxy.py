@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,20 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import (
-    Any,
-    Dict,
-    Iterator,
-    MutableMapping,
-)
+from typing import Any, Dict, Iterator, MutableMapping
 
 from typing_extensions import Final
 
-import streamlit as st
 from streamlit import logger as _logger
+from streamlit import runtime
+from streamlit.runtime.state.safe_session_state import SafeSessionState
+from streamlit.runtime.state.session_state import SessionState, require_valid_user_key
 from streamlit.type_util import Key
-from .safe_session_state import SafeSessionState
-from .session_state import SessionState, require_valid_user_key
 
 LOGGER: Final = _logger.get_logger(__name__)
 
@@ -50,7 +45,7 @@ def get_session_state() -> SafeSessionState:
     if ctx is None:
         if not _state_use_warning_already_displayed:
             _state_use_warning_already_displayed = True
-            if not st._is_running_with_streamlit:
+            if not runtime.exists():
                 LOGGER.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )

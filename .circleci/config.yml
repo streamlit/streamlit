@@ -466,6 +466,8 @@ jobs:
     docker:
       - image: circleci/python:3.10.1
 
+    resource_class: large
+
     working_directory: ~/repo
 
     steps:
@@ -499,7 +501,7 @@ jobs:
           name: Run linters
           command: |
             # Run eslint as a standalone command to generate the test report.
-            PRE_COMMIT_NO_CONCURRENCY=true DISABLE=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+            PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
             make jslint
 
       - store_test_results:
@@ -614,9 +616,9 @@ jobs:
           <<: *generate_protobufs
 
       - run:
-          name: Run make develop
+          name: Run make init develop
           command: |
-            make develop
+            make init develop
 
       - run:
           name: CLI smoke tests

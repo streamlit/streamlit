@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,17 +14,20 @@
 
 import os
 import traceback
-from typing import cast, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, cast
+
 from typing_extensions import Final
 
 import streamlit
-from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
-from streamlit.errors import MarkdownFormattedException
-from streamlit.errors import StreamlitAPIException
-from streamlit.errors import StreamlitAPIWarning
-from streamlit.errors import StreamlitDeprecationWarning
-from streamlit.errors import UncaughtAppException
+from streamlit.errors import (
+    MarkdownFormattedException,
+    StreamlitAPIException,
+    StreamlitAPIWarning,
+    StreamlitDeprecationWarning,
+    UncaughtAppException,
+)
 from streamlit.logger import get_logger
+from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:

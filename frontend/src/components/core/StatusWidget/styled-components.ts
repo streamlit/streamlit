@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { Theme } from "src/theme"
-import { getLuminance } from "color2k"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 
 /*
   "ConnectionStatus" styles are used for displaying
@@ -36,24 +34,23 @@ export interface StyledConnectionStatusLabelProps {
   isMinimized: boolean
 }
 
-export const StyledConnectionStatusLabel = styled.label<
-  StyledConnectionStatusLabelProps
->(({ isMinimized, theme }) => ({
-  fontSize: theme.fontSizes.sm,
-  color: theme.colors.gray,
-  textTransform: "uppercase",
-  marginTop: theme.spacing.none,
-  marginRight: isMinimized ? theme.spacing.none : theme.spacing.lg,
-  marginBottom: theme.spacing.none,
-  marginLeft: theme.spacing.sm,
-  whiteSpace: "nowrap",
-  maxWidth: isMinimized ? "0" : "20rem",
-  transition:
-    "opacity 500ms 0ms, clip 500ms 0ms, max-width 500ms 0ms, margin 500ms 0ms, visibility 0ms 500ms",
-  opacity: isMinimized ? 0 : 1,
-  visibility: isMinimized ? "hidden" : "visible",
-  lineHeight: 1,
-}))
+export const StyledConnectionStatusLabel =
+  styled.label<StyledConnectionStatusLabelProps>(({ isMinimized, theme }) => ({
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.gray,
+    textTransform: "uppercase",
+    marginTop: theme.spacing.none,
+    marginRight: isMinimized ? theme.spacing.none : theme.spacing.lg,
+    marginBottom: theme.spacing.none,
+    marginLeft: theme.spacing.sm,
+    whiteSpace: "nowrap",
+    maxWidth: isMinimized ? "0" : "20rem",
+    transition:
+      "opacity 500ms 0ms, clip 500ms 0ms, max-width 500ms 0ms, margin 500ms 0ms, visibility 0ms 500ms",
+    opacity: isMinimized ? 0 : 1,
+    visibility: isMinimized ? "hidden" : "visible",
+    lineHeight: 1,
+  }))
 
 /*
   "AppStatus" styles are for app-related statuses:
@@ -105,20 +102,19 @@ export interface StyledAppButtonContainerProps {
   isMinimized: boolean
 }
 
-export const StyledAppButtonContainer = styled.span<
-  StyledAppButtonContainerProps
->(({ isMinimized, theme }) => ({
-  marginLeft: theme.spacing.sm,
-  whiteSpace: "nowrap",
-  transition: `opacity 200ms ease-out 0s,
+export const StyledAppButtonContainer =
+  styled.span<StyledAppButtonContainerProps>(({ isMinimized, theme }) => ({
+    marginLeft: theme.spacing.sm,
+    whiteSpace: "nowrap",
+    transition: `opacity 200ms ease-out 0s,
   clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
   max-width 200ms ease-out 0s, padding 200ms ease-out 0s`, // Hide at end of the transition
-  ...(isMinimized ? minimizedStyles(theme) : {}),
-}))
+    ...(isMinimized ? minimizedStyles(theme) : {}),
+  }))
 
 export const StyledAppRunningIcon = styled.img(({ theme }) => {
   // Testing if current background color is light or dark to modify img:
-  const filter = getLuminance(theme.colors.bgColor) > 0.5 ? "" : "invert(1)"
+  const filter = hasLightBackgroundColor(theme) ? "" : "invert(1)"
 
   return {
     opacity: 0.4,

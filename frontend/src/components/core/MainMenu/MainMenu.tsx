@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -43,7 +42,7 @@ import Icon from "src/components/shared/Icon"
 import {
   IGuestToHostMessage,
   IMenuItem,
-} from "src/hocs/withS4ACommunication/types"
+} from "src/hocs/withHostCommunication/types"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 import { MetricsManager } from "src/lib/MetricsManager"
 import {
@@ -96,9 +95,9 @@ export interface Props {
 
   screenCastState: string
 
-  s4aMenuItems: IMenuItem[]
+  hostMenuItems: IMenuItem[]
 
-  sendS4AMessage: (message: IGuestToHostMessage) => void
+  sendMessageToHost: (message: IGuestToHostMessage) => void
 
   gitInfo: IGitInfo | null
 
@@ -116,7 +115,7 @@ export interface Props {
 
   menuItems?: PageConfig.IMenuItems | null
 
-  s4aIsOwner?: boolean
+  hostIsOwner?: boolean
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -282,12 +281,8 @@ const SubMenu = ({
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
   const onClickDeployApp = useCallback((): void => {
-    const {
-      showDeployError,
-      closeDialog,
-      isDeployErrorModalOpen,
-      gitInfo,
-    } = props
+    const { showDeployError, closeDialog, isDeployErrorModalOpen, gitInfo } =
+      props
 
     if (!gitInfo) {
       const dialog = NoRepositoryDetected()
@@ -453,7 +448,7 @@ function MainMenu(props: Props): ReactElement {
     },
   }
 
-  const S4AMenuItems = props.s4aMenuItems.map(item => {
+  const hostMenuItems = props.hostMenuItems.map(item => {
     if (item.type === "separator") {
       return coreMenuItems.DIVIDER
     }
@@ -472,7 +467,7 @@ function MainMenu(props: Props): ReactElement {
 
     return {
       onClick: () =>
-        props.sendS4AMessage({
+        props.sendMessageToHost({
           type: "MENU_ITEM_CALLBACK",
           key: item.key,
         }),
@@ -480,8 +475,8 @@ function MainMenu(props: Props): ReactElement {
     }
   }, [] as any[])
 
-  const shouldShowS4AMenu = !!S4AMenuItems.length
-  const showDeploy = isLocalhost() && !shouldShowS4AMenu && props.canDeploy
+  const shouldShowHostMenu = !!hostMenuItems.length
+  const showDeploy = isLocalhost() && !shouldShowHostMenu && props.canDeploy
   const preferredMenuOrder: any[] = [
     coreMenuItems.rerun,
     coreMenuItems.settings,
@@ -490,7 +485,7 @@ function MainMenu(props: Props): ReactElement {
     coreMenuItems.DIVIDER,
     coreMenuItems.report,
     coreMenuItems.community,
-    ...(shouldShowS4AMenu ? S4AMenuItems : [coreMenuItems.DIVIDER]),
+    ...(shouldShowHostMenu ? hostMenuItems : [coreMenuItems.DIVIDER]),
     coreMenuItems.about,
   ]
 
@@ -537,7 +532,7 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
-  const { s4aIsOwner } = props
+  const { hostIsOwner } = props
 
   return (
     <StatefulPopover
@@ -551,7 +546,7 @@ function MainMenu(props: Props): ReactElement {
       content={({ close }) => (
         <>
           <SubMenu menuItems={menuItems} closeMenu={close} isDevMenu={false} />
-          {(s4aIsOwner || isLocalhost()) && (
+          {(hostIsOwner || isLocalhost()) && (
             <StyledUl>
               <SubMenu
                 menuItems={devMenuItems}
