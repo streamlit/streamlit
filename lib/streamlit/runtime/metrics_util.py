@@ -230,7 +230,7 @@ def gather_metrics(callable: F) -> F:
         )
         command_telemetry: Union[Command, None] = None
 
-        if ctx and tracking_activated:
+        if tracking_activated:
             # Deactivate tracking to prevent calls inside already tracked commands
             ctx.command_tracking_deactivated = True
             try:
@@ -250,7 +250,7 @@ def gather_metrics(callable: F) -> F:
 
         result = callable(*args, **kwargs)
 
-        # Activate tracking again
+        # Activate tracking again if callable executes without any exceptions
         if ctx:
             ctx.command_tracking_deactivated = False
 
