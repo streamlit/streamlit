@@ -126,7 +126,7 @@ export function PlotlyChart({
     const spec = JSON.parse(figure.spec)
     // spec.data.forEach((entry: any, index: number) => {
     //   if (spec.data[index].marker !== undefined) {
-    //     delete spec.data[index].marker["color"]
+    //     delete spec.data[index].marker.color
     //   }
     // })
 
@@ -138,6 +138,24 @@ export function PlotlyChart({
     }
 
     if (element.theme === "streamlit") {
+      const legendGroupIndexes = new Map<string, number[]>()
+      spec.data.forEach((entry: any, index: number) => {
+        if (entry.legendgroup === undefined) {
+          // do nothing
+        } else if (legendGroupIndexes.has(entry.legendgroup)) {
+          legendGroupIndexes.set(
+            entry.legendgroup,
+            // @ts-ignore
+            legendGroupIndexes.get(entry.legendgroup).concat(index)
+          )
+        } else {
+          legendGroupIndexes.set(entry.legendgroup, [index])
+        }
+      })
+      console.log(legendGroupIndexes)
+      if (legendGroupIndexes.size <= 6) {
+        spec.layout.template.layout.legend = assign({orientation: 'h', xanchor: "left", yanchor: "middle", y: -.25}, spec.layout.template.layout.legend)
+      }
       spec.data = assign(changeDiscreteColors(spec, theme), spec.data)
       // should this be the same name as applyStreamlitTheme because there are duplicates?
       spec.layout.template.layout = applyStreamlitThemeLayout(
@@ -174,6 +192,13 @@ export function PlotlyChart({
         },
         spec.layout
       )
+      // console.log(spec.data.labels)
+      // spec.data.some((entry: any) => {
+      //   if (entry.labels && entry.labels.length <= 6) {
+      //     spec.layout.template.layout.legend = assign({orientation: 'h', xanchor: "left", yanchor: "middle", y: -.25}, spec.layout.template.layout.legend)
+      //     return true
+      //   }
+      // })
       if ("title" in spec.layout) {
         spec.layout.title = assign({
           text: `<b>${spec.layout.title.text}</b>`,

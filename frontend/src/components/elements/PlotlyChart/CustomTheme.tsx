@@ -34,6 +34,10 @@ export function applyStreamlitThemeData(data: any, theme: Theme): any {
   return assign(data, streamlitTheme)
 }
 
+function getGreyText(theme: Theme) {
+  return hasLightBackgroundColor(theme) ? theme.colors.gray70 : theme.colors.gray30
+}
+
 export function applyStreamlitThemeLayout(layout: any, theme: Theme): any {
   // This theming config contains multiple hard coded spacing values.
   // The reason is that we currently only have rem values in our spacing
@@ -104,22 +108,27 @@ export function applyStreamlitThemeLayout(layout: any, theme: Theme): any {
           "#D5DAE5",
         ],
     legend: {
-      orientation: "h",
-      yanchor: "bottom",
-      xanchor: "left",
-      y: -0.375,
+      // side: "left",
+      // orientation: "h",
+      // yanchor: "bottom",
+      // xanchor: "left",
+      // y: -.25,
       title: {
         font: {
           size: fontSizes.smPx,
-          color: colors.fadedText60,
+          color: getGreyText(theme),
         },
         side: "top",
       },
+      valign: "top",
       bordercolor: colors.transparent,
       borderwidth: 0,
       // tracegroupgap: 200,
-      labelColor: colors.fadedText60,
-      titleColor: colors.fadedText60,
+      font: {
+        color: getGreyText(theme),
+      },
+      labelColor: getGreyText(theme),
+      titleColor: getGreyText(theme),
       ...themeFonts,
     },
     paper_bgcolor: colors.bgColor,
@@ -155,36 +164,41 @@ export function applyStreamlitThemeLayout(layout: any, theme: Theme): any {
           "#D5DAE5",
         ],
     yaxis: {
-      nticks: 10,
+      // nticks: 10,
       ticklabelposition: "outside",
+      tickmode: "auto",
       // automargin: "left",
       zeroline: false,
       title: {
         font: {
-          color: colors.fadedText60,
+          color: getGreyText(theme),
         },
       },
       tickfont: {
-        color: colors.fadedText60,
+        color: getGreyText(theme),
       },
+      automargin: true,
     },
     xaxis: {
       standoff: 100,
-      nticks: 8,
+      // nticks: 8,
       showgrid: false,
       rangeselector: {
         bordercolor: colors.transparent,
         borderwidth: 0,
       },
       tickfont: {
-        color: colors.fadedText60,
+        color: getGreyText(theme),
+        size: fontSizes.smPx,
       },
       title: {
         font: {
-          color: colors.fadedText60,
+          color: getGreyText(theme),
+          size: fontSizes.smPx,
         },
       },
       zeroline: false,
+      automargin: true,
     },
     margin: {
       pad: 5,
@@ -193,22 +207,27 @@ export function applyStreamlitThemeLayout(layout: any, theme: Theme): any {
     },
     hoverlabel: {
       bgcolor: colors.bgColor,
-      borderColor: colors.gray70,
+      borderColor: getGreyText(theme),
       font: {
-        color: theme.colors.fadedText60,
+        color: getGreyText(theme),
       },
     },
     coloraxis: {
       colorbar: {
+        thickness: 16,
+        xpad: 32,
+        ticklabelposition: "outside",
         outlinecolor: colors.transparent,
-        outlinewidth: 0,
+        outlinewidth: 8,
+        nticks: 10,
+        y: .5745,
         title: {
           font: {
-            color: colors.fadedText60,
+            color: getGreyText(theme),
           },
         },
         tickfont: {
-          color: colors.fadedText60,
+          color: getGreyText(theme),
         },
       },
       colorscale: {

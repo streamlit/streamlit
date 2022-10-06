@@ -207,8 +207,6 @@ def marshall(
         config.setdefault("linkText", kwargs.get("link_text", False))
 
         proto.figure.spec = json.dumps(figure, cls=plotly.utils.PlotlyJSONEncoder)
-        # import pprint as pp
-        # pp.pprint(figure)
         proto.figure.config = json.dumps(config)
 
     else:
