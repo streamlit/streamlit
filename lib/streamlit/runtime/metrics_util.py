@@ -17,11 +17,12 @@ import inspect
 import os
 import sys
 import threading
+import time
 import uuid
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
-from typing import Any, Callable, List, Optional, Set, TypeVar, cast
+from typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast
 
 from typing_extensions import Final
 
@@ -29,13 +30,14 @@ from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
-from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 LOGGER = get_logger(__name__)
 
 # Limit the number of commands to keep the page profile message small
 # since Segment allows only a maximum of 32kb per event.
 _MAX_TRACKED_COMMANDS: Final = 200
+# Only track a maximum of 25 uses per unique command
+_MAX_TRACKED_PER_COMMAND: Final = 25
 # A mapping to convert from the actual name to preferred/shorter representations
 _OBJECT_NAME_MAPPING: Final = {
     "streamlit.delta_generator.DeltaGenerator": "DG",
@@ -55,6 +57,8 @@ _CALLABLE_NAME_MAPPING: Final = {
     "MemoAPI.clear": "clear_memo",
     "SingletonCache.write_result": "_cache_singleton_object",
     "MemoCache.write_result": "_cache_memo_object",
+    "SessionStateProxy.__setattr__": "session_state.__setattr__",
+    "SessionStateProxy.__setitem__": "session_state.__setitem__",
     "_write_to_cache": "_cache_object",
 }
 # A list of dependencies to check for attribution
@@ -212,8 +216,12 @@ F = TypeVar("F", bound=Callable[..., Any])
 def gather_metrics(callable: F) -> F:
     @wraps(callable)
     def wrap(*args, **kwargs):
+        exec_start = timer()
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
 
+        ctx_import_time = timer()
         ctx = get_script_run_ctx()
+        ctx_get_time = timer()
 
         tracking_activated = (
             ctx is not None
@@ -222,30 +230,41 @@ def gather_metrics(callable: F) -> F:
             and len(ctx.tracked_commands)
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
+        command_telemetry: Union[Command, None] = None
 
-        # Deactivate tracking to prevent calls inside already tracked commands
-        if ctx:
+        if ctx and tracking_activated:
+            # Deactivate tracking to prevent calls inside already tracked commands
             ctx.command_tracking_deactivated = True
+            try:
+                command_telemetry = _get_command_telemetry(callable, *args, **kwargs)
 
-        exec_start = timer()
+                if (
+                    command_telemetry.name not in ctx.tracked_commands_counter
+                    or ctx.tracked_commands_counter[command_telemetry.name]
+                    < _MAX_TRACKED_PER_COMMAND
+                ):
+                    ctx.tracked_commands.append(command_telemetry)
+                    get_command_telemetry_time = timer()
+                    counter_time = timer()
+
+                    print(
+                        f"{command_telemetry.name}: Time required for metrics gathering {to_microseconds(timer() - exec_start)},{to_microseconds(ctx_import_time-exec_start)},{to_microseconds(ctx_get_time-ctx_import_time)},{to_microseconds(get_command_telemetry_time-ctx_get_time)},{to_microseconds(counter_time-get_command_telemetry_time)}"
+                    )
+                ctx.tracked_commands_counter.update([command_telemetry.name])
+            except Exception as ex:
+                # Always capture all exceptions since we want to make sure that
+                # the telemetry never causes any issues.
+                LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
+
         result = callable(*args, **kwargs)
 
         # Activate tracking again
         if ctx:
             ctx.command_tracking_deactivated = False
 
-        if not tracking_activated:
-            return result
-
-        try:
-            command_telemetry = _get_command_telemetry(callable, *args, **kwargs)
+        if tracking_activated and command_telemetry:
+            # Set the execution time to the measured value
             command_telemetry.time = to_microseconds(timer() - exec_start)
-            if ctx:
-                ctx.tracked_commands.append(command_telemetry)
-        except Exception as ex:
-            # Always capture all exceptions since we want to make sure that
-            # the telemetry never causes any issues.
-            LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
         return result
 
     with contextlib.suppress(AttributeError):
@@ -269,6 +288,9 @@ def create_page_profile_message(
     msg.page_profile.exec_time = exec_time
     msg.page_profile.prep_time = prep_time
 
+    with contextlib.suppress(Exception):
+        msg.page_profile.headless = config.get_option("server.headless")
+
     # Collect all config options that have been manually set
     config_options: Set[str] = set()
     if config._config_options:
@@ -291,6 +313,8 @@ def create_page_profile_message(
         if attribution in sys.modules
     }
 
+    msg.page_profile.os = str(sys.platform)
+    msg.page_profile.timezone = str(time.tzname)
     msg.page_profile.attributions.extend(attributions)
 
     if uncaught_exception:
