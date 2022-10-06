@@ -103,6 +103,6 @@ def check_valid_button_type(button_type: str, widget_type: str) -> Any:
         return button_type
 
     raise StreamlitAPIException(
-        f'The type argument to {widget} must be "primary" or "secondary". \n'
+        f'The type argument to {widget_type} must be "primary" or "secondary". \n'
         f"The argument passed was {button_type}."
     )
