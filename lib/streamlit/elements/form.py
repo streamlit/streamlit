@@ -238,10 +238,10 @@ class FormMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
-        type : string ("primary" or "secondary")
-            An optional string, which specifies the button type. Can be “primary” to
-            fill the button with color or “secondary” for a normal button (default).
-            This argument can only be supplied by keyword.
+        type (”primary” or “secondary”):
+            An optional string that specifies the button type. Can be “primary” for a
+            button with additional emphasis or “secondary” for a normal button. This
+            argument can only be supplied by keyword. Defaults to “secondary”.
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False. This argument can only be supplied by keyword.
