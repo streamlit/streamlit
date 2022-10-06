@@ -231,8 +231,6 @@ def gather_metrics(callable: F) -> F:
         command_telemetry: Union[Command, None] = None
 
         if ctx and tracking_activated:
-            # Deactivate tracking to prevent calls inside already tracked commands
-            ctx.command_tracking_deactivated = True
             try:
                 command_telemetry = _get_command_telemetry(callable, *args, **kwargs)
 
@@ -243,16 +241,18 @@ def gather_metrics(callable: F) -> F:
                 ):
                     ctx.tracked_commands.append(command_telemetry)
                 ctx.tracked_commands_counter.update([command_telemetry.name])
+                # Deactivate tracking to prevent calls inside already tracked commands
+                ctx.command_tracking_deactivated = True
             except Exception as ex:
                 # Always capture all exceptions since we want to make sure that
                 # the telemetry never causes any issues.
                 LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
-
-        result = callable(*args, **kwargs)
-
-        # Activate tracking again if callable executes without any exceptions
-        if ctx:
-            ctx.command_tracking_deactivated = False
+        try:
+            result = callable(*args, **kwargs)
+        finally:
+            # Activate tracking again if callable executes without any exceptions
+            if ctx:
+                ctx.command_tracking_deactivated = False
 
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
