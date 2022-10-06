@@ -42,10 +42,7 @@ jobs:
           pull_request_number: ${{ github.event.pull_request.number }}
           ref_type: ${{ github.ref_type }}
           branch: ${{ github.ref_name }}
-
-      # TODO: Need the AWS S3 secret/key for the below steps - added the if statement to gate for now
-      - if: ${{ 'true' == 'false' }}
-        name: Upload wheel to S3
+      - name: Upload wheel to S3
         env:
           BRANCH: ${{ env.BRANCH }}
           PREVIEW_BRANCH: ${{ env.PREVIEW_BRANCH }}
@@ -70,9 +67,7 @@ jobs:
 
           cd ../..
           echo -e "S3_URL=https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}" >> $GITHUB_ENV
-      # TODO: Remove gate
-      - if: ${{ 'true' == 'false' }}
-        name: Setup preview repo
+      - name: Setup preview repo
         env:
           PREVIEW_BRANCH: ${{ env.PREVIEW_BRANCH }}
           S3_URL: ${{ env.S3_URL }}
@@ -90,9 +85,7 @@ jobs:
           git add .
           git commit -m "Prepare core preview: ${PREVIEW_BRANCH}"
           git push -f origin ${PREVIEW_BRANCH}
-      # TODO: Remove gate
-      - if: ${{ 'true' == 'false' }}
-        name: Ready to deploy!
+      - name: Ready to deploy!
         env:
           PREVIEW_BRANCH: ${{ env.PREVIEW_BRANCH }}
         run: |
