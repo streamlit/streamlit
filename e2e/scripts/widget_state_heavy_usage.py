@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import time
+
+import streamlit as st
 
 number = st.number_input("test", value=100)
 st.write(number)

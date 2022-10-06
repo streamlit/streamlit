@@ -17,10 +17,10 @@ import sys
 import uuid
 from asyncio import AbstractEventLoop
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Dict, Optional, List, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
 
 import streamlit.elements.exception as exception_utils
-from streamlit import __version__, config, source_util, secrets
+from streamlit import config, runtime, source_util
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -34,22 +34,19 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
+from streamlit.runtime import caching, legacy_caching
+from streamlit.runtime.credentials import Credentials
+from streamlit.runtime.metrics_util import Installation
+from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
+from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
-from . import caching, legacy_caching
-from .credentials import Credentials
-from .media_file_manager import get_media_file_manager
-from .metrics_util import Installation
-from .scriptrunner import (
-    RerunData,
-    ScriptRunner,
-    ScriptRunnerEvent,
-)
-from .session_data import SessionData
-from .uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
-    from .state import SessionState
+    from streamlit.runtime.state import SessionState
 
 
 class AppSessionState(Enum):
@@ -77,7 +74,6 @@ class AppSession:
 
     def __init__(
         self,
-        event_loop: AbstractEventLoop,
         session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
@@ -88,9 +84,6 @@ class AppSession:
 
         Parameters
         ----------
-        event_loop : AbstractEventLoop
-            The asyncio EventLoop that we're running on.
-
         session_data : SessionData
             Object storing parameters related to running a script
 
@@ -118,7 +111,7 @@ class AppSession:
         # Each AppSession has a unique string ID.
         self.id = str(uuid.uuid4())
 
-        self._event_loop = event_loop
+        self._event_loop = asyncio.get_running_loop()
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
@@ -141,7 +134,7 @@ class AppSession:
         )
 
         # The script should rerun when the `secrets.toml` file has been changed.
-        secrets._file_change_listener.connect(self._on_secrets_file_changed)
+        secrets_singleton._file_change_listener.connect(self._on_secrets_file_changed)
 
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -183,8 +176,8 @@ class AppSession:
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
-            get_media_file_manager().clear_session_refs(self.id)
-            get_media_file_manager().remove_orphaned_files()
+            runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+            runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -198,7 +191,9 @@ class AppSession:
                 self._stop_config_listener()
             if self._stop_pages_listener is not None:
                 self._stop_pages_listener()
-            secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
+            secrets_singleton._file_change_listener.disconnect(
+                self._on_secrets_file_changed
+            )
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
@@ -452,7 +447,7 @@ class AppSession:
 
         assert (
             self._event_loop == asyncio.get_running_loop()
-        ), "This function must only be called on the eventloop thread"
+        ), "This function must only be called on the eventloop thread the AppSession was created on."
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.
@@ -529,7 +524,7 @@ class AppSession:
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
                 # session is actually shutting down.
-                get_media_file_manager().clear_session_refs(self.id)
+                runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
 
             self._client_state = client_state
             self._scriptrunner = None
@@ -582,7 +577,7 @@ class AppSession:
 
         _populate_user_info_msg(imsg.user_info)
 
-        imsg.environment_info.streamlit_version = __version__
+        imsg.environment_info.streamlit_version = STREAMLIT_VERSION_STRING
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
 
         imsg.session_state.run_on_save = self._run_on_save

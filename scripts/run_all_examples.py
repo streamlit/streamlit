@@ -18,6 +18,7 @@
 
 import os
 import sys
+
 import click
 
 # True means we run through all tests automatically.

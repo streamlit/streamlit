@@ -278,42 +278,42 @@ class NumberInput extends React.PureComponent<Props, State> {
     return this.state.value + this.getStep() <= this.getMax()
   }
 
-  private modifyValueUsingStep = (
-    modifier: "increment" | "decrement"
-  ): any => (): void => {
-    const { value } = this.state
-    const step = this.getStep()
+  private modifyValueUsingStep =
+    (modifier: "increment" | "decrement"): any =>
+    (): void => {
+      const { value } = this.state
+      const step = this.getStep()
 
-    switch (modifier) {
-      case "increment":
-        if (this.canIncrement) {
-          this.setState(
-            {
-              dirty: true,
-              value: value + step,
-            },
-            () => {
-              this.commitWidgetValue({ fromUi: true })
-            }
-          )
-        }
-        break
-      case "decrement":
-        if (this.canDecrement) {
-          this.setState(
-            {
-              dirty: true,
-              value: value - step,
-            },
-            () => {
-              this.commitWidgetValue({ fromUi: true })
-            }
-          )
-        }
-        break
-      default: // Do nothing
+      switch (modifier) {
+        case "increment":
+          if (this.canIncrement) {
+            this.setState(
+              {
+                dirty: true,
+                value: value + step,
+              },
+              () => {
+                this.commitWidgetValue({ fromUi: true })
+              }
+            )
+          }
+          break
+        case "decrement":
+          if (this.canDecrement) {
+            this.setState(
+              {
+                dirty: true,
+                value: value - step,
+              },
+              () => {
+                this.commitWidgetValue({ fromUi: true })
+              }
+            )
+          }
+          break
+        default: // Do nothing
+      }
     }
-  }
 
   public render(): React.ReactNode {
     const { element, width, disabled, widgetMgr } = this.props

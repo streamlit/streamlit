@@ -14,13 +14,14 @@
 
 """time_input unit test."""
 
-from tests import testutil
+from datetime import datetime, time
+
+from parameterized import parameterized
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from parameterized import parameterized
-from datetime import datetime
-from datetime import time
+from tests import testutil
 
 
 class TimeInputTest(testutil.DeltaGeneratorTestCase):

@@ -21,17 +21,14 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.runtime.caching import (
-    MEMO_CALL_STACK,
-    SINGLETON_CALL_STACK,
-)
+from streamlit.runtime.caching import MEMO_CALL_STACK, SINGLETON_CALL_STACK
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
+    ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
     script_run_context,
-    ScriptRunContext,
 )
 from streamlit.runtime.state import SessionState
 from tests.testutil import DeltaGeneratorTestCase
@@ -72,7 +69,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         super().tearDown()
 
     def get_text_delta_contents(self) -> List[str]:
-
         deltas = self.get_all_deltas_from_queue()
         text = [
             element.text.body
@@ -575,3 +571,75 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         # have been called just once.
         self.assertEqual(2, foo_call_count[0])
         self.assertEqual(1, bar_call_count[0])
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_without_spinner(self, _, cache_decorator):
+        """If the show_spinner flag is not set, the report queue should be
+        empty.
+        """
+
+        @cache_decorator(show_spinner=False)
+        def function_without_spinner(x: int) -> int:
+            return x
+
+        function_without_spinner(3)
+        self.assertTrue(self.forward_msg_queue.is_empty())
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_with_spinner(self, _, cache_decorator):
+        """If the show_spinner flag is set, there should be one element in the
+        report queue.
+        """
+
+        @cache_decorator(show_spinner=True)
+        def function_with_spinner(x: int) -> int:
+            return x
+
+        function_with_spinner(3)
+        self.assertFalse(self.forward_msg_queue.is_empty())
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_with_custom_text_spinner(self, _, cache_decorator):
+        """If the show_spinner flag is set, there should be one element in the
+        report queue.
+        """
+
+        @cache_decorator(show_spinner="CUSTOM_TEXT")
+        def function_with_spinner_custom_text(x: int) -> int:
+            return x
+
+        function_with_spinner_custom_text(3)
+        self.assertFalse(self.forward_msg_queue.is_empty())
+
+    @parameterized.expand(
+        [
+            ("memo", memo),
+            ("singleton", singleton),
+        ]
+    )
+    def test_with_empty_text_spinner(self, _, cache_decorator):
+        """If the show_spinner flag is set, even if it is empty text,
+        there should be one element in the report queue.
+        """
+
+        @cache_decorator(show_spinner="")
+        def function_with_spinner_empty_text(x: int) -> int:
+            return x
+
+        function_with_spinner_empty_text(3)
+        self.assertFalse(self.forward_msg_queue.is_empty())

@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import numpy as np
+
+import streamlit as st
 
 st.markdown("This **markdown** is awesome! :sunglasses:")
 

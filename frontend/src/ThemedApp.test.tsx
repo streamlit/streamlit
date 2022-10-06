@@ -62,10 +62,7 @@ describe("ThemedApp", () => {
   it("updates theme", () => {
     const wrapper = shallow(<ThemedApp />)
     // @ts-ignore
-    wrapper
-      .find(AppWithScreencast)
-      .props()
-      .theme.setTheme(darkTheme)
+    wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
     const updatedTheme: ThemeConfig = wrapper.find(AppWithScreencast).props()
       .theme.activeTheme
     expect(updatedTheme.name).toBe("Dark")
@@ -78,10 +75,7 @@ describe("ThemedApp", () => {
   it("does not save Auto theme", () => {
     const wrapper = shallow(<ThemedApp />)
     // @ts-ignore
-    wrapper
-      .find(AppWithScreencast)
-      .props()
-      .theme.setTheme(darkTheme)
+    wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
 
     wrapper
       .find(AppWithScreencast)
@@ -105,8 +99,8 @@ describe("ThemedApp", () => {
     app.props().theme.addThemes([darkTheme])
 
     wrapper.update()
-    const newThemes = wrapper.find(AppWithScreencast).props().theme
-      .availableThemes
+    const newThemes = wrapper.find(AppWithScreencast).props()
+      .theme.availableThemes
 
     // Should only have added one theme despite multiple calls adding themes.
     expect(newThemes.length).toBe(initialThemes.length + 1)

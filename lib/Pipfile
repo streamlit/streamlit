@@ -22,13 +22,12 @@ verify_ssl = true
 black = ">=22.3.0"
 pre-commit = "*"
 hypothesis = ">=6.17.4"
-mypy = ">=0.930"
+mypy = ">=0.981"
 mypy-protobuf = ">=3.2"
 parameterized = "*"
 pipenv = "*"
 # Lower protobuf versions cause mypy issues during development builds
-# protobuf 3.20.2 is broken: https://github.com/protocolbuffers/protobuf/issues/10571
-protobuf = ">=3.19, <4, !=3.20.2"
+protobuf = ">=3.19, <4"
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"

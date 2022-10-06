@@ -14,17 +14,17 @@
 
 """Unit tests for MediaFileManager"""
 
-from typing import Optional
-from unittest import mock, TestCase
 import random
-from unittest.mock import mock_open, MagicMock, call
+from typing import Optional
+from unittest import TestCase, mock
+from unittest.mock import MagicMock, call, mock_open
 
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import (
-    _calculate_file_id,
-    MemoryMediaFileStorage,
     MemoryFile,
+    MemoryMediaFileStorage,
+    _calculate_file_id,
 )
 
 
@@ -133,18 +133,18 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_reject_null_files(self, _):
+    def test_reject_null_files(self):
         """MediaFileManager.add raises a TypeError if it's passed None."""
         with self.assertRaises(TypeError):
             self.media_file_manager.add(None, "media/any", random_coordinates())
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session",
+        MagicMock(return_value="mock_session"),
     )
-    def test_add_binary_files(self, _):
+    def test_add_binary_files(self):
         """Test that we can add binary files to the manager."""
         storage_load_spy = MagicMock(side_effect=self.storage.load_and_get_id)
         self.storage.load_and_get_id = storage_load_spy
@@ -176,14 +176,14 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session",
+        MagicMock(return_value="mock_session"),
     )
     @mock.patch(
         "streamlit.runtime.memory_media_file_storage.open",
         mock_open(read_data=b"mock_test_file"),
         create=True,
     )
-    def test_add_file_by_name(self, _1):
+    def test_add_file_by_name(self):
         """Test that we can add files by filename."""
         storage_load_spy = MagicMock(side_effect=self.storage.load_and_get_id)
         self.storage.load_and_get_id = storage_load_spy
@@ -207,9 +207,9 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_add_files_same_coord(self, _):
+    def test_add_files_same_coord(self):
         """We can add multiple files that share the same coordinate."""
         coord = random_coordinates()
 
@@ -239,9 +239,9 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_add_file_already_exists_same_coord(self, _):
+    def test_add_file_already_exists_same_coord(self):
         """Adding a file that already exists results in just a single file in
         the manager.
         """
@@ -263,9 +263,9 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_add_file_already_exists_different_coord(self, _):
+    def test_add_file_already_exists_different_coord(self):
         """Adding a file that already exists, but with different coordinates,
         results in just a single file in the manager.
         """
@@ -288,9 +288,9 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_remove_orphaned_files_in_empty_manager(self, _):
+    def test_remove_orphaned_files_in_empty_manager(self):
         """Calling clear_session_refs/remove_orphaned_files in an empty manager
         is a no-op.
         """

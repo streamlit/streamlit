@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
-
+from streamlit import runtime
 
 i1 = st.number_input("number input 1")
 st.write('value 1: "', i1, '"')
@@ -39,7 +39,7 @@ st.write('value 7: "', i7, '"')
 i8 = st.number_input("number input 8", label_visibility="collapsed")
 st.write('value 8: "', i8, '"')
 
-if st._is_running_with_streamlit:
+if runtime.exists():
 
     def on_change():
         st.session_state.number_input_changed = True

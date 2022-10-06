@@ -271,10 +271,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       return
     }
 
-    const {
-      dataRows: prevNumRows,
-      dataColumns: prevNumCols,
-    } = prevData.dimensions
+    const { dataRows: prevNumRows, dataColumns: prevNumCols } =
+      prevData.dimensions
     const { dataRows: numRows, dataColumns: numCols } = data.dimensions
 
     // Check if dataframes have same "shape" but the new one has more rows.

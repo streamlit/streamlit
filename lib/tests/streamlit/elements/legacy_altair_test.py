@@ -13,18 +13,18 @@
 # limitations under the License.
 
 """st._legacy_altair_chart unit test."""
+import json
 from datetime import date
 from functools import reduce
 
 import altair as alt
-import json
 import pandas as pd
 import pyarrow as pa
 
-from streamlit.errors import StreamlitAPIException
-from streamlit.elements import legacy_altair as altair
-from tests import testutil
 import streamlit as st
+from streamlit.elements import legacy_altair as altair
+from streamlit.errors import StreamlitAPIException
+from tests import testutil
 
 
 def _deep_get(dictionary, *keys):

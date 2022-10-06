@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from streamlit.string_util import clean_text, is_emoji
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import clean_text, is_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

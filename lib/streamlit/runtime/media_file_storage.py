@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import abstractmethod
 from enum import Enum
-from typing import Union, Optional
+from typing import Optional, Union
 
 from typing_extensions import Protocol
 
@@ -39,6 +40,7 @@ class MediaFileStorageError(Exception):
 
 
 class MediaFileStorage(Protocol):
+    @abstractmethod
     def load_and_get_id(
         self,
         path_or_data: Union[str, bytes],
@@ -80,7 +82,9 @@ class MediaFileStorage(Protocol):
             path is invalid).
 
         """
+        raise NotImplementedError
 
+    @abstractmethod
     def get_url(self, file_id: str) -> str:
         """Return a URL for a file in the manager.
 
@@ -101,7 +105,9 @@ class MediaFileStorage(Protocol):
             Raised if the manager doesn't contain an object with the given ID.
 
         """
+        raise NotImplementedError
 
+    @abstractmethod
     def delete_file(self, file_id: str) -> None:
         """Delete a file from the manager.
 
@@ -134,3 +140,4 @@ class MediaFileStorage(Protocol):
             deletion usually occurs on session disconnect).
 
         """
+        raise NotImplementedError

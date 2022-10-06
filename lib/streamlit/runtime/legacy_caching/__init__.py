@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .caching import cache as cache
-from .caching import clear_cache as clear_cache
-from .caching import get_cache_path as get_cache_path
-from .caching import (
+from streamlit.runtime.legacy_caching.caching import cache as cache
+from streamlit.runtime.legacy_caching.caching import clear_cache as clear_cache
+from streamlit.runtime.legacy_caching.caching import get_cache_path as get_cache_path
+from streamlit.runtime.legacy_caching.caching import (
     maybe_show_cached_st_function_warning as maybe_show_cached_st_function_warning,
 )

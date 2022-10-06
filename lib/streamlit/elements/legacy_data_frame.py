@@ -16,21 +16,19 @@
 
 import datetime
 import re
-from typing import Any, cast, Dict, NamedTuple, Optional, TYPE_CHECKING
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, Dict, NamedTuple, Optional, cast
 
 import pyarrow as pa
 import tzlocal
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
+from typing_extensions import Final
 
 from streamlit import errors, type_util
 from streamlit.elements.arrow import Data
 from streamlit.logger import get_logger
-from streamlit.proto.DataFrame_pb2 import (
-    DataFrame as DataFrameProto,
-    TableStyle as TableStyleProto,
-)
+from streamlit.proto.DataFrame_pb2 import DataFrame as DataFrameProto
+from streamlit.proto.DataFrame_pb2 import TableStyle as TableStyleProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -358,8 +356,8 @@ def _marshall_index(pandas_index, proto_index) -> None:
     pandas_index - Panda.Index or related (input)
     proto_index  - proto.Index (output)
     """
-    import pandas as pd
     import numpy as np
+    import pandas as pd
 
     if type(pandas_index) == pd.Index:
         _marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)

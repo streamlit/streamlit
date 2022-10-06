@@ -39,12 +39,7 @@ describe("StreamlitDialog", () => {
     await flushPromises()
 
     setTimeout(() => {
-      expect(
-        wrapper
-          .find("button")
-          .at(1)
-          .is(":focus")
-      ).toBe(true)
+      expect(wrapper.find("button").at(1).is(":focus")).toBe(true)
     }, 0)
   })
 })

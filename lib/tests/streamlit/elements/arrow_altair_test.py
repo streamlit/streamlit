@@ -17,17 +17,17 @@ from datetime import date
 from functools import reduce
 from typing import Callable
 
-import pytest
 import altair as alt
 import pandas as pd
-from tests import testutil
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType
+from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame
-from streamlit import StreamlitAPIException
+from tests import testutil
 
 
 def _deep_get(dictionary, *keys):

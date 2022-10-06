@@ -15,9 +15,10 @@
 """st.help unit test."""
 import sys
 
-from tests import testutil
-import streamlit as st
 import numpy as np
+
+import streamlit as st
+from tests import testutil
 
 
 class StHelpTest(testutil.DeltaGeneratorTestCase):

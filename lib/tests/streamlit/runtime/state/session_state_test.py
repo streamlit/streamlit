@@ -15,12 +15,13 @@
 """Session state unit tests."""
 import unittest
 from copy import deepcopy
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from typing import Any, List, Tuple
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from hypothesis import given, strategies as hst
+from hypothesis import given
+from hypothesis import strategies as hst
 
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
@@ -30,11 +31,11 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.session_state import (
-    WStates,
-    WidgetMetadata,
+    GENERATED_WIDGET_KEY_PREFIX,
     Serialized,
     Value,
-    GENERATED_WIDGET_KEY_PREFIX,
+    WidgetMetadata,
+    WStates,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from tests import testutil
@@ -209,7 +210,7 @@ class WStateTests(unittest.TestCase):
         metadata.callback.assert_called_once_with(1, y=2)
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):
     def test_widget_creation_updates_state(self):
         state = st.session_state
@@ -228,7 +229,7 @@ class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):
         assert c == True
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateTest(testutil.DeltaGeneratorTestCase):
     def test_widget_presence(self):
         state = st.session_state
@@ -294,7 +295,7 @@ def check_roundtrip(widget_id: str, value: Any) -> None:
     assert deserializer(serializer(value), "") == value
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
     def test_checkbox_serde(self):
         cb = st.checkbox("cb", key="cb")

@@ -23,10 +23,10 @@ with a non-zero status.
 """
 
 import os
-from multiprocessing.pool import ThreadPool
-from multiprocessing import Lock
 import subprocess
 import sys
+from multiprocessing import Lock
+from multiprocessing.pool import ThreadPool
 from typing import Set
 
 import click

@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from typing import List
 
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 
 LOGGER = get_logger(__name__)
 

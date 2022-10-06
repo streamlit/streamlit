@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Snow_pb2 import Snow as SnowProto
 from streamlit.runtime.metrics_util import gather_metrics

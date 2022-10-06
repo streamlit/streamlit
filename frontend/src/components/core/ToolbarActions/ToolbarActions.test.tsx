@@ -69,11 +69,11 @@ describe("ToolbarActions", () => {
   const getProps = (
     extended?: Partial<ToolbarActionsProps>
   ): ToolbarActionsProps => ({
-    s4aToolbarItems: [
+    hostToolbarItems: [
       { key: "favorite", icon: "star.svg" },
       { key: "share", label: "Share" },
     ],
-    sendS4AMessage: jest.fn(),
+    sendMessageToHost: jest.fn(),
     ...extended,
   })
 
@@ -82,24 +82,18 @@ describe("ToolbarActions", () => {
     expect(wrapper).toMatchSnapshot()
   })
 
-  it("calls sendS4AMessage with correct args when clicked", () => {
+  it("calls sendMessageToHost with correct args when clicked", () => {
     const props = getProps()
     const wrapper = shallow(<ToolbarActions {...props} />)
 
-    wrapper
-      .find(ActionButton)
-      .at(0)
-      .simulate("click")
-    expect(props.sendS4AMessage).toHaveBeenLastCalledWith({
+    wrapper.find(ActionButton).at(0).simulate("click")
+    expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "favorite",
     })
 
-    wrapper
-      .find(ActionButton)
-      .at(1)
-      .simulate("click")
-    expect(props.sendS4AMessage).toHaveBeenLastCalledWith({
+    wrapper.find(ActionButton).at(1).simulate("click")
+    expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "share",
     })

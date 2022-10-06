@@ -20,8 +20,8 @@ import streamlit as st
 from streamlit import errors
 from streamlit.elements import exception
 from streamlit.elements.exception import (
-    _format_syntax_error_message,
     _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
+    _format_syntax_error_message,
 )
 from streamlit.errors import StreamlitAPIException, UncaughtAppException
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto

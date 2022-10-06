@@ -70,14 +70,8 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const {
-      theme,
-      width,
-      help,
-      label,
-      horizontal,
-      labelVisibility,
-    } = this.props
+    const { theme, width, help, label, horizontal, labelVisibility } =
+      this.props
     let { disabled } = this.props
     const { colors, radii } = theme
     const style = { width }

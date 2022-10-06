@@ -13,18 +13,12 @@
 # limitations under the License.
 
 import json
-from typing import (
-    Any,
-    List,
-    Union,
-    cast,
-    TYPE_CHECKING,
-)
+from typing import TYPE_CHECKING, Any, List, Union, cast
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
-from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

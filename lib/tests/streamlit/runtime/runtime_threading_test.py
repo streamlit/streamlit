@@ -17,7 +17,7 @@ import threading
 from queue import Queue
 from unittest.mock import MagicMock
 
-from streamlit.runtime.runtime import Runtime, RuntimeConfig
+from streamlit.runtime import Runtime, RuntimeConfig
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 

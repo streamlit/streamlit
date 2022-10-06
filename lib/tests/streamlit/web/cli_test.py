@@ -33,7 +33,6 @@ from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials
 from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
-
 from tests import testutil
 
 
@@ -47,7 +46,6 @@ class CliTest(unittest.TestCase):
 
         cli.name = "streamlit"
         self.runner = CliRunner()
-        streamlit._is_running_with_streamlit = False
 
         self.patches = [
             patch.object(config._on_config_parsed, "send"),
@@ -194,18 +192,6 @@ class CliTest(unittest.TestCase):
         with patch("click.get_current_context", return_value=mock_context):
             result = cli._get_command_line_as_string()
             self.assertIsNone(result)
-
-    def test_running_in_streamlit(self):
-        """Test that streamlit._running_in_streamlit is True after
-        calling `streamlit run...`, and false otherwise.
-        """
-        self.assertFalse(streamlit._is_running_with_streamlit)
-        with patch("streamlit.web.cli.bootstrap.run"), mock.patch(
-            "streamlit.runtime.credentials.Credentials._check_activated"
-        ), patch("streamlit.web.cli._get_command_line_as_string"):
-
-            cli._main_run("/not/a/file", None)
-            self.assertTrue(streamlit._is_running_with_streamlit)
 
     def test_convert_config_option_to_click_option(self):
         """Test that configurator_options adds dynamic commands based on a

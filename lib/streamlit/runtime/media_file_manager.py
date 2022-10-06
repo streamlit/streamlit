@@ -16,10 +16,10 @@
 
 import collections
 import threading
-from typing import Dict, Set, Optional, Union
+from typing import Dict, Optional, Set, Union
 
 from streamlit.logger import get_logger
-from .media_file_storage import MediaFileStorage, MediaFileKind
+from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
 
 LOGGER = get_logger(__name__)
 
@@ -228,28 +228,3 @@ class MediaFileManager:
             self._files_by_session_and_coord[session_id][coordinates] = file_id
 
             return self._storage.get_url(file_id)
-
-
-# Singleton MediaFileManager instance. The Runtime initializes
-# this during startup.
-_media_file_manager: Optional[MediaFileManager] = None
-
-
-def set_media_file_manager(manager: MediaFileManager) -> None:
-    """Set the singleton MediaFileManager instance."""
-    global _media_file_manager
-    if _media_file_manager is not None:
-        raise RuntimeError("MediaFileManager singleton already exists!")
-    _media_file_manager = manager
-
-
-def get_media_file_manager() -> MediaFileManager:
-    """Return the singleton MediaFileManager instance. Raise an error
-    if it hasn't been instantiated yet.
-    """
-    global _media_file_manager
-
-    if _media_file_manager is None:
-        raise RuntimeError("MediaFileManager hasn't been created!")
-
-    return _media_file_manager

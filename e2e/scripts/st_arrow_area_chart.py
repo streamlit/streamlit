@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import numpy as np
 import pandas as pd
+
+import streamlit as st
 
 np.random.seed(0)
 

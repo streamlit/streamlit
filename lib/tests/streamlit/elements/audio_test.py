@@ -23,9 +23,7 @@ from scipy.io import wavfile
 
 import streamlit as st
 from streamlit.runtime.media_file_storage import MediaFileStorageError
-from streamlit.runtime.memory_media_file_storage import (
-    _calculate_file_id,
-)
+from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests import testutil
 

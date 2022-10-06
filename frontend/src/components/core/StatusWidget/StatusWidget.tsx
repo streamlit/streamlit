@@ -168,9 +168,10 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 
   public componentDidMount(): void {
-    this.sessionEventConn = this.props.sessionEventDispatcher.onSessionEvent.connect(
-      e => this.handleSessionEvent(e)
-    )
+    this.sessionEventConn =
+      this.props.sessionEventDispatcher.onSessionEvent.connect(e =>
+        this.handleSessionEvent(e)
+      )
     window.addEventListener("scroll", this.handleScroll)
   }
 

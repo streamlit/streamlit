@@ -14,15 +14,16 @@
 
 """file_uploader unit test."""
 
-from parameterized import parameterized
 from unittest.mock import patch
 
+from parameterized import parameterized
+
 import streamlit as st
+from streamlit import config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit import config
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.uploaded_file_manager import UploadedFileRec, UploadedFile
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from tests import testutil
 
 

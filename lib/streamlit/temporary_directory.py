@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tempfile
 import shutil
+import tempfile
+
 from streamlit import util
 
 # We provide our own context manager for temporary directory that wraps

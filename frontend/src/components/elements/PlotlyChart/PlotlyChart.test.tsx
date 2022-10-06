@@ -113,10 +113,7 @@ describe("PlotlyChart Element", () => {
         </ThemeProvider>
       )
 
-      const { layout } = wrapper
-        .find(Plot)
-        .first()
-        .props()
+      const { layout } = wrapper.find(Plot).first().props()
       expect(layout.paper_bgcolor).toBe(darkTheme.emotion.colors.bgColor)
       expect(layout.font?.color).toBe(darkTheme.emotion.colors.bodyText)
     })
@@ -142,10 +139,7 @@ describe("PlotlyChart Element", () => {
         </ThemeProvider>
       )
 
-      const { layout } = wrapper
-        .find(Plot)
-        .first()
-        .props()
+      const { layout } = wrapper.find(Plot).first().props()
       expect(layout.paper_bgcolor).toBe("orange")
       // Verify that things not overwritten by the user still fall back to the
       // theme default.

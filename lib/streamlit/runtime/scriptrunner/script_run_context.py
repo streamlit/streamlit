@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
 import threading
-from typing import Dict, Optional, List, Callable, Set
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Set
+
 from typing_extensions import Final, TypeAlias
 
+from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.proto.PageProfile_pb2 import Command
 
 LOGGER: Final = get_logger(__name__)
 
@@ -148,7 +150,7 @@ def get_script_run_ctx() -> Optional[ScriptRunContext]:
     ctx: Optional[ScriptRunContext] = getattr(
         thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None
     )
-    if ctx is None and streamlit._is_running_with_streamlit:
+    if ctx is None and runtime.exists():
         # Only warn about a missing ScriptRunContext if we were started
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
