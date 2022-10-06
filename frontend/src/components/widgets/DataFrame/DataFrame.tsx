@@ -422,6 +422,21 @@ function DataFrame({
   })
 
   React.useLayoutEffect(() => {
+    // This prevents weird table resizing behavior if the container width
+    // changes and the table uses the full container width.
+    if (
+      resizableRef.current &&
+      element.useContainerWidth &&
+      resizableSize.width === "100%"
+    ) {
+      setResizableSize({
+        width: containerWidth,
+        height: resizableSize.height,
+      })
+    }
+  }, [containerWidth])
+
+  React.useLayoutEffect(() => {
     if (resizableRef.current) {
       // Reset the height if the number of rows changes (e.g. via add_rows)
       setResizableSize({
@@ -513,7 +528,7 @@ function DataFrame({
           // Freeze all index columns:
           freezeColumns={numIndices}
           smoothScrollX={true}
-          // Only activate smooth mode for vertical scrolling for large tables:
+          // Only deactivate smooth mode for vertical scrolling for large tables:
           smoothScrollY={numRows < 100000}
           // Show borders between cells:
           verticalBorder={true}
