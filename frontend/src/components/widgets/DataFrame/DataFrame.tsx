@@ -17,6 +17,7 @@
 import React, { ReactElement, useState } from "react"
 import {
   DataEditor as GlideDataEditor,
+  EditableGridCell,
   GridCell,
   GridColumn,
   DataEditorProps,
@@ -25,24 +26,29 @@ import {
   CompactSelection,
   GridMouseEventArgs,
   Theme as GlideTheme,
+  isEditableGridCell,
 } from "@glideapps/glide-data-grid"
 import { Resizable, Size as ResizableSize } from "re-resizable"
 import { useColumnSort } from "@glideapps/glide-data-grid-source"
+import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { transparentize } from "color2k"
 import { useTheme } from "@emotion/react"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { Quiver } from "src/lib/Quiver"
+import { Quiver, Type as QuiverType, DataType } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
 import { Theme } from "src/theme"
+import { notNullOrUndefined } from "src/lib/utils"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 
 import {
   getCellTemplate,
   fillCellTemplate,
   getColumnSortMode,
-  determineColumnType,
+  getColumnTypeFromQuiver,
   ColumnType,
+  getColumnTypeFromConfig,
+  updateCell,
 } from "./DataFrameCells"
 import { StyledResizableContainer } from "./styled-components"
 
@@ -58,6 +64,72 @@ const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
 // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
 const DEFAULT_TABLE_HEIGHT = 400
+
+/**
+ * The GridColumn type extended with a function to get a template of the given type.
+ */
+// TODO: rename
+type GridColumnWithCellTemplate = GridColumn & {
+  // The type of the column.
+  columnType: ColumnType
+  // The index number of the column.
+  columnIndex: number
+  // The quiver data type of the column.
+  quiverType: QuiverType
+  // If `True`, the column can be edited.
+  isEditable: boolean
+  // If `True`, the column is hidden (will not be shown).
+  isHidden: boolean
+  // If `True`, the column is a table index.
+  isIndex: boolean
+}
+
+/**
+ * Options to configure columns.
+ */
+interface ColumnConfigProps {
+  width?: number
+  title?: string
+  type?: string
+  hidden?: boolean
+  editable?: boolean
+}
+
+/**
+ * Configuration type for column sorting hook.
+ */
+type ColumnSortConfig = {
+  column: GridColumn
+  mode?: "default" | "raw" | "smart"
+  direction?: "asc" | "desc"
+}
+
+/**
+ * The editing state of the DataFrame.
+ */
+class EditingState {
+  // column -> row -> value
+  private cachedContent: Map<number, Map<number, GridCell>> = new Map()
+
+  get(col: number, row: number): GridCell | undefined {
+    const colCache = this.cachedContent.get(col)
+
+    if (colCache === undefined) {
+      return undefined
+    }
+
+    return colCache.get(row)
+  }
+
+  set(col: number, row: number, value: GridCell): void {
+    if (this.cachedContent.get(col) === undefined) {
+      this.cachedContent.set(col, new Map())
+    }
+
+    const rowCache = this.cachedContent.get(col) as Map<number, GridCell>
+    rowCache.set(row, value)
+  }
+}
 
 /**
  * Creates a glide-data-grid compatible theme based on our theme configuration.
@@ -104,11 +176,67 @@ export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
 }
 
 /**
- * The GridColumn type extended with a function to get a template of the given type.
+ * Apply the column configuration if supplied.
  */
-type GridColumnWithCellTemplate = GridColumn & {
-  getTemplate(): GridCell
-  columnType: ColumnType
+function applyColumnConfig(
+  column: GridColumnWithCellTemplate,
+  columnsConfig: Map<string | number, ColumnConfigProps>
+): GridColumnWithCellTemplate | null {
+  if (!columnsConfig) {
+    // No column config configured
+    return column
+  }
+
+  let columnConfig
+  if (columnsConfig.has(column.title)) {
+    columnConfig = columnsConfig.get(column.title)
+  } else if (columnsConfig.has(`index:${column.columnIndex}`)) {
+    columnConfig = columnsConfig.get(`index:${column.columnIndex}`)
+  }
+
+  if (!columnConfig) {
+    // No column config found for this column
+    return column
+  }
+
+  if (
+    notNullOrUndefined(columnConfig.hidden) &&
+    columnConfig.hidden === true
+  ) {
+    // If column is hidden, return null
+    return null
+  }
+
+  return {
+    ...column,
+    // Update title:
+    ...(notNullOrUndefined(columnConfig.title)
+      ? {
+          title: columnConfig.title,
+        }
+      : {}),
+    // Update width:
+    ...(notNullOrUndefined(columnConfig.width)
+      ? {
+          width: Math.min(
+            Math.max(columnConfig.width, MIN_COLUMN_WIDTH),
+            MAX_COLUMN_WIDTH
+          ),
+        }
+      : {}),
+    // Update data type:
+    ...(notNullOrUndefined(columnConfig.type)
+      ? {
+          columnType: getColumnTypeFromConfig(columnConfig.type),
+        }
+      : {}),
+    // Update editable state:
+    ...(notNullOrUndefined(columnConfig.editable)
+      ? {
+          isEditable: columnConfig.editable,
+        }
+      : {}),
+  } as GridColumnWithCellTemplate
 }
 
 /**
@@ -116,7 +244,8 @@ type GridColumnWithCellTemplate = GridColumn & {
  */
 export function getColumns(
   element: ArrowProto,
-  data: Quiver
+  data: Quiver,
+  columnsConfig: Map<string, ColumnConfigProps>
 ): GridColumnWithCellTemplate[] {
   const columns: GridColumnWithCellTemplate[] = []
   const stretchColumn = element.useContainerWidth || element.width
@@ -128,10 +257,10 @@ export function getColumns(
       id: `empty-index`,
       title: "",
       hasMenu: false,
-      getTemplate: () => {
-        return getCellTemplate(ColumnType.Text, true, "faded")
-      },
       columnType: ColumnType.Text,
+      columnIndex: 0,
+      isEditable: false,
+      isIndex: true,
       ...(stretchColumn ? { grow: 1 } : {}),
     } as GridColumnWithCellTemplate)
     return columns
@@ -142,47 +271,53 @@ export function getColumns(
 
   for (let i = 0; i < numIndices; i++) {
     const quiverType = data.types.index[i]
-    const columnType = determineColumnType(quiverType)
-    columns.push({
+    const columnType = getColumnTypeFromQuiver(quiverType)
+
+    const column = {
       id: `index-${i}`,
-      // Indices currently have empty titles:
-      title: "",
+      title: "", // Indices have empty titles as default.
       hasMenu: false,
-      getTemplate: () => {
-        return getCellTemplate(columnType, true, "faded")
-      },
       columnType,
+      quiverType,
+      columnIndex: i,
+      isEditable: false,
+      isHidden: false,
+      isIndex: true,
       ...(stretchColumn ? { grow: 1 } : {}),
-    } as GridColumnWithCellTemplate)
+    } as GridColumnWithCellTemplate
+
+    const updatedColumn = applyColumnConfig(column, columnsConfig)
+    // If column is hidden, the return value is null.
+    if (updatedColumn) {
+      columns.push(updatedColumn)
+    }
   }
 
   for (let i = 0; i < numColumns; i++) {
     const columnTitle = data.columns[0][i]
-
     const quiverType = data.types.data[i]
-    const columnType = determineColumnType(quiverType)
+    const columnType = getColumnTypeFromQuiver(quiverType)
 
-    columns.push({
+    const column = {
       id: `column-${columnTitle}-${i}`,
       title: columnTitle,
       hasMenu: false,
-      getTemplate: () => {
-        return getCellTemplate(columnType, true)
-      },
       columnType,
+      quiverType,
+      columnIndex: i + numIndices,
+      isEditable: false,
+      isHidden: false,
+      isIndex: false,
       ...(stretchColumn ? { grow: 3 } : {}),
-    } as GridColumnWithCellTemplate)
+    } as GridColumnWithCellTemplate
+
+    const updatedColumn = applyColumnConfig(column, columnsConfig)
+    // If column is hidden, the return value is null.
+    if (updatedColumn) {
+      columns.push(updatedColumn)
+    }
   }
   return columns
-}
-
-/**
- * Configuration type for column sorting hook.
- */
-type ColumnSortConfig = {
-  column: GridColumn
-  mode?: "default" | "raw" | "smart"
-  direction?: "asc" | "desc"
 }
 
 /**
@@ -210,9 +345,9 @@ function updateSortingHeader(
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.
  */
-type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
+type DataLoaderReturn = { numRows: number } & Pick<
   DataEditorProps,
-  "columns" | "getCellContent" | "onColumnResize"
+  "columns" | "getCellContent" | "onColumnResize" | "onCellEdited"
 >
 
 /**
@@ -226,13 +361,17 @@ export function useDataLoader(
   data: Quiver,
   sort?: ColumnSortConfig | undefined
 ): DataLoaderReturn {
+  const editingState = React.useRef<EditingState>(new EditingState())
   // The columns with the corresponding empty template for every type:
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [columnSizes, setColumnSizes] = useState<Map<string, number>>(
     () => new Map()
   )
 
-  const columns = getColumns(element, data).map(column => {
+  // TODO (lukasmasuch): Support column configuration
+  // const columnsConfig = element.columns ? new Map(Object.entries(JSON.parse(element.columns))) : new Map()
+
+  const columns = getColumns(element, data, new Map()).map(column => {
     // Apply column widths from state
     if (
       column.id &&
@@ -250,7 +389,7 @@ export function useDataLoader(
 
   // Number of rows of the table minus 1 for the header row:
   const numRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
-  const numIndices = data.types?.index?.length ?? 0
+  // TODO(lukasmasuch): Remove? const numIndices = data.types?.index?.length ?? 0
 
   const onColumnResize = React.useCallback(
     (
@@ -270,24 +409,32 @@ export function useDataLoader(
     ([col, row]: readonly [number, number]): GridCell => {
       if (data.isEmpty()) {
         return {
-          ...getCellTemplate(ColumnType.Text, true, "faded"),
+          ...getCellTemplate(ColumnType.Text, true, true),
           displayData: "empty",
         } as GridCell
       }
 
       if (col > columns.length - 1) {
         // This should never happen
-        return getCellTemplate(ColumnType.Text, true)
+        // TODO (lukasmasuch): use error cell?
+        return getCellTemplate(ColumnType.Text, true, false)
       }
 
-      const cellTemplate = columns[col].getTemplate()
+      const column = columns[col]
+      const cellTemplate = getCellTemplate(
+        column.columnType,
+        !column.isEditable,
+        column.isIndex
+      )
+
       if (row > numRows - 1) {
         // This should never happen
         return cellTemplate
       }
+
       try {
         // Quiver has the header in first row
-        const quiverCell = data.getCell(row + 1, col)
+        const quiverCell = data.getCell(row + 1, column.columnIndex)
         return fillCellTemplate(cellTemplate, quiverCell, data.cssStyles)
       } catch (error) {
         // This should not happen in read-only table.
@@ -298,21 +445,62 @@ export function useDataLoader(
     [columns, numRows, data]
   )
 
-  const { getCellContent: getCellContentSorted } = useColumnSort({
-    columns,
-    getCellContent,
-    rows: numRows,
-    sort,
-  })
+  const { getCellContent: getCellContentSorted, getOriginalIndex } =
+    useColumnSort({
+      columns,
+      getCellContent,
+      rows: numRows,
+      sort,
+    })
 
   const updatedColumns = updateSortingHeader(columns, sort)
 
+  const onCellEdited = React.useCallback(
+    (
+      [col, row]: readonly [number, number],
+      newVal: EditableGridCell
+    ): void => {
+      // TODO (lukasmasuch): Check for disabled flag
+      // if (element.disabled === true) {
+      //   // TODO: check for editable flag
+      //   // element.editable === false ||
+      //   return
+      // }
+
+      const currentCell = getCellContentSorted([col, row])
+      const column = updatedColumns[col]
+
+      if (
+        !isEditableGridCell(newVal) ||
+        !isEditableGridCell(currentCell) ||
+        !column.isEditable
+      ) {
+        return
+      }
+
+      // TODO (lukasmasuch): check if type is compatible with DataType instead
+      if (
+        typeof newVal.data === "string" ||
+        typeof newVal.data === "number" ||
+        typeof newVal.data === "boolean"
+      ) {
+        // TODO: support display values
+        editingState.current.set(
+          col,
+          getOriginalIndex(row),
+          updateCell(currentCell, newVal.data as DataType)
+        )
+      }
+    },
+    [columns]
+  )
+
   return {
     numRows,
-    numIndices,
     columns: updatedColumns,
     getCellContent: getCellContentSorted,
     onColumnResize,
+    onCellEdited,
   }
 }
 export interface DataFrameProps {
@@ -330,15 +518,15 @@ function DataFrame({
   height: containerHeight,
   isFullScreen,
 }: DataFrameProps): ReactElement {
+  const extraCellArgs = useExtraCells()
   const [sort, setSort] = React.useState<ColumnSortConfig>()
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const theme: Theme = useTheme()
 
   const stretchColumn = element.useContainerWidth || element.width
 
-  const { numRows, numIndices, columns, getCellContent, onColumnResize } =
+  const { numRows, columns, getCellContent, onColumnResize, onCellEdited } =
     useDataLoader(element, data, sort)
-
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
@@ -526,7 +714,10 @@ function DataFrame({
           getCellContent={getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
-          freezeColumns={numIndices}
+          freezeColumns={
+            columns.filter(col => (col as GridColumnWithCellTemplate).isIndex)
+              .length
+          }
           smoothScrollX={true}
           // Only deactivate smooth mode for vertical scrolling for large tables:
           smoothScrollY={numRows < 100000}
@@ -561,6 +752,10 @@ function DataFrame({
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
           }}
+          // Add support for additional cells:
+          customRenderers={extraCellArgs.customRenderers}
+          // Support editing:
+          onCellEdited={onCellEdited}
         />
       </Resizable>
     </StyledResizableContainer>

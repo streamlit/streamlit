@@ -127,7 +127,7 @@ describe("DataFrame widget", () => {
   })
 
   it("should correctly sort the table descending order", () => {
-    const tableColumns = getColumns(props.element, props.data)
+    const tableColumns = getColumns(props.element, props.data, new Map())
 
     // Add descending sort for first column
     const { result } = renderHook(() =>
@@ -152,7 +152,7 @@ describe("DataFrame widget", () => {
   })
 
   it("should correctly sort the table ascending order", () => {
-    const tableColumns = getColumns(props.element, props.data)
+    const tableColumns = getColumns(props.element, props.data, new Map())
 
     // Add ascending sort for first column
     const { result } = renderHook(() =>
