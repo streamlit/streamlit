@@ -230,7 +230,7 @@ def gather_metrics(callable: F) -> F:
         )
         command_telemetry: Union[Command, None] = None
 
-        if tracking_activated:
+        if ctx and tracking_activated:
             # Deactivate tracking to prevent calls inside already tracked commands
             ctx.command_tracking_deactivated = True
             try:
