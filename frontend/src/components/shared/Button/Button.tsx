@@ -26,7 +26,8 @@ import {
   StyledPrimaryButton,
   StyledSecondaryButton,
   StyledTertiaryButton,
-  StyledFormSubmitButton,
+  StyledPrimaryFormSubmitButton,
+  StyledSecondaryFormSubmitButton,
   StyledHeaderButton,
 } from "./styled-components"
 
@@ -53,8 +54,10 @@ function Button({
     ComponentType = StyledBorderlessIconButton
   } else if (kind === Kind.MINIMAL) {
     ComponentType = StyledMinimalButton
-  } else if (kind === Kind.FORM_SUBMIT) {
-    ComponentType = StyledFormSubmitButton
+  } else if (kind === Kind.PRIMARY_FORM_SUBMIT) {
+    ComponentType = StyledPrimaryFormSubmitButton
+  } else if (kind === Kind.SECONDARY_FORM_SUBMIT) {
+    ComponentType = StyledSecondaryFormSubmitButton
   } else if (kind === Kind.HEADER_BUTTON) {
     ComponentType = StyledHeaderButton
   }

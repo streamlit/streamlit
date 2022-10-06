@@ -27,7 +27,8 @@ export enum Kind {
   ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
   MINIMAL = "minimal",
-  FORM_SUBMIT = "formSubmit",
+  PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
+  SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
   HEADER_BUTTON = "header",
 }
 
@@ -96,30 +97,29 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
 export const StyledPrimaryButton = styled(
   StyledBaseButton
 )<RequiredButtonProps>(({ theme }) => ({
-  // backgroundColor: theme.colors.primary,
-  // color: theme.colors.lightenedBg05,
-  // border: `1px solid ${theme.colors.fadedText40}`,
+  backgroundColor: theme.colors.primary,
+  color: theme.colors.lightenedBg05,
+  border: `1px solid ${theme.colors.fadedText10}`,
   "&:hover": {
-    // borderColor: theme.colors.fadedText60,
-    // color: theme.colors.black,
-    // opacity: "75%",
+    filter: "brightness(0.85)",
   },
   "&:active": {
-    // color: theme.colors.white,
-    // borderColor: theme.colors.fadedText60,
-    // backgroundColor: theme.colors.fadedText60,
+    backgroundColor: theme.colors.lightenedBg05,
+    filter: "none",
+    borderColor: "inherit",
+    color: "inherit",
   },
   "&:focus:not(:active)": {
-    // borderColor: theme.colors.fadedText60,
-    // color: theme.colors.black,
-    // opacity: "75%",
+    filter: "brightness(0.85)",
+    color: theme.colors.lightenedBg05,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    // borderColor: theme.colors.fadedText40,
-    // backgroundColor: theme.colors.primary,
-    // color: theme.colors.black,
-    // opacity: "30%",
-    // cursor: "not-allowed",
+    color: theme.colors.lightenedBg05,
+    borderColor: theme.colors.fadedText40,
+    filter: "none",
+    backgroundColor: theme.colors.primary,
+    opacity: "60%",
+    cursor: "not-allowed",
   },
 }))
 
@@ -208,8 +208,12 @@ export const StyledMinimalButton = styled(
   },
 }))
 
-export const StyledFormSubmitButton =
+export const StyledPrimaryFormSubmitButton =
   styled(StyledPrimaryButton)<RequiredButtonProps>()
+
+export const StyledSecondaryFormSubmitButton = styled(
+  StyledSecondaryButton
+)<RequiredButtonProps>()
 
 export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   ({ size, theme }) => {

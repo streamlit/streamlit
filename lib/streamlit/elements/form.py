@@ -17,6 +17,7 @@ from typing import NamedTuple, Optional, cast
 
 import streamlit
 from streamlit import runtime
+import streamlit.elements.utils
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -209,6 +210,7 @@ class FormMixin:
         args=None,
         kwargs=None,
         *,  # keyword-only arguments:
+        type: str = "secondary",
         disabled: bool = False,
     ) -> bool:
         """Display a form submit button.
@@ -236,6 +238,10 @@ class FormMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        type : string ("primary" or "secondary")
+            An optional string, which specifies the button type. Can be “primary” to
+            fill the button with color or “secondary” for a normal button (default).
+            This argument can only be supplied by keyword.
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False. This argument can only be supplied by keyword.
@@ -246,12 +252,17 @@ class FormMixin:
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
+        type = streamlit.elements.utils.check_valid_button_type(
+            str(type), "st.form_submit_button"
+        )
+
         return self._form_submit_button(
             label=label,
             help=help,
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            type=type,
             disabled=disabled,
             ctx=ctx,
         )
@@ -264,6 +275,7 @@ class FormMixin:
         args=None,
         kwargs=None,
         *,  # keyword-only arguments:
+        type: str = "secondary",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
@@ -277,6 +289,7 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            type=type,
             disabled=disabled,
             ctx=ctx,
         )

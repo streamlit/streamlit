@@ -21,7 +21,11 @@ from typing_extensions import Final
 
 from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    check_valid_button_type,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
@@ -132,7 +136,7 @@ class ButtonMixin:
 
         key = to_key(key)
         ctx = get_script_run_ctx()
-        type = button_type(str(type))
+        type = check_valid_button_type(str(type), "st.button")
 
         return self.dg._button(
             label,
