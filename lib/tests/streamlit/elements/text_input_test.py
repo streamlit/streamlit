@@ -15,7 +15,7 @@
 """text_input unit test."""
 
 import re
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from parameterized import parameterized
 
@@ -100,7 +100,7 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.text_input
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 

@@ -15,7 +15,7 @@
 """st.caching unit tests."""
 import threading
 import types
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from parameterized import parameterized
 
@@ -261,9 +261,9 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual([0, 1, 2], bar_vals)
 
     # Reduce the huge amount of logspam we get from hashing/caching
-    @patch("streamlit.runtime.legacy_caching.hashing._LOGGER.debug")
-    @patch("streamlit.runtime.legacy_caching.caching._LOGGER.debug")
-    def test_no_max_size(self, _1, _2):
+    @patch("streamlit.runtime.legacy_caching.hashing._LOGGER.debug", MagicMock())
+    @patch("streamlit.runtime.legacy_caching.caching._LOGGER.debug", MagicMock())
+    def test_no_max_size(self):
         """If max_size is None, the cache is unbounded."""
         called_values = []
 

@@ -94,11 +94,6 @@ from streamlit.runtime.caching import (
 
 cache = _gather_metrics(_cache)
 
-# This is set to True inside cli._main_run(), and is False otherwise.
-# If False, we should assume that DeltaGenerator functions are effectively
-# no-ops, and adapt gracefully.
-_is_running_with_streamlit: bool = False
-
 
 def _update_logger() -> None:
     _logger.set_log_level(_config.get_option("logger.level").upper())
@@ -476,6 +471,7 @@ def _maybe_print_use_warning() -> None:
     The warning is printed only once.
     """
     global _use_warning_has_been_displayed
+    from streamlit import runtime
 
     if not _use_warning_has_been_displayed:
         _use_warning_has_been_displayed = True
@@ -487,7 +483,7 @@ def _maybe_print_use_warning() -> None:
                 f"\n  {warning} to view a Streamlit app on a browser, use Streamlit in a file and\n  run it with the following command:\n\n    streamlit run [FILE_NAME] [ARGUMENTS]"
             )
 
-        elif not _is_running_with_streamlit and _config.get_option(
+        elif not runtime.exists() and _config.get_option(
             "global.showWarningOnDirectExecution"
         ):
             script_name = _sys.argv[0]

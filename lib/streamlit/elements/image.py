@@ -30,7 +30,6 @@ import numpy as np
 from PIL import Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
 
-import streamlit
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -381,7 +380,7 @@ def image_to_url(
     image_data = _ensure_image_size_and_format(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
-    if streamlit._is_running_with_streamlit:
+    if runtime.exists():
         return runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
@@ -490,8 +489,11 @@ def marshall_images(
                     image = textfile.read()
 
             # Following regex allows svg image files to start either via a "<?xml...>" tag eventually followed by a "<svg...>" tag or directly starting with a "<svg>" tag
-            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s)", image):
-                proto_img.markup = f"data:image/svg+xml,{image}"
+            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s|^\s?<svg>\s)", image):
+                if "xlink" in image or "xmlns" not in image:
+                    proto_img.markup = f"data:image/svg+xml,{image}"
+                else:
+                    proto_img.url = f"data:image/svg+xml,{image}"
                 is_svg = True
         if not is_svg:
             proto_img.url = image_to_url(
