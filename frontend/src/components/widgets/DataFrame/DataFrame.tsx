@@ -69,7 +69,7 @@ const DEFAULT_TABLE_HEIGHT = 400
  * The GridColumn type extended with a function to get a template of the given type.
  */
 // TODO: rename
-type GridColumnWithCellTemplate = GridColumn & {
+type Column = GridColumn & {
   // The type of the column.
   columnType: ColumnType
   // The index number of the column.
@@ -179,9 +179,9 @@ export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
  * Apply the column configuration if supplied.
  */
 function applyColumnConfig(
-  column: GridColumnWithCellTemplate,
+  column: Column,
   columnsConfig: Map<string | number, ColumnConfigProps>
-): GridColumnWithCellTemplate | null {
+): Column | null {
   if (!columnsConfig) {
     // No column config configured
     return column
@@ -236,7 +236,7 @@ function applyColumnConfig(
           isEditable: columnConfig.editable,
         }
       : {}),
-  } as GridColumnWithCellTemplate
+  } as Column
 }
 
 /**
@@ -246,8 +246,8 @@ export function getColumns(
   element: ArrowProto,
   data: Quiver,
   columnsConfig: Map<string, ColumnConfigProps>
-): GridColumnWithCellTemplate[] {
-  const columns: GridColumnWithCellTemplate[] = []
+): Column[] {
+  const columns: Column[] = []
   const stretchColumn = element.useContainerWidth || element.width
 
   if (data.isEmpty()) {
@@ -262,7 +262,7 @@ export function getColumns(
       isEditable: false,
       isIndex: true,
       ...(stretchColumn ? { grow: 1 } : {}),
-    } as GridColumnWithCellTemplate)
+    } as Column)
     return columns
   }
 
@@ -284,7 +284,7 @@ export function getColumns(
       isHidden: false,
       isIndex: true,
       ...(stretchColumn ? { grow: 1 } : {}),
-    } as GridColumnWithCellTemplate
+    } as Column
 
     const updatedColumn = applyColumnConfig(column, columnsConfig)
     // If column is hidden, the return value is null.
@@ -309,7 +309,7 @@ export function getColumns(
       isHidden: false,
       isIndex: false,
       ...(stretchColumn ? { grow: 3 } : {}),
-    } as GridColumnWithCellTemplate
+    } as Column
 
     const updatedColumn = applyColumnConfig(column, columnsConfig)
     // If column is hidden, the return value is null.
@@ -324,9 +324,9 @@ export function getColumns(
  * Updates the column headers based on the sorting configuration.
  */
 function updateSortingHeader(
-  columns: GridColumnWithCellTemplate[],
+  columns: Column[],
   sort: ColumnSortConfig | undefined
-): GridColumnWithCellTemplate[] {
+): Column[] {
   if (sort === undefined) {
     return columns
   }
@@ -382,7 +382,7 @@ export function useDataLoader(
         ...column,
         width: columnSizes.get(column.id),
         grow: 0, // Deactivate grow for this column
-      } as GridColumnWithCellTemplate
+      } as Column
     }
     return column
   })
@@ -556,9 +556,7 @@ function DataFrame({
       setSort({
         column: clickedColumn,
         direction: sortDirection,
-        mode: getColumnSortMode(
-          (clickedColumn as GridColumnWithCellTemplate).columnType
-        ),
+        mode: getColumnSortMode((clickedColumn as Column).columnType),
       } as ColumnSortConfig)
     },
     [sort, columns]
@@ -714,10 +712,7 @@ function DataFrame({
           getCellContent={getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
-          freezeColumns={
-            columns.filter(col => (col as GridColumnWithCellTemplate).isIndex)
-              .length
-          }
+          freezeColumns={columns.filter(col => (col as Column).isIndex).length}
           smoothScrollX={true}
           // Only deactivate smooth mode for vertical scrolling for large tables:
           smoothScrollY={numRows < 100000}
