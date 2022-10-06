@@ -248,7 +248,8 @@ def gather_metrics(callable: F) -> F:
                     counter_time = timer()
 
                     print(
-                        f"{command_telemetry.name}: Time required for metrics gathering {to_microseconds(timer() - exec_start)},{to_microseconds(ctx_import_time-exec_start)},{to_microseconds(ctx_get_time-ctx_import_time)},{to_microseconds(get_command_telemetry_time-ctx_get_time)},{to_microseconds(counter_time-get_command_telemetry_time)}"
+                        f"{command_telemetry.name}: Time required for metrics gathering {to_microseconds(timer() - exec_start)},{to_microseconds(ctx_import_time-exec_start)},{to_microseconds(ctx_get_time-ctx_import_time)},{to_microseconds(get_command_telemetry_time-ctx_get_time)},{to_microseconds(counter_time-get_command_telemetry_time)}",
+                        flush=True,
                     )
                 ctx.tracked_commands_counter.update([command_telemetry.name])
             except Exception as ex:
