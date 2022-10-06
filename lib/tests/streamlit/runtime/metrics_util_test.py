@@ -14,6 +14,7 @@
 
 import datetime
 import unittest
+from collections import Counter
 from typing import Callable
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -211,3 +212,64 @@ class PageTelemetryTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(len(ctx.tracked_commands), 0)
         test_function(param1=10, param2="foobar")
         self.assertEqual(len(ctx.tracked_commands), 0)
+
+    def test_command_tracking_limits(self):
+        """Test that the command tracking limits are respected."""
+
+        ctx = get_script_run_ctx()
+        ctx.reset()
+        ctx.gather_usage_stats = True
+
+        @metrics_util.gather_metrics
+        def test_function1() -> str:
+            return "foo"
+
+        @metrics_util.gather_metrics
+        def test_function2() -> str:
+            return "foo"
+
+        @metrics_util.gather_metrics
+        def test_function3() -> str:
+            return "foo"
+
+        @metrics_util.gather_metrics
+        def test_function4() -> str:
+            return "foo"
+
+        @metrics_util.gather_metrics
+        def test_function5() -> str:
+            return "foo"
+
+        @metrics_util.gather_metrics
+        def test_function6() -> str:
+            return "foo"
+
+        @metrics_util.gather_metrics
+        def test_function7() -> str:
+            return "foo"
+
+        @metrics_util.gather_metrics
+        def test_function8() -> str:
+            return "foo"
+
+        for _ in range(0, metrics_util._MAX_TRACKED_PER_COMMAND + 1):
+            test_function1()
+            test_function2()
+            test_function3()
+            test_function4()
+            test_function5()
+            test_function6()
+            test_function7()
+            test_function8()
+
+        self.assertLessEqual(
+            len(ctx.tracked_commands), metrics_util._MAX_TRACKED_COMMANDS
+        )
+
+        # Test that no individual command is tracked more than _MAX_TRACKED_PER_COMMAND
+        command_counts = Counter(
+            [command.name for command in ctx.tracked_commands]
+        ).most_common()
+        self.assertLessEqual(
+            command_counts[0][1], metrics_util._MAX_TRACKED_PER_COMMAND
+        )
