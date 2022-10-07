@@ -115,7 +115,6 @@ describe("st.image", () => {
   it("displays a GIF image and a caption together", () => {
     cy.get(".element-container [data-testid='stImage']")
       .eq(15)
-      .wait(4000)
       .matchImageSnapshot("gif-with-caption");
   });
 
