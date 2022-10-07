@@ -40,7 +40,7 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
     types.ModuleType,
 )
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class WriteMixin:
@@ -159,7 +159,7 @@ class WriteMixin:
 
         """
         if kwargs:
-            LOGGER.warning(
+            _LOGGER.warning(
                 'Invalid arguments were passed to "st.write" function. Support for '
                 "passing such unknown keywords arguments will be dropped in future. "
                 "Invalid arguments were: %s",

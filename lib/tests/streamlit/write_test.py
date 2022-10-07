@@ -239,7 +239,7 @@ class StreamlitWriteTest(unittest.TestCase):
 
     def test_unknown_arguments(self):
         """Test st.write that raises an exception."""
-        with self.assertLogs(write.LOGGER) as logs:
+        with self.assertLogs(write._LOGGER) as logs:
             st.write("some text", unknown_keyword_arg=123)
 
         self.assertIn(
