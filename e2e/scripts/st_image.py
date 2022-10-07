@@ -20,16 +20,16 @@ from PIL import Image, ImageDraw
 import streamlit as st
 
 
-def create_gif(size):
+def create_gif(size, frames=1):
     # Create grayscale image.
     im = Image.new("L", (size, size), "white")
 
     images = []
 
-    # Make 32 frames with the circle of a constant size, moving across the
+    # Make circle of a constant size with a number of frames, moving across the
     # principal diagonal of a 64x64 image. The GIF will not loop and stops
-    # animating after 3200ms.
-    for i in range(0, 32):
+    # animating after frames x 100ms.
+    for i in range(0, frames):
         frame = im.copy()
         draw = ImageDraw.Draw(frame)
         pos = (i, i)
@@ -54,7 +54,7 @@ import streamlit as st
 
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)
-gif = create_gif(64)
+gif = create_gif(64, frames=32)
 
 st.image(img, caption="Black Square as JPEG", output_format="JPEG", width=100)
 
@@ -106,5 +106,5 @@ st.image(
 )
 
 st.image(gif, width=100)
-st.image(gif, caption="Black Circle as GIF", width=100)
+st.image(create_gif(64), caption="Black Circle as GIF", width=100)
 st.image(gif, caption="GIF as PNG", output_format="PNG", width=100)
