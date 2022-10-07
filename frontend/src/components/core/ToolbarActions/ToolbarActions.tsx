@@ -20,7 +20,7 @@ import Button, { Kind } from "src/components/shared/Button"
 import {
   IGuestToHostMessage,
   IToolbarItem,
-} from "src/hocs/withS4ACommunication/types"
+} from "src/hocs/withHostCommunication/types"
 import {
   StyledActionButtonContainer,
   StyledActionButtonIcon,
@@ -52,24 +52,24 @@ export function ActionButton({
 }
 
 export interface ToolbarActionsProps {
-  sendS4AMessage: (message: IGuestToHostMessage) => void
-  s4aToolbarItems: IToolbarItem[]
+  sendMessageToHost: (message: IGuestToHostMessage) => void
+  hostToolbarItems: IToolbarItem[]
 }
 
 function ToolbarActions({
-  sendS4AMessage,
-  s4aToolbarItems,
+  sendMessageToHost,
+  hostToolbarItems,
 }: ToolbarActionsProps): ReactElement {
   return (
     <>
-      {s4aToolbarItems.map(({ borderless, key, label, icon }) => (
+      {hostToolbarItems.map(({ borderless, key, label, icon }) => (
         <ActionButton
           key={key}
           label={label}
           icon={icon}
           borderless={borderless}
           onClick={() =>
-            sendS4AMessage({
+            sendMessageToHost({
               type: "TOOLBAR_ITEM_CALLBACK",
               key,
             })

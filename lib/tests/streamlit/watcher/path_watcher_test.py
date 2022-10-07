@@ -15,13 +15,12 @@
 """Tests the public utility functions in path_watcher.py"""
 
 import unittest
-from unittest.mock import call, Mock, patch
-
+from unittest.mock import Mock, call, patch
 
 import streamlit.watcher.path_watcher
 from streamlit.watcher.path_watcher import (
-    get_default_path_watcher_class,
     NoOpPathWatcher,
+    get_default_path_watcher_class,
     watch_dir,
     watch_file,
 )

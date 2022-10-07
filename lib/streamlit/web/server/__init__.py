@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .component_request_handler import ComponentRequestHandler
-from .routes import (
+from streamlit.web.server.component_request_handler import ComponentRequestHandler
+from streamlit.web.server.routes import (
     allow_cross_origin_requests as allow_cross_origin_requests,
 )
-from .server import (
-    Server as Server,
+from streamlit.web.server.server import Server as Server
+from streamlit.web.server.server import (
     server_address_is_unix_socket as server_address_is_unix_socket,
 )
-from .stats_request_handler import StatsRequestHandler
+from streamlit.web.server.stats_request_handler import StatsRequestHandler

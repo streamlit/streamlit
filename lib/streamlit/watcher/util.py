@@ -19,11 +19,10 @@ functions that use streamlit.config can go here to avoid a dependency cycle.
 """
 
 import hashlib
-import time
 import os
+import time
 from pathlib import Path
 from typing import Optional
-
 
 # How many times to try to grab the MD5 hash.
 _MAX_RETRIES = 5

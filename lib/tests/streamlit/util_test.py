@@ -15,8 +15,8 @@
 import random
 import unittest
 from unittest.mock import patch
-import numpy as np
 
+import numpy as np
 from parameterized import parameterized
 
 from streamlit import util

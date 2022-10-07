@@ -17,8 +17,7 @@
 import unittest
 
 from streamlit.runtime.stats import CacheStat
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 
 FILE_1 = UploadedFileRec(id=0, name="file1", type="type", data=b"file1")
 FILE_2 = UploadedFileRec(id=0, name="file2", type="type", data=b"file222")

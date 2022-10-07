@@ -14,7 +14,6 @@
 
 """st.memo/singleton hashing tests."""
 
-from enum import Enum, auto
 import functools
 import hashlib
 import os
@@ -23,9 +22,9 @@ import tempfile
 import types
 import unittest
 from dataclasses import dataclass
-from io import BytesIO
-from io import StringIO
-from unittest.mock import Mock, MagicMock
+from enum import Enum, auto
+from io import BytesIO, StringIO
+from unittest.mock import MagicMock, Mock
 
 import cffi
 import numpy as np
@@ -34,9 +33,9 @@ from parameterized import parameterized
 
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.hashing import (
-    _CacheFuncHasher,
-    _PANDAS_ROWS_LARGE,
     _NP_SIZE_LARGE,
+    _PANDAS_ROWS_LARGE,
+    _CacheFuncHasher,
 )
 
 try:
@@ -49,8 +48,8 @@ try:
 except ImportError:
     pass
 
-from streamlit.type_util import is_type
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.type_util import is_type
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -283,13 +282,33 @@ class HashTest(unittest.TestCase):
         assert get_hash(bar)
 
     def test_enum(self):
+        """The hashing function returns the same result when called with the same
+        Enum members."""
+
         class EnumClass(Enum):
             ENUM_1 = auto()
             ENUM_2 = auto()
 
-        enum_1 = EnumClass.ENUM_1
+        # Hash values should be stable
+        self.assertEqual(get_hash(EnumClass.ENUM_1), get_hash(EnumClass.ENUM_1))
 
-        assert get_hash(enum_1)
+        # Different enum values should produce different hashes
+        self.assertNotEqual(get_hash(EnumClass.ENUM_1), get_hash(EnumClass.ENUM_2))
+
+    def test_different_enums(self):
+        """Different enum classes should have different hashes, even when the enum
+        values are the same."""
+
+        class EnumClassA(Enum):
+            ENUM_1 = "hello"
+
+        class EnumClassB(Enum):
+            ENUM_1 = "hello"
+
+        enum_a = EnumClassA.ENUM_1
+        enum_b = EnumClassB.ENUM_1
+
+        self.assertNotEqual(get_hash(enum_a), get_hash(enum_b))
 
 
 class NotHashableTest(unittest.TestCase):

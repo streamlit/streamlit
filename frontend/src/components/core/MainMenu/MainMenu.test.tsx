@@ -17,7 +17,7 @@
 import React from "react"
 
 import { mount } from "src/lib/test_util"
-import { IMenuItem } from "src/hocs/withS4ACommunication/types"
+import { IMenuItem } from "src/hocs/withHostCommunication/types"
 
 import { GitInfo, IGitInfo } from "src/autogen/proto"
 import { IDeployErrorDialog } from "src/components/core/StreamlitDialog/DeployErrorDialogs/types"
@@ -39,10 +39,10 @@ const getProps = (extend?: Partial<Props>): Props => ({
   clearCacheCallback: jest.fn(),
   isServerConnected: true,
   quickRerunCallback: jest.fn(),
-  s4aMenuItems: [],
+  hostMenuItems: [],
   screencastCallback: jest.fn(),
   screenCastState: "",
-  sendS4AMessage: jest.fn(),
+  sendMessageToHost: jest.fn(),
   settingsCallback: jest.fn(),
   isDeployErrorModalOpen: false,
   showDeployError: jest.fn(),
@@ -50,7 +50,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   closeDialog: jest.fn(),
   canDeploy: true,
   menuItems: {},
-  s4aIsOwner: false,
+  hostIsOwner: false,
   gitInfo: null,
   ...extend,
 })
@@ -63,7 +63,7 @@ describe("App", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should render s4a menu items", () => {
+  it("should render host menu items", () => {
     const items: IMenuItem[] = [
       {
         type: "separator",
@@ -83,7 +83,7 @@ describe("App", () => {
       },
     ]
     const props = getProps({
-      s4aMenuItems: items,
+      hostMenuItems: items,
     })
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
@@ -221,10 +221,7 @@ describe("App", () => {
 
       // @ts-ignore
       const menuWrapper = mount(popoverContent(() => {}))
-      const items: any = menuWrapper
-        .find("StatefulMenu")
-        .at(1)
-        .prop("items")
+      const items: any = menuWrapper.find("StatefulMenu").at(1).prop("items")
 
       const deployOption = items.find(
         // @ts-ignore
@@ -385,7 +382,7 @@ describe("App", () => {
     ])
   })
 
-  it("should not render dev menu when s4aIsOwner is false and not on localhost", () => {
+  it("should not render dev menu when hostIsOwner is false and not on localhost", () => {
     // set isLocalhost to false by deleting window.location.
     // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
     // @ts-ignore

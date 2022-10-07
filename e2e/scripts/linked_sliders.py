@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
-if st._is_running_with_streamlit:
+if runtime.exists():
 
     to_celsius = lambda fahrenheit: (fahrenheit - 32) * 5.0 / 9.0
     to_fahrenheit = lambda celsius: 9.0 / 5.0 * celsius + 32

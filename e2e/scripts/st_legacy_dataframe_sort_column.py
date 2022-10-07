@@ -16,6 +16,7 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
+
 import streamlit as st
 
 cols = st.number_input("Number of columns", value=5)

@@ -17,7 +17,6 @@ import platform
 import re
 import sys
 
-
 _system = platform.system()
 IS_WINDOWS = _system == "Windows"
 IS_DARWIN = _system == "Darwin"

@@ -129,14 +129,8 @@ class TimeInput extends PureComponent<Props, State> {
   }
 
   private dateToString = (value: Date): string => {
-    const hours = value
-      .getHours()
-      .toString()
-      .padStart(2, "0")
-    const minutes = value
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")
+    const hours = value.getHours().toString().padStart(2, "0")
+    const minutes = value.getMinutes().toString().padStart(2, "0")
 
     return `${hours}:${minutes}`
   }

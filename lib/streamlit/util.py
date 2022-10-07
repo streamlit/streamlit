@@ -18,9 +18,9 @@ import functools
 import hashlib
 import os
 import subprocess
-import numpy as np
-
 from typing import Any, Dict, Iterable, List, Mapping, TypeVar
+
+import numpy as np
 from typing_extensions import Final
 
 from streamlit import env_util

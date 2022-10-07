@@ -162,10 +162,7 @@ describe("CameraInput widget", () => {
     wrapper.update()
 
     act(() => {
-      wrapper
-        .find("SwitchFacingModeButton")
-        .find("button")
-        .simulate("click")
+      wrapper.find("SwitchFacingModeButton").find("button").simulate("click")
     })
     wrapper.update()
 

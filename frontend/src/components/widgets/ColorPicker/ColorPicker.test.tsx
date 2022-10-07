@@ -61,9 +61,7 @@ function getPickedColor(wrapper: ReactWrapper<ColorPicker>): string {
 function selectColor(wrapper: ReactWrapper<ColorPicker>, color: string): void {
   // Open the popover, select the new color, close the popover.
   wrapper.find(UIPopover).simulate("click")
-  getPopoverWrapper(wrapper)
-    .find(ChromePicker)
-    .prop("onChange")({
+  getPopoverWrapper(wrapper).find(ChromePicker).prop("onChange")({
     hex: color,
   })
   wrapper.find(UIPopover).simulate("click")
@@ -118,9 +116,11 @@ describe("ColorPicker widget", () => {
     expect(getPickedColor(wrapper)).toEqual(newColor)
 
     // And the WidgetMgr should also be updated.
-    expect(
-      props.widgetMgr.setStringValue
-    ).toHaveBeenLastCalledWith(props.element, newColor, { fromUi: true })
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      newColor,
+      { fromUi: true }
+    )
   })
 
   it("resets its value when form is cleared", () => {
@@ -136,9 +136,11 @@ describe("ColorPicker widget", () => {
     selectColor(wrapper, newColor)
 
     expect(getPickedColor(wrapper)).toEqual(newColor)
-    expect(
-      props.widgetMgr.setStringValue
-    ).toHaveBeenLastCalledWith(props.element, newColor, { fromUi: true })
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      newColor,
+      { fromUi: true }
+    )
 
     // "Submit" the form
     props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })

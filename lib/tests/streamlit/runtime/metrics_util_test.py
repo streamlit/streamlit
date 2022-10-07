@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable
 import datetime
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
-from parameterized import parameterized
+from typing import Callable
+from unittest.mock import MagicMock, mock_open, patch
+
 import pandas as pd
+from parameterized import parameterized
 
 import streamlit
 from streamlit.runtime import metrics_util
-
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 from tests import testutil
 
 MAC = "mac"
@@ -183,7 +184,7 @@ class PageTelemetryTest(testutil.DeltaGeneratorTestCase):
     def test_gather_metrics_decorator(self):
         """Test gather_metrics decorator"""
 
-        ctx = metrics_util.get_script_run_ctx()
+        ctx = get_script_run_ctx()
         ctx.reset()
         ctx.gather_usage_stats = True
 

@@ -14,15 +14,14 @@
 
 """Config Util Unittest."""
 import copy
-import textwrap
 import re
+import textwrap
 import unittest
 from unittest.mock import patch
 
 from parameterized import parameterized
 
-from streamlit import config_util
-from streamlit import config
+from streamlit import config, config_util
 
 CONFIG_OPTIONS_TEMPLATE = config._config_options_template
 CONFIG_SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)

@@ -23,9 +23,7 @@ from typing import Optional
 import click
 import toml
 
-from streamlit import util
-from streamlit import env_util
-from streamlit import file_util
+from streamlit import env_util, file_util, util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -50,9 +48,9 @@ _Activation = namedtuple(
 _EMAIL_PROMPT = """
   {0}%(welcome)s
 
-  If you're one of our development partners or you're interested in getting
-  personal technical support or Streamlit updates, please enter your email
-  address below. Otherwise, you may leave the field blank.
+  If you’d like to receive helpful onboarding emails, news, offers, promotions,
+  and the occasional swag, please enter your email address below. Otherwise,
+  leave this field blank.
 
   %(email)s""".format(
     "👋 " if _SHOW_EMOJIS else ""
@@ -63,18 +61,19 @@ _EMAIL_PROMPT = """
 
 # IMPORTANT: Break the text below at 80 chars.
 _TELEMETRY_TEXT = """
-  %(privacy)s
-  As an open source project, we collect usage statistics. We cannot see and do
-  not store information contained in Streamlit apps. You can find out more by
-  reading our privacy policy at: %(link)s
+  You can find our privacy policy at %(link)s
 
-  If you'd like to opt out of usage statistics, add the following to
-  %(config)s, creating that file if necessary:
+  Summary:
+  - This open source library collects usage statistics.
+  - We cannot see and do not store information contained inside Streamlit apps,
+    such as text, charts, images, etc.
+  - Telemetry data is stored in servers in the United States.
+  - If you'd like to opt out, add the following to %(config)s,
+    creating that file if necessary:
 
     [browser]
     gatherUsageStats = false
 """ % {
-    "privacy": click.style("Privacy Policy:", bold=True),
     "link": click.style("https://streamlit.io/privacy-policy", underline=True),
     "config": click.style(_CONFIG_FILE_PATH),
 }

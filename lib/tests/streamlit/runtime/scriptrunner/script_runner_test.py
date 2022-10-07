@@ -17,7 +17,7 @@
 import os
 import sys
 import time
-from typing import List, Any, Optional
+from typing import Any, List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,23 +30,23 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
-from streamlit.runtime import media_file_manager
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import (
-    ScriptRunner,
-    ScriptRunnerEvent,
     RerunData,
     RerunException,
+    ScriptRunner,
+    ScriptRunnerEvent,
     StopException,
 )
 from streamlit.runtime.scriptrunner.script_requests import (
-    ScriptRequestType,
-    ScriptRequests,
     ScriptRequest,
+    ScriptRequests,
+    ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -81,13 +81,15 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
 class ScriptRunnerTest(AsyncTestCase):
     def setUp(self) -> None:
         super().setUp()
-        media_file_manager._media_file_manager = MediaFileManager(
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
         super().tearDown()
-        media_file_manager._media_file_manager = None
+        Runtime._instance = None
 
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""

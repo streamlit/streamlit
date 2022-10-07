@@ -24,7 +24,6 @@ import PIL.Image as Image
 import pytest
 from parameterized import parameterized
 from PIL import ImageDraw
-from tests import testutil
 
 import streamlit as st
 import streamlit.elements.image as image
@@ -36,6 +35,7 @@ from streamlit.runtime.memory_media_file_storage import (
     get_extension_for_mimetype,
 )
 from streamlit.web.server.server import MEDIA_ENDPOINT
+from tests import testutil
 
 
 def create_image(size, format="RGB", add_alpha=True):

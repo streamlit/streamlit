@@ -48,21 +48,11 @@ describe("Test Webcam Component", () => {
     // automatically put in pending state
     const wrapper = mount(<WebcamComponent {...props} />)
     expect(wrapper).toBeDefined()
-    expect(
-      wrapper
-        .find(StyledBox)
-        .at(0)
-        .text()
-    ).toEqual(
+    expect(wrapper.find(StyledBox).at(0).text()).toEqual(
       "This app would like to use your camera.Learn how to allow access."
     )
     // hidden style should be there and webcam should not show
-    expect(
-      wrapper
-        .find(StyledBox)
-        .at(1)
-        .props().hidden
-    ).toEqual(true)
+    expect(wrapper.find(StyledBox).at(1).props().hidden).toEqual(true)
   })
 
   it("renders ask permission screen when error state", () => {
@@ -80,21 +70,11 @@ describe("Test Webcam Component", () => {
     })
     wrapper.update()
 
-    expect(
-      wrapper
-        .find(StyledBox)
-        .at(0)
-        .text()
-    ).toEqual(
+    expect(wrapper.find(StyledBox).at(0).text()).toEqual(
       "This app would like to use your camera.Learn how to allow access."
     )
 
-    expect(
-      wrapper
-        .find(StyledBox)
-        .at(1)
-        .props().hidden
-    ).toEqual(true)
+    expect(wrapper.find(StyledBox).at(1).props().hidden).toEqual(true)
   })
 
   it("does not render ask permission screen in success state", () => {

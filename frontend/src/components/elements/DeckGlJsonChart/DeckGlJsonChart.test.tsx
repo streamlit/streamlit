@@ -42,8 +42,7 @@ const getProps = (
         "@@type": "HexagonLayer",
         autoHighlight: true,
         coverage: 1,
-        data:
-          "https://raw.githubusercontent.com/uber-common/deck.gl-data/master/examples/3d-heatmap/heatmap-data.csv",
+        data: "https://raw.githubusercontent.com/uber-common/deck.gl-data/master/examples/3d-heatmap/heatmap-data.csv",
         elevationRange: [0, 3000],
         elevationScale: 50,
         extruded: true,

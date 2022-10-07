@@ -14,21 +14,17 @@
 
 """slider unit test."""
 
-from unittest.mock import patch
+from datetime import date, datetime, time, timedelta, timezone
+from unittest.mock import MagicMock, patch
+
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.js_number import JSNumber
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from tests import testutil
-
-from datetime import date
-from datetime import datetime
-from datetime import time
-from datetime import timedelta
-from datetime import timezone
 
 
 class SliderTest(testutil.DeltaGeneratorTestCase):
@@ -220,7 +216,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.slider
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 

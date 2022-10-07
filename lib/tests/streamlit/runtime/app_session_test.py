@@ -16,7 +16,7 @@ import asyncio
 import threading
 import unittest
 from asyncio import AbstractEventLoop
-from typing import List, Any, Callable, cast, Optional
+from typing import Any, Callable, List, Optional, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,19 +26,19 @@ from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import media_file_manager
+from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import (
+    RerunData,
     ScriptRunContext,
+    ScriptRunner,
+    ScriptRunnerEvent,
     add_script_run_ctx,
     get_script_run_ctx,
-    ScriptRunner,
-    RerunData,
 )
-from streamlit.runtime.scriptrunner import ScriptRunnerEvent
 from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -57,14 +57,17 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
     if event_loop is None:
         event_loop = MagicMock()
 
-    return AppSession(
-        event_loop=event_loop,
-        session_data=SessionData("/fake/script_path.py", "fake_command_line"),
-        uploaded_file_manager=MagicMock(),
-        message_enqueued_callback=None,
-        local_sources_watcher=MagicMock(),
-        user_info={"email": "test@test.com"},
-    )
+    with patch(
+        "streamlit.runtime.app_session.asyncio.get_running_loop",
+        return_value=event_loop,
+    ):
+        return AppSession(
+            session_data=SessionData("/fake/script_path.py", "fake_command_line"),
+            uploaded_file_manager=MagicMock(),
+            message_enqueued_callback=None,
+            local_sources_watcher=MagicMock(),
+            user_info={"email": "test@test.com"},
+        )
 
 
 @patch(
@@ -74,13 +77,15 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
 class AppSessionTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
-        media_file_manager._media_file_manager = MediaFileManager(
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
         super().tearDown()
-        media_file_manager._media_file_manager = None
+        Runtime._instance = None
 
     @patch(
         "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
@@ -474,8 +479,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
     async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
-        event_loop = asyncio.get_running_loop()
-        session = _create_test_session(event_loop)
+        session = _create_test_session(asyncio.get_running_loop())
 
         handle_event_spy = MagicMock(
             side_effect=session._handle_scriptrunner_event_on_event_loop

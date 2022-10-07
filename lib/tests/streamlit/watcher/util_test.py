@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, MagicMock, mock_open
 import tempfile
 import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 from streamlit.watcher import util
 
@@ -64,21 +64,17 @@ class FakeStat(object):
 
 
 class PathModificationTimeTests(unittest.TestCase):
-    @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
-    )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    @patch("streamlit.watcher.util.os.stat", MagicMock(return_value=FakeStat(101.0)))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=True))
     def test_st_mtime_if_file_exists(self):
         assert util.path_modification_time("foo") == 101.0
 
-    @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
-    )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    @patch("streamlit.watcher.util.os.stat", MagicMock(return_value=FakeStat(101.0)))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=True))
     def test_st_mtime_if_file_exists_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 101.0
 
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=False))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=False))
     def test_zero_if_file_nonexistent_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 0.0
 

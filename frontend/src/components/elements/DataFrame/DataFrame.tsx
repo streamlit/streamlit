@@ -71,13 +71,8 @@ export function DataFrame({
 
   // Calculate the dimensions of this array.
   const [, nCols] = tableGetRowsAndCols(element.get("data"))
-  const {
-    headerRows,
-    headerCols,
-    dataRows,
-    cols,
-    rows,
-  } = dataFrameGetDimensions(element)
+  const { headerRows, headerCols, dataRows, cols, rows } =
+    dataFrameGetDimensions(element)
 
   /**
    * Called when one of our column headers is clicked.

@@ -14,9 +14,7 @@
 
 import os
 
-from streamlit import util
-from streamlit import file_util
-from streamlit import config
+from streamlit import config, file_util, util
 
 # The files in the folders below should always be blacklisted.
 DEFAULT_FOLDER_BLACKLIST = [

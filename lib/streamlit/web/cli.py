@@ -14,18 +14,17 @@
 
 """This is a script which is run when the Streamlit package is executed."""
 
-import sys
-from streamlit import config as _config
-
 import os
+import sys
 from typing import Optional
 
 import click
 
 import streamlit
-from streamlit.runtime.credentials import Credentials, check_credentials
 import streamlit.web.bootstrap as bootstrap
+from streamlit import config as _config
 from streamlit.case_converters import to_snake_case
+from streamlit.runtime.credentials import Credentials, check_credentials
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
@@ -189,6 +188,7 @@ def main_run(target, args=None, **kwargs):
 
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
+
             from streamlit import url_util
 
             path = urlparse(target).path
@@ -231,9 +231,6 @@ def _main_run(file, args=None, flag_options=None):
         flag_options = {}
 
     command_line = _get_command_line_as_string()
-
-    # Set a global flag indicating that we're "within" streamlit.
-    streamlit._is_running_with_streamlit = True
 
     check_credentials()
 

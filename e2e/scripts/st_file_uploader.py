@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 single_file = st.file_uploader("Drop a file:", type=["txt"], key="single")
 if single_file is None:
@@ -20,11 +21,11 @@ if single_file is None:
 else:
     st.text(single_file.read())
 
-# Here and throughout this file, we use if st._is_running_with_streamlit:
+# Here and throughout this file, we use `if runtime.is_running():`
 # since we also run e2e python files in "bare Python mode" as part of our
 # Python tests, and this doesn't work in that circumstance
 # st.session_state can only be accessed while running with streamlit
-if st._is_running_with_streamlit:
+if runtime.exists():
     st.write(repr(st.session_state.single) == repr(single_file))
 
 disabled = st.file_uploader(
@@ -35,7 +36,7 @@ if disabled is None:
 else:
     st.text(disabled.read())
 
-if st._is_running_with_streamlit:
+if runtime.exists():
     st.write(repr(st.session_state.disabled) == repr(disabled))
 
 multiple_files = st.file_uploader(
@@ -50,7 +51,7 @@ else:
     files = [file.read().decode() for file in multiple_files]
     st.text("\n".join(files))
 
-if st._is_running_with_streamlit:
+if runtime.exists():
     st.write(repr(st.session_state.multiple) == repr(multiple_files))
 
 with st.form("foo"):
@@ -73,7 +74,7 @@ if hidden_label is None:
 else:
     st.text(hidden_label.read())
 
-if st._is_running_with_streamlit:
+if runtime.exists():
     st.write(repr(st.session_state.hidden_label) == repr(hidden_label))
 
 collapsed_label = st.file_uploader(
@@ -87,10 +88,10 @@ if collapsed_label is None:
 else:
     st.text(collapsed_label.read())
 
-if st._is_running_with_streamlit:
+if runtime.exists():
     st.write(repr(st.session_state.collapsed_label) == repr(collapsed_label))
 
-if st._is_running_with_streamlit:
+if runtime.exists():
     if not st.session_state.get("counter"):
         st.session_state["counter"] = 0
 

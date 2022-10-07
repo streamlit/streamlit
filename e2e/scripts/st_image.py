@@ -50,6 +50,8 @@ def create_gif(size):
     return data.getvalue()
 
 
+import streamlit as st
+
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)
 gif = create_gif(64)

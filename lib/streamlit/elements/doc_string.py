@@ -16,11 +16,12 @@
 
 import contextlib
 import inspect
-from typing import Any, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
+
 from typing_extensions import Final
 
-from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.logger import get_logger
+from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:

@@ -22,11 +22,11 @@ import tornado.web
 import tornado.websocket
 
 from streamlit.logger import get_logger
-from streamlit.web.server.upload_file_request_handler import (
-    UploadFileRequestHandler,
-    UPLOAD_FILE_ROUTE,
-)
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.web.server.upload_file_request_handler import (
+    UPLOAD_FILE_ROUTE,
+    UploadFileRequestHandler,
+)
 
 LOGGER = get_logger(__name__)
 

@@ -36,10 +36,8 @@ const ThemedSidebar = ({
   children,
   ...sidebarProps
 }: Omit<SidebarProps, "chevronDownshift" | "theme">): ReactElement => {
-  const {
-    activeTheme,
-    sidebarChevronDownshift: chevronDownshift,
-  } = React.useContext(AppContext)
+  const { activeTheme, sidebarChevronDownshift: chevronDownshift } =
+    React.useContext(AppContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (
