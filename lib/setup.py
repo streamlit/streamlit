@@ -21,9 +21,9 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.13.0"  # PEP-440
+VERSION = "1.13.1.dev20221007"  # PEP-440
 
-NAME = "streamlit"
+NAME = "streamlit-nightly"
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible.
