@@ -1,4 +1,4 @@
-name: Javascript Tests
+name: Javascript
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  js_tests:
+  test:
     runs-on: ubuntu-latest
 
     defaults:
