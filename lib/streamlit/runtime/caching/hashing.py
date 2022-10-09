@@ -291,7 +291,7 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "PIL.Image.Image"):
             import numpy as np
 
-            np_array = np.array(obj)
+            np_array = np.frombuffer(obj.tobytes(), dtype="uint8")
             return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):
