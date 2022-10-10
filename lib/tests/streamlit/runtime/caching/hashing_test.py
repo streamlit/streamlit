@@ -221,8 +221,8 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(im1), get_hash(im2))
 
         # Check for big PIL images, they converted to numpy array with size
-        # bigger than _NP_SIZE_LARGE = 1_000_000
-        # 1000 * 1000 * 3 = 3_000_000 > _NP_SIZE_LARGE
+        # bigger than _NP_SIZE_LARGE
+        # 1000 * 1000 * 3 = 3_000_000 > _NP_SIZE_LARGE = 1_000_000
         im4 = Image.new("RGB", (1000, 1000), (100, 20, 60))
         im5 = Image.new("RGB", (1000, 1000), (100, 20, 60))
 
