@@ -79,8 +79,7 @@ class VerifyVersionCommand(install):
     description = "verify that the git tag matches our version"
 
     def run(self):
-        # Todo: CIRCLE_TAG exclusive to CircleCI - remove once converted
-        tag = os.getenv("CIRCLE_TAG") or os.getenv("TAG")
+        tag = os.getenv("TAG")
 
         if tag != VERSION:
             info = "Git tag: {0} does not match the version of this app: {1}".format(

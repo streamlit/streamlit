@@ -1,4 +1,4 @@
-name: CLI Regression Test
+name: CLI Regression
 
 on:
   push:
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  cli-regression-test:
+  cli_test:
     runs-on: ubuntu-latest
 
     defaults:

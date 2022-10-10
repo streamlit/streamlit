@@ -1,4 +1,4 @@
-name: Python Prod Deps Smoke Test
+name: Python Prod Deps Smoke
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  python-prod-deps-smoke-test:
+  smoke_test:
     runs-on: ubuntu-latest
 
     defaults:
