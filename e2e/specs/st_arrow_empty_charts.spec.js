@@ -65,7 +65,7 @@ describe("handles arrow empty charts", () => {
 
     cy.getIndexed(".stException .message", 4).should(
       "have.text",
-      "TypeError: _arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
+      "TypeError: ArrowAltairMixin._arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
     );
   });
 });
