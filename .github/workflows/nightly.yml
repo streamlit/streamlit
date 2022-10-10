@@ -1,9 +1,9 @@
 name: Nightly Build
 
 on:
-  # schedule:
-  #   # Run job at 10.30pm PST or 11.30pm PDT
-  #   - cron:  '30 6 * * *'
+  schedule:
+    # Run job at 10.30pm PST or 11.30pm PDT
+    - cron:  '30 6 * * *'
 
 jobs:
   create-nightly-tag:

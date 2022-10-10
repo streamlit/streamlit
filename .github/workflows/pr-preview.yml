@@ -54,7 +54,8 @@ jobs:
           AWS_DEFAULT_REGION: us-west-2
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CORE_PREVIEWS_S3_SECRET_KEY }}
-        # TODO: Add explanation on streamlit-11.11.11 convention
+        # To create a consistent location for the release/demo whl file, we need a
+        # stagnent version number (streamlit-11.11.11)
         run: |
           sudo apt install -y awscli
 
