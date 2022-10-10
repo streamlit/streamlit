@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test_version:
+  py_version:
     runs-on: ubuntu-latest
 
     defaults:

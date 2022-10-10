@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  js_test:
     runs-on: ubuntu-latest
 
     defaults:

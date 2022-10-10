@@ -87,7 +87,7 @@ jobs:
           name: cypress_snapshots
           path: frontend/cypress/snapshots
 
-  summary:
+  cypress_summary:
     runs-on: ubuntu-latest
 
     # Consolidates cypress test matrix results for a single pass/fail status check
