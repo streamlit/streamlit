@@ -220,9 +220,11 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(im1), get_hash(im3))
         self.assertNotEqual(get_hash(im1), get_hash(im2))
 
-        # ADD EXPLANATORY COMMENT
-        im4 = Image.new("RGB", (500, 500), (100, 20, 60))
-        im5 = Image.new("RGB", (500, 500), (100, 20, 60))
+        # Check for big PIL images, they converted to numpy array with size
+        # bigger than _NP_SIZE_LARGE = 1_000_000
+        # 1000 * 1000 * 3 = 3_000_000 > _NP_SIZE_LARGE
+        im4 = Image.new("RGB", (1000, 1000), (100, 20, 60))
+        im5 = Image.new("RGB", (1000, 1000), (100, 20, 60))
 
         self.assertEqual(get_hash(im4), get_hash(im5))
 
