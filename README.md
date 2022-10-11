@@ -64,3 +64,4 @@ With [Community Cloud](https://streamlit.io/cloud) you can deploy, manage, and s
 ## License
 
 Streamlit is completely free and open-source and licensed under the [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) license.
+
