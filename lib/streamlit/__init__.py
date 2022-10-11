@@ -82,6 +82,7 @@ from streamlit.commands.query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
 )
+from streamlit.elements.show import show as _show
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -214,6 +215,7 @@ beta_columns = _gather_metrics(_main.beta_columns)
 # Experimental APIs (these may have their signatures changed)
 experimental_get_query_params = _gather_metrics(_get_query_params)
 experimental_set_query_params = _gather_metrics(_set_query_params)
+experimental_show = _gather_metrics(_show)
 
 
 @_gather_metrics
@@ -254,88 +256,6 @@ def set_option(key: str, value: Any) -> None:
             key=key
         )
     )
-
-
-@_gather_metrics
-def experimental_show(*args: Any) -> None:
-    """Write arguments and *argument names* to your app for debugging purposes.
-
-    Show() has similar properties to write():
-
-        1. You can pass in multiple arguments, all of which will be debugged.
-        2. It returns None, so it's "slot" in the app cannot be reused.
-
-    Note: This is an experimental feature. See
-    https://docs.streamlit.io/library/advanced-features/prerelease#experimental for more information.
-
-    Parameters
-    ----------
-    *args : any
-        One or many objects to debug in the App.
-
-    Example
-    -------
-    >>> dataframe = pd.DataFrame({
-    ...     'first column': [1, 2, 3, 4],
-    ...     'second column': [10, 20, 30, 40],
-    ... })
-    >>> st.experimental_show(dataframe)
-
-    Notes
-    -----
-    This is an experimental feature with usage limitations:
-
-    - The method must be called with the name `show`.
-    - Must be called in one line of code, and only once per line.
-    - When passing multiple arguments the inclusion of `,` or `)` in a string
-        argument may cause an error.
-
-    """
-    if not args:
-        return
-
-    try:
-        import inspect
-
-        # Get the calling line of code
-        current_frame = inspect.currentframe()
-        if current_frame is None:
-            warning("`show` not enabled in the shell")
-            return
-
-        # Use two f_back because of telemetry decorator
-        if current_frame.f_back is not None and current_frame.f_back.f_back is not None:
-            lines = inspect.getframeinfo(current_frame.f_back.f_back)[3]
-        else:
-            lines = None
-
-        if not lines:
-            warning("`show` not enabled in the shell")
-            return
-
-        # Parse arguments from the line
-        line = lines[0].split("show", 1)[1]
-        inputs = _code_util.get_method_args_from_code(args, line)
-
-        # Escape markdown and add deltas
-        for idx, input in enumerate(inputs):
-            escaped = _string_util.escape_markdown(input)
-
-            markdown("**%s**" % escaped)
-            write(args[idx])
-
-    except Exception as raised_exc:
-        _, exc, exc_tb = _sys.exc_info()
-        if exc is None:
-            # Presumably, exc should never be None, but it is typed as
-            # Optional, and I don't know the internals of sys.exc_info() well
-            # enough to just use a cast here. Hence, the runtime check.
-            raise RuntimeError(
-                "Unexpected state: exc was None. If you see this message, "
-                "please create an issue at "
-                "https://github.com/streamlit/streamlit/issues"
-            ) from raised_exc
-        exception(exc)
 
 
 @_gather_metrics

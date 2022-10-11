@@ -489,6 +489,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(RerunException):
             st.experimental_rerun()
 
+    def test_show_exists(self):
+        """Assert that `st.experimental_show` exists."""
+        st.experimental_show(MagicMock())
+
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
         import plotly.graph_objs as go
