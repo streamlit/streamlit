@@ -243,7 +243,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           <StyledNavigationControlContainer>
             <NavigationControl className="zoomButton" showCompass={false} />
           </StyledNavigationControlContainer>
-          )
         </DeckGL>
       </StyledDeckGlChart>
     )

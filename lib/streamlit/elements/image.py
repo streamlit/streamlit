@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
 
 import numpy as np
-from PIL import Image, ImageFile
+from PIL import GifImagePlugin, Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit import runtime
@@ -51,12 +51,14 @@ LOGGER: Final = get_logger(__name__)
 # DPI.
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
-PILImage: TypeAlias = Union[ImageFile.ImageFile, Image.Image]
+PILImage: TypeAlias = Union[
+    ImageFile.ImageFile, Image.Image, GifImagePlugin.GifImageFile
+]
 AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
-ImageFormat: TypeAlias = Literal["JPEG", "PNG"]
+ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
@@ -165,15 +167,19 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
         return False
 
 
+def _image_is_gif(image: PILImage) -> bool:
+    return bool(image.format == "GIF")
+
+
 def _validate_image_format_string(
     image_data: Union[bytes, PILImage], format: str
 ) -> ImageFormat:
-    """Return either "JPEG" or "PNG", based on the input `format` string.
+    """Return either "JPEG", "PNG", or "GIF", based on the input `format` string.
 
     - If `format` is "JPEG" or "JPG" (or any capitalization thereof), return "JPEG"
     - If `format` is "PNG" (or any capitalization thereof), return "PNG"
     - For all other strings, return "PNG" if the image has an alpha channel,
-      and "JPEG" otherwise.
+    "GIF" if the image is a GIF, and "JPEG" otherwise.
     """
     format = format.upper()
     if format == "JPEG" or format == "PNG":
@@ -187,6 +193,9 @@ def _validate_image_format_string(
         pil_image = Image.open(io.BytesIO(image_data))
     else:
         pil_image = image_data
+
+    if _image_is_gif(pil_image):
+        return "GIF"
 
     if _image_may_have_alpha_channel(pil_image):
         return "PNG"
