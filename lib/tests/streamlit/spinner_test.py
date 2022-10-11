@@ -15,7 +15,7 @@
 import time
 
 import testutil
-from streamlit.spinner import spinner
+from streamlit.elements.spinner import spinner
 
 
 class SpinnerTest(testutil.DeltaGeneratorTestCase):

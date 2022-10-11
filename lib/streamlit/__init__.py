@@ -92,7 +92,7 @@ from streamlit.runtime.caching import (
     singleton as experimental_singleton,
     memo as experimental_memo,
 )
-from streamlit.spinner import spinner as spinner
+from streamlit.elements.spinner import spinner as spinner
 
 cache = _gather_metrics(_cache)
 
