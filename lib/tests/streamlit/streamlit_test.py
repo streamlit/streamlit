@@ -15,13 +15,12 @@
 """Streamlit Unit test."""
 
 import json
-import logging
 import os
 import re
 import sys
 import textwrap
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -29,12 +28,10 @@ from google.protobuf import json_format
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import StopException, __version__
+from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
-from streamlit.runtime.scriptrunner import RerunException
 from tests import testutil
 
 
@@ -61,26 +58,25 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to False
         self.assertEqual(False, st.get_option("browser.gatherUsageStats"))
 
-    def test_set_option_scriptable(self):
-        """Test that scriptable options can be set from API."""
-        # This is set in lib/tests/conftest.py to off
-        self.assertEqual(True, st.get_option("client.displayEnabled"))
-
-        try:
-            # client.displayEnabled and client.caching can be set after run starts.
-            st.set_option("client.displayEnabled", False)
-            self.assertEqual(False, st.get_option("client.displayEnabled"))
-        finally:
-            # Restore original value
-            st.set_option("client.displayEnabled", True)
-
-    def test_set_option_unscriptable(self):
-        """Test that unscriptable options cannot be set with st.set_option."""
-        # This is set in lib/tests/conftest.py to off
-        self.assertEqual(True, st.get_option("server.enableCORS"))
-
-        with self.assertRaises(StreamlitAPIException):
-            st.set_option("server.enableCORS", False)
+    @parameterized.expand(
+        [
+            "spinner",
+            "experimental_get_query_params",
+            "experimental_set_query_params",
+            "stop",
+            "experimental_rerun",
+            "experimental_show",
+            "get_option",
+            "set_option",
+        ]
+    )
+    def test_api_exists(self, api_name: str):
+        """Test that the given function exists in the `st` namespace.
+        Many st.foo methods are defined in other modules; this test helps
+        ensure we don't accidentally remove them from __init__.py.
+        """
+        api = getattr(st, api_name)
+        self.assertTrue(callable(api))
 
 
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
@@ -441,35 +437,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.progress.value, 51)
-
-    def test_st_spinner_exists(self):
-        """Test that `st.spinner` exists.
-
-        (spinner functionality is tested in `spinner_test.py`).
-        """
-        st.spinner("some_text")
-
-    def test_get_query_params_exists(self):
-        """Assert that `st.experimental_get_query_params` exists."""
-        st.experimental_get_query_params()
-
-    def test_set_query_params_exists(self):
-        """Assert that `st.experimental_set_query_params` exists."""
-        st.experimental_set_query_params(show_map=True)
-
-    def test_stop_exists(self):
-        """Assert that `st.stop` exists."""
-        with self.assertRaises(StopException):
-            st.stop()
-
-    def test_rerun_exists(self):
-        """Assert that `st.experimental_rerun` exists."""
-        with self.assertRaises(RerunException):
-            st.experimental_rerun()
-
-    def test_show_exists(self):
-        """Assert that `st.experimental_show` exists."""
-        st.experimental_show(MagicMock())
 
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""

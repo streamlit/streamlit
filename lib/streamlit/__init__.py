@@ -54,10 +54,6 @@ __version__ = _STREAMLIT_VERSION_STRING
 
 from typing import Any
 
-from streamlit import code_util as _code_util
-from streamlit import env_util as _env_util
-from streamlit import source_util as _source_util
-from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.runtime.scriptrunner import (
     add_script_run_ctx as _add_script_run_ctx,
@@ -66,8 +62,6 @@ from streamlit.runtime.scriptrunner import (
     RerunException as _RerunException,
     RerunData as _RerunData,
 )
-from streamlit.errors import StreamlitAPIException as _StreamlitAPIException
-from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
@@ -78,6 +72,7 @@ from streamlit.commands.query_params import (
     set_query_params as _set_query_params,
 )
 from streamlit.elements.show import show as _show
+from streamlit.commands.set_option import set_option as _set_option
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -89,6 +84,7 @@ from streamlit.runtime.caching import (
     memo as experimental_memo,
 )
 from streamlit.elements.spinner import spinner as spinner
+from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
     rerun as experimental_rerun,
@@ -196,7 +192,8 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
 # Config
 get_option = _config.get_option
-from streamlit.commands.page_config import set_page_config as set_page_config
+set_option = _gather_metrics(_set_option)
+
 
 # Session State
 session_state = _SessionStateProxy()
@@ -211,46 +208,6 @@ beta_columns = _gather_metrics(_main.beta_columns)
 experimental_get_query_params = _gather_metrics(_get_query_params)
 experimental_set_query_params = _gather_metrics(_set_query_params)
 experimental_show = _gather_metrics(_show)
-
-
-@_gather_metrics
-def set_option(key: str, value: Any) -> None:
-    """Set config option.
-
-    Currently, only the following config options can be set within the script itself:
-        * client.caching
-        * client.displayEnabled
-        * deprecation.*
-
-    Calling with any other options will raise StreamlitAPIException.
-
-    Run `streamlit config show` in the terminal to see all available options.
-
-    Parameters
-    ----------
-    key : str
-        The config option key of the form "section.optionName". To see all
-        available options, run `streamlit config show` on a terminal.
-
-    value
-        The new value to assign to this config option.
-
-    """
-    try:
-        opt = _config._config_options_template[key]
-    except KeyError as ke:
-        raise _StreamlitAPIException(
-            "Unrecognized config option: {key}".format(key=key)
-        ) from ke
-    if opt.scriptable:
-        _config.set_option(key, value)
-        return
-
-    raise _StreamlitAPIException(
-        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
-            key=key
-        )
-    )
 
 
 @_gather_metrics
