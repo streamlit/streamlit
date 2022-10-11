@@ -54,9 +54,8 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from typing import Any, Dict, List, NoReturn
+from typing import Any, NoReturn
 import sys as _sys
-import urllib.parse as _parse
 
 import click as _click
 
@@ -79,6 +78,10 @@ from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
 from streamlit.user_info import UserInfoProxy as _UserInfoProxy
+from streamlit.commands.query_params import (
+    get_query_params as _get_query_params,
+    set_query_params as _set_query_params,
+)
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -204,6 +207,10 @@ beta_container = _gather_metrics(_main.beta_container)
 beta_expander = _gather_metrics(_main.beta_expander)
 beta_columns = _gather_metrics(_main.beta_columns)
 
+# "Experimental" APIs (these may have their signatures changed)
+experimental_get_query_params = _gather_metrics(_get_query_params)
+experimental_set_query_params = _gather_metrics(_set_query_params)
+
 
 @_gather_metrics
 def set_option(key: str, value: Any) -> None:
@@ -325,68 +332,6 @@ def experimental_show(*args: Any) -> None:
                 "https://github.com/streamlit/streamlit/issues"
             ) from raised_exc
         exception(exc)
-
-
-@_gather_metrics
-def experimental_get_query_params() -> Dict[str, List[str]]:
-    """Return the query parameters that is currently showing in the browser's URL bar.
-
-    Returns
-    -------
-    dict
-      The current query parameters as a dict. "Query parameters" are the part of the URL that comes
-      after the first "?".
-
-    Example
-    -------
-    Let's say the user's web browser is at
-    `http://localhost:8501/?show_map=True&selected=asia&selected=america`.
-    Then, you can get the query parameters using the following:
-
-    >>> st.experimental_get_query_params()
-    {"show_map": ["True"], "selected": ["asia", "america"]}
-
-    Note that the values in the returned dict are *always* lists. This is
-    because we internally use Python's urllib.parse.parse_qs(), which behaves
-    this way. And this behavior makes sense when you consider that every item
-    in a query string is potentially a 1-element array.
-
-    """
-    ctx = _get_script_run_ctx()
-    if ctx is None:
-        return {}
-    return _parse.parse_qs(ctx.query_string)
-
-
-@_gather_metrics
-def experimental_set_query_params(**query_params: Any) -> None:
-    """Set the query parameters that are shown in the browser's URL bar.
-
-    Parameters
-    ----------
-    **query_params : dict
-        The query parameters to set, as key-value pairs.
-
-    Example
-    -------
-
-    To point the user's web browser to something like
-    "http://localhost:8501/?show_map=True&selected=asia&selected=america",
-    you would do the following:
-
-    >>> st.experimental_set_query_params(
-    ...     show_map=True,
-    ...     selected=["asia", "america"],
-    ... )
-
-    """
-    ctx = _get_script_run_ctx()
-    if ctx is None:
-        return
-    ctx.query_string = _parse.urlencode(query_params, doseq=True)
-    msg = _ForwardMsg_pb2.ForwardMsg()
-    msg.page_info_changed.query_string = ctx.query_string
-    ctx.enqueue(msg)
 
 
 @_gather_metrics

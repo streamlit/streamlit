@@ -473,6 +473,14 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         """
         st.spinner("some_text")
 
+    def test_get_query_params(self):
+        """Tests that `experimental_get_query_params` is in the `st` package."""
+        st.experimental_get_query_params()
+
+    def test_set_query_params(self):
+        """Tests that `experimental_set_query_params` is in the `st` package."""
+        st.experimental_set_query_params(show_map=True)
+
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
         import plotly.graph_objs as go
