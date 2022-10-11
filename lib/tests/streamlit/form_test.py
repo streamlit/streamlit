@@ -244,6 +244,15 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
 class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
     """Test form submit button."""
 
+    def test_disabled_submit_button(self):
+        """Test that a submit button can be disabled."""
+
+        with st.form("foo"):
+            st.form_submit_button(disabled=True)
+
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual(True, last_delta.new_element.button.disabled)
+
     def test_submit_button_outside_form(self):
         """Test that a submit button is not allowed outside a form."""
 

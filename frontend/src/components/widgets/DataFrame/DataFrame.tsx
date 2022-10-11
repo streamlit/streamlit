@@ -119,6 +119,7 @@ export function getColumns(
   data: Quiver
 ): GridColumnWithCellTemplate[] {
   const columns: GridColumnWithCellTemplate[] = []
+  const stretchColumn = element.useContainerWidth || element.width
 
   if (data.isEmpty()) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
@@ -131,6 +132,7 @@ export function getColumns(
         return getCellTemplate(ColumnType.Text, true, "faded")
       },
       columnType: ColumnType.Text,
+      ...(stretchColumn ? { grow: 1 } : {}),
     } as GridColumnWithCellTemplate)
     return columns
   }
@@ -150,6 +152,7 @@ export function getColumns(
         return getCellTemplate(columnType, true, "faded")
       },
       columnType,
+      ...(stretchColumn ? { grow: 1 } : {}),
     } as GridColumnWithCellTemplate)
   }
 
@@ -159,8 +162,6 @@ export function getColumns(
     const quiverType = data.types.data[i]
     const columnType = determineColumnType(quiverType)
 
-    const stretchColumn = element.useContainerWidth || element.width
-
     columns.push({
       id: `column-${columnTitle}-${i}`,
       title: columnTitle,
@@ -169,7 +170,7 @@ export function getColumns(
         return getCellTemplate(columnType, true)
       },
       columnType,
-      ...(stretchColumn ? { grow: 1 } : {}),
+      ...(stretchColumn ? { grow: 3 } : {}),
     } as GridColumnWithCellTemplate)
   }
   return columns
@@ -241,8 +242,7 @@ export function useDataLoader(
       return {
         ...column,
         width: columnSizes.get(column.id),
-        // TODO (lukasmasuch): set grow: 0 -> currently not possible because of a bug:
-        // https://github.com/glideapps/glide-data-grid/issues/479
+        grow: 0, // Deactivate grow for this column
       } as GridColumnWithCellTemplate
     }
     return column
@@ -253,9 +253,14 @@ export function useDataLoader(
   const numIndices = data.types?.index?.length ?? 0
 
   const onColumnResize = React.useCallback(
-    (column: GridColumn, newSize: number) => {
+    (
+      column: GridColumn,
+      newSize: number,
+      colIndex: number,
+      newSizeWithGrow: number
+    ) => {
       if (column.id) {
-        setColumnSizes(new Map(columnSizes).set(column.id, newSize))
+        setColumnSizes(new Map(columnSizes).set(column.id, newSizeWithGrow))
       }
     },
     [columns]
@@ -417,6 +422,21 @@ function DataFrame({
   })
 
   React.useLayoutEffect(() => {
+    // This prevents weird table resizing behavior if the container width
+    // changes and the table uses the full container width.
+    if (
+      resizableRef.current &&
+      element.useContainerWidth &&
+      resizableSize.width === "100%"
+    ) {
+      setResizableSize({
+        width: containerWidth,
+        height: resizableSize.height,
+      })
+    }
+  }, [containerWidth])
+
+  React.useLayoutEffect(() => {
     if (resizableRef.current) {
       // Reset the height if the number of rows changes (e.g. via add_rows)
       setResizableSize({
@@ -508,7 +528,7 @@ function DataFrame({
           // Freeze all index columns:
           freezeColumns={numIndices}
           smoothScrollX={true}
-          // Only activate smooth mode for vertical scrolling for large tables:
+          // Only deactivate smooth mode for vertical scrolling for large tables:
           smoothScrollY={numRows < 100000}
           // Show borders between cells:
           verticalBorder={true}

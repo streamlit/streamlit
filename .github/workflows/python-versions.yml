@@ -1,4 +1,4 @@
-name: Test Python Versions
+name: Python Versions
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  python_tests:
+  py_version:
     runs-on: ubuntu-latest
 
     defaults:
