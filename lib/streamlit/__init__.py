@@ -55,13 +55,6 @@ __version__ = _STREAMLIT_VERSION_STRING
 from typing import Any
 
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.runtime.scriptrunner import (
-    add_script_run_ctx as _add_script_run_ctx,
-    get_script_run_ctx as _get_script_run_ctx,
-    StopException,
-    RerunException as _RerunException,
-    RerunData as _RerunData,
-)
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
@@ -87,7 +80,7 @@ from streamlit.elements.spinner import spinner as spinner
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
-    rerun as experimental_rerun,
+    rerun as _rerun,
 )
 
 cache = _gather_metrics(_cache)
@@ -194,7 +187,6 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 get_option = _config.get_option
 set_option = _gather_metrics(_set_option)
 
-
 # Session State
 session_state = _SessionStateProxy()
 experimental_user = _UserInfoProxy()
@@ -208,6 +200,7 @@ beta_columns = _gather_metrics(_main.beta_columns)
 experimental_get_query_params = _gather_metrics(_get_query_params)
 experimental_set_query_params = _gather_metrics(_set_query_params)
 experimental_show = _gather_metrics(_show)
+experimental_rerun = _rerun
 
 
 @_gather_metrics

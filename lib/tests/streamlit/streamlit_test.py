@@ -60,23 +60,94 @@ class StreamlitTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            # DeltaGenerator methods:
+            "altair_chart",
+            "area_chart",
+            "audio",
+            "balloons",
+            "bar_chart",
+            "bokeh_chart",
+            "button",
+            "caption",
+            "camera_input",
+            "checkbox",
+            "code",
+            "columns",
+            "tabs",
+            "container",
+            "dataframe",
+            "date_input",
+            "download_button",
+            "expander",
+            "pydeck_chart",
+            "empty",
+            "error",
+            "exception",
+            "file_uploader",
+            "form",
+            "form_submit_button",
+            "graphviz_chart",
+            "header",
+            "help",
+            "image",
+            "info",
+            "json",
+            "latex",
+            "line_chart",
+            "map",
+            "markdown",
+            "metric",
+            "multiselect",
+            "number_input",
+            "plotly_chart",
+            "progress",
+            "pyplot",
+            "radio",
+            "selectbox",
+            "select_slider",
+            "slider",
+            "snow",
+            "subheader",
+            "success",
+            "table",
+            "text",
+            "text_area",
+            "text_input",
+            "time_input",
+            "title",
+            "vega_lite_chart",
+            "video",
+            "warning",
+            "write",
+            "color_picker",
+            # Other modules the user should have access to:
+            "echo",
             "spinner",
+            "set_page_config",
+            "stop",
+            "cache",
+            # Beta APIs:
+            "beta_container",
+            "beta_expander",
+            "beta_columns",
+            # Experimental APIs:
+            "experimental_singleton",
+            "experimental_memo",
             "experimental_get_query_params",
             "experimental_set_query_params",
-            "stop",
             "experimental_rerun",
             "experimental_show",
             "get_option",
             "set_option",
         ]
     )
-    def test_api_exists(self, api_name: str):
+    def test_function_exists(self, api_name: str):
         """Test that the given function exists in the `st` namespace.
-        Many st.foo methods are defined in other modules; this test helps
+        Most st.foo methods are defined in other modules; this test helps
         ensure we don't accidentally remove them from __init__.py.
         """
         api = getattr(st, api_name)
-        self.assertTrue(callable(api))
+        self.assertTrue(callable(api), f"'st.{api_name}' is not callable")
 
 
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
