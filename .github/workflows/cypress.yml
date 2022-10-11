@@ -5,6 +5,7 @@ on:
     branches:
       - 'develop'
       - 'feature/**'
+      - 'flaky-tests'
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
