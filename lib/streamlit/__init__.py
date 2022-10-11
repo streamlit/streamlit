@@ -54,7 +54,7 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from typing import Any, NoReturn
+from typing import Any
 import sys as _sys
 
 import click as _click
@@ -93,6 +93,10 @@ from streamlit.runtime.caching import (
     memo as experimental_memo,
 )
 from streamlit.elements.spinner import spinner as spinner
+from streamlit.commands.execution_control import (
+    stop as stop,
+    rerun as experimental_rerun,
+)
 
 cache = _gather_metrics(_cache)
 
@@ -207,7 +211,7 @@ beta_container = _gather_metrics(_main.beta_container)
 beta_expander = _gather_metrics(_main.beta_expander)
 beta_columns = _gather_metrics(_main.beta_columns)
 
-# "Experimental" APIs (these may have their signatures changed)
+# Experimental APIs (these may have their signatures changed)
 experimental_get_query_params = _gather_metrics(_get_query_params)
 experimental_set_query_params = _gather_metrics(_set_query_params)
 
@@ -374,50 +378,3 @@ def _maybe_print_use_warning() -> None:
             _LOGGER.warning(
                 f"\n  {warning} to view this Streamlit app on a browser, run it with the following\n  command:\n\n    streamlit run {script_name} [ARGUMENTS]"
             )
-
-
-def stop() -> NoReturn:
-    """Stops execution immediately.
-
-    Streamlit will not run any statements after `st.stop()`.
-    We recommend rendering a message to explain why the script has stopped.
-    When run outside of Streamlit, this will raise an Exception.
-
-    Example
-    -------
-
-    >>> name = st.text_input('Name')
-    >>> if not name:
-    >>>   st.warning('Please input a name.')
-    >>>   st.stop()
-    >>> st.success('Thank you for inputting a name.')
-
-    """
-    raise StopException()
-
-
-def experimental_rerun() -> NoReturn:
-    """Rerun the script immediately.
-
-    When `st.experimental_rerun()` is called, the script is halted - no
-    more statements will be run, and the script will be queued to re-run
-    from the top.
-
-    If this function is called outside of Streamlit, it will raise an
-    Exception.
-    """
-
-    ctx = _get_script_run_ctx()
-
-    query_string = ""
-    page_script_hash = ""
-    if ctx is not None:
-        query_string = ctx.query_string
-        page_script_hash = ctx.page_script_hash
-
-    raise _RerunException(
-        _RerunData(
-            query_string=query_string,
-            page_script_hash=page_script_hash,
-        )
-    )

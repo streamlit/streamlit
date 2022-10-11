@@ -29,11 +29,12 @@ from google.protobuf import json_format
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import __version__
+from streamlit import StopException, __version__
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+from streamlit.runtime.scriptrunner import RerunException
 from tests import testutil
 
 
@@ -463,23 +464,30 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.progress.value, 51)
 
-    def test_st_spinner(self):
-        """Test that `spinner` is in the `st` package.
-
-        This test will fail if we accidentally move the spinner import
-        out of __init__.py.
+    def test_st_spinner_exists(self):
+        """Test that `st.spinner` exists.
 
         (spinner functionality is tested in `spinner_test.py`).
         """
         st.spinner("some_text")
 
-    def test_get_query_params(self):
-        """Tests that `experimental_get_query_params` is in the `st` package."""
+    def test_get_query_params_exists(self):
+        """Assert that `st.experimental_get_query_params` exists."""
         st.experimental_get_query_params()
 
-    def test_set_query_params(self):
-        """Tests that `experimental_set_query_params` is in the `st` package."""
+    def test_set_query_params_exists(self):
+        """Assert that `st.experimental_set_query_params` exists."""
         st.experimental_set_query_params(show_map=True)
+
+    def test_stop_exists(self):
+        """Assert that `st.stop` exists."""
+        with self.assertRaises(StopException):
+            st.stop()
+
+    def test_rerun_exists(self):
+        """Assert that `st.experimental_rerun` exists."""
+        with self.assertRaises(RerunException):
+            st.experimental_rerun()
 
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
