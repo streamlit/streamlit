@@ -56,6 +56,10 @@ from typing import Any
 
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
+from streamlit.runtime.caching import (
+    singleton as _singleton,
+    memo as _memo,
+)
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
@@ -72,10 +76,6 @@ from streamlit.commands.set_option import set_option as _set_option
 
 from streamlit.echo import echo as echo
 from streamlit.runtime.legacy_caching import cache as _cache
-from streamlit.runtime.caching import (
-    singleton as experimental_singleton,
-    memo as experimental_memo,
-)
 from streamlit.elements.spinner import spinner as spinner
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
@@ -189,14 +189,16 @@ set_option = _gather_metrics(_set_option)
 
 # Session State
 session_state = _SessionStateProxy()
-experimental_user = _UserInfoProxy()
 
 # Beta APIs
 beta_container = _gather_metrics(_main.beta_container)
 beta_expander = _gather_metrics(_main.beta_expander)
 beta_columns = _gather_metrics(_main.beta_columns)
 
-# Experimental APIs (these may have their signatures changed)
+# Experimental APIs
+experimental_user = _UserInfoProxy()
+experimental_singleton = _singleton
+experimental_memo = _memo
 experimental_get_query_params = _gather_metrics(_get_query_params)
 experimental_set_query_params = _gather_metrics(_set_query_params)
 experimental_show = _gather_metrics(_show)
