@@ -3,7 +3,10 @@ name: Python Prod Deps Smoke
 on:
   push:
     branches:
-      - '**'
+      - 'develop'
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
   workflow_call:
     inputs:
