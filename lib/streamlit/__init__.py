@@ -49,15 +49,10 @@ from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
 
-_LOGGER = _logger.get_logger("root")
-
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
 from typing import Any
-import sys as _sys
-
-import click as _click
 
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
@@ -265,36 +260,3 @@ def _transparent_write(*args: Any) -> Any:
     if len(args) == 1:
         return args[0]
     return args
-
-
-# We want to show a warning when the user runs a Streamlit script without
-# 'streamlit run', but we need to make sure the warning appears only once no
-# matter how many times __init__ gets loaded.
-_use_warning_has_been_displayed: bool = False
-
-
-def _maybe_print_use_warning() -> None:
-    """Print a warning if Streamlit is imported but not being run with `streamlit run`.
-    The warning is printed only once.
-    """
-    global _use_warning_has_been_displayed
-    from streamlit import runtime
-
-    if not _use_warning_has_been_displayed:
-        _use_warning_has_been_displayed = True
-
-        warning = _click.style("Warning:", bold=True, fg="yellow")
-
-        if _env_util.is_repl():
-            _LOGGER.warning(
-                f"\n  {warning} to view a Streamlit app on a browser, use Streamlit in a file and\n  run it with the following command:\n\n    streamlit run [FILE_NAME] [ARGUMENTS]"
-            )
-
-        elif not runtime.exists() and _config.get_option(
-            "global.showWarningOnDirectExecution"
-        ):
-            script_name = _sys.argv[0]
-
-            _LOGGER.warning(
-                f"\n  {warning} to view this Streamlit app on a browser, run it with the following\n  command:\n\n    streamlit run {script_name} [ARGUMENTS]"
-            )
