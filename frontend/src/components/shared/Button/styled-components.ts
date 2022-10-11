@@ -98,7 +98,7 @@ export const StyledPrimaryButton = styled(
   StyledBaseButton
 )<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.primary,
-  color: theme.colors.lightenedBg05,
+  color: theme.colors.white,
   border: `1px solid ${theme.colors.fadedText10}`,
   "&:hover": {
     filter: "brightness(0.85)",
@@ -114,8 +114,8 @@ export const StyledPrimaryButton = styled(
     color: theme.colors.lightenedBg05,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    color: theme.colors.lightenedBg05,
     borderColor: theme.colors.fadedText40,
+    color: theme.colors.white,
     filter: "none",
     backgroundColor: theme.colors.primary,
     opacity: "60%",
