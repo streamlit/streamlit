@@ -69,7 +69,6 @@ from streamlit.commands.query_params import (
     set_query_params as _set_query_params,
 )
 from streamlit.elements.show import show as _show
-from streamlit.commands.set_option import set_option as _set_option
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -185,7 +184,7 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
 # Config
 get_option = _config.get_option
-set_option = _gather_metrics(_set_option)
+set_option = _gather_metrics(_config.set_user_option)
 
 # Session State
 session_state = _SessionStateProxy()
