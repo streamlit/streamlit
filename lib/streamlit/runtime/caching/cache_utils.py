@@ -348,17 +348,15 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with (
-                    cached_func.warning_call_stack.calling_cached_function(func),
-                    cached_func.message_call_stack.calling_cached_function(),
-                    cached_func.message_call_stack.maybe_allow_widgets(
-                        cached_func.allow_widgets
-                    ),
-                    cached_func.warning_call_stack.maybe_suppress_cached_st_function_warning(
-                        cached_func.suppress_st_warning
-                    ),
-                ):
-                    return_value = func(*args, **kwargs)
+                with cached_func.warning_call_stack.calling_cached_function(func):
+                    with cached_func.message_call_stack.calling_cached_function():
+                        with cached_func.message_call_stack.maybe_allow_widgets(
+                            cached_func.allow_widgets
+                        ):
+                            with cached_func.warning_call_stack.maybe_suppress_cached_st_function_warning(
+                                cached_func.suppress_st_warning
+                            ):
+                                return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
                 cache.write_result(value_key, return_value, messages)
