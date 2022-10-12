@@ -22,6 +22,7 @@ jobs:
         shell: bash -ileo pipefail {0}
 
     outputs:
+      enable-setup: ${{ steps.exports.outputs.enable-setup || 'false' }}
       preview-branch: ${{ steps.exports.outputs.preview-branch }}
       s3-url: ${{ steps.exports.outputs.s3-url }}
 
@@ -42,6 +43,12 @@ jobs:
         run: |
           sudo apt install rsync
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
+      - name: Store Whl File
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: whl_file
+          path: lib/dist
       # Uses action to safely process user input (branch name) to prevent script injection attacks
       - name: Set Environment Variables
         uses: ./.github/actions/preview_branch
@@ -49,7 +56,8 @@ jobs:
           pull_request_number: ${{ github.event.pull_request.number }}
           ref_type: ${{ github.ref_type }}
           branch: ${{ github.ref_name }}
-      - name: Upload wheel to S3
+      - if: ${{ env.AWS_ACCESS_KEY_ID != 0 }}
+        name: Upload wheel to S3
         id: exports
         env:
           BRANCH: ${{ env.BRANCH }}
@@ -76,6 +84,7 @@ jobs:
 
           cd ../..
           # env variables don't carry over between gh action jobs
+          echo "::set-output name=preview-branch::${{ env.AWS_ACCESS_KEY_ID != '' }}"
           echo "::set-output name=preview-branch::$PREVIEW_BRANCH"
           echo "::set-output name=s3-url::https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
 
@@ -83,6 +92,7 @@ jobs:
     runs-on: ubuntu-latest
 
     needs: upload-whl
+    if: needs.upload-whl.outputs.enable-setup == 'true'
 
     defaults:
       run:
