@@ -230,10 +230,12 @@ class CachedFunction:
         func: types.FunctionType,
         show_spinner: Union[bool, str],
         suppress_st_warning: bool,
+        allow_widgets: bool,
     ):
         self.func = func
         self.show_spinner = show_spinner
         self.suppress_st_warning = suppress_st_warning
+        self.allow_widgets = allow_widgets
 
     @property
     def cache_type(self) -> CacheType:
@@ -285,7 +287,11 @@ def replay_result_messages(
             if isinstance(msg, ElementMsgData):
                 if msg.widget_metadata is not None:
                     register_widget_from_metadata(
-                        msg.widget_metadata.metadata, ctx, "", ""
+                        # TODO: can we provide real values for these?
+                        msg.widget_metadata.metadata,
+                        ctx,
+                        "",
+                        "",
                     )
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 maybe_dg = dg._enqueue(msg.delta_type, msg.message)
@@ -342,14 +348,17 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with cached_func.warning_call_stack.calling_cached_function(
-                    func
-                ), cached_func.message_call_stack.calling_cached_function():
-                    if cached_func.suppress_st_warning:
-                        with cached_func.warning_call_stack.suppress_cached_st_function_warning():
-                            return_value = func(*args, **kwargs)
-                    else:
-                        return_value = func(*args, **kwargs)
+                with (
+                    cached_func.warning_call_stack.calling_cached_function(func),
+                    cached_func.message_call_stack.calling_cached_function(),
+                    cached_func.message_call_stack.maybe_allow_widgets(
+                        cached_func.allow_widgets
+                    ),
+                    cached_func.warning_call_stack.maybe_suppress_cached_st_function_warning(
+                        cached_func.suppress_st_warning
+                    ),
+                ):
+                    return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
                 cache.write_result(value_key, return_value, messages)
@@ -408,6 +417,16 @@ class CacheWarningCallStack(threading.local):
         finally:
             self._suppress_st_function_warning -= 1
             assert self._suppress_st_function_warning >= 0
+
+    @contextlib.contextmanager
+    def maybe_suppress_cached_st_function_warning(
+        self, suppress: bool
+    ) -> Iterator[None]:
+        if suppress:
+            with self.suppress_cached_st_function_warning():
+                yield
+        else:
+            yield
 
     def maybe_show_cached_st_function_warning(
         self,
@@ -496,6 +515,7 @@ class CacheMessagesCallStack(threading.local):
         self._most_recent_messages: List[MsgData] = []
         self._registered_metadata: Optional[WidgetMetadata[Any]] = None
         self._cache_type = cache_type
+        self._allow_widgets: int = 0
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -538,15 +558,17 @@ class CacheMessagesCallStack(threading.local):
                 self._registered_metadata = None
             except AttributeError:
                 widget_meta = None
-            msgs.append(
-                ElementMsgData(
-                    delta_type,
-                    element_proto,
-                    id_to_save,
-                    returned_dg_id,
-                    widget_meta,
+
+            if self._allow_widgets or widget_meta is None:
+                msgs.append(
+                    ElementMsgData(
+                        delta_type,
+                        element_proto,
+                        id_to_save,
+                        returned_dg_id,
+                        widget_meta,
+                    )
                 )
-            )
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
 
@@ -580,6 +602,23 @@ class CacheMessagesCallStack(threading.local):
 
     def save_widget_metadata(self, metadata: WidgetMetadata[Any]) -> None:
         self._registered_metadata = metadata
+
+    @contextlib.contextmanager
+    def allow_widgets(self) -> Iterator[None]:
+        self._allow_widgets += 1
+        try:
+            yield
+        finally:
+            self._allow_widgets -= 1
+            assert self._allow_widgets >= 0
+
+    @contextlib.contextmanager
+    def maybe_allow_widgets(self, allow: bool) -> Iterator[None]:
+        if allow:
+            with self.allow_widgets():
+                yield
+        else:
+            yield
 
 
 def _make_value_key(

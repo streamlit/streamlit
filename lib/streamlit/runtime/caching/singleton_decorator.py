@@ -146,6 +146,7 @@ class SingletonAPI:
         *,
         show_spinner: Union[bool, str] = True,
         suppress_st_warning=False,
+        experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
 
@@ -159,6 +160,7 @@ class SingletonAPI:
         *,
         show_spinner: Union[bool, str] = True,
         suppress_st_warning=False,
+        experimental_allow_widgets: bool = False,
     ):
         """Function decorator to store singleton objects.
 
@@ -241,6 +243,7 @@ class SingletonAPI:
                     func=f,
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
+                    allow_widgets=experimental_allow_widgets,
                 )
             )
 
@@ -249,6 +252,7 @@ class SingletonAPI:
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
+                allow_widgets=experimental_allow_widgets,
             )
         )
 
@@ -262,11 +266,14 @@ class SingletonAPI:
 class SingletonCache(Cache):
     """Manages cached values for a single st.singleton function."""
 
-    def __init__(self, key: str, display_name: str):
+    def __init__(
+        self, key: str, display_name: str, experimental_allow_widgets: bool = False
+    ):
         self.key = key
         self.display_name = display_name
         self._mem_cache: Dict[str, InitialCachedResults] = {}
         self._mem_cache_lock = threading.Lock()
+        self.allow_widgets = experimental_allow_widgets
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -291,16 +298,20 @@ class SingletonCache(Cache):
     @gather_metrics
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
-        main_id = st._main.id
-        sidebar_id = st.sidebar.id
-        widgets = {
-            msg.widget_metadata.widget_id
-            for msg in messages
-            if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
-        }
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+
+        main_id = st._main.id
+        sidebar_id = st.sidebar.id
+        if self.allow_widgets:
+            widgets = {
+                msg.widget_metadata.widget_id
+                for msg in messages
+                if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
+            }
+        else:
+            widgets = set()
 
         with self._mem_cache_lock:
             try:

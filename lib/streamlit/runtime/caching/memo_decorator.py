@@ -76,8 +76,9 @@ class MemoizedFunction(CachedFunction):
         persist: Optional[str],
         max_entries: Optional[int],
         ttl: Optional[float],
+        allow_widgets: bool,
     ):
-        super().__init__(func, show_spinner, suppress_st_warning)
+        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
@@ -219,6 +220,7 @@ class MemoAPI:
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
         ttl: Optional[Union[float, timedelta]] = None,
+        experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
 
@@ -235,6 +237,7 @@ class MemoAPI:
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
         ttl: Optional[Union[float, timedelta]] = None,
+        experimental_allow_widgets: bool = False,
     ):
         """Function decorator to memoize function executions.
 
@@ -359,6 +362,7 @@ class MemoAPI:
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl_seconds,
+                    allow_widgets=experimental_allow_widgets,
                 )
             )
 
@@ -375,6 +379,7 @@ class MemoAPI:
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl_seconds,
+                allow_widgets=experimental_allow_widgets,
             )
         )
 
@@ -395,6 +400,7 @@ class MemoCache(Cache):
         max_entries: float,
         ttl: float,
         display_name: str,
+        experimental_allow_widgets: bool = False,
     ):
         self.key = key
         self.display_name = display_name
@@ -403,6 +409,7 @@ class MemoCache(Cache):
             maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
+        self.allow_widgets = experimental_allow_widgets
 
     @property
     def max_entries(self) -> float:
@@ -467,14 +474,18 @@ class MemoCache(Cache):
         """
         main_id = st._main.id
         sidebar_id = st.sidebar.id
-        widgets = {
-            msg.widget_metadata.widget_id
-            for msg in messages
-            if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
-        }
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+
+        if self.allow_widgets:
+            widgets = {
+                msg.widget_metadata.widget_id
+                for msg in messages
+                if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
+            }
+        else:
+            widgets = set()
 
         initial_results: Optional[InitialCachedResults] = None
 
