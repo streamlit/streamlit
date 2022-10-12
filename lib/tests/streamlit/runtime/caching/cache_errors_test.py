@@ -20,6 +20,7 @@ from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.runtime.caching.cache_errors import (
     UnhashableParamError,
     UnserializableReturnValueError,
+    get_return_value_type,
 )
 from tests import testutil
 
@@ -34,6 +35,8 @@ class CacheErrorsTest(testutil.DeltaGeneratorTestCase):
 
     TODO: parameterize these tests for both memo + singleton
     """
+
+    maxDiff = None
 
     def test_unhashable_type(self):
         @st.experimental_memo
@@ -83,7 +86,7 @@ def unhashable_type_func(_lock, ...):
         self.assertEqual(ep.type, "UnserializableReturnValueError")
 
         expected_message = f"""
-            Cannot serialize the return value (of type `<class '_thread.lock'>`) in `unserializable_return_value_func()`.  
+            Cannot serialize the return value (of type {get_return_value_type(return_value=threading.Lock())}) in `unserializable_return_value_func()`.  
             `st.experimental_memo` uses [pickle](https://docs.python.org/3/library/pickle.html) to 
             serialize the function’s return value and safely store it in the cache without mutating the original object. Please convert the return value to a pickle-serializable type.  
             If you want to cache unserializable objects such as database connections or Tensorflow 

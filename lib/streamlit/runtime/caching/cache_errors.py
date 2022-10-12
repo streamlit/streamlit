@@ -24,12 +24,19 @@ from streamlit.errors import (
 )
 
 
-def _get_cached_func_name_md(func: types.FunctionType) -> str:
+def _get_cached_func_name_md(func: object) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return "`%s()`" % func.__name__
-    else:
-        return "a cached function"
+    elif hasattr(type(func), "__name__"):
+        return f"`{type(func).__name__}`"
+    return f"`{type(func)}`"
+
+
+def get_return_value_type(return_value: object) -> str:
+    if hasattr(return_value, "__module__") and hasattr(type(return_value), "__name__"):
+        return f"`{return_value.__module__}.{type(return_value).__name__}`"
+    return _get_cached_func_name_md(return_value)
 
 
 class CacheType(enum.Enum):
@@ -158,17 +165,9 @@ class UnserializableReturnValueError(MarkdownFormattedException):
         MarkdownFormattedException.__init__(
             self,
             f"""
-            Cannot serialize the return value (of type {self._get_return_value_type(return_value)}) in {_get_cached_func_name_md(func)}.  
+            Cannot serialize the return value (of type {get_return_value_type(return_value)}) in {_get_cached_func_name_md(func)}.  
             `st.experimental_memo` uses [pickle](https://docs.python.org/3/library/pickle.html) to 
             serialize the function’s return value and safely store it in the cache without mutating the original object. Please convert the return value to a pickle-serializable type.  
             If you want to cache unserializable objects such as database connections or Tensorflow 
             sessions, use `st.experimental_singleton` instead (see [our docs](https://docs.streamlit.io/library/advanced-features/experimental-cache-primitives) for differences).""",
         )
-
-    @staticmethod
-    def _get_return_value_type(return_value: types.FunctionType) -> str:
-        if hasattr(return_value, "__module__") and hasattr(
-            type(return_value), "__name__"
-        ):
-            return f"`{return_value.__module__}.{type(return_value).__name__}`"
-        return f"`{type(return_value)}`"
