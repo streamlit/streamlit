@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   smoke_test:
+    name: Python Prod Deps Smoke Test
     runs-on: ubuntu-latest
 
     defaults:

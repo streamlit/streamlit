@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   js_test:
+    name: Javascript Tests
     runs-on: ubuntu-latest
 
     defaults:

@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   cli_test:
+    name: CLI Regression Test
     runs-on: ubuntu-latest
 
     defaults:

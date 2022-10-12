@@ -3,54 +3,48 @@ name: CI Checks
 on:
   push:
     branches:
-      - 'develop'
-      - 'feature/**'
+      - '**'
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  run-python-tests:
-    name: Python Min & Max Version Test
+  python:
     uses: ./.github/workflows/python-versions.yml
     with:
       ref: ${{ github.ref_name }}
 
-  run-javascript-tests:
-    name: Javascript Tests
+  javascript:
     uses: ./.github/workflows/js-tests.yml
     with:
       ref: ${{ github.ref_name }}
 
-  run-cli-regression-test:
-    name: CLI Regression Test
+  cli-regression:
     uses: ./.github/workflows/cli-regression.yml
     with:
       ref: ${{ github.ref_name }}
 
-  run-py-prod-deps-smoke-test:
-    name: Python Prod Deps Smoke Test
+  py-prod-deps-smoke:
     uses: ./.github/workflows/py-prod-deps-smoke-test.yml
     with:
       ref: ${{ github.ref_name }}
 
-  run-cypress-tests:
-    name: Cypress Tests
+  cypress:
     uses: ./.github/workflows/cypress.yml
     with:
       ref: ${{ github.ref_name }}
 
-  # ci-check-summary:
-  #   runs-on: ubuntu-latest
+  ci-check-summary:
+    runs-on: ubuntu-latest
 
-  #   # Consolidates results of above CI checks into a single pass/fail status check
-  #   if: ${{ always() }}
-  #   needs: [run-python-tests, run-javascript-tests, run-cli-regression-test, run-py-prod-deps-smoke-test, run-cypress-tests]
+    # Consolidates results of above CI checks into a single pass/fail status check
+    if: ${{ always() }}
+    needs: [python, javascript, cli-regression, py-prod-deps-smoke, cypress]
 
-  #   defaults:
-  #     run:
-  #       shell: bash -ileo pipefail {0}
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
 
-  #   steps:
-  #     - name: Overall CI Check Status
-  #       if: ${{ needs.test.result == 'failure' }}
-  #       run: exit 1
+    steps:
+      - name: Overall CI Check Status
+        if: ${{ needs.python.result == 'failure' || needs.javascript.result == 'failure' || needs.cli-regression.result == 'failure' || needs.py-prod-deps-smoke.result == 'failure' || needs.cypress.result == 'failure' }}
+        run: exit 1

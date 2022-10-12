@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   test:
+    name: Cypress Tests
     runs-on: ubuntu-latest
 
     defaults:

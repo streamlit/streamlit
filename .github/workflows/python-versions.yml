@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   py_version:
+    name: Python Version Tests
     runs-on: ubuntu-latest
 
     defaults:
