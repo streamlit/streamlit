@@ -19,7 +19,7 @@ if st.button("click to rerun"):
     irrelevant_value = 1
 
 
-@st.experimental_memo  # type: ignore
+@st.experimental_memo(experimental_allow_widgets=True)  # type: ignore
 def cached(irrelevant):
     options = ["foo", "bar", "baz"]
     if st.checkbox("custom filters"):

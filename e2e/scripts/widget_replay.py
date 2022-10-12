@@ -17,7 +17,7 @@ import streamlit as st
 st.button("click to rerun")
 
 
-@st.experimental_memo  # type: ignore
+@st.experimental_memo(experimental_allow_widgets=True)  # type: ignore
 def foo(i):
     options = ["foo", "bar", "baz", "qux"]
     r = st.radio("radio", options, index=i)
