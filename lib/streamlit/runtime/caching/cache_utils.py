@@ -49,6 +49,7 @@ from streamlit.runtime.caching.cache_errors import (
     CacheType,
     UnhashableParamError,
     UnhashableTypeError,
+    UnserializableReturnValueError,
 )
 from streamlit.runtime.caching.hashing import update_hash
 
@@ -248,7 +249,12 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                         return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
-                cache.write_result(value_key, return_value, messages)
+                try:
+                    cache.write_result(value_key, return_value, messages)
+                except TypeError:
+                    raise UnserializableReturnValueError(
+                        return_value=return_value, func=cached_func.func
+                    )
 
             return return_value
 
