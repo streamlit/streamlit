@@ -21,22 +21,30 @@ describe("st.button", () => {
     cy.prepForElementSnapshots();
   });
 
-  it("shows widget correctly", () => {
-    cy.get(".stButton").should("have.length", 2);
+  it("shows default button correctly", () => {
+    cy.get(".stButton").should("have.length", 3);
 
     cy.get(".stButton")
       .first()
       .matchThemedSnapshots("button-widget");
   });
 
-  it("shows disabled widget correctly", () => {
-    cy.get(".stButton").should("have.length", 2);
+  it("shows primary button correctly", () => {
+    cy.get(".stButton").should("have.length", 3);
+
+    cy.get(".stButton")
+      .last()
+      .matchThemedSnapshots("primary-button-widget");
+  });
+
+  it("shows disabled button correctly", () => {
+    cy.get(".stButton").should("have.length", 3);
 
     cy.getIndexed(".stButton", 1).matchThemedSnapshots("disabled-button");
   });
 
   it("has correct default values", () => {
-    cy.get(".stButton button").should("have.text", "button 1" + "button 2");
+    cy.get(".stButton button").should("have.text", "button 1" + "button 2" + "button 3");
   });
 
   it("sets value correctly when user clicks", () => {
