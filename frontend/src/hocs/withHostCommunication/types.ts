@@ -151,6 +151,9 @@ export type IGuestToHostMessage =
       type: "UPDATE_HASH"
       hash: string
     }
+  | {
+      type: "WEBSOCKET_DISCONNECTED"
+    }
 
 export type VersionedMessage<Message> = {
   stCommVersion: number

@@ -368,6 +368,17 @@ export class App extends PureComponent<Props, State> {
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
 
+    const { connectionState: currState } = this.state
+
+    if (
+      currState === ConnectionState.CONNECTED &&
+      newState === ConnectionState.PINGING_SERVER
+    ) {
+      this.props.hostCommunication.sendMessage({
+        type: "WEBSOCKET_DISCONNECTED",
+      })
+    }
+
     this.setState({ connectionState: newState })
 
     if (newState === ConnectionState.CONNECTED) {

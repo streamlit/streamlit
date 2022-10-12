@@ -331,6 +331,19 @@ describe("App", () => {
     })
   })
 
+  it("sends WEBSOCKET_DISCONNECTED message to the host when the connection to the server is dropped", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const app = wrapper.instance() as App
+
+    app.handleConnectionStateChanged(ConnectionState.CONNECTED)
+    app.handleConnectionStateChanged(ConnectionState.PINGING_SERVER)
+
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "WEBSOCKET_DISCONNECTED",
+    })
+  })
+
   it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
