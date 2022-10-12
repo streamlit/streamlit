@@ -52,7 +52,7 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from typing import Any
+from typing import Any as _Any
 
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
@@ -205,7 +205,7 @@ experimental_rerun = _rerun
 
 
 @_gather_metrics
-def _transparent_write(*args: Any) -> Any:
+def _transparent_write(*args: _Any) -> _Any:
     """This is just st.write, but returns the arguments you passed to it."""
     write(*args)
     if len(args) == 1:
