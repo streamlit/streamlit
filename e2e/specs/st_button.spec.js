@@ -66,9 +66,6 @@ describe("st.button", () => {
       .first()
       .click();
 
-    // ensure markdown rendered on button click callback has time to load
-    cy.get(".stMarkdown", { timeout: 10000 }).should("have.length", 7)
-
     cy.get(".stMarkdown").contains("Button was clicked: True");
     cy.get(".stMarkdown").contains("times clicked: 1");
     cy.get(".stMarkdown").contains("arg value: 1");
