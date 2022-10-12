@@ -24,7 +24,7 @@ from streamlit.errors import (
 )
 
 
-def _get_cached_func_name_md(func: object) -> str:
+def _get_cached_func_name_md(func) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return "`%s()`" % func.__name__
@@ -33,7 +33,7 @@ def _get_cached_func_name_md(func: object) -> str:
     return f"`{type(func)}`"
 
 
-def get_return_value_type(return_value: object) -> str:
+def get_return_value_type(return_value) -> str:
     if hasattr(return_value, "__module__") and hasattr(type(return_value), "__name__"):
         return f"`{return_value.__module__}.{type(return_value).__name__}`"
     return _get_cached_func_name_md(return_value)
