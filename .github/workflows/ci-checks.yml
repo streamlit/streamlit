@@ -1,0 +1,56 @@
+name: CI Checks
+
+on:
+  push:
+    branches:
+      - 'develop'
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  run-python-tests:
+    name: Python Min & Max Version Test
+    uses: ./.github/workflows/python-versions.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-javascript-tests:
+    name: Javascript Tests
+    uses: ./.github/workflows/js-tests.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-cli-regression-test:
+    name: CLI Regression Test
+    uses: ./.github/workflows/cli-regression.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-py-prod-deps-smoke-test:
+    name: Python Prod Deps Smoke Test
+    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-cypress-tests:
+    name: Cypress Tests
+    uses: ./.github/workflows/cypress.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  # ci-check-summary:
+  #   runs-on: ubuntu-latest
+
+  #   # Consolidates results of above CI checks into a single pass/fail status check
+  #   if: ${{ always() }}
+  #   needs: [run-python-tests, run-javascript-tests, run-cli-regression-test, run-py-prod-deps-smoke-test, run-cypress-tests]
+
+  #   defaults:
+  #     run:
+  #       shell: bash -ileo pipefail {0}
+
+  #   steps:
+  #     - name: Overall CI Check Status
+  #       if: ${{ needs.test.result == 'failure' }}
+  #       run: exit 1
