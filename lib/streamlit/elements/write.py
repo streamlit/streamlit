@@ -45,7 +45,7 @@ _LOGGER = get_logger(__name__)
 
 class WriteMixin:
     @gather_metrics
-    def write(self, *args: Any, unsafe_allow_html=False, **kwargs) -> None:
+    def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
         """Write arguments to the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
