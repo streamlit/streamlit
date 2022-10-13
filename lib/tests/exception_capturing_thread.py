@@ -24,6 +24,11 @@ def call_on_threads(
 
     The function must take single `int` param, which will be the index of
     the thread it's being called on.
+
+    Note that a passing multi-threaded test does not generally guarantee that
+    the tested code is thread safe! Because threading issues tend to be
+    non-deterministic, a flaky test that fails only occasionally is a good
+    indicator of an underlying issue.
     """
     threads = [
         ExceptionCapturingThread(name=f"Thread {ii}", target=func, args=[ii])
