@@ -45,7 +45,6 @@ jobs:
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
       - name: Store Whl File
         uses: actions/upload-artifact@v3
-        if: always()
         with:
           name: whl_file
           path: lib/dist
