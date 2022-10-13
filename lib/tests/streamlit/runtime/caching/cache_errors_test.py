@@ -23,9 +23,10 @@ from streamlit.runtime.caching.cache_errors import (
     get_return_value_type,
 )
 from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class CacheErrorsTest(testutil.DeltaGeneratorTestCase):
+class CacheErrorsTest(DeltaGeneratorTestCase):
     """Make sure user-visible error messages look correct.
 
     These errors are a little annoying to test, but they're important! So we
