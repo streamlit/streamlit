@@ -16,7 +16,7 @@
 
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
-import { transparentize } from "color2k"
+import { darken, transparentize } from "color2k"
 import { Theme } from "src/theme"
 
 export enum Kind {
@@ -99,26 +99,18 @@ export const StyledPrimaryButton = styled(
 )<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.primary,
   color: theme.colors.white,
-  border: `1px solid ${theme.colors.fadedText10}`,
+  border: `1px solid ${theme.colors.primary}`,
   "&:hover": {
-    filter: "brightness(0.85)",
+    backgroundColor: darken(theme.colors.primary, 0.05),
   },
   "&:active": {
-    backgroundColor: theme.colors.lightenedBg05,
-    filter: "none",
-    borderColor: "inherit",
-    color: "inherit",
-  },
-  "&:focus:not(:active)": {
-    filter: "brightness(0.85)",
-    color: theme.colors.lightenedBg05,
+    backgroundColor: "transparent",
+    color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText40,
-    color: theme.colors.white,
-    filter: "none",
-    backgroundColor: theme.colors.primary,
-    opacity: "60%",
+    borderColor: theme.colors.fadedText10,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
     cursor: "not-allowed",
   },
 }))
@@ -142,7 +134,7 @@ export const StyledSecondaryButton = styled(
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText40,
+    borderColor: theme.colors.fadedText10,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
