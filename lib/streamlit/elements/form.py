@@ -208,6 +208,8 @@ class FormMixin:
         on_click=None,
         args=None,
         kwargs=None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> bool:
         """Display a form submit button.
 
@@ -234,6 +236,9 @@ class FormMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the button if set to True. The
+            default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -247,6 +252,7 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            disabled=disabled,
             ctx=ctx,
         )
 
@@ -257,6 +263,8 @@ class FormMixin:
         on_click=None,
         args=None,
         kwargs=None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
@@ -269,6 +277,7 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            disabled=disabled,
             ctx=ctx,
         )
 

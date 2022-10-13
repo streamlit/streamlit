@@ -103,4 +103,24 @@ describe("st.image", () => {
       "I am prefixed with some meta tags"
     );
   });
+
+  it("displays a GIF image", () => {
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 11)
+      .should("have.css", "height", "100px")
+      .should("have.css", "width", "100px")
+      .should("have.attr", "src")
+      .should("match", /^.*\.gif$/);
+  });
+
+  it("displays a GIF image and a caption together", () => {
+    cy.get(".element-container [data-testid='stImage']")
+      .eq(15)
+      .matchImageSnapshot("gif-with-caption");
+  });
+
+  it("displays a GIF as PNG", () => {
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 13)
+      .should("have.attr", "src")
+      .should("match", /^.*\.png$/);
+  });
 });
