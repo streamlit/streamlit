@@ -15,10 +15,10 @@
 """button unit test."""
 
 import streamlit as st
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class ButtonTest(testutil.DeltaGeneratorTestCase):
+class ButtonTest(DeltaGeneratorTestCase):
     """Test ability to marshall button protos."""
 
     def test_button(self):

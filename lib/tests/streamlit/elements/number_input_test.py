@@ -26,10 +26,10 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class NumberInputTest(testutil.DeltaGeneratorTestCase):
+class NumberInputTest(DeltaGeneratorTestCase):
     def test_data_type(self):
         """Test that NumberInput.type is set to the proper
         NumberInput.DataType value

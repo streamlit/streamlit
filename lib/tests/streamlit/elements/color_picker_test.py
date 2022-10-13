@@ -22,10 +22,10 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class ColorPickerTest(testutil.DeltaGeneratorTestCase):
+class ColorPickerTest(DeltaGeneratorTestCase):
     def test_just_label(self):
         """Test that it can be called with no value."""
         st.color_picker("the label")

@@ -31,7 +31,7 @@ from streamlit.runtime.state.session_state import (
     WidgetMetadata,
 )
 from streamlit.runtime.state.widgets import _get_widget_id
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def _create_widget(id, states):
@@ -266,7 +266,7 @@ class WidgetHelperTests(unittest.TestCase):
         )
 
 
-class WidgetIdDisabledTests(testutil.DeltaGeneratorTestCase):
+class WidgetIdDisabledTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (st.button,),

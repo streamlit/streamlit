@@ -15,10 +15,10 @@
 from parameterized import parameterized
 
 import streamlit as st
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class EchoTest(testutil.DeltaGeneratorTestCase):
+class EchoTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("code_location default", lambda: st.echo(), 0, 1),

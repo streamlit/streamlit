@@ -23,7 +23,7 @@ import streamlit as st
 from streamlit.cursor import make_delta_path
 from streamlit.elements.media import MediaData
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class TestMediaKind(Enum):
@@ -31,7 +31,7 @@ class TestMediaKind(Enum):
     VIDEO = "video"
 
 
-class MediaTest(testutil.DeltaGeneratorTestCase):
+class MediaTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             ("foo.wav", "audio/wav", TestMediaKind.AUDIO, False),

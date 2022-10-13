@@ -21,12 +21,12 @@ import pandas as pd
 
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
 
-class StMapTest(testutil.DeltaGeneratorTestCase):
+class StMapTest(DeltaGeneratorTestCase):
     """Test ability to marshall deck_gl_json_chart protos via st.map."""
 
     def test_no_args(self):

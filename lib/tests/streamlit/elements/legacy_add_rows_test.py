@@ -24,7 +24,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DataFrame_pb2 import DataFrame
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 DATAFRAME = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
 DATAFRAME_WITH_INDEX = pd.DataFrame({"a": [1, 2], "b": [10, 20]}).set_index("a")
@@ -33,7 +33,7 @@ NEW_ROWS_WITH_INDEX = pd.DataFrame({"a": [3, 4, 5], "b": [30, 40, 50]}).set_inde
 NEW_ROWS_WRONG_SHAPE = pd.DataFrame({"a": [3, 4], "b": [30, 40], "c": [50, 60]})
 
 
-class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     """Test dg._legacy_add_rows()."""
 
     def _get_unnamed_data_methods(self):
