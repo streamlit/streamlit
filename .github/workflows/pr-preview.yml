@@ -56,7 +56,7 @@ jobs:
           pull_request_number: ${{ github.event.pull_request.number }}
           ref_type: ${{ github.ref_type }}
           branch: ${{ github.ref_name }}
-      - if: ${{ env.AWS_ACCESS_KEY_ID != 0 }}
+      - if: ${{ env.AWS_ACCESS_KEY_ID != '' }}
         name: Upload wheel to S3
         id: exports
         env:
