@@ -22,7 +22,7 @@ jobs:
         shell: bash -ileo pipefail {0}
 
     outputs:
-      enable-setup: ${{ steps.exports.outputs.enable-setup || 'false' }}
+      enable-setup: ${{ steps.exports.outputs.enable-setup }}
       preview-branch: ${{ steps.exports.outputs.preview-branch }}
       s3-url: ${{ steps.exports.outputs.s3-url }}
 
@@ -84,7 +84,7 @@ jobs:
 
           cd ../..
           # env variables don't carry over between gh action jobs
-          echo "::set-output name=preview-branch::${{ env.AWS_ACCESS_KEY_ID != '' }}"
+          echo "::set-output name=enable-setup::${{ env.AWS_ACCESS_KEY_ID != '' }}"
           echo "::set-output name=preview-branch::$PREVIEW_BRANCH"
           echo "::set-output name=s3-url::https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
 
