@@ -124,7 +124,9 @@ class RuntimeTest(RuntimeTestCase):
             session_id = self.runtime.create_session(
                 client=MockSessionClient(), user_info=MagicMock()
             )
-            app_session = self.runtime._get_session_info(session_id).session
+            app_session = self.runtime._session_mgr.get_active_session_info(
+                session_id
+            ).session
 
             # Close the session. AppSession.shutdown should be called.
             self.runtime.close_session(session_id)
@@ -183,6 +185,8 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session(session_id)
         self.assertFalse(self.runtime.is_active_session(session_id))
 
+    # TODO(vdonato): Change this test to verify that *all* AppSessions (both active and
+    # inactive) are shut down when the Runtime stops.
     async def test_shutdown_appsessions_on_stop(self):
         """When the Runtime stops, it should shut down open AppSessions."""
         with self.patch_app_session():
@@ -194,7 +198,9 @@ class RuntimeTest(RuntimeTestCase):
                 session_id = self.runtime.create_session(
                     MockSessionClient(), MagicMock()
                 )
-                app_session = self.runtime._get_session_info(session_id).session
+                app_session = self.runtime._session_mgr.get_active_session_info(
+                    session_id
+                ).session
                 app_sessions.append(app_session)
 
             # Sanity check
@@ -221,7 +227,9 @@ class RuntimeTest(RuntimeTestCase):
             back_msg = MagicMock()
             self.runtime.handle_backmsg(session_id, back_msg)
 
-            app_session = self.runtime._get_session_info(session_id).session
+            app_session = self.runtime._session_mgr.get_active_session_info(
+                session_id
+            ).session
             app_session.handle_backmsg.assert_called_once_with(back_msg)
 
     async def test_handle_backmsg_invalid_session(self):
@@ -242,7 +250,9 @@ class RuntimeTest(RuntimeTestCase):
             exception = MagicMock()
             self.runtime.handle_backmsg_deserialization_exception(session_id, exception)
 
-            app_session = self.runtime._get_session_info(session_id).session
+            app_session = self.runtime._session_mgr.get_active_session_info(
+                session_id
+            ).session
             app_session.handle_backmsg_exception.assert_called_once_with(exception)
 
     async def test_handle_backmsg_exception_invalid_session(self):
@@ -514,6 +524,7 @@ class ScriptCheckTest(RuntimeTestCase):
             script_path=self._path,
             command_line="mock command line",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            session_manager_class=MagicMock,
         )
         self.runtime = Runtime(config)
         await self.runtime.start()
