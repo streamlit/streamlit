@@ -44,7 +44,7 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
 if TYPE_CHECKING:
-    from streamlit.runtime.session_manager import SessionInfo
+    from streamlit.runtime.session_manager import SessionManager
 
 
 T = TypeVar("T")
@@ -700,11 +700,11 @@ def require_valid_user_key(key: str) -> None:
 
 @dataclass
 class SessionStateStatProvider(CacheStatsProvider):
-    _session_info_by_id: Dict[str, "SessionInfo"]
+    _session_mgr: "SessionManager"
 
     def get_stats(self) -> List[CacheStat]:
         stats: List[CacheStat] = []
-        for session_info in self._session_info_by_id.values():
+        for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state
             stats.extend(session_state.get_stats())
         return stats
