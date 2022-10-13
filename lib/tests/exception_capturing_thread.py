@@ -42,7 +42,9 @@ class ExceptionCapturingThread(threading.Thread):
         Otherwise no-op.
         """
         if self._unhandled_exception is not None:
-            raise self._unhandled_exception
+            raise RuntimeError(
+                f"Unhandled exception in thread '{self.name}'"
+            ) from self._unhandled_exception
 
     def run(self) -> None:
         try:
