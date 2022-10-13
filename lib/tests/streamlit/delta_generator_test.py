@@ -16,14 +16,20 @@
 
 import functools
 import json
+import logging
+import re
+import unittest
+from unittest.mock import MagicMock, patch
 
 from parameterized import parameterized
 
 import streamlit as st
+import streamlit.delta_generator as delta_generator
 import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -41,6 +47,30 @@ def identity(x):
 register_widget = functools.partial(
     w.register_widget, deserializer=lambda x, s: x, serializer=identity
 )
+
+
+class RunWarningTest(unittest.TestCase):
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=False))
+    def test_run_warning_presence(self):
+        """Using Streamlit without `streamlit run` produces a warning."""
+        with self.assertLogs(level=logging.WARNING) as logs:
+            delta_generator._use_warning_has_been_displayed = False
+            st.write("Using delta generator")
+            output = "".join(logs.output)
+            # Warning produced exactly once
+            self.assertEqual(len(re.findall(r"streamlit run", output)), 1)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_run_warning_absence(self):
+        """Using Streamlit through the CLI results in a Runtime being instantiated,
+        so it produces no usage warning."""
+        with self.assertLogs(level=logging.WARNING) as logs:
+            delta_generator._use_warning_has_been_displayed = False
+            st.write("Using delta generator")
+            # assertLogs is being used as a context manager, but it also checks
+            # that some log output was captured, so we have to let it capture something
+            get_logger("root").warning("irrelevant warning so assertLogs passes")
+            self.assertNotRegex("".join(logs.output), r"streamlit run")
 
 
 class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):

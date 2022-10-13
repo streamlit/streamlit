@@ -44,6 +44,20 @@ describe("Button element", () => {
           .exists()
       ).toBeTruthy()
     })
+
+    it(`renders disabled ${kind} correctly`, () => {
+      const wrapper = shallow(
+        <Button {...getProps({ kind, disabled: true })}>Hello</Button>
+      )
+
+      expect(
+        wrapper
+          .find(
+            `Styled${kind.charAt(0).toUpperCase()}${kind.substring(1)}Button`
+          )
+          .prop("disabled")
+      ).toBe(true)
+    })
   })
 
   Object.keys(Size).forEach(key => {
