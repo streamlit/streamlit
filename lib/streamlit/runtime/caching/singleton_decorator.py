@@ -53,7 +53,9 @@ class SingletonCaches(CacheStatsProvider):
         self._caches_lock = threading.Lock()
         self._function_caches: Dict[str, "SingletonCache"] = {}
 
-    def get_cache(self, key: str, display_name: str) -> "SingletonCache":
+    def get_cache(
+        self, key: str, display_name: str, allow_widgets: bool
+    ) -> "SingletonCache":
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -68,7 +70,9 @@ class SingletonCaches(CacheStatsProvider):
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug("Creating new SingletonCache (key=%s)", key)
-            cache = SingletonCache(key=key, display_name=display_name)
+            cache = SingletonCache(
+                key=key, display_name=display_name, allow_widgets=allow_widgets
+            )
             self._function_caches[key] = cache
             return cache
 
@@ -120,7 +124,9 @@ class SingletonFunction(CachedFunction):
 
     def get_function_cache(self, function_key: str) -> Cache:
         return _singleton_caches.get_cache(
-            key=function_key, display_name=self.display_name
+            key=function_key,
+            display_name=self.display_name,
+            allow_widgets=self.allow_widgets,
         )
 
 
@@ -266,14 +272,12 @@ class SingletonAPI:
 class SingletonCache(Cache):
     """Manages cached values for a single st.singleton function."""
 
-    def __init__(
-        self, key: str, display_name: str, experimental_allow_widgets: bool = False
-    ):
+    def __init__(self, key: str, display_name: str, allow_widgets: bool = False):
         self.key = key
         self.display_name = display_name
         self._mem_cache: Dict[str, InitialCachedResults] = {}
         self._mem_cache_lock = threading.Lock()
-        self.allow_widgets = experimental_allow_widgets
+        self.allow_widgets = allow_widgets
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.

@@ -107,6 +107,7 @@ class MemoizedFunction(CachedFunction):
             max_entries=self.max_entries,
             ttl=self.ttl,
             display_name=self.display_name,
+            allow_widgets=self.allow_widgets,
         )
 
 
@@ -124,6 +125,7 @@ class MemoCaches(CacheStatsProvider):
         max_entries: Optional[Union[int, float]],
         ttl: Optional[Union[int, float]],
         display_name: str,
+        allow_widgets: bool,
     ) -> "MemoCache":
         """Return the mem cache for the given key.
 
@@ -160,6 +162,7 @@ class MemoCaches(CacheStatsProvider):
                 max_entries=max_entries,
                 ttl=ttl,
                 display_name=display_name,
+                allow_widgets=allow_widgets,
             )
             self._function_caches[key] = cache
             return cache
@@ -400,7 +403,7 @@ class MemoCache(Cache):
         max_entries: float,
         ttl: float,
         display_name: str,
-        experimental_allow_widgets: bool = False,
+        allow_widgets: bool = False,
     ):
         self.key = key
         self.display_name = display_name
@@ -409,7 +412,7 @@ class MemoCache(Cache):
             maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
-        self.allow_widgets = experimental_allow_widgets
+        self.allow_widgets = allow_widgets
 
     @property
     def max_entries(self) -> float:
