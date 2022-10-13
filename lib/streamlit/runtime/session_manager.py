@@ -14,7 +14,7 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, cast
 
 from typing_extensions import Protocol
 
@@ -43,6 +43,19 @@ class SessionClient(Protocol):
 
 
 @dataclass
+class ActiveSessionInfo:
+    """Type containing data related to an active session.
+
+    This type is nearly identical to SessionInfo. The difference is that when using it,
+    we are guaranteed that SessionClient is not None.
+    """
+
+    client: SessionClient
+    session: AppSession
+    script_run_count: int = 0
+
+
+@dataclass
 class SessionInfo:
     """Type containing data related to an AppSession.
 
@@ -54,6 +67,13 @@ class SessionInfo:
     client: Optional[SessionClient]
     session: AppSession
     script_run_count: int = 0
+
+    def is_active(self) -> bool:
+        return self.client is not None
+
+    def to_active(self) -> ActiveSessionInfo:
+        assert self.is_active(), "A SessionInfo with no client cannot be active!"
+        return cast(ActiveSessionInfo, self)
 
 
 class SessionStorageError(Exception):
@@ -309,9 +329,9 @@ class SessionManager(Protocol):
         """
         self.close_session(session_id)
 
-    def get_active_session_info(self, session_id: str) -> Optional[SessionInfo]:
-        """Return the SessionInfo for the given id, or None if either no such session
-        exists or the session is not active.
+    def get_active_session_info(self, session_id: str) -> Optional[ActiveSessionInfo]:
+        """Return the ActiveSessionInfo for the given id, or None if either no such
+        session exists or the session is not active.
 
         Parameters
         ----------
@@ -320,9 +340,12 @@ class SessionManager(Protocol):
 
         Returns
         -------
-        SessionInfo or None
+        ActiveSessionInfo or None
         """
-        return self.get_session_info(session_id)
+        session = self.get_session_info(session_id)
+        if session is None or not session.is_active():
+            return None
+        return session.to_active()
 
     def is_active_session(self, session_id: str) -> bool:
         """Return True if the given session exists and is active, False otherwise.
@@ -333,14 +356,14 @@ class SessionManager(Protocol):
         """
         return self.get_active_session_info(session_id) is not None
 
-    def list_active_sessions(self) -> List[SessionInfo]:
-        """Return the SessionInfo for all active sessions tracked by this SessionManager.
+    def list_active_sessions(self) -> List[ActiveSessionInfo]:
+        """Return the session info for all active sessions tracked by this SessionManager.
 
         Returns
         -------
-        List[SessionInfo]
+        List[ActiveSessionInfo]
         """
-        return self.list_sessions()
+        return [s.to_active() for s in self.list_sessions()]
 
     def num_active_sessions(self) -> int:
         """Return the number of active sessions tracked by this SessionManager.
