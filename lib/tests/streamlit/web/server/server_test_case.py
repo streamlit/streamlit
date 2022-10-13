@@ -102,7 +102,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         """
 
         return mock.patch(
-            "streamlit.runtime.runtime.AppSession",
+            "streamlit.runtime.websocket_session_manager.AppSession",
             # new_callable must return a function, not an object, or else
             # there will only be a single AppSession mock. Hence the lambda.
             new_callable=lambda: self._create_mock_app_session,
