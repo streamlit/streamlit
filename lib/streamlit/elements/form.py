@@ -16,7 +16,6 @@ import textwrap
 from typing import NamedTuple, Optional, cast
 
 import streamlit
-import streamlit.elements.utils
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2

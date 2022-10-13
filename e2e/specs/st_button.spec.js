@@ -29,18 +29,18 @@ describe("st.button", () => {
       .matchThemedSnapshots("button-widget");
   });
 
+  it("shows disabled button correctly", () => {
+    cy.get(".stButton").should("have.length", 3);
+
+    cy.getIndexed(".stButton", 1).matchThemedSnapshots("disabled-button");
+  });
+
   it("shows primary button correctly", () => {
     cy.get(".stButton").should("have.length", 3);
 
     cy.get(".stButton")
       .last()
-      .matchThemedSnapshots("primary-button-widget");
-  });
-
-  it("shows disabled button correctly", () => {
-    cy.get(".stButton").should("have.length", 3);
-
-    cy.getIndexed(".stButton", 1).matchThemedSnapshots("disabled-button");
+      .matchThemedSnapshots("primary-button");
   });
 
   it("has correct default values", () => {

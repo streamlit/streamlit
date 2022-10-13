@@ -121,19 +121,6 @@ class ButtonMixin:
            height: 220px
 
         """
-
-        def button_type(type):
-            valid_kinds = ["primary", "secondary"]
-            kind = type.lower()
-
-            if kind in valid_kinds:
-                return kind
-
-            raise StreamlitAPIException(
-                'The type argument to st.button must be "primary" or "secondary". \n'
-                f"The argument passed was {type}."
-            )
-
         key = to_key(key)
         ctx = get_script_run_ctx()
         type = check_valid_button_type(str(type), "st.button")
