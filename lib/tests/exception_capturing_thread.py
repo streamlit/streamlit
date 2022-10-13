@@ -59,7 +59,7 @@ class ExceptionCapturingThread(threading.Thread):
         """The unhandled exception raised by the thread's target, if it raised one."""
         return self._unhandled_exception
 
-    def assert_no_unhandled_exception(self):
+    def assert_no_unhandled_exception(self) -> None:
         """If the thread target raised an unhandled exception, re-raise it.
         Otherwise no-op.
         """
