@@ -13,7 +13,29 @@
 # limitations under the License.
 
 import threading
-from typing import Optional
+from typing import Any, Callable, Optional
+
+
+def call_on_threads(
+    func: Callable[[int], Any], num_threads: int, timeout: Optional[float] = 0.25
+) -> None:
+    """Call a function on multiple threads simultaneously and assert that no
+    thread raises an unhandled exception.
+
+    The function must take single `int` param, which will be the index of
+    the thread it's being called on.
+    """
+    threads = [
+        ExceptionCapturingThread(name=f"Thread {ii}", target=func, args=[ii])
+        for ii in range(num_threads)
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join(timeout=timeout)
+        thread.assert_no_unhandled_exception()
 
 
 class ExceptionCapturingThread(threading.Thread):
