@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: whl_file
-          path: lib/dist
+          path: lib/dist/*.whl
       # Uses action to safely process user input (branch name) to prevent script injection attacks
       - name: Set Environment Variables
         uses: ./.github/actions/preview_branch
