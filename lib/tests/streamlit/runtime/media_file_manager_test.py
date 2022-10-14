@@ -372,7 +372,7 @@ class MediaFileManagerTest(TestCase):
         )
 
 
-NUM_THREADS = 5
+NUM_THREADS = 15
 
 
 class MediaFileManagerThreadingTest(unittest.TestCase):
