@@ -20,7 +20,6 @@ from typing import Optional
 from unittest import TestCase, mock
 from unittest.mock import MagicMock, call, mock_open
 
-from exception_capturing_thread import call_on_threads
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import (
@@ -28,6 +27,7 @@ from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     _calculate_file_id,
 )
+from tests.exception_capturing_thread import call_on_threads
 
 
 def random_coordinates():
