@@ -18,6 +18,7 @@ import json
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
@@ -25,6 +26,7 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockedSnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as MockedSnowparkTable
+from tests.testutil import create_snowpark_session
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
@@ -97,8 +99,8 @@ class StMapTest(DeltaGeneratorTestCase):
 
         self.assertTrue("data must be numeric." in str(ctx.exception))
 
-    def test_unevaluated_snowpark_table(self):
-        """Test st.map with unevaluated Snowpark Table"""
+    def test_unevaluated_snowpark_table_mock(self):
+        """Test st.map with unevaluated Snowpark Table based on mock data"""
         mocked_snowpark_table = MockedSnowparkTable(is_map=True, num_of_rows=50000)
         st.map(mocked_snowpark_table)
 
@@ -114,8 +116,27 @@ class StMapTest(DeltaGeneratorTestCase):
         """Check if map data was cut to 10k rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 10000)
 
-    def test_unevaluated_snowpark_dataframe(self):
-        """Test st.map with unevaluated Snowpark DataFrame"""
+    @pytest.mark.require_snowflake()
+    def test_unevaluated_snowpark_table_integration(self):
+        """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
+        with create_snowpark_session() as snowpark_session:
+            table = snowpark_session.sql(
+                """
+                SELECT V1.$1 AS "lat", V1.$2 AS "lon" FROM
+                    (
+                        VALUES (1, 10), (2, 20), (3, 30), (4, 40)
+                    ) AS V1
+                """
+            ).cache_result()
+            st.map(table)
+
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+
+        """Check if map data have 4 rows"""
+        self.assertEqual(len(c["layers"][0]["data"]), 4)
+
+    def test_unevaluated_snowpark_dataframe_mock(self):
+        """Test st.map with unevaluated Snowpark DataFrame based on mock data"""
         mocked_snowpark_dataframe = MockedSnowparkDataFrame(
             is_map=True, num_of_rows=50000
         )
@@ -132,6 +153,25 @@ class StMapTest(DeltaGeneratorTestCase):
 
         """Check if map data was cut to 10k rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 10000)
+
+    @pytest.mark.require_snowflake()
+    def test_unevaluated_snowpark_dataframe_integration(self):
+        """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
+        with create_snowpark_session() as snowpark_session:
+            df = snowpark_session.sql(
+                """
+                SELECT V1.$1 AS "lat", V1.$2 AS "lon" FROM
+                    (
+                        VALUES (1, 10), (2, 20), (3, 30), (4, 40)
+                    ) AS V1
+                """
+            )
+            st.map(df)
+
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+
+        """Check if map data have 4 rows"""
+        self.assertEqual(len(c["layers"][0]["data"]), 4)
 
     def test_pyspark_dataframe(self):
         """Test st.map with pyspark.sql.DataFrame"""

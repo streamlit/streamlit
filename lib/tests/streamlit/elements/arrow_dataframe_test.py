@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pytest as pytest
 
 import streamlit as st
 from streamlit.type_util import (
@@ -29,6 +30,8 @@ from streamlit.type_util import (
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 # In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
+from tests.testutil import create_snowpark_session
+
 if is_pandas_version_less_than("1.3.0"):
     from pandas.io.formats.style import Styler
 else:
@@ -133,3 +136,31 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         st._arrow_dataframe(styler)
         mock_styler_translate.assert_called_once_with(False, False)
+
+    @pytest.mark.require_snowflake()
+    def test_snowpark_uncollected(self):
+        """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
+        with create_snowpark_session() as snowpark_session:
+            df = snowpark_session.sql("SELECT 40+2 as COL1")
+            print("===" * 20)
+            print(df)
+            print("===" * 20)
+
+            st._arrow_dataframe(df)
+
+        expected = pd.DataFrame({"COL1": [42]})
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)
+
+    @pytest.mark.require_snowflake()
+    def test_snowpark_collected(self):
+        """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
+        with create_snowpark_session() as snowpark_session:
+            df = snowpark_session.sql("SELECT 40+2 as COL1").collect()
+            st._arrow_dataframe(df)
+
+        expected = pd.DataFrame({"COL1": [42]})
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)
