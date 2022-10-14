@@ -80,7 +80,7 @@ class StreamlitWriteTest(unittest.TestCase):
             type_util._NUMPY_ARRAY_TYPE_STR: np.array(["a", "b", "c"]),
         }
 
-        # Make sure we have test cases for all _DATAFRAME_LIKE_TYPES, except Snowpark, which requires Snowflake connection
+        # Make sure we have test cases for all _DATAFRAME_LIKE_TYPES
         self.assertEqual(sorted(data.keys()), sorted(type_util._DATAFRAME_LIKE_TYPES))
 
         for df in data.values():
