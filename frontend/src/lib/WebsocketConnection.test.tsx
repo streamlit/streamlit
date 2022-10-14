@@ -461,6 +461,7 @@ describe("WebsocketConnection", () => {
     onMessage: jest.fn(),
     onConnectionStateChange: jest.fn(),
     onRetry: jest.fn(),
+    getHostAuthToken: jest.fn(),
   }
 
   let client: WebsocketConnection
@@ -516,5 +517,49 @@ describe("WebsocketConnection", () => {
     it("returns undefined when ConnectionState != Connected", () => {
       expect(client.getBaseUriParts()).toBeUndefined()
     })
+  })
+})
+
+describe("WebsocketConnection auth token handling", () => {
+  const MOCK_SOCKET_DATA = {
+    baseUriPartsList: [
+      {
+        host: "localhost",
+        port: 1234,
+        basePath: "",
+      },
+    ],
+    onMessage: jest.fn(),
+    onConnectionStateChange: jest.fn(),
+    onRetry: jest.fn(),
+    getHostAuthToken: jest.fn(),
+  }
+
+  let websocketSpy: any
+
+  beforeEach(() => {
+    websocketSpy = jest.spyOn(window, "WebSocket")
+  })
+
+  it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", () => {
+    // eslint-disable-next-line no-new
+    new WebsocketConnection(MOCK_SOCKET_DATA)
+
+    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
+      "streamlit",
+    ])
+  })
+
+  it("sets second Sec-WebSocket-Protocol option to value from getHostAuthToken", () => {
+    // eslint-disable-next-line no-new
+    new WebsocketConnection({
+      ...MOCK_SOCKET_DATA,
+      getHostAuthToken: () => "iAmAnAuthToken",
+    })
+
+    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
+      "streamlit",
+      "iAmAnAuthToken",
+    ])
   })
 })
