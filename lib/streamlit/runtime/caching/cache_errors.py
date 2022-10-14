@@ -24,7 +24,7 @@ from streamlit.errors import (
 )
 
 
-def _get_cached_func_name_md(func) -> str:
+def get_cached_func_name_md(func) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return "`%s()`" % func.__name__
@@ -36,7 +36,7 @@ def _get_cached_func_name_md(func) -> str:
 def get_return_value_type(return_value) -> str:
     if hasattr(return_value, "__module__") and hasattr(type(return_value), "__name__"):
         return f"`{return_value.__module__}.{type(return_value).__name__}`"
-    return _get_cached_func_name_md(return_value)
+    return get_cached_func_name_md(return_value)
 
 
 class CacheType(enum.Enum):
@@ -141,7 +141,7 @@ class CacheReplayClosureError(StreamlitAPIException):
         cache_type: CacheType,
         cached_func: types.FunctionType,
     ):
-        func_name = _get_cached_func_name_md(cached_func)
+        func_name = get_cached_func_name_md(cached_func)
         decorator_name = (cache_type.value,)
 
         msg = (
@@ -165,7 +165,7 @@ class UnserializableReturnValueError(MarkdownFormattedException):
         MarkdownFormattedException.__init__(
             self,
             f"""
-            Cannot serialize the return value (of type {get_return_value_type(return_value)}) in {_get_cached_func_name_md(func)}.  
+            Cannot serialize the return value (of type {get_return_value_type(return_value)}) in {get_cached_func_name_md(func)}.  
             `st.experimental_memo` uses [pickle](https://docs.python.org/3/library/pickle.html) to 
             serialize the function’s return value and safely store it in the cache without mutating the original object. Please convert the return value to a pickle-serializable type.  
             If you want to cache unserializable objects such as database connections or Tensorflow 
