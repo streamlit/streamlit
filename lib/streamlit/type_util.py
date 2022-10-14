@@ -206,7 +206,6 @@ _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_SERIES_TYPE_STR,
     _PANDAS_STYLER_TYPE_STR,
     _NUMPY_ARRAY_TYPE_STR,
-    _SNOWPARK_DF_TYPE_STR,
 )
 
 DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"

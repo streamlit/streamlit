@@ -81,16 +81,7 @@ class StreamlitWriteTest(unittest.TestCase):
         }
 
         # Make sure we have test cases for all _DATAFRAME_LIKE_TYPES, except Snowpark, which requires Snowflake connection
-        self.assertEqual(
-            sorted(data.keys()),
-            sorted(
-                [
-                    dataframe_type
-                    for dataframe_type in type_util._DATAFRAME_LIKE_TYPES
-                    if dataframe_type != type_util._SNOWPARK_DF_TYPE_STR
-                ]
-            ),
-        )
+        self.assertEqual(sorted(data.keys()), sorted(type_util._DATAFRAME_LIKE_TYPES))
 
         for df in data.values():
             with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
