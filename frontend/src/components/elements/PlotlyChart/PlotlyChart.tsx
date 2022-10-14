@@ -58,6 +58,7 @@ function renderFigure({
   const [savedElement, saveElement] = useState(element)
   const [config, setConfig] = useState(JSON.parse(figure.config))
   const theme: Theme = useTheme()
+  const [savedTheme, saveTheme] = useState(theme)
 
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
@@ -76,10 +77,11 @@ function renderFigure({
   const [spec, setSpec] = useState(generateSpec(figure))
 
   const elementChanged = !(savedElement && savedElement === element)
-  if (elementChanged) {
+  if (elementChanged || theme !== savedTheme) {
     saveElement(element)
     setConfig(JSON.parse(figure.config))
     setSpec(generateSpec(figure))
+    saveTheme(theme)
   }
   const { data, layout, frames } = spec
 
