@@ -57,6 +57,7 @@ function renderFigure({
 
   const [savedElement, saveElement] = useState(element)
   const [config, setConfig] = useState(JSON.parse(figure.config))
+  const theme: Theme = useTheme()
 
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
@@ -68,7 +69,6 @@ function renderFigure({
       spec.layout.width = width
     }
 
-    const theme: Theme = useTheme()
     spec.layout = layoutWithThemeDefaults(spec.layout, theme)
 
     return spec
