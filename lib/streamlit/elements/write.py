@@ -191,6 +191,9 @@ class WriteMixin:
             # Order matters!
             if isinstance(arg, str):
                 string_buffer.append(arg)
+            elif type_util.is_snowpark_dataframe(arg):
+                flush_buffer()
+                self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):
                 flush_buffer()
                 if len(np.shape(arg)) > 2:
