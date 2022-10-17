@@ -208,15 +208,9 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => ({
     color: isActive ? theme.colors.bodyText : theme.colors.fadedText60,
-
-    // We only want it to to be truncated on desktop,
-    // where we can use the tooltip to show the whole content.
-    // On mobile, we'll let it wrap
-    [`@media (min-width: 768px)`]: {
-      overflow: "hidden",
-      whiteSpace: "nowrap",
-      textOverflow: "ellipsis",
-    },
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
     display: "table-cell",
   })
 )
