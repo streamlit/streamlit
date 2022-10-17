@@ -283,7 +283,7 @@ def marshall_video(
         _marshall_av_media(coordinates, proto, data, mimetype)
 
 
-def _validate_and_normalize(data) -> Tuple[bytes, int]:
+def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     import numpy as np
 
     data = np.array(data, dtype=float)
@@ -315,7 +315,7 @@ def _validate_and_normalize(data) -> Tuple[bytes, int]:
     return scaled_data.tobytes(), nchan
 
 
-def _make_wav(data, sample_rate):
+def _make_wav(data: "npt.NDArray[Any]", sample_rate: int) -> bytes:
     """
     Transform a numpy array to a PCM bytestring
     We use code from IPython display module to convert numpy array to wave bytes
@@ -338,9 +338,11 @@ def _make_wav(data, sample_rate):
     return val
 
 
-def _maybe_convert_to_wave_bytes(data, sample_rate):
+def _maybe_convert_to_wave_bytes(
+    data: MediaData, sample_rate: Optional[int]
+) -> MediaData:
     if type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
-        data = _make_wav(data, sample_rate)
+        data = _make_wav(cast("npt.NDArray[Any]", data), sample_rate)
     return data
 
 
