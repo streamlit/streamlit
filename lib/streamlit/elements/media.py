@@ -32,7 +32,6 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-
 MediaData: TypeAlias = Union[
     str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
 ]
@@ -285,6 +284,10 @@ def _validate_and_normalize(data) -> Tuple[bytes, int]:
     import numpy as np
 
     data = np.array(data, dtype=float)
+
+    if data.size == 0:
+        raise StreamlitAPIException("""st.audio data numpy array should not be empty""")
+
     if len(data.shape) == 1:
         nchan = 1
     elif len(data.shape) == 2:
