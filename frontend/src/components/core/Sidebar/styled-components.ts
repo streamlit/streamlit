@@ -208,6 +208,10 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => ({
     color: isActive ? theme.colors.bodyText : theme.colors.fadedText60,
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+    display: "table-cell",
   })
 )
 
