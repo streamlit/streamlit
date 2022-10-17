@@ -291,6 +291,8 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "PIL.Image.Image"):
             import numpy as np
 
+            # we don't just hash the results of obj.tobytes() because we want to use
+            # the sampling logic for numpy data
             np_array = np.frombuffer(obj.tobytes(), dtype="uint8")
             return self.to_bytes(np_array)
 

@@ -225,8 +225,13 @@ class HashTest(unittest.TestCase):
         # 1000 * 1000 * 3 = 3_000_000 > _NP_SIZE_LARGE = 1_000_000
         im4 = Image.new("RGB", (1000, 1000), (100, 20, 60))
         im5 = Image.new("RGB", (1000, 1000), (100, 20, 60))
+        im6 = Image.new("RGB", (1000, 1000), (101, 21, 61))
+
+        im4_np_array = np.frombuffer(im4.tobytes(), dtype="uint8")
+        self.assertGreater(im4_np_array.size, _NP_SIZE_LARGE)
 
         self.assertEqual(get_hash(im4), get_hash(im5))
+        self.assertNotEqual(get_hash(im5), get_hash(im6))
 
     @parameterized.expand(
         [
