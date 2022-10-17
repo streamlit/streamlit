@@ -229,7 +229,7 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
 
     def test_remove_session_files(self):
         """`remove_session_files` is thread-safe."""
-        # Add a bunch of files, each to a different session to a single widget
+        # Add a bunch of files, each to a different session
         file_ids = []
         for ii in range(self.NUM_THREADS):
             file = UploadedFileRec(id=0, name=f"file_{ii}", type="type", data=b"123")
