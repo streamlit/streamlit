@@ -62,11 +62,11 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         sample_rate = 44100
 
         # Fake audio data: expect the resultant mimetype to be audio default.
-        fake_audio_1d_np_array = np.array(arr)
+        fake_audio_np_array = np.array(arr)
 
-        st.audio(fake_audio_1d_np_array, sample_rate=sample_rate)
+        st.audio(fake_audio_np_array, sample_rate=sample_rate)
         computed_bytes = _maybe_convert_to_wave_bytes(
-            fake_audio_1d_np_array, sample_rate=sample_rate
+            fake_audio_np_array, sample_rate=sample_rate
         )
 
         el = self.get_delta_from_queue().new_element
@@ -133,6 +133,59 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
             "Warning: sample_parameter rate will be ignored, "
             "since data is not a numpy array",
         )
+
+    def test_maybe_convert_to_wave_numpy_arr_mono(self):
+        """Test _maybe_convert_to_wave_bytes works correctly with 1d numpy array."""
+        sample_rate = 7
+        fake_audio_np_array = np.array([1, 9])
+
+        computed_bytes = _maybe_convert_to_wave_bytes(
+            fake_audio_np_array, sample_rate=sample_rate
+        )
+
+        self.assertEqual(
+            computed_bytes,
+            b"RIFF(\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x07\x00\x00"
+            b"\x00\x0e\x00\x00\x00\x02\x00\x10\x00data\x04\x00\x00\x008\x0e\xff\x7f",
+        )
+
+    def test_maybe_convert_to_wave_numpy_arr_stereo(self):
+        """Test _maybe_convert_to_wave_bytes works correctly with 2d numpy array."""
+        sample_rate = 44100
+        left_channel = np.array([1, 9])
+        right_channel = np.array([6, 1])
+
+        fake_audio_np_array = np.array([left_channel, right_channel])
+
+        computed_bytes = _maybe_convert_to_wave_bytes(
+            fake_audio_np_array, sample_rate=sample_rate
+        )
+
+        self.assertEqual(
+            computed_bytes,
+            b"RIFF,\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00D\xac\x00\x00"
+            b"\x10\xb1\x02\x00\x04\x00\x10\x00data\x08\x00\x00\x008\x0eTU\xff\x7f8\x0e",
+        )
+
+    def test_maybe_convert_to_wave_bytes_with_sample_rate(self):
+        """Test _maybe_convert_to_wave_bytes works correctly with bytes."""
+
+        fake_audio_data_bytes = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        sample_rate = 44100
+
+        computed_bytes = _maybe_convert_to_wave_bytes(
+            fake_audio_data_bytes, sample_rate=sample_rate
+        )
+
+        self.assertEqual(computed_bytes, fake_audio_data_bytes)
+
+    def test_maybe_convert_to_wave_bytes_without_sample_rate(self):
+        """Test _maybe_convert_to_wave_bytes works correctly when sample_rate
+        is None."""
+
+        np_arr = np.array([0, 1, 2, 3])
+        computed_bytes = _maybe_convert_to_wave_bytes(np_arr, sample_rate=None)
+        self.assertTrue(computed_bytes is np_arr)
 
     def test_st_audio_from_file(self):
         """Test st.audio using generated data in a file-like object."""
