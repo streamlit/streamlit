@@ -169,13 +169,13 @@ class UploadedFileManagerTest(unittest.TestCase):
 
 class UploadedFileManagerThreadingTest(unittest.TestCase):
     # The number of threads to run our tests on
-    NUM_THREADS = 15
+    NUM_THREADS = 50
 
     def setUp(self) -> None:
         self.mgr = UploadedFileManager()
 
     def test_add_file(self):
-        """add_file is thread-safe."""
+        """`add_file` is thread-safe."""
         added_files = []
 
         def add_file(ii: int) -> None:
@@ -197,3 +197,60 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
         for file_list in self.mgr._files_by_id.values():
             file_ids.update(file.id for file in file_list)
         self.assertEqual(self.NUM_THREADS, len(file_ids))
+
+    def test_remove_file(self):
+        """`remove_file` is thread-safe."""
+        # Add a bunch of files to a single widget
+        file_ids = []
+        for ii in range(self.NUM_THREADS):
+            file = UploadedFileRec(id=0, name=f"file_{ii}", type="type", data=b"123")
+            file_ids.append(self.mgr.add_file("session", "widget", file).id)
+
+        # Have each thread remove a single file
+        def remove_file(index: int) -> None:
+            file_id = file_ids[index]
+
+            # Ensure our file exists
+            get_files_result = self.mgr.get_files("session", "widget", [file_id])
+            self.assertEqual(1, len(get_files_result))
+
+            # Remove our file
+            was_removed = self.mgr.remove_file("session", "widget", file_id)
+            self.assertTrue(was_removed)
+
+            # Ensure our file no longer exists
+            get_files_result = self.mgr.get_files("session", "widget", [file_id])
+            self.assertEqual(0, len(get_files_result))
+
+        call_on_threads(remove_file, self.NUM_THREADS)
+
+        self.assertEqual(0, len(self.mgr.get_all_files("session", "widget")))
+
+    def test_remove_orphaned_files(self):
+        """`remove_orphaned_files` is thread-safe."""
+        # Add a bunch of "active" files to a single widget
+        active_file_ids = []
+        for ii in range(self.NUM_THREADS):
+            file = UploadedFileRec(id=0, name=f"file_{ii}", type="type", data=b"123")
+            active_file_ids.append(self.mgr.add_file("session", "widget", file).id)
+
+        # Now add some "inactive" files to the same widget
+        inactive_file_ids = []
+        for ii in range(self.NUM_THREADS, self.NUM_THREADS + 50):
+            file = UploadedFileRec(id=0, name=f"file_{ii}", type="type", data=b"123")
+            inactive_file_ids.append(self.mgr.add_file("session", "widget", file).id)
+
+        newest_file_id = inactive_file_ids[len(inactive_file_ids) - 1] + 1
+
+        # Call `remove_orphaned_files` from each thread.
+        # Our active_files should remain intact, and our orphans should be removed!
+        def remove_orphans(_: int) -> None:
+            self.mgr.remove_orphaned_files(
+                "session", "widget", newest_file_id, active_file_ids
+            )
+            remaining_ids = [
+                file.id for file in self.mgr.get_all_files("session", "widget")
+            ]
+            self.assertEqual(sorted(active_file_ids), sorted(remaining_ids))
+
+        call_on_threads(remove_orphans, num_threads=self.NUM_THREADS)
