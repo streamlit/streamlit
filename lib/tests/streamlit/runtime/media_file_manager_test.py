@@ -374,7 +374,7 @@ class MediaFileManagerTest(TestCase):
 
 class MediaFileManagerThreadingTest(unittest.TestCase):
     # The number of threads to run our tests on
-    NUM_THREADS = 15
+    NUM_THREADS = 50
 
     def setUp(self):
         super().setUp()
