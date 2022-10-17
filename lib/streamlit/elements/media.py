@@ -14,12 +14,13 @@
 
 import io
 import re
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Optional, Tuple, Union, cast
 
 from typing_extensions import Final, TypeAlias
 from validators import url
 
 from streamlit import runtime, type_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -44,6 +45,8 @@ class MediaMixin:
         data: MediaData,
         format: str = "audio/wav",
         start_time: int = 0,
+        *,
+        sample_rate: Optional[int] = None,
     ) -> "DeltaGenerator":
         """Display an audio player.
 
@@ -52,13 +55,20 @@ class MediaMixin:
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
             Raw audio data, filename, or a URL pointing to the file to load.
-            Numpy arrays and raw data formats must include all necessary file
+            Raw data formats must include all necessary file
             headers to match specified file format.
+            In case of numpy array:
+            * Numpy 1d array containing the desired waveform (mono)
+            * Numpy 2d array containing waveforms for each channel.
+              Shape=(NCHAN, NSAMPLES). For the standard channel order, see
+              http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
         start_time: int
             The time from which this element should start playing.
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+        sample_rate: int or None
+            sample_rate only used to transform numpy array to wav format
 
         Example
         -------
@@ -74,7 +84,17 @@ class MediaMixin:
         """
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
-        marshall_audio(coordinates, audio_proto, data, format, start_time)
+        # check validity
+        if type_util.is_type(data, "numpy.ndarray") and sample_rate is None:
+            raise StreamlitAPIException(
+                """IN CASE OF NUMPY ARRAY SAMPLE_RATE PARAMETER IS REQUIRED"""
+            )
+        if not type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
+            import streamlit as st
+
+            st.warning("sample_rate will be ignored, since data is not a numpy array")
+
+        marshall_audio(coordinates, audio_proto, data, format, start_time, sample_rate)
         return self.dg._enqueue("audio", audio_proto)
 
     @gather_metrics
@@ -261,12 +281,70 @@ def marshall_video(
         _marshall_av_media(coordinates, proto, data, mimetype)
 
 
+def _validate_and_normalize(data) -> Tuple[bytes, int]:
+    import numpy as np
+
+    data = np.array(data, dtype=float)
+    if len(data.shape) == 1:
+        nchan = 1
+    elif len(data.shape) == 2:
+        # In wave files,channels are interleaved. E.g.,
+        # "L1R1L2R2..." for stereo. See
+        # http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
+        # for channel ordering
+        nchan = data.shape[0]
+        data = data.T.ravel()
+    else:
+        raise StreamlitAPIException(
+            """In case of numpy array audio input must be a 1D or 2D array"""
+        )
+
+    max_abs_value = np.max(np.abs(data))
+    # 16-bit samples are stored as 2's-complement signed integers,
+    # ranging from -32768 to 32767.
+    # scaled_data is PCM 16 bit numpy array, that's why we multiply [-1, 1] float
+    # values to 32_767 == 2 ** 15 - 1.
+    np_array = data / max_abs_value * 32767
+    scaled_data = np_array.astype(np.int16)
+    return scaled_data.tobytes(), nchan
+
+
+def _make_wav(data, sample_rate):
+    """
+    Transform a numpy array to a PCM bytestring
+    We use code from IPython display module to convert numpy array to wave bytes
+    https://github.com/ipython/ipython/blob/1015c392f3d50cf4ff3e9f29beede8c1abfdcb2a/IPython/lib/display.py#L146
+    """
+    import wave
+
+    scaled, nchan = _validate_and_normalize(data)
+
+    fp = io.BytesIO()
+    waveobj = wave.open(fp, mode="wb")
+    waveobj.setnchannels(nchan)
+    waveobj.setframerate(sample_rate)
+    waveobj.setsampwidth(2)
+    waveobj.setcomptype("NONE", "NONE")
+    waveobj.writeframes(scaled)
+    val = fp.getvalue()
+    waveobj.close()
+
+    return val
+
+
+def _maybe_convert_to_wave_bytes(data, sample_rate):
+    if type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
+        data = _make_wav(data, sample_rate)
+    return data
+
+
 def marshall_audio(
     coordinates: str,
     proto: AudioProto,
     data: MediaData,
     mimetype: str = "audio/wav",
     start_time: int = 0,
+    sample_rate: Optional[int] = None,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -284,6 +362,8 @@ def marshall_audio(
         See https://tools.ietf.org/html/rfc4281 for more info.
     start_time : int
         The time from which this element should start playing. (default: 0)
+    sample_rate: int or None
+        Optional param to provide sample_rate in case of numpy array
     """
 
     proto.start_time = start_time
@@ -292,4 +372,5 @@ def marshall_audio(
         proto.url = data
 
     else:
+        data = _maybe_convert_to_wave_bytes(data, sample_rate)
         _marshall_av_media(coordinates, proto, data, mimetype)
