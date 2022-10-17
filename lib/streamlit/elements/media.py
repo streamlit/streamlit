@@ -83,7 +83,7 @@ class MediaMixin:
         """
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
-        # check validity
+
         if type_util.is_type(data, "numpy.ndarray") and sample_rate is None:
             raise StreamlitAPIException(
                 """IN CASE OF NUMPY ARRAY SAMPLE_RATE PARAMETER IS REQUIRED"""
@@ -91,7 +91,10 @@ class MediaMixin:
         if not type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
             import streamlit as st
 
-            st.warning("sample_rate will be ignored, since data is not a numpy array")
+            st.warning(
+                "Warning: sample_parameter rate will be ignored, since data is "
+                "not a numpy array"
+            )
 
         marshall_audio(coordinates, audio_proto, data, format, start_time, sample_rate)
         return self.dg._enqueue("audio", audio_proto)

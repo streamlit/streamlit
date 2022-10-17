@@ -25,6 +25,7 @@ from scipy.io import wavfile
 import streamlit as st
 from streamlit.elements.media import _maybe_convert_to_wave_bytes
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.web.server.server import MEDIA_ENDPOINT
@@ -93,7 +94,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         ]
     )
     def test_st_audio_invalid_numpy_array(self, np_arr, expected_shape, exception_text):
-        """Test st.audio using fake audio 1d numpy array."""
+        """Test st.audio using invalid numpy array."""
 
         sample_rate = 44100
         self.assertEqual(len(np_arr.shape), expected_shape)
@@ -102,6 +103,36 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
             st.audio(np_arr, sample_rate=sample_rate)
 
         self.assertEqual(str(e.exception), exception_text)
+
+    def test_st_audio_missing_sample_rate_numpy_arr(self):
+        """Test st.audio raises exception when sample_rate missing in case of valid
+        numpy array."""
+
+        valid_np_array = np.array([1, 2, 3, 4, 5])
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.audio(valid_np_array)
+
+        self.assertEqual(
+            str(e.exception), "IN CASE OF NUMPY ARRAY SAMPLE_RATE PARAMETER IS REQUIRED"
+        )
+
+    def test_st_audio_sample_rate_raises_warning(self):
+        """Test st.audio raises streamlit warning when sample_rate parameter provided,
+        but data is not a numpy array."""
+
+        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        sample_rate = 44100
+
+        st.audio(fake_audio_data, sample_rate=sample_rate)
+
+        c = self.get_delta_from_queue(-2).new_element.alert
+        self.assertEqual(c.format, AlertProto.WARNING)
+        self.assertEqual(
+            c.body,
+            "Warning: sample_parameter rate will be ignored, "
+            "since data is not a numpy array",
+        )
 
     def test_st_audio_from_file(self):
         """Test st.audio using generated data in a file-like object."""
@@ -162,10 +193,3 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.audio.start_time, 10)
         self.assertTrue(el.audio.url.startswith(MEDIA_ENDPOINT))
         self.assertTrue(_calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
-
-
-# TODO st.audio raises error when sample_rate not provided in case of numpy array
-# TODO st.audio raises warning when sample rate provided in case of data is not numpy array
-# TODO check valid wav file generation for valid 1d numpy array
-# TODO check valid wav file generation for valid 2d numpy array
-# TODO check raises error when invalid numpy array shape provided
