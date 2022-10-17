@@ -24,6 +24,7 @@ from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.runtime.legacy_caching import caching, hashing
 from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class NotHashable:
@@ -33,7 +34,7 @@ class NotHashable:
         raise NotImplementedError
 
 
-class CacheTest(testutil.DeltaGeneratorTestCase):
+class CacheTest(DeltaGeneratorTestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
@@ -415,7 +416,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         str_hash_func.assert_called_once_with("ahoy")
 
 
-class CacheErrorsTest(testutil.DeltaGeneratorTestCase):
+class CacheErrorsTest(DeltaGeneratorTestCase):
     """Make sure user-visible error messages look correct.
 
     These errors are a little annoying to test, but they're important! So we

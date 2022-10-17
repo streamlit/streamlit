@@ -32,7 +32,7 @@ from streamlit.runtime.caching.memo_decorator import (
     get_memo_stats_provider,
 )
 from streamlit.runtime.stats import CacheStat
-from tests.testutil import DeltaGeneratorTestCase
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def as_cached_result(value):

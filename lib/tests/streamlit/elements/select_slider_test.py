@@ -24,10 +24,10 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class SliderTest(testutil.DeltaGeneratorTestCase):
+class SliderTest(DeltaGeneratorTestCase):
     """Test ability to marshall select slider protos."""
 
     def test_no_value(self):

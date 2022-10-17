@@ -18,7 +18,7 @@ import pandas as pd
 
 import streamlit as st
 from streamlit.type_util import bytes_to_data_frame
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 DATAFRAME = pd.DataFrame({"a": [1], "b": [10]})
 NEW_ROWS = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -31,7 +31,7 @@ MELTED_DATAFRAME = pd.DataFrame(
 )
 
 
-class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     """Test dg._arrow_add_rows."""
 
     def _get_deltas_that_melt_dataframes(self):

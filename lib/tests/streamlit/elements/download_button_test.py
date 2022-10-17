@@ -17,10 +17,10 @@
 from parameterized import parameterized
 
 import streamlit as st
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class DownloadButtonTest(testutil.DeltaGeneratorTestCase):
+class DownloadButtonTest(DeltaGeneratorTestCase):
     """Test ability to marshall download_button protos."""
 
     @parameterized.expand([("hello world",), (b"byteshere",)])
