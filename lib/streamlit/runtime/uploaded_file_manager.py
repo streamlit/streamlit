@@ -314,7 +314,7 @@ class UploadedFileManager(CacheStatsProvider):
             return file_id
 
     def get_stats(self) -> List[CacheStat]:
-        """Return the managers CacheStats.
+        """Return the manager's CacheStats.
 
         Safe to call from any thread.
         """
