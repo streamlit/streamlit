@@ -89,7 +89,9 @@ describe("SidebarNav", () => {
   it("replaces underscores with spaces in pageName", () => {
     const wrapper = shallow(<SidebarNav {...getProps()} />)
 
-    const links = wrapper.find(StyledSidebarNavLink).find(StyledSidebarNavLink)
+    const links = wrapper
+      .find(StyledSidebarNavLink)
+      .find(StyledSidebarLinkText)
 
     expect(links.at(0).text()).toBe("streamlit app")
     expect(links.at(1).text()).toBe("my other page")
