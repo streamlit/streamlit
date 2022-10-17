@@ -16,6 +16,7 @@
 
 import unittest
 
+from exception_capturing_thread import call_on_threads
 from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 
@@ -164,3 +165,35 @@ class UploadedFileManagerTest(unittest.TestCase):
             ),
         ]
         self.assertEqual(expected, self.mgr.get_stats())
+
+
+class UploadedFileManagerThreadingTest(unittest.TestCase):
+    # The number of threads to run our tests on
+    NUM_THREADS = 15
+
+    def setUp(self) -> None:
+        self.mgr = UploadedFileManager()
+
+    def test_add_file(self):
+        """add_file is thread-safe."""
+        added_files = []
+
+        def add_file(ii: int) -> None:
+            # Invent a new file and add it to the mgr
+            file = UploadedFileRec(
+                id=0, name=f"file_{ii}", type="type", data=bytes(f"{ii}", "utf-8")
+            )
+            added_files.append(self.mgr.add_file("session", f"widget_{ii}", file))
+
+        call_on_threads(add_file, num_threads=self.NUM_THREADS)
+        for ii in range(self.NUM_THREADS):
+            # Ensure all our files are present.
+            files = self.mgr.get_all_files("session", f"widget_{ii}")
+            self.assertEqual(1, len(files))
+            self.assertEqual(bytes(f"{ii}", "utf-8"), files[0].data)
+
+        # Ensure all files have unique IDs.
+        file_ids = set()
+        for file_list in self.mgr._files_by_id.values():
+            file_ids.update(file.id for file in file_list)
+        self.assertEqual(self.NUM_THREADS, len(file_ids))
