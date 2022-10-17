@@ -15,6 +15,7 @@
 """Unit tests for MediaFileManager"""
 
 import random
+import unittest
 from typing import Optional
 from unittest import TestCase, mock
 from unittest.mock import MagicMock, call, mock_open
@@ -26,6 +27,7 @@ from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     _calculate_file_id,
 )
+from tests.exception_capturing_thread import call_on_threads
 
 
 def random_coordinates():
@@ -368,3 +370,54 @@ class MediaFileManagerTest(TestCase):
         storage_delete_spy.assert_has_calls(
             [call(file_id) for file_id in file_ids], any_order=True
         )
+
+
+NUM_THREADS = 15
+
+
+class MediaFileManagerThreadingTest(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.storage = MemoryMediaFileStorage("/mock/endpoint")
+        self.media_file_manager = MediaFileManager(self.storage)
+        random.seed(1337)
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session_id"),
+    )
+    def test_add_file_multiple_threads(self):
+        """We can safely call `add` from multiple threads simultaneously."""
+
+        def add_file(ii: int) -> None:
+            coord = random_coordinates()
+            data = bytes(f"{ii}", "utf-8")
+            self.media_file_manager.add(data, "image/png", coord)
+
+        call_on_threads(add_file, num_threads=NUM_THREADS)
+        self.assertEqual(NUM_THREADS, len(self.media_file_manager._file_metadata))
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session_id"),
+    )
+    def test_clear_files_multiple_threads(self):
+        """We can safely clear session refs and remove orphaned files
+        from multiple threads simultaneously.
+        """
+        # Add a bunch of files
+        for sample in ALL_FIXTURES.values():
+            self.media_file_manager.add(
+                sample["content"], sample["mimetype"], random_coordinates()
+            )
+        self.assertEqual(len(ALL_FIXTURES), len(self.media_file_manager._file_metadata))
+
+        # Remove those files from multiple threads
+        def remove_files(_: int) -> None:
+            self.media_file_manager.clear_session_refs("mock_session_id")
+            self.media_file_manager.remove_orphaned_files()
+
+        call_on_threads(remove_files, num_threads=NUM_THREADS)
+
+        # Our files should be gone!
+        self.assertEqual(0, len(self.media_file_manager._file_metadata))
