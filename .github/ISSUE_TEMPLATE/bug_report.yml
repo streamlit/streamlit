@@ -1,5 +1,5 @@
 name: Bug report
-description: Submit a bug report to help us improve Streamlit.
+description: Submit a bug report to help us improve Streamlit
 labels: [bug, needs triage]
 body:
   - type: markdown
