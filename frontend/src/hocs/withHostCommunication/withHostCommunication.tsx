@@ -17,7 +17,6 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { CLOUD_COMM_WHITELIST } from "src/urls"
 import { isValidURL } from "src/lib/UriUtil"
 
 import {
@@ -35,6 +34,7 @@ export interface HostCommunicationHOC {
   sendMessage: (message: IGuestToHostMessage) => void
   onModalReset: () => void
   onPageChanged: () => void
+  setAllowedOrigins: (allowedOrigins: string[]) => void
 }
 
 export const HOST_COMM_VERSION = 1
@@ -57,6 +57,7 @@ function withHostCommunication(
     // unwieldy. We may want to consider installing the redux-toolkit package
     // even if we're not using redux just because it's so useful for reducing
     // this type of boilerplate.
+    const [allowedOrigins, setAllowedOrigins] = useState<string[]>([])
     const [authToken, setAuthToken] = useState<string | undefined>(undefined)
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [hideSidebarNav, setHideSidebarNav] = useState(false)
@@ -87,7 +88,7 @@ function withHostCommunication(
         if (
           !origin ||
           message.stCommVersion !== HOST_COMM_VERSION ||
-          !CLOUD_COMM_WHITELIST.find(el => isValidURL(el, origin))
+          !allowedOrigins.find(el => isValidURL(el, origin))
         ) {
           return
         }
@@ -146,12 +147,17 @@ function withHostCommunication(
       return () => {
         window.removeEventListener("message", receiveMessage)
       }
-    }, [])
+    }, [allowedOrigins])
 
     return (
       <WrappedComponent
         hostCommunication={
           {
+            connect: () => {
+              sendMessageToHost({
+                type: "GUEST_READY",
+              })
+            },
             currentState: {
               authToken,
               forcedModalClose,
@@ -165,11 +171,6 @@ function withHostCommunication(
               deployedAppMetadata,
               toolbarItems,
             },
-            connect: () => {
-              sendMessageToHost({
-                type: "GUEST_READY",
-              })
-            },
             onModalReset: () => {
               setForcedModalClose(false)
             },
@@ -177,6 +178,7 @@ function withHostCommunication(
               setRequestedPageScriptHash(null)
             },
             sendMessage: sendMessageToHost,
+            setAllowedOrigins,
           } as HostCommunicationHOC
         }
         {...props}

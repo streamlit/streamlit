@@ -74,10 +74,11 @@ const getHostCommunicationProp = (
   extend?: Partial<HostCommunicationHOC>
 ): HostCommunicationHOC => ({
   connect: jest.fn(),
-  sendMessage: jest.fn(),
+  currentState: getHostCommunicationState({}),
   onModalReset: jest.fn(),
   onPageChanged: jest.fn(),
-  currentState: getHostCommunicationState({}),
+  sendMessage: jest.fn(),
+  setAllowedOrigins: jest.fn(),
   ...extend,
 })
 
