@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 # st.session_state can only be accessed while running with streamlit
-if st._is_running_with_streamlit:
+if runtime.exists():
     if "initialized" not in st.session_state:
         st.session_state["item_counter"] = 0
         st.session_state.attr_counter = 0

@@ -13,12 +13,13 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 st.text("Text before stop")
 
 # Since st.stop() throws an intentional exception, we want this to run
 # only in streamlit
-if st._is_running_with_streamlit:
+if runtime.exists():
     st.stop()
 
 st.text("Text after stop")

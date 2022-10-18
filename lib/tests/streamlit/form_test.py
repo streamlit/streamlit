@@ -14,18 +14,18 @@
 
 """Form unit tests."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.session_state import RegisterWidgetResult
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 NO_FORM_ID = ""
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
-class FormAssociationTest(testutil.DeltaGeneratorTestCase):
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+class FormAssociationTest(DeltaGeneratorTestCase):
     """Tests for every flavor of form/deltagenerator association."""
 
     def _get_last_checkbox_form_id(self) -> str:
@@ -164,8 +164,8 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("form", self._get_last_checkbox_form_id())
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
-class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+class FormMarshallingTest(DeltaGeneratorTestCase):
     """Test ability to marshall form protos."""
 
     def test_marshall_form(self):
@@ -240,9 +240,18 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("bar", form_data.form_id)
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
-class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+class FormSubmitButtonTest(DeltaGeneratorTestCase):
     """Test form submit button."""
+
+    def test_disabled_submit_button(self):
+        """Test that a submit button can be disabled."""
+
+        with st.form("foo"):
+            st.form_submit_button(disabled=True)
+
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual(True, last_delta.new_element.button.disabled)
 
     def test_submit_button_outside_form(self):
         """Test that a submit button is not allowed outside a form."""
@@ -280,16 +289,16 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
 
     @patch(
         "streamlit.elements.button.register_widget",
-        return_value=RegisterWidgetResult(True, False),
+        MagicMock(return_value=RegisterWidgetResult(True, False)),
     )
-    def test_return_true_when_submitted(self, _):
+    def test_return_true_when_submitted(self):
         with st.form("form"):
             submitted = st.form_submit_button("Submit")
             self.assertEqual(submitted, True)
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
-class FormStateInteractionTest(testutil.DeltaGeneratorTestCase):
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+class FormStateInteractionTest(DeltaGeneratorTestCase):
     def test_exception_for_callbacks_on_widgets(self):
         with self.assertRaises(StreamlitAPIException):
             with st.form("form"):

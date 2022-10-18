@@ -17,10 +17,10 @@
 import pandas as pd
 
 import streamlit as st
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class LegacyDataFrameDimensionsTest(testutil.DeltaGeneratorTestCase):
+class LegacyDataFrameDimensionsTest(DeltaGeneratorTestCase):
     """Test the metadata in the serialized delta message for the different
     dimension specifier options.
     """

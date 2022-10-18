@@ -17,11 +17,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { matchers } from "@emotion/jest"
-import {
-  ExpandMore,
-  ExpandLess,
-  Description,
-} from "@emotion-icons/material-outlined"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 import React from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
@@ -36,6 +32,7 @@ import {
   StyledSidebarNavItems,
   StyledSidebarNavSeparatorContainer,
   StyledSidebarNavLink,
+  StyledSidebarLinkText,
 } from "./styled-components"
 
 expect.extend(matchers)
@@ -92,7 +89,9 @@ describe("SidebarNav", () => {
   it("replaces underscores with spaces in pageName", () => {
     const wrapper = shallow(<SidebarNav {...getProps()} />)
 
-    const links = wrapper.find(StyledSidebarNavLink).find("span")
+    const links = wrapper
+      .find(StyledSidebarNavLink)
+      .find(StyledSidebarLinkText)
 
     expect(links.at(0).text()).toBe("streamlit app")
     expect(links.at(1).text()).toBe("my other page")
@@ -409,10 +408,6 @@ describe("SidebarNav", () => {
     const wrapper = shallow(<SidebarNav {...props} />)
 
     expect(
-      wrapper.find(StyledSidebarNavLink).at(0).find("Icon").prop("content")
-    ).toBe(Description)
-
-    expect(
       wrapper.find(StyledSidebarNavLink).at(1).find("EmojiIcon").dive().text()
     ).toBe("🦈")
   })
@@ -427,6 +422,18 @@ describe("SidebarNav", () => {
     )
     expect(wrapper.find(StyledSidebarNavLink).at(1).prop("isActive")).toBe(
       true
+    )
+  })
+
+  it("changes the text color when the page is active", () => {
+    const props = getProps({ currentPageScriptHash: "other_page_hash" })
+
+    const wrapper = mount(<SidebarNav {...props} />)
+    const activeLink = wrapper.find(StyledSidebarNavLink).at(1)
+
+    expect(activeLink.find(StyledSidebarLinkText)).toHaveStyleRule(
+      "color",
+      "#31333F"
     )
   })
 })

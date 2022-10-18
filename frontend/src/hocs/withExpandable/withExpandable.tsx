@@ -21,7 +21,7 @@ import classNames from "classnames"
 import {
   StatelessAccordion as Accordion,
   Panel,
-  SharedProps,
+  SharedStylePropsArg,
 } from "baseui/accordion"
 import { useTheme } from "@emotion/react"
 import { StyledExpandableContainer } from "./styled-components"
@@ -72,7 +72,7 @@ function withExpandable(
           disabled={widgetsDisabled}
           overrides={{
             Content: {
-              style: ({ $expanded }: SharedProps) => ({
+              style: ({ $expanded }: SharedStylePropsArg) => ({
                 backgroundColor: colors.transparent,
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
@@ -100,14 +100,14 @@ function withExpandable(
                 paddingRight: `${spacing.none} !important`,
                 paddingTop: `${spacing.none} !important`,
                 paddingBottom: `${spacing.none} !important`,
-                borderTop: "none !important",
-                borderBottom: "none !important",
-                borderRight: "none !important",
-                borderLeft: "none !important",
+                borderTopStyle: "none !important",
+                borderBottomStyle: "none !important",
+                borderRightStyle: "none !important",
+                borderLeftStyle: "none !important",
               }),
             },
             Header: {
-              style: ({ $disabled }: SharedProps) => ({
+              style: ({ $disabled }: SharedStylePropsArg) => ({
                 marginBottom: spacing.none,
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
@@ -136,7 +136,7 @@ function withExpandable(
               },
             },
             ToggleIcon: {
-              style: ({ $disabled }: SharedProps) => ({
+              style: ({ $disabled }: SharedStylePropsArg) => ({
                 color: $disabled ? colors.disabled : colors.bodyText,
               }),
               // eslint-disable-next-line react/display-name

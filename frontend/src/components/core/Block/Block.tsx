@@ -124,32 +124,33 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   return (
     <>
-      {props.node.children.map(
-        (node: AppNode, index: number): ReactElement => {
-          // Base case: render a leaf node.
-          if (node instanceof ElementNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = { ...props, node: node as ElementNode }
+      {props.node.children &&
+        props.node.children.map(
+          (node: AppNode, index: number): ReactElement => {
+            // Base case: render a leaf node.
+            if (node instanceof ElementNode) {
+              // Put node in childProps instead of passing as a node={node} prop in React to
+              // guarantee it doesn't get overwritten by {...childProps}.
+              const childProps = { ...props, node: node as ElementNode }
 
-            const key = getElementWidgetID(node.element) || index
-            return <ElementNodeRenderer key={key} {...childProps} />
+              const key = getElementWidgetID(node.element) || index
+              return <ElementNodeRenderer key={key} {...childProps} />
+            }
+
+            // Recursive case: render a block, which can contain other blocks
+            // and elements.
+            if (node instanceof BlockNode) {
+              // Put node in childProps instead of passing as a node={node} prop in React to
+              // guarantee it doesn't get overwritten by {...childProps}.
+              const childProps = { ...props, node: node as BlockNode }
+
+              return <BlockNodeRenderer key={index} {...childProps} />
+            }
+
+            // We don't have any other node types!
+            throw new Error(`Unrecognized AppNode: ${node}`)
           }
-
-          // Recursive case: render a block, which can contain other blocks
-          // and elements.
-          if (node instanceof BlockNode) {
-            // Put node in childProps instead of passing as a node={node} prop in React to
-            // guarantee it doesn't get overwritten by {...childProps}.
-            const childProps = { ...props, node: node as BlockNode }
-
-            return <BlockNodeRenderer key={index} {...childProps} />
-          }
-
-          // We don't have any other node types!
-          throw new Error(`Unrecognized AppNode: ${node}`)
-        }
-      )}
+        )}
     </>
   )
 }

@@ -16,10 +16,10 @@ import pytest
 
 import streamlit as st
 from streamlit.runtime.scriptrunner import StopException
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class StopTest(testutil.DeltaGeneratorTestCase):
+class StopTest(DeltaGeneratorTestCase):
     def test_stop(self):
         with pytest.raises(StopException) as exc_message:
             st.stop()

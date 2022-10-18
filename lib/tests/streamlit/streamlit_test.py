@@ -15,12 +15,10 @@
 """Streamlit Unit test."""
 
 import json
-import logging
 import os
 import re
 import sys
 import textwrap
-import time
 import unittest
 from unittest.mock import patch
 
@@ -32,10 +30,10 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def get_version():
@@ -61,49 +59,106 @@ class StreamlitTest(unittest.TestCase):
         # This is set in lib/tests/conftest.py to False
         self.assertEqual(False, st.get_option("browser.gatherUsageStats"))
 
-    def test_set_option_scriptable(self):
-        """Test that scriptable options can be set from API."""
-        # This is set in lib/tests/conftest.py to off
-        self.assertEqual(True, st.get_option("client.displayEnabled"))
+    def test_public_api(self):
+        """Test that we don't accidentally remove (or add) symbols
+        to the public `st` API.
+        """
+        api = {
+            k
+            for k, v in st.__dict__.items()
+            if not k.startswith("_") and not isinstance(v, type(st))
+        }
+        self.assertEqual(
+            api,
+            {
+                # DeltaGenerator methods:
+                "altair_chart",
+                "area_chart",
+                "audio",
+                "balloons",
+                "bar_chart",
+                "bokeh_chart",
+                "button",
+                "caption",
+                "camera_input",
+                "checkbox",
+                "code",
+                "columns",
+                "tabs",
+                "container",
+                "dataframe",
+                "date_input",
+                "download_button",
+                "expander",
+                "pydeck_chart",
+                "empty",
+                "error",
+                "exception",
+                "file_uploader",
+                "form",
+                "form_submit_button",
+                "graphviz_chart",
+                "header",
+                "help",
+                "image",
+                "info",
+                "json",
+                "latex",
+                "line_chart",
+                "map",
+                "markdown",
+                "metric",
+                "multiselect",
+                "number_input",
+                "plotly_chart",
+                "progress",
+                "pyplot",
+                "radio",
+                "selectbox",
+                "select_slider",
+                "slider",
+                "snow",
+                "subheader",
+                "success",
+                "table",
+                "text",
+                "text_area",
+                "text_input",
+                "time_input",
+                "title",
+                "vega_lite_chart",
+                "video",
+                "warning",
+                "write",
+                "color_picker",
+                "sidebar",
+                # Other modules the user should have access to:
+                "echo",
+                "spinner",
+                "set_page_config",
+                "stop",
+                "cache",
+                "secrets",
+                "session_state",
+                # Beta APIs:
+                "beta_container",
+                "beta_expander",
+                "beta_columns",
+                # Experimental APIs:
+                "experimental_user",
+                "experimental_singleton",
+                "experimental_memo",
+                "experimental_get_query_params",
+                "experimental_set_query_params",
+                "experimental_rerun",
+                "experimental_show",
+                "get_option",
+                "set_option",
+            },
+        )
 
-        try:
-            # client.displayEnabled and client.caching can be set after run starts.
-            st.set_option("client.displayEnabled", False)
-            self.assertEqual(False, st.get_option("client.displayEnabled"))
-        finally:
-            # Restore original value
-            st.set_option("client.displayEnabled", True)
 
-    def test_set_option_unscriptable(self):
-        """Test that unscriptable options cannot be set with st.set_option."""
-        # This is set in lib/tests/conftest.py to off
-        self.assertEqual(True, st.get_option("server.enableCORS"))
-
-        with self.assertRaises(StreamlitAPIException):
-            st.set_option("server.enableCORS", False)
-
-    def test_run_warning_presence(self):
-        """Using Streamlit without `streamlit run` produces a warning."""
-        with self.assertLogs(level=logging.WARNING) as logs:
-            st._is_running_with_streamlit = False
-            st._use_warning_has_been_displayed = False
-            st.write("Using delta generator")
-            output = "".join(logs.output)
-            # Warning produced exactly once
-            self.assertEqual(len(re.findall(r"streamlit run", output)), 1)
-
-    def test_run_warning_absence(self):
-        """Using Streamlit through the CLI produces no usage warning."""
-        with self.assertLogs(level=logging.WARNING) as logs:
-            st._is_running_with_streamlit = True
-            st._use_warning_has_been_displayed = False
-            st.write("Using delta generator")
-            # assertLogs is being used as a context manager, but it also checks that some log output was captured, so we have to let it capture something
-            get_logger("root").warning("irrelevant warning so assertLogs passes")
-            self.assertNotRegex("".join(logs.output), r"streamlit run")
-
-
-class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
+class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
     def test_st_legacy_altair_chart(self):
@@ -461,14 +516,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.progress.value, 51)
-
-    def test_st_spinner(self):
-        """Test st.spinner."""
-        with st.spinner("some text"):
-            # Without the timeout, the spinner is sometimes not available
-            time.sleep(0.2)
-            el = self.get_delta_from_queue().new_element
-            self.assertEqual(el.spinner.text, "some text")
 
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""

@@ -74,7 +74,6 @@ class AppSession:
 
     def __init__(
         self,
-        event_loop: AbstractEventLoop,
         session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
@@ -85,9 +84,6 @@ class AppSession:
 
         Parameters
         ----------
-        event_loop : AbstractEventLoop
-            The asyncio EventLoop that we're running on.
-
         session_data : SessionData
             Object storing parameters related to running a script
 
@@ -115,7 +111,7 @@ class AppSession:
         # Each AppSession has a unique string ID.
         self.id = str(uuid.uuid4())
 
-        self._event_loop = event_loop
+        self._event_loop = asyncio.get_running_loop()
         self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
@@ -451,7 +447,7 @@ class AppSession:
 
         assert (
             self._event_loop == asyncio.get_running_loop()
-        ), "This function must only be called on the eventloop thread"
+        ), "This function must only be called on the eventloop thread the AppSession was created on."
 
         if sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.

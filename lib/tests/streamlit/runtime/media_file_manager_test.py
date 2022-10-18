@@ -15,6 +15,7 @@
 """Unit tests for MediaFileManager"""
 
 import random
+import unittest
 from typing import Optional
 from unittest import TestCase, mock
 from unittest.mock import MagicMock, call, mock_open
@@ -26,6 +27,7 @@ from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     _calculate_file_id,
 )
+from tests.exception_capturing_thread import call_on_threads
 
 
 def random_coordinates():
@@ -133,18 +135,18 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_reject_null_files(self, _):
+    def test_reject_null_files(self):
         """MediaFileManager.add raises a TypeError if it's passed None."""
         with self.assertRaises(TypeError):
             self.media_file_manager.add(None, "media/any", random_coordinates())
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session",
+        MagicMock(return_value="mock_session"),
     )
-    def test_add_binary_files(self, _):
+    def test_add_binary_files(self):
         """Test that we can add binary files to the manager."""
         storage_load_spy = MagicMock(side_effect=self.storage.load_and_get_id)
         self.storage.load_and_get_id = storage_load_spy
@@ -176,14 +178,14 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session",
+        MagicMock(return_value="mock_session"),
     )
     @mock.patch(
         "streamlit.runtime.memory_media_file_storage.open",
         mock_open(read_data=b"mock_test_file"),
         create=True,
     )
-    def test_add_file_by_name(self, _1):
+    def test_add_file_by_name(self):
         """Test that we can add files by filename."""
         storage_load_spy = MagicMock(side_effect=self.storage.load_and_get_id)
         self.storage.load_and_get_id = storage_load_spy
@@ -207,9 +209,9 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_add_files_same_coord(self, _):
+    def test_add_files_same_coord(self):
         """We can add multiple files that share the same coordinate."""
         coord = random_coordinates()
 
@@ -239,9 +241,9 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_add_file_already_exists_same_coord(self, _):
+    def test_add_file_already_exists_same_coord(self):
         """Adding a file that already exists results in just a single file in
         the manager.
         """
@@ -263,9 +265,9 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_add_file_already_exists_different_coord(self, _):
+    def test_add_file_already_exists_different_coord(self):
         """Adding a file that already exists, but with different coordinates,
         results in just a single file in the manager.
         """
@@ -288,9 +290,9 @@ class MediaFileManagerTest(TestCase):
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
-        return_value="mock_session_id",
+        MagicMock(return_value="mock_session_id"),
     )
-    def test_remove_orphaned_files_in_empty_manager(self, _):
+    def test_remove_orphaned_files_in_empty_manager(self):
         """Calling clear_session_refs/remove_orphaned_files in an empty manager
         is a no-op.
         """
@@ -368,3 +370,54 @@ class MediaFileManagerTest(TestCase):
         storage_delete_spy.assert_has_calls(
             [call(file_id) for file_id in file_ids], any_order=True
         )
+
+
+class MediaFileManagerThreadingTest(unittest.TestCase):
+    # The number of threads to run our tests on
+    NUM_THREADS = 50
+
+    def setUp(self):
+        super().setUp()
+        self.storage = MemoryMediaFileStorage("/mock/endpoint")
+        self.media_file_manager = MediaFileManager(self.storage)
+        random.seed(1337)
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session_id"),
+    )
+    def test_add_file_multiple_threads(self):
+        """We can safely call `add` from multiple threads simultaneously."""
+
+        def add_file(ii: int) -> None:
+            coord = random_coordinates()
+            data = bytes(f"{ii}", "utf-8")
+            self.media_file_manager.add(data, "image/png", coord)
+
+        call_on_threads(add_file, num_threads=self.NUM_THREADS)
+        self.assertEqual(self.NUM_THREADS, len(self.media_file_manager._file_metadata))
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session_id"),
+    )
+    def test_clear_files_multiple_threads(self):
+        """We can safely clear session refs and remove orphaned files
+        from multiple threads simultaneously.
+        """
+        # Add a bunch of files
+        for sample in ALL_FIXTURES.values():
+            self.media_file_manager.add(
+                sample["content"], sample["mimetype"], random_coordinates()
+            )
+        self.assertEqual(len(ALL_FIXTURES), len(self.media_file_manager._file_metadata))
+
+        # Remove those files from multiple threads
+        def remove_files(_: int) -> None:
+            self.media_file_manager.clear_session_refs("mock_session_id")
+            self.media_file_manager.remove_orphaned_files()
+
+        call_on_threads(remove_files, num_threads=self.NUM_THREADS)
+
+        # Our files should be gone!
+        self.assertEqual(0, len(self.media_file_manager._file_metadata))

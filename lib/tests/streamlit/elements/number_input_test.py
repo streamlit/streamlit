@@ -26,10 +26,10 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class NumberInputTest(testutil.DeltaGeneratorTestCase):
+class NumberInputTest(DeltaGeneratorTestCase):
     def test_data_type(self):
         """Test that NumberInput.type is set to the proper
         NumberInput.DataType value
@@ -220,7 +220,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
@@ -251,7 +251,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(number_input_proto.step, 1.0)
         self.assertEqual(number_input_proto.default, 0)
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch("streamlit.elements.utils.get_session_state")
     def test_no_warning_with_value_set_in_state(self, patched_get_session_state):
         mock_session_state = MagicMock()

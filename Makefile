@@ -104,40 +104,16 @@ pylint:
 # Fix Python files that are not properly formatted.
 pyformat:
 	pre-commit run black --all-files
+	pre-commit run isort --all-files
 
 .PHONY: pytest
 # Run Python unit tests.
 pytest:
-	# Just testing. No code coverage.
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
 			-l tests/ \
-			$(PYTHON_MODULES)
-
-.PHONY: pycoverage
-# Show Python test coverage.
-pycoverage:
-	# testing + code coverage
-	cd lib; \
-		PYTHONPATH=. \
-		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
-			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
-			--cov-report=term-missing tests/ \
-			$(PYTHON_MODULES)
-
-.PHONY: pycoverage_html
-# Generate HTML report of Python test coverage.
-pycoverage_html:
-	# testing + code coverage
-	cd lib; \
-		PYTHONPATH=. \
-		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
-			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
-			--cov-report=html tests/ \
 			$(PYTHON_MODULES)
 
 .PHONY: mypy

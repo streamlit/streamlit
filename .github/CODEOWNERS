@@ -1,7 +1,7 @@
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence, that is.
-* @streamlit/core @LukasMasuch
 frontend/package.json @jroes @anoctopus @tconkling @kmcgrady
 lib/Pipfile @jroes @anoctopus @tconkling @kmcgrady
 lib/setup.py @jroes @anoctopus @tconkling @kmcgrady
 proto/ @vdonato @tconkling @LukasMasuch
+.github/ @vdonato @mayagbarnes @kmcgrady

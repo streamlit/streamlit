@@ -14,7 +14,7 @@
 
 """slider unit test."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -24,10 +24,10 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class SliderTest(testutil.DeltaGeneratorTestCase):
+class SliderTest(DeltaGeneratorTestCase):
     """Test ability to marshall select slider protos."""
 
     def test_no_value(self):
@@ -220,7 +220,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.slider
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 

@@ -18,6 +18,7 @@ from typing import Callable, Dict, List, Optional, Set
 
 from typing_extensions import Final, TypeAlias
 
+from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -149,7 +150,7 @@ def get_script_run_ctx() -> Optional[ScriptRunContext]:
     ctx: Optional[ScriptRunContext] = getattr(
         thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None
     )
-    if ctx is None and streamlit._is_running_with_streamlit:
+    if ctx is None and runtime.exists():
         # Only warn about a missing ScriptRunContext if we were started
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit

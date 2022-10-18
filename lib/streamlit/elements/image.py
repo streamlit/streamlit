@@ -27,10 +27,9 @@ from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
 
 import numpy as np
-from PIL import Image, ImageFile
+from PIL import GifImagePlugin, Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
 
-import streamlit
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -52,12 +51,14 @@ LOGGER: Final = get_logger(__name__)
 # DPI.
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
-PILImage: TypeAlias = Union[ImageFile.ImageFile, Image.Image]
+PILImage: TypeAlias = Union[
+    ImageFile.ImageFile, Image.Image, GifImagePlugin.GifImageFile
+]
 AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
 Channels: TypeAlias = Literal["RGB", "BGR"]
-ImageFormat: TypeAlias = Literal["JPEG", "PNG"]
+ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
@@ -166,15 +167,19 @@ def _image_may_have_alpha_channel(image: PILImage) -> bool:
         return False
 
 
+def _image_is_gif(image: PILImage) -> bool:
+    return bool(image.format == "GIF")
+
+
 def _validate_image_format_string(
     image_data: Union[bytes, PILImage], format: str
 ) -> ImageFormat:
-    """Return either "JPEG" or "PNG", based on the input `format` string.
+    """Return either "JPEG", "PNG", or "GIF", based on the input `format` string.
 
     - If `format` is "JPEG" or "JPG" (or any capitalization thereof), return "JPEG"
     - If `format` is "PNG" (or any capitalization thereof), return "PNG"
     - For all other strings, return "PNG" if the image has an alpha channel,
-      and "JPEG" otherwise.
+    "GIF" if the image is a GIF, and "JPEG" otherwise.
     """
     format = format.upper()
     if format == "JPEG" or format == "PNG":
@@ -188,6 +193,9 @@ def _validate_image_format_string(
         pil_image = Image.open(io.BytesIO(image_data))
     else:
         pil_image = image_data
+
+    if _image_is_gif(pil_image):
+        return "GIF"
 
     if _image_may_have_alpha_channel(pil_image):
         return "PNG"
@@ -381,7 +389,7 @@ def image_to_url(
     image_data = _ensure_image_size_and_format(image_data, width, image_format)
     mimetype = _get_image_format_mimetype(image_format)
 
-    if streamlit._is_running_with_streamlit:
+    if runtime.exists():
         return runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
@@ -490,8 +498,11 @@ def marshall_images(
                     image = textfile.read()
 
             # Following regex allows svg image files to start either via a "<?xml...>" tag eventually followed by a "<svg...>" tag or directly starting with a "<svg>" tag
-            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s)", image):
-                proto_img.markup = f"data:image/svg+xml,{image}"
+            if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s|^\s?<svg>\s)", image):
+                if "xlink" in image or "xmlns" not in image:
+                    proto_img.markup = f"data:image/svg+xml,{image}"
+                else:
+                    proto_img.url = f"data:image/svg+xml,{image}"
                 is_svg = True
         if not is_svg:
             proto_img.url = image_to_url(

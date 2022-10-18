@@ -16,6 +16,7 @@ import textwrap
 from typing import NamedTuple, Optional, cast
 
 import streamlit
+from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -38,7 +39,7 @@ def _current_form(
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
-    if not streamlit._is_running_with_streamlit:
+    if not runtime.exists():
         return None
 
     if this_dg._form_data is not None:
@@ -207,6 +208,8 @@ class FormMixin:
         on_click=None,
         args=None,
         kwargs=None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> bool:
         """Display a form submit button.
 
@@ -233,6 +236,9 @@ class FormMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the button if set to True. The
+            default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -246,6 +252,7 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            disabled=disabled,
             ctx=ctx,
         )
 
@@ -256,6 +263,8 @@ class FormMixin:
         on_click=None,
         args=None,
         kwargs=None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
@@ -268,6 +277,7 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            disabled=disabled,
             ctx=ctx,
         )
 

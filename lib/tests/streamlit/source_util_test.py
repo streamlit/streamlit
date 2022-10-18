@@ -93,7 +93,7 @@ class PageHelperFunctionTests(unittest.TestCase):
     def test_page_icon_and_name(self, path_str, expected):
         assert source_util.page_icon_and_name(Path(path_str)) == expected
 
-    @patch("streamlit.source_util._on_pages_changed", new=MagicMock())
+    @patch("streamlit.source_util._on_pages_changed", MagicMock())
     @patch("streamlit.source_util._cached_pages", new="Some pages")
     def test_invalidate_pages_cache(self):
         source_util.invalidate_pages_cache()
@@ -101,7 +101,7 @@ class PageHelperFunctionTests(unittest.TestCase):
         assert source_util._cached_pages is None
         source_util._on_pages_changed.send.assert_called_once()
 
-    @patch("streamlit.source_util._on_pages_changed", new=MagicMock())
+    @patch("streamlit.source_util._on_pages_changed", MagicMock())
     def test_register_pages_changed_callback(self):
         callback = lambda: None
 

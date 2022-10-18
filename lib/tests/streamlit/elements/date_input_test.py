@@ -22,10 +22,10 @@ from pytest import raises
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class DateInputTest(testutil.DeltaGeneratorTestCase):
+class DateInputTest(DeltaGeneratorTestCase):
     """Test ability to marshall date_input protos."""
 
     def test_just_label(self):

@@ -14,7 +14,7 @@
 
 """Arrow DataFrame tests."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -26,7 +26,7 @@ from streamlit.type_util import (
     is_pandas_version_less_than,
     pyarrow_table_to_bytes,
 )
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 # In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
 if is_pandas_version_less_than("1.3.0"):
@@ -43,7 +43,7 @@ def mock_data_frame():
     )
 
 
-class ArrowDataFrameProtoTest(testutil.DeltaGeneratorTestCase):
+class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     """Test ability to marshall arrow protos."""
 
     def test_dataframe_data(self):
@@ -108,9 +108,12 @@ class ArrowDataFrameProtoTest(testutil.DeltaGeneratorTestCase):
             bytes_to_data_frame(proto.styler.display_values), expected
         )
 
-    @patch("streamlit.type_util.is_pandas_version_less_than", return_value=True)
+    @patch(
+        "streamlit.type_util.is_pandas_version_less_than",
+        MagicMock(return_value=True),
+    )
     @patch.object(Styler, "_translate")
-    def test_pandas_version_below_1_3_0(self, mock_styler_translate, _):
+    def test_pandas_version_below_1_3_0(self, mock_styler_translate):
         """Tests that `styler._translate` is called without arguments in Pandas < 1.3.0"""
         df = mock_data_frame()
         styler = df.style.set_uuid("FAKE_UUID")
@@ -118,9 +121,12 @@ class ArrowDataFrameProtoTest(testutil.DeltaGeneratorTestCase):
         st._arrow_dataframe(styler)
         mock_styler_translate.assert_called_once_with()
 
-    @patch("streamlit.type_util.is_pandas_version_less_than", return_value=False)
+    @patch(
+        "streamlit.type_util.is_pandas_version_less_than",
+        MagicMock(return_value=False),
+    )
     @patch.object(Styler, "_translate")
-    def test_pandas_version_1_3_0_and_above(self, mock_styler_translate, _):
+    def test_pandas_version_1_3_0_and_above(self, mock_styler_translate):
         """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
         df = mock_data_frame()
         styler = df.style.set_uuid("FAKE_UUID")

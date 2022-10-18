@@ -15,17 +15,17 @@
 """text_area unit test."""
 
 import re
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class TextAreaTest(testutil.DeltaGeneratorTestCase):
+class TextAreaTest(DeltaGeneratorTestCase):
     """Test ability to marshall text_area protos."""
 
     def test_just_label(self):
@@ -86,7 +86,7 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.color_picker
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 

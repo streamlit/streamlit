@@ -1,9 +1,12 @@
-name: Test Python Versions
+name: Python Versions
 
 on:
   push:
     branches:
-      - '**'
+      - 'develop'
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
   workflow_call:
     inputs:
@@ -12,27 +15,27 @@ on:
         type: string
 
 # Avoid duplicate workflows on same branch
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-python
   cancel-in-progress: true
 
 jobs:
-  python_tests:
+  py_version:
     runs-on: ubuntu-latest
 
     defaults:
       run:
         shell: bash -ileo pipefail {0}
-    
+
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.7", "3.10"]
-    
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
@@ -50,7 +53,7 @@ jobs:
       - name: Run Type Checkers
         run: scripts/mypy --report
       - name: Run Python Tests
-        run: make pycoverage
+        run: make pytest
       - name: Run Integration Tests
         run: make integration-tests
       - name: CLI Smoke Tests

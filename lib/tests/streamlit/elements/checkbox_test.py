@@ -14,19 +14,19 @@
 
 """checkbox unit tests."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from parameterized import parameterized
 
 import streamlit as st
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class SomeObj(object):
     pass
 
 
-class CheckboxTest(testutil.DeltaGeneratorTestCase):
+class CheckboxTest(DeltaGeneratorTestCase):
     """Test ability to marshall checkbox protos."""
 
     def test_just_label(self):
@@ -71,7 +71,7 @@ class CheckboxTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.checkbox
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 

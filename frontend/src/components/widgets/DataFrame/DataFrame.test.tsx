@@ -107,21 +107,21 @@ describe("DataFrame widget", () => {
     // Resize first column to size of 123:
     act(() => {
       const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[0], 123, 0)
+      onColumnResize?.(columns[0], 123, 0, 123)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(123)
 
     // Resize first column to size of 321:
     act(() => {
       const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[0], 321, 0)
+      onColumnResize?.(columns[0], 321, 0, 321)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
 
     // First column should stay at previous value if other column is resized
     act(() => {
       const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[1], 88, 1)
+      onColumnResize?.(columns[1], 88, 1, 88)
     })
     expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
   })
