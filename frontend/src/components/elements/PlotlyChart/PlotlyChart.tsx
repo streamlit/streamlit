@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
 import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import {
@@ -55,10 +55,7 @@ function renderFigure({
   const figure = element.figure as FigureProto
   const isFullScreen = (): boolean => !!height
 
-  const [savedElement, saveElement] = useState(element)
-  const [config, setConfig] = useState(JSON.parse(figure.config))
   const theme: Theme = useTheme()
-  const [savedTheme, saveTheme] = useState(theme)
 
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
@@ -74,15 +71,16 @@ function renderFigure({
 
     return spec
   }
+
+  const [config, setConfig] = useState(JSON.parse(figure.config))
   const [spec, setSpec] = useState(generateSpec(figure))
 
-  const elementChanged = !(savedElement && savedElement === element)
-  if (elementChanged || theme !== savedTheme) {
-    saveElement(element)
+  // Update config and spec references iff the theme or props change
+  useEffect(() => {
     setConfig(JSON.parse(figure.config))
     setSpec(generateSpec(figure))
-    saveTheme(theme)
-  }
+  }, [element, theme, height, width])
+
   const { data, layout, frames } = spec
 
   return (
