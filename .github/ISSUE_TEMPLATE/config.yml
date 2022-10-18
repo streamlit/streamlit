@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Streamlit community support
-    url: https://discuss.streamlit.io/
-    about: General usage questions and community discussions
   - name: Streamlit documentation
     url: https://docs.streamlit.io/
     about: Learn more about how to use Streamlit
+  - name: Anything else?
+    url: https://discuss.streamlit.io/
+    about: Ask usage questions on the Streamlit community forum
