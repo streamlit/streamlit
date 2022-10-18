@@ -47,3 +47,6 @@ st.write("value 2:", i3)
 
 i4 = st.button("button 3", type="primary")
 st.write("value 3:", i4)
+
+i5 = st.button("button 4", type="primary", disabled=True)
+st.write("value 4:", i5)

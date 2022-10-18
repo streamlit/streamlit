@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import textwrap
-from typing import NamedTuple, Optional, cast
+from typing import Literal, NamedTuple, Optional, cast
 
 import streamlit
 from streamlit import runtime
@@ -209,7 +209,7 @@ class FormMixin:
         args=None,
         kwargs=None,
         *,  # keyword-only arguments:
-        type: str = "secondary",
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
     ) -> bool:
         """Display a form submit button.
@@ -251,9 +251,13 @@ class FormMixin:
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
-        type = streamlit.elements.button.check_valid_button_type(
-            str(type), "st.form_submit_button"
-        )
+
+        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.button must be "primary" or "secondary". \n'
+                f'The argument passed was "{type}".'
+            )
 
         return self._form_submit_button(
             label=label,
@@ -274,7 +278,7 @@ class FormMixin:
         args=None,
         kwargs=None,
         *,  # keyword-only arguments:
-        type: str = "secondary",
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:

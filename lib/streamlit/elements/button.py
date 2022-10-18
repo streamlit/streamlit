@@ -15,7 +15,7 @@
 import io
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, BinaryIO, Optional, TextIO, Union, cast
+from typing import TYPE_CHECKING, BinaryIO, Literal, Optional, TextIO, Union, cast
 
 from typing_extensions import Final
 
@@ -68,7 +68,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
-        type: str = "secondary",
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
     ) -> bool:
         """Display a button widget.
@@ -119,7 +119,13 @@ class ButtonMixin:
         """
         key = to_key(key)
         ctx = get_script_run_ctx()
-        type = check_valid_button_type(str(type), "st.button")
+
+        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.button must be "primary" or "secondary". \n'
+                f'The argument passed was "{type}".'
+            )
 
         return self.dg._button(
             label,
@@ -323,7 +329,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
-        type: str = "secondary",
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
@@ -381,24 +387,6 @@ class ButtonMixin:
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-
-def check_valid_button_type(button_type: str, button_command: str) -> Any:
-    """
-    Checks whether the entered button type is one of the allowed options.
-    button_type should be either "primary" or "secondary"
-    button_command is "st.button" or "st.form_submit_button"
-    """
-    valid_button_types = ["primary", "secondary"]
-    button_type = button_type.lower()
-
-    if button_type in valid_button_types:
-        return button_type
-
-    raise StreamlitAPIException(
-        f'The type argument to {button_command} must be "primary" or "secondary". \n'
-        f'The argument passed was "{button_type}".'
-    )
 
 
 def marshall_file(
