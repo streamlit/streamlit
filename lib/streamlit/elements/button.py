@@ -15,9 +15,9 @@
 import io
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Literal, Optional, TextIO, Union, cast
+from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
 
-from typing_extensions import Final
+from typing_extensions import Final, Literal
 
 from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form

@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import textwrap
-from typing import Literal, NamedTuple, Optional, cast
+from typing import NamedTuple, Optional, cast
+
+from typing_extensions import Literal
 
 import streamlit
 from streamlit import runtime
