@@ -67,16 +67,13 @@ body:
         _Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in._
     validations:
       required: false
-  - type: dropdown
+  - type: checkboxes
     attributes:
       label: Is this a regression?
-      description: That is, did this use to work the way you expected in the past?
+      description: Did this use to work the way you expected in the past?
       options:
-        - "Yes"
-        - "No"
-        - "I don't know"
-    validations:
-      required: false
+        - label: Yes, this used to work in a previous version.
+          required: false
   - type: textarea
     attributes:
       label: Debug info
@@ -107,3 +104,12 @@ body:
         _Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in._
     validations:
       required: false
+  - type: checkboxes
+    attributes:
+      label: Are you willing to submit a PR?
+      description: |
+        This is absolutely not required, but we are happy to guide you in the contribution process
+        especially if you already have a good understanding of how to implement the fix.
+      options:
+        - label: Yes, I am willing to submit a PR!
+          required: false
