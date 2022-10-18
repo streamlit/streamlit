@@ -59,7 +59,7 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
         </StyledSmall>
         <div>
           <Button
-            kind="primary"
+            kind="secondary"
             onClick={[Function]}
           >
             Copy theme to clipboard

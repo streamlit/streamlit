@@ -282,6 +282,24 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         last_delta = self.get_delta_from_queue()
         self.assertEqual("foo", last_delta.new_element.button.form_id)
 
+    def test_submit_button_default_type(self):
+        """Test that a submit button with no explicit type has default of "secondary"."""
+
+        form = st.form("foo")
+        form.form_submit_button()
+
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual("secondary", last_delta.new_element.button.type)
+
+    def test_submit_button_primary_type(self):
+        """Test that a submit button can be called with type="primary"."""
+
+        form = st.form("foo")
+        form.form_submit_button(type="primary")
+
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual("primary", last_delta.new_element.button.type)
+
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):
             submitted = st.form_submit_button("Submit")
