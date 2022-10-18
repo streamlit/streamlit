@@ -121,7 +121,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(
             str(e.exception),
-            "`sample_rate` param must be specified when data is a numpy array.",
+            "`sample_rate` must be specified when `data` is a numpy array.",
         )
 
     def test_st_audio_sample_rate_raises_warning(self):
@@ -137,8 +137,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.format, AlertProto.WARNING)
         self.assertEqual(
             c.body,
-            "Warning: `sample_rate` parameter will be ignored, "
-            "since data is not a numpy array",
+            "Warning: `sample_rate` will be ignored since data is not a numpy array.",
         )
 
     def test_maybe_convert_to_wave_numpy_arr_empty(self):

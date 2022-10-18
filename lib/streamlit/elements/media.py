@@ -86,14 +86,14 @@ class MediaMixin:
 
         if type_util.is_type(data, "numpy.ndarray") and sample_rate is None:
             raise StreamlitAPIException(
-                "`sample_rate` param must be specified when data is a numpy array."
+                "`sample_rate` must be specified when `data` is a numpy array."
             )
         if not type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
             import streamlit as st
 
             st.warning(
-                "Warning: `sample_rate` parameter will be ignored, since data is "
-                "not a numpy array"
+                "Warning: `sample_rate` will be ignored since data is not a numpy "
+                "array."
             )
 
         marshall_audio(coordinates, audio_proto, data, format, start_time, sample_rate)
