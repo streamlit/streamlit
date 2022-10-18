@@ -85,17 +85,17 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
             (
                 np.linspace(1, 10, num=300).reshape((10, 10, 3)),  # 3d numpy array
                 3,
-                "Numpy array audio input must be a 1D or 2D array",
+                "Numpy array audio input must be a 1D or 2D array.",
             ),
             (
                 np.linspace(1, 10, num=300).reshape((10, 2, 5, 3)),  # 4d numpy array
                 4,
-                "Numpy array audio input must be a 1D or 2D array",
+                "Numpy array audio input must be a 1D or 2D array.",
             ),
             (
                 np.empty((2, 0, 0, 0)),  # 4d empty numpy array
                 4,
-                "Numpy array audio input must be a 1D or 2D array",
+                "Numpy array audio input must be a 1D or 2D array.",
             ),
         ]
     )
