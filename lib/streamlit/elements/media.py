@@ -301,8 +301,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
         raise StreamlitAPIException("Numpy array audio input must be a 1D or 2D array.")
 
     if data.size == 0:
-        empty_np_arr = data.astype(np.int16)
-        return empty_np_arr.tobytes(), nchan
+        return data.astype(np.int16).tobytes(), nchan
 
     max_abs_value = np.max(np.abs(data))
     # 16-bit samples are stored as 2's-complement signed integers,
