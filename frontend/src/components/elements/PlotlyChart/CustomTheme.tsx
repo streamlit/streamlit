@@ -20,6 +20,9 @@ import { useTheme } from "@emotion/react"
 
 import { hasLightBackgroundColor, Theme } from "src/theme"
 
+// TODO: for these colors below, these likely need to move to our theme!
+// For the meantime, these colors will be defined for plotly.
+
 const divergingColorscaleLightTheme = [
   [0.1, "#004280"],
   [0.2, "#0054A3"],
@@ -132,10 +135,9 @@ export function changeDiscreteColors(data: any): void {
     : categoryColorsDarkTheme
 
   const legendGroupToIndexes = new Map<string, number[]>()
-  // change variable name here
   const customDataToDataIdx = new Map<string, number[]>()
-  // change variable name here
   const graphIdxToCustomData = new Map<number, Map<string, number[]>>()
+
   data.forEach((graph: any, graphIndex: number) => {
     if (
       graph.customdata !== undefined &&
@@ -465,8 +467,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
     colorscale: {
       // TODO: Eventually, we might want to move those color schemes to our theme.
-      // But For now, this is specifically defined for vega lite based charts.
-      // Ramp & heatmap are both using the sequential color scheme.
+      // But For now, this is specifically defined for plotly based charts.
       ...(hasLightBackgroundColor(theme)
         ? {
             diverging: divergingColorscaleLightTheme,
