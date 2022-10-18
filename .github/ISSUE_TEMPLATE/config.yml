@@ -6,3 +6,6 @@ contact_links:
   - name: Streamlit documentation
     url: https://docs.streamlit.io/
     about: To learn more about how Streamlit works.
+  - name: Documentation improvement request
+    url: https://github.com/streamlit/docs/issues/new/choose
+    about: Let us know how our docs could be better.
