@@ -137,7 +137,6 @@ export function changeDiscreteColors(data: any): void {
   const legendGroupToIndexes = new Map<string, number[]>()
   const customDataToDataIdx = new Map<string, number[]>()
   const graphIdxToCustomData = new Map<number, Map<string, number[]>>()
-
   data.forEach((graph: any, graphIndex: number) => {
     if (
       graph.customdata !== undefined &&
@@ -176,12 +175,12 @@ export function changeDiscreteColors(data: any): void {
   })
 
   let colorIndex = 0
-  legendGroupToIndexes.forEach((value: number[]) => {
-    value.forEach((index: number) => {
+  legendGroupToIndexes.forEach((dataIdx: number[]) => {
+    dataIdx.forEach((index: number) => {
       if (data[index].line !== undefined) {
         // dont assign colors for dist plot boxes when they're transparent
         if (
-          data[index].type === "box" &&
+          data[index].type !== "box" &&
           data[index].line.color !== "rgba(255,255,255,0)" &&
           data[index].line.color !== "transparent"
         ) {
@@ -189,7 +188,8 @@ export function changeDiscreteColors(data: any): void {
             color: categoryColors[colorIndex % categoryColors.length],
           })
         }
-      } else if (
+      }
+      if (
         data[index].marker !== undefined &&
         typeof data[index].marker.color === "string"
       ) {
