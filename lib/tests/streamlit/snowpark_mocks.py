@@ -13,12 +13,17 @@
 # limitations under the License.
 
 
+class DataFrame:
+    """This is dummy DataFrame class,
+    which imitates snowflake.snowpark.dataframe.Dataframe class
+    for testing purposes."""
+
+    __module__ = "snowflake.snowpark.dataframe"
+
+
 class Row:
     """This is dummy Row class,
     which imitates snowflake.snowpark.row.Row class
     for testing purposes."""
 
     __module__ = "snowflake.snowpark.row"
-
-    def __init__(self):
-        pass

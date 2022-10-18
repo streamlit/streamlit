@@ -28,8 +28,7 @@ from streamlit.type_util import (
     is_snowpark_dataframe,
     to_bytes,
 )
-from tests.snowflake.snowpark.dataframe import DataFrame as SnowparkDataFrame
-from tests.snowflake.snowpark.row import Row as SnowparkRow
+from tests.streamlit.snowpark_mocks import DataFrame, Row
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -200,7 +199,7 @@ dtype: object""",
         self.assertFalse(is_snowpark_dataframe(df))
 
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_dataframe should return true
-        self.assertTrue(is_snowpark_dataframe(SnowparkDataFrame()))
+        self.assertTrue(is_snowpark_dataframe(DataFrame()))
 
         # any object should not be snowpark dataframe
         self.assertFalse(is_snowpark_dataframe("any text"))
@@ -245,4 +244,10 @@ dtype: object""",
         )
 
         # list with SnowparkRow should be SnowparkDataframe
-        self.assertTrue(is_snowpark_dataframe([SnowparkRow()]))
+        self.assertTrue(
+            is_snowpark_dataframe(
+                [
+                    Row(),
+                ]
+            )
+        )

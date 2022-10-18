@@ -28,8 +28,7 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
-from tests.snowflake.snowpark.dataframe import DataFrame as SnowparkDataFrame
-from tests.snowflake.snowpark.row import Row as SnowparkRow
+from tests.streamlit.snowpark_mocks import DataFrame, Row
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -182,14 +181,14 @@ class StreamlitWriteTest(unittest.TestCase):
 
         # SnowparkDataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
-            st.write(SnowparkDataFrame())
+            st.write(DataFrame())
             p.assert_called_once()
 
         # SnowparkRow inside list should call streamlit.delta_generator.DeltaGenerator.dataframe
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
             st.write(
                 [
-                    SnowparkRow(),
+                    Row(),
                 ]
             )
             p.assert_called_once()
