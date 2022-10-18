@@ -15,17 +15,13 @@
 import io
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
+from typing import TYPE_CHECKING, Any, BinaryIO, Optional, TextIO, Union, cast
 
 from typing_extensions import Final
 
 from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
-from streamlit.elements.utils import (
-    check_callback_rules,
-    check_session_state_rules,
-    check_valid_button_type,
-)
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
@@ -385,6 +381,24 @@ class ButtonMixin:
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def check_valid_button_type(button_type: str, button_command: str) -> Any:
+    """
+    Checks whether the entered button type is one of the allowed options.
+    button_type should be either "primary" or "secondary"
+    button_command is "st.button" or "st.form_submit_button"
+    """
+    valid_button_types = ["primary", "secondary"]
+    button_type = button_type.lower()
+
+    if button_type in valid_button_types:
+        return button_type
+
+    raise StreamlitAPIException(
+        f'The type argument to {button_command} must be "primary" or "secondary". \n'
+        f'The argument passed was "{button_type}".'
+    )
 
 
 def marshall_file(

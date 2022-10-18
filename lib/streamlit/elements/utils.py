@@ -90,19 +90,3 @@ def get_label_visibility_proto_value(
         return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
     elif label_visibility_string == "collapsed":
         return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
-
-
-def check_valid_button_type(button_type: str, widget_type: str) -> Any:
-    """
-    Checks whether the entered button type is one of the allowed options
-    """
-    valid_button_types = ["primary", "secondary"]
-    button_type = button_type.lower()
-
-    if button_type in valid_button_types:
-        return button_type
-
-    raise StreamlitAPIException(
-        f'The type argument to {widget_type} must be "primary" or "secondary". \n'
-        f"The argument passed was {button_type}."
-    )

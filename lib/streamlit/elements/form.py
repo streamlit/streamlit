@@ -251,7 +251,7 @@ class FormMixin:
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
-        type = streamlit.elements.utils.check_valid_button_type(
+        type = streamlit.elements.button.check_valid_button_type(
             str(type), "st.form_submit_button"
         )
 
