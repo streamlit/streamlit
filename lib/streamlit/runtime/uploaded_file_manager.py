@@ -64,6 +64,8 @@ class UploadedFile(io.BytesIO):
 class UploadedFileManager(CacheStatsProvider):
     """Holds files uploaded by users of the running Streamlit app,
     and emits an event signal when a file is added.
+
+    This class can be used safely from multiple threads simultaneously.
     """
 
     def __init__(self):
@@ -104,6 +106,8 @@ class UploadedFileManager(CacheStatsProvider):
 
         The "on_files_updated" Signal will be emitted.
 
+        Safe to call from any thread.
+
         Parameters
         ----------
         session_id
@@ -139,6 +143,8 @@ class UploadedFileManager(CacheStatsProvider):
     def get_all_files(self, session_id: str, widget_id: str) -> List[UploadedFileRec]:
         """Return all the files stored for the given widget.
 
+        Safe to call from any thread.
+
         Parameters
         ----------
         session_id
@@ -154,6 +160,8 @@ class UploadedFileManager(CacheStatsProvider):
         self, session_id: str, widget_id: str, file_ids: List[int]
     ) -> List[UploadedFileRec]:
         """Return the files with the given widget_id and file_ids.
+
+        Safe to call from any thread.
 
         Parameters
         ----------
@@ -196,6 +204,8 @@ class UploadedFileManager(CacheStatsProvider):
         This logic ensures that a FileUploader within a form doesn't have any
         of its "unsubmitted" uploads prematurely deleted when the script is
         re-run.
+
+        Safe to call from any thread.
         """
         file_list_id = (session_id, widget_id)
         with self._files_lock:
@@ -227,6 +237,8 @@ class UploadedFileManager(CacheStatsProvider):
 
         The "on_files_updated" Signal will be emitted.
 
+        Safe to call from any thread.
+
         Returns
         -------
         bool
@@ -250,6 +262,8 @@ class UploadedFileManager(CacheStatsProvider):
         provided session, if it exists.
 
         Does not emit any signals.
+
+        Safe to call from any thread.
         """
         files_by_widget = session_id, widget_id
         with self._files_lock:
@@ -260,6 +274,8 @@ class UploadedFileManager(CacheStatsProvider):
         provided session, if it exists.
 
         The "on_files_updated" Signal will be emitted.
+
+        Safe to call from any thread.
 
         Parameters
         ----------
@@ -273,6 +289,8 @@ class UploadedFileManager(CacheStatsProvider):
 
     def remove_session_files(self, session_id: str) -> None:
         """Remove all files that belong to the given session.
+
+        Safe to call from any thread.
 
         Parameters
         ----------
@@ -296,6 +314,10 @@ class UploadedFileManager(CacheStatsProvider):
             return file_id
 
     def get_stats(self) -> List[CacheStat]:
+        """Return the manager's CacheStats.
+
+        Safe to call from any thread.
+        """
         with self._files_lock:
             # Flatten all files into a single list
             all_files: List[UploadedFileRec] = []
