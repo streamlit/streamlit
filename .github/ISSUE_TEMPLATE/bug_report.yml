@@ -7,6 +7,8 @@ body:
       value: |
         Thanks for taking the time to report this problem!
         We really appreciate the community's efforts to improve Streamlit.
+
+        If you are not sure whether you have found a bug, please consider asking in our [community forum](https://discuss.streamlit.io/) first.
   - type: checkboxes
     attributes:
       label: Checklist
