@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: Streamlit community support
     url: https://discuss.streamlit.io/
-    about: Please ask and answer questions here.
+    about: General usage questions and community discussions
   - name: Streamlit documentation
     url: https://docs.streamlit.io/
-    about: To learn more about how Streamlit works.
+    about: Learn more about how to use Streamlit
