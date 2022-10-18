@@ -236,6 +236,9 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
 
 
 def is_snowpark_dataframe(obj: object) -> bool:
+    """True if obj is of type  _SNOWPARK_DF_TYPE_STR (snowflake.snowpark.dataframe.DataFrame) or
+    True when obj is a list which contains _SNOWPARK_DF_ROW_TYPE_STR (snowflake.snowpark.row.Row),
+    False otherwise"""
     if is_type(obj, _SNOWPARK_DF_TYPE_STR):
         return True
     if not isinstance(obj, list):
