@@ -92,7 +92,7 @@ class MediaMixin:
             import streamlit as st
 
             st.warning(
-                "Warning: sample_rate parameter rate will be ignored, since data is "
+                "Warning: `sample_rate` parameter will be ignored, since data is "
                 "not a numpy array"
             )
 

@@ -137,7 +137,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.format, AlertProto.WARNING)
         self.assertEqual(
             c.body,
-            "Warning: sample_rate parameter rate will be ignored, "
+            "Warning: `sample_rate` parameter will be ignored, "
             "since data is not a numpy array",
         )
 
