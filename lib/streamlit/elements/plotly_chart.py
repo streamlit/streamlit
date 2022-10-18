@@ -184,11 +184,6 @@ def marshall(
         figure = plotly.tools.mpl_to_plotly(figure_or_data)
 
     else:
-        if theme == "streamlit":
-            import plotly.io as pio
-            import streamlit.mythemes
-
-            # pio.templates.default = "draft"
         figure = plotly.tools.return_figure_from_figure_or_data(
             figure_or_data, validate_figure=True
         )
