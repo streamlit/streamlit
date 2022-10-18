@@ -52,6 +52,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            ([],),  # empty arr
             ([1, 2, 3, 4],),  # 1d array
             ([[34, 15], [78, 98], [23, 78]],),  # 2d numpy array
         ]
@@ -82,14 +83,19 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (
-                np.array([]),  # empty numpy array
-                1,
-                "st.audio data numpy array should not be empty",
-            ),
-            (
                 np.linspace(1, 10, num=300).reshape((10, 10, 3)),  # 3d numpy array
                 3,
-                "In case of numpy array audio input must be a 1D or 2D array",
+                "Numpy array audio input must be a 1D or 2D array",
+            ),
+            (
+                np.linspace(1, 10, num=300).reshape((10, 2, 5, 3)),  # 4d numpy array
+                4,
+                "Numpy array audio input must be a 1D or 2D array",
+            ),
+            (
+                np.empty((2, 0, 0, 0)),  # 4d empty numpy array
+                4,
+                "Numpy array audio input must be a 1D or 2D array",
             ),
         ]
     )
@@ -114,7 +120,8 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
             st.audio(valid_np_array)
 
         self.assertEqual(
-            str(e.exception), "IN CASE OF NUMPY ARRAY SAMPLE_RATE PARAMETER IS REQUIRED"
+            str(e.exception),
+            "`sample_rate` param must be specified when data is a numpy array.",
         )
 
     def test_st_audio_sample_rate_raises_warning(self):
@@ -132,6 +139,21 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
             c.body,
             "Warning: sample_parameter rate will be ignored, "
             "since data is not a numpy array",
+        )
+
+    def test_maybe_convert_to_wave_numpy_arr_empty(self):
+        """Test _maybe_convert_to_wave_bytes works correctly with empty numpy array."""
+        sample_rate = 44100
+        fake_audio_np_array = np.array([])
+
+        computed_bytes = _maybe_convert_to_wave_bytes(
+            fake_audio_np_array, sample_rate=sample_rate
+        )
+
+        self.assertEqual(
+            computed_bytes,
+            b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00D\xac\x00\x00"
+            b"\x88X\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00",
         )
 
     def test_maybe_convert_to_wave_numpy_arr_mono(self):

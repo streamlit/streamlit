@@ -86,7 +86,7 @@ class MediaMixin:
 
         if type_util.is_type(data, "numpy.ndarray") and sample_rate is None:
             raise StreamlitAPIException(
-                """IN CASE OF NUMPY ARRAY SAMPLE_RATE PARAMETER IS REQUIRED"""
+                "`sample_rate` param must be specified when data is a numpy array."
             )
         if not type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
             import streamlit as st
@@ -288,9 +288,6 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
 
     data = np.array(data, dtype=float)
 
-    if data.size == 0:
-        raise StreamlitAPIException("""st.audio data numpy array should not be empty""")
-
     if len(data.shape) == 1:
         nchan = 1
     elif len(data.shape) == 2:
@@ -301,9 +298,11 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
         nchan = data.shape[0]
         data = data.T.ravel()
     else:
-        raise StreamlitAPIException(
-            """In case of numpy array audio input must be a 1D or 2D array"""
-        )
+        raise StreamlitAPIException("Numpy array audio input must be a 1D or 2D array.")
+
+    if data.size == 0:
+        empty_np_arr = data.astype(np.int16)
+        return empty_np_arr.tobytes(), nchan
 
     max_abs_value = np.max(np.abs(data))
     # 16-bit samples are stored as 2's-complement signed integers,
