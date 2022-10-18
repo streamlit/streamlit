@@ -22,10 +22,10 @@ import numpy as np
 
 import streamlit as st
 from streamlit.web.server.server import MEDIA_ENDPOINT
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class PyplotTest(testutil.DeltaGeneratorTestCase):
+class PyplotTest(DeltaGeneratorTestCase):
     def setUp(self, override_root=True):
         super().setUp(override_root)
         if matplotlib.get_backend().lower() != "agg":

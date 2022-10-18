@@ -62,8 +62,6 @@ describe("withHostCommunication HOC", () => {
   })
 
   it("host should receive a GUEST_READY message", done => {
-    shallow(<TestComponent />)
-
     const listener = (event: MessageEvent): void => {
       expect(event.data).toStrictEqual({
         stCommVersion: HOST_COMM_VERSION,
@@ -75,13 +73,21 @@ describe("withHostCommunication HOC", () => {
     }
 
     window.addEventListener("message", listener)
+
+    shallow(<TestComponent />)
+  })
+})
+
+describe("withHostCommunication HOC receiving messages", () => {
+  let dispatchEvent: any
+  let wrapper: any
+
+  beforeEach(() => {
+    dispatchEvent = mockEventListeners()
+    wrapper = mount(<TestComponent />)
   })
 
   it("should respond to UPDATE_HASH message", () => {
-    const dispatchEvent = mockEventListeners()
-
-    mount(<TestComponent />)
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -98,9 +104,6 @@ describe("withHostCommunication HOC", () => {
   })
 
   it("can process a received SET_TOOLBAR_ITEMS message", () => {
-    const dispatchEvent = mockEventListeners()
-    const wrapper = mount(<TestComponent />)
-
     act(() => {
       dispatchEvent(
         "message",
@@ -136,9 +139,6 @@ describe("withHostCommunication HOC", () => {
   })
 
   it("can process a received SET_SIDEBAR_CHEVRON_DOWNSHIFT message", () => {
-    const dispatchEvent = mockEventListeners()
-    const wrapper = mount(<TestComponent />)
-
     act(() => {
       dispatchEvent(
         "message",
@@ -160,9 +160,6 @@ describe("withHostCommunication HOC", () => {
   })
 
   it("can process a received SET_SIDEBAR_NAV_VISIBILITY message", () => {
-    const dispatchEvent = mockEventListeners()
-    const wrapper = mount(<TestComponent />)
-
     act(() => {
       dispatchEvent(
         "message",
@@ -184,9 +181,6 @@ describe("withHostCommunication HOC", () => {
   })
 
   it("can process a received REQUEST_PAGE_CHANGE message", () => {
-    const dispatchEvent = mockEventListeners()
-    const wrapper = mount(<TestComponent />)
-
     act(() => {
       dispatchEvent(
         "message",
@@ -217,9 +211,6 @@ describe("withHostCommunication HOC", () => {
   })
 
   it("can process a received SET_PAGE_LINK_BASE_URL message", () => {
-    const dispatchEvent = mockEventListeners()
-    const wrapper = mount(<TestComponent />)
-
     act(() => {
       dispatchEvent(
         "message",
@@ -242,12 +233,29 @@ describe("withHostCommunication HOC", () => {
     )
   })
 
+  it("can process a received SET_AUTH_TOKEN message", () => {
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "SET_AUTH_TOKEN",
+            authToken: "i am an auth token",
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
+    expect(props.currentState.authToken).toBe("i am an auth token")
+  })
+
   describe("Test different origins", () => {
     it("exact pattern", () => {
-      const dispatchEvent = mockEventListeners()
-
-      mount(<TestComponent />)
-
       dispatchEvent(
         "message",
         new MessageEvent("message", {
@@ -262,11 +270,8 @@ describe("withHostCommunication HOC", () => {
 
       expect(window.location.hash).toEqual("#somehash")
     })
+
     it("wildcard pattern", () => {
-      const dispatchEvent = mockEventListeners()
-
-      mount(<TestComponent />)
-
       dispatchEvent(
         "message",
         new MessageEvent("message", {

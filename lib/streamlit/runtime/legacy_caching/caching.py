@@ -44,6 +44,7 @@ from pympler.asizeof import asizeof
 
 import streamlit as st
 from streamlit import config, file_util, util
+from streamlit.elements.spinner import spinner
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
@@ -618,7 +619,7 @@ def cache(
             return return_value
 
         if show_spinner:
-            with st.spinner(message):
+            with spinner(message):
                 return get_or_create_cached_value()
         else:
             return get_or_create_cached_value()

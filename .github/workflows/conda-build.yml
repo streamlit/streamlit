@@ -1,0 +1,49 @@
+name: Conda Build Test
+
+on:
+  push:
+    branches:
+      - "develop"
+      - "feature/**"
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Avoid duplicate workflows on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_conda_package:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          submodules: "recursive"
+      # We need to install Python 3.9 here because it's the latest version
+      # supported by the miniconda installer as of 2022/10/11.
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Install conda and conda-build
+        env:
+          MINICONDA_RELEASE: "Miniconda3-py39_4.12.0-Linux-x86_64"
+        run: |
+          curl -sO "https://repo.anaconda.com/miniconda/${MINICONDA_RELEASE}.sh"
+          bash "${MINICONDA_RELEASE}.sh" -b
+          conda install conda-build
+      - name: Build Conda Package - Fast
+        timeout-minutes: 120
+        run: |
+          sudo apt install rsync
+          BUILD_AS_FAST_AS_POSSIBLE=1 make conda-package

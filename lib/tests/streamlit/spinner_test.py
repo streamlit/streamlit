@@ -12,31 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""LaTeX unit test."""
+import time
 
-import streamlit as st
+from streamlit.elements.spinner import spinner
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class LatexTest(DeltaGeneratorTestCase):
-    """Test ability to marshall latex protos."""
-
-    def test_latex(self):
-        st.latex("ax^2 + bx + c = 0")
-
-        c = self.get_delta_from_queue().new_element.markdown
-        self.assertEqual(c.body, "$$\nax^2 + bx + c = 0\n$$")
-
-    def test_sympy_expression(self):
-        try:
-            import sympy
-
-            a, b = sympy.symbols("a b")
-            out = a + b
-        except:
-            out = "a + b"
-
-        st.latex(out)
-
-        c = self.get_delta_from_queue().new_element.markdown
-        self.assertEqual(c.body, "$$\na + b\n$$")
+class SpinnerTest(DeltaGeneratorTestCase):
+    def test_spinner(self):
+        """Test st.spinner."""
+        with spinner("some text"):
+            # Without the timeout, the spinner is sometimes not available
+            time.sleep(0.2)
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.spinner.text, "some text")

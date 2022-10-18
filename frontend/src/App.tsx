@@ -280,12 +280,14 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
+      getHostAuthToken: this.getHostAuthToken,
     })
 
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
     }
 
+    this.props.hostCommunication.connect()
     this.props.hostCommunication.sendMessage({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
@@ -365,6 +367,17 @@ export class App extends PureComponent<Props, State> {
     logMessage(
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
+
+    const { connectionState: currState } = this.state
+
+    if (
+      currState === ConnectionState.CONNECTED &&
+      newState === ConnectionState.PINGING_SERVER
+    ) {
+      this.props.hostCommunication.sendMessage({
+        type: "WEBSOCKET_DISCONNECTED",
+      })
+    }
 
     this.setState({ connectionState: newState })
 
@@ -760,7 +773,6 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.props.hostCommunication.connect()
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
@@ -1170,6 +1182,12 @@ export class App extends PureComponent<Props, State> {
       logError(`Not connected. Cannot send back message: ${msg}`)
     }
   }
+
+  /**
+   * Returns the authToken set by the withHostCommunication hoc.
+   */
+  private getHostAuthToken = (): string | undefined =>
+    this.props.hostCommunication.currentState.authToken
 
   /**
    * Updates the app body when there's a connection error.

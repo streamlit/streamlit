@@ -22,10 +22,10 @@ import streamlit as st
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.web.server.server import MEDIA_ENDPOINT
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class VideoTest(testutil.DeltaGeneratorTestCase):
+class VideoTest(DeltaGeneratorTestCase):
     def test_st_video_from_bytes(self):
         """Test st.video using fake bytes data."""
         # Make up some bytes to pretend we have a video.  The server should not vet

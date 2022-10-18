@@ -24,10 +24,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class FileUploaderTest(testutil.DeltaGeneratorTestCase):
+class FileUploaderTest(DeltaGeneratorTestCase):
     def test_just_label(self):
         """Test that it can be called with no other values."""
         st.file_uploader("the label")

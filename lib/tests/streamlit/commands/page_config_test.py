@@ -26,10 +26,10 @@ from streamlit.commands.page_config import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.string_util import is_emoji
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class PageConfigTest(testutil.DeltaGeneratorTestCase):
+class PageConfigTest(DeltaGeneratorTestCase):
     def test_set_page_config_title(self):
         st.set_page_config(page_title="Hello")
         c = self.get_message_from_queue().page_config_changed

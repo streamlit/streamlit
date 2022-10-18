@@ -3,7 +3,10 @@ name: PR Preview
 on:
   push:
     branches:
-      - '**'
+      - 'develop'
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 # Avoid duplicate workflows on same branch
 concurrency: 

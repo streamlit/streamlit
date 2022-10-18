@@ -24,10 +24,10 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class SliderTest(testutil.DeltaGeneratorTestCase):
+class SliderTest(DeltaGeneratorTestCase):
     """Test ability to marshall slider protos."""
 
     def test_just_label(self):

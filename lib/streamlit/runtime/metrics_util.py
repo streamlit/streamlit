@@ -60,6 +60,10 @@ _CALLABLE_NAME_MAPPING: Final = {
     "SessionStateProxy.__setattr__": "session_state.__setattr__",
     "SessionStateProxy.__setitem__": "session_state.__setitem__",
     "_write_to_cache": "_cache_object",
+    "_get_query_params": "experimental_get_query_params",
+    "_set_query_params": "experimental_set_query_params",
+    "_show": "experimental_show",
+    "set_user_option": "set_option",
 }
 # A list of dependencies to check for attribution
 _ATTRIBUTIONS_TO_CHECK: Final = ["snowflake"]

@@ -24,7 +24,7 @@ from parameterized import parameterized
 import streamlit
 from streamlit.runtime import metrics_util
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 MAC = "mac"
 UUID = "uuid"
@@ -91,7 +91,7 @@ class MetricsUtilTest(unittest.TestCase):
         self.assertEqual(machine_id, MAC)
 
 
-class PageTelemetryTest(testutil.DeltaGeneratorTestCase):
+class PageTelemetryTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (streamlit.dataframe, "dataframe"),

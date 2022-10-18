@@ -14,10 +14,10 @@
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class ColumnsTest(testutil.DeltaGeneratorTestCase):
+class ColumnsTest(DeltaGeneratorTestCase):
     """Test columns."""
 
     def test_equal_width_columns(self):
@@ -133,7 +133,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(columns_blocks[2].add_block.column.gap, "large")
 
 
-class ExpanderTest(testutil.DeltaGeneratorTestCase):
+class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""
         with self.assertRaises(TypeError):
@@ -151,7 +151,7 @@ class ExpanderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
 
 
-class TabsTest(testutil.DeltaGeneratorTestCase):
+class TabsTest(DeltaGeneratorTestCase):
     def test_tab_required(self):
         """Test that at least one tab is required."""
         with self.assertRaises(TypeError):

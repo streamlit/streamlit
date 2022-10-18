@@ -320,14 +320,27 @@ describe("App", () => {
     expect(wrapper.find(Modal)).toHaveLength(1)
   })
 
-  it("sends the active theme to the host when the app is first rendered", () => {
+  it("sends initialization messages to the host when the app is first rendered", () => {
     const props = getProps()
     shallow(<App {...props} />)
 
-    // @ts-ignore
+    expect(props.hostCommunication.connect).toHaveBeenCalled()
     expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(lightTheme.emotion),
+    })
+  })
+
+  it("sends WEBSOCKET_DISCONNECTED message to the host when the connection to the server is dropped", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const app = wrapper.instance() as App
+
+    app.handleConnectionStateChanged(ConnectionState.CONNECTED)
+    app.handleConnectionStateChanged(ConnectionState.PINGING_SERVER)
+
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "WEBSOCKET_DISCONNECTED",
     })
   })
 
@@ -409,6 +422,30 @@ describe("App", () => {
     expect(
       props.hostCommunication.currentState.requestedPageScriptHash
     ).toBeNull()
+  })
+
+  it("should return the auth token set in hostCommunication from getHostAuthToken", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    // Use setProps (vs setting the auth token on component rendered) to
+    // simulate the auth token changing after the withHostCommunication hoc
+    // initially loads.
+    wrapper.setProps(
+      getProps({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
+            authToken: "verySecureAuthToken",
+          }),
+        }),
+      })
+    )
+    wrapper.update()
+
+    const instance = wrapper.instance() as App
+
+    // @ts-ignore
+    expect(instance.getHostAuthToken()).toBe("verySecureAuthToken")
   })
 })
 
