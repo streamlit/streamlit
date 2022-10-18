@@ -15,7 +15,7 @@
 """SessionStateProxy unit tests."""
 
 import unittest
-from typing import Dict, Any
+from typing import Any, Dict
 from unittest.mock import patch
 
 import pytest

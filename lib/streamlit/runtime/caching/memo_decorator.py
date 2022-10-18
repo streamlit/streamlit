@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """@st.memo: pickle-based caching"""
+import math
 import os
 import pickle
 import shutil
@@ -20,37 +21,31 @@ import threading
 import time
 import types
 from datetime import timedelta
-from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload, Union
+from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, cast, overload
 
-import math
 from cachetools import TTLCache
 
 import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
-from streamlit.file_util import (
-    streamlit_read,
-    streamlit_write,
-    get_streamlit_file_path,
-)
+from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
-from streamlit.runtime.stats import CacheStatsProvider, CacheStat
-from streamlit.runtime.metrics_util import gather_metrics
-
-from .cache_errors import (
+from streamlit.runtime.caching.cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
     CacheType,
 )
-from .cache_utils import (
+from streamlit.runtime.caching.cache_utils import (
     Cache,
+    CachedFunction,
     CachedResult,
+    CacheMessagesCallStack,
+    CacheWarningCallStack,
     MsgData,
     create_cache_wrapper,
-    CacheWarningCallStack,
-    CachedFunction,
-    CacheMessagesCallStack,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
 
@@ -73,7 +68,7 @@ class MemoizedFunction(CachedFunction):
     def __init__(
         self,
         func: types.FunctionType,
-        show_spinner: bool,
+        show_spinner: Union[bool, str],
         suppress_st_warning: bool,
         persist: Optional[str],
         max_entries: Optional[int],
@@ -217,7 +212,7 @@ class MemoAPI:
         self,
         *,
         persist: Optional[str] = None,
-        show_spinner: bool = True,
+        show_spinner: Union[bool, str] = True,
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
         ttl: Optional[Union[float, timedelta]] = None,
@@ -233,7 +228,7 @@ class MemoAPI:
         func: Optional[F] = None,
         *,
         persist: Optional[str] = None,
-        show_spinner: bool = True,
+        show_spinner: Union[bool, str] = True,
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
         ttl: Optional[Union[float, timedelta]] = None,

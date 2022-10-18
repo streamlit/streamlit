@@ -65,10 +65,7 @@ describe("withScreencast HOC", () => {
     })
 
     it("should show a countdown after setup", async () => {
-      await wrapper
-        .find(ScreencastDialog)
-        .props()
-        .startRecording()
+      await wrapper.find(ScreencastDialog).props().startRecording()
 
       const countdownWrapper = wrapper.find(Countdown)
 

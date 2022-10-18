@@ -14,15 +14,14 @@
 
 """Legacy DataFrame Styler unit tests"""
 
-from typing import List, Optional, Any, Set
+from typing import Any, List, Optional, Set
 
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.proto.DataFrame_pb2 import CellStyle, DataFrame, Table
-from streamlit.proto.DataFrame_pb2 import CSSStyle
+from streamlit.proto.DataFrame_pb2 import CellStyle, CSSStyle, DataFrame, Table
 from streamlit.proto.Element_pb2 import Element
 from tests import testutil
 

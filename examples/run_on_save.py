@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from random import random
 import os
 import platform
-import streamlit as st
 import time
+from random import random
+
+import streamlit as st
 
 st.title("Test of run-on-save")
 secs_to_wait = 5

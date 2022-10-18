@@ -20,8 +20,8 @@ import tornado.web
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import (
-    get_extension_for_mimetype,
     MemoryMediaFileStorage,
+    get_extension_for_mimetype,
 )
 from streamlit.string_util import generate_download_filename_from_title
 from streamlit.web.server import allow_cross_origin_requests
@@ -70,8 +70,13 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
                 )
 
             try:
+                # Check that the value can be encoded in latin1. Latin1 is
+                # the default encoding for headers.
+                filename.encode("latin1")
                 file_expr = 'filename="{}"'.format(filename)
             except UnicodeEncodeError:
+                # RFC5987 syntax.
+                # See: https://datatracker.ietf.org/doc/html/rfc5987
                 file_expr = "filename*=utf-8''{}".format(quote(filename))
 
             self.set_header("Content-Disposition", f"attachment; {file_expr}")

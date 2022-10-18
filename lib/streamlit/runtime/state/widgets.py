@@ -15,15 +15,14 @@
 import hashlib
 import textwrap
 from types import MappingProxyType
-from typing import Dict, Optional, Union, TYPE_CHECKING
-from typing import Mapping
+from typing import TYPE_CHECKING, Dict, Mapping, Optional, Union
 
 from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
-from streamlit.proto.Checkbox_pb2 import Checkbox
 from streamlit.proto.CameraInput_pb2 import CameraInput
+from streamlit.proto.Checkbox_pb2 import Checkbox
 from streamlit.proto.ColorPicker_pb2 import ColorPicker
 from streamlit.proto.Components_pb2 import ComponentInstance
 from streamlit.proto.DateInput_pb2 import DateInput
@@ -37,20 +36,19 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
-from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
-from streamlit.type_util import ValueFieldName
-
-from .session_state import (
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
-    WidgetMetadata,
-    WidgetSerializer,
+    RegisterWidgetResult,
+    T,
     WidgetArgs,
     WidgetCallback,
     WidgetDeserializer,
     WidgetKwargs,
-    RegisterWidgetResult,
-    T,
+    WidgetMetadata,
+    WidgetSerializer,
 )
+from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext

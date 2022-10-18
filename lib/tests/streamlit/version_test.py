@@ -14,17 +14,19 @@
 
 """version unit test."""
 
-from unittest import mock
 import unittest
+from unittest import mock
 
 import requests_mock
 from packaging.version import Version as PkgVersion
 
 from streamlit import version
-from streamlit.version import PYPI_STREAMLIT_URL
-from streamlit.version import _get_installed_streamlit_version
-from streamlit.version import _get_latest_streamlit_version
-from streamlit.version import should_show_new_version_notice
+from streamlit.version import (
+    PYPI_STREAMLIT_URL,
+    _get_installed_streamlit_version,
+    _get_latest_streamlit_version,
+    should_show_new_version_notice,
+)
 
 
 class VersionTest(unittest.TestCase):

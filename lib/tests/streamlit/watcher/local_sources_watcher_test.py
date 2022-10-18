@@ -14,20 +14,19 @@
 
 """streamlit.LocalSourcesWatcher unit test."""
 
-from unittest.mock import MagicMock, patch
 import os
 import sys
 import unittest
-
-from streamlit import config
-from streamlit.watcher import local_sources_watcher
-from streamlit.watcher.path_watcher import NoOpPathWatcher, watchdog_available
+from unittest.mock import MagicMock, patch
 
 import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
 import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
 import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
-import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
 import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
+import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
+from streamlit import config
+from streamlit.watcher import local_sources_watcher
+from streamlit.watcher.path_watcher import NoOpPathWatcher, watchdog_available
 
 SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 

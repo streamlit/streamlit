@@ -40,7 +40,7 @@ describe("FileStatus widget", () => {
   it("shows progress bar when uploading", () => {
     const props = getProps({
       type: "uploading",
-      cancelToken: (null as unknown) as CancelTokenSource,
+      cancelToken: null as unknown as CancelTokenSource,
       progress: 40,
     })
     const wrapper = shallow(<UploadedFileStatus {...props} />)

@@ -15,6 +15,7 @@
 """number_input unit test."""
 
 from unittest.mock import MagicMock, patch
+
 import pytest
 from parameterized import parameterized
 

@@ -80,9 +80,10 @@ describe("Button widget", () => {
 
       wrappedUIButton.simulate("click")
 
-      expect(
-        props.widgetMgr.setTriggerValue
-      ).toHaveBeenCalledWith(props.element, { fromUi: true })
+      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        props.element,
+        { fromUi: true }
+      )
     })
 
     it("disable prop", () => {

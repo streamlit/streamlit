@@ -13,24 +13,27 @@
 # limitations under the License.
 
 # Explicitly re-export public symbols
-from .safe_session_state import SafeSessionState as SafeSessionState
-
-from .session_state import (
-    SessionState as SessionState,
-    WidgetCallback as WidgetCallback,
-    WidgetArgs as WidgetArgs,
-    WidgetKwargs as WidgetKwargs,
-    SessionStateStatProvider as SessionStateStatProvider,
+from streamlit.runtime.state.safe_session_state import (
+    SafeSessionState as SafeSessionState,
+)
+from streamlit.runtime.state.session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY as SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
-
-from .session_state_proxy import (
+from streamlit.runtime.state.session_state import SessionState as SessionState
+from streamlit.runtime.state.session_state import (
+    SessionStateStatProvider as SessionStateStatProvider,
+)
+from streamlit.runtime.state.session_state import WidgetArgs as WidgetArgs
+from streamlit.runtime.state.session_state import WidgetCallback as WidgetCallback
+from streamlit.runtime.state.session_state import WidgetKwargs as WidgetKwargs
+from streamlit.runtime.state.session_state_proxy import (
     SessionStateProxy as SessionStateProxy,
+)
+from streamlit.runtime.state.session_state_proxy import (
     get_session_state as get_session_state,
 )
-
-from .widgets import (
+from streamlit.runtime.state.widgets import NoValue as NoValue
+from streamlit.runtime.state.widgets import (
     coalesce_widget_states as coalesce_widget_states,
-    register_widget as register_widget,
-    NoValue as NoValue,
 )
+from streamlit.runtime.state.widgets import register_widget as register_widget

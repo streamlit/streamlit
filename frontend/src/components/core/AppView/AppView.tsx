@@ -97,9 +97,8 @@ function AppView(props: AppViewProps): ReactElement {
     return () => window.removeEventListener("hashchange", listener, false)
   }, [])
 
-  const { wideMode, initialSidebarState, embedded } = React.useContext(
-    AppContext
-  )
+  const { wideMode, initialSidebarState, embedded } =
+    React.useContext(AppContext)
   const renderBlock = (node: BlockNode): ReactElement => (
     <StyledAppViewBlockContainer
       className="block-container"

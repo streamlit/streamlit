@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import time
+
+import streamlit as st
 
 # A spinner always requires a computation to run for a certain time
 # Therefore, we add a button to allow triggering the spinner during the test execution.

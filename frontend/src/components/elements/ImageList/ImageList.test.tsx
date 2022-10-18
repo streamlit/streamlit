@@ -27,13 +27,11 @@ const getProps = (
     imgs: [
       {
         caption: "a",
-        url:
-          "/media/e275965f8926e17fa8c92c6530be58be11cf5a55474619c16f5442f9.jpeg",
+        url: "/media/e275965f8926e17fa8c92c6530be58be11cf5a55474619c16f5442f9.jpeg",
       },
       {
         caption: "b",
-        url:
-          "/media/e275965f8926e17fa8c92c6530be58be11cf5a55474619c16f5442f9.jpeg",
+        url: "/media/e275965f8926e17fa8c92c6530be58be11cf5a55474619c16f5442f9.jpeg",
       },
     ],
     width: -1,

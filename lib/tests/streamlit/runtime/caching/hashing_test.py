@@ -14,7 +14,6 @@
 
 """st.memo/singleton hashing tests."""
 
-from enum import Enum, auto
 import functools
 import hashlib
 import os
@@ -23,9 +22,9 @@ import tempfile
 import types
 import unittest
 from dataclasses import dataclass
-from io import BytesIO
-from io import StringIO
-from unittest.mock import Mock, MagicMock
+from enum import Enum, auto
+from io import BytesIO, StringIO
+from unittest.mock import MagicMock, Mock
 
 import cffi
 import numpy as np
@@ -34,9 +33,9 @@ from parameterized import parameterized
 
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.hashing import (
-    _CacheFuncHasher,
-    _PANDAS_ROWS_LARGE,
     _NP_SIZE_LARGE,
+    _PANDAS_ROWS_LARGE,
+    _CacheFuncHasher,
 )
 
 try:
@@ -49,8 +48,8 @@ try:
 except ImportError:
     pass
 
-from streamlit.type_util import is_type
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.type_util import is_type
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 

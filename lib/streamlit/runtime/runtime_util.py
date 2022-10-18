@@ -19,7 +19,7 @@ from typing import Any, Optional
 from streamlit import config
 from streamlit.errors import MarkdownFormattedException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from .forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 
 
 class MessageSizeError(MarkdownFormattedException):

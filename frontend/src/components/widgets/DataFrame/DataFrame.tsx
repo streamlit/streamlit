@@ -331,13 +331,8 @@ function DataFrame({
 
   const stretchColumn = element.useContainerWidth || element.width
 
-  const {
-    numRows,
-    numIndices,
-    columns,
-    getCellContent,
-    onColumnResize,
-  } = useDataLoader(element, data, sort)
+  const { numRows, numIndices, columns, getCellContent, onColumnResize } =
+    useDataLoader(element, data, sort)
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 

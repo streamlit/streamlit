@@ -14,17 +14,17 @@
 
 """Unit tests for MediaFileManager"""
 
-from typing import Optional
-from unittest import mock, TestCase
 import random
-from unittest.mock import mock_open, MagicMock, call
+from typing import Optional
+from unittest import TestCase, mock
+from unittest.mock import MagicMock, call, mock_open
 
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import (
-    _calculate_file_id,
-    MemoryMediaFileStorage,
     MemoryFile,
+    MemoryMediaFileStorage,
+    _calculate_file_id,
 )
 
 

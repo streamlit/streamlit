@@ -86,19 +86,13 @@ describe("ToolbarActions", () => {
     const props = getProps()
     const wrapper = shallow(<ToolbarActions {...props} />)
 
-    wrapper
-      .find(ActionButton)
-      .at(0)
-      .simulate("click")
+    wrapper.find(ActionButton).at(0).simulate("click")
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "favorite",
     })
 
-    wrapper
-      .find(ActionButton)
-      .at(1)
-      .simulate("click")
+    wrapper.find(ActionButton).at(1).simulate("click")
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "share",

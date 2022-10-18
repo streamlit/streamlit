@@ -305,9 +305,8 @@ export class App extends PureComponent<Props, State> {
       this.closeDialog()
     }
 
-    const {
-      requestedPageScriptHash,
-    } = this.props.hostCommunication.currentState
+    const { requestedPageScriptHash } =
+      this.props.hostCommunication.currentState
     if (requestedPageScriptHash !== null) {
       this.onPageChange(requestedPageScriptHash)
       this.props.hostCommunication.onPageChanged()
@@ -438,13 +437,8 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const {
-      title,
-      favicon,
-      layout,
-      initialSidebarState,
-      menuItems,
-    } = pageConfig
+    const { title, favicon, layout, initialSidebarState, menuItems } =
+      pageConfig
 
     MetricsManager.current.enqueue("pageConfigChanged", {
       favicon,
@@ -588,7 +582,8 @@ export class App extends PureComponent<Props, State> {
           customThemeDefined,
         })
 
-        const customComponentCounter = MetricsManager.current.getAndResetCustomComponentCounter()
+        const customComponentCounter =
+          MetricsManager.current.getAndResetCustomComponentCounter()
         Object.entries(customComponentCounter).forEach(([name, count]) => {
           MetricsManager.current.enqueue("customComponentStats", {
             name,
@@ -1276,9 +1271,8 @@ export class App extends PureComponent<Props, State> {
       currentPageScriptHash,
     } = this.state
 
-    const {
-      hideSidebarNav: hostHideSidebarNav,
-    } = this.props.hostCommunication.currentState
+    const { hideSidebarNav: hostHideSidebarNav } =
+      this.props.hostCommunication.currentState
 
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -1311,8 +1305,8 @@ export class App extends PureComponent<Props, State> {
           availableThemes: this.props.theme.availableThemes,
           setTheme: this.setAndSendTheme,
           addThemes: this.props.theme.addThemes,
-          sidebarChevronDownshift: this.props.hostCommunication.currentState
-            .sidebarChevronDownshift,
+          sidebarChevronDownshift:
+            this.props.hostCommunication.currentState.sidebarChevronDownshift,
           getBaseUriParts: this.getBaseUriParts,
         }}
       >

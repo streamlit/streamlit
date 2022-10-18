@@ -186,10 +186,7 @@ describe("App", () => {
       scriptName: "scriptName",
     })
 
-    wrapper
-      .find(MainMenu)
-      .props()
-      .screencastCallback()
+    wrapper.find(MainMenu).props().screencastCallback()
 
     expect(props.screenCast.startRecording).toHaveBeenCalledWith(
       "streamlit-scriptName-date"

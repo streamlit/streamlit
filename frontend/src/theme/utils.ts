@@ -125,14 +125,8 @@ export const createBaseThemePrimitives = (
 // NOTE: A lot of the properties we can override here don't seem to actually
 // be used anywhere in BaseWeb's source. Will report a bug about it.
 export const createThemeOverrides = (theme: Theme): Record<string, any> => {
-  const {
-    inSidebar,
-    colors,
-    genericFonts,
-    fontSizes,
-    lineHeights,
-    radii,
-  } = theme
+  const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
+    theme
   const fontStyles = {
     fontFamily: genericFonts.bodyFont,
     fontSize: fontSizes.md,
@@ -543,9 +537,8 @@ export const getCachedTheme = (): ThemeConfig | null => {
     return null
   }
 
-  const { name: themeName, themeInput }: CachedTheme = JSON.parse(
-    cachedThemeStr
-  )
+  const { name: themeName, themeInput }: CachedTheme =
+    JSON.parse(cachedThemeStr)
   switch (themeName) {
     case lightTheme.name:
       return lightTheme

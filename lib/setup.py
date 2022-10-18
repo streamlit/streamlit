@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import os
-import setuptools
 import sys
 from pathlib import Path
 
+import setuptools
 from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent

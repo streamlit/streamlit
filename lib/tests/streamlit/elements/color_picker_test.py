@@ -15,12 +15,14 @@
 """color_picker unit test."""
 
 from unittest.mock import patch
+
 import pytest
-from tests import testutil
+from parameterized import parameterized
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from parameterized import parameterized
+from tests import testutil
 
 
 class ColorPickerTest(testutil.DeltaGeneratorTestCase):

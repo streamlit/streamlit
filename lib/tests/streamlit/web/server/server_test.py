@@ -31,7 +31,7 @@ import streamlit.web.server.server
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import RuntimeState, Runtime
+from streamlit.runtime import Runtime, RuntimeState
 from streamlit.web.server.server import (
     MAX_PORT_SEARCH_RETRIES,
     RetriesExceeded,
@@ -39,7 +39,7 @@ from streamlit.web.server.server import (
     start_listening,
 )
 from tests.streamlit.message_mocks import create_dataframe_msg
-from .server_test_case import ServerTestCase
+from tests.streamlit.web.server.server_test_case import ServerTestCase
 
 LOGGER = get_logger(__name__)
 

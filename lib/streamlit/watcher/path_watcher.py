@@ -17,8 +17,7 @@ from typing import Callable, Optional, Type, Union
 import click
 
 import streamlit.watcher
-from streamlit import config
-from streamlit import env_util
+from streamlit import config, env_util
 from streamlit.logger import get_logger
 from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 

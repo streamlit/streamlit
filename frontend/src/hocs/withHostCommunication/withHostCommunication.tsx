@@ -176,8 +176,9 @@ function withHostCommunication(
     )
   }
 
-  ComponentWithHostCommunication.displayName = `withHostCommunication(${WrappedComponent.displayName ||
-    WrappedComponent.name})`
+  ComponentWithHostCommunication.displayName = `withHostCommunication(${
+    WrappedComponent.displayName || WrappedComponent.name
+  })`
 
   // Static methods must be copied over
   // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over

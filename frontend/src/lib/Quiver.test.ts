@@ -1061,10 +1061,7 @@ describe("Quiver", () => {
 
         expect(qq.index).toEqual([
           vectorFromArray([
-            978220800000,
-            1009756800000,
-            978220800000,
-            1009756800000,
+            978220800000, 1009756800000, 978220800000, 1009756800000,
           ]),
         ])
         expect(qq.columns).toEqual([

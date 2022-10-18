@@ -113,10 +113,8 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
-  const {
-    addScriptFinishedHandler,
-    removeScriptFinishedHandler,
-  } = React.useContext(AppContext)
+  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
+    React.useContext(AppContext)
   if (isSidebar) {
     return React.createElement(tag, tagProps, children)
   }

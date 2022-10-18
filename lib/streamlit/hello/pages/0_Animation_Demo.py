@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
-import numpy as np
 from typing import Any
+
+import numpy as np
+
+import streamlit as st
 from streamlit.hello.utils import show_code
 
 

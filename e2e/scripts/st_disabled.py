@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import date, time
+
 import streamlit as st
-from datetime import time
-from datetime import date
 
 options = ("female", "male")
 
