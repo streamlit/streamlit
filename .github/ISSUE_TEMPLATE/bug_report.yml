@@ -2,6 +2,11 @@ name: Bug report
 description: Submit a bug report to help us improve Streamlit.
 labels: [bug, needs triage]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this problem!
+        We really appreciate the community's efforts to improve Streamlit.
   - type: checkboxes
     attributes:
       label: Checklist
@@ -18,7 +23,7 @@ body:
   - type: textarea
     attributes:
       label: Summary
-      description: Type here a clear and concise description of the bug. Aim for 2-3 sentences.
+      description: Type here a clear and concise description of the problem. Aim for 2-3 sentences.
     validations:
       required: true
   - type: textarea
