@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.errors import StreamlitAPIException
-import streamlit as st
 import plotly.express as px
-from tests import testutil
 from parameterized import parameterized
 
+import streamlit as st
+from streamlit.errors import StreamlitAPIException
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
-class PyDeckTest(testutil.DeltaGeneratorTestCase):
+
+class PyDeckTest(DeltaGeneratorTestCase):
     def test_basic(self):
         """Test that plotly object works."""
         df = px.data.gapminder().query("country=='Canada'")
