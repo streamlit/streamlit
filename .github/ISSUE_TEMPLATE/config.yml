@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Documentation request
+    url: https://github.com/streamlit/docs/issues/new/choose
+    about: Let us know how our docs could be better.
   - name: Streamlit community support
     url: https://discuss.streamlit.io/
     about: Please ask and answer questions here.
