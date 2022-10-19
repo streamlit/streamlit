@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
+about: Suggest a feature or enhancement for Streamlit
 title: ""
 labels: enhancement, needs triage
 assignees: ""
