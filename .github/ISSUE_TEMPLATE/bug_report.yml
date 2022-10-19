@@ -16,8 +16,6 @@ body:
       options:
         - label: I have searched the [existing issues](https://github.com/streamlit/streamlit/issues) for similar issues.
           required: true
-        - label: I have searched the [Streamlit documentation](https://docs.streamlit.io/).
-          required: true
         - label: I added a very descriptive title to this issue.
           required: true
         - label: I have provided sufficient information below to help reproduce this issue.
