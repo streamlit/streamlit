@@ -183,6 +183,10 @@ ALLOWED_MESSAGE_ORIGINS = [
 
 class AllowedMessageOriginsHandler(_SpecialRequestHandler):
     def get(self) -> None:
+        # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
+        # disallows writing lists directly into responses due to potential XSS
+        # vulnerabilities.
+        # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
         self.write({"allowedOrigins": ALLOWED_MESSAGE_ORIGINS})
         self.set_status(200)
 
