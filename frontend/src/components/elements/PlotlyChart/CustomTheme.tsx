@@ -128,6 +128,12 @@ export function getIncreasingGreen(theme: Theme): string {
   return hasLightBackgroundColor(theme) ? "#29B09D" : "#7DEFA1"
 }
 
+/**
+ * This applies categorical colors (discrete or labeled data) to
+ * graphs by mapping legend groups to marker colors and customdata to marker colors.
+ * This is done because colorway is not fully respected by plotly.
+ * @param data - spec.data
+ */
 export function changeDiscreteColors(data: any): void {
   const theme: Theme = useTheme()
   const categoryColors = hasLightBackgroundColor(theme)
@@ -215,6 +221,10 @@ export function changeDiscreteColors(data: any): void {
   )
 }
 
+/**
+ * This overrides the colorscale (continuous colorscale) to all graphs.
+ * @param data - spec.data
+ */
 export function applyColorscale(data: any): any {
   const theme = useTheme()
   data.forEach((entry: any) => {
@@ -227,6 +237,11 @@ export function applyColorscale(data: any): any {
   return data
 }
 
+/**
+ * This applies colors specifically for the table, candlestick, and waterfall plot
+ * because their dictionary structure is different from other more regular charts.
+ * @param data - spec.data
+ */
 export function applyUniqueGraphColorsData(data: any): void {
   const theme = useTheme()
   const { colors, genericFonts } = theme
@@ -299,22 +314,19 @@ export function applyUniqueGraphColorsData(data: any): void {
         })
       }
     }
-    if (entry.marker !== undefined) {
-      entry.marker.line = assign(entry.marker.line, {
-        width: 0,
-        color: colors.transparent,
-      })
-    }
   })
 }
 
+/**
+ * This applies general layout changes to things such as x axis,
+ * y axis, legends, titles, grid changes, background, etc.
+ * @param layout - spec.layout.template.layout
+ * @param theme - Theme from useTheme()
+ */
 export function applyStreamlitThemeTemplateLayout(
   layout: any,
   theme: Theme
 ): void {
-  // This theming config contains multiple hard coded spacing values.
-  // The reason is that we currently only have rem values in our spacing
-  // definitions and vega lite requires numerical (pixel) values.
   const { genericFonts, colors, fontSizes } = theme
 
   const streamlitTheme = {
@@ -466,8 +478,6 @@ export function applyStreamlitThemeTemplateLayout(
       },
     },
     colorscale: {
-      // TODO: Eventually, we might want to move those color schemes to our theme.
-      // But For now, this is specifically defined for plotly based charts.
       ...(hasLightBackgroundColor(theme)
         ? {
             diverging: divergingColorscaleLightTheme,
@@ -480,6 +490,7 @@ export function applyStreamlitThemeTemplateLayout(
             sequentialminus: sequentialColorscaleLightTheme,
           }),
     },
+    // specifically for the ternary graph
     ternary: {
       gridcolor: getGray70(theme),
       bgcolor: colors.bgColor,
@@ -520,6 +531,11 @@ export function applyStreamlitThemeTemplateLayout(
   assign(layout, streamlitTheme)
 }
 
+/**
+ * Applies the colorscale, colors for unique graphs, and discrete coloring
+ * for in general through assigning properties in spec.data
+ * @param data - spec.data
+ */
 export function applyStreamlitThemeData(data: any): void {
   const { colors } = useTheme()
   applyColorscale(data)
@@ -535,6 +551,12 @@ export function applyStreamlitThemeData(data: any): void {
   })
 }
 
+/**
+ * This applies specific changes for spec.layout.template.data because
+ * spec.data does not fully catch these and neither does spec.layout.template.layout
+ * @param data - spec.layout.template.data
+ * @param theme - Theme from useTheme()
+ */
 export function applyStreamlitThemeTemplateData(
   data: any,
   theme: Theme
@@ -557,6 +579,11 @@ export function applyStreamlitThemeTemplateData(
   }
 }
 
+/**
+ * Applies the Streamlit theme by overriding properties in
+ * spec.data, spec.layout.template.data, and spec.layout.template.layout
+ * @param spec - spec
+ */
 export function applyStreamlitTheme(spec: any): void {
   const theme: Theme = useTheme()
   applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
