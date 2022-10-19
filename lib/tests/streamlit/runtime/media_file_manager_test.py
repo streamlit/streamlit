@@ -372,10 +372,10 @@ class MediaFileManagerTest(TestCase):
         )
 
 
-NUM_THREADS = 15
-
-
 class MediaFileManagerThreadingTest(unittest.TestCase):
+    # The number of threads to run our tests on
+    NUM_THREADS = 50
+
     def setUp(self):
         super().setUp()
         self.storage = MemoryMediaFileStorage("/mock/endpoint")
@@ -394,8 +394,8 @@ class MediaFileManagerThreadingTest(unittest.TestCase):
             data = bytes(f"{ii}", "utf-8")
             self.media_file_manager.add(data, "image/png", coord)
 
-        call_on_threads(add_file, num_threads=NUM_THREADS)
-        self.assertEqual(NUM_THREADS, len(self.media_file_manager._file_metadata))
+        call_on_threads(add_file, num_threads=self.NUM_THREADS)
+        self.assertEqual(self.NUM_THREADS, len(self.media_file_manager._file_metadata))
 
     @mock.patch(
         "streamlit.runtime.media_file_manager._get_session_id",
@@ -417,7 +417,7 @@ class MediaFileManagerThreadingTest(unittest.TestCase):
             self.media_file_manager.clear_session_refs("mock_session_id")
             self.media_file_manager.remove_orphaned_files()
 
-        call_on_threads(remove_files, num_threads=NUM_THREADS)
+        call_on_threads(remove_files, num_threads=self.NUM_THREADS)
 
         # Our files should be gone!
         self.assertEqual(0, len(self.media_file_manager._file_metadata))

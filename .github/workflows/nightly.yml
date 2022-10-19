@@ -9,6 +9,8 @@ jobs:
   create-nightly-tag:
     runs-on: ubuntu-latest
 
+    if: github.repository == 'streamlit/streamlit'
+
     defaults:
       run:
         shell: bash -ileo pipefail {0}
