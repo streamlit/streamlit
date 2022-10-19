@@ -74,7 +74,7 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
-        theme: Union[None, str] = None,
+        theme: Union[None, Literal["streamlit"]] = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display an interactive Plotly chart.
@@ -168,7 +168,7 @@ def marshall(
     figure_or_data: FigureOrData,
     use_container_width: bool,
     sharing: SharingMode,
-    theme: Union[None, str],
+    theme: Union[None, Literal["streamlit"]],
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
