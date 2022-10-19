@@ -321,7 +321,7 @@ export function applyStreamlitThemeTemplateLayout(
   const streamlitTheme = {
     // hide all text that is less than 8 px
     uniformtext: {
-      minsize: 8,
+      minsize: 6,
       mode: "hide",
     },
     background: colors.bgColor,

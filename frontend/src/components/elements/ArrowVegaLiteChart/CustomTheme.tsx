@@ -64,7 +64,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       titlePadding: theme.spacing.lgPx,
       labelPadding: theme.spacing.lgPx,
       labelSeparation: theme.spacing.twoXSPx,
-      // labelOverlap: true,
+      labelOverlap: true,
     },
     legend: {
       labelFontSize: theme.fontSizes.smPx,
