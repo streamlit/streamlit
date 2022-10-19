@@ -16,7 +16,12 @@
 
 import { merge, mergeWith, isArray } from "lodash"
 
-import { hasLightBackgroundColor, Theme } from "src/theme"
+import {
+  getGray30,
+  getGray70,
+  hasLightBackgroundColor,
+  Theme,
+} from "src/theme"
 
 export function applyStreamlitTheme(config: any, theme: Theme): any {
   // This theming config contains multiple hard coded spacing values.
@@ -41,40 +46,41 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
     axis: {
       labelFontSize: theme.fontSizes.twoSmPx,
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: theme.colors.fadedText60,
+      labelColor: getGray70(theme),
       labelFontStyle: "normal",
       titleFontWeight: theme.fontWeights.normal,
       titleFontSize: theme.fontSizes.smPx,
-      titleColor: theme.colors.fadedText60,
+      titleColor: getGray70(theme),
       titleFontStyle: "normal",
       ticks: false,
-      gridColor: theme.colors.fadedText05,
+      gridColor: getGray30(theme),
       domain: false,
       domainWidth: 1,
-      domainColor: theme.colors.fadedText05,
+      domainColor: getGray30(theme),
       labelFlush: true,
       labelFlushOffset: 1,
       labelBound: false,
       labelLimit: 100,
-      titlePadding: 16,
-      labelPadding: 16,
-      labelSeparation: 4,
-      labelOverlap: true,
+      titlePadding: theme.spacing.lgPx,
+      labelPadding: theme.spacing.lgPx,
+      labelSeparation: theme.spacing.twoXSPx,
+      // labelOverlap: true,
     },
     legend: {
       labelFontSize: theme.fontSizes.smPx,
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: theme.colors.bodyText,
+      labelColor: getGray70(theme),
       titleFontSize: theme.fontSizes.smPx,
       titleFontWeight: theme.fontWeights.normal,
       titleFontStyle: "normal",
-      titleColor: theme.colors.fadedText60,
-      titlePadding: 12,
-      labelPadding: 16,
-      columnPadding: 8,
-      rowPadding: 4,
+      titleColor: getGray70(theme),
+      titlePadding: theme.spacing.mdPx,
+      labelPadding: theme.spacing.lgPx,
+      columnPadding: theme.spacing.smPx,
+      rowPadding: theme.spacing.twoXSPx,
       padding: -1,
       orient: "bottom",
+      columns: 4,
       symbolStrokeWidth: 4,
     },
     range: {
@@ -203,7 +209,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
         : { color: "#83C9FF" }),
     },
     bar: {
-      binSpacing: 4,
+      binSpacing: theme.spacing.twoXSPx,
       discreteBandSize: { band: 0.85 },
     },
     axisDiscrete: {
@@ -243,7 +249,7 @@ export function applyThemeDefaults(config: any, theme: Theme): any {
     axis: {
       labelColor: colors.bodyText,
       titleColor: colors.bodyText,
-      gridColor: colors.fadedText10,
+      gridColor: getGray30(theme),
       ...themeFonts,
     },
     legend: {

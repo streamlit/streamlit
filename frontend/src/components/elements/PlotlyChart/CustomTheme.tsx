@@ -18,7 +18,13 @@ import { merge, assign } from "lodash"
 
 import { useTheme } from "@emotion/react"
 
-import { hasLightBackgroundColor, Theme } from "src/theme"
+import {
+  getGray30,
+  getGray70,
+  getGray90,
+  hasLightBackgroundColor,
+  Theme,
+} from "src/theme"
 
 // TODO: for these colors below, these likely need to move to our theme!
 // For the meantime, these colors will be defined for plotly.
@@ -101,24 +107,6 @@ const categoryColorsDarkTheme = [
   "#6D3FC0",
   "#D5DAE5",
 ]
-
-export function getGray70(theme: Theme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray70
-    : theme.colors.gray30
-}
-
-export function getGray30(theme: Theme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray30
-    : theme.colors.gray85
-}
-
-export function getGray90(theme: Theme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray90
-    : theme.colors.gray10
-}
 
 export function getDecreasingRed(theme: Theme): string {
   return hasLightBackgroundColor(theme) ? "#FF2B2B" : "#FFABAB"
@@ -248,6 +236,7 @@ export function applyUniqueGraphColorsData(data: any): void {
   data.forEach((entry: any) => {
     // entry.type is always defined
     if (entry.type === "table") {
+      // from dataframe.tsx cell properties
       entry.header = assign(entry.header, {
         font: {
           color: getGray70(theme),
@@ -290,7 +279,7 @@ export function applyUniqueGraphColorsData(data: any): void {
         connector: {
           line: {
             color: getGray30(theme),
-            width: 2,
+            width: theme.spacing.threeXSPx,
           },
         },
       })
@@ -357,7 +346,7 @@ export function applyStreamlitThemeTemplateLayout(
         color: colors.headingColor,
       },
       pad: {
-        l: 4,
+        l: theme.spacing.twoXSPx,
       },
       xanchor: "left",
       x: 0,
@@ -375,7 +364,7 @@ export function applyStreamlitThemeTemplateLayout(
       },
       valign: "top",
       bordercolor: colors.transparent,
-      borderwidth: 0,
+      borderwidth: theme.spacing.nonePx,
       font: {
         size: fontSizes.twoSmPx,
         color: getGray90(theme),
@@ -394,7 +383,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
-        standoff: 24,
+        standoff: theme.spacing.twoXLPx,
       },
       tickcolor: getGray30(theme),
       tickfont: {
@@ -421,7 +410,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
-        standoff: 12,
+        standoff: theme.spacing.mdPx,
       },
       minor: {
         gridcolor: getGray30(theme),
@@ -430,9 +419,9 @@ export function applyStreamlitThemeTemplateLayout(
       automargin: true,
     },
     margin: {
-      pad: 16,
-      r: 0,
-      l: 0,
+      pad: theme.spacing.lgPx,
+      r: theme.spacing.nonePx,
+      l: theme.spacing.nonePx,
     },
     hoverlabel: {
       bgcolor: colors.bgColor,
@@ -446,7 +435,7 @@ export function applyStreamlitThemeTemplateLayout(
     coloraxis: {
       colorbar: {
         thickness: 16,
-        xpad: 24,
+        xpad: theme.spacing.twoXLPx,
         ticklabelposition: "outside",
         outlinecolor: colors.transparent,
         outlinewidth: 8,
