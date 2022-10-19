@@ -639,6 +639,13 @@ export function doInitPings(
       totalTries++
     }
 
+    // We fire off requests to the server's healthz and allowed message origins
+    // endpoints in parallel to avoid having to wait on too many sequential
+    // round trip network requests before we can try to establish a WebSocket
+    // connection. Technically, it would have been possible to implement a
+    // single "get server health and origins whitelist" endpoint, but we chose
+    // not to do so as it's semantically cleaner to not give the healthcheck
+    // endpoint additional responsibilities.
     Promise.all([
       axios.get(healthzUri, { timeout: minimumTimeoutMs }),
       axios.get(allowedOriginsUri, { timeout: minimumTimeoutMs }),

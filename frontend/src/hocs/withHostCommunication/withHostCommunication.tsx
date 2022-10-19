@@ -85,6 +85,12 @@ function withHostCommunication(
           origin = event.origin
         }
 
+        // Messages coming from the parent frame of a deployed Streamlit app
+        // may not be coming from a trusted source (even if we've set the CSP
+        // frame-anscestors header, it doesn't hurt to be extra safe). We avoid
+        // processing messages received from origins we haven't explicitly
+        // labeled as trusted here to lower the probability that we end up
+        // processing malicious input.
         if (
           !origin ||
           message.stCommVersion !== HOST_COMM_VERSION ||

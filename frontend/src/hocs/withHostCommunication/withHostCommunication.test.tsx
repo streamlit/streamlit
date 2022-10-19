@@ -85,6 +85,9 @@ describe("withHostCommunication HOC receiving messages", () => {
   let hostCommunication: any
 
   beforeEach(() => {
+    // We need to save and restore window.location.hash for each test because
+    // its value persists between tests otherwise, which may cause tests to
+    // interfere with each other.
     originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
     wrapper = mount(<TestComponent />)
