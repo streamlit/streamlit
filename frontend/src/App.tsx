@@ -281,6 +281,7 @@ export class App extends PureComponent<Props, State> {
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
       getHostAuthToken: this.getHostAuthToken,
+      setHostAllowedOrigins: this.props.hostCommunication.setAllowedOrigins,
     })
 
     if (isEmbeddedInIFrame()) {

@@ -102,6 +102,12 @@ interface Args {
    * relevant deployment scenario).
    */
   getHostAuthToken: () => string | undefined
+
+  /**
+   * Function to set the list of origins that this app should accept
+   * cross-origin messages from (if in a relevant deployment scenario).
+   */
+  setHostAllowedOrigins: (allowedOrigins: string[]) => void
 }
 
 interface MessageQueue {

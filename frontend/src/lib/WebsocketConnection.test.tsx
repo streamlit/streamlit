@@ -462,6 +462,7 @@ describe("WebsocketConnection", () => {
     onConnectionStateChange: jest.fn(),
     onRetry: jest.fn(),
     getHostAuthToken: jest.fn(),
+    setHostAllowedOrigins: jest.fn(),
   }
 
   let client: WebsocketConnection
@@ -533,6 +534,7 @@ describe("WebsocketConnection auth token handling", () => {
     onConnectionStateChange: jest.fn(),
     onRetry: jest.fn(),
     getHostAuthToken: jest.fn(),
+    setHostAllowedOrigins: jest.fn(),
   }
 
   let websocketSpy: any
