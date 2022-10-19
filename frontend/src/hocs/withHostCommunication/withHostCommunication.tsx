@@ -30,7 +30,6 @@ import {
 
 export interface HostCommunicationHOC {
   currentState: HostCommunicationState
-  connect: () => void
   sendMessage: (message: IGuestToHostMessage) => void
   onModalReset: () => void
   onPageChanged: () => void
@@ -148,7 +147,12 @@ function withHostCommunication(
         }
       }
 
+      if (!allowedOrigins.length) {
+        return () => {}
+      }
+
       window.addEventListener("message", receiveMessage)
+      sendMessageToHost({ type: "GUEST_READY" })
 
       return () => {
         window.removeEventListener("message", receiveMessage)
@@ -159,11 +163,6 @@ function withHostCommunication(
       <WrappedComponent
         hostCommunication={
           {
-            connect: () => {
-              sendMessageToHost({
-                type: "GUEST_READY",
-              })
-            },
             currentState: {
               authToken,
               forcedModalClose,

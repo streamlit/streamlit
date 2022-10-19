@@ -27,8 +27,6 @@ import withHostCommunication, {
 const TestComponentNaked = (props: {
   hostCommunication: HostCommunicationHOC
 }): ReactElement => {
-  props.hostCommunication.connect()
-
   return <div>test</div>
 }
 
@@ -74,7 +72,14 @@ describe("withHostCommunication HOC", () => {
 
     window.addEventListener("message", listener)
 
-    shallow(<TestComponent />)
+    const wrapper = mount(<TestComponent />)
+    const hostCommunication: any = wrapper
+      .find(TestComponentNaked)
+      .prop("hostCommunication")
+
+    act(() => {
+      hostCommunication.setAllowedOrigins(["https://devel.streamlit.test"])
+    })
   })
 })
 

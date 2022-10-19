@@ -288,7 +288,6 @@ export class App extends PureComponent<Props, State> {
       document.body.classList.add("embedded")
     }
 
-    this.props.hostCommunication.connect()
     this.props.hostCommunication.sendMessage({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),

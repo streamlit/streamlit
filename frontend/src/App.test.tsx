@@ -73,7 +73,6 @@ const getHostCommunicationState = (
 const getHostCommunicationProp = (
   extend?: Partial<HostCommunicationHOC>
 ): HostCommunicationHOC => ({
-  connect: jest.fn(),
   currentState: getHostCommunicationState({}),
   onModalReset: jest.fn(),
   onPageChanged: jest.fn(),
@@ -207,7 +206,6 @@ describe("App", () => {
   it("shows hostMenuItems", () => {
     const props = getProps({
       hostCommunication: getHostCommunicationProp({
-        connect: jest.fn(),
         sendMessage: jest.fn(),
         currentState: getHostCommunicationState({
           queryParams: "",
@@ -232,7 +230,6 @@ describe("App", () => {
   it("shows hostToolbarItems", () => {
     const props = getProps({
       hostCommunication: getHostCommunicationProp({
-        connect: jest.fn(),
         sendMessage: jest.fn(),
         currentState: getHostCommunicationState({
           queryParams: "",
@@ -321,11 +318,10 @@ describe("App", () => {
     expect(wrapper.find(Modal)).toHaveLength(1)
   })
 
-  it("sends initialization messages to the host when the app is first rendered", () => {
+  it("sends theme info to the host when the app is first rendered", () => {
     const props = getProps()
     shallow(<App {...props} />)
 
-    expect(props.hostCommunication.connect).toHaveBeenCalled()
     expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(lightTheme.emotion),
