@@ -182,7 +182,7 @@ class MessageCacheHandler(tornado.web.RequestHandler):
         if msg_hash is None:
             # Hash is missing! This is a malformed request.
             LOGGER.error(
-                "HTTP request for cached message is " "missing the hash attribute."
+                "HTTP request for cached message is missing the hash attribute."
             )
             self.set_status(404)
             raise tornado.web.Finish()
@@ -192,12 +192,12 @@ class MessageCacheHandler(tornado.web.RequestHandler):
             # Message not in our cache.
             LOGGER.error(
                 "HTTP request for cached message could not be fulfilled. "
-                "No such message: %s" % msg_hash
+                f"No such message: {msg_hash}"
             )
             self.set_status(404)
             raise tornado.web.Finish()
 
-        LOGGER.debug("MessageCache HIT [hash=%s]" % msg_hash)
+        LOGGER.debug(f"MessageCache HIT [hash={msg_hash}]")
         msg_str = serialize_forward_msg(message)
         self.set_header("Content-Type", "application/octet-stream")
         self.write(msg_str)
