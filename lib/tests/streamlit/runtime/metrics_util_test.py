@@ -23,6 +23,7 @@ import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import memo_decorator, singleton_decorator
 from streamlit.runtime.legacy_caching import caching
@@ -229,6 +230,9 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 "_cache_singleton_object",
             ),
             (caching._write_to_cache, "_cache_object"),
+            (st._transparent_write, "magic"),
+            (components.html, "_html"),
+            (components.iframe, "_iframe"),
         ]
     )
     def test_internal_api_commands(self, command: Callable, expected_name: str):
