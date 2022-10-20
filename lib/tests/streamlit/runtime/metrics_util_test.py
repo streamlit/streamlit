@@ -96,6 +96,11 @@ class MetricsUtilTest(unittest.TestCase):
 
 
 class PageTelemetryTest(DeltaGeneratorTestCase):
+    def setUp(self):
+        ctx = get_script_run_ctx()
+        ctx.reset()
+        ctx.gather_usage_stats = True
+
     @parameterized.expand(
         [
             (st.dataframe, "dataframe"),
@@ -184,8 +189,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     def test_gather_metrics_decorator(self):
         """The gather_metrics decorator works as expected."""
         ctx = get_script_run_ctx()
-        ctx.reset()
-        ctx.gather_usage_stats = True
 
         @metrics_util.gather_metrics
         def test_function(param1: int, param2: str, param3: float = 0.1) -> str:
@@ -230,8 +233,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     def test_internal_api_commands(self, command: Callable, expected_name: str):
         """Some internal functions are also tracked and should use the correct name."""
         ctx = get_script_run_ctx()
-        ctx.reset()
-        ctx.gather_usage_stats = True
 
         # This will always throw an exception because of missing arguments
         # This is fine since the command still get tracked
@@ -255,8 +256,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     def test_public_api_commands(self):
         """All commands of the public API should be tracked with the correct name."""
         ctx = get_script_run_ctx()
-        ctx.reset()
-        ctx.gather_usage_stats = True
 
         # Some commands are currently not tracked for various reasons:
         ignored_commands = {
