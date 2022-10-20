@@ -301,7 +301,12 @@ def gather_metrics(
                     non_optional_func, *args, **kwargs
                 )
                 if name:
-                    command_telemetry.name = name
+                    if command_telemetry.name and command_telemetry.name.startswith(
+                        "external:"
+                    ):
+                        command_telemetry.name = f"external:{name}"
+                    else:
+                        command_telemetry.name = name
 
                 if (
                     command_telemetry.name not in ctx.tracked_commands_counter
