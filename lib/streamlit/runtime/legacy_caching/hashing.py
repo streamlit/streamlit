@@ -966,24 +966,19 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
     hash_source = hash_stacks.current.hash_source
 
     failed_obj_type_str = type_util.get_fqn_type(failed_obj)
+    object_part = ""
 
     if hash_source is None or hash_reason is None:
         object_desc = "something"
-        object_part = ""
-        additional_explanation = ""
 
     elif hash_reason is HashReason.CACHING_BLOCK:
         object_desc = "a code block"
-        object_part = ""
-        additional_explanation = ""
 
     else:
         if hasattr(hash_source, "__name__"):
-            object_desc = "`%s()`" % hash_source.__name__
-            object_desc_specific = object_desc
+            object_desc = f"`{hash_source.__name__}()`"
         else:
             object_desc = "a function"
-            object_desc_specific = "that function"
 
         if hash_reason is HashReason.CACHING_FUNC_ARGS:
             object_part = "the arguments of"
