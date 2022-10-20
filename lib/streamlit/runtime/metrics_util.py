@@ -53,7 +53,14 @@ _OBJECT_NAME_MAPPING: Final = {
 }
 
 # A list of dependencies to check for attribution
-_ATTRIBUTIONS_TO_CHECK: Final = ["snowflake", "torch", "tensorflow"]
+_ATTRIBUTIONS_TO_CHECK: Final = [
+    "snowflake",
+    "torch",
+    "tensorflow",
+    "streamlit_extras",
+    "streamlit_pydantic",
+    "plost",
+]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
