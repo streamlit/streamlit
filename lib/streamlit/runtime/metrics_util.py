@@ -22,6 +22,7 @@ import uuid
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
+from tkinter import N
 from typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast, overload
 
 from typing_extensions import Final
@@ -40,6 +41,7 @@ _MAX_TRACKED_COMMANDS: Final = 200
 # commands excessively (e.g. calling add_rows thousands of times in one rerun)
 # making the page profile useless.
 _MAX_TRACKED_PER_COMMAND: Final = 25
+
 # A mapping to convert from the actual name to preferred/shorter representations
 _OBJECT_NAME_MAPPING: Final = {
     "streamlit.delta_generator.DeltaGenerator": "DG",
@@ -51,6 +53,10 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.core.indexes.base.Index": "PandasIndex",
     "pandas.core.series.Series": "PandasSeries",
 }
+
+# If the gather_metrics decorator is used outside of streamlit library
+# we enforce a prefix to be added to the tracked command:
+_EXTERNAL_COMMAND_PREFIX = "external:"
 
 # A list of dependencies to check for attribution
 _ATTRIBUTIONS_TO_CHECK: Final = [
@@ -157,7 +163,7 @@ def _get_callable_name(func: Callable[..., Any]) -> str:
                 # Only return actual function name
                 name = name.split(".")[-1]
         else:
-            name = f"external:{name}"
+            name = _EXTERNAL_COMMAND_PREFIX + name
 
         return name
     return "failed"
@@ -302,9 +308,9 @@ def gather_metrics(
                 )
                 if name:
                     if command_telemetry.name and command_telemetry.name.startswith(
-                        "external:"
+                        _EXTERNAL_COMMAND_PREFIX
                     ):
-                        command_telemetry.name = f"external:{name}"
+                        command_telemetry.name = _EXTERNAL_COMMAND_PREFIX + name
                     else:
                         command_telemetry.name = name
 
