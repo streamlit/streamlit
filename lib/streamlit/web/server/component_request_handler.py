@@ -43,11 +43,14 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         abspath = os.path.realpath(os.path.join(component_root, filename))
 
         # Do NOT expose anything outside of the component root.
-        if os.path.commonprefix([component_root, abspath]) != component_root:
+        if os.path.commonprefix([component_root, abspath]) != component_root or (
+            not os.path.normpath(abspath).startswith(
+                component_root
+            )  # this is a recommendation from CodeQL, probably a bit redundant
+        ):
             self.write("forbidden")
             self.set_status(403)
             return
-
         try:
             with open(abspath, "rb") as file:
                 contents = file.read()
