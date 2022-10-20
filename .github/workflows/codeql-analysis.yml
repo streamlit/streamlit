@@ -39,12 +39,12 @@ jobs:
 
       - name: Set Python for CodeQL
         run: |
+          cd lib
+          pipenv shell
+          echo "$(which python)"
           # Set the `CODEQL-PYTHON` environment variable to the Python executable
           # that includes the dependencies
           echo "CODEQL_PYTHON=$(which python)" >> $GITHUB_ENV
-
-      - name: Print out python
-        run: echo "$(which python)"
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
