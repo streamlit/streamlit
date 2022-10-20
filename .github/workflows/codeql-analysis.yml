@@ -41,6 +41,7 @@ jobs:
         run: |
           source venv/bin/activate
           make develop
+          pipenv shell
           echo "$(which python)"
           # Set the `CODEQL-PYTHON` environment variable to the Python executable
           # that includes the dependencies
