@@ -312,47 +312,19 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         ctx.reset()
         ctx.gather_usage_stats = True
 
-        @metrics_util.gather_metrics
-        def test_function1() -> str:
-            return "foo"
+        funcs = []
+        for i in range(10):
 
-        @metrics_util.gather_metrics
-        def test_function2() -> str:
-            return "foo"
+            def test_function() -> str:
+                return "foo"
 
-        @metrics_util.gather_metrics
-        def test_function3() -> str:
-            return "foo"
-
-        @metrics_util.gather_metrics
-        def test_function4() -> str:
-            return "foo"
-
-        @metrics_util.gather_metrics
-        def test_function5() -> str:
-            return "foo"
-
-        @metrics_util.gather_metrics
-        def test_function6() -> str:
-            return "foo"
-
-        @metrics_util.gather_metrics
-        def test_function7() -> str:
-            return "foo"
-
-        @metrics_util.gather_metrics
-        def test_function8() -> str:
-            return "foo"
+            funcs.append(
+                metrics_util.gather_metrics(test_function, name=f"test_function_{i}")
+            )
 
         for _ in range(metrics_util._MAX_TRACKED_PER_COMMAND + 1):
-            test_function1()
-            test_function2()
-            test_function3()
-            test_function4()
-            test_function5()
-            test_function6()
-            test_function7()
-            test_function8()
+            for func in funcs:
+                func()
 
         self.assertLessEqual(
             len(ctx.tracked_commands), metrics_util._MAX_TRACKED_COMMANDS
