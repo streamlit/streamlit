@@ -216,8 +216,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (st._transparent_write, "magic"),
             (st.experimental_memo.clear, "clear_memo"),
             (st.experimental_singleton.clear, "clear_singleton"),
-            (st.session_state.__setattr__, "session_state_set_attr"),
-            (st.session_state.__setitem__, "session_state_set_item"),
+            (st.session_state.__setattr__, "session_state.set_attr"),
+            (st.session_state.__setitem__, "session_state.set_item"),
             (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (memo_decorator.MemoCache.write_result, "_cache_memo_object"),
             (
