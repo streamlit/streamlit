@@ -42,6 +42,7 @@ jobs:
           # Set the `CODEQL-PYTHON` environment variable to the Python executable
           # that includes the dependencies
           echo "CODEQL_PYTHON=$(which python)" >> $GITHUB_ENV
+          echo "$CODEQL_PYTHON"
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
