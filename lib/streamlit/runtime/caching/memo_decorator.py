@@ -475,11 +475,12 @@ class MemoCache(Cache):
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
-        main_id = st._main.id
-        sidebar_id = st.sidebar.id
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+
+        main_id = st._main.id
+        sidebar_id = st.sidebar.id
 
         if self.allow_widgets:
             widgets = {
