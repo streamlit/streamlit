@@ -165,13 +165,41 @@ export function buildMediaUri(
 }
 
 /**
- * Check if the given url follows the url pattern which could include
- * a wildcard.
+ * Check if the given origin follows the allowed origin pattern, which could
+ * include a wildcard.
  */
-export function isValidURL(pattern: string, hostname: string): boolean {
+export function isValidOrigin(
+  allowedOrigin: string,
+  testOrigin: string
+): boolean {
+  let allowedUrl: URL
+  let testUrl: URL
+
+  try {
+    allowedUrl = new URL(allowedOrigin)
+    testUrl = new URL(testOrigin)
+  } catch {
+    return false
+  }
+
+  if (
+    allowedUrl.protocol !== testUrl.protocol ||
+    allowedUrl.port !== testUrl.port
+  ) {
+    return false
+  }
+
+  const { hostname: pattern } = allowedUrl
+  const { hostname } = testUrl
+
   if (pattern === hostname) return true
 
-  const splitPattern = pattern.split(".")
+  // Web browsers will encode the wildcard character in the pattern being
+  // tested into %2A when parsing allowedOrigin into a URL, so we either have
+  // to convert it back here or test against "%2A" below. There's unfortunately
+  // no great way to write a unit test for this because the behavior differs
+  // between nodejs test environments and a real browser :(
+  const splitPattern = pattern.replace(/%2A/g, "*").split(".")
   const splitHostname = hostname.split(".")
 
   if (splitPattern.length !== splitHostname.length) return false

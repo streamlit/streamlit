@@ -167,17 +167,17 @@ class HealthHandler(_SpecialRequestHandler):
 # granularly control what domains a Streamlit app should accept cross-origin iframe
 # messages from.
 ALLOWED_MESSAGE_ORIGINS = [
-    "devel.streamlit.test",
-    "share.streamlit.io",
-    "share-demo.streamlit.io",
-    "share-head.streamlit.io",
-    "share-staging.streamlit.io",
-    "*.demo.streamlit.run",
-    "*.head.streamlit.run",
-    "*.staging.streamlit.run",
-    "*.streamlitapp.test",
-    "*.streamlitapp.com",
-    "*.streamlit.run",
+    "https://devel.streamlit.test",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://*.streamlit.run",
 ]
 
 

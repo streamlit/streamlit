@@ -102,7 +102,7 @@ describe("withHostCommunication HOC receiving messages", () => {
       .prop("hostCommunication")
 
     act(() => {
-      hostCommunication.setAllowedOrigins(["devel.streamlit.test"])
+      hostCommunication.setAllowedOrigins(["http://devel.streamlit.test"])
     })
   })
 
@@ -280,7 +280,7 @@ describe("withHostCommunication HOC receiving messages", () => {
   describe("Test different origins", () => {
     it("exact pattern", () => {
       act(() => {
-        hostCommunication.setAllowedOrigins(["share.streamlit.io"])
+        hostCommunication.setAllowedOrigins(["http://share.streamlit.io"])
       })
 
       dispatchEvent(
@@ -300,7 +300,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
     it("wildcard pattern", () => {
       act(() => {
-        hostCommunication.setAllowedOrigins(["*.streamlitapp.com"])
+        hostCommunication.setAllowedOrigins(["http://*.streamlitapp.com"])
       })
 
       dispatchEvent(
@@ -320,7 +320,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
     it("ignores non-matching origins", () => {
       act(() => {
-        hostCommunication.setAllowedOrigins(["share.streamlit.io"])
+        hostCommunication.setAllowedOrigins(["http://share.streamlit.io"])
       })
 
       dispatchEvent(

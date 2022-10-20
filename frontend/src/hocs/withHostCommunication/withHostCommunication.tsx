@@ -17,7 +17,7 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { isValidURL } from "src/lib/UriUtil"
+import { isValidOrigin } from "src/lib/UriUtil"
 
 import {
   IGuestToHostMessage,
@@ -73,16 +73,7 @@ function withHostCommunication(
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
-        let origin: string
         const message: VersionedMessage<IHostToGuestMessage> | any = event.data
-
-        try {
-          const url = new URL(event.origin)
-
-          origin = url.hostname
-        } catch (e) {
-          origin = event.origin
-        }
 
         // Messages coming from the parent frame of a deployed Streamlit app
         // may not be coming from a trusted source (even if we've set the CSP
@@ -91,9 +82,8 @@ function withHostCommunication(
         // labeled as trusted here to lower the probability that we end up
         // processing malicious input.
         if (
-          !origin ||
           message.stCommVersion !== HOST_COMM_VERSION ||
-          !allowedOrigins.find(el => isValidURL(el, origin))
+          !allowedOrigins.find(allowed => isValidOrigin(allowed, event.origin))
         ) {
           return
         }
