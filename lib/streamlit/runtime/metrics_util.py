@@ -133,6 +133,8 @@ def _get_callable_name(func: Callable[..., Any]) -> str:
     """Get a simplified name for the type of the given callable."""
     with contextlib.suppress(Exception):
         name = "unknown"
+        module = "unknown"
+
         if inspect.isclass(func):
             name = func.__class__.__name__
         elif hasattr(func, "__qualname__"):
@@ -140,9 +142,16 @@ def _get_callable_name(func: Callable[..., Any]) -> str:
         elif hasattr(func, "__name__"):
             name = func.__name__
 
-        if "." in name:
-            # Only return actual function name
-            name = name.split(".")[-1]
+        if hasattr(func, "__module__"):
+            module = func.__module__
+
+        if module.startswith("streamlit."):
+            if "." in name:
+                # Only return actual function name
+                name = name.split(".")[-1]
+        else:
+            name = f"external:{name}"
+
         return name
     return "failed"
 
