@@ -42,11 +42,10 @@ jobs:
         run: |
           source venv/bin/activate
           make develop
-          pipenv shell
-          echo "$(which python)"
+          echo "$(pipenv run which python)"
           # Set the `CODEQL-PYTHON` environment variable to the Python executable
           # that includes the dependencies
-          echo "CODEQL_PYTHON=$(which python)" >> $GITHUB_ENV
+          echo "CODEQL_PYTHON=$(pipenv run which python)" >> $GITHUB_ENV
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
