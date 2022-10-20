@@ -44,7 +44,7 @@ jobs:
           echo "CODEQL_PYTHON=$(which python)" >> $GITHUB_ENV
 
       - name: Print out python
-        run: echo "$(which python)""
+        run: echo "$(which python)"
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
