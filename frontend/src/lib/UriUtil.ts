@@ -166,7 +166,7 @@ export function buildMediaUri(
 
 /**
  * Check if the given origin follows the allowed origin pattern, which could
- * include a wildcard.
+ * include wildcards.
  */
 export function isValidOrigin(
   allowedOrigin: string,
