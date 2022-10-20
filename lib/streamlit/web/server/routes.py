@@ -178,6 +178,10 @@ ALLOWED_MESSAGE_ORIGINS = [
     "https://*.streamlitapp.test",
     "https://*.streamlitapp.com",
     "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
 ]
 
 
