@@ -30,6 +30,8 @@ import {
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"
 
+jest.mock("src/lib/ConnectionManager")
+
 describe("ThemedApp", () => {
   beforeEach(() => {
     // sourced from:
