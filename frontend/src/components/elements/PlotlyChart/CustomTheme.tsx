@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-import { merge, assign } from "lodash"
+import { assign } from "lodash"
 
 import { useTheme } from "@emotion/react"
 
 import { hasLightBackgroundColor, Theme } from "src/theme"
+import { ensureError } from "src/lib/ErrorHandling"
+import { logError } from "src/lib/log"
 
 // TODO: for these colors below, these likely need to move to our theme!
 // For the meantime, these colors will be defined for plotly.
@@ -102,30 +104,34 @@ const categoryColorsDarkTheme = [
   "#D5DAE5",
 ]
 
-export function getGray70(theme: Theme): string {
+function getGray70(theme: Theme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray70
     : theme.colors.gray30
 }
 
-export function getGray30(theme: Theme): string {
+function getGray30(theme: Theme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray30
     : theme.colors.gray85
 }
 
-export function getGray90(theme: Theme): string {
+function getGray90(theme: Theme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray90
     : theme.colors.gray10
 }
 
-export function getDecreasingRed(theme: Theme): string {
-  return hasLightBackgroundColor(theme) ? "#FF2B2B" : "#FFABAB"
+function getDecreasingRed(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.red80
+    : theme.colors.red40
 }
 
-export function getIncreasingGreen(theme: Theme): string {
-  return hasLightBackgroundColor(theme) ? "#29B09D" : "#7DEFA1"
+function getIncreasingGreen(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.blueGreen80
+    : theme.colors.green40
 }
 
 /**
@@ -335,14 +341,6 @@ export function applyStreamlitThemeTemplateLayout(
       minsize: 8,
       mode: "hide",
     },
-    background: colors.bgColor,
-    header: {
-      labelColor: colors.bodyText,
-    },
-    view: {
-      continuousHeight: 350,
-      continuousWidth: 400,
-    },
     font: {
       color: getGray70(theme),
       family: genericFonts.bodyFont,
@@ -352,7 +350,7 @@ export function applyStreamlitThemeTemplateLayout(
       color: colors.headingColor,
       subtitleColor: colors.bodyText,
       font: {
-        family: genericFonts.bodyFont,
+        family: genericFonts.headingFont,
         size: fontSizes.mdPx,
         color: colors.headingColor,
       },
@@ -588,7 +586,12 @@ export function applyStreamlitTheme(spec: any): void {
   const theme: Theme = useTheme()
   applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
   applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
-  applyStreamlitThemeData(spec.data)
+  try {
+    applyStreamlitThemeData(spec.data)
+  } catch (e) {
+    const err = ensureError(e)
+    logError(err)
+  }
   if ("title" in spec.layout) {
     spec.layout.title = assign({
       text: `<b>${spec.layout.title.text}</b>`,
@@ -596,45 +599,32 @@ export function applyStreamlitTheme(spec: any): void {
   }
 }
 
-export function applyThemeDefaults(config: any, theme: Theme): any {
-  const { colors, fontSizes, genericFonts } = theme
-  const themeFonts = {
-    labelFont: genericFonts.bodyFont,
-    titleFont: genericFonts.bodyFont,
-    labelFontSize: fontSizes.twoSmPx,
-    titleFontSize: fontSizes.twoSmPx,
-  }
+/**
+ * Apply minimum changes to graph to fit streamlit
+ * @param layout - spec.layout
+ * @param theme - theme from useTheme()
+ * @returns modified spec.layout
+ */
+export function layoutWithThemeDefaults(layout: any, theme: Theme): any {
+  const { colors, genericFonts } = theme
+
   const themeDefaults = {
-    background: colors.bgColor,
-    axis: {
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
-      gridColor: colors.fadedText10,
-      ...themeFonts,
-    },
-    legend: {
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
-      ...themeFonts,
-    },
-    title: {
+    font: {
       color: colors.bodyText,
-      subtitleColor: colors.bodyText,
-      ...themeFonts,
+      family: genericFonts.bodyFont,
     },
-    header: {
-      labelColor: colors.bodyText,
-    },
-    view: {
-      continuousHeight: 350,
-      continuousWidth: 400,
-    },
+    paper_bgcolor: colors.bgColor,
+    plot_bgcolor: colors.secondaryBg,
   }
 
-  if (!config) {
-    return themeDefaults
+  // Fill in theme defaults where the user didn't specify layout options.
+  return {
+    ...layout,
+    font: {
+      ...themeDefaults.font,
+      ...layout.font,
+    },
+    paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
+    plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
   }
-
-  // Fill in theme defaults where the user didn't specify config options.
-  return merge({}, themeDefaults, config || {})
 }

@@ -145,7 +145,7 @@ class PlotlyMixin:
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
-                f"""You set theme=\"{theme}\" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme. """
+                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme. '
             )
         marshall(
             plotly_chart_proto,

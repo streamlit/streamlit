@@ -28,9 +28,8 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(fig)
 
         el = self.get_delta_from_queue().new_element
-        print(el)
-        self.assertTrue(el.plotly_chart.figure.spec != None)
-        self.assertTrue(el.plotly_chart.figure.config != None)
+        self.assertNotEqual(el.plotly_chart.figure.spec, None)
+        self.assertNotEqual(el.plotly_chart.figure.config, None)
 
     @parameterized.expand(
         [
@@ -55,6 +54,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
             st.plotly_chart(fig, theme="bad_theme")
 
         self.assertEqual(
-            f"""You set theme=\"bad_theme\" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme. """,
+            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme. ',
             str(exc.exception),
         )
