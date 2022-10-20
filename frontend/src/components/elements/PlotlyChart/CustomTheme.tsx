@@ -526,6 +526,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
   }
 
+  // cant use merge. use assign because plotly already has properties defined.
   assign(layout, streamlitTheme)
 }
 
