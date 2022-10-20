@@ -22,7 +22,7 @@ import streamlit.web.server.routes
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class ComponentRequestHandler(tornado.web.RequestHandler):
@@ -53,7 +53,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             with open(abspath, "rb") as file:
                 contents = file.read()
         except (OSError) as e:
-            LOGGER.error(
+            _LOGGER.error(
                 "ComponentRequestHandler: GET %s read error", abspath, exc_info=e
             )
             self.write("read error")
