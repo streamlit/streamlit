@@ -67,7 +67,6 @@ function renderFigure({
     } else if (element.useContainerWidth) {
       spec.layout.width = width
     }
-    // applyTheme(element.theme)
     if (element.theme === "streamlit") {
       applyStreamlitTheme(spec, theme)
     } else {
