@@ -33,6 +33,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def get_version():
@@ -157,7 +158,7 @@ class StreamlitTest(unittest.TestCase):
         )
 
 
-class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
+class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
     def test_st_legacy_altair_chart(self):

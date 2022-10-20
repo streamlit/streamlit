@@ -37,7 +37,7 @@ from streamlit.runtime.scriptrunner import (
     script_run_context,
 )
 from streamlit.runtime.state import SessionState
-from tests.testutil import DeltaGeneratorTestCase
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton

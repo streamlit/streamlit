@@ -35,7 +35,7 @@ from streamlit.runtime.memory_media_file_storage import (
     get_extension_for_mimetype,
 )
 from streamlit.web.server.server import MEDIA_ENDPOINT
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def create_image(size, format="RGB", add_alpha=True):
@@ -134,7 +134,7 @@ IMAGES = {
 }
 
 
-class ImageProtoTest(testutil.DeltaGeneratorTestCase):
+class ImageProtoTest(DeltaGeneratorTestCase):
     """Test streamlit.image."""
 
     @parameterized.expand(

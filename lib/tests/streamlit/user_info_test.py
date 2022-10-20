@@ -23,7 +23,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
-from tests.testutil import DeltaGeneratorTestCase
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class UserInfoProxyTest(DeltaGeneratorTestCase):

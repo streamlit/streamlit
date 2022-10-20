@@ -23,10 +23,10 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.TextInput_pb2 import TextInput
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class TextInputTest(testutil.DeltaGeneratorTestCase):
+class TextInputTest(DeltaGeneratorTestCase):
     """Test ability to marshall text_input protos."""
 
     def test_just_label(self):
@@ -163,11 +163,11 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.text_input("the label", label_visibility="wrong_value")
-            self.assertEquals(
-                str(e),
-                "Unsupported label_visibility option 'wrong_value'. Valid values are "
-                "'visible', 'hidden' or 'collapsed'.",
-            )
+        self.assertEquals(
+            str(e.exception),
+            "Unsupported label_visibility option 'wrong_value'. Valid values are "
+            "'visible', 'hidden' or 'collapsed'.",
+        )
 
 
 class SomeObj:

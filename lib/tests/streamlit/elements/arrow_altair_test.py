@@ -27,7 +27,7 @@ from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def _deep_get(dictionary, *keys):
@@ -38,7 +38,7 @@ def _deep_get(dictionary, *keys):
     )
 
 
-class ArrowAltairTest(testutil.DeltaGeneratorTestCase):
+class ArrowAltairTest(DeltaGeneratorTestCase):
     """Test ability to marshall arrow_altair_chart proto."""
 
     def test_altair_chart(self):
@@ -95,7 +95,7 @@ class ArrowAltairTest(testutil.DeltaGeneratorTestCase):
         self.assertNotEqual(y_scale, "utc")
 
 
-class ArrowChartsTest(testutil.DeltaGeneratorTestCase):
+class ArrowChartsTest(DeltaGeneratorTestCase):
     """Test Arrow charts."""
 
     def test_arrow_line_chart(self):

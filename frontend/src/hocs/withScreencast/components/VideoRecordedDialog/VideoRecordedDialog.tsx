@@ -78,7 +78,7 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
             <StyledFirstColumn>Step 2</StyledFirstColumn>
             <StyledSecondColumn>
               <StyledDownloadButtonContainer>
-                <Button kind={Kind.PRIMARY} onClick={handleDownloadClick}>
+                <Button kind={Kind.SECONDARY} onClick={handleDownloadClick}>
                   Save video to disk
                 </Button>
               </StyledDownloadButtonContainer>

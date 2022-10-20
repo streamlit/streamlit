@@ -22,10 +22,10 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class TextAreaTest(testutil.DeltaGeneratorTestCase):
+class TextAreaTest(DeltaGeneratorTestCase):
     """Test ability to marshall text_area protos."""
 
     def test_just_label(self):
@@ -130,12 +130,12 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
-            st.number_input("the label", label_visibility="wrong_value")
-            self.assertEquals(
-                str(e),
-                "Unsupported label_visibility option 'wrong_value'. Valid values are "
-                "'visible', 'hidden' or 'collapsed'.",
-            )
+            st.text_area("the label", label_visibility="wrong_value")
+        self.assertEquals(
+            str(e.exception),
+            "Unsupported label_visibility option 'wrong_value'. Valid values are "
+            "'visible', 'hidden' or 'collapsed'.",
+        )
 
     def test_help_dedents(self):
         """Test that help properly dedents"""
