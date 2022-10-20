@@ -16,8 +16,6 @@
 
 import { assign } from "lodash"
 
-import { useTheme } from "@emotion/react"
-
 import { hasLightBackgroundColor, Theme } from "src/theme"
 import { ensureError } from "src/lib/ErrorHandling"
 import { logError } from "src/lib/log"
@@ -140,8 +138,7 @@ function getIncreasingGreen(theme: Theme): string {
  * This is done because colorway is not fully respected by plotly.
  * @param data - spec.data
  */
-export function changeDiscreteColors(data: any): void {
-  const theme: Theme = useTheme()
+export function changeDiscreteColors(data: any, theme: Theme): void {
   const categoryColors = hasLightBackgroundColor(theme)
     ? categoryColorsLightTheme
     : categoryColorsDarkTheme
@@ -231,8 +228,7 @@ export function changeDiscreteColors(data: any): void {
  * This overrides the colorscale (continuous colorscale) to all graphs.
  * @param data - spec.data
  */
-export function applyColorscale(data: any): any {
-  const theme = useTheme()
+export function applyColorscale(data: any, theme: Theme): any {
   data.forEach((entry: any) => {
     entry = assign(entry, {
       colorscale: hasLightBackgroundColor(theme)
@@ -248,8 +244,7 @@ export function applyColorscale(data: any): any {
  * because their dictionary structure is different from other more regular charts.
  * @param data - spec.data
  */
-export function applyUniqueGraphColorsData(data: any): void {
-  const theme = useTheme()
+export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
   const { colors, genericFonts } = theme
   data.forEach((entry: any) => {
     // entry.type is always defined
@@ -535,16 +530,15 @@ export function applyStreamlitThemeTemplateLayout(
  * for in general through assigning properties in spec.data
  * @param data - spec.data
  */
-export function applyStreamlitThemeData(data: any): void {
-  const { colors } = useTheme()
-  applyColorscale(data)
-  applyUniqueGraphColorsData(data)
-  changeDiscreteColors(data)
+export function applyStreamlitThemeData(data: any, theme: Theme): void {
+  applyColorscale(data, theme)
+  applyUniqueGraphColorsData(data, theme)
+  changeDiscreteColors(data, theme)
   data.forEach((entry: any) => {
     if (entry.marker !== undefined) {
       entry.marker.line = assign(entry.marker.line, {
         width: 0,
-        color: colors.transparent,
+        color: theme.colors.transparent,
       })
     }
   })
@@ -583,12 +577,11 @@ export function applyStreamlitThemeTemplateData(
  * spec.data, spec.layout.template.data, and spec.layout.template.layout
  * @param spec - spec
  */
-export function applyStreamlitTheme(spec: any): void {
-  const theme: Theme = useTheme()
+export function applyStreamlitTheme(spec: any, theme: Theme): void {
   applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
   applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
   try {
-    applyStreamlitThemeData(spec.data)
+    applyStreamlitThemeData(spec.data, theme)
   } catch (e) {
     const err = ensureError(e)
     logError(err)
