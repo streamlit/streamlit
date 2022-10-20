@@ -36,7 +36,9 @@ LOGGER = get_logger(__name__)
 # Limit the number of commands to keep the page profile message small
 # since Segment allows only a maximum of 32kb per event.
 _MAX_TRACKED_COMMANDS: Final = 200
-# Only track a maximum of 25 uses per unique command
+# Only track a maximum of 25 uses per unique command since some apps use
+# commands excessively (e.g. calling add_rows thousands of times in one rerun)
+# making the page profile useless.
 _MAX_TRACKED_PER_COMMAND: Final = 25
 # A mapping to convert from the actual name to preferred/shorter representations
 _OBJECT_NAME_MAPPING: Final = {
@@ -200,7 +202,7 @@ def _get_command_telemetry(func: Callable[..., Any], *args, **kwargs) -> Command
 
 def to_microseconds(seconds: float) -> int:
     """Convert seconds into microseconds."""
-    return int(seconds * 1000000)
+    return int(seconds * 1_000_000)
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -275,7 +277,7 @@ def gather_metrics(
             and len(ctx.tracked_commands)
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
-        command_telemetry: Union[Command, None] = None
+        command_telemetry: Optional[Command] = None
 
         if ctx and tracking_activated:
             try:
@@ -294,7 +296,7 @@ def gather_metrics(
                 ctx.tracked_commands_counter.update([command_telemetry.name])
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ctx.command_tracking_deactivated = True
-            except Exception as ex:
+            except BaseException as ex:
                 # Always capture all exceptions since we want to make sure that
                 # the telemetry never causes any issues.
                 LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
