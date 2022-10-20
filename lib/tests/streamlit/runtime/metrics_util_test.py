@@ -303,7 +303,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 ctx.gather_usage_stats = True
 
     def test_command_tracking_limits(self):
-        """Command tracking limits (25 max per command) should be respected."""
+        """Command tracking limits should be respected.
+
+        Current limits are 25 per unique command and 200 in total.
+        """
         ctx = get_script_run_ctx()
         ctx.reset()
         ctx.gather_usage_stats = True
