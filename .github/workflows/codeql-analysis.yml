@@ -40,9 +40,7 @@ jobs:
 
           # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
           queries: security-and-quality
-          paths:
-            - lib/streamlit
-            - frontend/src
+          config-file: ./.github/codeql-config.yml
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
