@@ -81,7 +81,7 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
     """
 
     def __init__(self, *args):
-        super(StreamlitAPIWarning, self).__init__(*args)
+        super().__init__(*args)
         import inspect
         import traceback
 
@@ -120,7 +120,7 @@ or in your `.streamlit/config.toml`
         # TODO: create a deprecation docs page to add to deprecation msg #1669
         # For more details, please see: https://docs.streamlit.io/path/to/deprecation/docs.html
 
-        super(StreamlitDeprecationWarning, self).__init__(message, *args)
+        super().__init__(message, *args)
 
     def __repr__(self) -> str:
         return util.repr_(self)
