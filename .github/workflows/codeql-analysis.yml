@@ -39,8 +39,8 @@ jobs:
 
       - name: Set Python for CodeQL
         run: |
-          cd lib
           source venv/bin/activate
+          make develop
           echo "$(which python)"
           # Set the `CODEQL-PYTHON` environment variable to the Python executable
           # that includes the dependencies
