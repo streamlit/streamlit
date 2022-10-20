@@ -309,7 +309,9 @@ export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
           },
           totals: {
             marker: {
-              color: hasLightBackgroundColor(theme) ? "#0068C9" : "#83C9FF",
+              color: hasLightBackgroundColor(theme)
+                ? theme.colors.green40
+                : theme.colors.blue40,
             },
           },
         })
@@ -333,7 +335,7 @@ export function applyStreamlitThemeTemplateLayout(
   const streamlitTheme = {
     // hide all text that is less than 8 px
     uniformtext: {
-      minsize: 8,
+      minsize: 6,
       mode: "hide",
     },
     font: {
@@ -461,11 +463,13 @@ export function applyStreamlitThemeTemplateLayout(
           ? {
               diverging: divergingColorscaleLightTheme,
               sequential: sequentialColorscaleLightTheme,
+              // reverse to dark for sequential minus
               sequentialminus: sequentialColorscaleDarkTheme,
             }
           : {
               diverging: divergingColorscaleDarkTheme,
               sequential: sequentialColorscaleDarkTheme,
+              // reverse to light for sequential minus
               sequentialminus: sequentialColorscaleLightTheme,
             }),
       },
@@ -475,11 +479,13 @@ export function applyStreamlitThemeTemplateLayout(
         ? {
             diverging: divergingColorscaleLightTheme,
             sequential: sequentialColorscaleLightTheme,
+            // reverse to dark for sequential minus
             sequentialminus: sequentialColorscaleDarkTheme,
           }
         : {
             diverging: divergingColorscaleDarkTheme,
             sequential: sequentialColorscaleDarkTheme,
+            // reverse to light for sequential minus
             sequentialminus: sequentialColorscaleLightTheme,
           }),
     },
