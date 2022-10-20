@@ -333,8 +333,8 @@ export function applyStreamlitThemeTemplateLayout(
   const { genericFonts, colors, fontSizes } = theme
 
   const streamlitTheme = {
-    // hide all text that is less than 8 px
     uniformtext: {
+      // hide all text that is less than 6 px
       minsize: 6,
       mode: "hide",
     },
@@ -485,7 +485,7 @@ export function applyStreamlitThemeTemplateLayout(
         : {
             diverging: divergingColorscaleDarkTheme,
             sequential: sequentialColorscaleDarkTheme,
-            // reverse to light for sequential minus
+            // reverse to dark for sequential minus
             sequentialminus: sequentialColorscaleLightTheme,
           }),
     },
