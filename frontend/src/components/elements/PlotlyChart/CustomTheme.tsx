@@ -485,7 +485,7 @@ export function applyStreamlitThemeTemplateLayout(
         : {
             diverging: divergingColorscaleDarkTheme,
             sequential: sequentialColorscaleDarkTheme,
-            // reverse to dark for sequential minus
+            // reverse to light for sequential minus
             sequentialminus: sequentialColorscaleLightTheme,
           }),
     },
