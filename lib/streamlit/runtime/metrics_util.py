@@ -332,8 +332,7 @@ def create_page_profile_message(
     msg.page_profile.exec_time = exec_time
     msg.page_profile.prep_time = prep_time
 
-    with contextlib.suppress(Exception):
-        msg.page_profile.headless = config.get_option("server.headless")
+    msg.page_profile.headless = config.get_option("server.headless")
 
     # Collect all config options that have been manually set
     config_options: Set[str] = set()
