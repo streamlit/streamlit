@@ -49,14 +49,12 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             self.set_status(403)
             return
 
-        LOGGER.debug(f"ComponentRequestHandler: GET: {abspath}")
-
         try:
             with open(abspath, "rb") as file:
                 contents = file.read()
         except (OSError) as e:
             LOGGER.error(
-                f"ComponentRequestHandler: GET {abspath} read error", exc_info=e
+                "ComponentRequestHandler: GET %s read error", abspath, exc_info=e
             )
             self.write("read error")
             self.set_status(404)
