@@ -35,10 +35,23 @@ def decode_ascii(string: bytes) -> str:
     """Decodes a string as ascii."""
     return string.decode("ascii")
 
-
 def clean_text(text: "SupportsStr") -> str:
     """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
+
+def clean_emoji(text: str) -> str:
+    """Sanitise emoji by removing hidden unicode characters."""
+    # Encode it with string escape.
+    encoded_text = str(text.encode('unicode_escape'))
+    # Remove irrelevant characters.
+    new_text = encoded_text[2:len(encoded_text) - 1].split('\\')
+    new_emoji = ""
+    for character in new_text:
+        if character != "ufe0f" and character:
+            new_emoji += str('\\' + character)
+    # Generate unicode for emoji. 
+    new_emoji = new_emoji.encode().decode('unicode_escape')
+    return new_emoji
 
 
 def is_emoji(text: str) -> bool:
