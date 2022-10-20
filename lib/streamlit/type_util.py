@@ -197,6 +197,8 @@ _PANDAS_INDEX_TYPE_STR: Final = "pandas.core.indexes.base.Index"
 _PANDAS_SERIES_TYPE_STR: Final = "pandas.core.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
 _NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
+_SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
+_SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -231,6 +233,21 @@ def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
 
 def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
+
+
+def is_snowpark_dataframe(obj: object) -> bool:
+    """True if obj is of type snowflake.snowpark.dataframe.DataFrame or
+    True when obj is a list which contains snowflake.snowpark.row.Row,
+    False otherwise"""
+    if is_type(obj, _SNOWPARK_DF_TYPE_STR):
+        return True
+    if not isinstance(obj, list):
+        return False
+    if len(obj) < 1:
+        return False
+    if not hasattr(obj[0], "__class__"):
+        return False
+    return is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
 
 
 def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:

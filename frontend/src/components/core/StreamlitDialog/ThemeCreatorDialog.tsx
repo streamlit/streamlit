@@ -305,7 +305,7 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
             </StyledSmall>
 
             <div>
-              <Button onClick={copyConfig} kind={Kind.PRIMARY}>
+              <Button onClick={copyConfig} kind={Kind.SECONDARY}>
                 {copied ? (
                   <React.Fragment>
                     {"Copied to clipboard "}
