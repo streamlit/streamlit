@@ -18,13 +18,7 @@ import { merge, assign } from "lodash"
 
 import { useTheme } from "@emotion/react"
 
-import {
-  getGray30,
-  getGray70,
-  getGray90,
-  hasLightBackgroundColor,
-  Theme,
-} from "src/theme"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 
 // TODO: for these colors below, these likely need to move to our theme!
 // For the meantime, these colors will be defined for plotly.
@@ -239,7 +233,7 @@ export function applyUniqueGraphColorsData(data: any): void {
       // from dataframe.tsx cell properties
       entry.header = assign(entry.header, {
         font: {
-          color: getGray70(theme),
+          color: theme.genericColors.axisText,
           family: genericFonts.bodyFont,
         },
         line: { color: colors.fadedText05, width: 1 },
@@ -249,7 +243,7 @@ export function applyUniqueGraphColorsData(data: any): void {
       })
       entry.cells = assign(entry.cells, {
         font: {
-          color: getGray90(theme),
+          color: theme.genericColors.legendText,
           family: genericFonts.bodyFont,
         },
         line: { color: colors.fadedText05, width: 1 },
@@ -278,7 +272,7 @@ export function applyUniqueGraphColorsData(data: any): void {
       entry = assign(entry, {
         connector: {
           line: {
-            color: getGray30(theme),
+            color: theme.genericColors.gridLine,
             width: theme.spacing.threeXSPx,
           },
         },
@@ -333,7 +327,7 @@ export function applyStreamlitThemeTemplateLayout(
       continuousWidth: 400,
     },
     font: {
-      color: getGray70(theme),
+      color: theme.genericColors.axisText,
       family: genericFonts.bodyFont,
       size: fontSizes.twoSmPx,
     },
@@ -358,7 +352,7 @@ export function applyStreamlitThemeTemplateLayout(
       title: {
         font: {
           size: fontSizes.twoSmPx,
-          color: getGray70(theme),
+          color: theme.genericColors.axisText,
         },
         side: "top",
       },
@@ -367,7 +361,7 @@ export function applyStreamlitThemeTemplateLayout(
       borderwidth: theme.spacing.nonePx,
       font: {
         size: fontSizes.twoSmPx,
-        color: getGray90(theme),
+        color: theme.genericColors.legendText,
       },
     },
     paper_bgcolor: colors.bgColor,
@@ -377,43 +371,43 @@ export function applyStreamlitThemeTemplateLayout(
       : categoryColorsDarkTheme,
     yaxis: {
       ticklabelposition: "outside",
-      zerolinecolor: getGray30(theme),
+      zerolinecolor: theme.genericColors.gridLine,
       title: {
         font: {
-          color: getGray70(theme),
+          color: theme.genericColors.axisText,
           size: fontSizes.smPx,
         },
         standoff: theme.spacing.twoXLPx,
       },
-      tickcolor: getGray30(theme),
+      tickcolor: theme.genericColors.gridLine,
       tickfont: {
-        color: getGray70(theme),
+        color: theme.genericColors.axisText,
         size: fontSizes.twoSmPx,
       },
-      gridcolor: getGray30(theme),
+      gridcolor: theme.genericColors.gridLine,
       minor: {
-        gridcolor: getGray30(theme),
+        gridcolor: theme.genericColors.gridLine,
       },
       automargin: true,
     },
     xaxis: {
-      zerolinecolor: getGray30(theme),
-      gridcolor: getGray30(theme),
+      zerolinecolor: theme.genericColors.gridLine,
+      gridcolor: theme.genericColors.gridLine,
       showgrid: false,
       tickfont: {
-        color: getGray70(theme),
+        color: theme.genericColors.axisText,
         size: fontSizes.twoSmPx,
       },
-      tickcolor: getGray30(theme),
+      tickcolor: theme.genericColors.gridLine,
       title: {
         font: {
-          color: getGray70(theme),
+          color: theme.genericColors.axisText,
           size: fontSizes.smPx,
         },
         standoff: theme.spacing.mdPx,
       },
       minor: {
-        gridcolor: getGray30(theme),
+        gridcolor: theme.genericColors.gridLine,
       },
       zeroline: false,
       automargin: true,
@@ -427,7 +421,7 @@ export function applyStreamlitThemeTemplateLayout(
       bgcolor: colors.bgColor,
       bordercolor: colors.fadedText10,
       font: {
-        color: getGray70(theme),
+        color: theme.genericColors.axisText,
         family: genericFonts.bodyFont,
         size: fontSizes.twoSmPx,
       },
@@ -443,12 +437,12 @@ export function applyStreamlitThemeTemplateLayout(
         y: 0.5745,
         title: {
           font: {
-            color: getGray70(theme),
+            color: theme.genericColors.axisText,
             size: fontSizes.smPx,
           },
         },
         tickfont: {
-          color: getGray70(theme),
+          color: theme.genericColors.axisText,
           size: fontSizes.twoSmPx,
         },
       },
@@ -481,7 +475,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
     // specifically for the ternary graph
     ternary: {
-      gridcolor: getGray70(theme),
+      gridcolor: theme.genericColors.axisText,
       bgcolor: colors.bgColor,
       title: {
         font: {
@@ -489,26 +483,26 @@ export function applyStreamlitThemeTemplateLayout(
           size: fontSizes.smPx,
         },
       },
-      color: getGray70(theme),
+      color: theme.genericColors.axisText,
       aaxis: {
-        gridcolor: getGray70(theme),
-        linecolor: getGray70(theme),
+        gridcolor: theme.genericColors.axisText,
+        linecolor: theme.genericColors.axisText,
         tickfont: {
           family: genericFonts.bodyFont,
           size: fontSizes.twoSmPx,
         },
       },
       baxis: {
-        linecolor: getGray70(theme),
-        gridcolor: getGray70(theme),
+        linecolor: theme.genericColors.axisText,
+        gridcolor: theme.genericColors.axisText,
         tickfont: {
           family: genericFonts.bodyFont,
           size: fontSizes.twoSmPx,
         },
       },
       caxis: {
-        linecolor: getGray70(theme),
-        gridcolor: getGray70(theme),
+        linecolor: theme.genericColors.axisText,
+        gridcolor: theme.genericColors.axisText,
         tickfont: {
           family: genericFonts.bodyFont,
           size: fontSizes.twoSmPx,
@@ -554,7 +548,7 @@ export function applyStreamlitThemeTemplateData(
     data.bar.forEach((entry: any) => {
       if (entry.marker !== undefined && entry.marker.line !== undefined) {
         entry.marker.line = assign(entry.marker.line, {
-          color: getGray30(theme),
+          color: theme.genericColors.gridLine,
         })
       }
     })

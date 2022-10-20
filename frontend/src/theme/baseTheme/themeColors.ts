@@ -30,6 +30,9 @@ export default {
   info: colors.blue100,
   danger: colors.red100,
   dangerBg: transparentize(colors.red70, 0.8),
+  axisText: colors.gray70,
+  gridLine: colors.gray30,
+  legendText: colors.gray90,
 
   primary: colors.red70,
   disabled: colors.gray40,

@@ -16,12 +16,7 @@
 
 import { merge, mergeWith, isArray } from "lodash"
 
-import {
-  getGray30,
-  getGray70,
-  hasLightBackgroundColor,
-  Theme,
-} from "src/theme"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 
 export function applyStreamlitTheme(config: any, theme: Theme): any {
   // This theming config contains multiple hard coded spacing values.
@@ -46,17 +41,17 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
     axis: {
       labelFontSize: theme.fontSizes.twoSmPx,
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: getGray70(theme),
+      labelColor: theme.genericColors.axisText,
       labelFontStyle: "normal",
       titleFontWeight: theme.fontWeights.normal,
       titleFontSize: theme.fontSizes.smPx,
-      titleColor: getGray70(theme),
+      titleColor: theme.genericColors.axisText,
       titleFontStyle: "normal",
       ticks: false,
-      gridColor: getGray30(theme),
+      gridColor: theme.genericColors.gridLine,
       domain: false,
       domainWidth: 1,
-      domainColor: getGray30(theme),
+      domainColor: theme.genericColors.gridLine,
       labelFlush: true,
       labelFlushOffset: 1,
       labelBound: false,
@@ -69,11 +64,11 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
     legend: {
       labelFontSize: theme.fontSizes.smPx,
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: getGray70(theme),
+      labelColor: theme.genericColors.axisText,
       titleFontSize: theme.fontSizes.smPx,
       titleFontWeight: theme.fontWeights.normal,
       titleFontStyle: "normal",
-      titleColor: getGray70(theme),
+      titleColor: theme.genericColors.axisText,
       titlePadding: theme.spacing.mdPx,
       labelPadding: theme.spacing.lgPx,
       columnPadding: theme.spacing.smPx,
@@ -249,7 +244,7 @@ export function applyThemeDefaults(config: any, theme: Theme): any {
     axis: {
       labelColor: colors.bodyText,
       titleColor: colors.bodyText,
-      gridColor: getGray30(theme),
+      gridColor: theme.genericColors.gridLine,
       ...themeFonts,
     },
     legend: {
