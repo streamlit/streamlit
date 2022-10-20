@@ -17,8 +17,10 @@ from typing import Any
 
 import streamlit as st
 from streamlit import code_util, string_util
+from streamlit.runtime.metrics_util import gather_metrics
 
 
+@gather_metrics(name="experimental_show")
 def show(*args: Any) -> None:
     """Write arguments and *argument names* to your app for debugging purposes.
 

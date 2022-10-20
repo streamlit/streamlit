@@ -88,7 +88,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         require_valid_user_key(key)
         return get_session_state()[key]
 
-    @gather_metrics
+    @gather_metrics(name="session_state_set_item")
     def __setitem__(self, key: Key, value: Any) -> None:
         """Set the value of the given key.
 
@@ -119,7 +119,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         except KeyError:
             raise AttributeError(_missing_attr_error_message(key))
 
-    @gather_metrics
+    @gather_metrics(name="session_state_set_attr")
     def __setattr__(self, key: str, value: Any) -> None:
         self[key] = value
 

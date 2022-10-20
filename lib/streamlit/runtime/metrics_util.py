@@ -22,7 +22,7 @@ import uuid
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
-from typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast
+from typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast, overload
 
 from typing_extensions import Final
 
@@ -49,24 +49,9 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.core.indexes.base.Index": "PandasIndex",
     "pandas.core.series.Series": "PandasSeries",
 }
-_CALLABLE_NAME_MAPPING: Final = {
-    "_transparent_write": "magic",
-    "MemoAPI.__call__": "experimental_memo",
-    "SingletonAPI.__call__": "experimental_singleton",
-    "SingletonAPI.clear": "clear_singleton",
-    "MemoAPI.clear": "clear_memo",
-    "SingletonCache.write_result": "_cache_singleton_object",
-    "MemoCache.write_result": "_cache_memo_object",
-    "SessionStateProxy.__setattr__": "session_state.__setattr__",
-    "SessionStateProxy.__setitem__": "session_state.__setitem__",
-    "_write_to_cache": "_cache_object",
-    "_get_query_params": "experimental_get_query_params",
-    "_set_query_params": "experimental_set_query_params",
-    "_show": "experimental_show",
-    "set_user_option": "set_option",
-}
+
 # A list of dependencies to check for attribution
-_ATTRIBUTIONS_TO_CHECK: Final = ["snowflake"]
+_ATTRIBUTIONS_TO_CHECK: Final = ["snowflake", "torch", "tensorflow"]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
@@ -123,6 +108,7 @@ class Installation:
 
 
 def _get_type_name(obj: object) -> str:
+    """Get a simplified name for the type of the given object."""
     with contextlib.suppress(Exception):
         obj_type = type(obj)
         type_name = "unknown"
@@ -141,18 +127,18 @@ def _get_type_name(obj: object) -> str:
     return "failed"
 
 
-def _get_callable_name(callable: Callable[..., Any]) -> str:
+def _get_callable_name(func: Callable[..., Any]) -> str:
+    """Get a simplified name for the type of the given callable."""
     with contextlib.suppress(Exception):
         name = "unknown"
-        if inspect.isclass(callable):
-            name = callable.__class__.__name__
-        elif hasattr(callable, "__qualname__"):
-            name = callable.__qualname__
-        elif hasattr(callable, "__name__"):
-            name = callable.__name__
-        if name in _CALLABLE_NAME_MAPPING:
-            name = _CALLABLE_NAME_MAPPING[name]
-        elif "." in name:
+        if inspect.isclass(func):
+            name = func.__class__.__name__
+        elif hasattr(func, "__qualname__"):
+            name = func.__qualname__
+        elif hasattr(func, "__name__"):
+            name = func.__name__
+
+        if "." in name:
             # Only return actual function name
             name = name.split(".")[-1]
         return name
@@ -160,6 +146,7 @@ def _get_callable_name(callable: Callable[..., Any]) -> str:
 
 
 def _get_arg_metadata(arg: object) -> Optional[str]:
+    """Get metadata information related to the value of the given object."""
     with contextlib.suppress(Exception):
         if isinstance(arg, (bool)):
             return f"val:{arg}"
@@ -170,16 +157,17 @@ def _get_arg_metadata(arg: object) -> Optional[str]:
     return None
 
 
-def _get_command_telemetry(callable: Callable[..., Any], *args, **kwargs) -> Command:
-    arg_keywords = inspect.getfullargspec(callable).args
+def _get_command_telemetry(func: Callable[..., Any], *args, **kwargs) -> Command:
+    """Get telemetry information for the given callable and its arguments."""
+    arg_keywords = inspect.getfullargspec(func).args
     self_arg: Optional[Any] = None
     arguments: List[Argument] = []
-    is_method = inspect.ismethod(callable)
+    is_method = inspect.ismethod(func)
 
     for i, arg in enumerate(args):
         pos = i
         if is_method:
-            # If the callable is a method, ignore the first argument (self)
+            # If func is a method, ignore the first argument (self)
             i = i + 1
 
         keyword = arg_keywords[i] if len(arg_keywords) > i else f"{i}"
@@ -199,7 +187,7 @@ def _get_command_telemetry(callable: Callable[..., Any], *args, **kwargs) -> Com
         if arg_metadata:
             argument.m = arg_metadata
         arguments.append(argument)
-    name = _get_callable_name(callable)
+    name = _get_callable_name(func)
     if (
         name == "create_instance"
         and self_arg
@@ -210,17 +198,72 @@ def _get_command_telemetry(callable: Callable[..., Any], *args, **kwargs) -> Com
     return Command(name=name, args=arguments)
 
 
-def to_microseconds(seconds):
+def to_microseconds(seconds: float) -> int:
+    """Convert seconds into microseconds."""
     return int(seconds * 1000000)
 
 
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def gather_metrics(callable: F) -> F:
-    @wraps(callable)
-    def wrap(*args, **kwargs):
+@overload
+def gather_metrics(
+    func: F,
+    name: Optional[str] = None,
+) -> F:
+    ...
+
+
+@overload
+def gather_metrics(
+    func: None = None,
+    name: Optional[str] = None,
+) -> Callable[[F], F]:
+    ...
+
+
+def gather_metrics(
+    func: Optional[F] = None,
+    name: Optional[str] = None,
+) -> Union[Callable[[F], F], F]:
+    """Function decorator to add telemetry tracking to commands.
+
+    Parameters
+    ----------
+    func : callable
+    The function to track for telemetry.
+
+    name : str or None
+    Overwrite the function name with a custom name that is used for telemetry tracking.
+
+    Example
+    -------
+    >>> @st.gather_metrics
+    ... def my_command(url):
+    ...     return url
+
+    >>> @st.gather_metrics(name="custom_name")
+    ... def my_command(url):
+    ...     return url
+    """
+
+    if func is None:
+        # Support passing the params via function decorator
+        def wrapper(f: F) -> F:
+            return gather_metrics(
+                func=f,
+                name=name,
+            )
+
+        return wrapper
+    else:
+        # To make mypy type narrow Optional[F] -> F
+        non_optional_func = func
+
+    @wraps(non_optional_func)
+    def wrapped_func(*args, **kwargs):
         exec_start = timer()
+        # get_script_run_ctx gets imported here to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
 
         ctx = get_script_run_ctx()
@@ -236,7 +279,11 @@ def gather_metrics(callable: F) -> F:
 
         if ctx and tracking_activated:
             try:
-                command_telemetry = _get_command_telemetry(callable, *args, **kwargs)
+                command_telemetry = _get_command_telemetry(
+                    non_optional_func, *args, **kwargs
+                )
+                if name:
+                    command_telemetry.name = name
 
                 if (
                     command_telemetry.name not in ctx.tracked_commands_counter
@@ -252,9 +299,9 @@ def gather_metrics(callable: F) -> F:
                 # the telemetry never causes any issues.
                 LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
         try:
-            result = callable(*args, **kwargs)
+            result = non_optional_func(*args, **kwargs)
         finally:
-            # Activate tracking again if callable executes without any exceptions
+            # Activate tracking again if command executes without any exceptions
             if ctx:
                 ctx.command_tracking_deactivated = False
 
@@ -266,9 +313,9 @@ def gather_metrics(callable: F) -> F:
     with contextlib.suppress(AttributeError):
         # Make this a well-behaved decorator by preserving important function
         # attributes.
-        wrap.__dict__.update(callable.__dict__)
-        wrap.__signature__ = inspect.signature(callable)  # type: ignore
-    return cast(F, wrap)
+        wrapped_func.__dict__.update(non_optional_func.__dict__)
+        wrapped_func.__signature__ = inspect.signature(non_optional_func)  # type: ignore
+    return cast(F, wrapped_func)
 
 
 def create_page_profile_message(
@@ -277,8 +324,7 @@ def create_page_profile_message(
     prep_time: int,
     uncaught_exception: Optional[str] = None,
 ) -> ForwardMsg:
-    """Create and return an PageProfile ForwardMsg."""
-
+    """Create and return the full PageProfile ForwardMsg."""
     msg = ForwardMsg()
     msg.page_profile.commands.extend(commands)
     msg.page_profile.exec_time = exec_time
