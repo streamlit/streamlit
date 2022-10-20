@@ -167,6 +167,12 @@ export function buildMediaUri(
 /**
  * Check if the given origin follows the allowed origin pattern, which could
  * include wildcards.
+ *
+ * This function is used to check whether cross-origin messages received by the
+ * withHostCommunication component come from an origin that we've listed as
+ * trusted. If this function returns false against the origin being tested for
+ * all trusted origins in our whitelist, the cross-origin message should be
+ * ignored.
  */
 export function isValidOrigin(
   allowedOrigin: string,
