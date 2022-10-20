@@ -36,11 +36,7 @@ from typing import Any, Callable, Dict, List, Optional, Pattern, Union
 from streamlit import config, file_util, type_util, util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.folder_black_list import FolderBlackList
-from streamlit.logger import get_logger
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
-_LOGGER = get_logger(__name__)
-
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
