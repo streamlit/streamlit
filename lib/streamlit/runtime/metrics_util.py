@@ -279,7 +279,7 @@ def gather_metrics(
         )
         command_telemetry: Optional[Command] = None
 
-        if tracking_activated:
+        if ctx and tracking_activated:
             try:
                 command_telemetry = _get_command_telemetry(
                     non_optional_func, *args, **kwargs
