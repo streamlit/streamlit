@@ -15,7 +15,7 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Union, cast
 
 from typing_extensions import Final
 
@@ -110,6 +110,7 @@ def marshall(
     data: Data = None,
     spec: Optional[Dict[str, Any]] = None,
     use_container_width: bool = False,
+    theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs,
 ):
     """Construct a Vega-Lite chart object.
@@ -172,6 +173,7 @@ def marshall(
 
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
+    proto.theme = theme or ""
 
     if data is not None:
         arrow.marshall(proto.data, data)
