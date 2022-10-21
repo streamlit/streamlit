@@ -11,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+A script with cached widget replay, where the set of widgets called by the function
+depend on the values of the widgets.
+"""
 
 import streamlit as st
 
