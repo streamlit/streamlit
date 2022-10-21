@@ -138,7 +138,7 @@ function getIncreasingGreen(theme: Theme): string {
  * This is done because colorway is not fully respected by plotly.
  * @param data - spec.data
  */
-export function changeDiscreteColors(data: any, theme: Theme): void {
+function applyDiscreteColors(data: any, theme: Theme): void {
   const categoryColors = hasLightBackgroundColor(theme)
     ? categoryColorsLightTheme
     : categoryColorsDarkTheme
@@ -539,7 +539,7 @@ export function applyStreamlitThemeTemplateLayout(
 export function applyStreamlitThemeData(data: any, theme: Theme): void {
   applyColorscale(data, theme)
   applyUniqueGraphColorsData(data, theme)
-  changeDiscreteColors(data, theme)
+  applyDiscreteColors(data, theme)
   data.forEach((entry: any) => {
     if (entry.marker !== undefined) {
       entry.marker.line = assign(entry.marker.line, {
@@ -584,18 +584,16 @@ export function applyStreamlitThemeTemplateData(
  * @param spec - spec
  */
 export function applyStreamlitTheme(spec: any, theme: Theme): void {
-  applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
-  applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
   try {
+    applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
+    applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
     applyStreamlitThemeData(spec.data, theme)
   } catch (e) {
     const err = ensureError(e)
     logError(err)
   }
   if ("title" in spec.layout) {
-    spec.layout.title = assign({
-      text: `<b>${spec.layout.title.text}</b>`,
-    })
+    spec.layout.title = { text: `<b>${spec.layout.title.text}</b>` }
   }
 }
 
