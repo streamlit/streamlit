@@ -58,7 +58,7 @@ class ButtonSerde:
 
 
 class ButtonMixin:
-    @gather_metrics
+    @gather_metrics("button")
     def button(
         self,
         label: str,
@@ -126,7 +126,7 @@ class ButtonMixin:
             ctx=ctx,
         )
 
-    @gather_metrics
+    @gather_metrics("download_button")
     def download_button(
         self,
         label: str,

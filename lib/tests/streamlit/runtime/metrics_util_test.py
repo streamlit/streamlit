@@ -105,17 +105,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.dataframe, "dataframe"),
-            (st.write, "write"),
-            (st.cache, "cache"),
-        ]
-    )
-    def test_get_callable_name(self, callable: Callable, expected_name: str):
-        """Test getting the callable name _get_callable_name"""
-        self.assertEqual(metrics_util._get_callable_name(callable), expected_name)
-
-    @parameterized.expand(
-        [
             (10, "int"),
             (0.01, "float"),
             (True, "bool"),
@@ -137,7 +126,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         """Test getting command telemetry via _get_command_telemetry."""
         # Test with dataframe command:
         command_metadata = metrics_util._get_command_telemetry(
-            st.dataframe, pd.DataFrame(), width=250
+            st.dataframe, "dataframe", pd.DataFrame(), width=250
         )
 
         self.assertEqual(command_metadata.name, "dataframe")
@@ -153,7 +142,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
         # Test with text_input command:
         command_metadata = metrics_util._get_command_telemetry(
-            st.text_input, label="text input", value="foo", disabled=True
+            st.text_input, "text_input", label="text input", value="foo", disabled=True
         )
 
         self.assertEqual(command_metadata.name, "text_input")
@@ -176,7 +165,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         forward_msg = metrics_util.create_page_profile_message(
             commands=[
                 metrics_util._get_command_telemetry(
-                    st.dataframe, pd.DataFrame(), width=250
+                    st.dataframe, "dataframe", pd.DataFrame(), width=250
                 )
             ],
             exec_time=1000,
@@ -192,7 +181,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         """The gather_metrics decorator works as expected."""
         ctx = get_script_run_ctx()
 
-        @metrics_util.gather_metrics
+        @metrics_util.gather_metrics("test_function")
         def test_function(param1: int, param2: str, param3: float = 0.1) -> str:
             st.markdown("This command should not be tracked")
             return "foo"
@@ -324,7 +313,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 return "foo"
 
             funcs.append(
-                metrics_util.gather_metrics(test_function, name=f"test_function_{i}")
+                metrics_util.gather_metrics(f"test_function_{i}", test_function)
             )
 
         for _ in range(metrics_util._MAX_TRACKED_PER_COMMAND + 1):

@@ -84,7 +84,7 @@ from streamlit.commands.execution_control import (
 
 # We add the metrics tracking for caching here,
 # since the actual cache function calls itself recursively
-cache = _gather_metrics(_cache, name="cache")
+cache = _gather_metrics("cache", _cache)
 
 
 def _update_logger() -> None:
@@ -188,15 +188,15 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 get_option = _config.get_option
 # We add the metrics tracking here, since importing
 # gather_metrics in config causes a circular dependency
-set_option = _gather_metrics(_config.set_user_option, name="set_option")
+set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
 session_state = _SessionStateProxy()
 
 # Beta APIs
-beta_container = _gather_metrics(_main.beta_container, name="beta_container")
-beta_expander = _gather_metrics(_main.beta_expander, name="beta_expander")
-beta_columns = _gather_metrics(_main.beta_columns, name="beta_columns")
+beta_container = _gather_metrics("beta_container", _main.beta_container)
+beta_expander = _gather_metrics("beta_expander", _main.beta_expander)
+beta_columns = _gather_metrics("beta_columns", _main.beta_columns)
 
 # Experimental APIs
 experimental_user = _UserInfoProxy()
@@ -208,7 +208,7 @@ experimental_show = _show
 experimental_rerun = _rerun
 
 
-@_gather_metrics(name="magic")
+@_gather_metrics("magic")
 def _transparent_write(*args: _Any) -> _Any:
     """This is just st.write, but returns the arguments you passed to it."""
     write(*args)

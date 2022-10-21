@@ -111,7 +111,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
 
 
 class FormMixin:
-    @gather_metrics
+    @gather_metrics("form")
     def form(self, key: str, clear_on_submit: bool = False):
         """Create a form that batches elements together with a "Submit" button.
 
@@ -200,7 +200,7 @@ class FormMixin:
         block_dg._form_data = FormData(form_id)
         return block_dg
 
-    @gather_metrics
+    @gather_metrics("form_submit_button")
     def form_submit_button(
         self,
         label: str = "Submit",

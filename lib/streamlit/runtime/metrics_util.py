@@ -31,7 +31,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 # Limit the number of commands to keep the page profile message small
 # since Segment allows only a maximum of 32kb per event.
@@ -145,26 +145,6 @@ def _get_top_level_module(func: Callable[..., Any]) -> str:
     return module.__name__.split(".")[0]
 
 
-def _get_callable_name(func: Callable[..., Any]) -> str:
-    """Get a simplified name for the type of the given callable."""
-    with contextlib.suppress(Exception):
-        name = "unknown"
-
-        if inspect.isclass(func):
-            name = func.__class__.__name__
-        elif hasattr(func, "__qualname__"):
-            name = func.__qualname__
-        elif hasattr(func, "__name__"):
-            name = func.__name__
-
-        if "." in name and _get_top_level_module(func) == "streamlit":
-            # Only return actual function name
-            name = name.split(".")[-1]
-
-        return name
-    return "failed"
-
-
 def _get_arg_metadata(arg: object) -> Optional[str]:
     """Get metadata information related to the value of the given object."""
     with contextlib.suppress(Exception):
@@ -177,12 +157,15 @@ def _get_arg_metadata(arg: object) -> Optional[str]:
     return None
 
 
-def _get_command_telemetry(func: Callable[..., Any], *args, **kwargs) -> Command:
+def _get_command_telemetry(
+    _command_func: Callable[..., Any], _command_name: str, *args, **kwargs
+) -> Command:
     """Get telemetry information for the given callable and its arguments."""
-    arg_keywords = inspect.getfullargspec(func).args
+    arg_keywords = inspect.getfullargspec(_command_func).args
     self_arg: Optional[Any] = None
     arguments: List[Argument] = []
-    is_method = inspect.ismethod(func)
+    is_method = inspect.ismethod(_command_func)
+    name = _command_name
 
     for i, arg in enumerate(args):
         pos = i
@@ -207,7 +190,13 @@ def _get_command_telemetry(func: Callable[..., Any], *args, **kwargs) -> Command
         if arg_metadata:
             argument.m = arg_metadata
         arguments.append(argument)
-    name = _get_callable_name(func)
+
+    top_level_module = _get_top_level_module(_command_func)
+    if top_level_module != "streamlit":
+        # If the gather_metrics decorator is used outside of streamlit library
+        # we enforce a prefix to be added to the tracked command:
+        name = f"external:{top_level_module}:{name}"
+
     if (
         name == "create_instance"
         and self_arg
@@ -215,6 +204,7 @@ def _get_command_telemetry(func: Callable[..., Any], *args, **kwargs) -> Command
         and self_arg.name
     ):
         name = f"component:{self_arg.name}"
+
     return Command(name=name, args=arguments)
 
 
@@ -228,24 +218,21 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 @overload
 def gather_metrics(
+    name: str,
     func: F,
-    name: Optional[str] = None,
 ) -> F:
     ...
 
 
 @overload
 def gather_metrics(
+    name: str,
     func: None = None,
-    name: Optional[str] = None,
 ) -> Callable[[F], F]:
     ...
 
 
-def gather_metrics(
-    func: Optional[F] = None,
-    name: Optional[str] = None,
-) -> Union[Callable[[F], F], F]:
+def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F], F]:
     """Function decorator to add telemetry tracking to commands.
 
     Parameters
@@ -267,12 +254,16 @@ def gather_metrics(
     ...     return url
     """
 
+    if not name:
+        _LOGGER.warning("gather_metrics: name is empty")
+        name = "undefined"
+
     if func is None:
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             return gather_metrics(
-                func=f,
                 name=name,
+                func=f,
             )
 
         return wrapper
@@ -300,19 +291,8 @@ def gather_metrics(
         if ctx and tracking_activated:
             try:
                 command_telemetry = _get_command_telemetry(
-                    non_optional_func, *args, **kwargs
+                    non_optional_func, name, *args, **kwargs
                 )
-
-                if name:
-                    command_telemetry.name = name
-
-                top_level_module = _get_top_level_module(non_optional_func)
-                if top_level_module != "streamlit":
-                    # If the gather_metrics decorator is used outside of streamlit library
-                    # we enforce a prefix to be added to the tracked command:
-                    command_telemetry.name = (
-                        f"external:{top_level_module}:{command_telemetry.name}"
-                    )
 
                 if (
                     command_telemetry.name not in ctx.tracked_commands_counter
@@ -326,7 +306,7 @@ def gather_metrics(
             except BaseException as ex:
                 # Always capture all exceptions since we want to make sure that
                 # the telemetry never causes any issues.
-                LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
+                _LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
         try:
             result = non_optional_func(*args, **kwargs)
         finally:

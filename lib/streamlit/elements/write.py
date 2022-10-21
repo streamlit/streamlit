@@ -44,7 +44,7 @@ _LOGGER = get_logger(__name__)
 
 
 class WriteMixin:
-    @gather_metrics
+    @gather_metrics("write")
     def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
         """Write arguments to the app.
 

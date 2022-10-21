@@ -26,7 +26,7 @@ SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
-    @gather_metrics
+    @gather_metrics("container")
     def container(self) -> "DeltaGenerator":
         """Insert a multi-element container.
 
@@ -71,7 +71,7 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    @gather_metrics
+    @gather_metrics("columns")
     def columns(
         self, spec: SpecType, *, gap: Optional[str] = "small"
     ) -> List["DeltaGenerator"]:
@@ -196,7 +196,7 @@ class LayoutsMixin:
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
-    @gather_metrics
+    @gather_metrics("tabs")
     def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
         """Insert containers separated into tabs.
 
@@ -284,7 +284,7 @@ class LayoutsMixin:
         tab_container = self.dg._block(block_proto)
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
-    @gather_metrics
+    @gather_metrics("expander")
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
         """Insert a multi-element container that can be expanded/collapsed.
 

@@ -349,7 +349,7 @@ def _read_from_cache(
         raise e
 
 
-@gather_metrics(name="_cache_object")
+@gather_metrics("_cache_object")
 def _write_to_cache(
     mem_cache: MemCache,
     key: str,

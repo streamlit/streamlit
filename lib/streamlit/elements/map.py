@@ -72,7 +72,7 @@ _ZOOM_LEVELS: Final = [
 
 
 class MapMixin:
-    @gather_metrics
+    @gather_metrics("map")
     def map(
         self,
         data: Data = None,

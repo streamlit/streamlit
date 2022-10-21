@@ -41,7 +41,7 @@ class MetricColorAndDirection:
 
 
 class MetricMixin:
-    @gather_metrics
+    @gather_metrics("metric")
     def metric(
         self,
         label: str,

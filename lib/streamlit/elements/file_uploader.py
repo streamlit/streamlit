@@ -202,7 +202,7 @@ class FileUploaderMixin:
     ) -> Optional[UploadedFile]:
         ...
 
-    @gather_metrics
+    @gather_metrics("file_uploader")
     def file_uploader(
         self,
         label: str,

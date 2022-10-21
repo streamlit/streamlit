@@ -41,7 +41,7 @@ Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]
 
 
 class ArrowMixin:
-    @gather_metrics
+    @gather_metrics("_arrow_dataframe")
     def _arrow_dataframe(
         self,
         data: Data = None,
@@ -108,7 +108,7 @@ class ArrowMixin:
         marshall(proto, data, default_uuid)
         return self.dg._enqueue("arrow_data_frame", proto)
 
-    @gather_metrics
+    @gather_metrics("_arrow_table")
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 
