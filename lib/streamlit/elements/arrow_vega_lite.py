@@ -15,9 +15,9 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
 
-from typing_extensions import Final
+from typing_extensions import Final, Literal
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.elements import arrow
