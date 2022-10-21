@@ -18,7 +18,6 @@ import threading
 from typing import Any, List
 from unittest.mock import patch
 
-import pytest as pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -58,8 +57,7 @@ def as_cached_result(value: Any, cache_type: CacheType) -> InitialCachedResults:
     """
     result = CachedResult(value, [], st._main.id, st.sidebar.id)
     widget_key = _make_widget_key([], cache_type)
-    d = {}
-    d[widget_key] = result
+    d = {widget_key: result}
     initial = InitialCachedResults(set(), d)
     return initial
 
