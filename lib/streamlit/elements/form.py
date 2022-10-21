@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,13 +13,16 @@
 # limitations under the License.
 
 import textwrap
-from typing import cast, Optional, NamedTuple
+from typing import NamedTuple, Optional, cast
+
+from typing_extensions import Literal
 
 import streamlit
+from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
-from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 
 
 class FormData(NamedTuple):
@@ -38,7 +41,7 @@ def _current_form(
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
-    if not streamlit._is_running_with_streamlit:
+    if not runtime.exists():
         return None
 
     if this_dg._form_data is not None:
@@ -171,7 +174,7 @@ class FormMixin:
         >>> form.form_submit_button("Submit")
 
         """
-        from .utils import check_session_state_rules
+        from streamlit.elements.utils import check_session_state_rules
 
         if is_in_form(self.dg):
             raise StreamlitAPIException("Forms cannot be nested in other forms.")
@@ -207,6 +210,9 @@ class FormMixin:
         on_click=None,
         args=None,
         kwargs=None,
+        *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
+        disabled: bool = False,
     ) -> bool:
         """Display a form submit button.
 
@@ -233,6 +239,13 @@ class FormMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        type (”primary” or “secondary”):
+            An optional string that specifies the button type. Can be “primary” for a
+            button with additional emphasis or “secondary” for a normal button. This
+            argument can only be supplied by keyword. Defaults to “secondary”.
+        disabled : bool
+            An optional boolean, which disables the button if set to True. The
+            default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -240,12 +253,22 @@ class FormMixin:
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
+
+        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.button must be "primary" or "secondary". \n'
+                f'The argument passed was "{type}".'
+            )
+
         return self._form_submit_button(
             label=label,
             help=help,
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            type=type,
+            disabled=disabled,
             ctx=ctx,
         )
 
@@ -256,6 +279,9 @@ class FormMixin:
         on_click=None,
         args=None,
         kwargs=None,
+        *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
+        disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
@@ -268,6 +294,8 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            type=type,
+            disabled=disabled,
             ctx=ctx,
         )
 

@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,41 +21,40 @@ export interface StyledDataFrameContainerProps {
   width: number
 }
 
-export const StyledDataFrameContainer = styled.div<
-  StyledDataFrameContainerProps
->(({ width, theme }) => ({
-  width,
-  border: `1px solid ${theme.colors.fadedText05}`,
-  boxSizing: "content-box",
+export const StyledDataFrameContainer =
+  styled.div<StyledDataFrameContainerProps>(({ width, theme }) => ({
+    width,
+    border: `1px solid ${theme.colors.fadedText05}`,
+    boxSizing: "content-box",
 
-  "& .table-top-right": {
-    // Hide scrollbar manually rather than with the hideTopRightGridScrollbar property of React
-    // Multigrid because the latter does show a scrollbar in some cases, for some reason.
-    overflow: "hidden !important",
-    paddingRight: "6px", // Scrollbar size
-  },
+    "& .table-top-right": {
+      // Hide scrollbar manually rather than with the hideTopRightGridScrollbar property of React
+      // Multigrid because the latter does show a scrollbar in some cases, for some reason.
+      overflow: "hidden !important",
+      paddingRight: "6px", // Scrollbar size
+    },
 
-  "& .table-bottom-left": {
-    // Hide scrollbar manually rather than with the hideTopRightGridScrollbar property of React
-    // Multigrid because the latter does show a scrollbar in some cases, for some reason.
-    overflow: "hidden !important",
-    paddingBottom: "6px", // Scrollbar size
-  },
+    "& .table-bottom-left": {
+      // Hide scrollbar manually rather than with the hideTopRightGridScrollbar property of React
+      // Multigrid because the latter does show a scrollbar in some cases, for some reason.
+      overflow: "hidden !important",
+      paddingBottom: "6px", // Scrollbar size
+    },
 
-  // Only this area should ever show a scrollbar.
-  "& .table-bottom-right": {
-    // Like all our scrollbar mods (see globalStyles.ts) this only works in Webkit and Blink.
-    overflow: "overlay !important",
-  },
+    // Only this area should ever show a scrollbar.
+    "& .table-bottom-right": {
+      // Like all our scrollbar mods (see globalStyles.ts) this only works in Webkit and Blink.
+      overflow: "overlay !important",
+    },
 
-  // Remove visible outline from click, since there's no click target/action anyway.
-  "& .table-bottom-right:focus-visible": {
-    outline: "none",
-  },
-  "& .table-bottom-right:focus": {
-    outline: "none",
-  },
-}))
+    // Remove visible outline from click, since there's no click target/action anyway.
+    "& .table-bottom-right:focus-visible": {
+      outline: "none",
+    },
+    "& .table-bottom-right:focus": {
+      outline: "none",
+    },
+  }))
 
 const StyledDataFrameCell = styled.div(({ theme }) => ({
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
@@ -84,9 +82,9 @@ const cellTextFormatter = (theme: Theme): CSSObject => ({
   lineHeight: theme.lineHeights.table,
 })
 
-export const StyledDataFrameCornerCell = styled(
-  StyledDataFrameCell
-)(({ theme }) => headerCellFormatter(theme))
+export const StyledDataFrameCornerCell = styled(StyledDataFrameCell)(
+  ({ theme }) => headerCellFormatter(theme)
+)
 
 export const StyledDataFrameColHeaderCell = styled(StyledDataFrameCell)(
   ({ theme }) => ({
@@ -110,9 +108,9 @@ export const StyledDataFrameRowHeaderCell = styled(StyledDataFrameCell)(
   })
 )
 
-export const StyledDataFrameDataCell = styled(
-  StyledDataFrameCell
-)(({ theme }) => cellTextFormatter(theme))
+export const StyledDataFrameDataCell = styled(StyledDataFrameCell)(
+  ({ theme }) => cellTextFormatter(theme)
+)
 
 export interface StyledFixupProps {
   verticalLocator: "top" | "bottom"

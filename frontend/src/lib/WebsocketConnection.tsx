@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -97,6 +96,12 @@ interface Args {
    * Function called when we receive a new message.
    */
   onMessage: OnMessage
+
+  /**
+   * Function to get the auth token set by the host of this app (if in a
+   * relevant deployment scenario).
+   */
+  getHostAuthToken: () => string | undefined
 }
 
 interface MessageQueue {
@@ -132,8 +137,8 @@ type Event =
   | "FATAL_ERROR" // Unrecoverable error. This should never happen!
 
 /**
- * This class is the "brother" of StaticConnection. The class connects to the
- * server and gets deltas over a websocket connection.
+ * This class connects to the server and gets deltas over a websocket connection.
+ *
  */
 export class WebsocketConnection {
   private readonly args: Args
@@ -347,7 +352,23 @@ export class WebsocketConnection {
     }
 
     logMessage(LOG, "creating WebSocket")
-    this.websocket = new WebSocket(uri)
+
+    // NOTE: We repurpose the Sec-WebSocket-Protocol header (set via the second
+    // parameter to the WebSocket constructor) here in a slightly unfortunate
+    // but necessary way. The browser WebSocket API doesn't allow us to set
+    // arbitrary HTTP headers, and this header is the only one where we have
+    // the ability to set it to arbitrary values. Thus, we use it to pass an
+    // auth token from client to server as the *second* value in the list.
+    //
+    // The reason why the auth token is set as the second value is that, when
+    // Sec-WebSocket-Protocol is set, many clients expect the server to respond
+    // with a selected subprotocol to use. We don't want that reply to be the
+    // auth token, so we just hard-code it to "streamlit".
+    const hostAuthToken = this.args.getHostAuthToken()
+    this.websocket = new WebSocket(uri, [
+      "streamlit",
+      ...(hostAuthToken ? [hostAuthToken] : []),
+    ])
     this.websocket.binaryType = "arraybuffer"
 
     this.setConnectionTimeout(uri)

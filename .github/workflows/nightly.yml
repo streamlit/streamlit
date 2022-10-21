@@ -1,0 +1,153 @@
+name: Nightly Build
+
+on:
+  schedule:
+    # Run job at 10.30pm PST or 11.30pm PDT
+    - cron:  '30 6 * * *'
+
+jobs:
+  create-nightly-tag:
+    runs-on: ubuntu-latest
+
+    if: github.repository == 'streamlit/streamlit'
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    permissions:
+      # Additional permission needed to generate tag
+      contents: write
+
+    outputs:
+      TAG: ${{ steps.create_tag.outputs.tag }}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: make develop
+      - name: Create tag
+        id: create_tag
+        run: |
+          git config --global user.email "core+streamlitbot-github@streamlit.io"
+          git config --global user.name "Streamlit Bot"
+
+          TAG="$(./scripts/pypi_nightly_create_tag.py)"
+          echo "::set-output name=tag::$TAG"
+
+          ./scripts/update_version.py $TAG
+          ./scripts/update_name.py streamlit-nightly
+
+          git add lib/setup.py frontend/package.json lib/streamlit/__init__.py lib/streamlit/version.py
+
+          git commit -m "Update version and project name in files"
+
+          git tag -a $TAG -m "Streamlit nightly $TAG"
+          git push origin $TAG
+      - if: ${{ failure() }}
+        name: Nightly Tag Failure Slack Message
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python scripts/slack_notifications.py nightly tag
+
+  run-python-tests:
+    needs: create-nightly-tag
+    uses: ./.github/workflows/python-versions.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
+
+  run-javascript-tests:
+    needs: create-nightly-tag
+    uses: ./.github/workflows/js-tests.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
+
+  run-py-prod-deps-smoke-test:
+    needs: create-nightly-tag
+    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
+
+  run-cypress-tests:
+    needs: create-nightly-tag
+    uses: ./.github/workflows/cypress.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
+
+  test-status-notification:
+    runs-on: ubuntu-latest
+
+    if: ${{ always() }}
+    # By default, jobs listed in needs must all complete successfully for the dependent job to run. always() conditional
+    # added as we'd like this job to run whether or not tests pass & slack us regarding failing tests.
+    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+
+    env:
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+    steps:
+      - if: ${{ needs.run-python-tests.result == 'failure' }}
+        run: python scripts/slack_notifications.py nightly python
+      - if: ${{ needs.run-javascript-tests.result == 'failure' }}
+        run: python scripts/slack_notifications.py nightly js
+      - if: ${{ needs.run-py-prod-deps-smoke-test.result == 'failure' }}
+        run: python scripts/slack_notifications.py nightly py_prod
+      - if: ${{ needs.run-cypress-tests.result == 'failure' }}
+        run: python scripts/slack_notifications.py nightly cypress
+  
+  create-nightly-build:
+    runs-on: ubuntu-latest
+
+    # Tag creation & tests must all complete successfully for nightly build job to run. 
+    needs: [create-nightly-tag, run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          ref: ${{needs.create-nightly-tag.outputs.tag}}
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: make develop
+      - name: Verify git tag vs. version
+        env:
+          TAG: ${{needs.create-nightly-tag.outputs.tag}}
+        run: |
+          cd lib
+          python setup.py verify
+      - name: Build Package
+        timeout-minutes: 120
+        run: |
+          sudo apt install rsync
+          make package
+      - name: Upload to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.NIGHTLY_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.NIGHTLY_PYPI_API_TOKEN }}
+        run: |
+          make distribute
+      - if: ${{ failure() }}
+        name: Nightly Build Failure Slack Message
+        env: 
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python scripts/slack_notifications.py nightly build

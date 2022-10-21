@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,7 +20,7 @@ import { shallow } from "src/lib/test_util"
 import Button, { Size, Kind, ButtonProps } from "./Button"
 
 const getProps = (propOverrides: Partial<ButtonProps> = {}): ButtonProps => ({
-  kind: Kind.PRIMARY,
+  kind: Kind.SECONDARY,
   size: Size.MEDIUM,
   onClick: () => {},
   disabled: false,
@@ -45,6 +44,20 @@ describe("Button element", () => {
           .exists()
       ).toBeTruthy()
     })
+
+    it(`renders disabled ${kind} correctly`, () => {
+      const wrapper = shallow(
+        <Button {...getProps({ kind, disabled: true })}>Hello</Button>
+      )
+
+      expect(
+        wrapper
+          .find(
+            `Styled${kind.charAt(0).toUpperCase()}${kind.substring(1)}Button`
+          )
+          .prop("disabled")
+      ).toBe(true)
+    })
   })
 
   Object.keys(Size).forEach(key => {
@@ -53,7 +66,7 @@ describe("Button element", () => {
     it(`renders ${size} buttons correctly`, () => {
       const wrapper = shallow(<Button {...getProps({ size })}>Hello</Button>)
 
-      expect(wrapper.find("StyledPrimaryButton").prop("size")).toBe(size)
+      expect(wrapper.find("StyledSecondaryButton").prop("size")).toBe(size)
     })
   })
 
@@ -62,7 +75,7 @@ describe("Button element", () => {
       <Button {...getProps({ fluidWidth: true })}>Hello</Button>
     )
 
-    expect(wrapper.find("StyledPrimaryButton").prop("fluidWidth")).toBe(true)
+    expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(true)
   })
 
   it("renders disabled buttons correctly", () => {
@@ -70,13 +83,13 @@ describe("Button element", () => {
       <Button {...getProps({ disabled: true })}>Hello</Button>
     )
 
-    expect(wrapper.find("StyledPrimaryButton").prop("disabled")).toBe(true)
+    expect(wrapper.find("StyledSecondaryButton").prop("disabled")).toBe(true)
   })
 
   it("calls onClick when button is clicked", () => {
     const onClick = jest.fn()
     const wrapper = shallow(<Button {...getProps({ onClick })}>Hello</Button>)
-    wrapper.find("StyledPrimaryButton").simulate("click")
+    wrapper.find("StyledSecondaryButton").simulate("click")
 
     expect(onClick).toBeCalled()
   })

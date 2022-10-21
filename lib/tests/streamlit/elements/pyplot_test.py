@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,11 +21,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import streamlit as st
-from streamlit.runtime.media_file_manager import STATIC_MEDIA_ENDPOINT
-from tests import testutil
+from streamlit.web.server.server import MEDIA_ENDPOINT
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class PyplotTest(testutil.DeltaGeneratorTestCase):
+class PyplotTest(DeltaGeneratorTestCase):
     def setUp(self, override_root=True):
         super().setUp(override_root)
         if matplotlib.get_backend().lower() != "agg":
@@ -53,7 +53,7 @@ class PyplotTest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, -2)
         self.assertEqual(el.imgs.imgs[0].caption, "")
-        self.assertTrue(el.imgs.imgs[0].url.startswith(STATIC_MEDIA_ENDPOINT))
+        self.assertTrue(el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT))
 
     def test_st_pyplot_clear_figure(self):
         """st.pyplot should clear the passed-in figure."""

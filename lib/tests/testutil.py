@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,24 +13,12 @@
 # limitations under the License.
 
 """Utility functions to use in our tests."""
-import threading
-import unittest
+
 from contextlib import contextmanager
-from typing import Any, Dict, List
+from typing import Any, Dict
 from unittest.mock import patch
 
 from streamlit import config
-from streamlit.runtime.app_session import AppSession
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner import (
-    add_script_run_ctx,
-    get_script_run_ctx,
-    ScriptRunContext,
-)
-from streamlit.runtime.state import SafeSessionState, SessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 @contextmanager
@@ -72,56 +60,6 @@ def build_mock_config_is_manually_set(overrides_dict):
         return orig_is_manually_set(name)
 
     return mock_config_is_manually_set
-
-
-class FakeAppSession(AppSession):
-    def __init__(self):
-        self._session_state = SessionState()
-
-
-class DeltaGeneratorTestCase(unittest.TestCase):
-    def setUp(self, override_root=True):
-        self.forward_msg_queue = ForwardMsgQueue()
-        self.override_root = override_root
-        self.orig_report_ctx = None
-        self.new_script_run_ctx = ScriptRunContext(
-            session_id="test session id",
-            _enqueue=self.forward_msg_queue.enqueue,
-            query_string="",
-            session_state=SafeSessionState(SessionState()),
-            uploaded_file_mgr=UploadedFileManager(),
-            page_script_hash="",
-            user_info={"email": "test@test.com"},
-        )
-
-        if self.override_root:
-            self.orig_report_ctx = get_script_run_ctx()
-            add_script_run_ctx(threading.current_thread(), self.new_script_run_ctx)
-
-        self.app_session = FakeAppSession()
-
-    def tearDown(self):
-        self.clear_queue()
-        if self.override_root:
-            add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
-
-    def get_message_from_queue(self, index=-1) -> ForwardMsg:
-        """Get a ForwardMsg proto from the queue, by index."""
-        return self.forward_msg_queue._queue[index]
-
-    def get_delta_from_queue(self, index=-1) -> Delta:
-        """Get a Delta proto from the queue, by index."""
-        deltas = self.get_all_deltas_from_queue()
-        return deltas[index]
-
-    def get_all_deltas_from_queue(self) -> List[Delta]:
-        """Return all the delta messages in our ForwardMsgQueue"""
-        return [
-            msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
-        ]
-
-    def clear_queue(self) -> None:
-        self.forward_msg_queue.clear()
 
 
 def normalize_md(txt: str) -> str:

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,12 +15,13 @@
 """Session state unit tests."""
 import unittest
 from copy import deepcopy
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from typing import Any, List, Tuple
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from hypothesis import given, strategies as hst
+from hypothesis import given
+from hypothesis import strategies as hst
 
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
@@ -30,14 +31,14 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.session_state import (
-    WStates,
-    WidgetMetadata,
+    GENERATED_WIDGET_KEY_PREFIX,
     Serialized,
     Value,
-    GENERATED_WIDGET_KEY_PREFIX,
+    WidgetMetadata,
+    WStates,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 identity = lambda x: x
 
@@ -209,8 +210,8 @@ class WStateTests(unittest.TestCase):
         metadata.callback.assert_called_once_with(1, y=2)
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
-class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+class SessionStateUpdateTest(DeltaGeneratorTestCase):
     def test_widget_creation_updates_state(self):
         state = st.session_state
         assert "c" not in state
@@ -228,8 +229,8 @@ class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):
         assert c == True
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
-class SessionStateTest(testutil.DeltaGeneratorTestCase):
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+class SessionStateTest(DeltaGeneratorTestCase):
     def test_widget_presence(self):
         state = st.session_state
 
@@ -294,8 +295,8 @@ def check_roundtrip(widget_id: str, value: Any) -> None:
     assert deserializer(serializer(value), "") == value
 
 
-@patch("streamlit._is_running_with_streamlit", new=True)
-class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
+@patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+class SessionStateSerdeTest(DeltaGeneratorTestCase):
     def test_checkbox_serde(self):
         cb = st.checkbox("cb", key="cb")
         check_roundtrip("cb", cb)
@@ -685,7 +686,7 @@ def test_map_set_del_3837_regression():
     assert len(m) == l1 - 1
 
 
-class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
+class SessionStateStatProviderTests(DeltaGeneratorTestCase):
     def test_session_state_stats(self):
         # TODO: document the values used here. They're somewhat arbitrary -
         #  we don't care about actual byte values, but rather that our

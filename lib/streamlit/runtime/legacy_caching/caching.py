@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,32 +27,34 @@ import time
 from collections import namedtuple
 from dataclasses import dataclass
 from typing import (
-    Dict,
-    Optional,
-    List,
-    Iterator,
     Any,
     Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
     TypeVar,
-    overload,
     Union,
     cast,
+    overload,
 )
 
 from cachetools import TTLCache
 from pympler.asizeof import asizeof
 
 import streamlit as st
-from streamlit import config
-from streamlit import file_util
-from streamlit import util
+from streamlit import config, file_util, util
+from streamlit.elements.spinner import spinner
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.legacy_caching.hashing import (
+    HashFuncsDict,
+    HashReason,
+    update_hash,
+)
 from streamlit.runtime.metrics_util import gather_metrics
-
-from .hashing import update_hash, HashFuncsDict, HashReason
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
 
@@ -617,7 +619,7 @@ def cache(
             return return_value
 
         if show_spinner:
-            with st.spinner(message):
+            with spinner(message):
                 return get_or_create_cached_value()
         else:
             return get_or_create_cached_value()

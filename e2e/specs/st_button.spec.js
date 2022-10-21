@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,22 +21,36 @@ describe("st.button", () => {
     cy.prepForElementSnapshots();
   });
 
-  it("shows widget correctly", () => {
-    cy.get(".stButton").should("have.length", 2);
+  it("shows default button correctly", () => {
+    cy.get(".stButton").should("have.length", 4);
 
     cy.get(".stButton")
       .first()
       .matchThemedSnapshots("button-widget");
   });
 
-  it("shows disabled widget correctly", () => {
-    cy.get(".stButton").should("have.length", 2);
+  it("shows disabled default button correctly", () => {
+    cy.get(".stButton").should("have.length", 4);
 
     cy.getIndexed(".stButton", 1).matchThemedSnapshots("disabled-button");
   });
 
+  it("shows primary button correctly", () => {
+    cy.get(".stButton").should("have.length", 4);
+
+    cy.getIndexed(".stButton", 2).matchThemedSnapshots("primary-button");
+  });
+
+  it("shows disabled primary button correctly", () => {
+    cy.get(".stButton").should("have.length", 4);
+
+    cy.get(".stButton")
+      .last()
+      .matchThemedSnapshots("disabled-primary-button");
+  });
+
   it("has correct default values", () => {
-    cy.get(".stButton button").should("have.text", "button 1" + "button 2");
+    cy.get(".stButton button").should("have.text", "button 1" + "button 2" + "button 3" + "button 4");
   });
 
   it("sets value correctly when user clicks", () => {

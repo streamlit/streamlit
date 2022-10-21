@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { matchers } from "@emotion/jest"
-import {
-  ExpandMore,
-  ExpandLess,
-  Description,
-} from "@emotion-icons/material-outlined"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 import React from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
@@ -36,6 +32,7 @@ import {
   StyledSidebarNavItems,
   StyledSidebarNavSeparatorContainer,
   StyledSidebarNavLink,
+  StyledSidebarLinkText,
 } from "./styled-components"
 
 expect.extend(matchers)
@@ -92,7 +89,9 @@ describe("SidebarNav", () => {
   it("replaces underscores with spaces in pageName", () => {
     const wrapper = shallow(<SidebarNav {...getProps()} />)
 
-    const links = wrapper.find(StyledSidebarNavLink).find("span")
+    const links = wrapper
+      .find(StyledSidebarNavLink)
+      .find(StyledSidebarLinkText)
 
     expect(links.at(0).text()).toBe("streamlit app")
     expect(links.at(1).text()).toBe("my other page")
@@ -221,10 +220,7 @@ describe("SidebarNav", () => {
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
     expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(Icon)
-        .exists()
+      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).exists()
     ).toBe(false)
   })
 
@@ -235,10 +231,7 @@ describe("SidebarNav", () => {
     )
 
     expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(Icon)
-        .props()
+      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
     ).toHaveProperty("content", ExpandMore)
   })
 
@@ -255,10 +248,7 @@ describe("SidebarNav", () => {
       mockClickEvent
     )
     expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(Icon)
-        .props()
+      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
     ).toHaveProperty("content", ExpandLess)
   })
 
@@ -274,10 +264,7 @@ describe("SidebarNav", () => {
       mockClickEvent
     )
     expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(Icon)
-        .props()
+      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
     ).toHaveProperty("content", ExpandLess)
   })
 
@@ -421,20 +408,7 @@ describe("SidebarNav", () => {
     const wrapper = shallow(<SidebarNav {...props} />)
 
     expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(0)
-        .find("Icon")
-        .prop("content")
-    ).toBe(Description)
-
-    expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(1)
-        .find("EmojiIcon")
-        .dive()
-        .text()
+      wrapper.find(StyledSidebarNavLink).at(1).find("EmojiIcon").dive().text()
     ).toBe("🦈")
   })
 
@@ -443,17 +417,23 @@ describe("SidebarNav", () => {
 
     const wrapper = shallow(<SidebarNav {...props} />)
 
-    expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(0)
-        .prop("isActive")
-    ).toBe(false)
-    expect(
-      wrapper
-        .find(StyledSidebarNavLink)
-        .at(1)
-        .prop("isActive")
-    ).toBe(true)
+    expect(wrapper.find(StyledSidebarNavLink).at(0).prop("isActive")).toBe(
+      false
+    )
+    expect(wrapper.find(StyledSidebarNavLink).at(1).prop("isActive")).toBe(
+      true
+    )
+  })
+
+  it("changes the text color when the page is active", () => {
+    const props = getProps({ currentPageScriptHash: "other_page_hash" })
+
+    const wrapper = mount(<SidebarNav {...props} />)
+    const activeLink = wrapper.find(StyledSidebarNavLink).at(1)
+
+    expect(activeLink.find(StyledSidebarLinkText)).toHaveStyleRule(
+      "color",
+      "#31333F"
+    )
   })
 })

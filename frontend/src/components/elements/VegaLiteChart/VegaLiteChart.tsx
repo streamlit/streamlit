@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,6 +29,7 @@ import { ensureError } from "src/lib/ErrorHandling"
 import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
+import { expressionInterpreter } from "vega-interpreter"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -284,7 +284,13 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
     const el = this.props.element
     const spec = this.generateSpec()
-    const { vgSpec, view, finalize } = await embed(this.element, spec)
+    const options = {
+      // Adds interpreter support for Vega expressions that is compliant with CSP
+      ast: true,
+      expr: expressionInterpreter,
+    }
+
+    const { vgSpec, view, finalize } = await embed(this.element, spec, options)
 
     this.vegaView = view
     this.vegaFinalizer = finalize

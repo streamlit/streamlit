@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,10 +18,17 @@ from unittest.mock import patch
 
 import pandas as pd
 import plotly.graph_objs as go
+from pandas.api.types import infer_dtype
 
 from streamlit import type_util
-from streamlit.type_util import data_frame_to_bytes, is_bytes_like, to_bytes
-from streamlit.errors import NumpyDtypeException
+from streamlit.type_util import (
+    data_frame_to_bytes,
+    fix_arrow_incompatible_column_types,
+    is_bytes_like,
+    is_snowpark_dataframe,
+    to_bytes,
+)
+from tests.streamlit.snowpark_mocks import DataFrame, Row
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -91,9 +98,156 @@ class TypeUtilTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             to_bytes(string_obj)
 
-    def test_data_frame_to_bytes_numpy_dtype_exception(self):
+    def test_data_frame_with_dtype_values_to_bytes(self):
         df1 = pd.DataFrame(["foo", "bar"])
         df2 = pd.DataFrame(df1.dtypes)
 
-        with self.assertRaises(NumpyDtypeException):
+        try:
             data_frame_to_bytes(df2)
+        except Exception as ex:
+            self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
+
+    def test_fix_complex_column_type(self):
+        """Test that `fix_unsupported_column_types` correctly fixes
+        columns containing complex types by converting them to string.
+        """
+        df = pd.DataFrame(
+            {
+                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
+                "integer": [1, 2, 3],
+                "string": ["foo", "bar", None],
+            }
+        )
+
+        self.assertEqual(infer_dtype(df["complex"]), "complex")
+
+        fixed_df = fix_arrow_incompatible_column_types(df)
+        self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
+
+    def test_fix_mixed_column_types(self):
+        """Test that `fix_arrow_incompatible_column_types` correctly fixes
+        columns containing mixed types by converting them to string.
+        """
+        df = pd.DataFrame(
+            {
+                "mixed-integer": [1, "foo", 3],
+                "mixed": [1.0, "foo", 3],
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        fixed_df = fix_arrow_incompatible_column_types(df)
+
+        self.assertEqual(infer_dtype(fixed_df["mixed-integer"]), "string")
+        self.assertEqual(infer_dtype(fixed_df["mixed"]), "string")
+        self.assertEqual(infer_dtype(fixed_df["integer"]), "integer")
+        self.assertEqual(infer_dtype(fixed_df["float"]), "floating")
+        self.assertEqual(infer_dtype(fixed_df["string"]), "string")
+        self.assertEqual(infer_dtype(fixed_df.index), "string")
+
+        self.assertEqual(
+            str(fixed_df.dtypes),
+            """mixed-integer     object
+mixed             object
+integer            int64
+float            float64
+string            object
+dtype: object""",
+        )
+
+    def test_data_frame_with_unsupported_column_types(self):
+        """Test that `data_frame_to_bytes` correctly handles dataframes
+        with unsupported column types by converting those types to string.
+        """
+        df = pd.DataFrame(
+            {
+                "mixed-integer": [1, "foo", 3],
+                "mixed": [1.0, "foo", 3],
+                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        try:
+            data_frame_to_bytes(df)
+        except Exception as ex:
+            self.fail(
+                "No exception should have been thrown here. "
+                f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
+            )
+
+    def test_is_snowpark_dataframe(self):
+        df = pd.DataFrame(
+            {
+                "mixed-integer": [1, "foo", 3],
+                "mixed": [1.0, "foo", 3],
+                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        # pandas dataframe should not be SnowparkDataFrame
+        self.assertFalse(is_snowpark_dataframe(df))
+
+        # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_dataframe should return true
+        self.assertTrue(is_snowpark_dataframe(DataFrame()))
+
+        # any object should not be snowpark dataframe
+        self.assertFalse(is_snowpark_dataframe("any text"))
+        self.assertFalse(is_snowpark_dataframe(123))
+
+        class DummyClass:
+            """DummyClass for testing purposes"""
+
+        self.assertFalse(is_snowpark_dataframe(DummyClass()))
+
+        # empty list should not be snowpark dataframe
+        self.assertFalse(is_snowpark_dataframe(list()))
+
+        # list with items should not be snowpark dataframe
+        self.assertFalse(
+            is_snowpark_dataframe(
+                [
+                    "any text",
+                ]
+            )
+        )
+        self.assertFalse(
+            is_snowpark_dataframe(
+                [
+                    123,
+                ]
+            )
+        )
+        self.assertFalse(
+            is_snowpark_dataframe(
+                [
+                    DummyClass(),
+                ]
+            )
+        )
+        self.assertFalse(
+            is_snowpark_dataframe(
+                [
+                    df,
+                ]
+            )
+        )
+
+        # list with SnowparkRow should be SnowparkDataframe
+        self.assertTrue(
+            is_snowpark_dataframe(
+                [
+                    Row(),
+                ]
+            )
+        )

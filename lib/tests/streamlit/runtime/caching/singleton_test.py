@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,10 +21,7 @@ from unittest.mock import patch
 from pympler.asizeof import asizeof
 
 import streamlit as st
-from streamlit.runtime.caching import (
-    singleton_decorator,
-    get_singleton_stats_provider,
-)
+from streamlit.runtime.caching import get_singleton_stats_provider, singleton_decorator
 from streamlit.runtime.caching.cache_utils import CachedResult
 from streamlit.runtime.stats import CacheStat
 

@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,11 +34,13 @@ function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
 
+  const kind = element.type === "primary" ? Kind.PRIMARY : Kind.SECONDARY
+
   return (
     <div className="row-widget stButton" style={style}>
       <ButtonTooltip help={element.help}>
         <UIButton
-          kind={Kind.PRIMARY}
+          kind={kind}
           size={Size.SMALL}
           disabled={disabled}
           onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}

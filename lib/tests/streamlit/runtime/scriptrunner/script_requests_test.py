@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,12 +15,12 @@
 import unittest
 from typing import Optional
 
-from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner.script_requests import (
-    ScriptRequests,
-    ScriptRequestType,
     RerunData,
     ScriptRequest,
+    ScriptRequests,
+    ScriptRequestType,
 )
 
 

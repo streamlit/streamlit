@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import React from "react"
 
 import { shallow } from "src/lib/test_util"
@@ -69,11 +69,11 @@ describe("ToolbarActions", () => {
   const getProps = (
     extended?: Partial<ToolbarActionsProps>
   ): ToolbarActionsProps => ({
-    s4aToolbarItems: [
+    hostToolbarItems: [
       { key: "favorite", icon: "star.svg" },
       { key: "share", label: "Share" },
     ],
-    sendS4AMessage: jest.fn(),
+    sendMessageToHost: jest.fn(),
     ...extended,
   })
 
@@ -82,24 +82,18 @@ describe("ToolbarActions", () => {
     expect(wrapper).toMatchSnapshot()
   })
 
-  it("calls sendS4AMessage with correct args when clicked", () => {
+  it("calls sendMessageToHost with correct args when clicked", () => {
     const props = getProps()
     const wrapper = shallow(<ToolbarActions {...props} />)
 
-    wrapper
-      .find(ActionButton)
-      .at(0)
-      .simulate("click")
-    expect(props.sendS4AMessage).toHaveBeenLastCalledWith({
+    wrapper.find(ActionButton).at(0).simulate("click")
+    expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "favorite",
     })
 
-    wrapper
-      .find(ActionButton)
-      .at(1)
-      .simulate("click")
-    expect(props.sendS4AMessage).toHaveBeenLastCalledWith({
+    wrapper.find(ActionButton).at(1).simulate("click")
+    expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "share",
     })

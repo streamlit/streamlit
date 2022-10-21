@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
 import threading
-from typing import Dict, Optional, List, Callable, Set
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Set
+
 from typing_extensions import Final, TypeAlias
 
+from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.proto.PageProfile_pb2 import Command
 
 LOGGER: Final = get_logger(__name__)
 
@@ -148,7 +150,7 @@ def get_script_run_ctx() -> Optional[ScriptRunContext]:
     ctx: Optional[ScriptRunContext] = getattr(
         thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None
     )
-    if ctx is None and streamlit._is_running_with_streamlit:
+    if ctx is None and runtime.exists():
         # Only warn about a missing ScriptRunContext if we were started
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,25 +16,24 @@
 
 import threading
 import types
-from typing import Optional, Any, Dict, List, TypeVar, Callable, overload, cast
+from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, cast, overload
 
 from pympler import asizeof
 
 import streamlit as st
 from streamlit.logger import get_logger
-from streamlit.runtime.stats import CacheStatsProvider, CacheStat
-from streamlit.runtime.metrics_util import gather_metrics
-
-from .cache_errors import CacheKeyNotFoundError, CacheType
-from .cache_utils import (
+from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError, CacheType
+from streamlit.runtime.caching.cache_utils import (
     Cache,
-    CacheMessagesCallStack,
+    CachedFunction,
     CachedResult,
+    CacheMessagesCallStack,
+    CacheWarningCallStack,
     MsgData,
     create_cache_wrapper,
-    CacheWarningCallStack,
-    CachedFunction,
 )
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
 
@@ -141,7 +140,7 @@ class SingletonAPI:
     def __call__(
         self,
         *,
-        show_spinner: bool = True,
+        show_spinner: Union[bool, str] = True,
         suppress_st_warning=False,
     ) -> Callable[[F], F]:
         ...
@@ -154,7 +153,7 @@ class SingletonAPI:
         self,
         func: Optional[F] = None,
         *,
-        show_spinner: bool = True,
+        show_spinner: Union[bool, str] = True,
         suppress_st_warning=False,
     ):
         """Function decorator to store singleton objects.
@@ -174,9 +173,10 @@ class SingletonAPI:
             The function that creates the singleton. Streamlit hashes the
             function's source code.
 
-        show_spinner : boolean
+        show_spinner : boolean or string
             Enable the spinner. Default is True to show a spinner when there is
-            a "cache miss" and the singleton is being created.
+            a "cache miss" and the singleton is being created. If string,
+            value of show_spinner param will be used for spinner text.
 
         suppress_st_warning : boolean
             Suppress warnings about calling Streamlit functions from within

@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,17 +16,19 @@
 
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
-import { transparentize } from "color2k"
+import { darken, transparentize } from "color2k"
 import { Theme } from "src/theme"
 
 export enum Kind {
   PRIMARY = "primary",
   SECONDARY = "secondary",
+  TERTIARY = "tertiary",
   LINK = "link",
   ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
   MINIMAL = "minimal",
-  FORM_SUBMIT = "formSubmit",
+  PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
+  SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
   HEADER_BUTTON = "header",
 }
 
@@ -93,9 +94,30 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
   })
 )
 
-export const StyledPrimaryButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ theme }) => ({
+export const StyledPrimaryButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
+  backgroundColor: theme.colors.primary,
+  color: theme.colors.white,
+  border: `1px solid ${theme.colors.primary}`,
+  "&:hover": {
+    backgroundColor: darken(theme.colors.primary, 0.05),
+  },
+  "&:active": {
+    backgroundColor: "transparent",
+    color: theme.colors.primary,
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    borderColor: theme.colors.fadedText10,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
+}))
+
+export const StyledSecondaryButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   border: `1px solid ${theme.colors.fadedText10}`,
   "&:hover": {
@@ -112,16 +134,16 @@ export const StyledPrimaryButton = styled(StyledBaseButton)<
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText40,
+    borderColor: theme.colors.fadedText10,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
   },
 }))
 
-export const StyledSecondaryButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ theme }) => ({
+export const StyledTertiaryButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: `1px solid ${theme.colors.transparent}`,
   "&:hover": {
@@ -166,9 +188,9 @@ export const StyledLinkButton = styled(StyledBaseButton)<RequiredButtonProps>(
   })
 )
 
-export const StyledMinimalButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ theme }) => ({
+export const StyledMinimalButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: "none",
   boxShadow: "none",
@@ -178,9 +200,12 @@ export const StyledMinimalButton = styled(StyledBaseButton)<
   },
 }))
 
-export const StyledFormSubmitButton = styled(StyledPrimaryButton)<
-  RequiredButtonProps
->()
+export const StyledPrimaryFormSubmitButton =
+  styled(StyledPrimaryButton)<RequiredButtonProps>()
+
+export const StyledSecondaryFormSubmitButton = styled(
+  StyledSecondaryButton
+)<RequiredButtonProps>()
 
 export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   ({ size, theme }) => {
@@ -216,9 +241,9 @@ export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   }
 )
 
-export const StyledHeaderButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ theme }) => {
+export const StyledHeaderButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => {
   return {
     backgroundColor: theme.colors.transparent,
     border: "none",
@@ -245,9 +270,9 @@ export const StyledHeaderButton = styled(StyledBaseButton)<
   }
 })
 
-export const StyledBorderlessIconButton = styled(StyledBaseButton)<
-  RequiredButtonProps
->(({ size, theme }) => {
+export const StyledBorderlessIconButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ size, theme }) => {
   const iconPadding: Record<Size, string> = {
     [Size.XSMALL]: theme.spacing.threeXS,
     [Size.SMALL]: theme.spacing.twoXS,

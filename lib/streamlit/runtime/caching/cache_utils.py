@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,33 +24,37 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Dict,
-    List,
     Iterator,
+    List,
+    Optional,
     Set,
     Tuple,
-    Optional,
-    Any,
     Union,
 )
 
 from google.protobuf.message import Message
 
 import streamlit as st
-from streamlit import util
-from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
+from streamlit import type_util, util
 from streamlit.elements import NONWIDGET_ELEMENTS
+from streamlit.elements.spinner import spinner
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
-from .cache_errors import (
+from streamlit.runtime.caching.cache_errors import (
+    CachedStFunctionWarning,
+    CacheKeyNotFoundError,
     CacheReplayClosureError,
     CacheType,
-    CachedStFunctionWarning,
     UnhashableParamError,
     UnhashableTypeError,
+    UnserializableReturnValueError,
+    get_cached_func_name_md,
 )
-from .hashing import update_hash
+from streamlit.runtime.caching.hashing import update_hash
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -128,7 +132,10 @@ class CachedFunction:
     """
 
     def __init__(
-        self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
+        self,
+        func: types.FunctionType,
+        show_spinner: Union[bool, str],
+        suppress_st_warning: bool,
     ):
         self.func = func
         self.show_spinner = show_spinner
@@ -211,10 +218,13 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
         name = func.__qualname__
 
-        if len(args) == 0 and len(kwargs) == 0:
-            message = f"Running `{name}()`."
+        if isinstance(cached_func.show_spinner, bool):
+            if len(args) == 0 and len(kwargs) == 0:
+                message = f"Running `{name}()`."
+            else:
+                message = f"Running `{name}(...)`."
         else:
-            message = f"Running `{name}(...)`."
+            message = cached_func.show_spinner
 
         def get_or_create_cached_value():
             # Generate the key for the cached value. This is based on the
@@ -242,12 +252,32 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                         return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
-                cache.write_result(value_key, return_value, messages)
+                try:
+                    cache.write_result(value_key, return_value, messages)
+                except TypeError:
+                    if type_util.is_type(
+                        return_value, "snowflake.snowpark.dataframe.DataFrame"
+                    ):
+
+                        class UnevaluatedDataFrameError(StreamlitAPIException):
+                            def __init__(self):
+                                super().__init__(
+                                    self,
+                                    f"""
+                                    The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated 
+                                    dataframe of type `snowflake.snowpark.DataFrame`. Please call `collect()` or `to_pandas()` on the 
+                                    dataframe before returning it, so `st.experimental_memo` can serialize and cache it.""",
+                                )
+
+                        raise UnevaluatedDataFrameError
+                    raise UnserializableReturnValueError(
+                        return_value=return_value, func=cached_func.func
+                    )
 
             return return_value
 
-        if cached_func.show_spinner:
-            with st.spinner(message):
+        if cached_func.show_spinner or isinstance(cached_func.show_spinner, str):
+            with spinner(message):
                 return get_or_create_cached_value()
         else:
             return get_or_create_cached_value()

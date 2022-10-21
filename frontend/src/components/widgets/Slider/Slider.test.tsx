@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -98,9 +97,11 @@ describe("Slider widget", () => {
     jest.runAllTimers()
     wrapper.update()
 
-    expect(
-      props.widgetMgr.setDoubleArrayValue
-    ).toHaveBeenCalledWith(props.element, [5], { fromUi: false })
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [5],
+      { fromUi: false }
+    )
 
     wrapper.unmount()
   })
@@ -157,9 +158,11 @@ describe("Slider widget", () => {
       jest.runAllTimers()
       wrapper.update()
 
-      expect(
-        props.widgetMgr.setDoubleArrayValue
-      ).toHaveBeenCalledWith(props.element, [10], { fromUi: true })
+      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+        props.element,
+        [10],
+        { fromUi: true }
+      )
 
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
     })
@@ -180,9 +183,11 @@ describe("Slider widget", () => {
       jest.runAllTimers()
       wrapper.update()
 
-      expect(
-        props.widgetMgr.setDoubleArrayValue
-      ).toHaveBeenLastCalledWith(props.element, [10], { fromUi: true })
+      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
+        props.element,
+        [10],
+        { fromUi: true }
+      )
 
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
 

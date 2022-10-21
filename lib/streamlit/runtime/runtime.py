@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,30 +18,36 @@ import time
 import traceback
 from asyncio import Future
 from enum import Enum
-from typing import Optional, Dict, NamedTuple, Tuple, Awaitable
+from typing import Awaitable, Dict, NamedTuple, Optional, Tuple
 
 from typing_extensions import Final, Protocol
 
-import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.runtime_util import is_cacheable_msg
-from streamlit.watcher import LocalSourcesWatcher
-from .app_session import AppSession
-from .caching import get_memo_stats_provider, get_singleton_stats_provider
-from .forward_msg_cache import (
-    ForwardMsgCache,
-    populate_hash_if_needed,
-    create_reference_msg,
+from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.caching import (
+    get_memo_stats_provider,
+    get_singleton_stats_provider,
 )
-from .media_file_manager import media_file_manager
-from .legacy_caching.caching import _mem_caches
-from .session_data import SessionData
-from .state import SessionStateStatProvider, SCRIPT_RUN_WITHOUT_ERRORS_KEY
-from .stats import StatsManager
-from .uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.forward_msg_cache import (
+    ForwardMsgCache,
+    create_reference_msg,
+    populate_hash_if_needed,
+)
+from streamlit.runtime.legacy_caching.caching import _mem_caches
+from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.media_file_storage import MediaFileStorage
+from streamlit.runtime.runtime_util import is_cacheable_msg
+from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.state import (
+    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    SessionStateStatProvider,
+)
+from streamlit.runtime.stats import StatsManager
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.watcher import LocalSourcesWatcher
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
@@ -77,6 +83,9 @@ class RuntimeConfig(NamedTuple):
     # The (optional) command line that Streamlit was started with
     # (e.g. "streamlit run app.py")
     command_line: Optional[str]
+
+    # The storage backend for Streamlit's MediaFileManager.
+    media_file_storage: MediaFileStorage
 
 
 class SessionInfo:
@@ -136,10 +145,32 @@ class AsyncObjects(NamedTuple):
 
 
 class Runtime:
-    def __init__(self, config: RuntimeConfig):
-        """Create a StreamlitRuntime. It won't be started yet.
+    _instance: Optional["Runtime"] = None
 
-        StreamlitRuntime is *not* thread-safe. Its public methods are generally
+    @classmethod
+    def instance(cls) -> "Runtime":
+        """Return the singleton Runtime instance. Raise an Error if the
+        Runtime hasn't been created yet.
+        """
+        if cls._instance is None:
+            raise RuntimeError("Runtime hasn't been created!")
+        return cls._instance
+
+    @classmethod
+    def exists(cls) -> bool:
+        """True if the singleton Runtime instance has been created.
+
+        When a Streamlit app is running in "raw mode" - that is, when the
+        app is run via `python app.py` instead of `streamlit run app.py` -
+        the Runtime will not exist, and various Streamlit functions need
+        to adapt.
+        """
+        return cls._instance is not None
+
+    def __init__(self, config: RuntimeConfig):
+        """Create a Runtime instance. It won't be started yet.
+
+        Runtime is *not* thread-safe. Its public methods are generally
         safe to call only on the same thread that its event loop runs on.
 
         Parameters
@@ -147,6 +178,10 @@ class Runtime:
         config
             Config options.
         """
+        if Runtime._instance is not None:
+            raise RuntimeError("Runtime instance already exists!")
+        Runtime._instance = self
+
         # Will be created when we start.
         self._async_objs: Optional[AsyncObjects] = None
 
@@ -166,13 +201,13 @@ class Runtime:
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
+        self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
 
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_memo_stats_provider())
         self._stats_mgr.register_provider(get_singleton_stats_provider())
         self._stats_mgr.register_provider(_mem_caches)
         self._stats_mgr.register_provider(self._message_cache)
-        self._stats_mgr.register_provider(media_file_manager)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
         self._stats_mgr.register_provider(
             SessionStateStatProvider(self._session_info_by_id)
@@ -191,6 +226,10 @@ class Runtime:
         return self._uploaded_file_mgr
 
     @property
+    def media_file_mgr(self) -> MediaFileManager:
+        return self._media_file_mgr
+
+    @property
     def stats_mgr(self) -> StatsManager:
         return self._stats_mgr
 
@@ -198,6 +237,19 @@ class Runtime:
     def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Runtime's run loop has exited."""
         return self._get_async_objs().stopped
+
+    def get_client(self, session_id: str) -> Optional[SessionClient]:
+        """Get the SessionClient for the given session_id, or None
+        if no such session exists.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
+        """
+        session_info = self._get_session_info(session_id)
+        if session_info is None:
+            return None
+        return session_info.client
 
     def _on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
@@ -234,7 +286,6 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        streamlit._is_running_with_streamlit = True
 
         # Create our AsyncObjects. We need to have a running eventloop to
         # instantiate our various synchronization primitives.
@@ -325,7 +376,6 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         session = AppSession(
-            event_loop=async_objs.eventloop,
             session_data=SessionData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
@@ -455,7 +505,6 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session = AppSession(
-            event_loop=self._get_async_objs().eventloop,
             session_data=SessionData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,

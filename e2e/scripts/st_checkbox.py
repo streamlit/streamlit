@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 i1 = st.checkbox("checkbox 1", True)
 st.write("value 1:", i1)
@@ -23,7 +24,7 @@ st.write("value 2:", i2)
 i3 = st.checkbox("checkbox 3")
 st.write("value 3:", i3)
 
-if st._is_running_with_streamlit:
+if runtime.exists():
 
     def on_change():
         st.session_state.checkbox_clicked = True

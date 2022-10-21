@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,17 +14,19 @@
 
 """version unit test."""
 
-from unittest import mock
 import unittest
+from unittest import mock
 
 import requests_mock
 from packaging.version import Version as PkgVersion
 
 from streamlit import version
-from streamlit.version import PYPI_STREAMLIT_URL
-from streamlit.version import _get_installed_streamlit_version
-from streamlit.version import _get_latest_streamlit_version
-from streamlit.version import should_show_new_version_notice
+from streamlit.version import (
+    PYPI_STREAMLIT_URL,
+    _get_installed_streamlit_version,
+    _get_latest_streamlit_version,
+    should_show_new_version_notice,
+)
 
 
 class VersionTest(unittest.TestCase):

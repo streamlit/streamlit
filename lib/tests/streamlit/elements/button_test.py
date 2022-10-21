@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,11 +14,11 @@
 
 """button unit test."""
 
-from tests import testutil
 import streamlit as st
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class ButtonTest(testutil.DeltaGeneratorTestCase):
+class ButtonTest(DeltaGeneratorTestCase):
     """Test ability to marshall button protos."""
 
     def test_button(self):
@@ -29,8 +29,16 @@ class ButtonTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, False)
         self.assertEqual(c.form_id, "")
+        self.assertEqual(c.type, "secondary")
         self.assertEqual(c.is_form_submitter, False)
         self.assertEqual(c.disabled, False)
+
+    def test_type(self):
+        """Test that it can be called with type param."""
+        st.button("the label", type="primary")
+
+        c = self.get_delta_from_queue().new_element.button
+        self.assertEqual(c.type, "primary")
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""

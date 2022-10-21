@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,18 +18,15 @@ import copy
 import os
 import secrets
 import threading
-import toml
 from collections import OrderedDict
-from typing import Any, Callable, cast, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
+import toml
 from blinker import Signal
 
-from streamlit import config_util
-from streamlit import development
-from streamlit import env_util
-from streamlit import file_util
-from streamlit import util
+from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
+from streamlit.errors import StreamlitAPIException
 
 # Config System Global State #
 
@@ -68,6 +65,9 @@ def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None
 
     Run `streamlit config show` in the terminal to see all available options.
 
+    This is an internal API. The public `st.set_option` API is implemented
+    in `set_user_option`.
+
     Parameters
     ----------
     key : str
@@ -85,6 +85,45 @@ def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None
         # Ensure that our config files have been parsed.
         get_config_options()
         _set_option(key, value, where_defined)
+
+
+def set_user_option(key: str, value: Any) -> None:
+    """Set config option.
+
+    Currently, only the following config options can be set within the script itself:
+        * client.caching
+        * client.displayEnabled
+        * deprecation.*
+
+    Calling with any other options will raise StreamlitAPIException.
+
+    Run `streamlit config show` in the terminal to see all available options.
+
+    Parameters
+    ----------
+    key : str
+        The config option key of the form "section.optionName". To see all
+        available options, run `streamlit config show` on a terminal.
+
+    value
+        The new value to assign to this config option.
+
+    """
+    try:
+        opt = _config_options_template[key]
+    except KeyError as ke:
+        raise StreamlitAPIException(
+            "Unrecognized config option: {key}".format(key=key)
+        ) from ke
+    if opt.scriptable:
+        set_option(key, value)
+        return
+
+    raise StreamlitAPIException(
+        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
+            key=key
+        )
+    )
 
 
 def get_option(key: str) -> Any:

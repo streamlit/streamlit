@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,29 +26,23 @@ import tempfile
 import threading
 import unittest.mock
 import weakref
-from typing import Any, Pattern, Optional, Dict, List
+from enum import Enum
+from typing import Any, Dict, List, Optional, Pattern
 
-from streamlit import type_util
-from streamlit import util
+from streamlit import type_util, util
 from streamlit.logger import get_logger
+from streamlit.runtime.caching.cache_errors import CacheType, UnhashableTypeError
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-from .cache_errors import (
-    CacheType,
-    UnhashableTypeError,
-)
 
 _LOGGER = get_logger(__name__)
-
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
 _PANDAS_SAMPLE_SIZE = 10000
 
-
 # Similar to dataframes, we also sample large numpy arrays.
 _NP_SIZE_LARGE = 1000000
 _NP_SAMPLE_SIZE = 100000
-
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
@@ -265,6 +259,9 @@ class _CacheFuncHasher:
         elif dataclasses.is_dataclass(obj):
             return self.to_bytes(dataclasses.asdict(obj))
 
+        elif isinstance(obj, Enum):
+            return str(obj).encode()
+
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame") or type_util.is_type(
             obj, "pandas.core.series.Series"
         ):
@@ -291,6 +288,13 @@ class _CacheFuncHasher:
 
             self.update(h, obj.tobytes())
             return h.digest()
+        elif type_util.is_type(obj, "PIL.Image.Image"):
+            import numpy as np
+
+            # we don't just hash the results of obj.tobytes() because we want to use
+            # the sampling logic for numpy data
+            np_array = np.frombuffer(obj.tobytes(), dtype="uint8")
+            return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):
             return bytes(obj.__name__.encode())

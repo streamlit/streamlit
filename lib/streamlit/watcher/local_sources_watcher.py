@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,21 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import os
 import sys
-import collections
 import types
 from typing import Callable, Dict, List, Optional, Set
 
-from streamlit import config
-from streamlit import file_util
+from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
-
 from streamlit.logger import get_logger
 from streamlit.source_util import get_pages
 from streamlit.watcher.path_watcher import (
-    get_default_path_watcher_class,
     NoOpPathWatcher,
+    get_default_path_watcher_class,
 )
 
 LOGGER = get_logger(__name__)

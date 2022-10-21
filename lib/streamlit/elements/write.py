@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,16 +15,17 @@
 import inspect
 import json as json
 import types
-from typing import cast, Any, List, Tuple, Type, TYPE_CHECKING
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, List, Tuple, Type, cast
 
 import numpy as np
+from typing_extensions import Final
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import SessionStateProxy
 from streamlit.user_info import UserInfoProxy
-from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -39,10 +40,12 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
     types.ModuleType,
 )
 
+_LOGGER = get_logger(__name__)
+
 
 class WriteMixin:
     @gather_metrics
-    def write(self, *args: Any, **kwargs: Any) -> None:
+    def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
         """Write arguments to the app.
 
         This is the Swiss Army knife of Streamlit commands: it does different
@@ -90,16 +93,6 @@ class WriteMixin:
             security. For more information, see:
 
             https://github.com/streamlit/streamlit/issues/152
-
-            **Also note that `unsafe_allow_html` is a temporary measure and may be
-            removed from Streamlit at any time.**
-
-            If you decide to turn on HTML anyway, we ask you to please tell us your
-            exact use case here:
-            https://discuss.streamlit.io/t/96 .
-
-            This will help us come up with safe APIs that allow you to do what you
-            want.
 
         Example
         -------
@@ -155,8 +148,15 @@ class WriteMixin:
             height: 300px
 
         """
+        if kwargs:
+            _LOGGER.warning(
+                'Invalid arguments were passed to "st.write" function. Support for '
+                "passing such unknown keywords arguments will be dropped in future. "
+                "Invalid arguments were: %s",
+                kwargs,
+            )
+
         string_buffer: List[str] = []
-        unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
         # BUT: 1) such cases are rare, 2) this rule is easy to understand,
@@ -181,6 +181,9 @@ class WriteMixin:
             # Order matters!
             if isinstance(arg, str):
                 string_buffer.append(arg)
+            elif type_util.is_snowpark_dataframe(arg):
+                flush_buffer()
+                self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):
                 flush_buffer()
                 if len(np.shape(arg)) > 2:

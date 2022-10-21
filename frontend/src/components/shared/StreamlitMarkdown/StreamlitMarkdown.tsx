@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -47,6 +46,7 @@ import {
   StyledLinkIconContainer,
   StyledLinkIcon,
   StyledHeaderContent,
+  StyledHeaderContainer,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -113,10 +113,8 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
-  const {
-    addScriptFinishedHandler,
-    removeScriptFinishedHandler,
-  } = React.useContext(AppContext)
+  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
+    React.useContext(AppContext)
   if (isSidebar) {
     return React.createElement(tag, tagProps, children)
   }
@@ -177,9 +175,11 @@ export const CustomHeading: FunctionComponent<HeadingProps> = ({
 }) => {
   const anchor = rest["data-anchor"]
   return (
-    <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
-      {children}
-    </HeadingWithAnchor>
+    <StyledHeaderContainer>
+      <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
+        {children}
+      </HeadingWithAnchor>
+    </StyledHeaderContainer>
   )
 }
 export interface RenderedMarkdownProps {
@@ -331,22 +331,24 @@ export function Heading(props: HeadingProtoProps): ReactElement {
 
   return (
     <div className="stMarkdown" style={{ width }}>
-      <HeadingWithAnchor tag={tag} anchor={anchor}>
-        <RenderedMarkdown
-          source={makeMarkdownHeading(tag, heading)}
-          allowHTML={false}
-          // this is purely an inline string
-          overrideComponents={{
-            p: Fragment,
-            h1: Fragment,
-            h2: Fragment,
-            h3: Fragment,
-            h4: Fragment,
-            h5: Fragment,
-            h6: Fragment,
-          }}
-        />
-      </HeadingWithAnchor>
+      <StyledHeaderContainer>
+        <HeadingWithAnchor tag={tag} anchor={anchor}>
+          <RenderedMarkdown
+            source={makeMarkdownHeading(tag, heading)}
+            allowHTML={false}
+            // this is purely an inline string
+            overrideComponents={{
+              p: Fragment,
+              h1: Fragment,
+              h2: Fragment,
+              h3: Fragment,
+              h4: Fragment,
+              h5: Fragment,
+              h6: Fragment,
+            }}
+          />
+        </HeadingWithAnchor>
+      </StyledHeaderContainer>
       {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
       {rest.length > 0 && (
         <StyledStreamlitMarkdown

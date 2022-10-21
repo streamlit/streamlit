@@ -1,5 +1,5 @@
 # Packages used to test things users may do with Streamlit.
-# As of July 17, 2022, only the latest version of Bokeh (2.4.3) is supported.
+# As of September 21, 2022, only the latest version of Bokeh (2.4.3) is supported.
 # NOTE: Python Bokeh and BokehJS versions must always match.
 bokeh==2.4.3
 cffi>=1.14

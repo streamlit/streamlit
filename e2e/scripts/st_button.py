@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 # st.session_state can only be used in streamlit
-if st._is_running_with_streamlit:
+if runtime.exists():
 
     def on_click(x, y):
         if "click_count" not in st.session_state:
@@ -43,3 +44,9 @@ i2 = st.checkbox("reset button return value")
 
 i3 = st.button("button 2", disabled=True)
 st.write("value 2:", i3)
+
+i4 = st.button("button 3", type="primary")
+st.write("value 3:", i4)
+
+i5 = st.button("button 4", type="primary", disabled=True)
+st.write("value 4:", i5)

@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,30 +19,23 @@ from __future__ import annotations
 import re
 import types
 from typing import (
+    TYPE_CHECKING,
     Any,
     Iterable,
+    List,
     NamedTuple,
     Optional,
     Sequence,
     TypeVar,
-    TYPE_CHECKING,
     Union,
     cast,
     overload,
-    List,
-)
-
-from typing_extensions import (
-    Final,
-    Literal,
-    Protocol,
-    TypeAlias,
-    TypeGuard,
-    get_args,
 )
 
 import pyarrow as pa
+from pandas import MultiIndex
 from pandas.api.types import infer_dtype
+from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 from streamlit import errors
 from streamlit import logger as _logger
@@ -50,7 +43,7 @@ from streamlit import logger as _logger
 if TYPE_CHECKING:
     import graphviz
     import sympy
-    from pandas import DataFrame, Series, Index
+    from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure
@@ -204,6 +197,8 @@ _PANDAS_INDEX_TYPE_STR: Final = "pandas.core.indexes.base.Index"
 _PANDAS_SERIES_TYPE_STR: Final = "pandas.core.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
 _NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
+_SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
+_SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -238,6 +233,21 @@ def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
 
 def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
+
+
+def is_snowpark_dataframe(obj: object) -> bool:
+    """True if obj is of type snowflake.snowpark.dataframe.DataFrame or
+    True when obj is a list which contains snowflake.snowpark.row.Row,
+    False otherwise"""
+    if is_type(obj, _SNOWPARK_DF_TYPE_STR):
+        return True
+    if not isinstance(obj, list):
+        return False
+    if len(obj) < 1:
+        return False
+    if not hasattr(obj[0], "__class__"):
+        return False
+    return is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
 
 
 def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
@@ -539,13 +549,59 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def convert_mixed_columns_to_string(
+def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
+    """Return True if the column type is known to cause issues during Arrow conversion."""
+
+    # Check all columns for mixed types and complex128 type
+    # The dtype of mixed type columns is always object, the actual type of the column
+    # values can be determined via the infer_dtype function:
+    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
+
+    return (
+        column.dtype == "object" and infer_dtype(column) in ["mixed", "mixed-integer"]
+    ) or column.dtype == "complex128"
+
+
+def fix_arrow_incompatible_column_types(
     df: DataFrame, selected_columns: Optional[List[str]] = None
 ) -> DataFrame:
+    """Fix column types that are not supported by Arrow table.
+
+    This includes mixed types (e.g. mix of integers and strings)
+    as well as complex numbers (complex128 type). These types will cause
+    errors during conversion of the dataframe to an Arrow table.
+    It is fixed by converting all values of the column to strings
+    This is sufficient for displaying the data on the frontend.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A dataframe to fix.
+
+    selected_columns: Optional[List[str]]
+        A list of columns to fix. If None, all columns are evaluated.
+
+    Returns
+    -------
+    The fixed dataframe.
+    """
+
     for col in selected_columns or df.columns:
-        column = df[col]
-        if column.dtype == "object" and "mixed" in infer_dtype(column):
-            df[col] = column.astype(str)
+        if _is_colum_type_arrow_incompatible(df[col]):
+            df[col] = df[col].astype(str)
+
+    # The index can also contain mixed types
+    # causing Arrow issues during conversion.
+    # Skipping multi-indices since they won't return
+    # the correct value from infer_dtype
+    if not selected_columns and (
+        not isinstance(
+            df.index,
+            MultiIndex,
+        )
+        and _is_colum_type_arrow_incompatible(df.index)
+    ):
+        df.index = df.index.astype(str)
     return df
 
 
@@ -559,25 +615,14 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
 
     """
     try:
-        try:
-            table = pa.Table.from_pandas(df)
-        except pa.ArrowTypeError:
-            # Fallback: Convert all object types to string
-            df = convert_mixed_columns_to_string(df)
-            table = pa.Table.from_pandas(df)
-        return pyarrow_table_to_bytes(table)
-    except Exception as e:
-        _NUMPY_DTYPE_ERROR_MESSAGE = "Could not convert dtype"
-        if _NUMPY_DTYPE_ERROR_MESSAGE in str(e):
-            raise errors.NumpyDtypeException(
-                """
-Unable to convert `numpy.dtype` to `pyarrow.DataType`.
-This is likely due to a bug in Arrow (see https://issues.apache.org/jira/browse/ARROW-14087).
-As a temporary workaround, you can convert the DataFrame cells to strings with `df.astype(str)`.
-"""
-            )
-        else:
-            raise errors.StreamlitAPIException(e)
+        table = pa.Table.from_pandas(df)
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError):
+        _LOGGER.info(
+            "Applying automatic fixes for column types to make the dataframe Arrow-compatible."
+        )
+        df = fix_arrow_incompatible_column_types(df)
+        table = pa.Table.from_pandas(df)
+    return pyarrow_table_to_bytes(table)
 
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:

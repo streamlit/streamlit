@@ -1,10 +1,23 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import streamlit as st
-from streamlit import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
-from tests import testutil
 
-
-class ColumnsTest(testutil.DeltaGeneratorTestCase):
+class ColumnsTest(DeltaGeneratorTestCase):
     """Test columns."""
 
     def test_equal_width_columns(self):
@@ -120,7 +133,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(columns_blocks[2].add_block.column.gap, "large")
 
 
-class ExpanderTest(testutil.DeltaGeneratorTestCase):
+class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""
         with self.assertRaises(TypeError):
@@ -138,7 +151,7 @@ class ExpanderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
 
 
-class TabsTest(testutil.DeltaGeneratorTestCase):
+class TabsTest(DeltaGeneratorTestCase):
     def test_tab_required(self):
         """Test that at least one tab is required."""
         with self.assertRaises(TypeError):

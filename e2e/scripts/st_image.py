@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,12 +12,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+import io
+
 import numpy as np
+from PIL import Image, ImageDraw
+
+import streamlit as st
+
+
+def create_gif(size, frames=1):
+    # Create grayscale image.
+    im = Image.new("L", (size, size), "white")
+
+    images = []
+
+    # Make circle of a constant size with a number of frames, moving across the
+    # principal diagonal of a 64x64 image. The GIF will not loop and stops
+    # animating after frames x 100ms.
+    for i in range(0, frames):
+        frame = im.copy()
+        draw = ImageDraw.Draw(frame)
+        pos = (i, i)
+        circle_size = size / 2
+        draw.ellipse([pos, tuple(p + circle_size for p in pos)], "black")
+        images.append(frame.copy())
+
+    # Save the frames as an animated GIF
+    data = io.BytesIO()
+    images[0].save(
+        data,
+        format="GIF",
+        save_all=True,
+        append_images=images[1:],
+        duration=1,
+    )
+
+    return data.getvalue()
+
+
+import streamlit as st
 
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)
-
+gif = create_gif(64, frames=32)
 
 st.image(img, caption="Black Square as JPEG", output_format="JPEG", width=100)
 
@@ -67,3 +104,7 @@ st.image(
     </svg>
 """
 )
+
+st.image(gif, width=100)
+st.image(create_gif(64), caption="Black Circle as GIF", width=100)
+st.image(gif, caption="GIF as PNG", output_format="PNG", width=100)

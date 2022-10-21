@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,10 +15,10 @@
  */
 
 import styled from "@emotion/styled"
-import { StyledSpinnerNext } from "baseui/spinner"
+import { Spinner } from "baseui/spinner"
 import isPropValid from "@emotion/is-prop-valid"
 
-export const ThemedStyledSpinner = styled(StyledSpinnerNext, {
+export const ThemedStyledSpinner = styled(Spinner, {
   shouldForwardProp: isPropValid,
 })(({ theme, $usingCustomTheme }) => {
   return {

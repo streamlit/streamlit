@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,11 +17,12 @@ import random
 
 import packaging.version
 import requests
+from importlib_metadata import version as _version
+from typing_extensions import Final
 
-import streamlit as st
-from streamlit.logger import get_logger
+import streamlit.logger as logger
 
-LOGGER = get_logger(__name__)
+LOGGER = logger.get_logger(__name__)
 
 PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 
@@ -30,12 +31,14 @@ PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 # should_show_new_version_notice() is called.
 CHECK_PYPI_PROBABILITY = 0.10
 
+STREAMLIT_VERSION_STRING: Final[str] = _version("streamlit")
 
-def _version_str_to_obj(version_str):
+
+def _version_str_to_obj(version_str) -> packaging.version.Version:
     return packaging.version.Version(version_str)
 
 
-def _get_installed_streamlit_version():
+def _get_installed_streamlit_version() -> packaging.version.Version:
     """Return the streamlit version string from setup.py.
 
     Returns
@@ -44,8 +47,7 @@ def _get_installed_streamlit_version():
         The version string specified in setup.py.
 
     """
-    version_str = st.__version__
-    return _version_str_to_obj(version_str)
+    return _version_str_to_obj(STREAMLIT_VERSION_STRING)
 
 
 def _get_latest_streamlit_version(timeout=None):

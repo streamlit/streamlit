@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +17,7 @@
 import { pick } from "lodash"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { initializeSegment } from "src/vendor/Segment"
-import { StreamlitShareMetadata } from "src/hocs/withS4ACommunication/types"
+import { DeployedAppMetadata } from "src/hocs/withHostCommunication/types"
 import { IS_DEV_ENV } from "./baseconsts"
 import { logAlways } from "./log"
 
@@ -81,7 +80,7 @@ export class MetricsManager {
    */
   private appHash = "Not initialized"
 
-  private metadata: StreamlitShareMetadata = {}
+  private metadata: DeployedAppMetadata = {}
 
   /**
    * Singleton MetricsManager object. The reason we're using a singleton here
@@ -232,12 +231,12 @@ export class MetricsManager {
     }
   }
 
-  public setMetadata(metadata: StreamlitShareMetadata): void {
+  public setMetadata(metadata: DeployedAppMetadata): void {
     this.metadata = metadata
   }
 
-  // Use the tracking data injected by S4A if the app is hosted there
-  private getHostTrackingData(): StreamlitShareMetadata {
+  // Use the tracking data injected by the host of the app if included.
+  private getHostTrackingData(): DeployedAppMetadata {
     if (this.metadata) {
       return pick(this.metadata, [
         "hostedAt",

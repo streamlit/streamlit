@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,39 +13,32 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from streamlit.type_util import (
-    Key,
-    to_key,
-    LabelVisibility,
-    maybe_raise_label_warnings,
-)
-from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
+from typing import List, Optional, Union, cast, overload
+
 from typing_extensions import Literal
 
 import streamlit
 from streamlit import config
-from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import (
-    register_widget,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-)
-from streamlit.runtime.metrics_util import gather_metrics
-
-from .form import current_form_id
-from ..proto.Common_pb2 import (
-    FileUploaderState as FileUploaderStateProto,
-    UploadedFileInfo as UploadedFileInfoProto,
-)
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
-from .utils import (
+from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
 )
+from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
+from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
+from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+    register_widget,
+)
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
 

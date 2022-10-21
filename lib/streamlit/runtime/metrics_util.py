@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,24 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
+import inspect
 import os
+import sys
 import threading
 import uuid
-import contextlib
-import sys
-import inspect
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
-from typing import Any, Callable, List, Optional, TypeVar, cast, Set
+from typing import Any, Callable, List, Optional, Set, TypeVar, cast
 
 from typing_extensions import Final
 
-from streamlit import util
-from streamlit import config
+from streamlit import config, util
 from streamlit.logger import get_logger
-from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 LOGGER = get_logger(__name__)
@@ -57,6 +56,10 @@ _CALLABLE_NAME_MAPPING: Final = {
     "SingletonCache.write_result": "_cache_singleton_object",
     "MemoCache.write_result": "_cache_memo_object",
     "_write_to_cache": "_cache_object",
+    "_get_query_params": "experimental_get_query_params",
+    "_set_query_params": "experimental_set_query_params",
+    "_show": "experimental_show",
+    "set_user_option": "set_option",
 }
 # A list of dependencies to check for attribution
 _ATTRIBUTIONS_TO_CHECK: Final = ["snowflake"]
@@ -213,6 +216,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 def gather_metrics(callable: F) -> F:
     @wraps(callable)
     def wrap(*args, **kwargs):
+
         ctx = get_script_run_ctx()
 
         tracking_activated = (

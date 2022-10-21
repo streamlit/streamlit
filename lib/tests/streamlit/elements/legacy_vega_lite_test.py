@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +14,14 @@
 
 """st._legacy_vega_lite unit test."""
 
-import pandas as pd
-import pyarrow as pa
 import json
 
-from tests import testutil
+import pandas as pd
+import pyarrow as pa
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 
@@ -30,7 +30,7 @@ df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
 
 
-class LegacyVegaLiteTest(testutil.DeltaGeneratorTestCase):
+class LegacyVegaLiteTest(DeltaGeneratorTestCase):
     """Test ability to marshall vega_lite_chart protos."""
 
     def test_no_args(self):

@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,7 +25,9 @@ import {
   StyledMinimalButton,
   StyledPrimaryButton,
   StyledSecondaryButton,
-  StyledFormSubmitButton,
+  StyledTertiaryButton,
+  StyledPrimaryFormSubmitButton,
+  StyledSecondaryFormSubmitButton,
   StyledHeaderButton,
 } from "./styled-components"
 
@@ -43,6 +44,8 @@ function Button({
 
   if (kind === Kind.SECONDARY) {
     ComponentType = StyledSecondaryButton
+  } else if (kind === Kind.TERTIARY) {
+    ComponentType = StyledTertiaryButton
   } else if (kind === Kind.LINK) {
     ComponentType = StyledLinkButton
   } else if (kind === Kind.ICON) {
@@ -51,8 +54,10 @@ function Button({
     ComponentType = StyledBorderlessIconButton
   } else if (kind === Kind.MINIMAL) {
     ComponentType = StyledMinimalButton
-  } else if (kind === Kind.FORM_SUBMIT) {
-    ComponentType = StyledFormSubmitButton
+  } else if (kind === Kind.PRIMARY_FORM_SUBMIT) {
+    ComponentType = StyledPrimaryFormSubmitButton
+  } else if (kind === Kind.SECONDARY_FORM_SUBMIT) {
+    ComponentType = StyledSecondaryFormSubmitButton
   } else if (kind === Kind.HEADER_BUTTON) {
     ComponentType = StyledHeaderButton
   }

@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +26,7 @@ import {
   GridMouseEventArgs,
   Theme as GlideTheme,
 } from "@glideapps/glide-data-grid"
+import { Resizable, Size as ResizableSize } from "re-resizable"
 import { useColumnSort } from "@glideapps/glide-data-grid-source"
 import { transparentize } from "color2k"
 import { useTheme } from "@emotion/react"
@@ -119,6 +119,7 @@ export function getColumns(
   data: Quiver
 ): GridColumnWithCellTemplate[] {
   const columns: GridColumnWithCellTemplate[] = []
+  const stretchColumn = element.useContainerWidth || element.width
 
   if (data.isEmpty()) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
@@ -131,6 +132,7 @@ export function getColumns(
         return getCellTemplate(ColumnType.Text, true, "faded")
       },
       columnType: ColumnType.Text,
+      ...(stretchColumn ? { grow: 1 } : {}),
     } as GridColumnWithCellTemplate)
     return columns
   }
@@ -150,6 +152,7 @@ export function getColumns(
         return getCellTemplate(columnType, true, "faded")
       },
       columnType,
+      ...(stretchColumn ? { grow: 1 } : {}),
     } as GridColumnWithCellTemplate)
   }
 
@@ -159,8 +162,6 @@ export function getColumns(
     const quiverType = data.types.data[i]
     const columnType = determineColumnType(quiverType)
 
-    const stretchColumn = element.useContainerWidth || element.width
-
     columns.push({
       id: `column-${columnTitle}-${i}`,
       title: columnTitle,
@@ -169,7 +170,7 @@ export function getColumns(
         return getCellTemplate(columnType, true)
       },
       columnType,
-      ...(stretchColumn ? { grow: 1 } : {}),
+      ...(stretchColumn ? { grow: 3 } : {}),
     } as GridColumnWithCellTemplate)
   }
   return columns
@@ -241,8 +242,7 @@ export function useDataLoader(
       return {
         ...column,
         width: columnSizes.get(column.id),
-        // TODO (lukasmasuch): set grow: 0 -> currently not possible because of a bug:
-        // https://github.com/glideapps/glide-data-grid/issues/479
+        grow: 0, // Deactivate grow for this column
       } as GridColumnWithCellTemplate
     }
     return column
@@ -253,9 +253,14 @@ export function useDataLoader(
   const numIndices = data.types?.index?.length ?? 0
 
   const onColumnResize = React.useCallback(
-    (column: GridColumn, newSize: number) => {
+    (
+      column: GridColumn,
+      newSize: number,
+      colIndex: number,
+      newSizeWithGrow: number
+    ) => {
       if (column.id) {
-        setColumnSizes(new Map(columnSizes).set(column.id, newSize))
+        setColumnSizes(new Map(columnSizes).set(column.id, newSizeWithGrow))
       }
     },
     [columns]
@@ -315,6 +320,7 @@ export interface DataFrameProps {
   data: Quiver
   width: number
   height?: number
+  isFullScreen?: boolean
 }
 
 function DataFrame({
@@ -322,17 +328,16 @@ function DataFrame({
   data,
   width: containerWidth,
   height: containerHeight,
+  isFullScreen,
 }: DataFrameProps): ReactElement {
   const [sort, setSort] = React.useState<ColumnSortConfig>()
+  const dataEditorRef = React.useRef<DataEditorRef>(null)
   const theme: Theme = useTheme()
 
-  const {
-    numRows,
-    numIndices,
-    columns,
-    getCellContent,
-    onColumnResize,
-  } = useDataLoader(element, data, sort)
+  const stretchColumn = element.useContainerWidth || element.width
+
+  const { numRows, numIndices, columns, getCellContent, onColumnResize } =
+    useDataLoader(element, data, sort)
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 
@@ -341,7 +346,7 @@ function DataFrame({
     rows: CompactSelection.empty(),
   })
 
-  const dataEditorRef = React.useRef<DataEditorRef>(null)
+  const resizableRef = React.useRef<Resizable>(null)
 
   const onHeaderClick = React.useCallback(
     (index: number) => {
@@ -371,49 +376,95 @@ function DataFrame({
     [sort, columns]
   )
 
-  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
-  let maxHeight = Math.max((numRows + 1) * ROW_HEIGHT + 3, MIN_TABLE_HEIGHT)
-  let height = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
+  // Automatic table height calculation: numRows +1 because of header, and +2 pixels for borders
+  let maxHeight = Math.max(
+    (numRows + 1) * ROW_HEIGHT + 1 + 2,
+    MIN_TABLE_HEIGHT
+  )
+  let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
 
   if (element.height) {
     // User has explicitly configured a height
-    height = Math.max(element.height, MIN_TABLE_HEIGHT)
+    initialHeight = Math.max(element.height, MIN_TABLE_HEIGHT)
     maxHeight = Math.max(element.height, maxHeight)
   }
 
   if (containerHeight) {
     // If container height is set (e.g. when used in fullscreen)
     // The maxHeight and height should not be larger than container height
-    height = Math.min(height, containerHeight)
+    initialHeight = Math.min(initialHeight, containerHeight)
     maxHeight = Math.min(maxHeight, containerHeight)
 
     if (!element.height) {
       // If no explicit height is set, set height to max height (fullscreen mode)
-      height = maxHeight
+      initialHeight = maxHeight
     }
   }
 
-  let width // If container width is undefined, auto set based on column widths
+  let initialWidth: number | undefined // If container width is undefined, auto set based on column widths
   let maxWidth = containerWidth
 
   if (element.useContainerWidth) {
     // Always use the full container width
-    width = containerWidth
+    initialWidth = containerWidth
   } else if (element.width) {
     // User has explicitly configured a width
-    width = Math.min(Math.max(element.width, MIN_TABLE_WIDTH), containerWidth)
+    initialWidth = Math.min(
+      Math.max(element.width, MIN_TABLE_WIDTH),
+      containerWidth
+    )
     maxWidth = Math.min(Math.max(element.width, maxWidth), containerWidth)
   }
+
+  const [resizableSize, setResizableSize] = React.useState<ResizableSize>({
+    width: initialWidth || "100%",
+    height: initialHeight,
+  })
+
+  React.useLayoutEffect(() => {
+    // This prevents weird table resizing behavior if the container width
+    // changes and the table uses the full container width.
+    if (
+      resizableRef.current &&
+      element.useContainerWidth &&
+      resizableSize.width === "100%"
+    ) {
+      setResizableSize({
+        width: containerWidth,
+        height: resizableSize.height,
+      })
+    }
+  }, [containerWidth])
+
+  React.useLayoutEffect(() => {
+    if (resizableRef.current) {
+      // Reset the height if the number of rows changes (e.g. via add_rows)
+      setResizableSize({
+        width: resizableSize.width,
+        height: initialHeight,
+      })
+    }
+  }, [numRows])
+
+  React.useLayoutEffect(() => {
+    if (resizableRef.current) {
+      if (isFullScreen) {
+        setResizableSize({
+          width: stretchColumn ? maxWidth : "100%",
+          height: maxHeight,
+        })
+      } else {
+        setResizableSize({
+          width: initialWidth || "100%",
+          height: initialHeight,
+        })
+      }
+    }
+  }, [isFullScreen])
 
   return (
     <StyledResizableContainer
       className="stDataFrame"
-      width={width}
-      height={height}
-      minHeight={MIN_TABLE_HEIGHT}
-      maxHeight={maxHeight}
-      minWidth={MIN_TABLE_WIDTH}
-      maxWidth={maxWidth}
       onBlur={() => {
         // If the container loses focus, clear the current selection
         if (!isFocused) {
@@ -425,53 +476,93 @@ function DataFrame({
         }
       }}
     >
-      <GlideDataEditor
-        ref={dataEditorRef}
-        columns={columns}
-        rows={numRows}
-        minColumnWidth={MIN_COLUMN_WIDTH}
-        maxColumnWidth={MAX_COLUMN_WIDTH}
-        rowHeight={ROW_HEIGHT}
-        headerHeight={ROW_HEIGHT}
-        getCellContent={getCellContent}
-        onColumnResize={onColumnResize}
-        // Freeze all index columns:
-        freezeColumns={numIndices}
-        smoothScrollX={true}
-        // Only activate smooth mode for vertical scrolling for large tables:
-        smoothScrollY={numRows < 100000}
-        // Show borders between cells:
-        verticalBorder={true}
-        // Activate copy to clipboard functionality:
-        getCellsForSelection={true}
-        // Deactivate row markers and numbers:
-        rowMarkers={"none"}
-        // Deactivate selections:
-        rangeSelect={"rect"}
-        columnSelect={"none"}
-        rowSelect={"none"}
-        // Activate search:
-        keybindings={{ search: true }}
-        // Header click is used for column sorting:
-        onHeaderClicked={onHeaderClick}
-        gridSelection={gridSelection}
-        onGridSelectionChange={(newSelection: GridSelection) => {
-          setGridSelection(newSelection)
+      <Resizable
+        data-testid="stDataFrameResizable"
+        ref={resizableRef}
+        defaultSize={resizableSize}
+        style={{
+          border: `1px solid ${theme.colors.fadedText05}`,
         }}
-        theme={createDataFrameTheme(theme)}
-        onMouseMove={(args: GridMouseEventArgs) => {
-          // Determine if the dataframe is focused or not
-          if (args.kind === "out-of-bounds" && isFocused) {
-            setIsFocused(false)
-          } else if (args.kind !== "out-of-bounds" && !isFocused) {
-            setIsFocused(true)
+        minHeight={MIN_TABLE_HEIGHT}
+        maxHeight={maxHeight}
+        minWidth={MIN_TABLE_WIDTH}
+        maxWidth={maxWidth}
+        enable={{
+          top: false,
+          right: false,
+          bottom: false,
+          left: false,
+          topRight: false,
+          bottomRight: true,
+          bottomLeft: false,
+          topLeft: false,
+        }}
+        grid={[1, ROW_HEIGHT]}
+        snapGap={ROW_HEIGHT / 3}
+        size={resizableSize}
+        onResizeStop={(_event, _direction, _ref, _delta) => {
+          if (resizableRef.current) {
+            setResizableSize({
+              width: resizableRef.current.size.width,
+              height:
+                // Add an additional pixel if it is stretched to full width
+                // to allow the full cell border to be visible
+                maxHeight - resizableRef.current.size.height === 3
+                  ? resizableRef.current.size.height + 3
+                  : resizableRef.current.size.height,
+            })
           }
         }}
-        experimental={{
-          // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
-          scrollbarWidthOverride: 1,
-        }}
-      />
+      >
+        <GlideDataEditor
+          className="glideDataEditor"
+          ref={dataEditorRef}
+          columns={columns}
+          rows={numRows}
+          minColumnWidth={MIN_COLUMN_WIDTH}
+          maxColumnWidth={MAX_COLUMN_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          headerHeight={ROW_HEIGHT}
+          getCellContent={getCellContent}
+          onColumnResize={onColumnResize}
+          // Freeze all index columns:
+          freezeColumns={numIndices}
+          smoothScrollX={true}
+          // Only deactivate smooth mode for vertical scrolling for large tables:
+          smoothScrollY={numRows < 100000}
+          // Show borders between cells:
+          verticalBorder={true}
+          // Activate copy to clipboard functionality:
+          getCellsForSelection={true}
+          // Deactivate row markers and numbers:
+          rowMarkers={"none"}
+          // Deactivate selections:
+          rangeSelect={"rect"}
+          columnSelect={"none"}
+          rowSelect={"none"}
+          // Activate search:
+          keybindings={{ search: true }}
+          // Header click is used for column sorting:
+          onHeaderClicked={onHeaderClick}
+          gridSelection={gridSelection}
+          onGridSelectionChange={(newSelection: GridSelection) => {
+            setGridSelection(newSelection)
+          }}
+          theme={createDataFrameTheme(theme)}
+          onMouseMove={(args: GridMouseEventArgs) => {
+            // Determine if the dataframe is focused or not
+            if (args.kind === "out-of-bounds" && isFocused) {
+              setIsFocused(false)
+            } else if (args.kind !== "out-of-bounds" && !isFocused) {
+              setIsFocused(true)
+            }
+          }}
+          experimental={{
+            // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
+            scrollbarWidthOverride: 1,
+          }}
+        />
+      </Resizable>
     </StyledResizableContainer>
   )
 }

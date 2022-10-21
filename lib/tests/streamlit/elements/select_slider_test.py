@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,20 +14,20 @@
 
 """slider unit test."""
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
 import pytest
-
 from parameterized import parameterized
-from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class SliderTest(testutil.DeltaGeneratorTestCase):
+class SliderTest(DeltaGeneratorTestCase):
     """Test ability to marshall select slider protos."""
 
     def test_no_value(self):
@@ -220,7 +220,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.slider
         self.assertEqual(proto.form_id, "")
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
@@ -257,8 +257,8 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
             st.select_slider(
                 "the label", options=["red", "orange"], label_visibility="wrong_value"
             )
-            self.assertEquals(
-                str(e),
-                "Unsupported label_visibility option 'wrong_value'. Valid values are "
-                "'visible', 'hidden' or 'collapsed'.",
-            )
+        self.assertEquals(
+            str(e.exception),
+            "Unsupported label_visibility option 'wrong_value'. Valid values are "
+            "'visible', 'hidden' or 'collapsed'.",
+        )

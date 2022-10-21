@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -216,7 +215,7 @@ describe("st.date_input", () => {
 
     // value should be reset to 1970-01-01
     cy.get(".stMarkdown").should(
-      "contain.text",
+      "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
@@ -225,8 +224,8 @@ describe("st.date_input", () => {
         "Value 6: ()" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
-        "Value 9: 1970-01-01"
-        // removed "Date Input Changed:" line due to resulting flakiness
+        "Value 9: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 

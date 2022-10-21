@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,8 +19,8 @@ from unittest.mock import Mock, patch
 
 import matplotlib
 
-from streamlit import SECRETS_FILE_LOC
 from streamlit import config
+from streamlit.runtime.secrets import SECRETS_FILE_LOC
 from streamlit.runtime.session_data import SessionData
 from streamlit.web import bootstrap
 from streamlit.web.bootstrap import NEW_VERSION_TEXT
@@ -284,6 +284,26 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         self.assertTrue("Local URL: http://localhost:8501/foo" in out)
         self.assertTrue("Network URL: http://internal-ip:8501/foo" not in out)
+
+    def test_print_socket(self):
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False}
+        )
+
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.address": "unix://mysocket.sock",
+                "global.developmentMode": False,
+            }
+        )
+
+        with patch.object(config, "get_option", new=mock_get_option), patch.object(
+            config, "is_manually_set", new=mock_is_manually_set
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        self.assertIn("Unix Socket: unix://mysocket.sock", out)
 
     @patch("streamlit.web.bootstrap.GitRepo")
     def test_print_old_git_warning(self, mock_git_repo):

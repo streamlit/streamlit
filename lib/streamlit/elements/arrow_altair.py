@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,32 +19,31 @@ a nice JSON schema for expressing graphs and charts."""
 from datetime import date
 from enum import Enum
 from typing import (
-    cast,
     TYPE_CHECKING,
-    Union,
-    Dict,
     Any,
-    Sequence,
+    Dict,
     List,
-    Tuple,
     Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
 )
 
 import altair as alt
 import pandas as pd
 from altair.vegalite.v4.api import Chart
-from pandas.api.types import infer_dtype
+from pandas.api.types import infer_dtype, is_integer_dtype
 
-from streamlit.errors import StreamlitAPIException
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
+from streamlit.elements.arrow import Data
+from streamlit.elements.utils import last_index_for_melted_dataframes
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-
-from .arrow import Data
-from .utils import last_index_for_melted_dataframes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -381,7 +380,7 @@ def _melt_data(
 
     # Arrow has problems with object types after melting two different dtypes
     # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-    data_df = type_util.convert_mixed_columns_to_string(
+    data_df = type_util.fix_arrow_incompatible_column_types(
         data_df, selected_columns=[x_column, color_column, y_column]
     )
 
@@ -513,6 +512,15 @@ def _generate_chart(
     if chart_type == ChartType.BAR and not _is_date_column(data, x_column):
         x_type = "ordinal"
 
+    # Use a max tick size of 1 for integer columns (prevents zoom into float numbers)
+    # and deactivate grid lines for x-axis
+    x_axis_config = alt.Axis(
+        tickMinStep=1 if is_integer_dtype(data[x_column]) else alt.Undefined, grid=False
+    )
+    y_axis_config = alt.Axis(
+        tickMinStep=1 if is_integer_dtype(data[y_column]) else alt.Undefined
+    )
+
     tooltips = [
         alt.Tooltip(x_column, title=x_column),
         alt.Tooltip(y_column, title=y_column),
@@ -533,8 +541,14 @@ def _generate_chart(
         alt.Chart(data, width=width, height=height, usermeta=STREAMLIT_THEME),
         "mark_" + chart_type.value,
     )().encode(
-        x=alt.X(x_column, title=x_title, scale=x_scale, type=x_type),
-        y=alt.Y(y_column, title=y_title, scale=y_scale),
+        x=alt.X(
+            x_column,
+            title=x_title,
+            scale=x_scale,
+            type=x_type,
+            axis=x_axis_config,
+        ),
+        y=alt.Y(y_column, title=y_title, scale=y_scale, axis=y_axis_config),
         tooltip=tooltips,
     )
 

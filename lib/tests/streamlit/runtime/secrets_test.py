@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +21,7 @@ from unittest.mock import MagicMock, mock_open, patch
 from toml import TomlDecodeError
 
 from streamlit.runtime.secrets import SECRETS_FILE_LOC, Secrets
+from tests.exception_capturing_thread import call_on_threads
 
 MOCK_TOML = """
 # Everything in this section will be available as an environment variable
@@ -162,3 +163,42 @@ class SecretsTest(unittest.TestCase):
             self.assertIsNone(self.secrets.get("db_password"))
             self.assertEqual("Joan", os.environ["db_username"])
             self.assertIsNone(os.environ.get("db_password"))
+
+
+class SecretsThreadingTests(unittest.TestCase):
+    # The number of threads to run our tests on
+    NUM_THREADS = 50
+
+    def setUp(self) -> None:
+        # st.secrets modifies os.environ, so we save it here and
+        # restore in tearDown.
+        self._prev_environ = dict(os.environ)
+        self.secrets = Secrets(MOCK_SECRETS_FILE_LOC)
+
+    def tearDown(self) -> None:
+        os.environ.clear()
+        os.environ.update(self._prev_environ)
+
+    @patch("streamlit.watcher.path_watcher.watch_file", MagicMock())
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_access_secrets(self, _):
+        """Accessing secrets is thread-safe."""
+
+        def access_secrets(_: int) -> None:
+            self.assertEqual(self.secrets["db_username"], "Jane")
+            self.assertEqual(self.secrets["subsection"]["email"], "eng@streamlit.io")
+            self.assertEqual(self.secrets["subsection"].email, "eng@streamlit.io")
+
+        call_on_threads(access_secrets, num_threads=self.NUM_THREADS)
+
+    @patch("streamlit.watcher.path_watcher.watch_file", MagicMock())
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_reload_secrets(self, _):
+        """Re-parsing the secrets file is thread-safe."""
+
+        def reload_secrets(_: int) -> None:
+            # Reset secrets, and then access a secret to reparse.
+            self.secrets._reset()
+            self.assertEqual(self.secrets["db_username"], "Jane")
+
+        call_on_threads(reload_secrets, num_threads=self.NUM_THREADS)

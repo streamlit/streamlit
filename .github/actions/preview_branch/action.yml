@@ -1,0 +1,41 @@
+name: "Set PREVIEW_BRANCH & BRANCH env variables"
+
+# Using an action to process user input (branch name) as an argument
+# is the recommended approach for mitigating script injection attacks.
+# It is not vulnerable to injection attacks, as the context value is not used
+# to generate a shell script, but is instead passed to the action as an argument
+# https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#good-practices-for-mitigating-script-injection-attacks
+
+inputs:
+  pull_request_number:
+    description: 'Pull request number'
+  ref_type:
+    description: 'The type of Git ref object created in the repository. Can be either branch or tag'
+  branch:
+    description: 'Name of the branch'
+
+runs:
+  using: composite
+  steps:
+    - name: Set PREVIEW_BRANCH & BRANCH
+      env:
+        PR_NUMBER: ${{ inputs.pull_request_number }}
+        REF_TYPE: ${{ inputs.ref_type }}
+        BRANCH_NAME: ${{ inputs.branch }}
+      run: |
+        echo "PREVIEW_BRANCH=$(
+          if [[ -n "$PR_NUMBER" ]]
+          then
+            echo "pr-$PR_NUMBER"
+          elif [[ "$REF_TYPE" == 'branch' ]]
+          then
+            echo "$BRANCH_NAME-preview"
+          elif [[ "$REF_TYPE" == 'tag' ]]
+          then
+            echo "tag-$BRANCH_NAME"
+          else
+            echo "main-preview"
+          fi
+        )" >> $GITHUB_ENV
+        echo "BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
+      shell: bash -ileo pipefail {0}

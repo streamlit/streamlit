@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, MagicMock, mock_open
 import tempfile
 import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 from streamlit.watcher import util
 
@@ -64,21 +64,17 @@ class FakeStat(object):
 
 
 class PathModificationTimeTests(unittest.TestCase):
-    @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
-    )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    @patch("streamlit.watcher.util.os.stat", MagicMock(return_value=FakeStat(101.0)))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=True))
     def test_st_mtime_if_file_exists(self):
         assert util.path_modification_time("foo") == 101.0
 
-    @patch(
-        "streamlit.watcher.util.os.stat", new=MagicMock(return_value=FakeStat(101.0))
-    )
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=True))
+    @patch("streamlit.watcher.util.os.stat", MagicMock(return_value=FakeStat(101.0)))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=True))
     def test_st_mtime_if_file_exists_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 101.0
 
-    @patch("streamlit.watcher.util.os.path.exists", new=MagicMock(return_value=False))
+    @patch("streamlit.watcher.util.os.path.exists", MagicMock(return_value=False))
     def test_zero_if_file_nonexistent_and_allow_nonexistent(self):
         assert util.path_modification_time("foo", allow_nonexistent=True) == 0.0
 

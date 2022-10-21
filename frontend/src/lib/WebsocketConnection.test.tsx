@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -462,6 +461,7 @@ describe("WebsocketConnection", () => {
     onMessage: jest.fn(),
     onConnectionStateChange: jest.fn(),
     onRetry: jest.fn(),
+    getHostAuthToken: jest.fn(),
   }
 
   let client: WebsocketConnection
@@ -517,5 +517,49 @@ describe("WebsocketConnection", () => {
     it("returns undefined when ConnectionState != Connected", () => {
       expect(client.getBaseUriParts()).toBeUndefined()
     })
+  })
+})
+
+describe("WebsocketConnection auth token handling", () => {
+  const MOCK_SOCKET_DATA = {
+    baseUriPartsList: [
+      {
+        host: "localhost",
+        port: 1234,
+        basePath: "",
+      },
+    ],
+    onMessage: jest.fn(),
+    onConnectionStateChange: jest.fn(),
+    onRetry: jest.fn(),
+    getHostAuthToken: jest.fn(),
+  }
+
+  let websocketSpy: any
+
+  beforeEach(() => {
+    websocketSpy = jest.spyOn(window, "WebSocket")
+  })
+
+  it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", () => {
+    // eslint-disable-next-line no-new
+    new WebsocketConnection(MOCK_SOCKET_DATA)
+
+    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
+      "streamlit",
+    ])
+  })
+
+  it("sets second Sec-WebSocket-Protocol option to value from getHostAuthToken", () => {
+    // eslint-disable-next-line no-new
+    new WebsocketConnection({
+      ...MOCK_SOCKET_DATA,
+      getHostAuthToken: () => "iAmAnAuthToken",
+    })
+
+    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
+      "streamlit",
+      "iAmAnAuthToken",
+    ])
   })
 })

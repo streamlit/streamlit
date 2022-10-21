@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,9 +15,10 @@
 """Tests widget-related functionality"""
 
 import unittest
+from unittest.mock import MagicMock, call
+
 import pytest
 from parameterized import parameterized
-from unittest.mock import call, MagicMock
 
 import streamlit as st
 from streamlit import errors
@@ -25,13 +26,12 @@ from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.state import coalesce_widget_states
 from streamlit.runtime.state.session_state import (
-    WidgetMetadata,
-    SessionState,
     GENERATED_WIDGET_KEY_PREFIX,
+    SessionState,
+    WidgetMetadata,
 )
 from streamlit.runtime.state.widgets import _get_widget_id
-
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def _create_widget(id, states):
@@ -266,7 +266,7 @@ class WidgetHelperTests(unittest.TestCase):
         )
 
 
-class WidgetIdDisabledTests(testutil.DeltaGeneratorTestCase):
+class WidgetIdDisabledTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (st.button,),

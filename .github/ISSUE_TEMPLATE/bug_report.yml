@@ -1,0 +1,120 @@
+name: Bug report
+description: Submit a bug report to help us improve Streamlit
+labels: [bug, needs triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this problem!
+        We really appreciate the community's efforts to improve Streamlit.
+
+        If you are not sure whether you have found a bug, please consider asking in our [community forum](https://discuss.streamlit.io/) first.
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      description: Please confirm and check all the following options.
+      options:
+        - label: I have searched the [existing issues](https://github.com/streamlit/streamlit/issues) for similar issues.
+          required: true
+        - label: I added a very descriptive title to this issue.
+          required: true
+        - label: I have provided sufficient information below to help reproduce this issue.
+          required: true
+  - type: textarea
+    attributes:
+      label: Summary
+      description: Type here a clear and concise description of the problem. Aim for 2-3 sentences.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproducible Code Example
+      render: Python
+      description: |
+        If applicable, please provide a [self-contained minimal code example](https://stackoverflow.com/help/minimal-reproducible-example) that reproduces the problem you ran into.
+        If we can copy it, run it, and see it right away, there's a much higher chance we will be able to help you.
+      placeholder: |
+        import streamlit as st
+
+        st.write("Hello World")
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: Please provide the steps we should take to reproduce the bug.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: Explain what you expect to happen when you go through the steps above, assuming there were no bugs.
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Current Behavior
+      placeholder: |
+        Error message:
+        ```
+        streamlit.errors.StreamlitAPIException ...
+        ```
+      description: |
+        Explain the buggy behavior you experience when you go through the steps above.
+        If you have error messages or stack traces please provide them here as well.
+        If applicable, add screenshots to help explain your problem.
+
+        _Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in._
+    validations:
+      required: false
+  - type: checkboxes
+    attributes:
+      label: Is this a regression?
+      description: Did this use to work the way you expected in the past?
+      options:
+        - label: Yes, this used to work in a previous version.
+          required: false
+  - type: textarea
+    attributes:
+      label: Debug info
+      description: |
+        Please share some system information related to the environment your app is running in.
+
+        Example:
+          - **Streamlit version**: 1.13.0 _(get it with `$ streamlit version`)_
+          - **Python version**: 3.9 _(get it with `$ python --version`)_
+          - **Virtual environment**: Pipenv
+          - **Operating System**: MacOs 12.6
+          - **Browser**: Chrome
+      value: |
+        - Streamlit version:
+        - Python version:
+        - Operating System:
+        - Browser:
+        - Virtual environment:
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: |
+        Links? References? Anything that will give us more context about the issue you are encountering!
+        For example, did this bug come from https://discuss.streamlit.io or another site? Link the original source here!
+
+        _Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in._
+    validations:
+      required: false
+  - type: checkboxes
+    attributes:
+      label: Are you willing to submit a PR?
+      description: |
+        This is absolutely not required, but we are happy to guide you in the contribution process
+        especially if you already have a good understanding of how to implement the fix.
+      options:
+        - label: Yes, I am willing to submit a PR!
+          required: false

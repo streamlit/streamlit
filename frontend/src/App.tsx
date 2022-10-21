@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -99,9 +98,9 @@ import {
 
 import { StyledApp } from "./styled-components"
 
-import withS4ACommunication, {
-  S4ACommunicationHOC,
-} from "./hocs/withS4ACommunication/withS4ACommunication"
+import withHostCommunication, {
+  HostCommunicationHOC,
+} from "./hocs/withHostCommunication"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -113,7 +112,7 @@ import { ensureError } from "./lib/ErrorHandling"
 
 export interface Props {
   screenCast: ScreenCastHOC
-  s4aCommunication: S4ACommunicationHOC
+  hostCommunication: HostCommunicationHOC
   theme: {
     activeTheme: ThemeConfig
     availableThemes: ThemeConfig[]
@@ -267,7 +266,7 @@ export class App extends PureComponent<Props, State> {
       this.rerunScript()
     },
     CLEAR_CACHE: () => {
-      if (isLocalhost() || this.props.s4aCommunication.currentState.isOwner) {
+      if (isLocalhost() || this.props.hostCommunication.currentState.isOwner) {
         this.openClearCacheDialog()
       }
     },
@@ -281,13 +280,15 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
+      getHostAuthToken: this.getHostAuthToken,
     })
 
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
     }
 
-    this.props.s4aCommunication.sendMessage({
+    this.props.hostCommunication.connect()
+    this.props.hostCommunication.sendMessage({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
     })
@@ -297,21 +298,20 @@ export class App extends PureComponent<Props, State> {
 
   componentDidUpdate(prevProps: Readonly<Props>): void {
     if (
-      prevProps.s4aCommunication.currentState.queryParams !==
-      this.props.s4aCommunication.currentState.queryParams
+      prevProps.hostCommunication.currentState.queryParams !==
+      this.props.hostCommunication.currentState.queryParams
     ) {
       this.sendRerunBackMsg()
     }
-    if (this.props.s4aCommunication.currentState.forcedModalClose) {
+    if (this.props.hostCommunication.currentState.forcedModalClose) {
       this.closeDialog()
     }
 
-    const {
-      requestedPageScriptHash,
-    } = this.props.s4aCommunication.currentState
+    const { requestedPageScriptHash } =
+      this.props.hostCommunication.currentState
     if (requestedPageScriptHash !== null) {
       this.onPageChange(requestedPageScriptHash)
-      this.props.s4aCommunication.onPageChanged()
+      this.props.hostCommunication.onPageChanged()
     }
   }
 
@@ -367,6 +367,17 @@ export class App extends PureComponent<Props, State> {
     logMessage(
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
+
+    const { connectionState: currState } = this.state
+
+    if (
+      currState === ConnectionState.CONNECTED &&
+      newState === ConnectionState.PINGING_SERVER
+    ) {
+      this.props.hostCommunication.sendMessage({
+        type: "WEBSOCKET_DISCONNECTED",
+      })
+    }
 
     this.setState({ connectionState: newState })
 
@@ -439,13 +450,8 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const {
-      title,
-      favicon,
-      layout,
-      initialSidebarState,
-      menuItems,
-    } = pageConfig
+    const { title, favicon, layout, initialSidebarState, menuItems } =
+      pageConfig
 
     MetricsManager.current.enqueue("pageConfigChanged", {
       favicon,
@@ -454,7 +460,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     if (title) {
-      this.props.s4aCommunication.sendMessage({
+      this.props.hostCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
         title,
       })
@@ -492,7 +498,7 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname + (queryString ? `?${queryString}` : "")
     window.history.pushState({}, "", targetUrl)
 
-    this.props.s4aCommunication.sendMessage({
+    this.props.hostCommunication.sendMessage({
       type: "SET_QUERY_PARAM",
       queryParams: queryString ? `?${queryString}` : "",
     })
@@ -507,7 +513,7 @@ export class App extends PureComponent<Props, State> {
 
     const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
     this.setState({ currentPageScriptHash }, () => {
-      this.props.s4aCommunication.sendMessage({
+      this.props.hostCommunication.sendMessage({
         type: "SET_CURRENT_PAGE_NAME",
         currentPageName: "",
         currentPageScriptHash,
@@ -518,7 +524,7 @@ export class App extends PureComponent<Props, State> {
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
     const { appPages } = pagesChangedMsg
     this.setState({ appPages }, () => {
-      this.props.s4aCommunication.sendMessage({
+      this.props.hostCommunication.sendMessage({
         type: "SET_APP_PAGES",
         appPages,
       })
@@ -589,7 +595,8 @@ export class App extends PureComponent<Props, State> {
           customThemeDefined,
         })
 
-        const customComponentCounter = MetricsManager.current.getAndResetCustomComponentCounter()
+        const customComponentCounter =
+          MetricsManager.current.getAndResetCustomComponentCounter()
         Object.entries(customComponentCounter).forEach(([name, count]) => {
           MetricsManager.current.enqueue("customComponentStats", {
             name,
@@ -699,12 +706,12 @@ export class App extends PureComponent<Props, State> {
         latestRunTime: performance.now(),
       },
       () => {
-        this.props.s4aCommunication.sendMessage({
+        this.props.hostCommunication.sendMessage({
           type: "SET_APP_PAGES",
           appPages: newSessionProto.appPages,
         })
 
-        this.props.s4aCommunication.sendMessage({
+        this.props.hostCommunication.sendMessage({
           type: "SET_CURRENT_PAGE_NAME",
           currentPageName: viewingMainPage ? "" : newPageName,
           currentPageScriptHash: newPageScriptHash,
@@ -727,7 +734,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     MetricsManager.current.setMetadata(
-      this.props.s4aCommunication.currentState.streamlitShareMetadata
+      this.props.hostCommunication.currentState.deployedAppMetadata
     )
     MetricsManager.current.setAppHash(newSessionHash)
     MetricsManager.current.clearDeltaCounter()
@@ -766,7 +773,6 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.props.s4aCommunication.connect()
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
@@ -775,7 +781,7 @@ export class App extends PureComponent<Props, State> {
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)
-    this.props.s4aCommunication.sendMessage({
+    this.props.hostCommunication.sendMessage({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(themeConfig.emotion),
     })
@@ -917,7 +923,7 @@ export class App extends PureComponent<Props, State> {
    */
   closeDialog = (): void => {
     this.setState({ dialog: undefined })
-    this.props.s4aCommunication.onModalReset()
+    this.props.hostCommunication.onModalReset()
   }
 
   /**
@@ -1178,6 +1184,12 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Returns the authToken set by the withHostCommunication hoc.
+   */
+  private getHostAuthToken = (): string | undefined =>
+    this.props.hostCommunication.currentState.authToken
+
+  /**
    * Updates the app body when there's a connection error.
    */
   handleConnectionError = (errNode: ReactNode): void => {
@@ -1248,7 +1260,7 @@ export class App extends PureComponent<Props, State> {
       : undefined
 
   getQueryString = (): string => {
-    const { queryParams } = this.props.s4aCommunication.currentState
+    const { queryParams } = this.props.hostCommunication.currentState
 
     const queryString =
       queryParams && queryParams.length > 0
@@ -1277,9 +1289,8 @@ export class App extends PureComponent<Props, State> {
       currentPageScriptHash,
     } = this.state
 
-    const {
-      hideSidebarNav: s4AHideSidebarNav,
-    } = this.props.s4aCommunication.currentState
+    const { hideSidebarNav: hostHideSidebarNav } =
+      this.props.hostCommunication.currentState
 
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -1312,8 +1323,8 @@ export class App extends PureComponent<Props, State> {
           availableThemes: this.props.theme.availableThemes,
           setTheme: this.setAndSendTheme,
           addThemes: this.props.theme.addThemes,
-          sidebarChevronDownshift: this.props.s4aCommunication.currentState
-            .sidebarChevronDownshift,
+          sidebarChevronDownshift:
+            this.props.hostCommunication.currentState.sidebarChevronDownshift,
           getBaseUriParts: this.getBaseUriParts,
         }}
       >
@@ -1337,10 +1348,12 @@ export class App extends PureComponent<Props, State> {
                     allowRunOnSave={allowRunOnSave}
                   />
                   <ToolbarActions
-                    s4aToolbarItems={
-                      this.props.s4aCommunication.currentState.toolbarItems
+                    hostToolbarItems={
+                      this.props.hostCommunication.currentState.toolbarItems
                     }
-                    sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                    sendMessageToHost={
+                      this.props.hostCommunication.sendMessage
+                    }
                   />
                 </>
               )}
@@ -1352,11 +1365,11 @@ export class App extends PureComponent<Props, State> {
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
-                s4aMenuItems={
-                  this.props.s4aCommunication.currentState.menuItems
+                hostMenuItems={
+                  this.props.hostCommunication.currentState.menuItems
                 }
-                s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
-                sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                hostIsOwner={this.props.hostCommunication.currentState.isOwner}
+                sendMessageToHost={this.props.hostCommunication.sendMessage}
                 gitInfo={gitInfo}
                 showDeployError={this.showDeployError}
                 closeDialog={this.closeDialog}
@@ -1381,9 +1394,9 @@ export class App extends PureComponent<Props, State> {
               appPages={this.state.appPages}
               onPageChange={this.onPageChange}
               currentPageScriptHash={currentPageScriptHash}
-              hideSidebarNav={hideSidebarNav || s4AHideSidebarNav}
+              hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
               pageLinkBaseUrl={
-                this.props.s4aCommunication.currentState.pageLinkBaseUrl
+                this.props.hostCommunication.currentState.pageLinkBaseUrl
               }
             />
             {renderedDialog}
@@ -1394,4 +1407,4 @@ export class App extends PureComponent<Props, State> {
   }
 }
 
-export default withS4ACommunication(withScreencast(App))
+export default withHostCommunication(withScreencast(App))

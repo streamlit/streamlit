@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,16 +14,17 @@
 
 """time_input unit test."""
 
-from tests import testutil
+from datetime import datetime, time
+
+from parameterized import parameterized
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from parameterized import parameterized
-from datetime import datetime
-from datetime import time
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class TimeInputTest(testutil.DeltaGeneratorTestCase):
+class TimeInputTest(DeltaGeneratorTestCase):
     """Test ability to marshall time_input protos."""
 
     def test_just_label(self):
@@ -91,8 +92,8 @@ class TimeInputTest(testutil.DeltaGeneratorTestCase):
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.time_input("the label", label_visibility="wrong_value")
-            self.assertEquals(
-                str(e),
-                "Unsupported label_visibility option 'wrong_value'. Valid values are "
-                "'visible', 'hidden' or 'collapsed'.",
-            )
+        self.assertEquals(
+            str(e.exception),
+            "Unsupported label_visibility option 'wrong_value'. Valid values are "
+            "'visible', 'hidden' or 'collapsed'.",
+        )

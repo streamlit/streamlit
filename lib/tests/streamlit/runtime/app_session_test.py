@@ -1,40 +1,44 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import asyncio
 import threading
 import unittest
 from asyncio import AbstractEventLoop
-from typing import List, Any, Callable, cast, Optional
+from typing import Any, Callable, List, Optional, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 import streamlit.runtime.app_session as app_session
 from streamlit import config
-from streamlit.runtime.app_session import AppSession, AppSessionState
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import Runtime
+from streamlit.runtime.app_session import AppSession, AppSessionState
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import (
+    RerunData,
     ScriptRunContext,
+    ScriptRunner,
+    ScriptRunnerEvent,
     add_script_run_ctx,
     get_script_run_ctx,
-    ScriptRunner,
-    RerunData,
 )
-from streamlit.runtime.scriptrunner import ScriptRunnerEvent
 from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -53,14 +57,17 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
     if event_loop is None:
         event_loop = MagicMock()
 
-    return AppSession(
-        event_loop=event_loop,
-        session_data=SessionData("/fake/script_path.py", "fake_command_line"),
-        uploaded_file_manager=MagicMock(),
-        message_enqueued_callback=None,
-        local_sources_watcher=MagicMock(),
-        user_info={"email": "test@test.com"},
-    )
+    with patch(
+        "streamlit.runtime.app_session.asyncio.get_running_loop",
+        return_value=event_loop,
+    ):
+        return AppSession(
+            session_data=SessionData("/fake/script_path.py", "fake_command_line"),
+            uploaded_file_manager=MagicMock(),
+            message_enqueued_callback=None,
+            local_sources_watcher=MagicMock(),
+            user_info={"email": "test@test.com"},
+        )
 
 
 @patch(
@@ -68,7 +75,21 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
     MagicMock(spec=LocalSourcesWatcher),
 )
 class AppSessionTest(unittest.TestCase):
-    @patch("streamlit.runtime.app_session.secrets._file_change_listener.disconnect")
+    def setUp(self) -> None:
+        super().setUp()
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.media_file_mgr = MediaFileManager(
+            MemoryMediaFileStorage("/mock/media")
+        )
+        Runtime._instance = mock_runtime
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        Runtime._instance = None
+
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
+    )
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
         session = _create_test_session()
@@ -129,7 +150,9 @@ class AppSessionTest(unittest.TestCase):
         clear_memo_cache.assert_called_once()
         clear_legacy_cache.assert_called_once()
 
-    @patch("streamlit.runtime.app_session.secrets._file_change_listener.connect")
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.connect"
+    )
     def test_request_rerun_on_secrets_file_change(self, patched_connect):
         """AppSession should add a secrets listener on creation."""
         session = _create_test_session()
@@ -456,8 +479,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
     async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
-        event_loop = asyncio.get_running_loop()
-        session = _create_test_session(event_loop)
+        session = _create_test_session(asyncio.get_running_loop())
 
         handle_event_spy = MagicMock(
             side_effect=session._handle_scriptrunner_event_on_event_loop

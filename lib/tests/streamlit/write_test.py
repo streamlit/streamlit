@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,20 +14,21 @@
 
 """Streamlit Unit test."""
 
-from collections import namedtuple
-from unittest.mock import call, patch, Mock, PropertyMock
-
 import time
 import unittest
+from collections import namedtuple
+from unittest.mock import Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
 
 import streamlit as st
 from streamlit import type_util
+from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
+from tests.streamlit.snowpark_mocks import DataFrame, Row
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -175,6 +176,23 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
+    def test_snowpark_dataframe_write(self):
+        """Test st.write with snowflake.snowpark.dataframe.DataFrame."""
+
+        # SnowparkDataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
+            st.write(DataFrame())
+            p.assert_called_once()
+
+        # SnowparkRow inside list should call streamlit.delta_generator.DeltaGenerator.dataframe
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
+            st.write(
+                [
+                    Row(),
+                ]
+            )
+            p.assert_called_once()
+
     @patch("streamlit.delta_generator.DeltaGenerator.markdown")
     @patch("streamlit.delta_generator.DeltaGenerator.json")
     def test_dict_and_string(self, mock_json, mock_markdown):
@@ -236,6 +254,15 @@ class StreamlitWriteTest(unittest.TestCase):
 
             with self.assertRaises(Exception):
                 st.write("some text")
+
+    def test_unknown_arguments(self):
+        """Test st.write that raises an exception."""
+        with self.assertLogs(write._LOGGER) as logs:
+            st.write("some text", unknown_keyword_arg=123)
+
+        self.assertIn(
+            'Invalid arguments were passed to "st.write" function.', logs.records[0].msg
+        )
 
     def test_spinner(self):
         """Test st.spinner."""

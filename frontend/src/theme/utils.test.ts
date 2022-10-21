@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { CustomThemeConfig } from "src/autogen/proto"
 import { LocalStore } from "src/lib/storageUtils"
 import { baseTheme, createAutoTheme, darkTheme, lightTheme } from "src/theme"
@@ -38,6 +38,7 @@ import {
   getCachedTheme,
   removeCachedTheme,
   setCachedTheme,
+  hasLightBackgroundColor,
 } from "./utils"
 
 const matchMediaFillers = {
@@ -562,5 +563,42 @@ describe("bgColorToBaseString", () => {
 
   it("returns 'dark' for a dark background color", () => {
     expect(bgColorToBaseString("#000000")).toBe("dark")
+  })
+})
+
+describe("hasLightBackgroundColor", () => {
+  const testCases = [
+    {
+      description: "works for default light theme",
+      theme: lightTheme,
+      expectedResult: true,
+    },
+    {
+      description: "works for default dark theme",
+      theme: darkTheme,
+      expectedResult: false,
+    },
+    {
+      description: "works for custom light theme",
+      theme: createTheme(
+        CUSTOM_THEME_NAME,
+        new CustomThemeConfig({ backgroundColor: "yellow" })
+      ),
+      expectedResult: true,
+    },
+    {
+      description: "works for custom dark theme",
+      theme: createTheme(
+        CUSTOM_THEME_NAME,
+        new CustomThemeConfig({ backgroundColor: "navy" })
+      ),
+      expectedResult: false,
+    },
+  ]
+
+  testCases.forEach(({ description, theme, expectedResult }) => {
+    it(description, () => {
+      expect(hasLightBackgroundColor(theme.emotion)).toBe(expectedResult)
+    })
   })
 })

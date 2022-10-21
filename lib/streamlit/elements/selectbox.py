@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,43 +14,34 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Optional,
-    Sequence,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Sequence, cast
 
+from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
-    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    register_widget,
 )
 from streamlit.type_util import (
     Key,
     LabelVisibility,
     OptionSequence,
-    ensure_indexable,
-    to_key,
     T,
+    ensure_indexable,
     maybe_raise_label_warnings,
+    to_key,
 )
 from streamlit.util import index_
-from streamlit.runtime.metrics_util import gather_metrics
-
-from .form import current_form_id
-from .utils import (
-    check_callback_rules,
-    check_session_state_rules,
-    get_label_visibility_proto_value,
-)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

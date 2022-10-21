@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,19 +22,19 @@ from streamlit.errors import StreamlitAPIException
 
 
 class ElementUtilsTest(unittest.TestCase):
-    @patch("streamlit.elements.utils.is_in_form", return_value=False)
-    @patch("streamlit._is_running_with_streamlit", new=True)
-    def test_check_callback_rules_not_in_form(self, _):
+    @patch("streamlit.elements.utils.is_in_form", MagicMock(return_value=False))
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_check_callback_rules_not_in_form(self):
         check_callback_rules(None, lambda x: x)
 
-    @patch("streamlit.elements.utils.is_in_form", return_value=True)
-    @patch("streamlit._is_running_with_streamlit", new=True)
-    def test_check_callback_rules_in_form(self, _):
+    @patch("streamlit.elements.utils.is_in_form", MagicMock(return_value=True))
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_check_callback_rules_in_form(self):
         check_callback_rules(None, None)
 
-    @patch("streamlit.elements.utils.is_in_form", return_value=True)
-    @patch("streamlit._is_running_with_streamlit", new=True)
-    def test_check_callback_rules_error(self, _):
+    @patch("streamlit.elements.utils.is_in_form", MagicMock(return_value=True))
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_check_callback_rules_error(self):
         with pytest.raises(StreamlitAPIException) as e:
             check_callback_rules(None, lambda x: x)
 
@@ -46,7 +46,7 @@ class ElementUtilsTest(unittest.TestCase):
 
         patched_st_warning.assert_not_called()
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch("streamlit.elements.utils.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_val(
@@ -60,7 +60,7 @@ class ElementUtilsTest(unittest.TestCase):
 
         patched_st_warning.assert_not_called()
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch("streamlit.elements.utils.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_state_val(
@@ -74,7 +74,7 @@ class ElementUtilsTest(unittest.TestCase):
 
         patched_st_warning.assert_not_called()
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch("streamlit.elements.utils.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_prints_warning(
@@ -91,7 +91,7 @@ class ElementUtilsTest(unittest.TestCase):
         warning_msg = args[0]
         assert 'The widget with key "the key"' in warning_msg
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch("streamlit.elements.utils.get_session_state")
     def test_check_session_state_rules_writes_not_allowed(
         self, patched_get_session_state

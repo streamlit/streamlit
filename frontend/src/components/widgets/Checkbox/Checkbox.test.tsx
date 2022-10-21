@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -135,9 +134,11 @@ describe("Checkbox widget", () => {
     wrapper.update()
 
     expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
-    expect(
-      props.widgetMgr.setBoolValue
-    ).toHaveBeenLastCalledWith(props.element, true, { fromUi: true })
+    expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+      props.element,
+      true,
+      { fromUi: true }
+    )
 
     // "Submit" the form
     props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })

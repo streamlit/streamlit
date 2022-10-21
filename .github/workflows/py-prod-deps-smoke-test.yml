@@ -1,0 +1,48 @@
+name: Python Prod Deps Smoke
+
+on:
+  push:
+    branches:
+      - 'develop'
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+  # Allows workflow to be called from other workflows
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+
+# Avoid duplicate workflows on same branch
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}-py_prod
+  cancel-in-progress: true
+
+jobs:
+  smoke_test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with: 
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          use_cached_venv: 'false'
+      - name: Run make develop
+        run: make develop
+      - name: Run CLI smoke tests
+        run: make cli-smoke-tests

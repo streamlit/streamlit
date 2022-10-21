@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,20 +22,21 @@ import tempfile
 import types
 import unittest
 from dataclasses import dataclass
-from io import BytesIO
-from io import StringIO
-from unittest.mock import Mock, MagicMock
+from enum import Enum, auto
+from io import BytesIO, StringIO
+from unittest.mock import MagicMock, Mock
 
 import cffi
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
+from PIL import Image
 
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.hashing import (
-    _CacheFuncHasher,
-    _PANDAS_ROWS_LARGE,
     _NP_SIZE_LARGE,
+    _PANDAS_ROWS_LARGE,
+    _CacheFuncHasher,
 )
 
 try:
@@ -48,8 +49,8 @@ try:
 except ImportError:
     pass
 
-from streamlit.type_util import is_type
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.type_util import is_type
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -211,6 +212,27 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(get_hash(np4), get_hash(np5))
 
+    def test_PIL_image(self):
+        im1 = Image.new("RGB", (50, 50), (220, 20, 60))
+        im2 = Image.new("RGB", (50, 50), (30, 144, 255))
+        im3 = Image.new("RGB", (50, 50), (220, 20, 60))
+
+        self.assertEqual(get_hash(im1), get_hash(im3))
+        self.assertNotEqual(get_hash(im1), get_hash(im2))
+
+        # Check for big PIL images, they converted to numpy array with size
+        # bigger than _NP_SIZE_LARGE
+        # 1000 * 1000 * 3 = 3_000_000 > _NP_SIZE_LARGE = 1_000_000
+        im4 = Image.new("RGB", (1000, 1000), (100, 20, 60))
+        im5 = Image.new("RGB", (1000, 1000), (100, 20, 60))
+        im6 = Image.new("RGB", (1000, 1000), (101, 21, 61))
+
+        im4_np_array = np.frombuffer(im4.tobytes(), dtype="uint8")
+        self.assertGreater(im4_np_array.size, _NP_SIZE_LARGE)
+
+        self.assertEqual(get_hash(im4), get_hash(im5))
+        self.assertNotEqual(get_hash(im5), get_hash(im6))
+
     @parameterized.expand(
         [
             (BytesIO, b"123", b"456", b"123"),
@@ -280,6 +302,35 @@ class HashTest(unittest.TestCase):
         bar = Data("bar")
 
         assert get_hash(bar)
+
+    def test_enum(self):
+        """The hashing function returns the same result when called with the same
+        Enum members."""
+
+        class EnumClass(Enum):
+            ENUM_1 = auto()
+            ENUM_2 = auto()
+
+        # Hash values should be stable
+        self.assertEqual(get_hash(EnumClass.ENUM_1), get_hash(EnumClass.ENUM_1))
+
+        # Different enum values should produce different hashes
+        self.assertNotEqual(get_hash(EnumClass.ENUM_1), get_hash(EnumClass.ENUM_2))
+
+    def test_different_enums(self):
+        """Different enum classes should have different hashes, even when the enum
+        values are the same."""
+
+        class EnumClassA(Enum):
+            ENUM_1 = "hello"
+
+        class EnumClassB(Enum):
+            ENUM_1 = "hello"
+
+        enum_a = EnumClassA.ENUM_1
+        enum_b = EnumClassB.ENUM_1
+
+        self.assertNotEqual(get_hash(enum_a), get_hash(enum_b))
 
 
 class NotHashableTest(unittest.TestCase):

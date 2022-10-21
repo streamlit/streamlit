@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,12 +14,7 @@
  * limitations under the License.
  */
 
-/**
- * @license
- * Copyright 2019 Streamlit Inc. All rights reserved.
- */
-
-import React, { ReactElement } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
 import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import {
@@ -36,58 +30,85 @@ export interface PlotlyChartProps {
   height: number | undefined
 }
 
+export interface PlotlyIFrameProps {
+  width: number
+  height: number | undefined
+  url: string
+}
+
 export const DEFAULT_HEIGHT = 450
 
-export function PlotlyChart({
-  width: propWidth,
-  element,
+function renderIFrame({
+  url,
+  width,
   height: propHeight,
-}: PlotlyChartProps): ReactElement {
-  const renderIFrame = (url: string): ReactElement => {
-    const height = propHeight || DEFAULT_HEIGHT
-    const width = propWidth
-    return <iframe title="Plotly" src={url} style={{ width, height }} />
-  }
+}: PlotlyIFrameProps): ReactElement {
+  const height = propHeight || DEFAULT_HEIGHT
+  return <iframe title="Plotly" src={url} style={{ width, height }} />
+}
 
-  const isFullScreen = (): boolean => !!propHeight
+function renderFigure({
+  element,
+  width,
+  height,
+}: PlotlyChartProps): ReactElement {
+  const figure = element.figure as FigureProto
+  const isFullScreen = (): boolean => !!height
+
+  const theme: Theme = useTheme()
 
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
 
     if (isFullScreen()) {
-      spec.layout.width = propWidth
-      spec.layout.height = propHeight
+      spec.layout.width = width
+      spec.layout.height = height
     } else if (element.useContainerWidth) {
-      spec.layout.width = propWidth
+      spec.layout.width = width
     }
 
-    const theme: Theme = useTheme()
     spec.layout = layoutWithThemeDefaults(spec.layout, theme)
 
     return spec
   }
 
-  const renderFigure = (figure: FigureProto): ReactElement => {
-    const config = JSON.parse(figure.config)
-    const { data, layout, frames } = generateSpec(figure)
+  const [config, setConfig] = useState(JSON.parse(figure.config))
+  const [spec, setSpec] = useState(generateSpec(figure))
 
-    return (
-      <Plot
-        key={isFullScreen() ? "fullscreen" : "original"}
-        className="stPlotlyChart"
-        data={data}
-        layout={layout}
-        config={config}
-        frames={frames}
-      />
-    )
-  }
+  // Update config and spec references iff the theme or props change
+  useEffect(() => {
+    setConfig(JSON.parse(figure.config))
+    setSpec(generateSpec(figure))
+  }, [element, theme, height, width])
 
+  const { data, layout, frames } = spec
+
+  return (
+    <Plot
+      key={isFullScreen() ? "fullscreen" : "original"}
+      className="stPlotlyChart"
+      data={data}
+      layout={layout}
+      config={config}
+      frames={frames}
+    />
+  )
+}
+
+export function PlotlyChart({
+  width,
+  element,
+  height,
+}: PlotlyChartProps): ReactElement {
   switch (element.chart) {
     case "url":
-      return renderIFrame(element.url as string)
+      return renderIFrame({
+        url: element.url as string,
+        height,
+        width,
+      })
     case "figure":
-      return renderFigure(element.figure as FigureProto)
+      return renderFigure({ element, height, width })
     default:
       throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
   }

@@ -23,18 +23,6 @@ Object {
          
         for more details.
       </li>
-      <li>
-        If you'd like to deploy a private app,
-         
-        <a
-          href="https://streamlit.io/for-teams"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          sign up for Streamlit for Teams
-        </a>
-        .
-      </li>
     </ul>
   </React.Fragment>,
   "title": "Unable to deploy app",

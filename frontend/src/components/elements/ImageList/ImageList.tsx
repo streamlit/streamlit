@@ -1,12 +1,11 @@
 /**
- * @license
- * Copyright 2018-2022 Streamlit Inc.
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -94,30 +93,28 @@ export function ImageList({
 
   return (
     <StyledImageList style={{ width }}>
-      {element.imgs.map(
-        (iimage: IImage, idx: number): ReactElement => {
-          const image = iimage as ImageProto
-          return (
-            <StyledImageContainer key={idx} data-testid="stImage">
-              {image.markup ? (
-                // SVGs are received unsanitized
-                ReactHtmlParser(xssSanitizeSvg(image.markup))
-              ) : (
-                <img
-                  style={imgStyle}
-                  src={buildMediaUri(image.url, getBaseUriParts())}
-                  alt={idx.toString()}
-                />
-              )}
-              {image.caption && (
-                <StyledCaption data-testid="caption" style={imgStyle}>
-                  {` ${image.caption} `}
-                </StyledCaption>
-              )}
-            </StyledImageContainer>
-          )
-        }
-      )}
+      {element.imgs.map((iimage: IImage, idx: number): ReactElement => {
+        const image = iimage as ImageProto
+        return (
+          <StyledImageContainer key={idx} data-testid="stImage">
+            {image.markup ? (
+              // SVGs are received unsanitized
+              ReactHtmlParser(xssSanitizeSvg(image.markup))
+            ) : (
+              <img
+                style={imgStyle}
+                src={buildMediaUri(image.url, getBaseUriParts())}
+                alt={idx.toString()}
+              />
+            )}
+            {image.caption && (
+              <StyledCaption data-testid="caption" style={imgStyle}>
+                {` ${image.caption} `}
+              </StyledCaption>
+            )}
+          </StyledImageContainer>
+        )
+      })}
     </StyledImageList>
   )
 }

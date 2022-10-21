@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,15 +29,12 @@ import tempfile
 import textwrap
 import threading
 import typing
-import weakref
-from typing import Any, List, Pattern, Optional, Dict, Callable, Union
 import unittest.mock
+import weakref
+from typing import Any, Callable, Dict, List, Optional, Pattern, Union
 
-from streamlit import config
-from streamlit import file_util
-from streamlit import type_util
-from streamlit import util
-from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
+from streamlit import config, file_util, type_util, util
+from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -713,8 +710,9 @@ class _CodeHasher:
     @staticmethod
     def _get_main_script_directory() -> str:
         """Get the absolute path to directory of the main script."""
-        import __main__
         import pathlib
+
+        import __main__
 
         # This works because we set __main__.__file__ to the
         # script path in ScriptRunner.

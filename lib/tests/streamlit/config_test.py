@@ -1,10 +1,10 @@
-# Copyright 2018-2022 Streamlit Inc.
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,18 +13,18 @@
 # limitations under the License.
 
 """Config System Unittest."""
-from unittest.mock import MagicMock, mock_open, patch
 import copy
 import os
 import textwrap
 import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from parameterized import parameterized
 
-from streamlit import config
-from streamlit import env_util
+from streamlit import config, env_util
 from streamlit.config_option import ConfigOption
+from streamlit.errors import StreamlitAPIException
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
@@ -53,6 +53,27 @@ class ConfigTest(unittest.TestCase):
         except Exception:
             pass
         config._delete_option("_test.tomlTest")
+
+    def test_set_user_option_scriptable(self):
+        """Test that scriptable options can be set from API."""
+        # This is set in lib/tests/conftest.py to off
+        self.assertEqual(True, config.get_option("client.displayEnabled"))
+
+        try:
+            # client.displayEnabled and client.caching can be set after run starts.
+            config.set_user_option("client.displayEnabled", False)
+            self.assertEqual(False, config.get_option("client.displayEnabled"))
+        finally:
+            # Restore original value
+            config.set_user_option("client.displayEnabled", True)
+
+    def test_set_user_option_unscriptable(self):
+        """Test that unscriptable options cannot be set with st.set_option."""
+        # This is set in lib/tests/conftest.py to off
+        self.assertEqual(True, config.get_option("server.enableCORS"))
+
+        with self.assertRaises(StreamlitAPIException):
+            config.set_user_option("server.enableCORS", False)
 
     def test_simple_config_option(self):
         """Test creating a simple (constant) config option."""
