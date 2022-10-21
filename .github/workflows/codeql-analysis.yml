@@ -37,16 +37,18 @@ jobs:
       # - name: Setup virtual env
       #   uses: ./.github/actions/make_init
 
-      # - name: Set Python for CodeQL
-      #   run: |
-      #     source venv/bin/activate
-      #     echo "$(pipenv run which python)"
-      #     # Set the `CODEQL-PYTHON` environment variable to the Python executable
-      #     # that includes the dependencies
-      #     echo "CODEQL_PYTHON=$(pipenv run which python)" >> $GITHUB_ENV
-      #     # Navigate back to home directory:
-      #     cd $GITHUB_WORKSPACE
-      #     ls
+      - name: Set Python for CodeQL
+        run: |
+          pip install pipenv
+          cd lib
+          pipenv install
+          echo "$(pipenv run which python)"
+          # Set the `CODEQL-PYTHON` environment variable to the Python executable
+          # that includes the dependencies
+          echo "CODEQL_PYTHON=$(pipenv run which python)" >> $GITHUB_ENV
+          # Navigate back to home directory:
+          cd $GITHUB_WORKSPACE
+          ls
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
