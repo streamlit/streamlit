@@ -47,7 +47,6 @@ class EchoTest(DeltaGeneratorTestCase):
                     pass
 
         echo_str = """```python
-
 st.write("Hello")
 
 "hi"
@@ -64,7 +63,6 @@ class MyClass(object):
     def do_y(self):
         pass
 
-
 ```"""
 
         element = self.get_delta_from_queue(echo_index).new_element
@@ -78,8 +76,8 @@ class MyClass(object):
     @parameterized.expand(
         [
             ("code_location default", {}, 0, 1),
-            ("code_location above", {"location": "above"}, 0, 1),
-            ("code_location below", {"location": "below"}, 1, 0),
+            ("code_location above", {"code_location": "above"}, 0, 1),
+            ("code_location below", {"code_location": "below"}, 1, 0),
         ]
     )
     def test_echo_unindent(
@@ -110,14 +108,19 @@ class MyClass(object):
         echo_str = """```python
 st.write("Hello")
 "hi"
+
 def foo(x):
     y = x + 10
+
     print(y)
+
 class MyClass(object):
     def do_x(self):
         pass
+
     def do_y(self):
         pass
+
 ```"""
 
         element = self.get_delta_from_queue(echo_index).new_element
@@ -133,7 +136,6 @@ class MyClass(object):
 
         echo_str = """```python
 a = 123
-
 
 ```"""
 
