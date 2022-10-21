@@ -561,7 +561,7 @@ def _generate_chart(
             color_column,
             title=color_title,
             type="nominal",
-            legend=alt.Legend(titlePadding=0, offset=10),
+            legend=alt.Legend(titlePadding=0, offset=10, orient="bottom"),
         )
         tooltips.append(alt.Tooltip(color_column, title="label"))
 
