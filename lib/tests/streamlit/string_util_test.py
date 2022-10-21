@@ -34,6 +34,12 @@ class StringUtilTest(unittest.TestCase):
             ("😃😃", False),
             ("😃X", False),
             ("X😃", False),
+            ("🚨", True),
+            # Test emoji with text presentation and emoji presentation selector variants
+            ("️🚨", True),
+            ("️🚨", True),
+            ("⛔️", True),
+            ("⛔️X", False),
         ]
     )
     def test_is_emoji(self, text: str, expected: bool):
