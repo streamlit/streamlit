@@ -201,11 +201,13 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
         self.assertEqual(len(ctx.tracked_commands), 1)
         self.assertTrue(ctx.tracked_commands[0].name.endswith("test_function"))
+        self.assertTrue(ctx.tracked_commands[0].name.startswith("external:"))
 
         st.markdown("This function should be tracked")
 
         self.assertEqual(len(ctx.tracked_commands), 2)
         self.assertTrue(ctx.tracked_commands[0].name.endswith("test_function"))
+        self.assertTrue(ctx.tracked_commands[0].name.startswith("external:"))
         self.assertEqual(ctx.tracked_commands[1].name, "markdown")
 
         ctx.reset()

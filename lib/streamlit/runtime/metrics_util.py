@@ -53,10 +53,6 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.core.series.Series": "PandasSeries",
 }
 
-# If the gather_metrics decorator is used outside of streamlit library
-# we enforce a prefix to be added to the tracked command:
-_EXTERNAL_COMMAND_PREFIX = "external:"
-
 # A list of dependencies to check for attribution
 _ATTRIBUTIONS_TO_CHECK: Final = [
     "snowflake",
@@ -141,11 +137,18 @@ def _get_type_name(obj: object) -> str:
     return "failed"
 
 
+def _get_top_level_module(func: Callable[..., Any]) -> str:
+    """Get the top level module for the given function."""
+    module = inspect.getmodule(func)
+    if module is None or not module.__name__:
+        return "unknown"
+    return module.__name__.split(".")[0]
+
+
 def _get_callable_name(func: Callable[..., Any]) -> str:
     """Get a simplified name for the type of the given callable."""
     with contextlib.suppress(Exception):
         name = "unknown"
-        module = "unknown"
 
         if inspect.isclass(func):
             name = func.__class__.__name__
@@ -154,15 +157,9 @@ def _get_callable_name(func: Callable[..., Any]) -> str:
         elif hasattr(func, "__name__"):
             name = func.__name__
 
-        if hasattr(func, "__module__"):
-            module = func.__module__
-
-        if module.startswith("streamlit.") or module == "streamlit":
-            if "." in name:
-                # Only return actual function name
-                name = name.split(".")[-1]
-        else:
-            name = _EXTERNAL_COMMAND_PREFIX + name
+        if "." in name and _get_top_level_module(func) == "streamlit":
+            # Only return actual function name
+            name = name.split(".")[-1]
 
         return name
     return "failed"
@@ -305,13 +302,17 @@ def gather_metrics(
                 command_telemetry = _get_command_telemetry(
                     non_optional_func, *args, **kwargs
                 )
+
                 if name:
-                    if command_telemetry.name and command_telemetry.name.startswith(
-                        _EXTERNAL_COMMAND_PREFIX
-                    ):
-                        command_telemetry.name = _EXTERNAL_COMMAND_PREFIX + name
-                    else:
-                        command_telemetry.name = name
+                    command_telemetry.name = name
+
+                top_level_module = _get_top_level_module(non_optional_func)
+                if top_level_module != "streamlit":
+                    # If the gather_metrics decorator is used outside of streamlit library
+                    # we enforce a prefix to be added to the tracked command:
+                    command_telemetry.name = (
+                        f"external:{top_level_module}:{command_telemetry.name}"
+                    )
 
                 if (
                     command_telemetry.name not in ctx.tracked_commands_counter
