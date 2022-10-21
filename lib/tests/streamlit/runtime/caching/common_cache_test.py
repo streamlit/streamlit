@@ -280,6 +280,20 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             cached_widget()
 
+            warning.assert_called()
+            warning.reset_mock()
+
+            # Make sure everything got reset properly
+            st.text("foo")
+            warning.assert_not_called()
+
+            # Test st.cache functions with widgets enabled
+            @cache_decorator(experimental_allow_widgets=True)
+            def cached_widget_enabled():
+                st.button("Press me too!")
+
+            cached_widget_enabled()
+
             warning.assert_not_called()
             warning.reset_mock()
 

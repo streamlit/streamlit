@@ -349,13 +349,16 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
                 with cached_func.warning_call_stack.calling_cached_function(func):
                     with cached_func.message_call_stack.calling_cached_function():
-                        with cached_func.message_call_stack.maybe_allow_widgets(
+                        with cached_func.warning_call_stack.maybe_allow_widgets(
                             cached_func.allow_widgets
                         ):
-                            with cached_func.warning_call_stack.maybe_suppress_cached_st_function_warning(
-                                cached_func.suppress_st_warning
+                            with cached_func.message_call_stack.maybe_allow_widgets(
+                                cached_func.allow_widgets
                             ):
-                                return_value = func(*args, **kwargs)
+                                with cached_func.warning_call_stack.maybe_suppress_cached_st_function_warning(
+                                    cached_func.suppress_st_warning
+                                ):
+                                    return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
                 try:
@@ -414,6 +417,7 @@ class CacheWarningCallStack(threading.local):
         self._cached_func_stack: List[types.FunctionType] = []
         self._suppress_st_function_warning = 0
         self._cache_type = cache_type
+        self._allow_widgets: int = 0
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -468,8 +472,11 @@ class CacheWarningCallStack(threading.local):
         # There are some elements not in either list, which we still want to warn about.
         # Ideally we will fix this by either updating the lists or creating a better
         # way of categorizing elements.
-        if st_func_name in NONWIDGET_ELEMENTS or st_func_name in WIDGETS:
+        if st_func_name in NONWIDGET_ELEMENTS:
             return
+        if st_func_name in WIDGETS and self._allow_widgets > 0:
+            return
+
         if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
             cached_func = self._cached_func_stack[-1]
             self._show_cached_st_function_warning(dg, st_func_name, cached_func)
@@ -485,6 +492,23 @@ class CacheWarningCallStack(threading.local):
         with self.suppress_cached_st_function_warning():
             e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
             dg.exception(e)
+
+    @contextlib.contextmanager
+    def allow_widgets(self) -> Iterator[None]:
+        self._allow_widgets += 1
+        try:
+            yield
+        finally:
+            self._allow_widgets -= 1
+            assert self._allow_widgets >= 0
+
+    @contextlib.contextmanager
+    def maybe_allow_widgets(self, allow: bool) -> Iterator[None]:
+        if allow:
+            with self.allow_widgets():
+                yield
+        else:
+            yield
 
 
 """
