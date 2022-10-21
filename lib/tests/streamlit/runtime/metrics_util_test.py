@@ -223,14 +223,13 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (st.experimental_singleton.clear, "clear_singleton"),
             (st.session_state.__setattr__, "session_state.set_attr"),
             (st.session_state.__setitem__, "session_state.set_item"),
-            (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (memo_decorator.MemoCache.write_result, "_cache_memo_object"),
             (
                 singleton_decorator.SingletonCache.write_result,
                 "_cache_singleton_object",
             ),
             (caching._write_to_cache, "_cache_object"),
-            (st._transparent_write, "magic"),
+            (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
         ]

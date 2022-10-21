@@ -22,7 +22,6 @@ import uuid
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
-from tkinter import N
 from typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast, overload
 
 from typing_extensions import Final
@@ -158,7 +157,7 @@ def _get_callable_name(func: Callable[..., Any]) -> str:
         if hasattr(func, "__module__"):
             module = func.__module__
 
-        if module.startswith("streamlit."):
+        if module.startswith("streamlit.") or module == "streamlit":
             if "." in name:
                 # Only return actual function name
                 name = name.split(".")[-1]
