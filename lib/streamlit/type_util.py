@@ -37,6 +37,7 @@ from pandas import MultiIndex
 from pandas.api.types import infer_dtype
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
+import streamlit as st
 from streamlit import errors
 from streamlit import logger as _logger
 
@@ -48,6 +49,10 @@ if TYPE_CHECKING:
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure
     from pydeck import Deck
+
+
+# Maximum number of rows to request from an unevaluated (out-of-core) dataframe
+MAX_UNEVALUATED_DF_ROWS = 10000
 
 _LOGGER = _logger.get_logger("root")
 
@@ -440,6 +445,14 @@ def convert_anything_to_df(df: Any) -> DataFrame:
     if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
         return pd.DataFrame([])
 
+    if is_type(df, _SNOWPARK_DF_TYPE_STR) and not isinstance(df, list):
+        df = pd.DataFrame(df.take(MAX_UNEVALUATED_DF_ROWS))
+        if df.shape[0] == MAX_UNEVALUATED_DF_ROWS:
+            st.caption(
+                f"Showing only 10k rows. Call `collect()` on the dataframe to show more."
+            )
+        return df
+
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
@@ -479,13 +492,16 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
 
     Parameters
     ----------
-    obj : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+    obj : list, tuple, numpy.ndarray, pandas.Series, pandas.DataFrame or snowflake.snowpark.dataframe.DataFrame
 
     Returns
     -------
     iterable
 
     """
+    if is_snowpark_dataframe(obj):
+        obj = convert_anything_to_df(obj)
+
     if is_dataframe(obj):
         # Return first column as a pd.Series
         # The type of the elements in this column is not known up front, hence
