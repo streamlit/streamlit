@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 from streamlit.runtime.caching.memo_decorator import (
     MEMO_CALL_STACK,
-    MEMO_MESSAGES_CALL_STACK,
+    MEMO_MESSAGE_CALL_STACK,
     MemoAPI,
     _memo_caches,
 )
@@ -48,7 +48,7 @@ def save_element_message(
     be used later to replay the element when a cache-decorated function's
     execution is skipped.
     """
-    MEMO_MESSAGES_CALL_STACK.save_element_message(
+    MEMO_MESSAGE_CALL_STACK.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
     SINGLETON_MESSAGE_CALL_STACK.save_element_message(
@@ -66,7 +66,7 @@ def save_block_message(
     be used later to replay the block when a cache-decorated function's
     execution is skipped.
     """
-    MEMO_MESSAGES_CALL_STACK.save_block_message(
+    MEMO_MESSAGE_CALL_STACK.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
     SINGLETON_MESSAGE_CALL_STACK.save_block_message(
@@ -78,7 +78,7 @@ def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
     """Save a widget's metadata to a thread-local callstack, so the widget
     can be registered again when that widget is replayed.
     """
-    MEMO_MESSAGES_CALL_STACK.save_widget_metadata(metadata)
+    MEMO_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
     SINGLETON_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
 
 

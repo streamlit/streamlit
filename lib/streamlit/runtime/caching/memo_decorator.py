@@ -62,7 +62,7 @@ _TTLCACHE_TIMER = time.monotonic
 _CACHE_DIR_NAME = "cache"
 
 MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
-MEMO_MESSAGES_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
+MEMO_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
 
 
 class MemoizedFunction(CachedFunction):
@@ -93,7 +93,7 @@ class MemoizedFunction(CachedFunction):
 
     @property
     def message_call_stack(self) -> CacheMessagesCallStack:
-        return MEMO_MESSAGES_CALL_STACK
+        return MEMO_MESSAGE_CALL_STACK
 
     @property
     def display_name(self) -> str:
