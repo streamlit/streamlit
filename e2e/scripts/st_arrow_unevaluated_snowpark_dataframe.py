@@ -15,7 +15,7 @@
 import streamlit as st
 from tests.streamlit.snowpark_mocks import DataFrame
 
-snowpark_dataframe = DataFrame(num_of_rows=50000)
+snowpark_dataframe = DataFrame(num_of_rows=50000, num_of_cols=4)
 
 st.dataframe(snowpark_dataframe)
 

@@ -24,7 +24,7 @@ class DataFrame:
 
     __module__ = "snowflake.snowpark.dataframe"
 
-    def __init__(self, num_of_rows: int = 10000, num_of_cols: int = 10):
+    def __init__(self, num_of_rows: int = 50000, num_of_cols: int = 4):
         self._data = None
         self._num_of_rows = num_of_rows
         self._num_of_cols = num_of_cols
@@ -47,6 +47,7 @@ class DataFrame:
     def _lazy_evaluation(self):
         """Sometimes we don't need data inside DataFrame class, so we populate it once and only when necessary"""
         if self._data is None:
+            random.seed(0)
             self._data = self._random_data()
 
     def _random_data(self) -> List[List[int]]:
