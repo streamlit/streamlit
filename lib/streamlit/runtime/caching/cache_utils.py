@@ -22,23 +22,13 @@ import threading
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from google.protobuf.message import Message
+from typing_extensions import Protocol, runtime_checkable
 
 import streamlit as st
-from streamlit import type_util, util
+from streamlit import runtime, type_util, util
 from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.elements.spinner import spinner
 from streamlit.errors import StreamlitAPIException
@@ -62,6 +52,11 @@ from streamlit.runtime.scriptrunner.script_run_context import (
 from streamlit.runtime.state.session_state import WidgetMetadata
 
 _LOGGER = get_logger(__name__)
+
+
+@runtime_checkable
+class Widget(Protocol):
+    id: str
 
 
 @dataclass(frozen=True)
@@ -564,21 +559,24 @@ class CacheMessagesCallStack(threading.local):
         executing cached functions, so they can be replayed any time the function's
         execution is skipped because they're in the cache.
         """
+        if not runtime.exists():
+            return
+
         id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
         for msgs in self._cached_message_stack:
-            try:
-                wid = element_proto.id  # type: ignore
+            if isinstance(element_proto, Widget):
+                wid = element_proto.id
                 # TODO replace `Message` with a more precise type
                 if not self._registered_metadata:
-                    _LOGGER.warning(
-                        "Trying to save widget message that wasn't registered. This should not happen."
+                    _LOGGER.error(
+                        "Trying to save widget message that wasn't registered. This should not be possible."
                     )
                     raise AttributeError
                 widget_meta = WidgetMsgMetadata(
                     wid, None, metadata=self._registered_metadata
                 )
                 self._registered_metadata = None
-            except AttributeError:
+            else:
                 widget_meta = None
 
             if self._allow_widgets or widget_meta is None:
