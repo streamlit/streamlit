@@ -34,19 +34,19 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Setup virtual env
-        uses: ./.github/actions/make_init
+      # - name: Setup virtual env
+      #   uses: ./.github/actions/make_init
 
-      - name: Set Python for CodeQL
-        run: |
-          source venv/bin/activate
-          echo "$(pipenv run which python)"
-          # Set the `CODEQL-PYTHON` environment variable to the Python executable
-          # that includes the dependencies
-          echo "CODEQL_PYTHON=$(pipenv run which python)" >> $GITHUB_ENV
-          # Navigate back to home directory:
-          cd $GITHUB_WORKSPACE
-          ls
+      # - name: Set Python for CodeQL
+      #   run: |
+      #     source venv/bin/activate
+      #     echo "$(pipenv run which python)"
+      #     # Set the `CODEQL-PYTHON` environment variable to the Python executable
+      #     # that includes the dependencies
+      #     echo "CODEQL_PYTHON=$(pipenv run which python)" >> $GITHUB_ENV
+      #     # Navigate back to home directory:
+      #     cd $GITHUB_WORKSPACE
+      #     ls
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
@@ -59,9 +59,9 @@ jobs:
           # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
           queries: security-and-quality
           config-file: ./.github/codeql-config.yml
-          # Override the default behavior so that the action doesn't attempt
-          # to auto-install Python dependencies
-          setup-python-dependencies: false
+          # # Override the default behavior so that the action doesn't attempt
+          # # to auto-install Python dependencies
+          # setup-python-dependencies: false
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
