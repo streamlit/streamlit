@@ -1,3 +1,5 @@
 paths:
   - lib/streamlit
   - frontend/src
+paths-ignore:
+  - "**/venv/"
