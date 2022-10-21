@@ -24,12 +24,29 @@ import re
 
 from emoji.unicode_codes.data_dict import EMOJI_DATA  # type: ignore
 
+# For each emoji, we also want to include the text presentation selector and emoji presentation selector variants (i.e. + u'\uFE0E' and + u'\uFE0F'),
+# as both prefixes and suffixes. See https://unicode.org/reports/tr51/#Emoji_Variation_Sequences and
+# https://github.com/carpedm20/emoji/blob/master/emoji/core.py
+
+
+def add_variants(emoji_unicodes):
+    new_emoji_unicodes = set()
+    for emoji_unicode in emoji_unicodes:
+        new_emoji_unicodes.add(emoji_unicode)
+        new_emoji_unicodes.add(emoji_unicode + VARIANT_TEXT_TYPE)
+        new_emoji_unicodes.add(VARIANT_TEXT_TYPE + emoji_unicode)
+        new_emoji_unicodes.add(emoji_unicode + VARIANT_EMOJI_TYPE)
+        new_emoji_unicodes.add(VARIANT_EMOJI_TYPE + emoji_unicode)
+    return new_emoji_unicodes
+
+
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 EMOJI_SET_REGEX = re.compile(r"ALL_EMOJIS.+?}", re.DOTALL)
 EMOJIS_SCRIPT_PATH = os.path.join(BASE_DIR, "lib", "streamlit", "emojis.py")
+VARIANT_TEXT_TYPE = "\uFE0E"
+VARIANT_EMOJI_TYPE = "\uFE0F"
 
-emoji_unicodes = set(EMOJI_DATA.keys())
-
+emoji_unicodes = add_variants(set(EMOJI_DATA.keys()))
 
 generated_code = 'ALL_EMOJIS = {"' + '","'.join(sorted(emoji_unicodes)) + '"}'
 
