@@ -23,7 +23,6 @@ from typing import (
     Any,
     Dict,
     List,
-    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -35,6 +34,7 @@ import altair as alt
 import pandas as pd
 from altair.vegalite.v4.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
+from typing_extensions import Literal
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
