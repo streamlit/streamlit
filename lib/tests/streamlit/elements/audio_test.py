@@ -23,7 +23,7 @@ from parameterized import parameterized
 from scipy.io import wavfile
 
 import streamlit as st
-from streamlit.elements.media import _maybe_convert_to_wave_bytes
+from streamlit.elements.media import _maybe_convert_to_wav_bytes
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.media_file_storage import MediaFileStorageError
@@ -66,7 +66,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         fake_audio_np_array = np.array(arr)
 
         st.audio(fake_audio_np_array, sample_rate=sample_rate)
-        computed_bytes = _maybe_convert_to_wave_bytes(
+        computed_bytes = _maybe_convert_to_wav_bytes(
             fake_audio_np_array, sample_rate=sample_rate
         )
 
@@ -145,7 +145,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         sample_rate = 44100
         fake_audio_np_array = np.array([])
 
-        computed_bytes = _maybe_convert_to_wave_bytes(
+        computed_bytes = _maybe_convert_to_wav_bytes(
             fake_audio_np_array, sample_rate=sample_rate
         )
 
@@ -160,7 +160,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         sample_rate = 7
         fake_audio_np_array = np.array([1, 9])
 
-        computed_bytes = _maybe_convert_to_wave_bytes(
+        computed_bytes = _maybe_convert_to_wav_bytes(
             fake_audio_np_array, sample_rate=sample_rate
         )
 
@@ -178,7 +178,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
 
         fake_audio_np_array = np.array([left_channel, right_channel])
 
-        computed_bytes = _maybe_convert_to_wave_bytes(
+        computed_bytes = _maybe_convert_to_wav_bytes(
             fake_audio_np_array, sample_rate=sample_rate
         )
 
@@ -194,7 +194,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         fake_audio_data_bytes = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
         sample_rate = 44100
 
-        computed_bytes = _maybe_convert_to_wave_bytes(
+        computed_bytes = _maybe_convert_to_wav_bytes(
             fake_audio_data_bytes, sample_rate=sample_rate
         )
 
@@ -205,7 +205,7 @@ class AudioTest(testutil.DeltaGeneratorTestCase):
         is None."""
 
         np_arr = np.array([0, 1, 2, 3])
-        computed_bytes = _maybe_convert_to_wave_bytes(np_arr, sample_rate=None)
+        computed_bytes = _maybe_convert_to_wav_bytes(np_arr, sample_rate=None)
         self.assertTrue(computed_bytes is np_arr)
 
     def test_st_audio_from_file(self):

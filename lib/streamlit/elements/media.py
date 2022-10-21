@@ -84,11 +84,13 @@ class MediaMixin:
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
 
-        if type_util.is_type(data, "numpy.ndarray") and sample_rate is None:
+        is_data_numpy_array = type_util.is_type(data, "numpy.ndarray")
+
+        if is_data_numpy_array and sample_rate is None:
             raise StreamlitAPIException(
                 "`sample_rate` must be specified when `data` is a numpy array."
             )
-        if not type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
+        if not is_data_numpy_array and sample_rate is not None:
             import streamlit as st
 
             st.warning(
@@ -308,7 +310,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     # ranging from -32768 to 32767.
     # scaled_data is PCM 16 bit numpy array, that's why we multiply [-1, 1] float
     # values to 32_767 == 2 ** 15 - 1.
-    np_array = data / max_abs_value * 32767
+    np_array = (data / max_abs_value) * 32767
     scaled_data = np_array.astype(np.int16)
     return scaled_data.tobytes(), nchan
 
@@ -323,20 +325,16 @@ def _make_wav(data: "npt.NDArray[Any]", sample_rate: int) -> bytes:
 
     scaled, nchan = _validate_and_normalize(data)
 
-    fp = io.BytesIO()
-    waveobj = wave.open(fp, mode="wb")
-    waveobj.setnchannels(nchan)
-    waveobj.setframerate(sample_rate)
-    waveobj.setsampwidth(2)
-    waveobj.setcomptype("NONE", "NONE")
-    waveobj.writeframes(scaled)
-    val = fp.getvalue()
-    waveobj.close()
-
-    return val
+    with io.BytesIO() as fp, wave.open(fp, mode="wb") as waveobj:
+        waveobj.setnchannels(nchan)
+        waveobj.setframerate(sample_rate)
+        waveobj.setsampwidth(2)
+        waveobj.setcomptype("NONE", "NONE")
+        waveobj.writeframes(scaled)
+        return fp.getvalue()
 
 
-def _maybe_convert_to_wave_bytes(
+def _maybe_convert_to_wav_bytes(
     data: MediaData, sample_rate: Optional[int]
 ) -> MediaData:
     if type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
@@ -378,5 +376,5 @@ def marshall_audio(
         proto.url = data
 
     else:
-        data = _maybe_convert_to_wave_bytes(data, sample_rate)
+        data = _maybe_convert_to_wav_bytes(data, sample_rate)
         _marshall_av_media(coordinates, proto, data, mimetype)
