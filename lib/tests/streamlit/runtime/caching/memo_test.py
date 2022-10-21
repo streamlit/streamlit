@@ -48,7 +48,7 @@ def as_cached_result(value: Any) -> InitialCachedResults:
     return _as_cached_result(value, CacheType.MEMO)
 
 
-def as_replay_test_data():
+def as_replay_test_data() -> InitialCachedResults:
     """Creates cached results for a function that returned `value`
     and executed `st.text(1)`.
     """
