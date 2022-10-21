@@ -40,6 +40,7 @@ from streamlit.web.server.component_request_handler import ComponentRequestHandl
 from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
+    AllowedMessageOriginsHandler,
     AssetsFileHandler,
     HealthHandler,
     MessageCacheHandler,
@@ -233,6 +234,10 @@ class Server:
                 make_url_path_regex(base, "st-metrics"),
                 StatsRequestHandler,
                 dict(stats_manager=self._runtime.stats_mgr),
+            ),
+            (
+                make_url_path_regex(base, "st-allowed-message-origins"),
+                AllowedMessageOriginsHandler,
             ),
             (
                 make_url_path_regex(
