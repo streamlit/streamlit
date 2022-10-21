@@ -73,7 +73,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       labelPadding: 16,
       columnPadding: 8,
       rowPadding: 4,
-      padding: 3,
+      padding: 7,
       symbolStrokeWidth: 4,
     },
     range: {
