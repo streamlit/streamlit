@@ -15,7 +15,6 @@
 """Streamlit support for Plotly charts."""
 
 import json
-import string
 import urllib.parse
 from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
 
@@ -103,6 +102,9 @@ class PlotlyMixin:
             Use any other sharing mode to send the chart to Plotly chart studio, which
             requires an account. See https://plot.ly/python/chart-studio/ for more information.
 
+        theme : str or None
+            The theme of the chart. This argument only accepts "streamlit" or None for now.
+
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
 
@@ -145,7 +147,7 @@ class PlotlyMixin:
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme. '
+                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         marshall(
             plotly_chart_proto,
