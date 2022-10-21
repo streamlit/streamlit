@@ -26,7 +26,6 @@ from emoji.unicode_codes.data_dict import EMOJI_DATA  # type: ignore
 
 
 def _add_variants(emoji_unicodes):
-    # Add the comments from above as a docstring
     """Add the variants of each emoji to the list of emoji unicodes.
 
     For each emoji, we also want to include the text presentation selector and emoji presentation selector variants,
