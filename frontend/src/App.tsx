@@ -826,7 +826,7 @@ export class App extends PureComponent<Props, State> {
         // we pick up any new changes to it).
         this.setAndSendTheme(customTheme)
       }
-    } else if (!themeInput) {
+    } else {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
