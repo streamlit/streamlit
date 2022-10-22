@@ -42,9 +42,8 @@ st.plotly_chart(chart)
 
 # Bar Chart
 # tests applyStreamlitThemeTemplateData and applyDiscreteColors
-fig_bar = px.bar(
-    long_df_bar, x="nation", y="count", color="medal", title="Long-Form Input"
-)
+long_df = px.data.medals_long()
+fig_bar = px.bar(long_df, x="nation", y="count", color="medal", title="Long-Form Input")
 st.plotly_chart(fig_bar, theme="streamlit")
 
 # Bubble Chart
