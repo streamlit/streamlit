@@ -45,13 +45,13 @@ describe("st.DataFrame with unevaluated snowflake.snowpark.dataframe.DataFrame",
 
   it("warning about data being capped exists", () => {
     cy.getIndexed("div [data-testid='stCaptionContainer']", 0)
-      .should("contain", "Showing only 10k rows. Call collect() on the dataframe to show more.")
+      .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
     cy.getIndexed("div [data-testid='stCaptionContainer']", 1)
-      .should("contain", "Showing only 10k rows. Call collect() on the dataframe to show more.")
+      .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
     cy.getIndexed("div [data-testid='stCaptionContainer']", 2)
-      .should("contain", "Showing only 10k rows. Call collect() on the dataframe to show more.")
+      .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
     cy.getIndexed("div [data-testid='stCaptionContainer']", 3)
-      .should("contain", "Showing only 10k rows. Call collect() on the dataframe to show more.")
+      .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
   });
 
   it("displays a line chart", () => {

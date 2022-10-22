@@ -449,7 +449,7 @@ def convert_anything_to_df(df: Any) -> DataFrame:
         df = pd.DataFrame(df.take(MAX_UNEVALUATED_DF_ROWS))
         if df.shape[0] == MAX_UNEVALUATED_DF_ROWS:
             st.caption(
-                f"Showing only 10k rows. Call `collect()` on the dataframe to show more."
+                f"⚠️ Showing only 10k rows. Call `collect()` on the dataframe to show more."
             )
         return df
 
