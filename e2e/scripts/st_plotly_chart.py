@@ -37,17 +37,18 @@ bin_size = [0.1, 0.25, 0.5]
 # Create distribution plot with custom bin_size
 chart = ff.create_distplot(hist_data, group_labels, bin_size)
 
-# Plot!
+# tests no streamlit theme plot
 st.plotly_chart(chart)
 
 # Bar Chart
-long_df_bar = px.data.medals_long()
+# tests applyStreamlitThemeTemplateData and applyDiscreteColors
 fig_bar = px.bar(
     long_df_bar, x="nation", y="count", color="medal", title="Long-Form Input"
 )
 st.plotly_chart(fig_bar, theme="streamlit")
 
 # Bubble Chart
+# tests applyDiscreteColors and applyStreamlitThemeData, specifically the bar line code
 df_bubble = px.data.gapminder()
 fig_bubble = px.scatter(
     df_bubble.query("year==2007"),
@@ -62,6 +63,7 @@ fig_bubble = px.scatter(
 st.plotly_chart(fig_bubble, theme="streamlit")
 
 # Candlestick Chart
+# tests applyUniqueGraphColorsData
 open_data_candlestick = [33.0, 33.3, 33.5, 33.0, 34.1]
 high_data_candlestick = [33.1, 33.3, 33.6, 33.2, 34.8]
 low_data_candlestick = [32.7, 32.7, 32.8, 32.6, 32.8]
@@ -87,19 +89,15 @@ fig_candlestick = go.Figure(
 st.plotly_chart(fig_candlestick, theme="streamlit")
 
 # Sunburst Chart
-df = px.data.gapminder().query("year == 2007")
+# tests customdata code in applyDiscreteColors
+df = px.data.tips()
 fig_sunburst = px.sunburst(
-    df,
-    path=["continent", "country"],
-    values="pop",
-    # setting color here to a string sets customdata attribute
-    color="lifeExp",
-    hover_data=["iso_alpha"],
-    color_continuous_midpoint=np.average(df["lifeExp"], weights=df["pop"]),
+    df, path=["sex", "day", "time"], values="total_bill", color="day"
 )
 st.plotly_chart(fig_sunburst, theme="streamlit")
 
 # Contour Plot
+# tests applyColorscale
 fig_contour = go.Figure(
     data=go.Contour(
         z=[
@@ -114,21 +112,16 @@ fig_contour = go.Figure(
 st.plotly_chart(fig_contour, theme="streamlit")
 
 # Dist plot
-x1 = np.random.randn(200) - 2
-x2 = np.random.randn(200)
-x3 = np.random.randn(200) + 2
-x4 = np.random.randn(200) + 4
-
-# Group data together
-hist_data = [x1, x2, x3, x4]
-
-group_labels = ["Group 1", "Group 2", "Group 3", "Group 4"]
-
-# Create distplot with custom bin_size
-fig_dist = ff.create_distplot(hist_data, group_labels, bin_size=0.2)
+# tests applyDiscreteColors, specifically the box type code
+df = px.data.tips()
+fig_dist = px.histogram(
+    df, x="total_bill", y="tip", color="sex", marginal="rug", hover_data=df.columns
+)
 st.plotly_chart(fig_dist, theme="streamlit")
 
+
 # Waterfall Chart
+# tests ApplyUniqueGraphColorsData waterfall code
 fig_waterfall = go.Figure(
     go.Waterfall(
         name="20",
@@ -153,12 +146,14 @@ fig_waterfall.update_layout(title="Profit and loss statement 2018", showlegend=T
 st.plotly_chart(fig_waterfall, theme="streamlit")
 
 # Ternary Chart
+# tests applyStreamlitThemeTemplateLayout, specifically the ternary code
 df = px.data.election()
 fig_ternary = px.scatter_ternary(df, a="Joly", b="Coderre", c="Bergeron")
 
 st.plotly_chart(fig_ternary, theme="streamlit")
 
 # Table Plot
+# tests ApplyUniqueGraphColorsData, specifically the table code
 fig_table = go.Figure(
     data=[
         go.Table(
