@@ -67,7 +67,9 @@ class MediaMixin:
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
         sample_rate: int or None
-            sample_rate only used to transform numpy array to wav format
+            The sample rate of the raw audio data, number of samples per second.
+            Only required when data parameter is being used as numpy.ndarray
+            of audio signal.
 
         Example
         -------
@@ -288,6 +290,23 @@ def marshall_video(
 
 
 def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
+    """Validates and normalizes numpy array data.
+    We validate numpy array shape (should be 1d or 2d)
+    We normalize input data to int16 [-32768, 32767] range.
+
+    Parameters
+    ----------
+    data : numpy array
+        numpy array to be validated and normalized
+
+    Returns
+    -------
+    Tuple of (bytes, int)
+        (bytes, nchan)
+        where
+         - bytes : bytes of normalized numpy array converted to int16
+         - nchan : number of channels for audio signal. 1 for mono, or 2 for stereo.
+    """
     import numpy as np
 
     data = np.array(data, dtype=float)
