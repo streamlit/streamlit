@@ -80,10 +80,10 @@ describe("st.button", () => {
       .first()
       .click();
 
-    cy.get(".stMarkdown").contains("Button was clicked: True");
-    cy.get(".stMarkdown").contains("times clicked: 1");
-    cy.get(".stMarkdown").contains("arg value: 1");
-    cy.get(".stMarkdown").contains("kwarg value: 2");
+    cy.get(".stMarkdown", { timeout: 10000 }).contains("Button was clicked: True");
+    cy.get(".stMarkdown", { timeout: 10000 }).contains("times clicked: 1");
+    cy.get(".stMarkdown", { timeout: 10000 }).contains("arg value: 1");
+    cy.get(".stMarkdown", { timeout: 10000 }).contains("kwarg value: 2");
 
     cy.get(".stButton button")
       .first()
