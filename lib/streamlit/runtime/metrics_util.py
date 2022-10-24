@@ -303,7 +303,7 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
                 ctx.tracked_commands_counter.update([command_telemetry.name])
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ctx.command_tracking_deactivated = True
-            except BaseException as ex:
+            except Exception as ex:
                 # Always capture all exceptions since we want to make sure that
                 # the telemetry never causes any issues.
                 _LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
