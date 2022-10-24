@@ -421,6 +421,28 @@ describe("ComponentInstance", () => {
       )
     })
 
+    it("errors on unrecognized special args", () => {
+      const mc = new MockComponent()
+
+      // We should receive an initial RENDER message with no arguments
+      mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+      expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
+        renderMsg({}, []),
+        "*"
+      )
+
+      const jsonArgs = {}
+      const element = createElementProp(jsonArgs, [
+        new SpecialArg({ key: "foo" }),
+      ])
+      mc.wrapper.setProps({ element, theme: darkTheme.emotion })
+      const child = mc.wrapper.childAt(0)
+      expect(child.type()).toEqual(ErrorElement)
+      expect(child.prop("message")).toEqual(
+        `Unrecognized SpecialArg type: undefined`
+      )
+    })
+
     it("warns if COMPONENT_READY hasn't been received after a timeout", () => {
       // Create a component, but don't send COMPONENT_READY
       const mock = new MockComponent()
