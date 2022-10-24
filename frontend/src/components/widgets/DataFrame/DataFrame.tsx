@@ -714,8 +714,7 @@ function DataFrame({
           // Freeze all index columns:
           freezeColumns={columns.filter(col => (col as Column).isIndex).length}
           smoothScrollX={true}
-          // Only deactivate smooth mode for vertical scrolling for large tables:
-          smoothScrollY={numRows < 100000}
+          smoothScrollY={true}
           // Show borders between cells:
           verticalBorder={true}
           // Activate copy to clipboard functionality:
