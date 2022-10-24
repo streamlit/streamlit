@@ -24,14 +24,14 @@ from pympler.asizeof import asizeof
 import streamlit as st
 from streamlit.runtime.caching import get_singleton_stats_provider, singleton_decorator
 from streamlit.runtime.caching.cache_errors import CacheType
-from streamlit.runtime.caching.cache_utils import InitialCachedResults
+from streamlit.runtime.caching.cache_utils import MultiCacheResults
 from streamlit.runtime.stats import CacheStat
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
 
 
-def as_cached_result(value: Any) -> InitialCachedResults:
+def as_cached_result(value: Any) -> MultiCacheResults:
     return _as_cached_result(value, CacheType.MEMO)
 
 

@@ -30,7 +30,7 @@ from streamlit.runtime.caching.cache_errors import CacheError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     ElementMsgData,
-    InitialCachedResults,
+    MultiCacheResults,
     _make_widget_key,
 )
 from streamlit.runtime.caching.memo_decorator import (
@@ -44,11 +44,11 @@ from tests.streamlit.runtime.caching.common_cache_test import (
 )
 
 
-def as_cached_result(value: Any) -> InitialCachedResults:
+def as_cached_result(value: Any) -> MultiCacheResults:
     return _as_cached_result(value, CacheType.MEMO)
 
 
-def as_replay_test_data() -> InitialCachedResults:
+def as_replay_test_data() -> MultiCacheResults:
     """Creates cached results for a function that returned `value`
     and executed `st.text(1)`.
     """
@@ -60,7 +60,7 @@ def as_replay_test_data() -> InitialCachedResults:
         st._main.id,
         st.sidebar.id,
     )
-    return InitialCachedResults(set(), d)
+    return MultiCacheResults(set(), d)
 
 
 class MemoTest(unittest.TestCase):

@@ -25,7 +25,7 @@ from streamlit.runtime.caching import MEMO_CALL_STACK, SINGLETON_CALL_STACK
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
-    InitialCachedResults,
+    MultiCacheResults,
     _make_widget_key,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
@@ -51,14 +51,14 @@ def get_text_or_block(delta):
         return "new_block"
 
 
-def as_cached_result(value: Any, cache_type: CacheType) -> InitialCachedResults:
+def as_cached_result(value: Any, cache_type: CacheType) -> MultiCacheResults:
     """Creates cached results for a function that returned `value`
     and did not execute any elements.
     """
     result = CachedResult(value, [], st._main.id, st.sidebar.id)
     widget_key = _make_widget_key([], cache_type)
     d = {widget_key: result}
-    initial = InitialCachedResults(set(), d)
+    initial = MultiCacheResults(set(), d)
     return initial
 
 

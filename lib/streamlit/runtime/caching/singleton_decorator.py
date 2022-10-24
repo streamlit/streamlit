@@ -30,8 +30,8 @@ from streamlit.runtime.caching.cache_utils import (
     CacheMessagesCallStack,
     CacheWarningCallStack,
     ElementMsgData,
-    InitialCachedResults,
     MsgData,
+    MultiCacheResults,
     _make_widget_key,
     create_cache_wrapper,
 )
@@ -275,7 +275,7 @@ class SingletonCache(Cache):
     def __init__(self, key: str, display_name: str, allow_widgets: bool = False):
         self.key = key
         self.display_name = display_name
-        self._mem_cache: Dict[str, InitialCachedResults] = {}
+        self._mem_cache: Dict[str, MultiCacheResults] = {}
         self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
 
@@ -321,7 +321,7 @@ class SingletonCache(Cache):
             try:
                 initial_results = self._mem_cache[key]
             except KeyError:
-                initial_results = InitialCachedResults(widget_ids=widgets, results={})
+                initial_results = MultiCacheResults(widget_ids=widgets, results={})
 
             initial_results.widget_ids.update(widgets)
             widget_key = initial_results.get_current_widget_key(

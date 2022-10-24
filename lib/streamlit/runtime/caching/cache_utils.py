@@ -164,7 +164,7 @@ class CachedResult:
 
 
 @dataclass
-class InitialCachedResults:
+class MultiCacheResults:
     """Widgets called by a cache-decorated function, and a mapping of the
     widget-derived cache key to the final results of executing the function.
     """
