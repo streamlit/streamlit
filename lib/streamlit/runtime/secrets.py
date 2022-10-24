@@ -14,6 +14,7 @@
 
 import os
 import threading
+from collections import UserDict
 from typing import Any, ItemsView, Iterator, KeysView, Mapping, Optional, ValuesView
 
 import toml
@@ -44,15 +45,11 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class AttrDict(dict):  # type: ignore[type-arg]
+class AttrDict(UserDict):
     """
     We use AttrDict to wrap up dictionary values from secrets
     to provide dot access to nested secrets
     """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
 
     @staticmethod
     def _maybe_wrap_in_attr_dict(value) -> Any:
@@ -63,14 +60,14 @@ class AttrDict(dict):  # type: ignore[type-arg]
 
     def __getattr__(self, attr_name: str) -> Any:
         try:
-            value = super(AttrDict, self).__getitem__(attr_name)
+            value = super().__getitem__(attr_name)
             return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise AttributeError(_missing_attr_error_message(attr_name))
 
     def __getitem__(self, key: str) -> Any:
         try:
-            value = super(AttrDict, self).__getitem__(key)
+            value = super().__getitem__(key)
             return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
