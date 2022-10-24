@@ -15,6 +15,7 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
+import unittest
 from typing import List
 from unittest.mock import patch
 
@@ -48,13 +49,6 @@ def get_text_or_block(delta):
 
 class CommonCacheTest(DeltaGeneratorTestCase):
     def tearDown(self):
-        # Some of these tests reach directly into CALL_STACK data and twiddle it.
-        # Reset default values on teardown.
-        MEMO_CALL_STACK._cached_func_stack = []
-        MEMO_CALL_STACK._suppress_st_function_warning = 0
-        SINGLETON_CALL_STACK._cached_func_stack = []
-        SINGLETON_CALL_STACK._suppress_st_function_warning = 0
-
         # Clear caches
         st.experimental_memo.clear()
         st.experimental_singleton.clear()
@@ -473,38 +467,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             foo(1)
 
     @parameterized.expand(
-        [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
-    )
-    def test_multithreaded_call_stack(self, _, call_stack):
-        """CachedFunctionCallStack should work across multiple threads."""
-
-        def get_counter():
-            return len(call_stack._cached_func_stack)
-
-        def set_counter(val):
-            call_stack._cached_func_stack = ["foo"] * val
-
-        self.assertEqual(0, get_counter())
-        set_counter(1)
-        self.assertEqual(1, get_counter())
-
-        values_in_thread = []
-
-        def thread_test():
-            values_in_thread.append(get_counter())
-            set_counter(55)
-            values_in_thread.append(get_counter())
-
-        thread = threading.Thread(target=thread_test)
-        thread.start()
-        thread.join()
-
-        self.assertEqual([0, 55], values_in_thread)
-
-        # The other thread should not have modified the main thread
-        self.assertEqual(1, get_counter())
-
-    @parameterized.expand(
         [
             ("memo", memo, memo.clear),
             ("singleton", singleton, singleton.clear),
@@ -643,3 +605,58 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         function_with_spinner_empty_text(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
+
+
+class CommonCacheThreadingTest(unittest.TestCase):
+    def tearDown(self):
+        # Some of these tests reach directly into CALL_STACK data and twiddle it.
+        # Reset default values on teardown.
+        MEMO_CALL_STACK._cached_func_stack = []
+        MEMO_CALL_STACK._suppress_st_function_warning = 0
+        SINGLETON_CALL_STACK._cached_func_stack = []
+        SINGLETON_CALL_STACK._suppress_st_function_warning = 0
+
+        # Clear caches
+        st.experimental_memo.clear()
+        st.experimental_singleton.clear()
+
+        # And some tests create widgets, and can result in DuplicateWidgetID
+        # errors on subsequent runs.
+        ctx = script_run_context.get_script_run_ctx()
+        if ctx is not None:
+            ctx.widget_ids_this_run.clear()
+            ctx.widget_user_keys_this_run.clear()
+
+        super().tearDown()
+
+    @parameterized.expand(
+        [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
+    )
+    def test_multithreaded_call_stack(self, _, call_stack):
+        """CachedFunctionCallStack should work across multiple threads."""
+
+        def get_counter():
+            return len(call_stack._cached_func_stack)
+
+        def set_counter(val):
+            call_stack._cached_func_stack = ["foo"] * val
+
+        self.assertEqual(0, get_counter())
+        set_counter(1)
+        self.assertEqual(1, get_counter())
+
+        values_in_thread = []
+
+        def thread_test():
+            values_in_thread.append(get_counter())
+            set_counter(55)
+            values_in_thread.append(get_counter())
+
+        thread = threading.Thread(target=thread_test)
+        thread.start()
+        thread.join()
+
+        self.assertEqual([0, 55], values_in_thread)
+
+        # The other thread should not have modified the main thread
+        self.assertEqual(1, get_counter())
