@@ -285,15 +285,17 @@ class SingletonCache(Cache):
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
-                initial = self._mem_cache[key]
+                multi_results = self._mem_cache[key]
 
                 ctx = get_script_run_ctx()
                 if not ctx:
                     raise CacheKeyNotFoundError()
 
-                widget_key = initial.get_current_widget_key(ctx, CacheType.SINGLETON)
-                if widget_key in initial.results:
-                    return initial.results[widget_key]
+                widget_key = multi_results.get_current_widget_key(
+                    ctx, CacheType.SINGLETON
+                )
+                if widget_key in multi_results.results:
+                    return multi_results.results[widget_key]
                 else:
                     raise CacheKeyNotFoundError()
             else:
@@ -319,18 +321,16 @@ class SingletonCache(Cache):
 
         with self._mem_cache_lock:
             try:
-                initial_results = self._mem_cache[key]
+                multi_results = self._mem_cache[key]
             except KeyError:
-                initial_results = MultiCacheResults(widget_ids=widgets, results={})
+                multi_results = MultiCacheResults(widget_ids=widgets, results={})
 
-            initial_results.widget_ids.update(widgets)
-            widget_key = initial_results.get_current_widget_key(
-                ctx, CacheType.SINGLETON
-            )
+            multi_results.widget_ids.update(widgets)
+            widget_key = multi_results.get_current_widget_key(ctx, CacheType.SINGLETON)
 
             result = CachedResult(value, messages, main_id, sidebar_id)
-            initial_results.results[widget_key] = result
-            self._mem_cache[key] = initial_results
+            multi_results.results[widget_key] = result
+            self._mem_cache[key] = multi_results
 
     def clear(self) -> None:
         with self._mem_cache_lock:

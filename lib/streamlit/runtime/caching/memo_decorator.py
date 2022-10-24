@@ -491,29 +491,29 @@ class MemoCache(Cache):
         else:
             widgets = set()
 
-        initial_results: Optional[MultiCacheResults] = None
+        first_stage_results: Optional[MultiCacheResults] = None
 
         # Try to find in mem cache, falling back to disk, then falling back
         # to a new result instance
         try:
-            initial_results = self._read_initial_from_mem_cache(key)
+            first_stage_results = self._read_multi_results_from_mem_cache(key)
         except (CacheKeyNotFoundError, pickle.UnpicklingError):
             if self.persist == "disk":
                 try:
-                    initial_results = self._read_initial_from_disk_cache(key)
+                    first_stage_results = self._read_multi_results_from_disk_cache(key)
                 except CacheKeyNotFoundError:
                     pass
 
-        if initial_results is None:
-            initial_results = MultiCacheResults(widget_ids=widgets, results={})
-        initial_results.widget_ids.update(widgets)
-        widget_key = initial_results.get_current_widget_key(ctx, CacheType.MEMO)
+        if first_stage_results is None:
+            first_stage_results = MultiCacheResults(widget_ids=widgets, results={})
+        first_stage_results.widget_ids.update(widgets)
+        widget_key = first_stage_results.get_current_widget_key(ctx, CacheType.MEMO)
 
         result = CachedResult(value, messages, main_id, sidebar_id)
-        initial_results.results[widget_key] = result
+        first_stage_results.results[widget_key] = result
 
         try:
-            pickled_entry = pickle.dumps(initial_results)
+            pickled_entry = pickle.dumps(first_stage_results)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
@@ -534,23 +534,23 @@ class MemoCache(Cache):
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = bytes(self._mem_cache[key])
-                _LOGGER.debug("Memory cache initial HIT: %s", key)
+                _LOGGER.debug("Memory cache first stage HIT: %s", key)
                 return entry
 
             else:
                 _LOGGER.debug("Memory cache MISS: %s", key)
                 raise CacheKeyNotFoundError("Key not found in mem cache")
 
-    def _read_initial_from_mem_cache(self, key: str) -> MultiCacheResults:
-        """Look up the initial results and ensure it has the right type.
+    def _read_multi_results_from_mem_cache(self, key: str) -> MultiCacheResults:
+        """Look up the results and ensure it has the right type.
 
         Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
         entry is malformed.
         """
         pickled = self._read_from_mem_cache(key)
-        maybe_initial = pickle.loads(pickled)
-        if isinstance(maybe_initial, MultiCacheResults):
-            return maybe_initial
+        maybe_results = pickle.loads(pickled)
+        if isinstance(maybe_results, MultiCacheResults):
+            return maybe_results
         else:
             with self._mem_cache_lock:
                 del self._mem_cache[key]
@@ -561,7 +561,7 @@ class MemoCache(Cache):
         try:
             with streamlit_read(path, binary=True) as input:
                 value = input.read()
-                _LOGGER.debug("Disk cache initial HIT: %s", key)
+                _LOGGER.debug("Disk cache first stage HIT: %s", key)
                 # The value is a pickled CachedResult, but we don't unpickle it yet
                 # so we can avoid having to repickle it when writing to the mem_cache
                 return bytes(value)
@@ -571,17 +571,17 @@ class MemoCache(Cache):
             _LOGGER.error(e)
             raise CacheError("Unable to read from cache") from e
 
-    def _read_initial_from_disk_cache(self, key: str) -> MultiCacheResults:
-        """Look up the initial results from disk and ensure it has the right type.
+    def _read_multi_results_from_disk_cache(self, key: str) -> MultiCacheResults:
+        """Look up the results from disk and ensure it has the right type.
 
         Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
         entry is the wrong type, which usually means it was written by another
         version of streamlit.
         """
         pickled = self._read_from_disk_cache(key)
-        maybe_initial = pickle.loads(pickled)
-        if isinstance(maybe_initial, MultiCacheResults):
-            return maybe_initial
+        maybe_results = pickle.loads(pickled)
+        if isinstance(maybe_results, MultiCacheResults):
+            return maybe_results
         else:
             self._remove_from_disk_cache(key)
             raise CacheKeyNotFoundError("Key not found in disk cache")
