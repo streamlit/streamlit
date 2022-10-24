@@ -31,9 +31,10 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
     script_run_context,
 )
-from streamlit.runtime.state import SessionState
+from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.exception_capturing_thread import ExceptionCapturingThread
+from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
@@ -189,8 +190,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 session_id="test session id",
                 _enqueue=forward_msg_queue.enqueue,
                 query_string="",
-                session_state=SessionState(),
-                uploaded_file_mgr=None,
+                session_state=SafeSessionState(SessionState()),
+                uploaded_file_mgr=UploadedFileManager(),
                 page_script_hash="",
                 user_info={"email": "test@test.com"},
             ),
@@ -554,6 +555,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
 
 class CommonCacheThreadingTest(unittest.TestCase):
+    # The number of threads to run our tests on
+    NUM_THREADS = 50
+
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.
         # Reset default values on teardown.
@@ -575,11 +579,69 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
         super().tearDown()
 
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_get_cache(self, _, cache_decorator):
+        """Accessing a cached value is safe from multiple threads."""
+
+        cached_func_call_count = [0]
+
+        @cache_decorator
+        def foo():
+            cached_func_call_count[0] += 1
+            return 42
+
+        def call_foo(_: int) -> None:
+            self.assertEqual(42, foo())
+
+        call_on_threads(call_foo, self.NUM_THREADS)
+
+        # We don't currently guarantee that the cached function will only be called
+        # once (multiple threads may compute the cached value independently if they
+        # access the function at ~the same time).
+        # TODO: But this might be a useful optimization for the future!
+        # self.assertEqual(1, cached_func_call_count[0])
+
+    @parameterized.expand(
+        [("memo", memo, memo.clear), ("singleton", singleton, singleton.clear)]
+    )
+    def test_clear_all_caches(self, _, cache_decorator, clear_cache_func):
+        """Clearing all caches is safe to call from multiple threads."""
+
+        @cache_decorator
+        def foo():
+            return 42
+
+        foo()
+
+        def clear_caches(_: int) -> None:
+            clear_cache_func()
+
+        call_on_threads(clear_caches, self.NUM_THREADS)
+
+        self.assertEqual(42, foo())
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_clear_single_cache(self, _, cache_decorator):
+        """It's safe to clear a single function cache from multiple threads."""
+
+        @cache_decorator
+        def foo():
+            return 42
+
+        foo()
+
+        def clear_foo(_: int) -> None:
+            foo.clear()
+
+        call_on_threads(clear_foo, self.NUM_THREADS)
+
+        self.assertEqual(42, foo())
+
     @parameterized.expand(
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
     )
     def test_multithreaded_call_stack(self, _, call_stack):
-        """CachedFunctionCallStack should work across multiple threads."""
+        """CachedFunctionCallStack works across multiple threads."""
 
         def get_counter():
             return len(call_stack._cached_func_stack)
