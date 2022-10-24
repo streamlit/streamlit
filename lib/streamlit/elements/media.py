@@ -38,7 +38,7 @@ MediaData: TypeAlias = Union[
 
 
 class MediaMixin:
-    @gather_metrics
+    @gather_metrics("audio")
     def audio(
         self,
         data: MediaData,
@@ -54,11 +54,11 @@ class MediaMixin:
             Raw audio data, filename, or a URL pointing to the file to load.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
-        start_time: int
-            The time from which this element should start playing.
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+        start_time: int
+            The time from which this element should start playing.
 
         Example
         -------
@@ -77,7 +77,7 @@ class MediaMixin:
         marshall_audio(coordinates, audio_proto, data, format, start_time)
         return self.dg._enqueue("audio", audio_proto)
 
-    @gather_metrics
+    @gather_metrics("video")
     def video(
         self,
         data: MediaData,

@@ -30,17 +30,3 @@ export const COMPONENT_DEVELOPER_URL =
 /** The URL we direct people to for troubleshooting camera permissions. */
 export const CAMERA_PERMISSION_URL =
   "https://docs.streamlit.io/knowledge-base/using-streamlit/enable-camera"
-
-export const CLOUD_COMM_WHITELIST = [
-  "devel.streamlit.test",
-  "share.streamlit.io",
-  "share-demo.streamlit.io",
-  "share-head.streamlit.io",
-  "share-staging.streamlit.io",
-  "*.demo.streamlit.run",
-  "*.head.streamlit.run",
-  "*.staging.streamlit.run",
-  "*.streamlitapp.test",
-  "*.streamlitapp.com",
-  "*.streamlit.run",
-]

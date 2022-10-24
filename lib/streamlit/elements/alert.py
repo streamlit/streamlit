@@ -36,7 +36,7 @@ def validate_emoji(maybe_emoji: Optional[str]) -> str:
 
 
 class AlertMixin:
-    @gather_metrics
+    @gather_metrics("error")
     def error(
         self,
         body: "SupportsStr",
@@ -65,7 +65,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
 
-    @gather_metrics
+    @gather_metrics("warning")
     def warning(
         self,
         body: "SupportsStr",
@@ -76,13 +76,12 @@ class AlertMixin:
 
         Parameters
         ----------
+        body : str
+            The warning text to display.
         icon : None
             An optional parameter, that adds an emoji to the alert.
             The default is None.
             This argument can only be supplied by keyword.
-
-        body : str
-            The warning text to display.
 
         Example
         -------
@@ -95,7 +94,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
-    @gather_metrics
+    @gather_metrics("info")
     def info(
         self,
         body: "SupportsStr",
@@ -106,13 +105,12 @@ class AlertMixin:
 
         Parameters
         ----------
+        body : str
+            The info text to display.
         icon : None
             An optional parameter, that adds an emoji to the alert.
             The default is None.
             This argument can only be supplied by keyword.
-
-        body : str
-            The info text to display.
 
         Example
         -------
@@ -126,7 +124,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
-    @gather_metrics
+    @gather_metrics("success")
     def success(
         self,
         body: "SupportsStr",
@@ -137,13 +135,12 @@ class AlertMixin:
 
         Parameters
         ----------
+        body : str
+            The success text to display.
         icon : None
             An optional parameter, that adds an emoji to the alert.
             The default is None.
             This argument can only be supplied by keyword.
-
-        body : str
-            The success text to display.
 
         Example
         -------

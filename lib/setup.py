@@ -41,15 +41,12 @@ INSTALL_REQUIRES = [
     "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",
-    "pydeck>=0.1.dev5",
     "pympler>=0.9",
     "python-dateutil",
     "requests>=2.4",
     "rich>=10.11.0",
     "semver",
     "toml",
-    # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
-    "tornado>=5.0",
     "typing-extensions>=3.10.0.0",
     "tzlocal>=1.1",
     "validators>=0.2",
@@ -59,9 +56,18 @@ INSTALL_REQUIRES = [
 ]
 
 # We want to exclude some dependencies in our internal conda distribution of
-# Streamlit.
+# Streamlit. These dependencies will be installed normally for both regular conda builds
+# and PyPI builds.
+# NOTE: These packages are still installed normally when running
+#       `pip install streamlit` and `conda install -c conda-forge streamlit`
+# TODO(vdonato): Change the names CONDA_OPTIONAL_DEPENDENCIES and ST_CONDA_BUILD to be
+# more explicitly about internal SnowPark things so that it's less likely for someone to
+# accidentally/unknowingly create a tornado-less Streamlit package.
 CONDA_OPTIONAL_DEPENDENCIES = [
     "gitpython!=3.1.19",
+    "pydeck>=0.1.dev5",
+    # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
+    "tornado>=5.0",
 ]
 
 # NOTE: ST_CONDA_BUILD is used here (even though CONDA_BUILD is set

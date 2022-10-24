@@ -131,8 +131,11 @@ class Slider extends React.PureComponent<Props, State> {
    * form is submitted. Restore our default value and update the WidgetManager.
    */
   private onFormCleared = (): void => {
-    this.setState({ value: this.props.element.default }, () =>
-      this.commitWidgetValue({ fromUi: true })
+    this.setState(
+      (_, prevProps) => {
+        return { value: prevProps.element.default }
+      },
+      () => this.commitWidgetValue({ fromUi: true })
     )
   }
 

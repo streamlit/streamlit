@@ -168,7 +168,7 @@ class SliderSerde:
 
 
 class SliderMixin:
-    @gather_metrics
+    @gather_metrics("slider")
     def slider(
         self,
         label: str,

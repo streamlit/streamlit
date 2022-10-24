@@ -159,7 +159,7 @@ class SingletonAPI:
     # __call__ should be a static method, but there's a mypy bug that
     # breaks type checking for overloaded static functions:
     # https://github.com/python/mypy/issues/7781
-    @gather_metrics
+    @gather_metrics("experimental_singleton")
     def __call__(
         self,
         func: Optional[F] = None,
@@ -263,7 +263,7 @@ class SingletonAPI:
         )
 
     @staticmethod
-    @gather_metrics
+    @gather_metrics("clear_singleton")
     def clear() -> None:
         """Clear all singleton caches."""
         _singleton_caches.clear_all()
@@ -301,7 +301,7 @@ class SingletonCache(Cache):
             else:
                 raise CacheKeyNotFoundError()
 
-    @gather_metrics
+    @gather_metrics("_cache_singleton_object")
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         ctx = get_script_run_ctx()

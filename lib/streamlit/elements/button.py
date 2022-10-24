@@ -58,7 +58,7 @@ class ButtonSerde:
 
 
 class ButtonMixin:
-    @gather_metrics
+    @gather_metrics("button")
     def button(
         self,
         label: str,
@@ -91,10 +91,10 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
-        type (”primary” or “secondary”):
-            An optional string that specifies the button type. Can be “primary” for a
-            button with additional emphasis or “secondary” for a normal button. This
-            argument can only be supplied by keyword. Defaults to “secondary”.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False. This argument can only be supplied by keyword.
@@ -140,7 +140,7 @@ class ButtonMixin:
             ctx=ctx,
         )
 
-    @gather_metrics
+    @gather_metrics("download_button")
     def download_button(
         self,
         label: str,

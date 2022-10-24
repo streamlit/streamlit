@@ -230,7 +230,7 @@ class MemoAPI:
     # __call__ should be a static method, but there's a mypy bug that
     # breaks type checking for overloaded static functions:
     # https://github.com/python/mypy/issues/7781
-    @gather_metrics
+    @gather_metrics("experimental_memo")
     def __call__(
         self,
         func: Optional[F] = None,
@@ -387,7 +387,7 @@ class MemoAPI:
         )
 
     @staticmethod
-    @gather_metrics
+    @gather_metrics("clear_memo")
     def clear() -> None:
         """Clear all in-memory and on-disk memo caches."""
         _memo_caches.clear_all()
@@ -470,7 +470,7 @@ class MemoCache(Cache):
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
-    @gather_metrics
+    @gather_metrics("_cache_memo_object")
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.

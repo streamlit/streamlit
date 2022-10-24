@@ -63,7 +63,7 @@ ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
 class ImageMixin:
-    @gather_metrics
+    @gather_metrics("image")
     def image(
         self,
         image: ImageOrImageList,

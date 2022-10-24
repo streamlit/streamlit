@@ -77,22 +77,6 @@ class WidgetManagerTests(unittest.TestCase):
         session_state = SessionState()
         self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])
 
-    @pytest.mark.skip
-    def test_get_keyed_widget_values(self):
-        states = WidgetStates()
-        _create_widget("trigger", states).trigger_value = True
-        _create_widget("trigger2", states).trigger_value = True
-
-        session_state = SessionState()
-        session_state.set_widgets_from_proto(states)
-
-        session_state._set_widget_metadata(
-            create_metadata("trigger", "trigger_value", True)
-        )
-        session_state._set_widget_metadata(create_metadata("trigger2", "trigger_value"))
-
-        self.assertEqual(dict(session_state.values()), {"trigger": True})
-
     def test_get_prev_widget_value_nonexistent(self):
         session_state = SessionState()
         self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])

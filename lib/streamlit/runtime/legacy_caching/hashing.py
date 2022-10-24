@@ -36,11 +36,7 @@ from typing import Any, Callable, Dict, List, Optional, Pattern, Union
 from streamlit import config, file_util, type_util, util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.folder_black_list import FolderBlackList
-from streamlit.logger import get_logger
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
-_LOGGER = get_logger(__name__)
-
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
@@ -966,24 +962,19 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
     hash_source = hash_stacks.current.hash_source
 
     failed_obj_type_str = type_util.get_fqn_type(failed_obj)
+    object_part = ""
 
     if hash_source is None or hash_reason is None:
         object_desc = "something"
-        object_part = ""
-        additional_explanation = ""
 
     elif hash_reason is HashReason.CACHING_BLOCK:
         object_desc = "a code block"
-        object_part = ""
-        additional_explanation = ""
 
     else:
         if hasattr(hash_source, "__name__"):
-            object_desc = "`%s()`" % hash_source.__name__
-            object_desc_specific = object_desc
+            object_desc = f"`{hash_source.__name__}()`"
         else:
             object_desc = "a function"
-            object_desc_specific = "that function"
 
         if hash_reason is HashReason.CACHING_FUNC_ARGS:
             object_part = "the arguments of"

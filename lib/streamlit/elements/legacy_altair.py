@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 
 class LegacyAltairMixin:
-    @gather_metrics
+    @gather_metrics("_legacy_line_chart")
     def _legacy_line_chart(
         self,
         data: "Data" = None,
@@ -94,7 +94,7 @@ class LegacyAltairMixin:
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    @gather_metrics
+    @gather_metrics("_legacy_area_chart")
     def _legacy_area_chart(
         self,
         data: "Data" = None,
@@ -150,7 +150,7 @@ class LegacyAltairMixin:
             "area_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    @gather_metrics
+    @gather_metrics("_legacy_bar_chart")
     def _legacy_bar_chart(
         self,
         data: "Data" = None,
@@ -206,7 +206,7 @@ class LegacyAltairMixin:
             "bar_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    @gather_metrics
+    @gather_metrics("_legacy_altair_chart")
     def _legacy_altair_chart(
         self, altair_chart: "Chart", use_container_width: bool = False
     ) -> "DeltaGenerator":

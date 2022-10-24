@@ -34,7 +34,7 @@ def _use_arrow() -> bool:
 
 
 class DataFrameSelectorMixin:
-    @gather_metrics
+    @gather_metrics("dataframe")
     def dataframe(
         self,
         data: "Data" = None,
@@ -47,7 +47,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -108,7 +108,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_dataframe(data, width, height)
 
-    @gather_metrics
+    @gather_metrics("table")
     def table(self, data: "Data" = None) -> "DeltaGenerator":
         """Display a static table.
 
@@ -117,7 +117,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
             The table data.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -142,7 +142,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_table(data)
 
-    @gather_metrics
+    @gather_metrics("line_chart")
     def line_chart(
         self,
         data: "Data" = None,
@@ -165,7 +165,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict or None
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -225,7 +225,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
-    @gather_metrics
+    @gather_metrics("area_chart")
     def area_chart(
         self,
         data: "Data" = None,
@@ -248,7 +248,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -308,7 +308,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
-    @gather_metrics
+    @gather_metrics("bar_chart")
     def bar_chart(
         self,
         data: "Data" = None,
@@ -331,7 +331,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -392,7 +392,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
-    @gather_metrics
+    @gather_metrics("altair_chart")
     def altair_chart(
         self,
         altair_chart: "Chart",
@@ -439,7 +439,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_altair_chart(altair_chart, use_container_width)
 
-    @gather_metrics
+    @gather_metrics("vega_lite_chart")
     def vega_lite_chart(
         self,
         data: "Data" = None,
@@ -509,13 +509,13 @@ class DataFrameSelectorMixin:
                 data, spec, use_container_width, **kwargs
             )
 
-    @gather_metrics
+    @gather_metrics("add_rows")
     def add_rows(self, data: "Data" = None, **kwargs) -> Optional["DeltaGenerator"]:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
             Table to concat. Optional.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).

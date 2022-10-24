@@ -106,7 +106,7 @@ class CameraInputSerde:
 
 
 class CameraInputMixin:
-    @gather_metrics
+    @gather_metrics("camera_input")
     def camera_input(
         self,
         label: str,

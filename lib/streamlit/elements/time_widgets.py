@@ -209,7 +209,7 @@ class DateInputSerde:
 
 
 class TimeWidgetsMixin:
-    @gather_metrics
+    @gather_metrics("time_input")
     def time_input(
         self,
         label: str,
@@ -353,7 +353,7 @@ class TimeWidgetsMixin:
         self.dg._enqueue("time_input", time_input_proto)
         return widget_state.value
 
-    @gather_metrics
+    @gather_metrics("date_input")
     def date_input(
         self,
         label: str,

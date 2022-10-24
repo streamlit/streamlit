@@ -270,5 +270,5 @@ export function applyThemeDefaults(config: any, theme: Theme): any {
   }
 
   // Fill in theme defaults where the user didn't specify config options.
-  return merge({}, themeDefaults, config || {})
+  return merge({}, themeDefaults, config)
 }
