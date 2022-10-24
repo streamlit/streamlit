@@ -195,6 +195,7 @@ class ArrowAltairMixin:
            height: 220px
 
         """
+
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.AREA, data, x, y, width, height)
         marshall(proto, chart, use_container_width)
@@ -264,6 +265,7 @@ class ArrowAltairMixin:
            height: 220px
 
         """
+
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.BAR, data, x, y, width, height)
         marshall(proto, chart, use_container_width)

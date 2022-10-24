@@ -183,7 +183,7 @@ class ComponentRegistryTest(unittest.TestCase):
         registry = ComponentRegistry.instance()
         with self.assertRaises(StreamlitAPIException) as ctx:
             registry.register_component(CustomComponent("test_component", test_path))
-            self.assertIn("No such component directory", ctx.exception)
+        self.assertIn("No such component directory", str(ctx.exception))
 
     def test_register_duplicate_path(self):
         """It's not an error to re-register a component.

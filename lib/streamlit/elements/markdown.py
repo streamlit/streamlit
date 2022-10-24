@@ -59,17 +59,6 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
-            *Also note that ``unsafe_allow_html`` is a temporary measure and may
-            be removed from Streamlit at any time.*
-
-            If you decide to turn on HTML anyway, we ask you to please tell us
-            your exact use case here:
-
-            https://discuss.streamlit.io/t/96
-
-            This will help us come up with safe APIs that allow you to do what
-            you want.
-
         Example
         -------
         >>> st.markdown('Streamlit is **_really_ cool**.')
@@ -139,16 +128,6 @@ class MarkdownMixin:
             security. For more information, see:
 
             https://github.com/streamlit/streamlit/issues/152
-
-            **Also note that `unsafe_allow_html` is a temporary measure and may be
-            removed from Streamlit at any time.**
-
-            If you decide to turn on HTML anyway, we ask you to please tell us your
-            exact use case here:
-            https://discuss.streamlit.io/t/96 .
-
-            This will help us come up with safe APIs that allow you to do what you
-            want.
 
         Example
         -------

@@ -27,8 +27,6 @@ import withHostCommunication, {
 const TestComponentNaked = (props: {
   hostCommunication: HostCommunicationHOC
 }): ReactElement => {
-  props.hostCommunication.connect()
-
   return <div>test</div>
 }
 
@@ -74,17 +72,42 @@ describe("withHostCommunication HOC", () => {
 
     window.addEventListener("message", listener)
 
-    shallow(<TestComponent />)
+    const wrapper = mount(<TestComponent />)
+    const hostCommunication: any = wrapper
+      .find(TestComponentNaked)
+      .prop("hostCommunication")
+
+    act(() => {
+      hostCommunication.setAllowedOrigins(["https://devel.streamlit.test"])
+    })
   })
 })
 
 describe("withHostCommunication HOC receiving messages", () => {
   let dispatchEvent: any
+  let originalHash: any
   let wrapper: any
+  let hostCommunication: any
 
   beforeEach(() => {
+    // We need to save and restore window.location.hash for each test because
+    // its value persists between tests otherwise, which may cause tests to
+    // interfere with each other.
+    originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
     wrapper = mount(<TestComponent />)
+
+    hostCommunication = wrapper
+      .find(TestComponentNaked)
+      .prop("hostCommunication")
+
+    act(() => {
+      hostCommunication.setAllowedOrigins(["http://devel.streamlit.test"])
+    })
+  })
+
+  afterEach(() => {
+    window.location.hash = originalHash
   })
 
   it("should respond to UPDATE_HASH message", () => {
@@ -256,6 +279,10 @@ describe("withHostCommunication HOC receiving messages", () => {
 
   describe("Test different origins", () => {
     it("exact pattern", () => {
+      act(() => {
+        hostCommunication.setAllowedOrigins(["http://share.streamlit.io"])
+      })
+
       dispatchEvent(
         "message",
         new MessageEvent("message", {
@@ -272,6 +299,10 @@ describe("withHostCommunication HOC receiving messages", () => {
     })
 
     it("wildcard pattern", () => {
+      act(() => {
+        hostCommunication.setAllowedOrigins(["http://*.streamlitapp.com"])
+      })
+
       dispatchEvent(
         "message",
         new MessageEvent("message", {
@@ -285,6 +316,26 @@ describe("withHostCommunication HOC receiving messages", () => {
       )
 
       expect(window.location.hash).toEqual("#somehash")
+    })
+
+    it("ignores non-matching origins", () => {
+      act(() => {
+        hostCommunication.setAllowedOrigins(["http://share.streamlit.io"])
+      })
+
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "UPDATE_HASH",
+            hash: "#somehash",
+          },
+          origin: "http://example.com",
+        })
+      )
+
+      expect(window.location.hash).toEqual("")
     })
   })
 })

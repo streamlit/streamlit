@@ -54,11 +54,11 @@ class MediaMixin:
             Raw audio data, filename, or a URL pointing to the file to load.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
-        start_time: int
-            The time from which this element should start playing.
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+        start_time: int
+            The time from which this element should start playing.
 
         Example
         -------

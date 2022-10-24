@@ -76,13 +76,12 @@ class AlertMixin:
 
         Parameters
         ----------
+        body : str
+            The warning text to display.
         icon : None
             An optional parameter, that adds an emoji to the alert.
             The default is None.
             This argument can only be supplied by keyword.
-
-        body : str
-            The warning text to display.
 
         Example
         -------
@@ -106,13 +105,12 @@ class AlertMixin:
 
         Parameters
         ----------
+        body : str
+            The info text to display.
         icon : None
             An optional parameter, that adds an emoji to the alert.
             The default is None.
             This argument can only be supplied by keyword.
-
-        body : str
-            The info text to display.
 
         Example
         -------
@@ -137,13 +135,12 @@ class AlertMixin:
 
         Parameters
         ----------
+        body : str
+            The success text to display.
         icon : None
             An optional parameter, that adds an emoji to the alert.
             The default is None.
             This argument can only be supplied by keyword.
-
-        body : str
-            The success text to display.
 
         Example
         -------
