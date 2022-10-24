@@ -1243,14 +1243,21 @@ export class App extends PureComponent<Props, State> {
   }
 
   addScriptFinishedHandler = (func: () => void): void => {
-    this.setState({
-      scriptFinishedHandlers: concat(this.state.scriptFinishedHandlers, func),
+    this.setState((prevState, _) => {
+      return {
+        scriptFinishedHandlers: concat(prevState.scriptFinishedHandlers, func),
+      }
     })
   }
 
   removeScriptFinishedHandler = (func: () => void): void => {
-    this.setState({
-      scriptFinishedHandlers: without(this.state.scriptFinishedHandlers, func),
+    this.setState((prevState, _) => {
+      return {
+        scriptFinishedHandlers: without(
+          prevState.scriptFinishedHandlers,
+          func
+        ),
+      }
     })
   }
 

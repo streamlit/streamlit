@@ -62,7 +62,9 @@ class ColorPicker extends React.PureComponent<Props, State> {
       prevProps.value !== this.props.value &&
       this.props.value !== this.state.value
     ) {
-      this.setState({ value: this.props.value })
+      this.setState((_, prevProps) => {
+        return { value: prevProps.value }
+      })
     }
   }
 
