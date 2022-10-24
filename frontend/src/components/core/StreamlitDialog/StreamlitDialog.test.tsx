@@ -42,4 +42,34 @@ describe("StreamlitDialog", () => {
       expect(wrapper.find("button").at(1).is(":focus")).toBe(true)
     }, 0)
   })
+
+  it("renders secondary dialog buttons properly", async () => {
+    const wrapper = mount(
+      <Fragment>
+        {StreamlitDialog({
+          type: DialogType.CLEAR_CACHE,
+          confirmCallback: () => {},
+          defaultAction: () => {},
+          onClose: () => {},
+        })}
+      </Fragment>
+    )
+
+    expect(wrapper.find("StyledSecondaryButton")).toMatchSnapshot()
+  })
+
+  it("renders tertiary dialog buttons properly", async () => {
+    const wrapper = mount(
+      <Fragment>
+        {StreamlitDialog({
+          type: DialogType.CLEAR_CACHE,
+          confirmCallback: () => {},
+          defaultAction: () => {},
+          onClose: () => {},
+        })}
+      </Fragment>
+    )
+
+    expect(wrapper.find("StyledTertiaryButton")).toMatchSnapshot()
+  })
 })

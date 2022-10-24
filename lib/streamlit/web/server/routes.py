@@ -160,6 +160,41 @@ class HealthHandler(_SpecialRequestHandler):
             self.write(msg)
 
 
+# NOTE: We eventually want to get rid of this hard-coded list entirely as we don't want
+# to have links to Community Cloud live in the open source library in a way that affects
+# functionality (links advertising Community Cloud are probably okay 🙂). In the long
+# run, this list will most likely be replaced by a config option allowing us to more
+# granularly control what domains a Streamlit app should accept cross-origin iframe
+# messages from.
+ALLOWED_MESSAGE_ORIGINS = [
+    "https://devel.streamlit.test",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
+]
+
+
+class AllowedMessageOriginsHandler(_SpecialRequestHandler):
+    def get(self) -> None:
+        # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
+        # disallows writing lists directly into responses due to potential XSS
+        # vulnerabilities.
+        # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
+        self.write({"allowedOrigins": ALLOWED_MESSAGE_ORIGINS})
+        self.set_status(200)
+
+
 class MessageCacheHandler(tornado.web.RequestHandler):
     """Returns ForwardMsgs from our MessageCache"""
 

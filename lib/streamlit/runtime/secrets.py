@@ -14,7 +14,8 @@
 
 import os
 import threading
-from typing import Any, Mapping, Optional
+from collections import UserDict
+from typing import Any, ItemsView, Iterator, KeysView, Mapping, Optional, ValuesView
 
 import toml
 from blinker import Signal
@@ -44,15 +45,11 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class AttrDict(dict):  # type: ignore[type-arg]
+class AttrDict(UserDict):  # type: ignore[type-arg]
     """
     We use AttrDict to wrap up dictionary values from secrets
     to provide dot access to nested secrets
     """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
 
     @staticmethod
     def _maybe_wrap_in_attr_dict(value) -> Any:
@@ -63,14 +60,14 @@ class AttrDict(dict):  # type: ignore[type-arg]
 
     def __getattr__(self, attr_name: str) -> Any:
         try:
-            value = super(AttrDict, self).__getitem__(attr_name)
+            value = super().__getitem__(attr_name)
             return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise AttributeError(_missing_attr_error_message(attr_name))
 
     def __getitem__(self, key: str) -> Any:
         try:
-            value = super(AttrDict, self).__getitem__(key)
+            value = super().__getitem__(key)
             return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
@@ -79,6 +76,8 @@ class AttrDict(dict):  # type: ignore[type-arg]
 class Secrets(Mapping[str, Any]):
     """A dict-like class that stores secrets.
     Parses secrets.toml on-demand. Cannot be externally mutated.
+
+    Safe to use from multiple threads.
     """
 
     def __init__(self, file_path: str):
@@ -95,6 +94,8 @@ class Secrets(Mapping[str, Any]):
         """Load secrets.toml from disk if it exists. If it doesn't exist,
         no exception will be raised. (If the file exists but is malformed,
         an exception *will* be raised.)
+
+        Thread-safe.
         """
         try:
             self._parse(print_exceptions=False)
@@ -103,7 +104,10 @@ class Secrets(Mapping[str, Any]):
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
-        added to os.environ."""
+        added to os.environ.
+
+        Thread-safe.
+        """
         with self._lock:
             if self._secrets is None:
                 return
@@ -206,6 +210,11 @@ class Secrets(Mapping[str, Any]):
         self._file_change_listener.send()
 
     def __getattr__(self, key: str) -> Any:
+        """Return the value with the given key. If no such key
+        exists, raise an AttributeError.
+
+        Thread-safe.
+        """
         try:
             value = self._parse(True)[key]
             if not isinstance(value, dict):
@@ -219,6 +228,11 @@ class Secrets(Mapping[str, Any]):
             raise AttributeError(_missing_attr_error_message(key))
 
     def __getitem__(self, key: str) -> Any:
+        """Return the value with the given key. If no such key
+        exists, raise a KeyError.
+
+        Thread-safe.
+        """
         try:
             value = self._parse(True)[key]
             if not isinstance(value, dict):
@@ -228,28 +242,36 @@ class Secrets(Mapping[str, Any]):
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """A string representation of the contents of the dict. Thread-safe."""
         return repr(self._parse(True))
 
     def __len__(self) -> int:
+        """The number of entries in the dict. Thread-safe."""
         return len(self._parse(True))
 
-    def has_key(self, k):
+    def has_key(self, k: str) -> bool:
+        """True if the given key is in the dict. Thread-safe."""
         return k in self._parse(True)
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
+        """A view of the keys in the dict. Thread-safe."""
         return self._parse(True).keys()
 
-    def values(self):
+    def values(self) -> ValuesView[Any]:
+        """A view of the values in the dict. Thread-safe."""
         return self._parse(True).values()
 
-    def items(self):
+    def items(self) -> ItemsView[str, Any]:
+        """A view of the key-value items in the dict. Thread-safe."""
         return self._parse(True).items()
 
-    def __contains__(self, item):
-        return item in self._parse(True)
+    def __contains__(self, key: Any) -> bool:
+        """True if the given key is in the dict. Thread-safe."""
+        return key in self._parse(True)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
+        """An iterator over the keys in the dict. Thread-safe."""
         return iter(self._parse(True))
 
 
