@@ -268,12 +268,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay(self, _, cache_decorator):
         @cache_decorator
         def foo(i):
@@ -288,12 +283,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         assert text == ["1", "---", "1"]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_nested(self, _, cache_decorator):
         @cache_decorator
         def inner(i):
@@ -329,12 +319,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             "3",
         ]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_outer_blocks(self, _, cache_decorator):
         @cache_decorator
         def foo(i):
@@ -349,12 +334,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         text = self.get_text_delta_contents()
         assert text == ["1", "---", "1"]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_sidebar(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -379,12 +359,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
         assert paths == [[1, 0], [0, 0], [1, 1]]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_inner_blocks(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -420,12 +395,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             [0, 5, 0],
         ]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_inner_direct(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -447,12 +417,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
         assert paths == [[0, 0], [0, 0, 0], [0, 1], [0, 2], [0, 2, 0]]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_outer_direct(self, _, cache_decorator):
         cont = st.container()
 
@@ -535,12 +500,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         self.assertEqual(2, foo_call_count[0])
         self.assertEqual(1, bar_call_count[0])
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_without_spinner(self, _, cache_decorator):
         """If the show_spinner flag is not set, the report queue should be
         empty.
@@ -553,12 +513,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_without_spinner(3)
         self.assertTrue(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_with_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, there should be one element in the
         report queue.
@@ -571,12 +526,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_with_spinner(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_with_custom_text_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, there should be one element in the
         report queue.
@@ -589,12 +539,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_with_spinner_custom_text(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_with_empty_text_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, even if it is empty text,
         there should be one element in the report queue.
