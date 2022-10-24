@@ -593,6 +593,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
         def call_foo(_: int) -> None:
             self.assertEqual(42, foo())
 
+        # Call foo from multiple threads and assert no errors.
         call_on_threads(call_foo, self.NUM_THREADS)
 
         # We don't currently guarantee that the cached function will only be called
@@ -611,13 +612,16 @@ class CommonCacheThreadingTest(unittest.TestCase):
         def foo():
             return 42
 
+        # Populate the cache
         foo()
 
         def clear_caches(_: int) -> None:
             clear_cache_func()
 
+        # Clear the cache from a bunch of threads and assert no errors.
         call_on_threads(clear_caches, self.NUM_THREADS)
 
+        # Sanity check: ensure we can still call our cached function.
         self.assertEqual(42, foo())
 
     @parameterized.expand([("memo", memo), ("singleton", singleton)])
@@ -628,13 +632,16 @@ class CommonCacheThreadingTest(unittest.TestCase):
         def foo():
             return 42
 
+        # Populate the cache
         foo()
 
         def clear_foo(_: int) -> None:
             foo.clear()
 
+        # Clear it from a bunch of threads and assert no errors.
         call_on_threads(clear_foo, self.NUM_THREADS)
 
+        # Sanity check: ensure we can still call our cached function.
         self.assertEqual(42, foo())
 
     @parameterized.expand(
