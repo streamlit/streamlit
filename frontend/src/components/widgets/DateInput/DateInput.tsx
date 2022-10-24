@@ -181,9 +181,11 @@ class DateInput extends React.PureComponent<Props, State> {
     const { isEmpty } = this.state
     if (isEmpty) {
       this.setState(
-        {
-          values: stringsToDates(this.props.element.default),
-          isEmpty: !stringsToDates(this.props.element.default),
+        (_, prevProps) => {
+          return {
+            values: stringsToDates(prevProps.element.default),
+            isEmpty: !stringsToDates(prevProps.element.default),
+          }
         },
         () => {
           this.commitWidgetValue({ fromUi: true })

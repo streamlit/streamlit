@@ -815,7 +815,7 @@ export class App extends PureComponent<Props, State> {
         // we pick up any new changes to it).
         this.setAndSendTheme(customTheme)
       }
-    } else if (!themeInput) {
+    } else {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
@@ -1232,14 +1232,21 @@ export class App extends PureComponent<Props, State> {
   }
 
   addScriptFinishedHandler = (func: () => void): void => {
-    this.setState({
-      scriptFinishedHandlers: concat(this.state.scriptFinishedHandlers, func),
+    this.setState((prevState, _) => {
+      return {
+        scriptFinishedHandlers: concat(prevState.scriptFinishedHandlers, func),
+      }
     })
   }
 
   removeScriptFinishedHandler = (func: () => void): void => {
-    this.setState({
-      scriptFinishedHandlers: without(this.state.scriptFinishedHandlers, func),
+    this.setState((prevState, _) => {
+      return {
+        scriptFinishedHandlers: without(
+          prevState.scriptFinishedHandlers,
+          func
+        ),
+      }
     })
   }
 

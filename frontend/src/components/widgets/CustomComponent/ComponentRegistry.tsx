@@ -95,7 +95,7 @@ export class ComponentRegistry {
 
     // Get the ComponentInstance associated with the event
     const listener = this.msgListeners.get(event.source)
-    if (listener == null) {
+    if (listener == null || typeof listener !== "function") {
       logWarning(
         `Received component message for unregistered ComponentInstance!`,
         event.data
