@@ -30,16 +30,12 @@ import pyarrow as pa
 from numpy import ndarray
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
+from typing_extensions import Literal, TypedDict
 
 import streamlit as st
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
-
-if sys.version_info >= (3, 8):
-    from typing import Literal, TypedDict
-else:
-    from typing_extensions import Literal, TypedDict
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
