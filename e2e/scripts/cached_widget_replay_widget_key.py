@@ -27,4 +27,4 @@ def foo():
 
 
 foo()
-st.write(side_effects)
+st.text(side_effects)

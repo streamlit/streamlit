@@ -21,16 +21,16 @@ describe("widget replay cache selection", () => {
 
   it("runs cached function with new widget values", () => {
     cy.get(".stRadio").should("have.length", 1);
-    cy.get(".stMarkdown").should("have.text", "['function ran']");
+    cy.get("[data-testid='stText']").should("have.text", "['function ran']");
     cy.get(".stButton").first.click();
     cy.get(".stRadio").should("have.length", 1);
-    cy.get(".stMarkdown").should("have.text", "[]");
+    cy.get("[data-testid='stText']").should("have.text", "[]");
 
     cy.get(".stRadio").first().find("input").last().click({ force: true });
     cy.get(".stRadio").should("have.length", 1);
-    cy.get(".stMarkdown").should("have.text", "['function ran']");
+    cy.get("[data-testid='stText']").should("have.text", "['function ran']");
     cy.get(".stButton").first.click();
     cy.get(".stRadio").should("have.length", 1);
-    cy.get(".stMarkdown").should("have.text", "[]");
+    cy.get("[data-testid='stText']").should("have.text", "[]");
   })
 })
