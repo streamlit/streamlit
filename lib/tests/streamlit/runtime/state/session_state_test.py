@@ -38,7 +38,7 @@ from streamlit.runtime.state.session_state import (
     WStates,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 identity = lambda x: x
 
@@ -211,7 +211,7 @@ class WStateTests(unittest.TestCase):
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):
+class SessionStateUpdateTest(DeltaGeneratorTestCase):
     def test_widget_creation_updates_state(self):
         state = st.session_state
         assert "c" not in state
@@ -230,7 +230,7 @@ class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-class SessionStateTest(testutil.DeltaGeneratorTestCase):
+class SessionStateTest(DeltaGeneratorTestCase):
     def test_widget_presence(self):
         state = st.session_state
 
@@ -296,7 +296,7 @@ def check_roundtrip(widget_id: str, value: Any) -> None:
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
+class SessionStateSerdeTest(DeltaGeneratorTestCase):
     def test_checkbox_serde(self):
         cb = st.checkbox("cb", key="cb")
         check_roundtrip("cb", cb)
@@ -686,7 +686,7 @@ def test_map_set_del_3837_regression():
     assert len(m) == l1 - 1
 
 
-class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
+class SessionStateStatProviderTests(DeltaGeneratorTestCase):
     def test_session_state_stats(self):
         # TODO: document the values used here. They're somewhat arbitrary -
         #  we don't care about actual byte values, but rather that our

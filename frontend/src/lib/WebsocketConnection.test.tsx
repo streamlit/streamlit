@@ -24,69 +24,99 @@ import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   StyledBashCode,
   WebsocketConnection,
-  doHealthPing,
+  doInitPings,
 } from "src/lib/WebsocketConnection"
 import { zip } from "lodash"
 
-describe("doHealthPing", () => {
+const MOCK_ALLOWED_ORIGINS_RESPONSE = {
+  data: {
+    allowedOrigins: ["list", "of", "allowed", "origins"],
+  },
+}
+
+describe("doInitPings", () => {
   const MOCK_PING_DATA = {
     uri: [
-      "https://not.a.real.host:3000/healthz",
-      "https://not.a.real.host:3001/healthz",
+      { host: "not.a.real.host", port: 3000, basePath: "/" },
+      { host: "not.a.real.host", port: 3001, basePath: "/" },
     ],
     timeoutMs: 10,
     maxTimeoutMs: 100,
-    retryCallback: () => {},
+    retryCallback: jest.fn(),
+    setHostAllowedOrigins: jest.fn(),
     userCommandLine: "streamlit run not-a-real-script.py",
   }
 
+  let originalAxiosGet: any
+  let originalPromiseAll: any
+
   beforeEach(() => {
+    originalAxiosGet = axios.get
+    axios.get = jest.fn()
     MOCK_PING_DATA.retryCallback = jest.fn()
+    MOCK_PING_DATA.setHostAllowedOrigins = jest.fn()
+    originalPromiseAll = Promise.all
   })
 
-  it("returns the uri index of the first successful ping (0)", async () => {
-    axios.get = jest.fn().mockResolvedValueOnce("")
+  afterEach(() => {
+    axios.get = originalAxiosGet
+    Promise.all = originalPromiseAll
+  })
 
-    const uriIndex = await doHealthPing(
+  it("returns the uri index and sets allowedOrigins for the first successful ping (0)", async () => {
+    Promise.all = jest
+      .fn()
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+
+    const uriIndex = await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(0)
+    expect(MOCK_PING_DATA.setHostAllowedOrigins).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_RESPONSE.data.allowedOrigins
+    )
   })
 
-  it("returns the uri index of the first successful ping (1)", async () => {
-    axios.get = jest
+  it("returns the uri index and sets allowedOrigins for the first successful ping (1)", async () => {
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(new Error(""))
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    const uriIndex = await doHealthPing(
+    const uriIndex = await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(1)
+    expect(MOCK_PING_DATA.setHostAllowedOrigins).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_RESPONSE.data.allowedOrigins
+    )
   })
 
   it("calls retry with the corresponding error message if there was an error", async () => {
     const TEST_ERROR_MESSAGE = "ERROR_MESSAGE"
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(new Error(TEST_ERROR_MESSAGE))
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -100,17 +130,18 @@ describe("doHealthPing", () => {
   it("calls retry with 'Connection timed out.' when the error code is `ECONNABORTED`", async () => {
     const TEST_ERROR = { code: "ECONNABORTED" }
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -128,17 +159,18 @@ describe("doHealthPing", () => {
       },
     }
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -154,17 +186,18 @@ describe("doHealthPing", () => {
       request: {},
     }
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -179,8 +212,8 @@ describe("doHealthPing", () => {
     const MOCK_PING_DATA_LOCALHOST = {
       ...MOCK_PING_DATA,
       uri: [
-        "https://localhost:3000/healthz",
-        "https://localhost:3001/healthz",
+        { host: "localhost", port: 3000, basePath: "/" },
+        { host: "localhost", port: 3001, basePath: "/" },
       ],
     }
 
@@ -204,17 +237,18 @@ describe("doHealthPing", () => {
       </Fragment>
     )
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA_LOCALHOST.uri,
       MOCK_PING_DATA_LOCALHOST.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA_LOCALHOST.retryCallback,
+      MOCK_PING_DATA_LOCALHOST.setHostAllowedOrigins,
       MOCK_PING_DATA_LOCALHOST.userCommandLine
     )
 
@@ -243,17 +277,18 @@ describe("doHealthPing", () => {
       </Fragment>
     )
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -272,17 +307,18 @@ describe("doHealthPing", () => {
       },
     }
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -296,7 +332,7 @@ describe("doHealthPing", () => {
   it("calls retry with correct total tries", async () => {
     const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
@@ -304,13 +340,14 @@ describe("doHealthPing", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -320,7 +357,7 @@ describe("doHealthPing", () => {
   it("has increasing but capped retry backoff", async () => {
     const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
@@ -328,7 +365,7 @@ describe("doHealthPing", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -339,11 +376,12 @@ describe("doHealthPing", () => {
       timeouts.push(timeout)
     }
 
-    await doHealthPing(
-      ["https://not.a.real.host:3000/healthz"],
+    await doInitPings(
+      [{ host: "not.a.real.host", port: 3000, basePath: "/" }],
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -362,7 +400,7 @@ describe("doHealthPing", () => {
   it("backs off independently for each target url", async () => {
     const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
@@ -370,7 +408,7 @@ describe("doHealthPing", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -381,11 +419,12 @@ describe("doHealthPing", () => {
       timeouts.push(timeout)
     }
 
-    await doHealthPing(
+    await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -399,16 +438,16 @@ describe("doHealthPing", () => {
   it("resets timeout each ping call", async () => {
     const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
 
-    axios.get = jest
+    Promise.all = jest
       .fn()
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
-      .mockResolvedValueOnce("")
-      // Reset for second doHealthPing call
+      // Reset after second doInitPings call
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -419,13 +458,15 @@ describe("doHealthPing", () => {
       timeouts.push(timeout)
     }
 
-    await doHealthPing(
-      ["https://not.a.real.host:3000/healthz"],
+    await doInitPings(
+      [{ host: "not.a.real.host", port: 3000, basePath: "/" }],
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
+
     const timeouts2: number[] = []
     const callback2 = (
       _times: number,
@@ -435,11 +476,12 @@ describe("doHealthPing", () => {
       timeouts2.push(timeout)
     }
 
-    await doHealthPing(
-      ["https://not.a.real.host:3000/healthz"],
+    await doInitPings(
+      [{ host: "not.a.real.host", port: 3000, basePath: "/" }],
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback2,
+      MOCK_PING_DATA.setHostAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -455,23 +497,40 @@ describe("WebsocketConnection", () => {
       {
         host: "localhost",
         port: 1234,
-        basePath: "",
+        basePath: "/",
       },
     ],
     onMessage: jest.fn(),
     onConnectionStateChange: jest.fn(),
     onRetry: jest.fn(),
+    getHostAuthToken: () => undefined,
+    setHostAllowedOrigins: jest.fn(),
   }
 
   let client: WebsocketConnection
   let server: WS
 
-  beforeEach(async () => {
+  let originalAxiosGet: any
+  let originalPromiseAll: any
+
+  beforeEach(() => {
     server = new WS("localhost:1234")
+
+    originalAxiosGet = axios.get
+    axios.get = jest.fn()
+
+    originalPromiseAll = Promise.all
+    Promise.all = jest
+      .fn()
+      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+
     client = new WebsocketConnection(MOCK_SOCKET_DATA)
   })
 
-  afterEach(async () => {
+  afterEach(() => {
+    axios.get = originalAxiosGet
+    Promise.all = originalPromiseAll
+
     // @ts-ignore
     client.websocket.close()
     server.close()
@@ -516,5 +575,60 @@ describe("WebsocketConnection", () => {
     it("returns undefined when ConnectionState != Connected", () => {
       expect(client.getBaseUriParts()).toBeUndefined()
     })
+  })
+})
+
+describe("WebsocketConnection auth token handling", () => {
+  const MOCK_SOCKET_DATA = {
+    baseUriPartsList: [
+      {
+        host: "localhost",
+        port: 1234,
+        basePath: "/",
+      },
+    ],
+    onMessage: jest.fn(),
+    onConnectionStateChange: jest.fn(),
+    onRetry: jest.fn(),
+    getHostAuthToken: jest.fn(),
+    setHostAllowedOrigins: jest.fn(),
+  }
+
+  let originalAxiosGet: any
+  let websocketSpy: any
+
+  beforeEach(() => {
+    websocketSpy = jest.spyOn(window, "WebSocket")
+
+    originalAxiosGet = axios.get
+    axios.get = jest.fn()
+  })
+
+  afterEach(() => {
+    axios.get = originalAxiosGet
+  })
+
+  it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", () => {
+    const ws = new WebsocketConnection(MOCK_SOCKET_DATA)
+    // @ts-ignore
+    ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
+      "streamlit",
+    ])
+  })
+
+  it("sets second Sec-WebSocket-Protocol option to value from getHostAuthToken", () => {
+    const ws = new WebsocketConnection({
+      ...MOCK_SOCKET_DATA,
+      getHostAuthToken: () => "iAmAnAuthToken",
+    })
+    // @ts-ignore
+    ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
+      "streamlit",
+      "iAmAnAuthToken",
+    ])
   })
 })

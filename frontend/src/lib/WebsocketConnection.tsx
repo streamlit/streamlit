@@ -38,6 +38,11 @@ const LOG = "WebsocketConnection"
 const SERVER_PING_PATH = "healthz"
 
 /**
+ * The path to fetch the whitelist for accepting cross-origin messages.
+ */
+const ALLOWED_ORIGINS_PATH = "st-allowed-message-origins"
+
+/**
  * The path of the server's websocket endpoint.
  */
 const WEBSOCKET_STREAM_PATH = "stream"
@@ -96,6 +101,18 @@ interface Args {
    * Function called when we receive a new message.
    */
   onMessage: OnMessage
+
+  /**
+   * Function to get the auth token set by the host of this app (if in a
+   * relevant deployment scenario).
+   */
+  getHostAuthToken: () => string | undefined
+
+  /**
+   * Function to set the list of origins that this app should accept
+   * cross-origin messages from (if in a relevant deployment scenario).
+   */
+  setHostAllowedOrigins: (allowedOrigins: string[]) => void
 }
 
 interface MessageQueue {
@@ -108,14 +125,16 @@ interface MessageQueue {
  *
  *   INITIAL
  *     │
- *     │               on conn succeed
+ *     │               on ping succeed
  *     v               :
- *   CONNECTING ───────────────> CONNECTED
- *     │  ^                          │
- *     │  │:on ping succeed          │
- *     │:on timeout/error/closed     │
- *     v  │                          │:on error/closed
- *   PINGING_SERVER <────────────────┘
+ *   PINGING_SERVER ───────────────> CONNECTING
+ *     ^  ^                            │  │
+ *     │  │:on timeout/error/closed    │  │
+ *     │  └────────────────────────────┘  │
+ *     │                                  │
+ *     │:on error/closed                  │:on conn succeed
+ *   CONNECTED<───────────────────────────┘
+ *
  *
  *                    on fatal error
  *                    :
@@ -131,8 +150,8 @@ type Event =
   | "FATAL_ERROR" // Unrecoverable error. This should never happen!
 
 /**
- * This class is the "brother" of StaticConnection. The class connects to the
- * server and gets deltas over a websocket connection.
+ * This class connects to the server and gets deltas over a websocket connection.
+ *
  */
 export class WebsocketConnection {
   private readonly args: Args
@@ -261,7 +280,7 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.INITIAL:
         if (event === "INITIALIZED") {
-          this.setFsmState(ConnectionState.CONNECTING)
+          this.setFsmState(ConnectionState.PINGING_SERVER)
           return
         }
         break
@@ -318,15 +337,12 @@ export class WebsocketConnection {
   }
 
   private async pingServer(userCommandLine?: string): Promise<void> {
-    const uris = this.args.baseUriPartsList.map((_, i) =>
-      buildHttpUri(this.args.baseUriPartsList[i], SERVER_PING_PATH)
-    )
-
-    this.uriIndex = await doHealthPing(
-      uris,
+    this.uriIndex = await doInitPings(
+      this.args.baseUriPartsList,
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
+      this.args.setHostAllowedOrigins,
       userCommandLine
     )
 
@@ -346,7 +362,23 @@ export class WebsocketConnection {
     }
 
     logMessage(LOG, "creating WebSocket")
-    this.websocket = new WebSocket(uri)
+
+    // NOTE: We repurpose the Sec-WebSocket-Protocol header (set via the second
+    // parameter to the WebSocket constructor) here in a slightly unfortunate
+    // but necessary way. The browser WebSocket API doesn't allow us to set
+    // arbitrary HTTP headers, and this header is the only one where we have
+    // the ability to set it to arbitrary values. Thus, we use it to pass an
+    // auth token from client to server as the *second* value in the list.
+    //
+    // The reason why the auth token is set as the second value is that, when
+    // Sec-WebSocket-Protocol is set, many clients expect the server to respond
+    // with a selected subprotocol to use. We don't want that reply to be the
+    // auth token, so we just hard-code it to "streamlit".
+    const hostAuthToken = this.args.getHostAuthToken()
+    this.websocket = new WebSocket(uri, [
+      "streamlit",
+      ...(hostAuthToken ? [hostAuthToken] : []),
+    ])
     this.websocket.binaryType = "arraybuffer"
 
     this.setConnectionTimeout(uri)
@@ -521,11 +553,12 @@ export const StyledBashCode = styled.code({
  * retries forever until one of the URIs responds with 'ok'.
  * Returns a promise with the index of the URI that worked.
  */
-export function doHealthPing(
-  uriList: string[],
+export function doInitPings(
+  uriPartsList: BaseUriParts[],
   minimumTimeoutMs: number,
   maximumTimeoutMs: number,
   retryCallback: OnRetry,
+  setHostAllowedOrigins: (allowedOrigins: string[]) => void,
   userCommandLine?: string
 ): Promise<number> {
   const resolver = new Resolver<number>()
@@ -537,7 +570,7 @@ export function doHealthPing(
 
   const retryImmediately = (): void => {
     uriNumber++
-    if (uriNumber >= uriList.length) {
+    if (uriNumber >= uriPartsList.length) {
       uriNumber = 0
     }
 
@@ -561,7 +594,8 @@ export function doHealthPing(
   }
 
   const retryWhenTheresNoResponse = (): void => {
-    const uri = new URL(uriList[uriNumber])
+    const uriParts = uriPartsList[uriNumber]
+    const uri = new URL(buildHttpUri(uriParts, ""))
 
     if (uri.hostname === "localhost") {
       const commandLine = userCommandLine || "streamlit run yourscript.py"
@@ -595,18 +629,29 @@ export function doHealthPing(
   }
 
   connect = () => {
-    const uri = uriList[uriNumber]
-    logMessage(LOG, `Attempting to connect to ${uri}.`)
+    const uriParts = uriPartsList[uriNumber]
+    const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
+    const allowedOriginsUri = buildHttpUri(uriParts, ALLOWED_ORIGINS_PATH)
+
+    logMessage(LOG, `Attempting to connect to ${healthzUri}.`)
 
     if (uriNumber === 0) {
       totalTries++
     }
 
-    axios
-      .get(uri, {
-        timeout: minimumTimeoutMs,
-      })
-      .then(() => {
+    // We fire off requests to the server's healthz and allowed message origins
+    // endpoints in parallel to avoid having to wait on too many sequential
+    // round trip network requests before we can try to establish a WebSocket
+    // connection. Technically, it would have been possible to implement a
+    // single "get server health and origins whitelist" endpoint, but we chose
+    // not to do so as it's semantically cleaner to not give the healthcheck
+    // endpoint additional responsibilities.
+    Promise.all([
+      axios.get(healthzUri, { timeout: minimumTimeoutMs }),
+      axios.get(allowedOriginsUri, { timeout: minimumTimeoutMs }),
+    ])
+      .then(([_, originsResp]) => {
+        setHostAllowedOrigins(originsResp.data.allowedOrigins)
         resolver.resolve(uriNumber)
       })
       .catch(error => {

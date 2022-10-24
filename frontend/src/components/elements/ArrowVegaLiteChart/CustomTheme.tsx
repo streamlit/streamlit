@@ -75,6 +75,7 @@ export function applyStreamlitTheme(config: any, theme: Theme): any {
       rowPadding: 4,
       padding: -1,
       orient: "bottom",
+      symbolStrokeWidth: 4,
     },
     range: {
       // TODO: Eventually, we might want to move those color schemes to our theme.

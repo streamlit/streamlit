@@ -18,10 +18,10 @@ import sys
 import numpy as np
 
 import streamlit as st
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class StHelpTest(testutil.DeltaGeneratorTestCase):
+class StHelpTest(DeltaGeneratorTestCase):
     """Test st.help."""
 
     def test_basic_func_with_doc(self):

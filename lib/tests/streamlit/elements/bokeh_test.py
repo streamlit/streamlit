@@ -20,10 +20,10 @@ from bokeh.plotting import figure
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class BokehTest(testutil.DeltaGeneratorTestCase):
+class BokehTest(DeltaGeneratorTestCase):
     """Test ability to marshall bokeh_chart protos."""
 
     def test_figure(self):

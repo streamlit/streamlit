@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
+
+import sys
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -30,10 +32,11 @@ from typing import (
     overload,
 )
 
+import click
 from typing_extensions import Final, Literal
 
 import streamlit as st
-from streamlit import cursor, type_util, util
+from streamlit import config, cursor, env_util, logger, runtime, type_util, util
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 
@@ -116,6 +119,35 @@ ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
 
 Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
+
+
+_use_warning_has_been_displayed: bool = False
+
+
+def _maybe_print_use_warning() -> None:
+    """Print a warning if Streamlit is imported but not being run with `streamlit run`.
+    The warning is printed only once, and is printed using the root logger.
+    """
+    global _use_warning_has_been_displayed
+
+    if not _use_warning_has_been_displayed:
+        _use_warning_has_been_displayed = True
+
+        warning = click.style("Warning:", bold=True, fg="yellow")
+
+        if env_util.is_repl():
+            logger.get_logger("root").warning(
+                f"\n  {warning} to view a Streamlit app on a browser, use Streamlit in a file and\n  run it with the following command:\n\n    streamlit run [FILE_NAME] [ARGUMENTS]"
+            )
+
+        elif not runtime.exists() and config.get_option(
+            "global.showWarningOnDirectExecution"
+        ):
+            script_name = sys.argv[0]
+
+            logger.get_logger("root").warning(
+                f"\n  {warning} to view this Streamlit app on a browser, run it with the following\n  command:\n\n    streamlit run {script_name} [ARGUMENTS]"
+            )
 
 
 class DeltaGenerator(
@@ -471,7 +503,7 @@ class DeltaGenerator(
         caching.maybe_show_cached_st_function_warning(dg, delta_type)
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
-        st._maybe_print_use_warning()
+        _maybe_print_use_warning()
 
         # Some elements have a method.__name__ != delta_type in proto.
         # This really matters for line_chart, bar_chart & area_chart,

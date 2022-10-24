@@ -35,6 +35,10 @@ export function FormSubmitButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, hasInProgressUpload, width } = props
   const { formId } = element
   const style = { width }
+  const kind =
+    element.type === "primary"
+      ? Kind.PRIMARY_FORM_SUBMIT
+      : Kind.SECONDARY_FORM_SUBMIT
 
   useEffect(() => {
     widgetMgr.incrementSubmitButtonCount(formId)
@@ -49,7 +53,7 @@ export function FormSubmitButton(props: Props): ReactElement {
     >
       <ButtonTooltip help={element.help}>
         <UIButton
-          kind={Kind.FORM_SUBMIT}
+          kind={kind}
           size={Size.SMALL}
           disabled={disabled || hasInProgressUpload}
           onClick={() => widgetMgr.submitForm(element)}

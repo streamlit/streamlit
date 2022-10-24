@@ -47,7 +47,7 @@ describe("st.form", () => {
 
   it("changes widget values after the form has been submitted", () => {
     changeWidgetValues();
-    cy.get(".stButton [kind='formSubmit']").click();
+    cy.get(".stButton [kind='secondaryFormSubmit']").click();
     cy.get("@markdown").should("have.length", 12);
 
     cy.getIndexed("@markdown", 0).should("have.text", "Checkbox: True");

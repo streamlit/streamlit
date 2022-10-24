@@ -65,7 +65,7 @@ describe("handles legacy empty charts", () => {
 
     cy.getIndexed(".stException .message", 4).should(
       "have.text",
-      "TypeError: _legacy_altair_chart() missing 1 required positional argument: 'altair_chart'"
+      "TypeError: LegacyAltairMixin._legacy_altair_chart() missing 1 required positional argument: 'altair_chart'"
     );
   });
 });

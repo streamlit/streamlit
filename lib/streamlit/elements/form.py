@@ -15,6 +15,8 @@
 import textwrap
 from typing import NamedTuple, Optional, cast
 
+from typing_extensions import Literal
+
 import streamlit
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
@@ -208,6 +210,9 @@ class FormMixin:
         on_click=None,
         args=None,
         kwargs=None,
+        *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
+        disabled: bool = False,
     ) -> bool:
         """Display a form submit button.
 
@@ -234,6 +239,13 @@ class FormMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
+        disabled : bool
+            An optional boolean, which disables the button if set to True. The
+            default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -241,12 +253,22 @@ class FormMixin:
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
+
+        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.button must be "primary" or "secondary". \n'
+                f'The argument passed was "{type}".'
+            )
+
         return self._form_submit_button(
             label=label,
             help=help,
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            type=type,
+            disabled=disabled,
             ctx=ctx,
         )
 
@@ -257,6 +279,9 @@ class FormMixin:
         on_click=None,
         args=None,
         kwargs=None,
+        *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
+        disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
@@ -269,6 +294,8 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            type=type,
+            disabled=disabled,
             ctx=ctx,
         )
 

@@ -3,7 +3,10 @@ name: PR Preview
 on:
   push:
     branches:
-      - '**'
+      - 'develop'
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 # Avoid duplicate workflows on same branch
 concurrency: 
@@ -11,12 +14,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pr-preview:
+  upload-whl:
     runs-on: ubuntu-latest
 
     defaults:
       run:
         shell: bash -ileo pipefail {0}
+
+    outputs:
+      enable-setup: ${{ steps.exports.outputs.enable-setup }}
+      preview-branch: ${{ steps.exports.outputs.preview-branch }}
+      s3-url: ${{ steps.exports.outputs.s3-url }}
 
     steps:
       - name: Checkout Streamlit code
@@ -35,6 +43,11 @@ jobs:
         run: |
           sudo apt install rsync
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
+      - name: Store Whl File
+        uses: actions/upload-artifact@v3
+        with:
+          name: whl_file
+          path: lib/dist/*.whl
       # Uses action to safely process user input (branch name) to prevent script injection attacks
       - name: Set Environment Variables
         uses: ./.github/actions/preview_branch
@@ -42,17 +55,17 @@ jobs:
           pull_request_number: ${{ github.event.pull_request.number }}
           ref_type: ${{ github.ref_type }}
           branch: ${{ github.ref_name }}
-
-      # TODO: Need the AWS S3 secret/key for the below steps - added the if statement to gate for now
-      - if: ${{ 'true' == 'false' }}
+      - if: ${{ env.AWS_ACCESS_KEY_ID != '' }}
         name: Upload wheel to S3
+        id: exports
         env:
           BRANCH: ${{ env.BRANCH }}
           PREVIEW_BRANCH: ${{ env.PREVIEW_BRANCH }}
           AWS_DEFAULT_REGION: us-west-2
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CORE_PREVIEWS_S3_SECRET_KEY }}
-        # TODO: Add explanation on streamlit-11.11.11 convention
+        # To create a consistent location for the release/demo whl file, we need a
+        # stagnent version number (streamlit-11.11.11)
         run: |
           sudo apt install -y awscli
 
@@ -69,29 +82,46 @@ jobs:
           fi
 
           cd ../..
-          echo -e "S3_URL=https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}" >> $GITHUB_ENV
-      - if: ${{ 'true' == 'false' }}
-        name: Setup preview repo
+          # env variables don't carry over between gh action jobs
+          echo "::set-output name=enable-setup::${{ env.AWS_ACCESS_KEY_ID != '' }}"
+          echo "::set-output name=preview-branch::$PREVIEW_BRANCH"
+          echo "::set-output name=s3-url::https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
+
+  setup-preview:
+    runs-on: ubuntu-latest
+
+    needs: upload-whl
+    if: needs.upload-whl.outputs.enable-setup == 'true'
+
+    defaults:
+      run:
+        shell: bash -ileo pipefail {0}
+    
+    steps:
+      - name: Checkout Core Previews Repo
+        uses: actions/checkout@v3
+        with: 
+          repository: streamlit/core-previews
+          # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo. 
+          # Accessing streamlit/core-previews repo requires a separate auth token.
+          token: ${{ secrets.CORE_PREVIEWS_REPO_TOKEN }}
+      - name: Setup preview repo
         env:
-          PREVIEW_BRANCH: ${{ env.PREVIEW_BRANCH }}
-          S3_URL: ${{ env.S3_URL }}
+          PREVIEW_BRANCH: ${{ needs.upload-whl.outputs.preview-branch }}
+          S3_URL: ${{ needs.upload-whl.outputs.s3-url }}
         run: |
           git config --global user.email "core+streamlitbot-github@streamlit.io"
           git config --global user.name "Streamlit Bot"
-          git clone git@github.com:streamlit/core-previews.git
+          git branch -D "$PREVIEW_BRANCH" &>/dev/null || true
+          git checkout -b "$PREVIEW_BRANCH"
 
-          cd core-previews
-          git branch -D ${PREVIEW_BRANCH} &>/dev/null || true
-          git checkout -b ${PREVIEW_BRANCH}
-
-          cat ../S3_URL >> requirements.txt
+          echo "$S3_URL" >> requirements.txt
 
           git add .
           git commit -m "Prepare core preview: ${PREVIEW_BRANCH}"
           git push -f origin ${PREVIEW_BRANCH}
-      - if: ${{ 'true' == 'false' }}
-        name: Ready to deploy!
+      - name: Ready to deploy!
         env:
-          PREVIEW_BRANCH: ${{ env.PREVIEW_BRANCH }}
+          PREVIEW_BRANCH: ${{ needs.upload-whl.outputs.preview-branch }}
         run: |
           echo -e "https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=${PREVIEW_BRANCH}&mainModule=streamlit_app.py"

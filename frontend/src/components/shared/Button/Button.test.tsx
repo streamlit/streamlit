@@ -20,7 +20,7 @@ import { shallow } from "src/lib/test_util"
 import Button, { Size, Kind, ButtonProps } from "./Button"
 
 const getProps = (propOverrides: Partial<ButtonProps> = {}): ButtonProps => ({
-  kind: Kind.PRIMARY,
+  kind: Kind.SECONDARY,
   size: Size.MEDIUM,
   onClick: () => {},
   disabled: false,
@@ -44,6 +44,20 @@ describe("Button element", () => {
           .exists()
       ).toBeTruthy()
     })
+
+    it(`renders disabled ${kind} correctly`, () => {
+      const wrapper = shallow(
+        <Button {...getProps({ kind, disabled: true })}>Hello</Button>
+      )
+
+      expect(
+        wrapper
+          .find(
+            `Styled${kind.charAt(0).toUpperCase()}${kind.substring(1)}Button`
+          )
+          .prop("disabled")
+      ).toBe(true)
+    })
   })
 
   Object.keys(Size).forEach(key => {
@@ -52,7 +66,7 @@ describe("Button element", () => {
     it(`renders ${size} buttons correctly`, () => {
       const wrapper = shallow(<Button {...getProps({ size })}>Hello</Button>)
 
-      expect(wrapper.find("StyledPrimaryButton").prop("size")).toBe(size)
+      expect(wrapper.find("StyledSecondaryButton").prop("size")).toBe(size)
     })
   })
 
@@ -61,7 +75,7 @@ describe("Button element", () => {
       <Button {...getProps({ fluidWidth: true })}>Hello</Button>
     )
 
-    expect(wrapper.find("StyledPrimaryButton").prop("fluidWidth")).toBe(true)
+    expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(true)
   })
 
   it("renders disabled buttons correctly", () => {
@@ -69,13 +83,13 @@ describe("Button element", () => {
       <Button {...getProps({ disabled: true })}>Hello</Button>
     )
 
-    expect(wrapper.find("StyledPrimaryButton").prop("disabled")).toBe(true)
+    expect(wrapper.find("StyledSecondaryButton").prop("disabled")).toBe(true)
   })
 
   it("calls onClick when button is clicked", () => {
     const onClick = jest.fn()
     const wrapper = shallow(<Button {...getProps({ onClick })}>Hello</Button>)
-    wrapper.find("StyledPrimaryButton").simulate("click")
+    wrapper.find("StyledSecondaryButton").simulate("click")
 
     expect(onClick).toBeCalled()
   })

@@ -44,6 +44,18 @@ interface Props {
    * Called when our ConnectionState is changed.
    */
   connectionStateChanged: (connectionState: ConnectionState) => void
+
+  /**
+   * Function to get the auth token set by the host of this app (if in a
+   * relevant deployment scenario).
+   */
+  getHostAuthToken: () => string | undefined
+
+  /**
+   * Function to set the list of origins that this app should accept
+   * cross-origin messages from (if in a relevant deployment scenario).
+   */
+  setHostAllowedOrigins: (allowedOrigins: string[]) => void
 }
 
 /**
@@ -145,6 +157,8 @@ export class ConnectionManager {
       onMessage: this.props.onMessage,
       onConnectionStateChange: this.setConnectionState,
       onRetry: this.showRetryError,
+      getHostAuthToken: this.props.getHostAuthToken,
+      setHostAllowedOrigins: this.props.setHostAllowedOrigins,
     })
   }
 }

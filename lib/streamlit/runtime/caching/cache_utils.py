@@ -38,8 +38,10 @@ from typing import (
 from google.protobuf.message import Message
 
 import streamlit as st
-from streamlit import util
+from streamlit import type_util, util
 from streamlit.elements import NONWIDGET_ELEMENTS
+from streamlit.elements.spinner import spinner
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_errors import (
@@ -49,6 +51,8 @@ from streamlit.runtime.caching.cache_errors import (
     CacheType,
     UnhashableParamError,
     UnhashableTypeError,
+    UnserializableReturnValueError,
+    get_cached_func_name_md,
 )
 from streamlit.runtime.caching.hashing import update_hash
 
@@ -248,12 +252,32 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                         return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
-                cache.write_result(value_key, return_value, messages)
+                try:
+                    cache.write_result(value_key, return_value, messages)
+                except TypeError:
+                    if type_util.is_type(
+                        return_value, "snowflake.snowpark.dataframe.DataFrame"
+                    ):
+
+                        class UnevaluatedDataFrameError(StreamlitAPIException):
+                            def __init__(self):
+                                super().__init__(
+                                    self,
+                                    f"""
+                                    The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated 
+                                    dataframe of type `snowflake.snowpark.DataFrame`. Please call `collect()` or `to_pandas()` on the 
+                                    dataframe before returning it, so `st.experimental_memo` can serialize and cache it.""",
+                                )
+
+                        raise UnevaluatedDataFrameError
+                    raise UnserializableReturnValueError(
+                        return_value=return_value, func=cached_func.func
+                    )
 
             return return_value
 
         if cached_func.show_spinner or isinstance(cached_func.show_spinner, str):
-            with st.spinner(message):
+            with spinner(message):
                 return get_or_create_cached_value()
         else:
             return get_or_create_cached_value()

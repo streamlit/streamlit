@@ -30,6 +30,7 @@ from numpy import ndarray
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
 
+import streamlit as st
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -54,7 +55,7 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.DataFrame, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -93,6 +94,7 @@ class ArrowMixin:
         >>> st._arrow_dataframe(df.style.highlight_max(axis=0))
 
         """
+
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
@@ -129,6 +131,7 @@ class ArrowMixin:
         >>> st._arrow_table(df)
 
         """
+
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.

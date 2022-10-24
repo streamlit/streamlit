@@ -24,7 +24,7 @@ import pyarrow as pa
 import streamlit as st
 from streamlit.elements import legacy_altair as altair
 from streamlit.errors import StreamlitAPIException
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def _deep_get(dictionary, *keys):
@@ -35,7 +35,7 @@ def _deep_get(dictionary, *keys):
     )
 
 
-class LegacyAltairTest(testutil.DeltaGeneratorTestCase):
+class LegacyAltairTest(DeltaGeneratorTestCase):
     """Test ability to marshall altair_chart proto."""
 
     def test_legacy_altair_chart(self):
@@ -83,7 +83,7 @@ class LegacyAltairTest(testutil.DeltaGeneratorTestCase):
         self.assertNotEqual(y_scale, "utc")
 
 
-class LegacyChartsTest(testutil.DeltaGeneratorTestCase):
+class LegacyChartsTest(DeltaGeneratorTestCase):
     """Test legacy charts."""
 
     def test_legacy_line_chart(self):

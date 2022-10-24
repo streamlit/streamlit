@@ -26,7 +26,7 @@ from streamlit.type_util import (
     is_pandas_version_less_than,
     pyarrow_table_to_bytes,
 )
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 # In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
 if is_pandas_version_less_than("1.3.0"):
@@ -43,7 +43,7 @@ def mock_data_frame():
     )
 
 
-class ArrowTest(testutil.DeltaGeneratorTestCase):
+class ArrowTest(DeltaGeneratorTestCase):
     """Test ability to marshall arrow protos."""
 
     def test_dataframe_data(self):
