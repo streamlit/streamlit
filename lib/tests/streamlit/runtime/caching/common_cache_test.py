@@ -33,6 +33,7 @@ from streamlit.runtime.scriptrunner import (
 )
 from streamlit.runtime.state import SessionState
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.exception_capturing_thread import ExceptionCapturingThread
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
@@ -652,9 +653,10 @@ class CommonCacheThreadingTest(unittest.TestCase):
             set_counter(55)
             values_in_thread.append(get_counter())
 
-        thread = threading.Thread(target=thread_test)
+        thread = ExceptionCapturingThread(target=thread_test)
         thread.start()
         thread.join()
+        thread.assert_no_unhandled_exception()
 
         self.assertEqual([0, 55], values_in_thread)
 
