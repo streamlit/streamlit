@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
+import sys
 from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
@@ -35,10 +36,103 @@ from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
 
+if sys.version_info >= (3, 8):
+    from typing import Literal, TypedDict
+else:
+    from typing_extensions import Literal, TypedDict
+
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]], None]
+ColumnType = Literal[
+    "text",
+    "number",
+    "boolean",
+    "list",
+    "url",
+    "image",
+    "bar-chart",
+    "line-chart",
+    "progress-chart",
+]
+
+
+class ColumnConfig(TypedDict, total=False):
+    width: Optional[int]
+    title: Optional[str]
+    type: Optional[ColumnType]
+    hidden: Optional[bool]
+    editable: Optional[bool]
+    alignment: Optional[Literal["left", "center", "right"]]
+    metadata: Optional[Dict]
+
+
+def column_config(
+    *,
+    width: Optional[int] = None,
+    title: Optional[str] = None,
+    type: Optional[ColumnType] = None,
+    hidden: Optional[bool] = None,
+    editable: Optional[bool] = None,
+    alignment: Optional[Literal["right", "left", "center"]] = None,
+    metadata: Optional[Dict] = None,
+) -> ColumnConfig:
+    """Configures a dataframe column.
+    Parameters
+    ----------
+    width: int or None
+        The initial width of the column expressed in pixels.
+    title: str or None
+        The column title displayed on the frontend.
+        This only changes the display value and does not have any impact on the actual data.
+    type: str or None
+        The type of the column.
+        Available column types: text, number, boolean, list, url, image, bar-chart, line-chart, progress-chart,
+    hidden: bool or None
+        If `True`, the column will not be shown on the frontend.
+        This can be used to hide index columns as well.
+    editable: bool or None
+        If `True`, the column will be editable.
+    alignment: str or None
+        The content alignment of the column. Available options: right, left, center.
+    metadata: dict or None
+        Column type specific metadata.
+
+    Examples
+    --------
+    >>> df = pd.DataFrame(
+    ...    np.random.randn(50, 20),
+    ...    columns=('col %d' % i for i in range(20)))
+    ...
+    >>> st._arrow_dataframe(df, columns={
+        "col 1": st.column_config(title="Column 1", width=100)
+    })
+    """
+    return ColumnConfig(
+        width=width,
+        title=title,
+        type=type,
+        hidden=hidden,
+        editable=editable,
+        alignment=alignment,
+        metadata=metadata,
+    )
+
+
+def _marshall_column_config(
+    proto, columns: Optional[Dict[Union[int, str], ColumnConfig]] = None
+) -> None:
+    if columns is None:
+        columns = {}
+    # Ignore all None values and prefix columns specified by index
+    proto.columns = json.dumps(
+        {
+            (f"index:{str(k)}" if isinstance(k, int) else k): v
+            for (k, v) in columns.items()
+            if v is not None
+        }
+    )
 
 
 class ArrowMixin:
@@ -50,6 +144,7 @@ class ArrowMixin:
         height: Optional[int] = None,
         *,
         use_container_width: bool = False,
+        columns: Optional[Dict[Union[int, str], ColumnConfig]] = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -108,6 +203,8 @@ class ArrowMixin:
         if height:
             proto.height = height
         marshall(proto, data, default_uuid)
+        _marshall_column_config(proto, columns)
+
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics

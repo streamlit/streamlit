@@ -29,6 +29,7 @@ import {
   EditableGridCell,
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
+import { sprintf } from "sprintf-js"
 
 import {
   DataFrameCell,
@@ -199,7 +200,8 @@ export function applyPandasStylerCss(
 export function getCellTemplate(
   type: ColumnType,
   readonly: boolean,
-  isIndex: boolean
+  isIndex: boolean,
+  alignment?: "left" | "right" | "center"
 ): GridCell {
   const style = isIndex ? "faded" : "normal"
 
@@ -210,6 +212,7 @@ export function getCellTemplate(
         data: "",
         displayData: "",
         allowOverlay: true,
+        contentAlign: alignment,
         readonly,
         style,
       } as TextCell
@@ -219,6 +222,7 @@ export function getCellTemplate(
         data: false,
         readonly,
         allowOverlay: false, // no overlay possible
+        contentAlign: alignment,
         style,
       } as BooleanCell
     case ColumnType.Number:
@@ -228,7 +232,7 @@ export function getCellTemplate(
         displayData: "",
         readonly,
         allowOverlay: true,
-        contentAlign: "right",
+        contentAlign: alignment || "right",
         style,
       } as NumberCell
     case ColumnType.List:
@@ -236,6 +240,7 @@ export function getCellTemplate(
         kind: GridCellKind.Bubble,
         data: [],
         allowOverlay: true,
+        contentAlign: alignment,
         style,
       } as BubbleCell
     case ColumnType.Url:
@@ -244,6 +249,7 @@ export function getCellTemplate(
         data: "",
         readonly,
         allowOverlay: true,
+        contentAlign: alignment,
         style,
       } as UriCell
     case ColumnType.Image:
@@ -253,6 +259,7 @@ export function getCellTemplate(
         displayData: [],
         allowAdd: !readonly,
         allowOverlay: true,
+        contentAlign: alignment,
         style,
       } as ImageCell
     case ColumnType.LineChart:
@@ -260,6 +267,7 @@ export function getCellTemplate(
         kind: GridCellKind.Custom,
         allowOverlay: false,
         copyData: "[]",
+        contentAlign: alignment,
         data: {
           kind: "sparkline-cell",
           values: [],
@@ -273,6 +281,7 @@ export function getCellTemplate(
         kind: GridCellKind.Custom,
         allowOverlay: false,
         copyData: "[]",
+        contentAlign: alignment,
         data: {
           kind: "sparkline-cell",
           values: [],
@@ -285,6 +294,7 @@ export function getCellTemplate(
         kind: GridCellKind.Custom,
         allowOverlay: false,
         copyData: "",
+        contentAlign: alignment,
         data: {
           kind: "range-cell",
           min: 0,
@@ -398,7 +408,8 @@ export function fillBooleanCell(cell: GridCell, data: any): GridCell {
 export function fillNumberCell(
   cell: GridCell,
   data: DataType,
-  displayData: string
+  displayData: string,
+  typeMetadata?: Record<string, unknown>
 ): GridCell {
   let cellData
 
@@ -413,6 +424,22 @@ export function fillNumberCell(
 
     if (Number.isNaN(cellData)) {
       return getErrorCell(`Incompatible number value: ${data}`)
+    }
+
+    // If user has specified a format in type metadata,
+    // use d3 format to format the number
+    if (
+      typeMetadata &&
+      "format" in typeMetadata &&
+      typeof typeMetadata.format === "string"
+    ) {
+      try {
+        displayData = sprintf(typeMetadata.format, cellData)
+      } catch (error) {
+        return getErrorCell(
+          `Format value (${typeMetadata.format}) not sprintf compatible: ${error}`
+        )
+      }
     }
   }
 
@@ -610,7 +637,8 @@ export function fillProgressCell(cell: GridCell, data: DataType): GridCell {
 export function fillCellTemplate(
   cellTemplate: GridCell,
   quiverCell: DataFrameCell,
-  cssStyles: string | undefined = undefined
+  cssStyles: string | undefined = undefined,
+  typeMetadata: Record<string, unknown> | undefined = undefined
 ): GridCell {
   let cellKind: GridCellKind | string = cellTemplate.kind
   if (cellTemplate.kind === GridCellKind.Custom) {
@@ -640,7 +668,8 @@ export function fillCellTemplate(
       return fillNumberCell(
         cellTemplate,
         quiverCell.content,
-        getDisplayContent(quiverCell)
+        getDisplayContent(quiverCell),
+        typeMetadata
       )
     case GridCellKind.Boolean:
       return fillBooleanCell(cellTemplate, quiverCell.content)

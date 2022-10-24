@@ -56,7 +56,10 @@ import "@glideapps/glide-data-grid/dist/index.css"
 
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
-const MAX_COLUMN_WIDTH = 650
+// Max column width used for manual resizing
+const MAX_COLUMN_WIDTH = 1000
+// Max column width used for automatic column sizing
+const MAX_COLUMN_AUTO_WIDTH = 500
 // Min width for the resizable table container:
 // Based on one column at minimum width + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
@@ -69,11 +72,11 @@ const DEFAULT_TABLE_HEIGHT = 400
  * The GridColumn type extended with a function to get a template of the given type.
  */
 // TODO: rename
-type Column = GridColumn & {
+type CustomColumn = GridColumn & {
+  // The index number of the column.
+  indexNumber: number
   // The type of the column.
   columnType: ColumnType
-  // The index number of the column.
-  columnIndex: number
   // The quiver data type of the column.
   quiverType: QuiverType
   // If `True`, the column can be edited.
@@ -82,6 +85,10 @@ type Column = GridColumn & {
   isHidden: boolean
   // If `True`, the column is a table index.
   isIndex: boolean
+  // Additional metadata related to the column type.
+  columnTypeMetadata?: Record<string, unknown>
+  // The content alignment of the column.
+  contentAlignment?: "left" | "center" | "right"
 }
 
 /**
@@ -93,6 +100,8 @@ interface ColumnConfigProps {
   type?: string
   hidden?: boolean
   editable?: boolean
+  metadata?: Record<string, unknown>
+  alignment?: string
 }
 
 /**
@@ -179,9 +188,9 @@ export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
  * Apply the column configuration if supplied.
  */
 function applyColumnConfig(
-  column: Column,
+  column: CustomColumn,
   columnsConfig: Map<string | number, ColumnConfigProps>
-): Column | null {
+): CustomColumn | null {
   if (!columnsConfig) {
     // No column config configured
     return column
@@ -190,8 +199,8 @@ function applyColumnConfig(
   let columnConfig
   if (columnsConfig.has(column.title)) {
     columnConfig = columnsConfig.get(column.title)
-  } else if (columnsConfig.has(`index:${column.columnIndex}`)) {
-    columnConfig = columnsConfig.get(`index:${column.columnIndex}`)
+  } else if (columnsConfig.has(`index:${column.indexNumber}`)) {
+    columnConfig = columnsConfig.get(`index:${column.indexNumber}`)
   }
 
   if (!columnConfig) {
@@ -236,7 +245,20 @@ function applyColumnConfig(
           isEditable: columnConfig.editable,
         }
       : {}),
-  } as Column
+    // Add column type metadata:
+    ...(notNullOrUndefined(columnConfig.metadata)
+      ? {
+          columnTypeMetadata: columnConfig.metadata,
+        }
+      : {}),
+    // Add column alignment:
+    ...(notNullOrUndefined(columnConfig.alignment) &&
+    ["left", "center", "right"].includes(columnConfig.alignment)
+      ? {
+          contentAlignment: columnConfig.alignment,
+        }
+      : {}),
+  } as CustomColumn
 }
 
 /**
@@ -246,8 +268,8 @@ export function getColumns(
   element: ArrowProto,
   data: Quiver,
   columnsConfig: Map<string, ColumnConfigProps>
-): Column[] {
-  const columns: Column[] = []
+): CustomColumn[] {
+  const columns: CustomColumn[] = []
   const stretchColumn = element.useContainerWidth || element.width
 
   if (data.isEmpty()) {
@@ -258,11 +280,11 @@ export function getColumns(
       title: "",
       hasMenu: false,
       columnType: ColumnType.Text,
-      columnIndex: 0,
+      indexNumber: 0,
       isEditable: false,
       isIndex: true,
       ...(stretchColumn ? { grow: 1 } : {}),
-    } as Column)
+    } as CustomColumn)
     return columns
   }
 
@@ -279,12 +301,12 @@ export function getColumns(
       hasMenu: false,
       columnType,
       quiverType,
-      columnIndex: i,
+      indexNumber: i,
       isEditable: false,
       isHidden: false,
       isIndex: true,
       ...(stretchColumn ? { grow: 1 } : {}),
-    } as Column
+    } as CustomColumn
 
     const updatedColumn = applyColumnConfig(column, columnsConfig)
     // If column is hidden, the return value is null.
@@ -304,12 +326,12 @@ export function getColumns(
       hasMenu: false,
       columnType,
       quiverType,
-      columnIndex: i + numIndices,
+      indexNumber: i + numIndices,
       isEditable: false,
       isHidden: false,
       isIndex: false,
       ...(stretchColumn ? { grow: 3 } : {}),
-    } as Column
+    } as CustomColumn
 
     const updatedColumn = applyColumnConfig(column, columnsConfig)
     // If column is hidden, the return value is null.
@@ -324,9 +346,9 @@ export function getColumns(
  * Updates the column headers based on the sorting configuration.
  */
 function updateSortingHeader(
-  columns: Column[],
+  columns: CustomColumn[],
   sort: ColumnSortConfig | undefined
-): Column[] {
+): CustomColumn[] {
   if (sort === undefined) {
     return columns
   }
@@ -368,10 +390,12 @@ export function useDataLoader(
     () => new Map()
   )
 
-  // TODO (lukasmasuch): Support column configuration
-  // const columnsConfig = element.columns ? new Map(Object.entries(JSON.parse(element.columns))) : new Map()
+  // TODO(lukasmasuch): Show error if column config is invalid?
+  const columnsConfig = element.columns
+    ? new Map(Object.entries(JSON.parse(element.columns)))
+    : new Map()
 
-  const columns = getColumns(element, data, new Map()).map(column => {
+  const columns = getColumns(element, data, columnsConfig).map(column => {
     // Apply column widths from state
     if (
       column.id &&
@@ -382,7 +406,7 @@ export function useDataLoader(
         ...column,
         width: columnSizes.get(column.id),
         grow: 0, // Deactivate grow for this column
-      } as Column
+      } as CustomColumn
     }
     return column
   })
@@ -424,7 +448,8 @@ export function useDataLoader(
       const cellTemplate = getCellTemplate(
         column.columnType,
         !column.isEditable,
-        column.isIndex
+        column.isIndex,
+        column.contentAlignment
       )
 
       if (row > numRows - 1) {
@@ -434,8 +459,13 @@ export function useDataLoader(
 
       try {
         // Quiver has the header in first row
-        const quiverCell = data.getCell(row + 1, column.columnIndex)
-        return fillCellTemplate(cellTemplate, quiverCell, data.cssStyles)
+        const quiverCell = data.getCell(row + 1, column.indexNumber)
+        return fillCellTemplate(
+          cellTemplate,
+          quiverCell,
+          data.cssStyles,
+          column.columnTypeMetadata
+        )
       } catch (error) {
         // This should not happen in read-only table.
         logError(error)
@@ -556,7 +586,7 @@ function DataFrame({
       setSort({
         column: clickedColumn,
         direction: sortDirection,
-        mode: getColumnSortMode((clickedColumn as Column).columnType),
+        mode: getColumnSortMode((clickedColumn as CustomColumn).columnType),
       } as ColumnSortConfig)
     },
     [sort, columns]
@@ -707,12 +737,15 @@ function DataFrame({
           rows={numRows}
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
+          maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
           rowHeight={ROW_HEIGHT}
           headerHeight={ROW_HEIGHT}
           getCellContent={getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
-          freezeColumns={columns.filter(col => (col as Column).isIndex).length}
+          freezeColumns={
+            columns.filter(col => (col as CustomColumn).isIndex).length
+          }
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:

@@ -25,6 +25,8 @@ message Arrow {
   uint32 height = 4;
   // If True, will overwrite the dataframe width to fit to container.
   bool use_container_width = 5;
+  // Colum configuration as JSON
+  string columns = 6;
 }
 
 message Styler {
