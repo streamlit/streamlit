@@ -29,10 +29,10 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.web.server.server import MEDIA_ENDPOINT
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class AudioTest(testutil.DeltaGeneratorTestCase):
+class AudioTest(DeltaGeneratorTestCase):
     def test_st_audio_from_bytes(self):
         """Test st.audio using fake audio bytes."""
 

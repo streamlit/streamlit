@@ -15,10 +15,10 @@
 import time
 
 from streamlit.elements.spinner import spinner
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class SpinnerTest(testutil.DeltaGeneratorTestCase):
+class SpinnerTest(DeltaGeneratorTestCase):
     def test_spinner(self):
         """Test st.spinner."""
         with spinner("some text"):

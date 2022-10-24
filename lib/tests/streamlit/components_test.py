@@ -29,8 +29,7 @@ from streamlit.components.v1.components import ComponentRegistry, CustomComponen
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
-from tests import testutil
-from tests.testutil import DeltaGeneratorTestCase
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
@@ -184,7 +183,7 @@ class ComponentRegistryTest(unittest.TestCase):
         registry = ComponentRegistry.instance()
         with self.assertRaises(StreamlitAPIException) as ctx:
             registry.register_component(CustomComponent("test_component", test_path))
-            self.assertIn("No such component directory", ctx.exception)
+        self.assertIn("No such component directory", str(ctx.exception))
 
     def test_register_duplicate_path(self):
         """It's not an error to re-register a component.
@@ -391,7 +390,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.assertEqual(component_instance_proto.form_id, form_proto.form.form_id)
 
 
-class IFrameTest(testutil.DeltaGeneratorTestCase):
+class IFrameTest(DeltaGeneratorTestCase):
     def test_iframe(self):
         """Test components.iframe"""
         components.iframe("http://not.a.url", width=200, scrolling=True)

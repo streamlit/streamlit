@@ -55,7 +55,7 @@ function DownloadButton(props: Props): ReactElement {
     <div className="row-widget stDownloadButton" style={style}>
       <ButtonTooltip help={element.help}>
         <UIButton
-          kind={Kind.PRIMARY}
+          kind={Kind.SECONDARY}
           size={Size.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}

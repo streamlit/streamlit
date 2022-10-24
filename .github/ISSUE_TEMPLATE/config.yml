@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Streamlit community support
-    url: https://discuss.streamlit.io/
-    about: Please ask and answer questions here.
+  - name: Documentation request
+    url: https://github.com/streamlit/docs/issues/new/choose
+    about: Let us know how our docs could be better
   - name: Streamlit documentation
     url: https://docs.streamlit.io/
-    about: To learn more about how Streamlit works.
+    about: Learn more about how to use Streamlit
+  - name: Anything else?
+    url: https://discuss.streamlit.io/
+    about: Ask usage questions on the Streamlit community forum

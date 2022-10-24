@@ -23,7 +23,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.proto.DataFrame_pb2 import CellStyle, CSSStyle, DataFrame, Table
 from streamlit.proto.Element_pb2 import Element
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def _get_df_proto(element: Element) -> DataFrame:
@@ -34,7 +34,7 @@ def _get_table_proto(element: Element) -> Table:
     return element.table
 
 
-class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
+class LegacyDataFrameStylingTest(DeltaGeneratorTestCase):
     """Tests marshalling of pandas.Styler dataframe styling data
     with both st._legacy_dataframe and st._legacy_table.
     """

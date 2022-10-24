@@ -62,11 +62,11 @@ class MediaMixin:
             * Numpy 2d array containing waveforms for each channel.
               Shape=(NCHAN, NSAMPLES). For the standard channel order, see
               http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
-        start_time: int
-            The time from which this element should start playing.
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+        start_time: int
+            The time from which this element should start playing.
         sample_rate: int or None
             The sample rate of the raw audio data, number of samples per second.
             Only required when data parameter is being used as numpy.ndarray

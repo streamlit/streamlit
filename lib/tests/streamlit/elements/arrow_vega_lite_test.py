@@ -19,14 +19,14 @@ import pyarrow as pa
 
 import streamlit as st
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
 
 
-class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
+class ArrowVegaLiteTest(DeltaGeneratorTestCase):
     """Test ability to marshall arrow_vega_lite_chart protos."""
 
     def test_no_args(self):

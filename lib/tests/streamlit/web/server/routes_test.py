@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import tempfile
 from unittest.mock import MagicMock
@@ -25,7 +26,9 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
+from streamlit.web.server.routes import ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
+    AllowedMessageOriginsHandler,
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
@@ -150,3 +153,22 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         for r in responses:
             assert r.code == 404
+
+
+class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    def get_app(self):
+        return tornado.web.Application(
+            [
+                (
+                    r"/st-allowed-message-origins",
+                    AllowedMessageOriginsHandler,
+                )
+            ]
+        )
+
+    def test_allowed_message_origins(self):
+        response = self.fetch("/st-allowed-message-origins")
+        self.assertEqual(200, response.code)
+        self.assertEqual(
+            {"allowedOrigins": ALLOWED_MESSAGE_ORIGINS}, json.loads(response.body)
+        )
