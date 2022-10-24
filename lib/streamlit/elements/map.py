@@ -22,6 +22,7 @@ import pandas as pd
 from typing_extensions import Final, TypeAlias
 
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
+from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -157,12 +158,19 @@ def _get_zoom_level(distance: float) -> int:
 
 
 def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
-    # TODO(harahu): The ignore statement here is because iterables don't have
-    #  the empty attribute. This is either a bug, or the documented data type
-    #  is too broad. One or the other should be addressed, and the ignore
-    #  statement removed.
-    if data is None or data.empty:  # type: ignore[union-attr]
+    if data is None:
         return json.dumps(_DEFAULT_MAP)
+
+    if hasattr(data, "empty"):
+        # TODO(harahu): The ignore statement here is because iterables don't have
+        #  the empty attribute. This is either a bug, or the documented data type
+        #  is too broad. One or the other should be addressed, and the ignore
+        #  statement removed.
+        if data.empty:  # type: ignore[union-attr]
+            return json.dumps(_DEFAULT_MAP)
+
+    if type_util.is_snowpark_dataframe(data):
+        data = type_util.convert_anything_to_df(data)
 
     if "lat" in data:
         lat = "lat"
@@ -186,7 +194,7 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
     #  the empty attribute. This is either a bug, or the documented data type
     #  is too broad. One or the other should be addressed, and the ignore
     #  statement removed.
-    if data[lon].isnull().values.any() or data[lat].isnull().values.any():  # type: ignore[index]
+    if data[lon].isnull().values.any() or data[lat].isnull().values.any():
         raise StreamlitAPIException("Latitude and longitude data must be numeric.")
 
     data = pd.DataFrame(data)
