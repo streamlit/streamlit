@@ -13,15 +13,11 @@
 # limitations under the License.
 
 import contextlib
-from typing import TYPE_CHECKING, Iterator
+from typing import Iterator
 
 from google.protobuf.message import Message
 
 from streamlit.proto.Block_pb2 import Block
-
-if TYPE_CHECKING:
-    from streamlit.delta_generator import DeltaGenerator
-
 from streamlit.runtime.caching.memo_decorator import (
     MEMO_CALL_STACK,
     MEMO_MESSAGES_CALL_STACK,
