@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import annotations
 
 import os
 import threading
@@ -46,7 +45,7 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class AttrDict(UserDict[str, Any]):
+class AttrDict(UserDict):  # type: ignore[type-arg]
     """
     We use AttrDict to wrap up dictionary values from secrets
     to provide dot access to nested secrets
