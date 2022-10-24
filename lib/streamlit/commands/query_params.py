@@ -16,9 +16,11 @@ import urllib.parse as parse
 from typing import Any, Dict, List
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
+@gather_metrics("experimental_get_query_params")
 def get_query_params() -> Dict[str, List[str]]:
     """Return the query parameters that is currently showing in the browser's URL bar.
 
@@ -49,6 +51,7 @@ def get_query_params() -> Dict[str, List[str]]:
     return parse.parse_qs(ctx.query_string)
 
 
+@gather_metrics("experimental_set_query_params")
 def set_query_params(**query_params: Any) -> None:
     """Set the query parameters that are shown in the browser's URL bar.
 

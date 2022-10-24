@@ -18,6 +18,7 @@ from typing_extensions import Final
 
 from streamlit import logger as _logger
 from streamlit import runtime
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState, require_valid_user_key
 from streamlit.type_util import Key
@@ -87,6 +88,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         require_valid_user_key(key)
         return get_session_state()[key]
 
+    @gather_metrics("session_state.set_item")
     def __setitem__(self, key: Key, value: Any) -> None:
         """Set the value of the given key.
 
@@ -117,6 +119,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         except KeyError:
             raise AttributeError(_missing_attr_error_message(key))
 
+    @gather_metrics("session_state.set_attr")
     def __setattr__(self, key: str, value: Any) -> None:
         self[key] = value
 

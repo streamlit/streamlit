@@ -72,7 +72,7 @@ class RadioSerde(Generic[T]):
 
 
 class RadioMixin:
-    @gather_metrics
+    @gather_metrics("radio")
     def radio(
         self,
         label: str,

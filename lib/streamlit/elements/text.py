@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class TextMixin:
-    @gather_metrics
+    @gather_metrics("text")
     def text(self, body: "SupportsStr") -> "DeltaGenerator":
         """Write fixed-width and preformatted text.
 

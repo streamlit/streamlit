@@ -36,7 +36,7 @@ LOGGER: Final = get_logger(__name__)
 
 
 class ArrowVegaLiteMixin:
-    @gather_metrics
+    @gather_metrics("_arrow_vega_lite_chart")
     def _arrow_vega_lite_chart(
         self,
         data: Data = None,

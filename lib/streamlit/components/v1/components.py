@@ -78,7 +78,7 @@ class CustomComponent:
         """An alias for create_instance."""
         return self.create_instance(*args, default=default, key=key, **kwargs)
 
-    @gather_metrics
+    @gather_metrics("create_instance")
     def create_instance(
         self,
         *args,

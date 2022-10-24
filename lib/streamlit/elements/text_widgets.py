@@ -66,7 +66,7 @@ class TextAreaSerde:
 
 
 class TextWidgetsMixin:
-    @gather_metrics
+    @gather_metrics("text_input")
     def text_input(
         self,
         label: str,
@@ -246,7 +246,7 @@ class TextWidgetsMixin:
         self.dg._enqueue("text_input", text_input_proto)
         return widget_state.value
 
-    @gather_metrics
+    @gather_metrics("text_area")
     def text_area(
         self,
         label: str,

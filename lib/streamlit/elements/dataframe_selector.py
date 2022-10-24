@@ -34,7 +34,7 @@ def _use_arrow() -> bool:
 
 
 class DataFrameSelectorMixin:
-    @gather_metrics
+    @gather_metrics("dataframe")
     def dataframe(
         self,
         data: "Data" = None,
@@ -108,7 +108,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_dataframe(data, width, height)
 
-    @gather_metrics
+    @gather_metrics("table")
     def table(self, data: "Data" = None) -> "DeltaGenerator":
         """Display a static table.
 
@@ -142,7 +142,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_table(data)
 
-    @gather_metrics
+    @gather_metrics("line_chart")
     def line_chart(
         self,
         data: "Data" = None,
@@ -225,7 +225,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
-    @gather_metrics
+    @gather_metrics("area_chart")
     def area_chart(
         self,
         data: "Data" = None,
@@ -308,7 +308,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
-    @gather_metrics
+    @gather_metrics("bar_chart")
     def bar_chart(
         self,
         data: "Data" = None,
@@ -392,7 +392,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
             )
 
-    @gather_metrics
+    @gather_metrics("altair_chart")
     def altair_chart(
         self,
         altair_chart: "Chart",
@@ -439,7 +439,7 @@ class DataFrameSelectorMixin:
         else:
             return self.dg._legacy_altair_chart(altair_chart, use_container_width)
 
-    @gather_metrics
+    @gather_metrics("vega_lite_chart")
     def vega_lite_chart(
         self,
         data: "Data" = None,
@@ -509,7 +509,7 @@ class DataFrameSelectorMixin:
                 data, spec, use_container_width, **kwargs
             )
 
-    @gather_metrics
+    @gather_metrics("add_rows")
     def add_rows(self, data: "Data" = None, **kwargs) -> Optional["DeltaGenerator"]:
         """Concatenate a dataframe to the bottom of the current one.
 

@@ -41,7 +41,7 @@ CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
-    @gather_metrics
+    @gather_metrics("help")
     def help(self, obj: Any) -> "DeltaGenerator":
         """Display object's doc string, nicely formatted.
 

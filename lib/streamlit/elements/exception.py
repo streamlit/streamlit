@@ -47,7 +47,7 @@ _STREAMLIT_DIR: Final = os.path.join(
 
 
 class ExceptionMixin:
-    @gather_metrics
+    @gather_metrics("exception")
     def exception(self, exception: BaseException) -> "DeltaGenerator":
         """Display an exception.
 

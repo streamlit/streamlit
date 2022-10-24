@@ -36,7 +36,7 @@ FigureOrDot: TypeAlias = Union["graphviz.Graph", "graphviz.Digraph", str]
 
 
 class GraphvizMixin:
-    @gather_metrics
+    @gather_metrics("graphviz_chart")
     def graphviz_chart(
         self,
         figure_or_dot: FigureOrDot,
