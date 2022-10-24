@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, Union, cast
 from typing_extensions import Final, TypeAlias
 from validators import url
 
+import streamlit as st
 from streamlit import runtime, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
@@ -93,10 +94,6 @@ class MediaMixin:
                 "`sample_rate` must be specified when `data` is a numpy array."
             )
         if not is_data_numpy_array and sample_rate is not None:
-            # we import streamlit locally here to avoid expensive and potentially
-            # circular import in a case when it has not needed
-            import streamlit as st
-
             st.warning(
                 "Warning: `sample_rate` will be ignored since data is not a numpy "
                 "array."
@@ -307,6 +304,8 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
          - bytes : bytes of normalized numpy array converted to int16
          - nchan : number of channels for audio signal. 1 for mono, or 2 for stereo.
     """
+    # we import numpy here locally to import it only when needed (when numpy array given
+    # to st.audio data)
     import numpy as np
 
     data = np.array(data, dtype=float)
