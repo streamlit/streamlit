@@ -57,11 +57,10 @@ class MediaMixin:
             Raw audio data, filename, or a URL pointing to the file to load.
             Raw data formats must include all necessary file headers to match the file
             format specified via `format`.
-            In case of numpy array:
-            * Numpy 1d array containing the desired waveform (mono)
-            * Numpy 2d array containing waveforms for each channel.
-              Shape=(NCHAN, NSAMPLES). For the standard channel order, see
-              http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
+            If `data` is a numpy array, it must either be a 1D array of the waveform
+            or a 2D array of shape `(num_channels, num_samples)` with waveforms
+            for all channels. See the default channel order at
+            http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
