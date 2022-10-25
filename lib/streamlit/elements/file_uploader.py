@@ -19,7 +19,7 @@ from typing import List, Optional, Union, cast, overload
 from typing_extensions import Literal
 
 import streamlit
-from streamlit import config, delta_generator
+from streamlit import config
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
