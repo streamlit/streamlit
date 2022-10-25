@@ -15,7 +15,6 @@
 import asyncio
 import sys
 import uuid
-from asyncio import AbstractEventLoop
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
 
