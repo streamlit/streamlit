@@ -125,9 +125,9 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         try:
             # abspath is the hash as used `get_absolute_path`
             media_file = cls._storage.get_file(abspath)
-        except:
+        except Exception:
             LOGGER.error("MediaFileHandler: Missing file %s", abspath)
-            return
+            return None
 
         LOGGER.debug(
             "MediaFileHandler: Sending %s file %s", media_file.mimetype, abspath

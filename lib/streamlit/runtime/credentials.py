@@ -125,7 +125,7 @@ class Credentials(object):
         """Load from toml file."""
         if self.activation is not None:
             LOGGER.error("Credentials already loaded. Not rereading file.")
-            return
+            return None
 
         try:
             with open(self._conf_file, "r") as f:
