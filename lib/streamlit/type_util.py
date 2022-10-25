@@ -39,8 +39,8 @@ from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, ge
 
 import streamlit as st
 from streamlit import errors
-from streamlit import string_util
 from streamlit import logger as _logger
+from streamlit import string_util
 
 if TYPE_CHECKING:
     import graphviz
