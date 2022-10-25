@@ -242,7 +242,7 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
 
-def is_snowpark_dataframe(obj: object) -> bool:
+def is_snowpark_data_object(obj: object) -> bool:
     """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row,
     False otherwise"""
@@ -509,7 +509,7 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
     iterable
 
     """
-    if is_snowpark_dataframe(obj):
+    if is_snowpark_data_object(obj):
         obj = convert_anything_to_df(obj)
 
     if is_dataframe(obj):

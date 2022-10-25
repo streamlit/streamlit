@@ -134,7 +134,7 @@ class ArrowMixin:
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of 10k rows, which is done in all other cases.
         # Avoid this and use 100 rows in st.table, because large tables render slowly, take too much screen space, and can crush the app.
-        if type_util.is_snowpark_dataframe(data):
+        if type_util.is_snowpark_data_object(data):
             data = type_util.convert_anything_to_df(data, max_unevaluated_rows=100)
 
         # If pandas.Styler uuid is not provided, a hash of the position
