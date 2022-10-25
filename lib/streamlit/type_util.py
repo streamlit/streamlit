@@ -37,7 +37,8 @@ from pandas import MultiIndex
 from pandas.api.types import infer_dtype
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
-from streamlit import caption, errors
+import streamlit as st
+from streamlit import errors
 from streamlit import logger as _logger
 
 if TYPE_CHECKING:
@@ -447,7 +448,7 @@ def convert_anything_to_df(df: Any) -> DataFrame:
     if is_type(df, _SNOWPARK_DF_TYPE_STR) and not isinstance(df, list):
         df = pd.DataFrame(df.take(MAX_UNEVALUATED_DF_ROWS))
         if df.shape[0] == MAX_UNEVALUATED_DF_ROWS:
-            caption(
+            st.caption(
                 "⚠️ Showing only 10k rows. Call `collect()` on the dataframe to show more."
             )
         return df
