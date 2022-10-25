@@ -188,10 +188,6 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
             'Map data must contain a column called "longitude" or "lon".'
         )
 
-    # TODO(harahu): The ignore statement here is because iterables don't have
-    #  the empty attribute. This is either a bug, or the documented data type
-    #  is too broad. One or the other should be addressed, and the ignore
-    #  statement removed.
     if data[lon].isnull().values.any() or data[lat].isnull().values.any():
         raise StreamlitAPIException("Latitude and longitude data must be numeric.")
 
