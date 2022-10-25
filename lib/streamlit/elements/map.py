@@ -96,7 +96,7 @@ class MapMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict,
             or None
             The data to be plotted. Must have columns called 'lat', 'lon',
             'latitude', or 'longitude'.
