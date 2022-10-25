@@ -55,8 +55,8 @@ class MediaMixin:
         data : str, bytes, BytesIO, numpy.ndarray, or file opened with
                 io.open().
             Raw audio data, filename, or a URL pointing to the file to load.
-            Raw data formats must include all necessary file
-            headers to match specified file format.
+            Raw data formats must include all necessary file headers to match the file
+            format specified via `format`.
             In case of numpy array:
             * Numpy 1d array containing the desired waveform (mono)
             * Numpy 2d array containing waveforms for each channel.
@@ -68,9 +68,8 @@ class MediaMixin:
         start_time: int
             The time from which this element should start playing.
         sample_rate: int or None
-            The sample rate of the raw audio data, number of samples per second.
-            Only required when data parameter is being used as numpy.ndarray
-            of audio signal.
+            The sample rate of the audio data in samples per second. Only required if
+            `data` is a numpy array.
 
         Example
         -------
