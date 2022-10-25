@@ -122,8 +122,6 @@ def _fix_tornado_crash() -> None:
     remove and bump tornado requirement for py38
     """
     if env_util.IS_WINDOWS and sys.version_info >= (3, 8):
-        import asyncio
-
         try:
             from asyncio import (  # type: ignore[attr-defined]
                 WindowsProactorEventLoopPolicy,
