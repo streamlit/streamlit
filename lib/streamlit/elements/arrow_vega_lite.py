@@ -42,6 +42,7 @@ class ArrowVegaLiteMixin:
         data: Data = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
@@ -60,6 +61,10 @@ class ArrowVegaLiteMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Vega-Lite's native `width` value.
+
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -95,6 +100,7 @@ class ArrowVegaLiteMixin:
             data,
             spec,
             use_container_width=use_container_width,
+            theme=theme,
             **kwargs,
         )
         return self.dg._enqueue("arrow_vega_lite_chart", proto)

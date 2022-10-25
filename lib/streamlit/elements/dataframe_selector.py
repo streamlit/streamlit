@@ -16,6 +16,8 @@
 "arrow") based on a config option"""
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
+from typing_extensions import Literal
+
 from streamlit import config
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -152,6 +154,7 @@ class DataFrameSelectorMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a line chart.
 
@@ -195,6 +198,10 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
+
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -216,6 +223,7 @@ class DataFrameSelectorMixin:
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
+                theme=theme,
             )
         else:
             return self.dg._legacy_line_chart(
@@ -235,6 +243,7 @@ class DataFrameSelectorMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display an area chart.
 
@@ -278,6 +287,10 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
+
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -299,6 +312,7 @@ class DataFrameSelectorMixin:
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
+                theme=theme,
             )
         else:
             return self.dg._legacy_area_chart(
@@ -318,6 +332,7 @@ class DataFrameSelectorMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a bar chart.
 
@@ -361,6 +376,10 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
+
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -383,6 +402,7 @@ class DataFrameSelectorMixin:
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
+                theme=theme,
             )
         else:
             return self.dg._legacy_bar_chart(
@@ -397,6 +417,7 @@ class DataFrameSelectorMixin:
         self,
         altair_chart: "Chart",
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -408,6 +429,10 @@ class DataFrameSelectorMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Altair's native `width` value.
+
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
 
         Example
         -------
@@ -435,7 +460,7 @@ class DataFrameSelectorMixin:
         """
 
         if _use_arrow():
-            return self.dg._arrow_altair_chart(altair_chart, use_container_width)
+            return self.dg._arrow_altair_chart(altair_chart, use_container_width, theme)
         else:
             return self.dg._legacy_altair_chart(altair_chart, use_container_width)
 
@@ -445,6 +470,7 @@ class DataFrameSelectorMixin:
         data: "Data" = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
@@ -467,6 +493,10 @@ class DataFrameSelectorMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Vega-Lite's native `width` value.
+
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -502,7 +532,7 @@ class DataFrameSelectorMixin:
         """
         if _use_arrow():
             return self.dg._arrow_vega_lite_chart(
-                data, spec, use_container_width, **kwargs
+                data, spec, use_container_width, theme, **kwargs
             )
         else:
             return self.dg._legacy_vega_lite_chart(
