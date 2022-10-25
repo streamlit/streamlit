@@ -50,9 +50,13 @@ export enum ColumnType {
   List = "list",
   Url = "url",
   Image = "image",
+  Date = "date",
+  DateTime = "datetime",
+  Time = "time",
   BarChart = "bar-chart",
   LineChart = "line-chart",
   ProgressChart = "progress-chart",
+  Object = "object", // Fallback for non-editable types show as read-only text
 }
 
 /**
@@ -77,13 +81,17 @@ export type CustomColumn = GridColumn & {
   contentAlignment?: "left" | "center" | "right"
 }
 
+interface ErrorCell extends TextCell {
+  readonly isError: true
+}
+
 /**
  * Maps the data type from column config to a valid column type.
  */
 export function getColumnTypeFromConfig(typeName?: string): ColumnType {
   if (!typeName) {
     // Use text column as fallback
-    return ColumnType.Text
+    return ColumnType.Object
   }
 
   typeName = typeName.toLowerCase().trim()
@@ -93,7 +101,7 @@ export function getColumnTypeFromConfig(typeName?: string): ColumnType {
     return typeName as ColumnType
   }
 
-  return ColumnType.Text
+  return ColumnType.Object
 }
 
 /**
@@ -102,11 +110,11 @@ export function getColumnTypeFromConfig(typeName?: string): ColumnType {
 export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
   let typeName = Quiver.getTypeName(quiverType)
 
-  let columnType = ColumnType.Text
+  let columnType = ColumnType.Object
 
   if (!typeName) {
     // Use text column as fallback
-    return ColumnType.Text
+    return ColumnType.Object
   }
 
   typeName = typeName.toLowerCase().trim()
@@ -114,9 +122,12 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
   // Match based on quiver types
   if (["unicode"].includes(typeName)) {
     columnType = ColumnType.Text
-  } else if (["date", "datetime", "datetimetz"].includes(typeName)) {
-    // TODO(lukasmasuch): Support datetime columns
-    columnType = ColumnType.Text
+  } else if (typeName == "date") {
+    columnType = ColumnType.Date
+  } else if (typeName == "time") {
+    columnType = ColumnType.Time
+  } else if (["datetime", "datetimetz"].includes(typeName)) {
+    columnType = ColumnType.DateTime
   } else if (typeName === "bool") {
     columnType = ColumnType.Boolean
   } else if (["int64", "float64", "range"].includes(typeName)) {
@@ -130,15 +141,18 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
 }
 
 /**
- * Returns either the formatted content or display value for a Quiver cell.
+ * Checks of the given column type supports editing.
  */
-export function getDisplayContent(quiverCell: DataFrameCell): string {
-  const displayContent =
-    quiverCell.displayContent ||
-    Quiver.format(quiverCell.content, quiverCell.contentType, quiverCell.field)
-
-  // Remove all line breaks
-  return displayContent.replace(/(\r\n|\n|\r)/gm, " ")
+export function isEditableType(type: ColumnType): boolean {
+  return [
+    ColumnType.Text,
+    ColumnType.Number,
+    ColumnType.Boolean,
+    ColumnType.Date,
+    ColumnType.Time,
+    ColumnType.DateTime,
+    ColumnType.Url,
+  ].includes(type)
 }
 
 /**
@@ -215,123 +229,6 @@ export function applyPandasStylerCss(
 }
 
 /**
- * Returns a template object representing an empty cell for a given column.
- *
- * @param columnConfig: The configuration of the column.
- *
- * @return a GridCell object that can be used by glide-data-grid.
- */
-export function getCellTemplate(columnConfig: CustomColumn): GridCell {
-  const style = columnConfig.isIndex ? "faded" : "normal"
-  const readonly = !columnConfig.isEditable
-  const contentAlign = columnConfig.contentAlignment
-
-  switch (columnConfig.columnType) {
-    case ColumnType.Text:
-      return {
-        kind: GridCellKind.Text,
-        data: "",
-        displayData: "",
-        allowOverlay: true,
-        contentAlign,
-        readonly,
-        style,
-      } as TextCell
-    case ColumnType.Boolean:
-      return {
-        kind: GridCellKind.Boolean,
-        data: false,
-        allowOverlay: false, // no overlay possible
-        contentAlign,
-        readonly,
-        style,
-      } as BooleanCell
-    case ColumnType.Number:
-      return {
-        kind: GridCellKind.Number,
-        data: undefined,
-        displayData: "",
-        readonly,
-        allowOverlay: true,
-        contentAlign: columnConfig.contentAlignment || "right",
-        style,
-      } as NumberCell
-    case ColumnType.List:
-      return {
-        kind: GridCellKind.Bubble,
-        data: [],
-        allowOverlay: true,
-        contentAlign,
-        style,
-      } as BubbleCell
-    case ColumnType.Url:
-      return {
-        kind: GridCellKind.Uri,
-        data: "",
-        readonly,
-        allowOverlay: true,
-        contentAlign,
-        style,
-      } as UriCell
-    case ColumnType.Image:
-      return {
-        kind: GridCellKind.Image,
-        data: [],
-        displayData: [],
-        allowAdd: !readonly,
-        allowOverlay: true,
-        contentAlign,
-        style,
-      } as ImageCell
-    case ColumnType.LineChart:
-      return {
-        kind: GridCellKind.Custom,
-        allowOverlay: false,
-        copyData: "[]",
-        contentAlign,
-        data: {
-          kind: "sparkline-cell",
-          values: [],
-          displayValues: [],
-          graphKind: "line",
-          yAxis: [0, 1],
-        },
-      } as CustomCell
-    case ColumnType.BarChart:
-      return {
-        kind: GridCellKind.Custom,
-        allowOverlay: false,
-        copyData: "[]",
-        contentAlign,
-        data: {
-          kind: "sparkline-cell",
-          values: [],
-          graphKind: "bar",
-          yAxis: [0, 1],
-        },
-      } as CustomCell
-    case ColumnType.ProgressChart:
-      return {
-        kind: GridCellKind.Custom,
-        allowOverlay: false,
-        copyData: "",
-        contentAlign,
-        data: {
-          kind: "range-cell",
-          min: 0,
-          max: 1,
-          value: 0,
-          step: 0.1,
-          label: `0%`,
-          measureLabel: "100%",
-        },
-      } as CustomCell
-    default:
-      throw new Error(`Unsupported cell type: ${columnConfig.columnType}`)
-  }
-}
-
-/**
  * Returns the sort mode based on the given column type.
  */
 export function getColumnSortMode(columnType: ColumnType): string {
@@ -385,7 +282,7 @@ function getEmptyCell(): LoadingCell {
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */
-export function getErrorCell(errorMsg: string, errorDetails = ""): TextCell {
+export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
   return {
     ...getTextCell(true, false),
     data: errorMsg + (errorDetails ? `\n${errorDetails}` : ""),
@@ -393,7 +290,8 @@ export function getErrorCell(errorMsg: string, errorDetails = ""): TextCell {
     themeOverride: {
       textDark: "#ff4b4b", // TODO(lukasmasuch): use color from theme?
     },
-  } as TextCell
+    isError: true,
+  } as ErrorCell
 }
 
 /**
@@ -401,23 +299,23 @@ export function getErrorCell(errorMsg: string, errorDetails = ""): TextCell {
  *
  * @param cell: The grid cell to fill in with data.
  * @param data: The raw data to fill in.
- * @param displayData: The data to use as display value.
  *
  * @return a filled in text cell.
  */
-function fillTextCell(
-  cell: GridCell,
-  data: DataType,
-  displayData: string
-): GridCell {
-  return {
-    ...cell,
-    data:
-      typeof data === "string" || !notNullOrUndefined(data) // don't use formattedContents for null/undefined
-        ? data
-        : displayData,
-    displayData,
-  } as TextCell
+function fillTextCell(cell: GridCell, data: DataType): GridCell {
+  try {
+    let cellData = notNullOrUndefined(data) ? data.toString() : ""
+    return {
+      ...cell,
+      data: cellData,
+      displayData: cellData, // TODO(lukasmasuch): Use <NA> placeholder?
+    } as TextCell
+  } catch (error) {
+    return getErrorCell(
+      `Incompatible text value: ${typeof data}`,
+      `Error: ${error}`
+    )
+  }
 }
 
 /**
@@ -444,17 +342,16 @@ function fillBooleanCell(cell: GridCell, data: any): GridCell {
  *
  * @param cell: The grid cell to fill in with data.
  * @param data: The raw data to fill in.
- * @param displayData: The data to use as display value.
  *
  * @return a filled in number cell.
  */
 function fillNumberCell(
   cell: GridCell,
   data: DataType,
-  displayData: string,
   typeMetadata?: Record<string, unknown>
 ): GridCell {
   let cellData
+  let displayData
 
   if (notNullOrUndefined(data)) {
     if (data instanceof Int32Array) {
@@ -469,8 +366,7 @@ function fillNumberCell(
       return getErrorCell(`Incompatible number value: ${data}`)
     }
 
-    // If user has specified a format in type metadata,
-    // use d3 format to format the number
+    // If user has specified a format pattern in type metadata
     if (
       typeMetadata &&
       "format" in typeMetadata &&
@@ -480,10 +376,15 @@ function fillNumberCell(
         displayData = sprintf(typeMetadata.format, cellData)
       } catch (error) {
         return getErrorCell(
-          `Format value (${typeMetadata.format}) not sprintf compatible: ${error}`
+          `Format value (${typeMetadata.format}) not sprintf compatible.`,
+          `Error: ${error}`
         )
       }
     }
+  }
+
+  if (!notNullOrUndefined(displayData)) {
+    displayData = notNullOrUndefined(cellData) ? cellData.toString() : "" // TODO(lukasmasuch): Use <NA> placeholder?
   }
 
   return {
@@ -558,6 +459,14 @@ function fillImageCell(cell: GridCell, data: DataType): GridCell {
     data: imageUrls,
     displayData: imageUrls,
   } as ImageCell
+}
+
+function fillDateTimeCell(cell: GridCell, data: DataType): GridCell {
+  console.log(data)
+  console.log(typeof data)
+  console.log(cell)
+
+  return cell
 }
 
 /**
@@ -671,25 +580,295 @@ export function fillProgressCell(cell: GridCell, data: DataType): GridCell {
  * cell data from the quiver object. Different types of data will
  * result in different cell types.
  *
- * @param cellTemplate: the empty cell template from the column.
+ * @param columnConfig: The configuration of the column.
  * @param quiverCell: a dataframe cell object from Quiver.
  * @param cssStyles: optional css styles to apply on the cell.
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */
-export function fillCellTemplate(
-  cellTemplate: GridCell,
-  quiverCell: DataFrameCell,
+export function getCell(
   columnConfig: CustomColumn,
-  cssStyles: string | undefined = undefined
+  data: any | undefined
 ): GridCell {
-  let cellKind: GridCellKind | string = cellTemplate.kind
-  if (cellTemplate.kind === GridCellKind.Custom) {
-    cellKind = (cellTemplate.data as any)?.kind
+  const style = columnConfig.isIndex ? "faded" : "normal"
+  const readonly = !columnConfig.isEditable
+  const contentAlign = columnConfig.contentAlignment
+  let cellTemplate
+
+  switch (columnConfig.columnType) {
+    case ColumnType.Text:
+      cellTemplate = {
+        kind: GridCellKind.Text,
+        data: "",
+        displayData: "",
+        allowOverlay: true,
+        contentAlign,
+        readonly,
+        style,
+      } as TextCell
+
+      cellTemplate = fillTextCell(cellTemplate, data)
+      break
+    case ColumnType.Object:
+      cellTemplate = {
+        kind: GridCellKind.Text,
+        data: "",
+        displayData: "",
+        allowOverlay: true,
+        contentAlign,
+        readonly: true, // Object columns are always readonly
+        style,
+      } as TextCell
+
+      cellTemplate = fillTextCell(cellTemplate, data)
+      break
+    case ColumnType.Boolean:
+      cellTemplate = {
+        kind: GridCellKind.Boolean,
+        data: false,
+        allowOverlay: false, // no overlay possible
+        contentAlign,
+        readonly,
+        style,
+      } as BooleanCell
+
+      cellTemplate = fillBooleanCell(cellTemplate, data)
+      break
+    case ColumnType.Number:
+      cellTemplate = {
+        kind: GridCellKind.Number,
+        data: undefined,
+        displayData: "",
+        readonly,
+        allowOverlay: true,
+        contentAlign: columnConfig.contentAlignment || "right",
+        style,
+      } as NumberCell
+      cellTemplate = fillNumberCell(
+        cellTemplate,
+        data,
+        columnConfig.columnTypeMetadata
+      )
+      break
+    case ColumnType.List:
+      cellTemplate = {
+        kind: GridCellKind.Bubble,
+        data: [],
+        allowOverlay: true,
+        contentAlign,
+        style,
+      } as BubbleCell
+
+      cellTemplate = fillListCell(cellTemplate, data)
+      break
+    case ColumnType.Url:
+      cellTemplate = {
+        kind: GridCellKind.Uri,
+        data: "",
+        readonly,
+        allowOverlay: true,
+        contentAlign,
+        style,
+      } as UriCell
+
+      cellTemplate = fillUrlCell(cellTemplate, data)
+      break
+    case ColumnType.Image:
+      cellTemplate = {
+        kind: GridCellKind.Image,
+        data: [],
+        displayData: [],
+        allowAdd: !readonly,
+        allowOverlay: true,
+        contentAlign,
+        style,
+      } as ImageCell
+
+      cellTemplate = fillImageCell(cellTemplate, data)
+      break
+    case ColumnType.Date:
+      cellTemplate = {
+        kind: GridCellKind.Custom,
+        allowOverlay: true,
+        copyData: "",
+        contentAlign,
+        data: {
+          kind: "date-picker-cell",
+          date: undefined,
+          displayDate: "",
+          format: "date",
+        },
+      } as CustomCell
+
+      cellTemplate = fillDateTimeCell(cellTemplate, data)
+      break
+    case ColumnType.DateTime:
+      cellTemplate = {
+        kind: GridCellKind.Custom,
+        allowOverlay: true,
+        copyData: "",
+        contentAlign,
+        data: {
+          kind: "date-picker-cell",
+          date: undefined,
+          displayDate: "",
+          format: "datetime-local",
+        },
+      } as CustomCell
+
+      cellTemplate = fillDateTimeCell(cellTemplate, data)
+      break
+    case ColumnType.Time:
+      cellTemplate = {
+        kind: GridCellKind.Custom,
+        allowOverlay: true,
+        copyData: "",
+        contentAlign,
+        data: {
+          kind: "date-picker-cell",
+          date: undefined,
+          displayDate: "",
+          format: "time",
+        },
+      } as CustomCell
+
+      cellTemplate = fillDateTimeCell(cellTemplate, data)
+      break
+    case ColumnType.LineChart:
+      cellTemplate = {
+        kind: GridCellKind.Custom,
+        allowOverlay: false,
+        copyData: "[]",
+        contentAlign,
+        data: {
+          kind: "sparkline-cell",
+          values: [],
+          displayValues: [],
+          graphKind: "line",
+          yAxis: [0, 1],
+        },
+      } as CustomCell
+
+      cellTemplate = fillChartCell(cellTemplate, data)
+      break
+    case ColumnType.BarChart:
+      cellTemplate = {
+        kind: GridCellKind.Custom,
+        allowOverlay: false,
+        copyData: "[]",
+        contentAlign,
+        data: {
+          kind: "sparkline-cell",
+          values: [],
+          graphKind: "bar",
+          yAxis: [0, 1],
+        },
+      } as CustomCell
+
+      cellTemplate = fillChartCell(cellTemplate, data)
+      break
+    case ColumnType.ProgressChart:
+      cellTemplate = {
+        kind: GridCellKind.Custom,
+        allowOverlay: false,
+        copyData: "",
+        contentAlign,
+        data: {
+          kind: "range-cell",
+          min: 0,
+          max: 1,
+          value: 0,
+          step: 0.1,
+          label: `0%`,
+          measureLabel: "100%",
+        },
+      } as CustomCell
+
+      cellTemplate = fillProgressCell(cellTemplate, data)
+      break
+    default:
+      // This should never happen
+      return getErrorCell(`Unsupported cell type: ${columnConfig.columnType}`)
   }
 
-  if (!cellKind) {
-    return getErrorCell("Unable to determine cell type.")
+  return cellTemplate
+}
+
+export function processDisplayData(displayData: string): string {
+  // Remove all line breaks
+  return displayData.replace(/(\r\n|\n|\r)/gm, " ")
+}
+
+/**
+ * Returns a glide-data-grid compatible cell object based on the
+ * cell data from the quiver object. Different types of data will
+ * result in different cell types.
+ *
+ * @param columnConfig: The configuration of the column.
+ * @param quiverCell: a dataframe cell object from Quiver.
+ * @param cssStyles: optional css styles to apply on the cell.
+ *
+ * @return a GridCell object that can be used by glide-data-grid.
+ */
+export function getCellFromQuiver(
+  columnConfig: CustomColumn,
+  quiverCell: DataFrameCell,
+  cssStyles: string | undefined = undefined
+): GridCell {
+  let cellTemplate
+
+  if (columnConfig.columnType === ColumnType.Object) {
+    // Always use display value from quiver for object types
+    // these are special types that the dataframe only support in read-only mode.
+    cellTemplate = getCell(
+      columnConfig,
+      processDisplayData(
+        Quiver.format(
+          quiverCell.content,
+          quiverCell.contentType,
+          quiverCell.field
+        )
+      )
+    )
+  } else {
+    cellTemplate = getCell(columnConfig, quiverCell.content)
+  }
+
+  if (cellTemplate.hasOwnProperty("isError")) {
+    // Directly return error cells without any additional modification
+    return cellTemplate
+  }
+
+  if (notNullOrUndefined(quiverCell.displayContent)) {
+    let displayData = processDisplayData(quiverCell.displayContent)
+    // If the display content is set, use that instead of the content.
+    // This is only supported for text, object, date, datetime, time and number cells.
+    if (
+      [ColumnType.Object, ColumnType.Text].includes(columnConfig.columnType)
+    ) {
+      cellTemplate = {
+        ...cellTemplate,
+        displayData,
+      } as TextCell
+    } else if (columnConfig.columnType === ColumnType.Number) {
+      cellTemplate = {
+        ...cellTemplate,
+        displayData,
+      } as NumberCell
+    } else if (
+      [ColumnType.Date, ColumnType.DateTime, ColumnType.Time].includes(
+        columnConfig.columnType
+      )
+    ) {
+      cellTemplate = {
+        ...cellTemplate,
+        copyData: displayData,
+        data: {
+          ...(cellTemplate as CustomCell)?.data,
+          displayDate: displayData,
+        },
+      } as CustomCell
+    }
   }
 
   if (cssStyles && quiverCell.cssId) {
@@ -699,83 +878,15 @@ export function fillCellTemplate(
       cssStyles
     )
   }
-
-  switch (cellKind) {
-    case GridCellKind.Text:
-      return fillTextCell(
-        cellTemplate,
-        quiverCell.content,
-        getDisplayContent(quiverCell)
-      )
-    case GridCellKind.Number:
-      return fillNumberCell(
-        cellTemplate,
-        quiverCell.content,
-        getDisplayContent(quiverCell),
-        columnConfig.columnTypeMetadata
-      )
-    case GridCellKind.Boolean:
-      return fillBooleanCell(cellTemplate, quiverCell.content)
-    case GridCellKind.Bubble:
-      return fillListCell(cellTemplate, quiverCell.content)
-    case GridCellKind.Uri:
-      return fillUrlCell(cellTemplate, quiverCell.content)
-    case GridCellKind.Image:
-      return fillImageCell(cellTemplate, quiverCell.content)
-    case "sparkline-cell":
-      return fillChartCell(cellTemplate, quiverCell.content)
-    case "range-cell":
-      return fillProgressCell(cellTemplate, quiverCell.content)
-    default:
-      return getErrorCell(`Unsupported cell kind: ${cellKind}`)
-  }
+  return cellTemplate
 }
 
 export function updateCell(
-  cell: EditableGridCell,
-  newValue: DataType,
-  newDisplayValue?: string
+  columnConfig: CustomColumn,
+  newValue: DataType
 ): GridCell {
-  let cellKind: GridCellKind | string = cell.kind
-  if (cell.kind === GridCellKind.Custom) {
-    cellKind = (cell.data as any)?.kind
-  }
-
-  if (!cellKind) {
-    return getErrorCell("Unable to determine cell type.")
-  }
-  let updatedCell
-  switch (cellKind) {
-    case GridCellKind.Text:
-      updatedCell = fillTextCell(
-        cell,
-        newValue,
-        notNullOrUndefined(newDisplayValue)
-          ? newDisplayValue
-          : String(newValue)
-      )
-      break
-    case GridCellKind.Number:
-      updatedCell = fillNumberCell(
-        cell,
-        newValue,
-        notNullOrUndefined(newDisplayValue)
-          ? newDisplayValue
-          : String(newValue)
-      )
-      break
-    case GridCellKind.Boolean:
-      updatedCell = fillBooleanCell(cell, newValue)
-      break
-    case GridCellKind.Uri:
-      updatedCell = fillUrlCell(cell, newValue)
-      break
-    default:
-      return getErrorCell(`Cell cannot be edited: ${cellKind}`)
-  }
-
   return {
-    ...updatedCell,
+    ...getCell(columnConfig, newValue),
     lastUpdated: performance.now(),
   }
 }

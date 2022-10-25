@@ -198,6 +198,34 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
+        proto.editable = False
+        marshall(proto, data, default_uuid)
+        _marshall_column_config(proto, columns)
+
+        return self.dg._enqueue("arrow_data_frame", proto)
+
+    def experimental_data_editor(
+        self,
+        data: Data = None,
+        *,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        use_container_width: bool = False,
+        columns: Optional[Dict[Union[int, str], ColumnConfig]] = None,
+    ) -> "DeltaGenerator":
+        # If pandas.Styler uuid is not provided, a hash of the position
+        # of the element will be used. This will cause a rerender of the table
+        # when the position of the element is changed.
+        delta_path = self.dg._get_delta_path_str()
+        default_uuid = str(hash(delta_path))
+
+        proto = ArrowProto()
+        proto.use_container_width = use_container_width
+        if width:
+            proto.width = width
+        if height:
+            proto.height = height
+        proto.editable = True
         marshall(proto, data, default_uuid)
         _marshall_column_config(proto, columns)
 

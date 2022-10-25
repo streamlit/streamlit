@@ -42,8 +42,7 @@ import { notNullOrUndefined } from "src/lib/utils"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 
 import {
-  getCellTemplate,
-  fillCellTemplate,
+  getCellFromQuiver,
   getColumnSortMode,
   getColumnTypeFromQuiver,
   ColumnType,
@@ -52,6 +51,7 @@ import {
   updateCell,
   getTextCell,
   getErrorCell,
+  isEditableType,
 } from "./DataFrameCells"
 import { StyledResizableContainer } from "./styled-components"
 
@@ -299,6 +299,7 @@ export function getColumns(
     const columnTitle = data.columns[0][i]
     const quiverType = data.types.data[i]
     const columnType = getColumnTypeFromQuiver(quiverType)
+    const isEditable = isEditableType(columnType) && element.editable
 
     const column = {
       id: `column-${columnTitle}-${i}`,
@@ -307,7 +308,7 @@ export function getColumns(
       columnType,
       quiverType,
       indexNumber: i + numIndices,
-      isEditable: false,
+      isEditable,
       isHidden: false,
       isIndex: false,
       ...(stretchColumn ? { grow: 3 } : {}),
@@ -425,27 +426,27 @@ export function useDataLoader(
         )
       }
 
-      const column = columns[col]
-      const cellTemplate = getCellTemplate(column)
-
       if (row > numRows - 1) {
-        // This should never happen
-        return cellTemplate
+        return getErrorCell(
+          "Row index out of bounds.",
+          "This should never happen. Please report this bug."
+        )
       }
+
+      const column = columns[col]
 
       try {
         // Quiver has the header in first row
         const quiverCell = data.getCell(row + 1, column.indexNumber)
-        return fillCellTemplate(
-          cellTemplate,
-          quiverCell,
-          column,
-          data.cssStyles
-        )
+        return getCellFromQuiver(column, quiverCell, data.cssStyles)
       } catch (error) {
         // This should not happen in read-only table.
+        // TODO(lukasmasuch): What to do with editable table here?
         logError(error)
-        return cellTemplate
+        return getErrorCell(
+          "Error during cell creation.",
+          `This should never happen. Please report this bug. \nError: ${error}`
+        )
       }
     },
     [columns, numRows, data]
@@ -484,19 +485,11 @@ export function useDataLoader(
         return
       }
 
-      // TODO (lukasmasuch): check if type is compatible with DataType instead
-      if (
-        typeof newVal.data === "string" ||
-        typeof newVal.data === "number" ||
-        typeof newVal.data === "boolean"
-      ) {
-        // TODO: support display values
-        editingState.current.set(
-          col,
-          getOriginalIndex(row),
-          updateCell(currentCell, newVal.data as DataType)
-        )
-      }
+      editingState.current.set(
+        col,
+        getOriginalIndex(row),
+        updateCell(column, newVal.data as DataType)
+      )
     },
     [columns]
   )
