@@ -84,7 +84,13 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.line_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_line_chart.assert_not_called()
         arrow_line_chart.assert_called_once_with(
-            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+            DATAFRAME,
+            x=None,
+            y=None,
+            width=100,
+            height=200,
+            use_container_width=True,
+            theme="streamlit",
         )
 
     @patch.object(DeltaGenerator, "_legacy_area_chart")
@@ -104,7 +110,13 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.area_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_area_chart.assert_not_called()
         arrow_area_chart.assert_called_once_with(
-            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+            DATAFRAME,
+            x=None,
+            y=None,
+            width=100,
+            height=200,
+            use_container_width=True,
+            theme="streamlit",
         )
 
     @patch.object(DeltaGenerator, "_legacy_bar_chart")
@@ -124,7 +136,13 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.bar_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_bar_chart.assert_not_called()
         arrow_bar_chart.assert_called_once_with(
-            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+            DATAFRAME,
+            x=None,
+            y=None,
+            width=100,
+            height=200,
+            use_container_width=True,
+            theme="streamlit",
         )
 
     @patch.object(DeltaGenerator, "_legacy_altair_chart")
@@ -141,7 +159,7 @@ class DataFrameSelectorTest(unittest.TestCase):
     def test_arrow_altair_chart(self, arrow_altair_chart, legacy_altair_chart):
         streamlit.altair_chart(ALTAIR_CHART, True)
         legacy_altair_chart.assert_not_called()
-        arrow_altair_chart.assert_called_once_with(ALTAIR_CHART, True)
+        arrow_altair_chart.assert_called_once_with(ALTAIR_CHART, True, "streamlit")
 
     @patch.object(DeltaGenerator, "_legacy_vega_lite_chart")
     @patch.object(DeltaGenerator, "_arrow_vega_lite_chart")
@@ -181,7 +199,13 @@ class DataFrameSelectorTest(unittest.TestCase):
         )
         legacy_vega_lite_chart.assert_not_called()
         arrow_vega_lite_chart.assert_called_once_with(
-            DATAFRAME, None, True, x="foo", boink_boop=100, baz={"boz": "booz"}
+            DATAFRAME,
+            None,
+            True,
+            "streamlit",
+            x="foo",
+            boink_boop=100,
+            baz={"boz": "booz"},
         )
 
     @patch.object(DeltaGenerator, "_legacy_add_rows")
