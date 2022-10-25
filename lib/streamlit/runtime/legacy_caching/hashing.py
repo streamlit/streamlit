@@ -28,10 +28,9 @@ import sys
 import tempfile
 import textwrap
 import threading
-import typing
 import unittest.mock
 import weakref
-from typing import Any, Callable, Dict, List, Optional, Pattern, Union
+from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
 
 from streamlit import config, file_util, type_util, util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
@@ -80,7 +79,7 @@ Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
 # when the hasher encounters an object, it will first check to see if its type
 # matches a key in this dict and, if so, will use the provided function to
 # generate a hash for it.
-HashFuncsDict = Dict[Union[str, typing.Type[Any]], Callable[[Any], Any]]
+HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
 
 
 class HashReason(enum.Enum):
