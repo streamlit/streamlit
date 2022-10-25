@@ -18,6 +18,7 @@ from typing import List, Optional, Union, cast, overload
 
 from typing_extensions import Literal
 
+import streamlit
 from streamlit import config, delta_generator
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -414,6 +415,6 @@ class FileUploaderMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "delta_generator.DeltaGenerator":
+    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("delta_generator.DeltaGenerator", self)
+        return cast("streamlit.delta_generator.DeltaGenerator", self)

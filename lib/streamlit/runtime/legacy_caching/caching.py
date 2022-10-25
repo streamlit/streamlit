@@ -42,7 +42,8 @@ from typing import (
 from cachetools import TTLCache
 from pympler.asizeof import asizeof
 
-from streamlit import config, delta_generator, file_util, util
+import streamlit as st
+from streamlit import config, file_util, util
 from streamlit.elements.spinner import spinner
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
@@ -185,7 +186,7 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 def _show_cached_st_function_warning(
-    dg: "delta_generator.DeltaGenerator",
+    dg: "st.delta_generator.DeltaGenerator",
     st_func_name: str,
     cached_func: Callable[..., Any],
 ) -> None:
@@ -197,7 +198,7 @@ def _show_cached_st_function_warning(
 
 
 def maybe_show_cached_st_function_warning(
-    dg: "delta_generator.DeltaGenerator", st_func_name: str
+    dg: "st.delta_generator.DeltaGenerator", st_func_name: str
 ) -> None:
     """If appropriate, warn about calling st.foo inside @cache.
 
