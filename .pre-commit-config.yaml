@@ -34,6 +34,14 @@ repos:
         args:
           - --filter-files
         exclude: ^lib/streamlit/__init__\.py$
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v1.7.7
+    hooks:
+      - id: autoflake
+        args:
+          - "--in-place"
+          - "--ignore-init-module-imports"
+          - "--ignore-pass-after-docstring"
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
