@@ -162,3 +162,25 @@ fig_table = go.Figure(
     ]
 )
 st.plotly_chart(fig_table, theme="streamlit")
+
+# latex in tooltips don't work!
+# https://github.com/plotly/plotly.js/issues/559
+fig = go.Figure()
+fig.add_trace(
+    go.Scatter(
+        x=[1, 2, 3, 4],
+        y=[1, 4, 9, 16],
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=[1, 2, 3, 4],
+        y=[0.5, 2, 4.5, 8],
+    )
+)
+fig.update_layout(
+    xaxis_title=r"$\sqrt{(n_\text{c}(t|{T_\text{early}}))}$",
+    yaxis_title=r"$d, r \text{ (solar radius)}$",
+)
+
+st.plotly_chart(fig, include_mathjax="cdn")
