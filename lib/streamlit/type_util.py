@@ -39,6 +39,7 @@ from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, ge
 
 import streamlit as st
 from streamlit import errors
+from streamlit import string_util
 from streamlit import logger as _logger
 
 if TYPE_CHECKING:
@@ -453,15 +454,11 @@ def convert_anything_to_df(
     if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
         return pd.DataFrame([])
 
-    if (
-        is_type(df, _SNOWPARK_DF_TYPE_STR)
-        and not isinstance(df, list)
-        or is_type(df, _SNOWPARK_TABLE_TYPE_STR)
-    ):
+    if is_type(df, _SNOWPARK_DF_TYPE_STR) or is_type(df, _SNOWPARK_TABLE_TYPE_STR):
         df = pd.DataFrame(df.take(max_unevaluated_rows))
         if df.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {'10k' if max_unevaluated_rows == MAX_UNEVALUATED_DF_ROWS else str(max_unevaluated_rows)} rows. "
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 f"Call `collect()` on the dataframe to show more."
             )
         return df

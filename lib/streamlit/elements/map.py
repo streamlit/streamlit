@@ -167,8 +167,7 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
     if hasattr(data, "empty") and data.empty:  # type: ignore
         return json.dumps(_DEFAULT_MAP)
 
-    if type_util.is_snowpark_dataframe(data):
-        data = type_util.convert_anything_to_df(data)
+    data = type_util.convert_anything_to_df(data)
 
     if "lat" in data:
         lat = "lat"
@@ -190,8 +189,6 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
 
     if data[lon].isnull().values.any() or data[lat].isnull().values.any():
         raise StreamlitAPIException("Latitude and longitude data must be numeric.")
-
-    data = pd.DataFrame(data)
 
     min_lat = data[lat].min()
     max_lat = data[lat].max()
