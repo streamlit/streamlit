@@ -17,8 +17,7 @@ from typing import NamedTuple, Optional, cast
 
 from typing_extensions import Literal
 
-import streamlit
-from streamlit import runtime
+from streamlit import delta_generator, runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -33,7 +32,7 @@ class FormData(NamedTuple):
 
 
 def _current_form(
-    this_dg: "streamlit.delta_generator.DeltaGenerator",
+    this_dg: "delta_generator.DeltaGenerator",
 ) -> Optional[FormData]:
     """Find the FormData for the given DeltaGenerator.
 
@@ -67,7 +66,7 @@ def _current_form(
     return None
 
 
-def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
+def current_form_id(dg: "delta_generator.DeltaGenerator") -> str:
     """Return the form_id for the current form, or the empty string if we're
     not inside an `st.form` block.
 
@@ -80,7 +79,7 @@ def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
     return form_data.form_id
 
 
-def is_in_form(dg: "streamlit.delta_generator.DeltaGenerator") -> bool:
+def is_in_form(dg: "delta_generator.DeltaGenerator") -> bool:
     """True if the DeltaGenerator is inside an st.form block."""
     return current_form_id(dg) != ""
 
@@ -300,6 +299,6 @@ class FormMixin:
         )
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> "delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("delta_generator.DeltaGenerator", self)
