@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 from streamlit import config
+from streamlit import exception as st_exception
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
@@ -68,6 +68,7 @@ def _print_rich_exception(e: BaseException):
 
 def handle_uncaught_app_exception(e: BaseException) -> None:
     """Handle an exception that originated from a user app.
+
     By default, we show exceptions directly in the browser. However,
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
@@ -92,10 +93,10 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
         if not error_logged:
             # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
             LOGGER.warning("Uncaught app exception", exc_info=e)
-        st.exception(e)
+        st_exception(e)
     else:
         if not error_logged:
             # Use LOGGER.error, rather than LOGGER.debug, since we don't
             # show debug logs by default.
             LOGGER.error("Uncaught app exception", exc_info=e)
-        st.exception(UncaughtAppException(e))
+        st_exception(UncaughtAppException(e))
