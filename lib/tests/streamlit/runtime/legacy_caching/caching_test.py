@@ -15,7 +15,7 @@
 """st.caching unit tests."""
 import threading
 import types
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from parameterized import parameterized
 
