@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Counter, Dict, List, Optional, Set
 
 from typing_extensions import Final, TypeAlias
 
@@ -56,6 +57,7 @@ class ScriptRunContext:
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
     tracked_commands: List[Command] = field(default_factory=list)
+    tracked_commands_counter: Counter[str] = field(default_factory=collections.Counter)
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
     widget_ids_this_run: Set[str] = field(default_factory=set)
@@ -78,6 +80,7 @@ class ScriptRunContext:
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
+        self.tracked_commands_counter = collections.Counter()
 
     def on_script_start(self) -> None:
         self._has_script_started = True

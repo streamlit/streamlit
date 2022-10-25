@@ -132,7 +132,7 @@ def _marshall_column_config(
 
 
 class ArrowMixin:
-    @gather_metrics
+    @gather_metrics("_arrow_dataframe")
     def _arrow_dataframe(
         self,
         data: Data = None,
@@ -203,7 +203,7 @@ class ArrowMixin:
 
         return self.dg._enqueue("arrow_data_frame", proto)
 
-    @gather_metrics
+    @gather_metrics("_arrow_table")
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 
@@ -224,6 +224,11 @@ class ArrowMixin:
         >>> st._arrow_table(df)
 
         """
+
+        # Check if data is uncollected, and collect it but with 100 rows max, instead of 10k rows, which is done in all other cases.
+        # Avoid this and use 100 rows in st.table, because large tables render slowly, take too much screen space, and can crush the app.
+        if type_util.is_snowpark_data_object(data):
+            data = type_util.convert_anything_to_df(data, max_unevaluated_rows=100)
 
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table

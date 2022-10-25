@@ -63,7 +63,7 @@ class NumberInputSerde:
 
 
 class NumberInputMixin:
-    @gather_metrics
+    @gather_metrics("number_input")
     def number_input(
         self,
         label: str,

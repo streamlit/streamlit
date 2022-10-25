@@ -40,6 +40,7 @@ from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, ge
 import streamlit as st
 from streamlit import errors
 from streamlit import logger as _logger
+from streamlit import string_util
 
 if TYPE_CHECKING:
     import graphviz
@@ -204,6 +205,7 @@ _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
 _NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
+_SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -240,10 +242,12 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
 
-def is_snowpark_dataframe(obj: object) -> bool:
-    """True if obj is of type snowflake.snowpark.dataframe.DataFrame or
+def is_snowpark_data_object(obj: object) -> bool:
+    """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row,
     False otherwise"""
+    if is_type(obj, _SNOWPARK_TABLE_TYPE_STR):
+        return True
     if is_type(obj, _SNOWPARK_DF_TYPE_STR):
         return True
     if not isinstance(obj, list):
@@ -416,12 +420,18 @@ def is_sequence(seq: Any) -> bool:
     return True
 
 
-def convert_anything_to_df(df: Any) -> DataFrame:
+def convert_anything_to_df(
+    df: Any, max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS
+) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
     ----------
     df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
+
+    max_unevaluated_rows: int
+        If unevaluated data is detected this func will evaluate it,
+        taking max_unevaluated_rows, defaults to 10k and 100 for st.table
 
     Returns
     -------
@@ -445,11 +455,12 @@ def convert_anything_to_df(df: Any) -> DataFrame:
     if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
         return pd.DataFrame([])
 
-    if is_type(df, _SNOWPARK_DF_TYPE_STR) and not isinstance(df, list):
-        df = pd.DataFrame(df.take(MAX_UNEVALUATED_DF_ROWS))
-        if df.shape[0] == MAX_UNEVALUATED_DF_ROWS:
+    if is_type(df, _SNOWPARK_DF_TYPE_STR) or is_type(df, _SNOWPARK_TABLE_TYPE_STR):
+        df = pd.DataFrame(df.take(max_unevaluated_rows))
+        if df.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only 10k rows. Call `collect()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+                "Call `collect()` on the dataframe to show more."
             )
         return df
 
@@ -492,14 +503,14 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
 
     Parameters
     ----------
-    obj : list, tuple, numpy.ndarray, pandas.Series, pandas.DataFrame or snowflake.snowpark.dataframe.DataFrame
+    obj : list, tuple, numpy.ndarray, pandas.Series, pandas.DataFrame, snowflake.snowpark.dataframe.DataFrame or snowflake.snowpark.table.Table
 
     Returns
     -------
     iterable
 
     """
-    if is_snowpark_dataframe(obj):
+    if is_snowpark_data_object(obj):
         obj = convert_anything_to_df(obj)
 
     if is_dataframe(obj):

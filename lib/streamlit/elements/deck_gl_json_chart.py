@@ -33,7 +33,7 @@ EMPTY_MAP: Final[Mapping[str, Any]] = {
 
 
 class PydeckMixin:
-    @gather_metrics
+    @gather_metrics("pydeck_chart")
     def pydeck_chart(
         self,
         pydeck_obj: Optional["Deck"] = None,

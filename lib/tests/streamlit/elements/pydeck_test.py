@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import json
-import unittest
 from unittest import mock
 
 import pandas as pd

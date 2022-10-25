@@ -38,7 +38,7 @@ MediaData: TypeAlias = Union[
 
 
 class MediaMixin:
-    @gather_metrics
+    @gather_metrics("audio")
     def audio(
         self,
         data: MediaData,
@@ -77,7 +77,7 @@ class MediaMixin:
         marshall_audio(coordinates, audio_proto, data, format, start_time)
         return self.dg._enqueue("audio", audio_proto)
 
-    @gather_metrics
+    @gather_metrics("video")
     def video(
         self,
         data: MediaData,

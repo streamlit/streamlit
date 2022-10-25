@@ -44,7 +44,7 @@ _LOGGER = get_logger(__name__)
 
 
 class WriteMixin:
-    @gather_metrics
+    @gather_metrics("write")
     def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
         """Write arguments to the app.
 
@@ -181,7 +181,7 @@ class WriteMixin:
             # Order matters!
             if isinstance(arg, str):
                 string_buffer.append(arg)
-            elif type_util.is_snowpark_dataframe(arg):
+            elif type_util.is_snowpark_data_object(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):

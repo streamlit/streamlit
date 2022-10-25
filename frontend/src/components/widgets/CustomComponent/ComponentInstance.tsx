@@ -348,10 +348,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
     // Parse the component's arguments and src URL.
     // Some of these steps may throw an exception, so we wrap them in a
-    // try-catch. If we catch an error, we set this.state.componentError
-    // and bail. The error will be displayed in the next call to render,
-    // which will be triggered immediately. (This will not cause an infinite
-    // loop.)
+    // try-catch. If we catch an error, we show the error message to the user.
     let newArgs: { [name: string]: any }
     const newDataframeArgs: DataframeArg[] = []
     let src: string
@@ -417,7 +414,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       })
     } catch (e) {
       const error = ensureError(e)
-      this.setState({ componentError: error })
       return this.renderError(error)
     }
 

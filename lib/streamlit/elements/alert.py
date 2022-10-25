@@ -36,7 +36,7 @@ def validate_emoji(maybe_emoji: Optional[str]) -> str:
 
 
 class AlertMixin:
-    @gather_metrics
+    @gather_metrics("error")
     def error(
         self,
         body: "SupportsStr",
@@ -65,7 +65,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
 
-    @gather_metrics
+    @gather_metrics("warning")
     def warning(
         self,
         body: "SupportsStr",
@@ -94,7 +94,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
-    @gather_metrics
+    @gather_metrics("info")
     def info(
         self,
         body: "SupportsStr",
@@ -124,7 +124,7 @@ class AlertMixin:
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
-    @gather_metrics
+    @gather_metrics("success")
     def success(
         self,
         body: "SupportsStr",

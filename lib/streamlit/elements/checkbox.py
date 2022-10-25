@@ -45,7 +45,7 @@ class CheckboxSerde:
 
 
 class CheckboxMixin:
-    @gather_metrics
+    @gather_metrics("checkbox")
     def checkbox(
         self,
         label: str,

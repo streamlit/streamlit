@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class HeadingMixin:
-    @gather_metrics
+    @gather_metrics("header")
     def header(
         self, body: SupportsStr, anchor: Optional[str] = None
     ) -> "DeltaGenerator":
@@ -51,7 +51,7 @@ class HeadingMixin:
         header_proto.tag = "h2"
         return self.dg._enqueue("heading", header_proto)
 
-    @gather_metrics
+    @gather_metrics("subheader")
     def subheader(
         self, body: SupportsStr, anchor: Optional[str] = None
     ) -> "DeltaGenerator":
@@ -79,7 +79,7 @@ class HeadingMixin:
 
         return self.dg._enqueue("heading", subheader_proto)
 
-    @gather_metrics
+    @gather_metrics("title")
     def title(
         self, body: SupportsStr, anchor: Optional[str] = None
     ) -> "DeltaGenerator":

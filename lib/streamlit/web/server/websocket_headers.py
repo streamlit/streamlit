@@ -20,7 +20,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 
 
-@gather_metrics
+@gather_metrics("_get_websocket_headers")
 def _get_websocket_headers() -> Optional[Dict[str, str]]:
     """Return a copy of the HTTP request headers for the current session's
     WebSocket connection. If there's no active session, return None instead.

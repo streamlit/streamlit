@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import mimetypes
 import os
 
@@ -22,7 +21,7 @@ import streamlit.web.server.routes
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class ComponentRequestHandler(tornado.web.RequestHandler):
@@ -44,18 +43,21 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         abspath = os.path.realpath(os.path.join(component_root, filename))
 
         # Do NOT expose anything outside of the component root.
-        if os.path.commonprefix([component_root, abspath]) != component_root:
+        if os.path.commonprefix([component_root, abspath]) != component_root or (
+            not os.path.normpath(abspath).startswith(
+                component_root
+            )  # this is a recommendation from CodeQL, probably a bit redundant
+        ):
             self.write("forbidden")
             self.set_status(403)
             return
-
-        LOGGER.debug("ComponentRequestHandler: GET: %s -> %s", path, abspath)
-
         try:
             with open(abspath, "rb") as file:
                 contents = file.read()
         except (OSError) as e:
-            LOGGER.error(f"ComponentRequestHandler: GET {path} read error", exc_info=e)
+            _LOGGER.error(
+                "ComponentRequestHandler: GET %s read error", abspath, exc_info=e
+            )
             self.write("read error")
             self.set_status(404)
             return

@@ -24,3 +24,5 @@ st.line_chart(snowpark_dataframe)
 st.bar_chart(snowpark_dataframe)
 
 st.area_chart(snowpark_dataframe)
+
+st.table(snowpark_dataframe)

@@ -160,10 +160,12 @@ class CameraInput extends React.PureComponent<Props, State> {
       .then(file => this.uploadFile(file))
       .then(() => delay(MIN_SHUTTER_EFFECT_TIME_MS))
       .then(() => {
-        this.setState({
-          imgSrc,
-          shutter: this.state.shutter,
-          minShutterEffectPassed: true,
+        this.setState((prevState, _) => {
+          return {
+            imgSrc,
+            shutter: prevState.shutter,
+            minShutterEffectPassed: true,
+          }
         })
       })
       .catch(err => {
