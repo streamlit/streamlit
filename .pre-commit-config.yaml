@@ -42,6 +42,7 @@ repos:
           - "--in-place"
           - "--ignore-init-module-imports"
           - "--ignore-pass-after-docstring"
+          - "--remove-unused-variables"
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
