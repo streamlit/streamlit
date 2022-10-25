@@ -230,7 +230,7 @@ function applyDiscreteColors(data: any, theme: Theme): void {
  */
 export function applyColorscale(data: any, theme: Theme): any {
   data.forEach((entry: any) => {
-    entry = assign(entry, {
+    assign(entry, {
       colorscale: hasLightBackgroundColor(theme)
         ? sequentialColorscaleLightTheme
         : sequentialColorscaleDarkTheme,
@@ -271,14 +271,14 @@ export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
       })
     } else if (entry.type === "candlestick") {
       if (entry.decreasing === undefined) {
-        entry = assign(entry, {
+        assign(entry, {
           decreasing: {
             line: {
               color: getDecreasingRed(theme),
             },
           },
         })
-        entry = assign(entry, {
+        assign(entry, {
           increasing: {
             line: {
               color: getIncreasingGreen(theme),
@@ -287,7 +287,7 @@ export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
         })
       }
     } else if (entry.type === "waterfall") {
-      entry = assign(entry, {
+      assign(entry, {
         connector: {
           line: {
             color: getGray30(theme),
@@ -296,7 +296,7 @@ export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
         },
       })
       if (entry.decreasing === undefined) {
-        entry = assign(entry, {
+        assign(entry, {
           decreasing: {
             marker: {
               color: getDecreasingRed(theme),
