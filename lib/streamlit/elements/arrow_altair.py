@@ -110,7 +110,7 @@ class ArrowAltairMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        theme : str or None
+        theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
 
@@ -186,7 +186,7 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-        theme : str or None
+        theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
 
@@ -264,7 +264,7 @@ class ArrowAltairMixin:
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
             This argument can only be supplied by keyword.
-        theme : str or None
+        theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
 
