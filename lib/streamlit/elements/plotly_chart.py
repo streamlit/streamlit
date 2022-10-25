@@ -103,7 +103,8 @@ class PlotlyMixin:
             requires an account. See https://plot.ly/python/chart-studio/ for more information.
 
         theme : str or None
-            The theme of the chart. This argument only accepts "streamlit" or None for now.
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
 
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
