@@ -52,6 +52,12 @@ if TYPE_CHECKING:
 # Create and enable streamlit theme
 STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
 
+# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
+alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
+# We don't want to activate the Streamlit theme for all Altair as default for now.
+# However, the Streamlit theme will be activated as default for our built-in charts.
+alt.themes.enable("none")
+
 
 class ChartType(Enum):
     AREA = "area"
