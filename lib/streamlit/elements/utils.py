@@ -14,7 +14,8 @@
 
 from typing import TYPE_CHECKING, Any, Hashable, Optional, Union, cast
 
-from streamlit import runtime, type_util, warning
+import streamlit
+from streamlit import runtime, type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
@@ -69,7 +70,7 @@ def check_session_state_rules(
         )
 
     if default_value is not None and not _shown_default_value_warning:
-        warning(
+        streamlit.warning(
             f'The widget with key "{key}" was created with a default value but'
             " also had its value set via the Session State API."
         )
