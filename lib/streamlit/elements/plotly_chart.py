@@ -102,7 +102,7 @@ class PlotlyMixin:
             Use any other sharing mode to send the chart to Plotly chart studio, which
             requires an account. See https://plot.ly/python/chart-studio/ for more information.
 
-        theme : str or None
+        theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
 
