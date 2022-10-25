@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
 from abc import abstractmethod
-from typing import List
+from typing import List, NamedTuple
 
 from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
 
 
-class CacheStat(typing.NamedTuple):
+class CacheStat(NamedTuple):
     """Describes a single cache entry.
 
     Properties
