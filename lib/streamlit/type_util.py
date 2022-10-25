@@ -429,8 +429,9 @@ def convert_anything_to_df(
     ----------
     df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
 
-    max_unevaluated_rows: int, If unevaluated data is detected this func will evaluate it,
-                            taking max_unevaluated_rows, defaults to 10k and 100 for st.table
+    max_unevaluated_rows: int
+        If unevaluated data is detected this func will evaluate it,
+        taking max_unevaluated_rows, defaults to 10k and 100 for st.table
 
     Returns
     -------
@@ -459,7 +460,7 @@ def convert_anything_to_df(
         if df.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                f"Call `collect()` on the dataframe to show more."
+                "Call `collect()` on the dataframe to show more."
             )
         return df
 
