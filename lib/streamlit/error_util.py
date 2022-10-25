@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit import config, exception
+from streamlit import config
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
