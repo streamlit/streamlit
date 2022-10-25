@@ -30,11 +30,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Pattern
 
 from streamlit import type_util, util
-from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import CacheType, UnhashableTypeError
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
-_LOGGER = get_logger(__name__)
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
