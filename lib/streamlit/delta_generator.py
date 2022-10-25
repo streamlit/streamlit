@@ -35,7 +35,6 @@ from typing import (
 import click
 from typing_extensions import Final, Literal
 
-import streamlit as st
 from streamlit import config, cursor, env_util, logger, runtime, type_util, util
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
