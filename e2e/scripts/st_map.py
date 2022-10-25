@@ -18,10 +18,20 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+from tests.streamlit.snowpark_mocks import DataFrame as MockedSnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Table as MockedSnowparkTable
 
 # Empty map.
 
 st.map()
+
+# st.map with unevaluated Snowpark DataFrame
+
+st.map(MockedSnowparkTable(is_map=True, num_of_rows=50000))
+
+# st.map with unevaluated Snowpark Table
+
+st.map(MockedSnowparkDataFrame(is_map=True, num_of_rows=50000))
 
 # Simple map.
 

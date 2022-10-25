@@ -16,12 +16,12 @@
 
 import {
   buildHttpUri,
-  buildWsUri,
-  getWindowBaseUriParts,
   buildMediaUri,
-  xssSanitizeSvg,
-  isValidURL,
+  buildWsUri,
   getPossibleBaseUris,
+  getWindowBaseUriParts,
+  isValidOrigin,
+  xssSanitizeSvg,
 } from "./UriUtil"
 
 const location: Partial<Location> = {}
@@ -179,30 +179,59 @@ test("sanitizes SVG uris", () => {
   expect(uri).toBe(`<svg></svg>`)
 })
 
-describe("isValidURL helper", () => {
-  it("should return true when the pattern and url are the same", () => {
-    const isValid = isValidURL(
-      "http://devel.streamlit.io",
-      "http://devel.streamlit.io"
-    )
-
-    expect(isValid).toBeTruthy()
+describe("isValidOrigin", () => {
+  it("returns false if allowedOrigin is invalid", () => {
+    // allowedOrigin doesn't have a protocol
+    expect(
+      isValidOrigin("devel.streamlit.io", "http://devel.streamlit.io")
+    ).toBeFalsy()
   })
 
-  it("should return false if it has different form", () => {
-    const isValid = isValidURL("*.com", "test.test.com")
-
-    expect(isValid).toBeFalsy()
+  it("returns false if testOrigin is invalid", () => {
+    // testOrigin doesn't have a protocol
+    expect(
+      isValidOrigin("http://devel.streamlit.io", "devel.streamlit.io")
+    ).toBeFalsy()
   })
 
-  it("should return true if it matches the pattern", () => {
-    expect(isValidURL("*.com", "a.com")).toBeTruthy()
-    expect(isValidURL("*.a.com", "asd.a.com")).toBeTruthy()
-    expect(isValidURL("www.*.a.com", "www.asd.a.com")).toBeTruthy()
+  it("returns false if protocols don't match", () => {
+    expect(
+      isValidOrigin("https://devel.streamlit.io", "http://devel.streamlit.io")
+    ).toBeFalsy()
   })
 
-  it("should return false if it doesn't match the pattern", () => {
-    expect(isValidURL("*.b.com", "www.c.com")).toBeFalsy()
+  it("returns false if ports don't match", () => {
+    expect(
+      isValidOrigin(
+        "https://devel.streamlit.io:8080",
+        "https://devel.streamlit.io"
+      )
+    ).toBeFalsy()
+  })
+
+  it("returns true when the pattern and url are the same", () => {
+    expect(
+      isValidOrigin("http://devel.streamlit.io", "http://devel.streamlit.io")
+    ).toBeTruthy()
+  })
+
+  it("returns false if it has different form", () => {
+    expect(isValidOrigin("https://*.com", "https://test.test.com")).toBeFalsy()
+  })
+
+  it("returns true if it matches the pattern", () => {
+    expect(isValidOrigin("https://*.com", "https://a.com")).toBeTruthy()
+    expect(isValidOrigin("https://*.a.com", "https://asd.a.com")).toBeTruthy()
+    expect(
+      isValidOrigin("https://www.*.a.com", "https://www.asd.a.com")
+    ).toBeTruthy()
+    expect(
+      isValidOrigin("https://abc.*.*.a.com", "https://abc.def.xyz.a.com")
+    ).toBeTruthy()
+  })
+
+  it("returns false if it doesn't match the pattern", () => {
+    expect(isValidOrigin("https://*.b.com", "https://www.c.com")).toBeFalsy()
   })
 })
 

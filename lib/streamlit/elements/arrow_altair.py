@@ -60,7 +60,7 @@ class ChartType(Enum):
 
 
 class ArrowAltairMixin:
-    @gather_metrics
+    @gather_metrics("_arrow_line_chart")
     def _arrow_line_chart(
         self,
         data: Data = None,
@@ -138,7 +138,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
 
-    @gather_metrics
+    @gather_metrics("_arrow_area_chart")
     def _arrow_area_chart(
         self,
         data: Data = None,
@@ -203,6 +203,7 @@ class ArrowAltairMixin:
            height: 220px
 
         """
+
         proto = ArrowVegaLiteChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
@@ -214,7 +215,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
 
-    @gather_metrics
+    @gather_metrics("_arrow_bar_chart")
     def _arrow_bar_chart(
         self,
         data: Data = None,
@@ -280,6 +281,7 @@ class ArrowAltairMixin:
            height: 220px
 
         """
+
         proto = ArrowVegaLiteChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
@@ -291,7 +293,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
 
-    @gather_metrics
+    @gather_metrics("_arrow_altair_chart")
     def _arrow_altair_chart(
         self,
         altair_chart: Chart,

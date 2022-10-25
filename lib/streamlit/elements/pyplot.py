@@ -35,7 +35,7 @@ LOGGER: Final = get_logger(__name__)
 
 
 class PyplotMixin:
-    @gather_metrics
+    @gather_metrics("pyplot")
     def pyplot(
         self,
         fig: Optional["Figure"] = None,

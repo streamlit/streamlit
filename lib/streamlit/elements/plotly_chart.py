@@ -66,7 +66,7 @@ FigureOrData: TypeAlias = Union[
 
 
 class PlotlyMixin:
-    @gather_metrics
+    @gather_metrics("plotly_chart")
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,

@@ -25,7 +25,7 @@ from streamlit.type_util import (
     data_frame_to_bytes,
     fix_arrow_incompatible_column_types,
     is_bytes_like,
-    is_snowpark_dataframe,
+    is_snowpark_data_object,
     to_bytes,
 )
 from tests.streamlit.snowpark_mocks import DataFrame, Row
@@ -196,47 +196,47 @@ dtype: object""",
         )
 
         # pandas dataframe should not be SnowparkDataFrame
-        self.assertFalse(is_snowpark_dataframe(df))
+        self.assertFalse(is_snowpark_data_object(df))
 
-        # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_dataframe should return true
-        self.assertTrue(is_snowpark_dataframe(DataFrame()))
+        # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
+        self.assertTrue(is_snowpark_data_object(DataFrame()))
 
         # any object should not be snowpark dataframe
-        self.assertFalse(is_snowpark_dataframe("any text"))
-        self.assertFalse(is_snowpark_dataframe(123))
+        self.assertFalse(is_snowpark_data_object("any text"))
+        self.assertFalse(is_snowpark_data_object(123))
 
         class DummyClass:
             """DummyClass for testing purposes"""
 
-        self.assertFalse(is_snowpark_dataframe(DummyClass()))
+        self.assertFalse(is_snowpark_data_object(DummyClass()))
 
         # empty list should not be snowpark dataframe
-        self.assertFalse(is_snowpark_dataframe(list()))
+        self.assertFalse(is_snowpark_data_object(list()))
 
         # list with items should not be snowpark dataframe
         self.assertFalse(
-            is_snowpark_dataframe(
+            is_snowpark_data_object(
                 [
                     "any text",
                 ]
             )
         )
         self.assertFalse(
-            is_snowpark_dataframe(
+            is_snowpark_data_object(
                 [
                     123,
                 ]
             )
         )
         self.assertFalse(
-            is_snowpark_dataframe(
+            is_snowpark_data_object(
                 [
                     DummyClass(),
                 ]
             )
         )
         self.assertFalse(
-            is_snowpark_dataframe(
+            is_snowpark_data_object(
                 [
                     df,
                 ]
@@ -245,7 +245,7 @@ dtype: object""",
 
         # list with SnowparkRow should be SnowparkDataframe
         self.assertTrue(
-            is_snowpark_dataframe(
+            is_snowpark_data_object(
                 [
                     Row(),
                 ]

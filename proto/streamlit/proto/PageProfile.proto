@@ -24,6 +24,9 @@ message PageProfile {
   repeated string config = 5;
   string uncaught_exception = 6;
   repeated string attributions = 7;
+  string os = 8;
+  string timezone = 9;
+  bool headless = 10;
 }
 
 // The field names are used as part of the event json sent

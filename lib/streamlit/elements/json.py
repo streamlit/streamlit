@@ -32,7 +32,7 @@ def _ensure_serialization(o: object) -> Union[str, List[Any]]:
 
 
 class JsonMixin:
-    @gather_metrics
+    @gather_metrics("json")
     def json(
         self,
         body: object,

@@ -139,7 +139,7 @@ class Credentials(object):
             raise RuntimeError(
                 'Credentials not found. Please run "streamlit activate".'
             )
-        except Exception as e:
+        except Exception:
             if auto_resolve:
                 self.reset()
                 return self.activate(show_instructions=not auto_resolve)

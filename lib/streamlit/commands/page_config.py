@@ -111,7 +111,7 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
         raise
 
 
-@gather_metrics
+@gather_metrics("set_page_config")
 def set_page_config(
     page_title: Optional[str] = None,
     page_icon: Optional[PageIcon] = None,
