@@ -17,6 +17,7 @@
 import {
   GridCell,
   GridCellKind,
+  GridColumn,
   TextCell,
   Theme as GlideTheme,
   BooleanCell,
@@ -39,6 +40,9 @@ import {
 } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
+/**
+ * All the supported column types.
+ */
 export enum ColumnType {
   Text = "text",
   Number = "number",
@@ -49,6 +53,28 @@ export enum ColumnType {
   BarChart = "bar-chart",
   LineChart = "line-chart",
   ProgressChart = "progress-chart",
+}
+
+/**
+ * A configuration for a grid column.
+ */
+export type CustomColumn = GridColumn & {
+  // The index number of the column.
+  indexNumber: number
+  // The type of the column.
+  columnType: ColumnType
+  // The quiver data type of the column.
+  quiverType: QuiverType
+  // If `True`, the column can be edited.
+  isEditable: boolean
+  // If `True`, the column is hidden (will not be shown).
+  isHidden: boolean
+  // If `True`, the column is a table index.
+  isIndex: boolean
+  // Additional metadata related to the column type.
+  columnTypeMetadata?: Record<string, unknown>
+  // The content alignment of the column.
+  contentAlignment?: "left" | "center" | "right"
 }
 
 /**
@@ -189,30 +215,25 @@ export function applyPandasStylerCss(
 }
 
 /**
- * Returns a template object representing an empty cell for a given data type.
+ * Returns a template object representing an empty cell for a given column.
  *
- * @param type: The type of the column.
- * @param readonly: If true, returns a read-only version of the cell template.
- * @param isIndex: Indicates if this is an index column.
+ * @param columnConfig: The configuration of the column.
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */
-export function getCellTemplate(
-  type: ColumnType,
-  readonly: boolean,
-  isIndex: boolean,
-  alignment?: "left" | "right" | "center"
-): GridCell {
-  const style = isIndex ? "faded" : "normal"
+export function getCellTemplate(columnConfig: CustomColumn): GridCell {
+  const style = columnConfig.isIndex ? "faded" : "normal"
+  const readonly = !columnConfig.isEditable
+  const contentAlign = columnConfig.contentAlignment
 
-  switch (type) {
+  switch (columnConfig.columnType) {
     case ColumnType.Text:
       return {
         kind: GridCellKind.Text,
         data: "",
         displayData: "",
         allowOverlay: true,
-        contentAlign: alignment,
+        contentAlign,
         readonly,
         style,
       } as TextCell
@@ -220,9 +241,9 @@ export function getCellTemplate(
       return {
         kind: GridCellKind.Boolean,
         data: false,
-        readonly,
         allowOverlay: false, // no overlay possible
-        contentAlign: alignment,
+        contentAlign,
+        readonly,
         style,
       } as BooleanCell
     case ColumnType.Number:
@@ -232,7 +253,7 @@ export function getCellTemplate(
         displayData: "",
         readonly,
         allowOverlay: true,
-        contentAlign: alignment || "right",
+        contentAlign: columnConfig.contentAlignment || "right",
         style,
       } as NumberCell
     case ColumnType.List:
@@ -240,7 +261,7 @@ export function getCellTemplate(
         kind: GridCellKind.Bubble,
         data: [],
         allowOverlay: true,
-        contentAlign: alignment,
+        contentAlign,
         style,
       } as BubbleCell
     case ColumnType.Url:
@@ -249,7 +270,7 @@ export function getCellTemplate(
         data: "",
         readonly,
         allowOverlay: true,
-        contentAlign: alignment,
+        contentAlign,
         style,
       } as UriCell
     case ColumnType.Image:
@@ -259,7 +280,7 @@ export function getCellTemplate(
         displayData: [],
         allowAdd: !readonly,
         allowOverlay: true,
-        contentAlign: alignment,
+        contentAlign,
         style,
       } as ImageCell
     case ColumnType.LineChart:
@@ -267,7 +288,7 @@ export function getCellTemplate(
         kind: GridCellKind.Custom,
         allowOverlay: false,
         copyData: "[]",
-        contentAlign: alignment,
+        contentAlign,
         data: {
           kind: "sparkline-cell",
           values: [],
@@ -281,7 +302,7 @@ export function getCellTemplate(
         kind: GridCellKind.Custom,
         allowOverlay: false,
         copyData: "[]",
-        contentAlign: alignment,
+        contentAlign,
         data: {
           kind: "sparkline-cell",
           values: [],
@@ -294,7 +315,7 @@ export function getCellTemplate(
         kind: GridCellKind.Custom,
         allowOverlay: false,
         copyData: "",
-        contentAlign: alignment,
+        contentAlign,
         data: {
           kind: "range-cell",
           min: 0,
@@ -306,7 +327,7 @@ export function getCellTemplate(
         },
       } as CustomCell
     default:
-      throw new Error(`Unsupported cell type: ${type}`)
+      throw new Error(`Unsupported cell type: ${columnConfig.columnType}`)
   }
 }
 
@@ -326,6 +347,26 @@ export function getColumnSortMode(columnType: ColumnType): string {
 }
 
 /**
+ * Returns an empty text cell.
+ *
+ * @param readonly: If true, returns a read-only version of the cell.
+ * @param faded: If true, returns a faded version of the cell.
+ *
+ * @return a GridCell object that can be used by glide-data-grid.
+ */
+export function getTextCell(readonly: boolean, faded: boolean): GridCell {
+  const style = faded ? "faded" : "normal"
+  return {
+    kind: GridCellKind.Text,
+    data: "",
+    displayData: "",
+    allowOverlay: true,
+    readonly,
+    style,
+  } as TextCell
+}
+
+/**
  * Returns an empty cell.
  */
 function getEmptyCell(): LoadingCell {
@@ -341,14 +382,16 @@ function getEmptyCell(): LoadingCell {
  * @param errorMsg: A short error message to use as display value.
  * @param errorDetails: The full error message to show when the user
  *                     clicks on a cell.
+ *
+ * @return a GridCell object that can be used by glide-data-grid.
  */
-function getErrorCell(errorMsg: string, errorDetails = ""): TextCell {
+export function getErrorCell(errorMsg: string, errorDetails = ""): TextCell {
   return {
-    ...getCellTemplate(ColumnType.Text, true, false),
+    ...getTextCell(true, false),
     data: errorMsg + (errorDetails ? `\n${errorDetails}` : ""),
     displayData: errorMsg,
     themeOverride: {
-      textDark: "#ff4b4b", // TOOD(lukasmasuch): use color from theme?
+      textDark: "#ff4b4b", // TODO(lukasmasuch): use color from theme?
     },
   } as TextCell
 }
@@ -362,7 +405,7 @@ function getErrorCell(errorMsg: string, errorDetails = ""): TextCell {
  *
  * @return a filled in text cell.
  */
-export function fillTextCell(
+function fillTextCell(
   cell: GridCell,
   data: DataType,
   displayData: string
@@ -385,7 +428,7 @@ export function fillTextCell(
  *
  * @return a filled in boolean cell.
  */
-export function fillBooleanCell(cell: GridCell, data: any): GridCell {
+function fillBooleanCell(cell: GridCell, data: any): GridCell {
   if (notNullOrUndefined(data) && typeof data !== "boolean") {
     return getErrorCell(`Incompatible boolean value: ${data}`)
   }
@@ -405,7 +448,7 @@ export function fillBooleanCell(cell: GridCell, data: any): GridCell {
  *
  * @return a filled in number cell.
  */
-export function fillNumberCell(
+function fillNumberCell(
   cell: GridCell,
   data: DataType,
   displayData: string,
@@ -458,7 +501,7 @@ export function fillNumberCell(
  *
  * @return a filled in list cell.
  */
-export function fillListCell(cell: GridCell, data: DataType): GridCell {
+function fillListCell(cell: GridCell, data: DataType): GridCell {
   let cellData = []
 
   if (notNullOrUndefined(data)) {
@@ -492,7 +535,7 @@ export function fillListCell(cell: GridCell, data: DataType): GridCell {
  *
  * @return a filled in URL cell.
  */
-export function fillUrlCell(cell: GridCell, data: DataType): GridCell {
+function fillUrlCell(cell: GridCell, data: DataType): GridCell {
   return {
     ...cell,
     data: notNullOrUndefined(data) ? String(data) : "",
@@ -507,7 +550,7 @@ export function fillUrlCell(cell: GridCell, data: DataType): GridCell {
  *
  * @return a filled in image cell.
  */
-export function fillImageCell(cell: GridCell, data: DataType): GridCell {
+function fillImageCell(cell: GridCell, data: DataType): GridCell {
   const imageUrls = notNullOrUndefined(data) ? [String(data)] : []
 
   return {
@@ -525,7 +568,7 @@ export function fillImageCell(cell: GridCell, data: DataType): GridCell {
  *
  * @return a filled in chart cell.
  */
-export function fillChartCell(cell: GridCell, data: DataType): GridCell {
+function fillChartCell(cell: GridCell, data: DataType): GridCell {
   if (!notNullOrUndefined(data)) {
     return getEmptyCell()
   }
@@ -637,8 +680,8 @@ export function fillProgressCell(cell: GridCell, data: DataType): GridCell {
 export function fillCellTemplate(
   cellTemplate: GridCell,
   quiverCell: DataFrameCell,
-  cssStyles: string | undefined = undefined,
-  typeMetadata: Record<string, unknown> | undefined = undefined
+  columnConfig: CustomColumn,
+  cssStyles: string | undefined = undefined
 ): GridCell {
   let cellKind: GridCellKind | string = cellTemplate.kind
   if (cellTemplate.kind === GridCellKind.Custom) {
@@ -669,7 +712,7 @@ export function fillCellTemplate(
         cellTemplate,
         quiverCell.content,
         getDisplayContent(quiverCell),
-        typeMetadata
+        columnConfig.columnTypeMetadata
       )
     case GridCellKind.Boolean:
       return fillBooleanCell(cellTemplate, quiverCell.content)

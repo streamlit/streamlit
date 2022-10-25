@@ -28,14 +28,14 @@ import {
   Theme as GlideTheme,
   isEditableGridCell,
 } from "@glideapps/glide-data-grid"
-import { Resizable, Size as ResizableSize } from "re-resizable"
 import { useColumnSort } from "@glideapps/glide-data-grid-source"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
+import { Resizable, Size as ResizableSize } from "re-resizable"
 import { transparentize } from "color2k"
 import { useTheme } from "@emotion/react"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { Quiver, Type as QuiverType, DataType } from "src/lib/Quiver"
+import { Quiver, DataType } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
 import { Theme } from "src/theme"
 import { notNullOrUndefined } from "src/lib/utils"
@@ -48,7 +48,10 @@ import {
   getColumnTypeFromQuiver,
   ColumnType,
   getColumnTypeFromConfig,
+  CustomColumn,
   updateCell,
+  getTextCell,
+  getErrorCell,
 } from "./DataFrameCells"
 import { StyledResizableContainer } from "./styled-components"
 
@@ -67,29 +70,6 @@ const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
 // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
 const DEFAULT_TABLE_HEIGHT = 400
-
-/**
- * The GridColumn type extended with a function to get a template of the given type.
- */
-// TODO: rename
-type CustomColumn = GridColumn & {
-  // The index number of the column.
-  indexNumber: number
-  // The type of the column.
-  columnType: ColumnType
-  // The quiver data type of the column.
-  quiverType: QuiverType
-  // If `True`, the column can be edited.
-  isEditable: boolean
-  // If `True`, the column is hidden (will not be shown).
-  isHidden: boolean
-  // If `True`, the column is a table index.
-  isIndex: boolean
-  // Additional metadata related to the column type.
-  columnTypeMetadata?: Record<string, unknown>
-  // The content alignment of the column.
-  contentAlignment?: "left" | "center" | "right"
-}
 
 /**
  * Options to configure columns.
@@ -433,24 +413,20 @@ export function useDataLoader(
     ([col, row]: readonly [number, number]): GridCell => {
       if (data.isEmpty()) {
         return {
-          ...getCellTemplate(ColumnType.Text, true, true),
+          ...getTextCell(true, true),
           displayData: "empty",
         } as GridCell
       }
 
       if (col > columns.length - 1) {
-        // This should never happen
-        // TODO (lukasmasuch): use error cell?
-        return getCellTemplate(ColumnType.Text, true, false)
+        return getErrorCell(
+          "Column index out of bounds.",
+          "This should never happen. Please report this bug."
+        )
       }
 
       const column = columns[col]
-      const cellTemplate = getCellTemplate(
-        column.columnType,
-        !column.isEditable,
-        column.isIndex,
-        column.contentAlignment
-      )
+      const cellTemplate = getCellTemplate(column)
 
       if (row > numRows - 1) {
         // This should never happen
@@ -463,8 +439,8 @@ export function useDataLoader(
         return fillCellTemplate(
           cellTemplate,
           quiverCell,
-          data.cssStyles,
-          column.columnTypeMetadata
+          column,
+          data.cssStyles
         )
       } catch (error) {
         // This should not happen in read-only table.
