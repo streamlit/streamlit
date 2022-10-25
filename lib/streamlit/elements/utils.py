@@ -79,7 +79,7 @@ def check_session_state_rules(
 
 def get_label_visibility_proto_value(
     label_visibility_string: type_util.LabelVisibility,
-) -> LabelVisibilityMessage.LabelVisibilityOptions:
+) -> LabelVisibilityMessage.LabelVisibilityOptions.ValueType:
     """Returns one of LabelVisibilityMessage enum constants based on string value."""
 
     if label_visibility_string == "visible":
