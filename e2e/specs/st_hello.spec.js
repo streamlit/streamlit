@@ -69,7 +69,7 @@ describe("hello", () => {
 
         cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
           .find("canvas")
-          .should("have.css", "height", "350px");
+          .should("have.css", "height", "300px");
       });
   });
 
@@ -108,7 +108,7 @@ describe("hello", () => {
 
         cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
           .find("canvas")
-          .should("have.css", "height", "350px");
+          .should("have.css", "height", "300px");
 
         cy.get(".appview-container").matchThemedSnapshots("dataframe-demo");
       });

@@ -25,7 +25,7 @@ describe("st._arrow_area_chart", () => {
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
       .find("canvas")
       .first()
-      .should("have.css", "height", "350px");
+      .should("have.css", "height", "300px");
   });
 
   it("displays all area-chart combinations correctly", () => {

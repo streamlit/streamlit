@@ -65,20 +65,20 @@ describe("st.DataFrame with unevaluated snowflake.snowpark.dataframe.DataFrame",
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
       .find("canvas")
       .first()
-      .should("have.css", "height", "350px");
+      .should("have.css", "height", "300px");
   });
 
   it("displays a bar chart", () => {
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
       .find("canvas")
       .first()
-      .should("have.css", "height", "350px");
+      .should("have.css", "height", "300px");
   });
 
   it("displays an area chart", () => {
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
       .find("canvas")
       .first()
-      .should("have.css", "height", "350px");
+      .should("have.css", "height", "300px");
   });
 });
