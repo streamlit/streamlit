@@ -19,7 +19,6 @@
 Gets all releases from PyPI, filters for release candidates of the current streamlit version.
 If there is an existing RC, prints that RC version. If there is no RC, returns None.
 """
-import json
 import os
 
 import requests
