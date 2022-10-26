@@ -102,7 +102,7 @@ def should_show_new_version_notice():
         latest_version = _get_latest_streamlit_version(timeout=1)
     except Exception as ex:
         # Log this as a debug. We don't care if the user sees it.
-        _LOGGER.debug("Failed PyPI version check.\n%s", ex)
+        _LOGGER.debug("Failed PyPI version check.", exc_info=ex)
         return False
 
     return latest_version > installed_version
