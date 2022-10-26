@@ -29,6 +29,7 @@ export const genericFonts = {
 // Same as in variables.scss
 const fontSizeTwoSmall = 12
 const fontSizeSmall = 14
+const fontSizeMedium = 16
 
 export const fontSizes = {
   twoSm: `${fontSizeTwoSmall}px`, // Use px to force sm to be a round number.
@@ -43,6 +44,7 @@ export const fontSizes = {
 
   twoSmPx: fontSizeTwoSmall, // twoSm but as a number, in pixels
   smPx: fontSizeSmall, // sm but as a number, in pixels
+  mdPx: fontSizeMedium, // med but as a number, in pixels
 }
 
 export const fontWeights = {
