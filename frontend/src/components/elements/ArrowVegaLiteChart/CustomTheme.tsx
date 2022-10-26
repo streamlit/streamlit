@@ -262,6 +262,9 @@ export function applyThemeDefaults(config: any, theme: Theme): any {
       continuousHeight: 350,
       continuousWidth: 400,
     },
+    mark: {
+      tooltip: true,
+    },
   }
 
   if (!config) {

@@ -32,11 +32,7 @@ st.write("Show streamlit theme:")
 st._arrow_altair_chart(chart, theme="streamlit")
 
 st.write("Overwrite theme config:")
-chart = (
-    alt.Chart(df, usermeta={"embedOptions": {"theme": None}})
-    .mark_circle()
-    .encode(x="a", y="b", size="c", color="c")
-)
+chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
 st._arrow_altair_chart(chart, theme="streamlit")
 
 data = pd.DataFrame(
