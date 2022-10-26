@@ -122,9 +122,9 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
   // Match based on quiver types
   if (["unicode"].includes(typeName)) {
     columnType = ColumnType.Text
-  } else if (typeName == "date") {
+  } else if (typeName === "date") {
     columnType = ColumnType.Date
-  } else if (typeName == "time") {
+  } else if (typeName === "time") {
     columnType = ColumnType.Time
   } else if (["datetime", "datetimetz"].includes(typeName)) {
     columnType = ColumnType.DateTime
@@ -304,7 +304,7 @@ export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
  */
 function fillTextCell(cell: GridCell, data: DataType): GridCell {
   try {
-    let cellData = notNullOrUndefined(data) ? data.toString() : ""
+    const cellData = notNullOrUndefined(data) ? data.toString() : ""
     return {
       ...cell,
       data: cellData,
@@ -840,7 +840,7 @@ export function getCellFromQuiver(
   }
 
   if (notNullOrUndefined(quiverCell.displayContent)) {
-    let displayData = processDisplayData(quiverCell.displayContent)
+    const displayData = processDisplayData(quiverCell.displayContent)
     // If the display content is set, use that instead of the content.
     // This is only supported for text, object, date, datetime, time and number cells.
     if (

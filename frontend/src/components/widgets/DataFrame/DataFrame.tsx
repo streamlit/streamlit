@@ -435,6 +435,14 @@ export function useDataLoader(
 
       const column = columns[col]
 
+      if (column.isEditable) {
+        const editedCell = editingState.current.get(column.indexNumber, row)
+
+        if (editedCell !== undefined) {
+          return editedCell
+        }
+      }
+
       try {
         // Quiver has the header in first row
         const quiverCell = data.getCell(row + 1, column.indexNumber)
@@ -750,8 +758,13 @@ function DataFrame({
           }}
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
-          // Support editing:
-          onCellEdited={onCellEdited}
+          // If element is editable, add additional properties:
+          {...(element.editable && {
+            // Support editing:
+            onCellEdited,
+            // Support fill handle for bulk editing
+            fillHandle: true,
+          })}
         />
       </Resizable>
     </StyledResizableContainer>
