@@ -158,7 +158,7 @@ def _on_server_start(server: Server) -> None:
     try:
         secrets.load_if_toml_exists()
     except Exception as ex:
-        LOGGER.error(f"Failed to load {SECRETS_FILE_LOC}", exc_info=ex)
+        LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
