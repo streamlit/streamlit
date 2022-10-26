@@ -30,7 +30,7 @@ from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
-_LOGGER = get_logger(__name__)
+LOGGER = get_logger(__name__)
 
 # Wait for 1 second before opening a browser. This gives old tabs a chance to
 # reconnect.
@@ -54,7 +54,7 @@ NEW_VERSION_TEXT = """
 
 
 def _set_up_signal_handler(server: Server) -> None:
-    _LOGGER.debug("Setting up signal handler")
+    LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
         # The server will shut down its threads and exit its loop.
@@ -158,7 +158,7 @@ def _on_server_start(server: Server) -> None:
     try:
         secrets.load_if_toml_exists()
     except Exception as ex:
-        _LOGGER.error(f"Failed to load {SECRETS_FILE_LOC}", exc_info=ex)
+        LOGGER.error(f"Failed to load {SECRETS_FILE_LOC}", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
