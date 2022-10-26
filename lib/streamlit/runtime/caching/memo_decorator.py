@@ -527,6 +527,7 @@ class MemoCache(Cache):
         try:
             os.remove(path)
         except FileNotFoundError:
+            # The file is already removed.
             pass
         except Exception as ex:
             _LOGGER.exception(

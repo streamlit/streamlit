@@ -567,6 +567,8 @@ class ScriptRunner:
             rerun_exception_data = e.rerun_data
 
         except StopException:
+            # This is thrown when the script executes `st.stop()`.
+            # We don't have to do anything here.
             pass
 
         except Exception as ex:
