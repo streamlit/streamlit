@@ -197,10 +197,6 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
-
         Example
         -------
         >>> chart_data = pd.DataFrame(
