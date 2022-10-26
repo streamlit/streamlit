@@ -329,6 +329,8 @@ class DeltaGenerator(
         return self._parent._main_dg if self._parent else self
 
     def __getattr__(self, name: str) -> Callable[..., NoReturn]:
+        import streamlit as st
+
         streamlit_methods = [
             method_name for method_name in dir(st) if callable(getattr(st, method_name))
         ]
