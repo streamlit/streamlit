@@ -380,8 +380,8 @@ class _CacheFuncHasher:
             h = hashlib.new("md5")
             try:
                 reduce_data = obj.__reduce__()
-            except BaseException as e:
-                raise UnhashableTypeError() from e
+            except Exception as ex:
+                raise UnhashableTypeError() from ex
 
             for item in reduce_data:
                 self.update(h, item)

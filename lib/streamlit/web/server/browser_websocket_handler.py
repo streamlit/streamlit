@@ -33,7 +33,7 @@ from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedE
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import is_url_from_allowed_origins
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
@@ -138,11 +138,11 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
             msg = BackMsg()
             msg.ParseFromString(payload)
-            LOGGER.debug("Received the following back message:\n%s", msg)
+            _LOGGER.debug("Received the following back message:\n%s", msg)
 
-        except BaseException as e:
-            LOGGER.error(e)
-            self._runtime.handle_backmsg_deserialization_exception(self._session_id, e)
+        except Exception as ex:
+            _LOGGER.error(ex)
+            self._runtime.handle_backmsg_deserialization_exception(self._session_id, ex)
             return
 
         if msg.WhichOneof("type") == "close_connection":
@@ -151,7 +151,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             if config.get_option("global.developmentMode"):
                 self._runtime.stop()
             else:
-                LOGGER.warning(
+                _LOGGER.warning(
                     "Client tried to close connection when " "not in development mode"
                 )
         else:

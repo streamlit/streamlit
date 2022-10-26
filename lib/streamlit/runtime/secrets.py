@@ -25,7 +25,7 @@ import streamlit as st
 import streamlit.watcher.path_watcher
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
 
 
@@ -201,7 +201,7 @@ class Secrets(Mapping[str, Any]):
 
     def _on_secrets_file_changed(self, _) -> None:
         with self._lock:
-            LOGGER.debug(f"Secrets file {self._file_path} changed, reloading")
+            _LOGGER.debug(f"Secrets file {self._file_path} changed, reloading")
             self._reset()
             self._parse(print_exceptions=True)
 
