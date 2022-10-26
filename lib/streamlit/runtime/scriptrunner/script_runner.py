@@ -412,6 +412,7 @@ class ScriptRunner:
         _LOGGER.debug("Running script %s", rerun_data)
 
         start_time: float = timer()
+        prep_time: float = 0  # This will be overwritten once preparations are done.
 
         # Reset DeltaGenerators, widgets, media files.
         runtime.get_instance().media_file_mgr.clear_session_refs()
@@ -422,7 +423,6 @@ class ScriptRunner:
         main_page_info = list(pages.values())[0]
         current_page_info = None
         uncaught_exception = None
-        prep_time: float = 0
 
         if rerun_data.page_script_hash:
             current_page_info = pages.get(rerun_data.page_script_hash, None)
