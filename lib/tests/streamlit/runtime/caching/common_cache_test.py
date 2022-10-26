@@ -15,6 +15,7 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
+import unittest
 from typing import List
 from unittest.mock import patch
 
@@ -30,8 +31,10 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
     script_run_context,
 )
-from streamlit.runtime.state import SessionState
+from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
@@ -48,13 +51,6 @@ def get_text_or_block(delta):
 
 class CommonCacheTest(DeltaGeneratorTestCase):
     def tearDown(self):
-        # Some of these tests reach directly into CALL_STACK data and twiddle it.
-        # Reset default values on teardown.
-        MEMO_CALL_STACK._cached_func_stack = []
-        MEMO_CALL_STACK._suppress_st_function_warning = 0
-        SINGLETON_CALL_STACK._cached_func_stack = []
-        SINGLETON_CALL_STACK._suppress_st_function_warning = 0
-
         # Clear caches
         st.experimental_memo.clear()
         st.experimental_singleton.clear()
@@ -194,8 +190,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 session_id="test session id",
                 _enqueue=forward_msg_queue.enqueue,
                 query_string="",
-                session_state=SessionState(),
-                uploaded_file_mgr=None,
+                session_state=SafeSessionState(SessionState()),
+                uploaded_file_mgr=UploadedFileManager(),
                 page_script_hash="",
                 user_info={"email": "test@test.com"},
             ),
@@ -273,12 +269,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay(self, _, cache_decorator):
         @cache_decorator
         def foo(i):
@@ -293,12 +284,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         assert text == ["1", "---", "1"]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_nested(self, _, cache_decorator):
         @cache_decorator
         def inner(i):
@@ -334,12 +320,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             "3",
         ]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_outer_blocks(self, _, cache_decorator):
         @cache_decorator
         def foo(i):
@@ -354,12 +335,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         text = self.get_text_delta_contents()
         assert text == ["1", "---", "1"]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_sidebar(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -384,12 +360,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
         assert paths == [[1, 0], [0, 0], [1, 1]]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_inner_blocks(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -425,12 +396,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             [0, 5, 0],
         ]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_inner_direct(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -452,12 +418,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
         assert paths == [[0, 0], [0, 0, 0], [0, 1], [0, 2], [0, 2, 0]]
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay_outer_direct(self, _, cache_decorator):
         cont = st.container()
 
@@ -471,38 +432,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             foo(1)
             st.text("---")
             foo(1)
-
-    @parameterized.expand(
-        [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
-    )
-    def test_multithreaded_call_stack(self, _, call_stack):
-        """CachedFunctionCallStack should work across multiple threads."""
-
-        def get_counter():
-            return len(call_stack._cached_func_stack)
-
-        def set_counter(val):
-            call_stack._cached_func_stack = ["foo"] * val
-
-        self.assertEqual(0, get_counter())
-        set_counter(1)
-        self.assertEqual(1, get_counter())
-
-        values_in_thread = []
-
-        def thread_test():
-            values_in_thread.append(get_counter())
-            set_counter(55)
-            values_in_thread.append(get_counter())
-
-        thread = threading.Thread(target=thread_test)
-        thread.start()
-        thread.join()
-
-        self.assertEqual([0, 55], values_in_thread)
-
-        # The other thread should not have modified the main thread
-        self.assertEqual(1, get_counter())
 
     @parameterized.expand(
         [
@@ -572,12 +501,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         self.assertEqual(2, foo_call_count[0])
         self.assertEqual(1, bar_call_count[0])
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_without_spinner(self, _, cache_decorator):
         """If the show_spinner flag is not set, the report queue should be
         empty.
@@ -590,12 +514,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_without_spinner(3)
         self.assertTrue(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_with_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, there should be one element in the
         report queue.
@@ -608,12 +527,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_with_spinner(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_with_custom_text_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, there should be one element in the
         report queue.
@@ -626,12 +540,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_with_spinner_custom_text(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand(
-        [
-            ("memo", memo),
-            ("singleton", singleton),
-        ]
-    )
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_with_empty_text_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, even if it is empty text,
         there should be one element in the report queue.
@@ -643,3 +552,127 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         function_with_spinner_empty_text(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
+
+
+class CommonCacheThreadingTest(unittest.TestCase):
+    # The number of threads to run our tests on
+    NUM_THREADS = 50
+
+    def tearDown(self):
+        # Some of these tests reach directly into CALL_STACK data and twiddle it.
+        # Reset default values on teardown.
+        MEMO_CALL_STACK._cached_func_stack = []
+        MEMO_CALL_STACK._suppress_st_function_warning = 0
+        SINGLETON_CALL_STACK._cached_func_stack = []
+        SINGLETON_CALL_STACK._suppress_st_function_warning = 0
+
+        # Clear caches
+        st.experimental_memo.clear()
+        st.experimental_singleton.clear()
+
+        # And some tests create widgets, and can result in DuplicateWidgetID
+        # errors on subsequent runs.
+        ctx = script_run_context.get_script_run_ctx()
+        if ctx is not None:
+            ctx.widget_ids_this_run.clear()
+            ctx.widget_user_keys_this_run.clear()
+
+        super().tearDown()
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_get_cache(self, _, cache_decorator):
+        """Accessing a cached value is safe from multiple threads."""
+
+        cached_func_call_count = [0]
+
+        @cache_decorator
+        def foo():
+            cached_func_call_count[0] += 1
+            return 42
+
+        def call_foo(_: int) -> None:
+            self.assertEqual(42, foo())
+
+        # Call foo from multiple threads and assert no errors.
+        call_on_threads(call_foo, self.NUM_THREADS)
+
+        # We don't currently guarantee that the cached function will only be called
+        # once (multiple threads may compute the cached value independently if they
+        # access the function at ~the same time).
+        # TODO: But this might be a useful optimization for the future!
+        # self.assertEqual(1, cached_func_call_count[0])
+
+    @parameterized.expand(
+        [("memo", memo, memo.clear), ("singleton", singleton, singleton.clear)]
+    )
+    def test_clear_all_caches(self, _, cache_decorator, clear_cache_func):
+        """Clearing all caches is safe to call from multiple threads."""
+
+        @cache_decorator
+        def foo():
+            return 42
+
+        # Populate the cache
+        foo()
+
+        def clear_caches(_: int) -> None:
+            clear_cache_func()
+
+        # Clear the cache from a bunch of threads and assert no errors.
+        call_on_threads(clear_caches, self.NUM_THREADS)
+
+        # Sanity check: ensure we can still call our cached function.
+        self.assertEqual(42, foo())
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_clear_single_cache(self, _, cache_decorator):
+        """It's safe to clear a single function cache from multiple threads."""
+
+        @cache_decorator
+        def foo():
+            return 42
+
+        # Populate the cache
+        foo()
+
+        def clear_foo(_: int) -> None:
+            foo.clear()
+
+        # Clear it from a bunch of threads and assert no errors.
+        call_on_threads(clear_foo, self.NUM_THREADS)
+
+        # Sanity check: ensure we can still call our cached function.
+        self.assertEqual(42, foo())
+
+    @parameterized.expand(
+        [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
+    )
+    def test_multithreaded_call_stack(self, _, call_stack):
+        """CachedFunctionCallStack works across multiple threads."""
+
+        def get_counter():
+            return len(call_stack._cached_func_stack)
+
+        def set_counter(val):
+            call_stack._cached_func_stack = ["foo"] * val
+
+        self.assertEqual(0, get_counter())
+        set_counter(1)
+        self.assertEqual(1, get_counter())
+
+        values_in_thread = []
+
+        def thread_test():
+            values_in_thread.append(get_counter())
+            set_counter(55)
+            values_in_thread.append(get_counter())
+
+        thread = ExceptionCapturingThread(target=thread_test)
+        thread.start()
+        thread.join()
+        thread.assert_no_unhandled_exception()
+
+        self.assertEqual([0, 55], values_in_thread)
+
+        # The other thread should not have modified the main thread
+        self.assertEqual(1, get_counter())
