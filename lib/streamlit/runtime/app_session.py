@@ -237,9 +237,9 @@ class AppSession:
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
-        except BaseException as e:
-            LOGGER.error(e)
-            self.handle_backmsg_exception(e)
+        except Exception as ex:
+            LOGGER.error(ex)
+            self.handle_backmsg_exception(ex)
 
     def handle_backmsg_exception(self, e: BaseException) -> None:
         """Handle an Exception raised while processing a BackMsg from the browser."""
@@ -632,10 +632,10 @@ class AppSession:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
             self._enqueue_forward_msg(msg)
-        except Exception as e:
+        except Exception as ex:
             # Users may never even install Git in the first place, so this
             # error requires no action. It can be useful for debugging.
-            LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
+            LOGGER.debug("Obtaining Git information produced an error", exc_info=ex)
 
     def _handle_rerun_script_request(
         self, client_state: Optional[ClientState] = None

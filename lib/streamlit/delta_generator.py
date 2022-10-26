@@ -35,7 +35,6 @@ from typing import (
 import click
 from typing_extensions import Final, Literal
 
-import streamlit as st
 from streamlit import config, cursor, env_util, logger, runtime, type_util, util
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
@@ -102,9 +101,6 @@ if TYPE_CHECKING:
 
 
 LOGGER: Final = get_logger(__name__)
-
-# Save the type built-in for when we override the name "type".
-_type = type
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
