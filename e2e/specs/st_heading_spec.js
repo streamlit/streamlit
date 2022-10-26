@@ -24,11 +24,11 @@ describe("st.header", () => {
   });
 
   it("displays correct number of title elements", () => {
-    cy.get(".element-container .stMarkdown h1").should("have.length", 2);
+    cy.get(".element-container .stMarkdown h1").should("have.length", 3);
   });
 
   it("displays correct number of subheader elements", () => {
-    cy.get(".element-container .stMarkdown h2").should("have.length", 2);
+    cy.get(".element-container .stMarkdown h3").should("have.length", 2);
   });
 
   it("displays a header", () => {
@@ -50,5 +50,13 @@ describe("st.header", () => {
       .first()
       .find("a")
       .should("have.attr", "href");
+  })
+
+  it("should display links correctly", () => {
+    cy
+      .getIndexed(".element-container .stMarkdown h1", 2)
+      .matchThemedSnapshots(
+        "title_link"
+      );
   })
 });
