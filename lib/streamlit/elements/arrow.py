@@ -32,7 +32,6 @@ from pandas import DataFrame
 from pandas.io.formats.style import Styler
 from typing_extensions import Literal, TypedDict
 
-import streamlit as st
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics

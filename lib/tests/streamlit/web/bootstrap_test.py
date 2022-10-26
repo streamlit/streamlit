@@ -360,7 +360,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
         bootstrap._on_server_start(Mock())
         mock_log_error.assert_called_once_with(
-            f"Failed to load {SECRETS_FILE_LOC}",
+            "Failed to load secrets.toml file",
             exc_info=mock_exception,
         )
 

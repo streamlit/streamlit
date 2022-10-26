@@ -135,14 +135,16 @@ class Credentials(object):
             self.activation = _verify_email(data.get("email"))
         except FileNotFoundError:
             if auto_resolve:
-                return self.activate(show_instructions=not auto_resolve)
+                self.activate(show_instructions=not auto_resolve)
+                return
             raise RuntimeError(
                 'Credentials not found. Please run "streamlit activate".'
             )
         except Exception:
             if auto_resolve:
                 self.reset()
-                return self.activate(show_instructions=not auto_resolve)
+                self.activate(show_instructions=not auto_resolve)
+                return
             raise Exception(
                 textwrap.dedent(
                     """
@@ -202,6 +204,8 @@ class Credentials(object):
         try:
             self.load()
         except RuntimeError:
+            # Runtime Error is raised if credentials file is not found. In that case,
+            # `self.activation` is None and we will show the activation prompt below.
             pass
 
         if self.activation:
