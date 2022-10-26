@@ -66,7 +66,7 @@ def setup_formatter(logger: logging.Logger) -> None:
 
     logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
 
-    # Import here to avoid circular imports.
+    # Import here to avoid circular imports
     from streamlit import config
 
     if config._config_options:
