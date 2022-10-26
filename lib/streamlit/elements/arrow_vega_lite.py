@@ -22,6 +22,7 @@ from typing_extensions import Final, Literal
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -95,6 +96,10 @@ class ArrowVegaLiteMixin:
 
         """
         proto = ArrowVegaLiteChartProto()
+        if theme != "streamlit" and theme != None:
+            raise StreamlitAPIException(
+                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+            )
         marshall(
             proto,
             data,
