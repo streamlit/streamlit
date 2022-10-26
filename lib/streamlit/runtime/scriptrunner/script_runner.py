@@ -422,6 +422,7 @@ class ScriptRunner:
         main_page_info = list(pages.values())[0]
         current_page_info = None
         uncaught_exception = None
+        prep_time = 0
 
         if rerun_data.page_script_hash:
             current_page_info = pages.get(rerun_data.page_script_hash, None)
@@ -511,7 +512,7 @@ class ScriptRunner:
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
-                exception=e,
+                exception=ex,
             )
             return
 
