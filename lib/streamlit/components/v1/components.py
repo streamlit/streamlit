@@ -149,9 +149,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         try:
             serialized_json_args = json.dumps(json_args)
-        except BaseException as e:
+        except Exception as ex:
             raise MarshallComponentException(
-                "Could not convert component args to JSON", e
+                "Could not convert component args to JSON", ex
             )
 
         def marshall_component(dg, element: Element) -> Union[Any, Type[NoValue]]:

@@ -102,7 +102,7 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
             output_format="auto",
             image_id="favicon",
         )
-    except BaseException:
+    except Exception:
         if isinstance(page_icon, str):
             # This fall-thru handles emoji shortcode strings (e.g. ":shark:"),
             # which aren't valid filenames and so will cause an Exception from
@@ -275,5 +275,5 @@ def valid_url(url: str) -> bool:
         if result.scheme == "mailto":
             return all([result.scheme, result.path])
         return all([result.scheme, result.netloc])
-    except:
+    except Exception:
         return False

@@ -44,7 +44,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
     from streamlit.runtime.state import SessionState
 
@@ -148,7 +148,7 @@ class AppSession:
 
         self._debug_last_backmsg_id: Optional[str] = None
 
-        LOGGER.debug("AppSession initialized (id=%s)", self.id)
+        _LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self) -> List[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
@@ -172,7 +172,7 @@ class AppSession:
 
         """
         if self._state != AppSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.debug("Shutting down (id=%s)", self.id)
+            _LOGGER.debug("Shutting down (id=%s)", self.id)
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
@@ -236,11 +236,11 @@ class AppSession:
             elif msg_type == "stop_script":
                 self._handle_stop_script_request()
             else:
-                LOGGER.warning('No handler for "%s"', msg_type)
+                _LOGGER.warning('No handler for "%s"', msg_type)
 
-        except BaseException as e:
-            LOGGER.error(e)
-            self.handle_backmsg_exception(e)
+        except Exception as ex:
+            _LOGGER.error(ex)
+            self.handle_backmsg_exception(ex)
 
     def handle_backmsg_exception(self, e: BaseException) -> None:
         """Handle an Exception raised while processing a BackMsg from the browser."""
@@ -285,7 +285,7 @@ class AppSession:
 
         """
         if self._state == AppSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.warning("Discarding rerun request after shutdown")
+            _LOGGER.warning("Discarding rerun request after shutdown")
             return
 
         if client_state:
@@ -455,7 +455,7 @@ class AppSession:
             # rerun request, for example) while another ScriptRunner is still
             # shutting down. The shutting-down ScriptRunner may still
             # emit events.
-            LOGGER.debug("Ignoring event from non-current ScriptRunner: %s", event)
+            _LOGGER.debug("Ignoring event from non-current ScriptRunner: %s", event)
             return
 
         prev_state = self._state
@@ -633,10 +633,10 @@ class AppSession:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
             self._enqueue_forward_msg(msg)
-        except Exception as e:
+        except Exception as ex:
             # Users may never even install Git in the first place, so this
             # error requires no action. It can be useful for debugging.
-            LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
+            _LOGGER.debug("Obtaining Git information produced an error", exc_info=ex)
 
     def _handle_rerun_script_request(
         self, client_state: Optional[ClientState] = None
@@ -714,7 +714,7 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     base = theme_opts["base"]
     if base is not None:
         if base not in base_map:
-            LOGGER.warning(
+            _LOGGER.warning(
                 f'"{base}" is an invalid value for theme.base.'
                 f" Allowed values include {list(base_map.keys())}."
                 ' Setting theme.base to "light".'
@@ -730,7 +730,7 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     font = theme_opts["font"]
     if font is not None:
         if font not in font_map:
-            LOGGER.warning(
+            _LOGGER.warning(
                 f'"{font}" is an invalid value for theme.font.'
                 f" Allowed values include {list(font_map.keys())}."
                 ' Setting theme.font to "sans serif".'

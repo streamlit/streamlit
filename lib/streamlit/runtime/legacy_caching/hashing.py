@@ -148,7 +148,7 @@ class _HashStack:
         def to_str(v):
             try:
                 return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
-            except:
+            except Exception:
                 return "<Unable to convert item to string>"
 
         # IDEA: Maybe we should remove our internal "hash_funcs" from the
@@ -371,8 +371,8 @@ class _CodeHasher:
             # Re-raise exceptions we hand-raise internally.
             raise
 
-        except BaseException as e:
-            raise InternalHashError(e, obj)
+        except Exception as ex:
+            raise InternalHashError(ex, obj)
 
         finally:
             # In case an UnhashableTypeError (or other) error is thrown, clean up the
@@ -423,8 +423,8 @@ class _CodeHasher:
             hash_func = self._hash_funcs[type_util.get_fqn_type(obj)]
             try:
                 output = hash_func(obj)
-            except BaseException as e:
-                raise UserHashError(e, obj, hash_func=hash_func)
+            except Exception as ex:
+                raise UserHashError(ex, obj, hash_func=hash_func)
 
             return self.to_bytes(output)
 
@@ -675,8 +675,8 @@ class _CodeHasher:
             h = hashlib.new("md5")
             try:
                 reduce_data = obj.__reduce__()
-            except BaseException as e:
-                raise UnhashableTypeError(e, obj)
+            except Exception as ex:
+                raise UnhashableTypeError(ex, obj)
 
             for item in reduce_data:
                 self.update(h, item, context)

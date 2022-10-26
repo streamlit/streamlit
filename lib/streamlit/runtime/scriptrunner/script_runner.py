@@ -46,7 +46,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class ScriptRunnerEvent(Enum):
@@ -274,7 +274,7 @@ class ScriptRunner:
         """
         assert self._is_in_script_thread()
 
-        LOGGER.debug("Beginning script thread")
+        _LOGGER.debug("Beginning script thread")
 
         # Create and attach the thread's ScriptRunContext
         ctx = ScriptRunContext(
@@ -409,7 +409,7 @@ class ScriptRunner:
         """
         assert self._is_in_script_thread()
 
-        LOGGER.debug("Running script %s", rerun_data)
+        _LOGGER.debug("Running script %s", rerun_data)
 
         start_time: float = timer()
 
@@ -504,9 +504,9 @@ class ScriptRunner:
                 optimize=-1,
             )
 
-        except BaseException as e:
+        except Exception as ex:
             # We got a compile error. Send an error event and bail immediately.
-            LOGGER.debug("Fatal script error: %s", e)
+            _LOGGER.debug("Fatal script error: %s", ex)
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
                 self,
@@ -568,9 +568,9 @@ class ScriptRunner:
         except StopException:
             pass
 
-        except BaseException as e:
+        except Exception as ex:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
-            uncaught_exception = e
+            uncaught_exception = ex
             handle_uncaught_app_exception(uncaught_exception)
 
         finally:
@@ -601,7 +601,7 @@ class ScriptRunner:
                 except Exception as ex:
                     # Always capture all exceptions since we want to make sure that
                     # the telemetry never causes any issues.
-                    LOGGER.debug("Failed to create page profile", exc_info=ex)
+                    _LOGGER.debug("Failed to create page profile", exc_info=ex)
             self._on_script_finished(ctx, finished_event)
 
         # Use _log_if_error() to make sure we never ever ever stop running the
@@ -672,14 +672,16 @@ def _clean_problem_modules() -> None:
         try:
             keras = sys.modules["keras"]
             keras.backend.clear_session()
-        except:
+        except Exception:
+            # We don't want to crash the app if we can't clear the Keras session.
             pass
 
     if "matplotlib.pyplot" in sys.modules:
         try:
             plt = sys.modules["matplotlib.pyplot"]
             plt.close("all")
-        except:
+        except Exception:
+            # We don't want to crash the app if we can't close matplotlib
             pass
 
 
@@ -722,4 +724,4 @@ def _log_if_error(fn: Callable[[], None]) -> None:
     try:
         fn()
     except Exception as e:
-        LOGGER.warning(e)
+        _LOGGER.warning(e)

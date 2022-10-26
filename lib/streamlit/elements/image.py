@@ -335,7 +335,7 @@ def image_to_url(
         try:
             with open(image, "rb") as f:
                 image_data = f.read()
-        except:
+        except Exception:
             # When we aren't able to open the image file, we still pass the path to
             # the MediaFileManager - its storage backend may have access to files
             # that Streamlit does not.

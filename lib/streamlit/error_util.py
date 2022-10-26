@@ -17,7 +17,7 @@ from streamlit import config
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 def _print_rich_exception(e: BaseException):
@@ -66,8 +66,9 @@ def _print_rich_exception(e: BaseException):
     )
 
 
-def handle_uncaught_app_exception(e: BaseException) -> None:
+def handle_uncaught_app_exception(ex: BaseException) -> None:
     """Handle an exception that originated from a user app.
+
     By default, we show exceptions directly in the browser. However,
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
@@ -80,7 +81,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
             # Print exception via rich
             # Rich is only a soft dependency
             # -> if not installed, we will use the default traceback formatting
-            _print_rich_exception(e)
+            _print_rich_exception(ex)
             error_logged = True
         except Exception:
             # Rich is not installed or not compatible to our config
@@ -91,11 +92,11 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
     if config.get_option("client.showErrorDetails"):
         if not error_logged:
             # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
-            LOGGER.warning("Uncaught app exception", exc_info=e)
-        st.exception(e)
+            _LOGGER.warning("Uncaught app exception", exc_info=ex)
+        st.exception(ex)
     else:
         if not error_logged:
             # Use LOGGER.error, rather than LOGGER.debug, since we don't
             # show debug logs by default.
-            LOGGER.error("Uncaught app exception", exc_info=e)
-        st.exception(UncaughtAppException(e))
+            _LOGGER.error("Uncaught app exception", exc_info=ex)
+        st.exception(UncaughtAppException(ex))

@@ -22,7 +22,7 @@ from typing_extensions import Final
 
 import streamlit.logger as logger
 
-LOGGER = logger.get_logger(__name__)
+_LOGGER = logger.get_logger(__name__)
 
 PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 
@@ -94,15 +94,15 @@ def should_show_new_version_notice():
     """
     if random.random() >= CHECK_PYPI_PROBABILITY:
         # We don't check PyPI every time this function is called.
-        LOGGER.debug("Skipping PyPI version check")
+        _LOGGER.debug("Skipping PyPI version check")
         return False
 
     try:
         installed_version = _get_installed_streamlit_version()
         latest_version = _get_latest_streamlit_version(timeout=1)
-    except BaseException as e:
+    except Exception as ex:
         # Log this as a debug. We don't care if the user sees it.
-        LOGGER.debug("Failed PyPI version check.\n%s", e)
+        _LOGGER.debug("Failed PyPI version check.\n%s", ex)
         return False
 
     return latest_version > installed_version
