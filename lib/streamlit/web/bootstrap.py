@@ -102,6 +102,7 @@ def _fix_matplotlib_crash() -> None:
 
             matplotlib.use("Agg")
         except ImportError:
+            # Matplotlib is not installed. No need to do anything.
             pass
 
 

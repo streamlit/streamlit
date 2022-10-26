@@ -100,6 +100,7 @@ class Secrets(Mapping[str, Any]):
         try:
             self._parse(print_exceptions=False)
         except FileNotFoundError:
+            # No secrets.toml file exists. That's fine.
             pass
 
     def _reset(self) -> None:

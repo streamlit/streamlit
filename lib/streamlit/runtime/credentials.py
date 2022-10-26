@@ -204,6 +204,8 @@ class Credentials(object):
         try:
             self.load()
         except RuntimeError:
+            # Runtime Error is raised if credentials file is not found. In that case,
+            # `self.activation` is None and we will show the activation prompt below.
             pass
 
         if self.activation:

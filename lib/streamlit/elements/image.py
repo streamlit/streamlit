@@ -329,6 +329,7 @@ def image_to_url(
             if p.scheme:
                 return image
         except UnicodeDecodeError:
+            # If the string runs into a UnicodeDecodeError, we assume it is not a valid URL.
             pass
 
         # Otherwise, try to open it as a file.

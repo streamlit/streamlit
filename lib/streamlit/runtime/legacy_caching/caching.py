@@ -312,6 +312,7 @@ def _write_to_disk_cache(key: str, value: Any) -> None:
         try:
             os.remove(path)
         except (FileNotFoundError, IOError, OSError):
+            # If we can't remove the file, it's not a big deal.
             pass
         raise CacheError("Unable to write to cache: %s" % e)
 
@@ -629,6 +630,7 @@ def cache(
     try:
         wrapped_func.__dict__.update(non_optional_func.__dict__)
     except AttributeError:
+        # For normal functions this should never happen, but if so it's not problematic.
         pass
 
     return cast(F, wrapped_func)
