@@ -49,8 +49,8 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-# Create and enable streamlit theme
-STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
+# no theme applied to charts
+alt.themes.enable("none")
 
 
 class ChartType(Enum):
@@ -566,7 +566,7 @@ def _generate_chart(
 
     chart = getattr(
         # Built-in charts use the streamlit theme as default. So, we set usermeta explicitly here.
-        alt.Chart(data, width=width, height=height, usermeta=STREAMLIT_THEME),
+        alt.Chart(data, width=width, height=height),
         "mark_" + chart_type.value,
     )().encode(
         x=alt.X(

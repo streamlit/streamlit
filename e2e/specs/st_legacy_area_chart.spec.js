@@ -24,6 +24,6 @@ describe("st._legacy_area_chart", () => {
   it("displays an area chart", () => {
     cy.get(".element-container [data-testid='stVegaLiteChart']")
       .find("canvas")
-      .should("have.css", "height", "300px");
+      .should("have.css", "height", "350px");
   });
 });

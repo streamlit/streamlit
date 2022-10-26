@@ -22,6 +22,6 @@ describe("st._legacy_bar_chart", () => {
   it("displays a bar chart", () => {
     cy.get(".element-container [data-testid='stVegaLiteChart']")
       .find("canvas")
-      .should("have.css", "height", "300px");
+      .should("have.css", "height", "350px");
   });
 });
