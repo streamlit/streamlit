@@ -154,7 +154,6 @@ class DataFrameSelectorMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a line chart.
 
@@ -223,7 +222,6 @@ class DataFrameSelectorMixin:
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
-                theme=theme,
             )
         else:
             return self.dg._legacy_line_chart(
@@ -243,7 +241,6 @@ class DataFrameSelectorMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display an area chart.
 
@@ -287,10 +284,6 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
-
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -312,7 +305,6 @@ class DataFrameSelectorMixin:
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
-                theme=theme,
             )
         else:
             return self.dg._legacy_area_chart(
@@ -332,7 +324,6 @@ class DataFrameSelectorMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a bar chart.
 
@@ -376,10 +367,6 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
-
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -402,7 +389,6 @@ class DataFrameSelectorMixin:
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
-                theme=theme,
             )
         else:
             return self.dg._legacy_bar_chart(

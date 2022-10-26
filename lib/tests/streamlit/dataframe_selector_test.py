@@ -118,7 +118,6 @@ class DataFrameSelectorTest(unittest.TestCase):
             width=100,
             height=200,
             use_container_width=True,
-            theme="streamlit",
         )
 
     @patch.object(DeltaGenerator, "_legacy_area_chart")
@@ -144,7 +143,6 @@ class DataFrameSelectorTest(unittest.TestCase):
             width=100,
             height=200,
             use_container_width=True,
-            theme="streamlit",
         )
 
     @patch.object(DeltaGenerator, "_legacy_bar_chart")
@@ -170,7 +168,6 @@ class DataFrameSelectorTest(unittest.TestCase):
             width=100,
             height=200,
             use_container_width=True,
-            theme="streamlit",
         )
 
     @patch.object(DeltaGenerator, "_legacy_altair_chart")

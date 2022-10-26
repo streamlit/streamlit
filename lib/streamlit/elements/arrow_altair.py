@@ -70,7 +70,6 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a line chart.
 
@@ -110,10 +109,6 @@ class ArrowAltairMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
-
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -128,12 +123,8 @@ class ArrowAltairMixin:
 
         """
         proto = ArrowVegaLiteChartProto()
-        if theme != "streamlit" and theme != None:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
-            )
         chart = _generate_chart(ChartType.LINE, data, x, y, width, height)
-        marshall(proto, chart, use_container_width, theme)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
@@ -148,7 +139,6 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display an area chart.
 
@@ -186,9 +176,6 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-        theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
 
         Example
         -------
@@ -205,12 +192,8 @@ class ArrowAltairMixin:
         """
 
         proto = ArrowVegaLiteChartProto()
-        if theme != "streamlit" and theme != None:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
-            )
         chart = _generate_chart(ChartType.AREA, data, x, y, width, height)
-        marshall(proto, chart, use_container_width, theme)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
@@ -225,7 +208,6 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a bar chart.
 
@@ -264,9 +246,6 @@ class ArrowAltairMixin:
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
             This argument can only be supplied by keyword.
-        theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
 
         Example
         -------
@@ -283,12 +262,8 @@ class ArrowAltairMixin:
         """
 
         proto = ArrowVegaLiteChartProto()
-        if theme != "streamlit" and theme != None:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
-            )
         chart = _generate_chart(ChartType.BAR, data, x, y, width, height)
-        marshall(proto, chart, use_container_width, theme)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
@@ -565,7 +540,6 @@ def _generate_chart(
         tooltips.append(alt.Tooltip(color_column, title="label"))
 
     chart = getattr(
-        # Built-in charts use the streamlit theme as default. So, we set usermeta explicitly here.
         alt.Chart(data, width=width, height=height),
         "mark_" + chart_type.value,
     )().encode(
