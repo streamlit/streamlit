@@ -202,7 +202,7 @@ class Secrets(Mapping[str, Any]):
 
     def _on_secrets_file_changed(self, _) -> None:
         with self._lock:
-            _LOGGER.debug(f"Secrets file {self._file_path} changed, reloading")
+            _LOGGER.debug("Secrets file %s changed, reloading", self._file_path)
             self._reset()
             self._parse(print_exceptions=True)
 
