@@ -43,7 +43,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
-_LOGGER = get_logger(__name__)
+LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
     from streamlit.runtime.state import SessionState
 
@@ -147,7 +147,7 @@ class AppSession:
 
         self._debug_last_backmsg_id: Optional[str] = None
 
-        _LOGGER.debug("AppSession initialized (id=%s)", self.id)
+        LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self) -> List[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
@@ -171,7 +171,7 @@ class AppSession:
 
         """
         if self._state != AppSessionState.SHUTDOWN_REQUESTED:
-            _LOGGER.debug("Shutting down (id=%s)", self.id)
+            LOGGER.debug("Shutting down (id=%s)", self.id)
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
@@ -235,10 +235,10 @@ class AppSession:
             elif msg_type == "stop_script":
                 self._handle_stop_script_request()
             else:
-                _LOGGER.warning('No handler for "%s"', msg_type)
+                LOGGER.warning('No handler for "%s"', msg_type)
 
         except Exception as ex:
-            _LOGGER.error(ex)
+            LOGGER.error(ex)
             self.handle_backmsg_exception(ex)
 
     def handle_backmsg_exception(self, e: BaseException) -> None:
@@ -284,7 +284,7 @@ class AppSession:
 
         """
         if self._state == AppSessionState.SHUTDOWN_REQUESTED:
-            _LOGGER.warning("Discarding rerun request after shutdown")
+            LOGGER.warning("Discarding rerun request after shutdown")
             return
 
         if client_state:
@@ -454,7 +454,7 @@ class AppSession:
             # rerun request, for example) while another ScriptRunner is still
             # shutting down. The shutting-down ScriptRunner may still
             # emit events.
-            _LOGGER.debug("Ignoring event from non-current ScriptRunner: %s", event)
+            LOGGER.debug("Ignoring event from non-current ScriptRunner: %s", event)
             return
 
         prev_state = self._state
@@ -635,7 +635,7 @@ class AppSession:
         except Exception as ex:
             # Users may never even install Git in the first place, so this
             # error requires no action. It can be useful for debugging.
-            _LOGGER.debug("Obtaining Git information produced an error", exc_info=ex)
+            LOGGER.debug("Obtaining Git information produced an error", exc_info=ex)
 
     def _handle_rerun_script_request(
         self, client_state: Optional[ClientState] = None
@@ -713,7 +713,7 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     base = theme_opts["base"]
     if base is not None:
         if base not in base_map:
-            _LOGGER.warning(
+            LOGGER.warning(
                 f'"{base}" is an invalid value for theme.base.'
                 f" Allowed values include {list(base_map.keys())}."
                 ' Setting theme.base to "light".'
@@ -729,7 +729,7 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     font = theme_opts["font"]
     if font is not None:
         if font not in font_map:
-            _LOGGER.warning(
+            LOGGER.warning(
                 f'"{font}" is an invalid value for theme.font.'
                 f" Allowed values include {list(font_map.keys())}."
                 ' Setting theme.font to "sans serif".'
