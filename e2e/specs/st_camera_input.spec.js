@@ -37,7 +37,7 @@ describe("st.camera_input", () => {
       .contains("Take Photo")
       .click();
 
-    cy.get("img").should("have.length.at.least", 2);
+    cy.get("img", { timeout: 10000 }).should("have.length.at.least", 2);
 
     cy.get("[data-testid='stImage']").should("have.length.at.least", 1);
   });
