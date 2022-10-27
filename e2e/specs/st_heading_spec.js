@@ -53,8 +53,9 @@ describe("st.header", () => {
   })
 
   it("should display links correctly", () => {
+    cy.log("Got in here!")
     cy
-      .getIndexed(".element-container .stMarkdown h1", 2)
+      .getIndexed(".element-container .stMarkdown h1", 3)
       .matchThemedSnapshots("heading_link");
   })
 });
