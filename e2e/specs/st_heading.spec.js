@@ -54,7 +54,7 @@ describe("st.header", () => {
 
   it("should display links correctly", () => {
     cy
-      .getIndexed(".element-container .stMarkdown h1", 3)
+      .getIndexed(".element-container .stMarkdown h1", 2)
       .matchThemedSnapshots("heading_link");
   })
 });
