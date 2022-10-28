@@ -473,30 +473,14 @@ export function useDataLoader(
   const onCellEdited = React.useCallback(
     (
       [col, row]: readonly [number, number],
-      newVal: EditableGridCell
+      updatedCell: EditableGridCell
     ): void => {
-      // TODO (lukasmasuch): Check for disabled flag
-      // if (element.disabled === true) {
-      //   // TODO: check for editable flag
-      //   // element.editable === false ||
-      //   return
-      // }
-
-      const currentCell = getCellContentSorted([col, row])
       const column = updatedColumns[col]
-
-      if (
-        !isEditableGridCell(newVal) ||
-        !isEditableGridCell(currentCell) ||
-        !column.isEditable
-      ) {
-        return
-      }
 
       editingState.current.set(
         col,
         getOriginalIndex(row),
-        updateCell(column, newVal.data as DataType)
+        updateCell(column, updatedCell)
       )
     },
     [columns]
@@ -759,12 +743,15 @@ function DataFrame({
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
           // If element is editable, add additional properties:
-          {...(element.editable && {
-            // Support editing:
-            onCellEdited,
-            // Support fill handle for bulk editing
-            fillHandle: true,
-          })}
+          {...(element.editable &&
+            !element.disabled && {
+              // Support editing:
+              onCellEdited,
+              // Support fill handle for bulk editing
+              fillHandle: true,
+              // Support on past of bulk ed
+              onPaste: true,
+            })}
         />
       </Resizable>
     </StyledResizableContainer>

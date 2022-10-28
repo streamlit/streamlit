@@ -31,6 +31,12 @@ import {
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
 import { sprintf } from "sprintf-js"
+import {
+  DropdownCellType,
+  SparklineCellType,
+  DatePickerType,
+  RangeCellType,
+} from "@glideapps/glide-data-grid-cells"
 
 import {
   DataFrameCell,
@@ -56,6 +62,7 @@ export enum ColumnType {
   BarChart = "bar-chart",
   LineChart = "line-chart",
   ProgressChart = "progress-chart",
+  Categorical = "categorical",
   Object = "object", // Fallback for non-editable types show as read-only text
 }
 
@@ -133,6 +140,8 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
   } else if (["int64", "float64", "range"].includes(typeName)) {
     // The default index in pandas uses a range type.
     columnType = ColumnType.Number
+  } else if (typeName === "categorical") {
+    columnType = ColumnType.Categorical
   } else if (typeName.startsWith("list")) {
     columnType = ColumnType.List
   }
@@ -152,6 +161,7 @@ export function isEditableType(type: ColumnType): boolean {
     ColumnType.Time,
     ColumnType.DateTime,
     ColumnType.Url,
+    ColumnType.Categorical,
   ].includes(type)
 }
 
@@ -251,7 +261,7 @@ export function getColumnSortMode(columnType: ColumnType): string {
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */
-export function getTextCell(readonly: boolean, faded: boolean): GridCell {
+export function getTextCell(readonly: boolean, faded: boolean): TextCell {
   const style = faded ? "faded" : "normal"
   return {
     kind: GridCellKind.Text,
@@ -302,7 +312,7 @@ export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
  *
  * @return a filled in text cell.
  */
-function fillTextCell(cell: GridCell, data: DataType): GridCell {
+function fillTextCell(cell: TextCell, data: DataType): GridCell {
   try {
     const cellData = notNullOrUndefined(data) ? data.toString() : ""
     return {
@@ -326,7 +336,7 @@ function fillTextCell(cell: GridCell, data: DataType): GridCell {
  *
  * @return a filled in boolean cell.
  */
-function fillBooleanCell(cell: GridCell, data: any): GridCell {
+function fillBooleanCell(cell: BooleanCell, data: any): GridCell {
   if (notNullOrUndefined(data) && typeof data !== "boolean") {
     return getErrorCell(`Incompatible boolean value: ${data}`)
   }
@@ -346,7 +356,7 @@ function fillBooleanCell(cell: GridCell, data: any): GridCell {
  * @return a filled in number cell.
  */
 function fillNumberCell(
-  cell: GridCell,
+  cell: NumberCell,
   data: DataType,
   typeMetadata?: Record<string, unknown>
 ): GridCell {
@@ -461,10 +471,10 @@ function fillImageCell(cell: GridCell, data: DataType): GridCell {
   } as ImageCell
 }
 
-function fillDateTimeCell(cell: GridCell, data: DataType): GridCell {
-  console.log(data)
-  console.log(typeof data)
-  console.log(cell)
+function fillDateTimeCell(cell: DatePickerType, data: DataType): GridCell {
+  // console.log(data)
+  // console.log(typeof data)
+  // console.log(cell)
 
   return cell
 }
@@ -477,7 +487,7 @@ function fillDateTimeCell(cell: GridCell, data: DataType): GridCell {
  *
  * @return a filled in chart cell.
  */
-function fillChartCell(cell: GridCell, data: DataType): GridCell {
+function fillChartCell(cell: SparklineCellType, data: DataType): GridCell {
   if (!notNullOrUndefined(data)) {
     return getEmptyCell()
   }
@@ -535,11 +545,11 @@ function fillChartCell(cell: GridCell, data: DataType): GridCell {
     ...cell,
     copyData: JSON.stringify(convertedChartData),
     data: {
-      ...(cell as CustomCell)?.data,
+      ...cell.data,
       values: normalizedChartData,
-      displayValues: convertedChartData,
+      displayValues: convertedChartData.map(v => v.toString()),
     },
-  } as CustomCell
+  } as SparklineCellType
 }
 
 /**
@@ -550,7 +560,10 @@ function fillChartCell(cell: GridCell, data: DataType): GridCell {
  *
  * @return a filled in progress cell.
  */
-export function fillProgressCell(cell: GridCell, data: DataType): GridCell {
+export function fillProgressCell(
+  cell: RangeCellType,
+  data: DataType
+): GridCell {
   if (!notNullOrUndefined(data)) {
     return getEmptyCell()
   }
@@ -568,11 +581,34 @@ export function fillProgressCell(cell: GridCell, data: DataType): GridCell {
     ...cell,
     copyData: String(data),
     data: {
-      ...(cell as CustomCell)?.data,
+      ...cell.data,
       value: cellData,
       label: `${Math.round(cellData * 100).toString()}%`,
     },
-  } as CustomCell
+  } as RangeCellType
+}
+
+export function fillCategoricalCell(
+  cell: DropdownCellType,
+  data: DataType
+): GridCell {
+  let cellData = cell.data.value
+  if (notNullOrUndefined(data)) {
+    cellData = data.toString()
+  }
+
+  if (!cell.data.allowedValues.includes(cellData)) {
+    console.log("reset", cell.data.allowedValues, cellData, data)
+    cellData = cell.data.value
+  }
+  return {
+    ...cell,
+    copyData: cellData,
+    data: {
+      ...cell.data,
+      value: cellData,
+    },
+  } as DropdownCellType
 }
 
 /**
@@ -581,8 +617,7 @@ export function fillProgressCell(cell: GridCell, data: DataType): GridCell {
  * result in different cell types.
  *
  * @param columnConfig: The configuration of the column.
- * @param quiverCell: a dataframe cell object from Quiver.
- * @param cssStyles: optional css styles to apply on the cell.
+ * @param data: The raw data to fill in.
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */
@@ -609,7 +644,7 @@ export function getCell(
 
       cellTemplate = fillTextCell(cellTemplate, data)
       break
-    case ColumnType.Object:
+    case ColumnType.Object || ColumnType.Time:
       cellTemplate = {
         kind: GridCellKind.Text,
         data: "",
@@ -698,7 +733,7 @@ export function getCell(
           displayDate: "",
           format: "date",
         },
-      } as CustomCell
+      } as DatePickerType
 
       cellTemplate = fillDateTimeCell(cellTemplate, data)
       break
@@ -714,25 +749,40 @@ export function getCell(
           displayDate: "",
           format: "datetime-local",
         },
-      } as CustomCell
+      } as DatePickerType
 
       cellTemplate = fillDateTimeCell(cellTemplate, data)
       break
-    case ColumnType.Time:
+    case ColumnType.Categorical:
+      if (
+        !(
+          columnConfig.columnTypeMetadata &&
+          "options" in columnConfig.columnTypeMetadata &&
+          Array.isArray(columnConfig.columnTypeMetadata["options"]) &&
+          columnConfig.columnTypeMetadata["options"].length > 0
+        )
+      ) {
+        return getErrorCell(
+          "No options provided.",
+          "The categorical cell type requires a list of options provided in the column metadata"
+        )
+      }
+
+      let options = columnConfig.columnTypeMetadata["options"]
+
       cellTemplate = {
         kind: GridCellKind.Custom,
         allowOverlay: true,
         copyData: "",
         contentAlign,
         data: {
-          kind: "date-picker-cell",
-          date: undefined,
-          displayDate: "",
-          format: "time",
+          kind: "dropdown-cell",
+          allowedValues: options,
+          value: options[0],
+          readonly,
         },
-      } as CustomCell
-
-      cellTemplate = fillDateTimeCell(cellTemplate, data)
+      } as DropdownCellType
+      cellTemplate = fillCategoricalCell(cellTemplate, data)
       break
     case ColumnType.LineChart:
       cellTemplate = {
@@ -747,7 +797,7 @@ export function getCell(
           graphKind: "line",
           yAxis: [0, 1],
         },
-      } as CustomCell
+      } as SparklineCellType
 
       cellTemplate = fillChartCell(cellTemplate, data)
       break
@@ -763,7 +813,7 @@ export function getCell(
           graphKind: "bar",
           yAxis: [0, 1],
         },
-      } as CustomCell
+      } as SparklineCellType
 
       cellTemplate = fillChartCell(cellTemplate, data)
       break
@@ -782,7 +832,7 @@ export function getCell(
           label: `0%`,
           measureLabel: "100%",
         },
-      } as CustomCell
+      } as RangeCellType
 
       cellTemplate = fillProgressCell(cellTemplate, data)
       break
@@ -883,10 +933,31 @@ export function getCellFromQuiver(
 
 export function updateCell(
   columnConfig: CustomColumn,
-  newValue: DataType
+  updatedCell: EditableGridCell
 ): GridCell {
-  return {
-    ...getCell(columnConfig, newValue),
-    lastUpdated: performance.now(),
+  switch (columnConfig.columnType) {
+    case ColumnType.Text ||
+      ColumnType.Boolean ||
+      ColumnType.Number ||
+      ColumnType.Url:
+      return {
+        ...getCell(columnConfig, updatedCell.data),
+        lastUpdated: performance.now(),
+      }
+    case ColumnType.Categorical:
+      return {
+        ...getCell(columnConfig, (updatedCell as DropdownCellType).data.value),
+        lastUpdated: performance.now(),
+      }
+    case ColumnType.Date || ColumnType.DateTime:
+      return {
+        ...getCell(columnConfig, (updatedCell as DatePickerType).data.date),
+        lastUpdated: performance.now(),
+      }
+    default:
+      // This should never happen
+      return getErrorCell(
+        `Unsupported cell type for editing: ${columnConfig.columnType}`
+      )
   }
 }
