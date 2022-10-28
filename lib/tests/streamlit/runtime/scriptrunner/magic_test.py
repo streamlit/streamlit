@@ -27,7 +27,7 @@ class MagicTest(unittest.TestCase):
     substitutions have been made.
     """
 
-    def _testCode(self, code, expected_count):
+    def _testCode(self, code: str, expected_count: int) -> None:
         tree = magic.add_magic(code, "./")
         count = 0
         for node in ast.walk(tree):
@@ -38,9 +38,7 @@ class MagicTest(unittest.TestCase):
         self.assertEqual(
             expected_count,
             count,
-            ("There must be exactly {} streamlit nodes, but found {}").format(
-                expected_count, count
-            ),
+            f"There must be exactly {expected_count} streamlit nodes, but found {count}",
         )
 
     def test_simple_statement(self):
