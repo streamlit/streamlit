@@ -18,8 +18,9 @@ describe("st.graphviz_chart", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
 
+    // Running status widget often concludes before charts loaded
     // Wait until charts are no longer loading
-    cy.get('.stAlert', { timeout: 10000 }).should('not.exist');
+    cy.get('.stAlert', { timeout: 15000 }).should('not.exist');
 
     cy.prepForElementSnapshots();
   });
