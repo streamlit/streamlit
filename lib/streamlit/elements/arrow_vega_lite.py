@@ -95,11 +95,11 @@ class ArrowVegaLiteMixin:
         translated to the syntax shown above.
 
         """
-        proto = ArrowVegaLiteChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
+        proto = ArrowVegaLiteChartProto()
         marshall(
             proto,
             data,
