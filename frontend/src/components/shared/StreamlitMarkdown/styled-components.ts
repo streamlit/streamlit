@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 export interface StyledStreamlitMarkdownProps {
@@ -25,15 +26,20 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
+function sharedMarkdownStyle(theme: Theme): any {
+  return {
+    a: {
+      color: theme.colors.linkText,
+    },
+  }
+}
+
 export const StyledStreamlitMarkdown =
   styled.div<StyledStreamlitMarkdownProps>(
     ({ theme, isCaption, isInSidebar }) => ({
       fontFamily: theme.genericFonts.bodyFont,
       marginBottom: `-${theme.spacing.lg}`,
-      a: {
-        color: theme.colors.linkText,
-      },
-
+      ...sharedMarkdownStyle(theme),
       p: {
         wordBreak: "break-word",
       },
@@ -141,6 +147,7 @@ export const StyledHeaderContainer = styled.div(({ theme }) => ({
   "h1, h2, h3, h4, h5, h6, span": {
     scrollMarginTop: theme.spacing.threeXL,
   },
+  ...sharedMarkdownStyle(theme),
 }))
 
 export const StyledHeaderContent = styled.span(() => ({
