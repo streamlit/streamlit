@@ -14,7 +14,8 @@
 
 import ast
 import sys
-from typing import Final
+
+from typing_extensions import Final
 
 # When a Streamlit app is magicified, we insert a `magic_funcs` import near the top of
 # its module's AST:
