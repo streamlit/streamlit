@@ -72,6 +72,12 @@ class AttrDict(UserDict):  # type: ignore[type-arg]
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
+    def __setattr__(self, key, value):
+        raise NotImplemented
+
+    def __setitem__(self, key, value):
+        raise NotImplemented
+
 
 class Secrets(Mapping[str, Any]):
     """A dict-like class that stores secrets.
