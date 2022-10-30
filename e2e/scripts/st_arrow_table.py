@@ -15,6 +15,7 @@
 import pandas as pd
 
 import streamlit as st
+from tests.streamlit import pyspark_mocks
 
 # NOTE: DO NOT CHANGE the order of elements.
 # Otherwise, snapshots will fail.
@@ -87,3 +88,6 @@ df = pd.DataFrame(
     index=["a", "b"],
 )
 st._arrow_table(df)
+
+"## PySpark DataFrame"
+st._arrow_table(pyspark_mocks.DataFrame())

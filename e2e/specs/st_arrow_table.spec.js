@@ -21,7 +21,7 @@ describe("st._arrow_table", () => {
     cy.prepForElementSnapshots();
 
     // Wait for all the tables to be loaded.
-    cy.get("[data-testid='stTable']").should("have.length", 10);
+    cy.get("[data-testid='stTable']").should("have.length", 11);
   });
 
   it("has consistent visuals", () => {

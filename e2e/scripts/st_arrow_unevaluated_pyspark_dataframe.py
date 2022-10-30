@@ -15,10 +15,14 @@
 import streamlit as st
 from tests.streamlit import pyspark_mocks
 
-st.write("This **markdown** is awesome! :sunglasses:")
+pyspark_dataframe = pyspark_mocks.DataFrame(is_numpy_arr=True, num_of_rows=50000)
 
-st.write("This <b>HTML tag</b> is escaped!")
+st.dataframe(pyspark_dataframe)
 
-st.write(pyspark_mocks.DataFrame())
+st.line_chart(pyspark_dataframe)
 
-st.write("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
+st.bar_chart(pyspark_dataframe)
+
+st.area_chart(pyspark_dataframe)
+
+st.table(pyspark_dataframe)

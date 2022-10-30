@@ -206,6 +206,7 @@ _NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
+_PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -455,9 +456,17 @@ def convert_anything_to_df(
     if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
         return pd.DataFrame([])
 
-    if is_type(df, _SNOWPARK_DF_TYPE_STR) or is_type(df, _SNOWPARK_TABLE_TYPE_STR):
-        df = pd.DataFrame(df.take(max_unevaluated_rows))
+    if (
+        is_type(df, _SNOWPARK_DF_TYPE_STR)
+        or is_type(df, _SNOWPARK_TABLE_TYPE_STR)
+        or is_type(df, _PYSPARK_DF_TYPE_STR)
+    ):
+        if is_type(df, _PYSPARK_DF_TYPE_STR):
+            df = df.limit(max_unevaluated_rows).toPandas()
+        else:
+            df = pd.DataFrame(df.take(max_unevaluated_rows))
         if df.shape[0] == max_unevaluated_rows:
+            df._max_unevaluated_rows_caption_was_shown = True
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
@@ -503,7 +512,7 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
 
     Parameters
     ----------
-    obj : list, tuple, numpy.ndarray, pandas.Series, pandas.DataFrame, snowflake.snowpark.dataframe.DataFrame or snowflake.snowpark.table.Table
+    obj : list, tuple, numpy.ndarray, pandas.Series, pandas.DataFrame, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame or snowflake.snowpark.table.Table
 
     Returns
     -------
@@ -511,6 +520,8 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
 
     """
     if is_snowpark_data_object(obj):
+        obj = convert_anything_to_df(obj)
+    elif is_type(obj, _PYSPARK_DF_TYPE_STR) and callable(getattr(obj, "toPandas")):
         obj = convert_anything_to_df(obj)
 
     if is_dataframe(obj):
