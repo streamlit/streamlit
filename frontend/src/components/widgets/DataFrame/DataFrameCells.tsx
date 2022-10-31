@@ -758,8 +758,8 @@ export function getCell(
         !(
           columnConfig.columnTypeMetadata &&
           "options" in columnConfig.columnTypeMetadata &&
-          Array.isArray(columnConfig.columnTypeMetadata["options"]) &&
-          columnConfig.columnTypeMetadata["options"].length > 0
+          Array.isArray(columnConfig.columnTypeMetadata.options) &&
+          columnConfig.columnTypeMetadata.options.length > 0
         )
       ) {
         return getErrorCell(
@@ -768,8 +768,6 @@ export function getCell(
         )
       }
 
-      let options = columnConfig.columnTypeMetadata["options"]
-
       cellTemplate = {
         kind: GridCellKind.Custom,
         allowOverlay: true,
@@ -777,8 +775,8 @@ export function getCell(
         contentAlign,
         data: {
           kind: "dropdown-cell",
-          allowedValues: options,
-          value: options[0],
+          allowedValues: columnConfig.columnTypeMetadata.options,
+          value: columnConfig.columnTypeMetadata.options[0],
           readonly,
         },
       } as DropdownCellType

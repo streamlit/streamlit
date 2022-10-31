@@ -26,7 +26,6 @@ import {
   CompactSelection,
   GridMouseEventArgs,
   Theme as GlideTheme,
-  isEditableGridCell,
 } from "@glideapps/glide-data-grid"
 import { useColumnSort } from "@glideapps/glide-data-grid-source"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
@@ -35,7 +34,7 @@ import { transparentize } from "color2k"
 import { useTheme } from "@emotion/react"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { Quiver, DataType } from "src/lib/Quiver"
+import { Quiver } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
 import { Theme } from "src/theme"
 import { notNullOrUndefined } from "src/lib/utils"
