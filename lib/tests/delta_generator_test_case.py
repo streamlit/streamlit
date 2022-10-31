@@ -42,9 +42,8 @@ class FakeAppSession(AppSession):
 
 
 class DeltaGeneratorTestCase(unittest.TestCase):
-    def setUp(self, override_root=True):
+    def setUp(self):
         self.forward_msg_queue = ForwardMsgQueue()
-        self.override_root = override_root
         self.orig_report_ctx = None
         self.new_script_run_ctx = ScriptRunContext(
             session_id="test session id",
@@ -56,9 +55,8 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             user_info={"email": "test@test.com"},
         )
 
-        if self.override_root:
-            self.orig_report_ctx = get_script_run_ctx()
-            add_script_run_ctx(threading.current_thread(), self.new_script_run_ctx)
+        self.orig_report_ctx = get_script_run_ctx()
+        add_script_run_ctx(threading.current_thread(), self.new_script_run_ctx)
 
         self.app_session = FakeAppSession()
 
@@ -72,8 +70,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.clear_queue()
-        if self.override_root:
-            add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
+        add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
         Runtime._instance = None
 
     def get_message_from_queue(self, index=-1) -> ForwardMsg:

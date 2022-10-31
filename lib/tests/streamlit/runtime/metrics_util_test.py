@@ -98,7 +98,7 @@ class MetricsUtilTest(unittest.TestCase):
 
 class PageTelemetryTest(DeltaGeneratorTestCase):
     def setUp(self):
-        super().setUp(self)
+        super().setUp()
         ctx = get_script_run_ctx()
         ctx.reset()
         ctx.gather_usage_stats = True
