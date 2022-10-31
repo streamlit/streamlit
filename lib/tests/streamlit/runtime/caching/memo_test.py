@@ -49,7 +49,7 @@ def as_cached_result(value: Any) -> MultiCacheResults:
 
 
 def as_replay_test_data() -> MultiCacheResults:
-    """Creates cached results for a function that returned `value`
+    """Creates cached results for a function that returned 1
     and executed `st.text(1)`.
     """
     widget_key = _make_widget_key([], CacheType.MEMO)
