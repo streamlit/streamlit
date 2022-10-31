@@ -13,18 +13,16 @@
 # limitations under the License.
 
 import streamlit as st
+from tests.streamlit import pyspark_mocks
 
-st.header("This header is awesome!")
-st.header("This header is awesome too!", anchor="awesome-header")
+pyspark_dataframe = pyspark_mocks.DataFrame(is_numpy_arr=True, num_of_rows=50000)
 
-st.title("`Code` - Title without Anchor")
-st.title("`Code` - Title with Anchor", anchor="title")
+st.dataframe(pyspark_dataframe)
 
+st.line_chart(pyspark_dataframe)
 
-st.subheader("`Code` - Subheader without Anchor")
-st.subheader(
-    """`Code` - Subheader with Anchor [test_link](href)""",
-    anchor="subheader",
-)
+st.bar_chart(pyspark_dataframe)
 
-st.title("a [link]()")
+st.area_chart(pyspark_dataframe)
+
+st.table(pyspark_dataframe)

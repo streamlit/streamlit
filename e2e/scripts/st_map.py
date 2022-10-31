@@ -18,12 +18,17 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockedSnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as MockedSnowparkTable
 
 # Empty map.
 
 st.map()
+
+# st.map with pyspark.sql.DataFrame
+
+st.map(pyspark_mocks.DataFrame(is_map=True))
 
 # st.map with unevaluated Snowpark DataFrame
 
