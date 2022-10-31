@@ -14,7 +14,6 @@
 
 import os
 import threading
-from collections import UserDict
 from typing import Any, ItemsView, Iterator, KeysView, Mapping, Optional, ValuesView
 
 import toml
@@ -45,38 +44,46 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class AttrDict(UserDict):  # type: ignore[type-arg]
+class AttrDict(Mapping[str, Any]):
     """
     We use AttrDict to wrap up dictionary values from secrets
     to provide dot access to nested secrets
     """
+
+    def __init__(self, value):
+        self.__dict__.update(value)
 
     @staticmethod
     def _maybe_wrap_in_attr_dict(value) -> Any:
         if not isinstance(value, dict):
             return value
         else:
-            return AttrDict(**value)
+            return AttrDict(value)
 
-    def __getattr__(self, attr_name: str) -> Any:
-        try:
-            value = super().__getitem__(attr_name)
-            return self._maybe_wrap_in_attr_dict(value)
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(attr_name))
+    def __len__(self) -> int:
+        return len(self.__dict__)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.__dict__)
 
     def __getitem__(self, key: str) -> Any:
         try:
-            value = super().__getitem__(key)
+            value = self.__dict__[key]
             return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
-    def __setattr__(self, key, value):
-        raise NotImplemented
+    def __getattr__(self, attr_name: str) -> Any:
+        try:
+            return self[attr_name]
+        except KeyError:
+            raise AttributeError(_missing_attr_error_message(attr_name))
 
     def __setitem__(self, key, value):
-        raise NotImplemented
+        raise TypeError("Secrets does not support item assignment.")
+
+    def __setattr__(self, key, value):
+        raise TypeError("Secrets does not support attribute assignment.")
 
 
 class Secrets(Mapping[str, Any]):
@@ -227,7 +234,7 @@ class Secrets(Mapping[str, Any]):
             if not isinstance(value, dict):
                 return value
             else:
-                return AttrDict(**value)
+                return AttrDict(value)
         # We add FileNotFoundError since __getattr__ is expected to only raise
         # AttributeError. Without handling FileNotFoundError, unittests.mocks
         # fails during mock creation on Python3.9
@@ -245,7 +252,7 @@ class Secrets(Mapping[str, Any]):
             if not isinstance(value, dict):
                 return value
             else:
-                return AttrDict(**value)
+                return AttrDict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
