@@ -13,9 +13,12 @@
 # limitations under the License.
 
 import streamlit as st
+from tests.streamlit import pyspark_mocks
 
 st.write("This **markdown** is awesome! :sunglasses:")
 
 st.write("This <b>HTML tag</b> is escaped!")
+
+st.write(pyspark_mocks.DataFrame())
 
 st.write("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)

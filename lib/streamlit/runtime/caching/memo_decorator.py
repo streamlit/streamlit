@@ -567,9 +567,9 @@ class MemoCache(Cache):
                 return bytes(value)
         except FileNotFoundError:
             raise CacheKeyNotFoundError("Key not found in disk cache")
-        except BaseException as e:
-            _LOGGER.error(e)
-            raise CacheError("Unable to read from cache") from e
+        except Exception as ex:
+            _LOGGER.error(ex)
+            raise CacheError("Unable to read from cache") from ex
 
     def _read_multi_results_from_disk_cache(self, key: str) -> MultiCacheResults:
         """Look up the results from disk and ensure it has the right type.
@@ -601,6 +601,7 @@ class MemoCache(Cache):
             try:
                 os.remove(path)
             except (FileNotFoundError, IOError, OSError):
+                # If we can't remove the file, it's not a big deal.
                 pass
             raise CacheError("Unable to write to cache") from e
 
@@ -612,9 +613,12 @@ class MemoCache(Cache):
         try:
             os.remove(path)
         except FileNotFoundError:
+            # The file is already removed.
             pass
-        except BaseException as e:
-            _LOGGER.exception("Unable to remove a file from the disk cache", e)
+        except Exception as ex:
+            _LOGGER.exception(
+                "Unable to remove a file from the disk cache", exc_info=ex
+            )
 
     def _get_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""

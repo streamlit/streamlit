@@ -258,6 +258,7 @@ def _delete_option(key: str) -> None:
         del _config_options_template[key]
         del cast(Dict[str, ConfigOption], _config_options)[key]
     except Exception:
+        # We don't care if the option already doesn't exist.
         pass
 
 

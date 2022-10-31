@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st.DataFrame with unevaluated snowflake.snowpark.dataframe.DataFrame", () => {
+describe("st.DataFrame with unevaluated pyspark.sql.DataFrame", () => {
 
   before(() => {
     // Increasing timeout since we're waiting for
@@ -38,9 +38,14 @@ describe("st.DataFrame with unevaluated snowflake.snowpark.dataframe.DataFrame",
       .should("have.length", 1)
   });
 
+  it("table exists and is evaluated", () => {
+    cy.get("div [data-testid='stTable']")
+      .should("have.length", 1)
+  });
+
   it("warning about data being capped exists", () => {
     cy.get("div [data-testid='stCaptionContainer']")
-      .should("have.length", 4)
+      .should("have.length", 5)
   });
 
   it("warning about data being capped exists", () => {
@@ -52,6 +57,8 @@ describe("st.DataFrame with unevaluated snowflake.snowpark.dataframe.DataFrame",
       .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
     cy.getIndexed("div [data-testid='stCaptionContainer']", 3)
       .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
+    cy.getIndexed("div [data-testid='stCaptionContainer']", 4)
+      .should("contain", "⚠️ Showing only 100 rows. Call collect() on the dataframe to show more.")
   });
 
   it("displays a line chart", () => {

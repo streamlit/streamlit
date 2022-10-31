@@ -47,7 +47,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -117,7 +117,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The table data.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -165,7 +165,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -248,7 +248,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -331,7 +331,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -515,7 +515,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
             Table to concat. Optional.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).

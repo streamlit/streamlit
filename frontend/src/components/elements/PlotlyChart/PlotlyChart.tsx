@@ -23,6 +23,7 @@ import {
 } from "src/autogen/proto"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
+import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
 
 export interface PlotlyChartProps {
   width: number
@@ -66,8 +67,12 @@ function renderFigure({
     } else if (element.useContainerWidth) {
       spec.layout.width = width
     }
-
-    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    if (element.theme === "streamlit") {
+      applyStreamlitTheme(spec, theme)
+    } else {
+      // Apply minor theming improvements to work better with Streamlit
+      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    }
 
     return spec
   }
@@ -111,30 +116,6 @@ export function PlotlyChart({
       return renderFigure({ element, height, width })
     default:
       throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
-  }
-}
-
-function layoutWithThemeDefaults(layout: any, theme: Theme): any {
-  const { colors, genericFonts } = theme
-
-  const themeDefaults = {
-    font: {
-      color: colors.bodyText,
-      family: genericFonts.bodyFont,
-    },
-    paper_bgcolor: colors.bgColor,
-    plot_bgcolor: colors.secondaryBg,
-  }
-
-  // Fill in theme defaults where the user didn't specify layout options.
-  return {
-    ...layout,
-    font: {
-      ...themeDefaults.font,
-      ...layout.font,
-    },
-    paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
-    plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
   }
 }
 

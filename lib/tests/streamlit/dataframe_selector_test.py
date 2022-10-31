@@ -22,7 +22,9 @@ import pandas as pd
 
 import streamlit
 from streamlit.delta_generator import DeltaGenerator
+from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockSnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Table as MockSnowparkTable
 from tests.testutil import patch_config_options
 
 DATAFRAME = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
@@ -63,6 +65,34 @@ class DataFrameSelectorTest(unittest.TestCase):
         legacy_dataframe.assert_not_called()
         arrow_dataframe.assert_called_once_with(
             snowpark_df, 100, 200, use_container_width=False
+        )
+
+    @patch.object(DeltaGenerator, "_legacy_dataframe")
+    @patch.object(DeltaGenerator, "_arrow_dataframe")
+    @patch_config_options({"global.dataFrameSerialization": "arrow"})
+    def test_arrow_dataframe_with_pyspark_dataframe(
+        self, arrow_dataframe, legacy_dataframe
+    ):
+        pyspark_dataframe = (
+            pyspark_mocks.create_pyspark_dataframe_with_mocked_personal_data()
+        )
+        streamlit.dataframe(pyspark_dataframe, 100, 200)
+        legacy_dataframe.assert_not_called()
+        arrow_dataframe.assert_called_once_with(
+            pyspark_dataframe, 100, 200, use_container_width=False
+        )
+
+    @patch.object(DeltaGenerator, "_legacy_dataframe")
+    @patch.object(DeltaGenerator, "_arrow_dataframe")
+    @patch_config_options({"global.dataFrameSerialization": "arrow"})
+    def test_arrow_dataframe_with_snowpark_table(
+        self, arrow_dataframe, legacy_dataframe
+    ):
+        snowpark_table = MockSnowparkTable()
+        streamlit.dataframe(snowpark_table, 100, 200)
+        legacy_dataframe.assert_not_called()
+        arrow_dataframe.assert_called_once_with(
+            snowpark_table, 100, 200, use_container_width=False
         )
 
     @patch.object(DeltaGenerator, "_legacy_table")

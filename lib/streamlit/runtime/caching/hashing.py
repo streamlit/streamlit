@@ -30,11 +30,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Pattern
 
 from streamlit import type_util, util
-from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import CacheType, UnhashableTypeError
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
-_LOGGER = get_logger(__name__)
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
@@ -383,8 +380,8 @@ class _CacheFuncHasher:
             h = hashlib.new("md5")
             try:
                 reduce_data = obj.__reduce__()
-            except BaseException as e:
-                raise UnhashableTypeError() from e
+            except Exception as ex:
+                raise UnhashableTypeError() from ex
 
             for item in reduce_data:
                 self.update(h, item)

@@ -26,7 +26,7 @@ from streamlit.runtime.memory_media_file_storage import (
 from streamlit.string_util import generate_download_filename_from_title
 from streamlit.web.server import allow_cross_origin_requests
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class MediaFileHandler(tornado.web.StaticFileHandler):
@@ -92,7 +92,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         try:
             self._storage.get_file(absolute_path)
         except MediaFileStorageError:
-            LOGGER.error("MediaFileHandler: Missing file %s", absolute_path)
+            _LOGGER.error("MediaFileHandler: Missing file %s", absolute_path)
             raise tornado.web.HTTPError(404, "not found")
 
         return absolute_path
@@ -120,16 +120,16 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
     def get_content(
         cls, abspath: str, start: Optional[int] = None, end: Optional[int] = None
     ):
-        LOGGER.debug("MediaFileHandler: GET %s", abspath)
+        _LOGGER.debug("MediaFileHandler: GET %s", abspath)
 
         try:
             # abspath is the hash as used `get_absolute_path`
             media_file = cls._storage.get_file(abspath)
-        except:
-            LOGGER.error("MediaFileHandler: Missing file %s", abspath)
-            return
+        except Exception:
+            _LOGGER.error("MediaFileHandler: Missing file %s", abspath)
+            return None
 
-        LOGGER.debug(
+        _LOGGER.debug(
             "MediaFileHandler: Sending %s file %s", media_file.mimetype, abspath
         )
 
