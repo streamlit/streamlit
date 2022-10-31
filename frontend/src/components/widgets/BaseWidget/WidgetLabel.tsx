@@ -52,7 +52,7 @@ export function WidgetLabel({
       disabled={disabled}
       labelVisibility={labelVisibility}
     >
-      <StreamlitMarkdown source={label} allowHTML={false} />
+      <StreamlitMarkdown source={label} allowHTML={false} isWidgetLabel />
       {/* {label} */}
       {children}
     </StyledWidgetLabel>

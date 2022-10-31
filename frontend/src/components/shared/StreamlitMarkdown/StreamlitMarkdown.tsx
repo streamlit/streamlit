@@ -70,6 +70,11 @@ export interface Props {
   allowHTML: boolean
   style?: CSSProperties
   isCaption?: boolean
+
+  /**
+   * Disallow markdown tables/images if used in widget/expander/tab label
+   */
+  isWidgetLabel?: boolean
 }
 
 /**
@@ -201,12 +206,18 @@ export interface RenderedMarkdownProps {
   allowHTML: boolean
 
   overrideComponents?: Components
+
+  /**
+   * Disallow markdown tables/images if used in widget/expander/tab label
+   */
+  isWidgetLabel?: boolean
 }
 
 export function RenderedMarkdown({
   allowHTML,
   source,
   overrideComponents,
+  isWidgetLabel,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -235,6 +246,7 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
+        disallowedElements={isWidgetLabel ? ["img", "table"] : []}
       >
         {source}
       </ReactMarkdown>
@@ -260,7 +272,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render(): ReactNode {
-    const { source, allowHTML, style, isCaption } = this.props
+    const { source, allowHTML, style, isCaption, isWidgetLabel } = this.props
     const isInSidebar = this.context
 
     return (
@@ -270,7 +282,11 @@ class StreamlitMarkdown extends PureComponent<Props> {
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >
-        <RenderedMarkdown source={source} allowHTML={allowHTML} />
+        <RenderedMarkdown
+          source={source}
+          allowHTML={allowHTML}
+          isWidgetLabel={isWidgetLabel}
+        />
       </StyledStreamlitMarkdown>
     )
   }
