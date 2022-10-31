@@ -738,7 +738,7 @@ function DataFrame({
           }}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
-            scrollbarWidthOverride: 1,
+            scrollbarWidthOverride: 0,
           }}
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
