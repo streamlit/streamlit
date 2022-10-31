@@ -466,7 +466,6 @@ def convert_anything_to_df(
         else:
             df = pd.DataFrame(df.take(max_unevaluated_rows))
         if df.shape[0] == max_unevaluated_rows:
-            df._max_unevaluated_rows_caption_was_shown = True
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
