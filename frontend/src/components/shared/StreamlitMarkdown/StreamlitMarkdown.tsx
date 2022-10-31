@@ -51,6 +51,12 @@ import {
 
 import "katex/dist/katex.min.css"
 
+enum Tags {
+  H1 = "h1",
+  H2 = "h2",
+  H3 = "h3",
+}
+
 export interface Props {
   /**
    * The Markdown formatted text to render.
@@ -305,14 +311,13 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
 
 function makeMarkdownHeading(tag: string, markdown: string): string {
   switch (tag.toLowerCase()) {
-    // willhuang1997: TODO: could be refactored to Enums
-    case "h1": {
+    case Tags.H1: {
       return `# ${markdown}`
     }
-    case "h2": {
+    case Tags.H2: {
       return `## ${markdown}`
     }
-    case "h3": {
+    case Tags.H3: {
       return `### ${markdown}`
     }
     default: {
