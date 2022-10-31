@@ -181,9 +181,7 @@ class WriteMixin:
             # Order matters!
             if isinstance(arg, str):
                 string_buffer.append(arg)
-            elif type_util.is_snowpark_data_object(arg) or type_util.is_type(
-                arg, type_util._PYSPARK_DF_TYPE_STR
-            ):
+            elif type_util.is_snowpark_or_pyspark_data_object(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):

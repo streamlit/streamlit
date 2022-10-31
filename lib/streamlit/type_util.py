@@ -243,6 +243,13 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
 
+def is_snowpark_or_pyspark_data_object(obj: object) -> bool:
+    """True if if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
+    True when obj is a list which contains snowflake.snowpark.row.Row or True when obj is of type pyspark.sql.dataframe.DataFrame
+    False otherwise"""
+    return is_snowpark_data_object(obj) or is_pyspark_data_object(obj)
+
+
 def is_snowpark_data_object(obj: object) -> bool:
     """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row,
@@ -258,6 +265,15 @@ def is_snowpark_data_object(obj: object) -> bool:
     if not hasattr(obj[0], "__class__"):
         return False
     return is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
+
+
+def is_pyspark_data_object(obj: object) -> bool:
+    """True if obj is of type pyspark.sql.dataframe.DataFrame"""
+    return (
+        is_type(obj, _PYSPARK_DF_TYPE_STR)
+        and hasattr(obj, "toPandas")
+        and callable(getattr(obj, "toPandas"))
+    )
 
 
 def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
@@ -518,9 +534,7 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
     iterable
 
     """
-    if is_snowpark_data_object(obj):
-        obj = convert_anything_to_df(obj)
-    elif is_type(obj, _PYSPARK_DF_TYPE_STR) and callable(getattr(obj, "toPandas")):
+    if is_snowpark_or_pyspark_data_object(obj):
         obj = convert_anything_to_df(obj)
 
     if is_dataframe(obj):
