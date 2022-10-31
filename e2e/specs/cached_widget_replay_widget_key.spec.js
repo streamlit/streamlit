@@ -23,7 +23,7 @@ describe("widget replay cache selection", () => {
     cy.get(".stRadio").should("have.length", 1);
     cy.get("[data-testid='stText']").should("have.text", "['function ran']");
     cy.get(".stButton").first.click();
-    cy.sleep(2);
+    cy.sleep(10);
     cy.get(".stRadio").should("have.length", 1);
     cy.get("[data-testid='stText']").should("have.text", "[]");
 
@@ -31,7 +31,7 @@ describe("widget replay cache selection", () => {
     cy.get(".stRadio").should("have.length", 1);
     cy.get("[data-testid='stText']").should("have.text", "['function ran']");
     cy.get(".stButton").first.click();
-    cy.sleep(2);
+    cy.sleep(10);
     cy.get(".stRadio").should("have.length", 1);
     cy.get("[data-testid='stText']").should("have.text", "[]");
   })
