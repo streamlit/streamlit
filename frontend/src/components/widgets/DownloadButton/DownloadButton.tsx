@@ -61,7 +61,11 @@ function DownloadButton(props: Props): ReactElement {
           disabled={disabled}
           onClick={handleDownloadClick}
         >
-          <StreamlitMarkdown source={element.label} allowHTML={false} />
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isWidgetLabel
+          />
         </UIButton>
       </ButtonTooltip>
     </div>

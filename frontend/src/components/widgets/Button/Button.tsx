@@ -46,7 +46,11 @@ function Button(props: Props): ReactElement {
           disabled={disabled}
           onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
         >
-          <StreamlitMarkdown source={element.label} allowHTML={false} />
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isWidgetLabel
+          />
         </UIButton>
       </ButtonTooltip>
     </div>

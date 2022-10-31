@@ -122,7 +122,11 @@ function Tabs(props: Props): ReactElement {
           return (
             <UITab
               title={
-                <StreamlitMarkdown source={nodeLabel} allowHTML={false} />
+                <StreamlitMarkdown
+                  source={nodeLabel}
+                  allowHTML={false}
+                  isWidgetLabel
+                />
               }
               key={index}
               overrides={{

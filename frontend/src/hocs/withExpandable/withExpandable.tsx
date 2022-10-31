@@ -170,7 +170,13 @@ function withExpandable(
           }}
         >
           <Panel
-            title={<StreamlitMarkdown source={label} allowHTML={false} />}
+            title={
+              <StreamlitMarkdown
+                source={label}
+                allowHTML={false}
+                isWidgetLabel
+              />
+            }
             key="panel"
           >
             <WrappedComponent {...componentProps} disabled={widgetsDisabled} />

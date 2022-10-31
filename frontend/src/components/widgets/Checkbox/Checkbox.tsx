@@ -200,7 +200,11 @@ class Checkbox extends React.PureComponent<Props, State> {
           }}
         >
           <StyledContent>
-            <StreamlitMarkdown source={element.label} allowHTML={false} />
+            <StreamlitMarkdown
+              source={element.label}
+              allowHTML={false}
+              isWidgetLabel
+            />
             {element.help && (
               <StyledWidgetLabelHelpInline color={color}>
                 <TooltipIcon
