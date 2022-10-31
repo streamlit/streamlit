@@ -129,8 +129,8 @@ class SecretsTest(unittest.TestCase):
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
-    def test_attr_dict_is_mapping_but_not_build_in_dict(self, *mocks):
-        """Verify that AttrDict is implements Mapping, but not build-in Dict"""
+    def test_attr_dict_is_mapping_but_not_built_in_dict(self, *mocks):
+        """Verify that AttrDict is implements Mapping, but not built-in Dict"""
         self.assertTrue(isinstance(self.secrets.subsection, Mapping))
         self.assertFalse(isinstance(self.secrets.subsection, dict))
 
