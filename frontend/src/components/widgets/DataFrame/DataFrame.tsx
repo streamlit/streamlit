@@ -771,7 +771,14 @@ function DataFrame({
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:
-          verticalBorder={true}
+          verticalBorder={(col: number) =>
+            // Show no border for last column in certain situations
+            // This is required to prevent the cell selection border to not be cut off
+            col >= columns.length &&
+            (element.useContainerWidth || resizableSize.width === "100%")
+              ? false
+              : true
+          }
           // Activate copy to clipboard functionality:
           getCellsForSelection={true}
           // Deactivate row markers and numbers:
@@ -800,7 +807,7 @@ function DataFrame({
           onPaste={false}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
-            scrollbarWidthOverride: 0,
+            scrollbarWidthOverride: 1,
           }}
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
