@@ -26,6 +26,7 @@ import {
   CompactSelection,
   GridMouseEventArgs,
   Theme as GlideTheme,
+  Item,
 } from "@glideapps/glide-data-grid"
 import { useColumnSort } from "@glideapps/glide-data-grid-source"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
@@ -51,6 +52,7 @@ import {
   getTextCell,
   getErrorCell,
   isEditableType,
+  getCell,
 } from "./DataFrameCells"
 import { StyledResizableContainer } from "./styled-components"
 
@@ -298,7 +300,8 @@ export function getColumns(
     const columnTitle = data.columns[0][i]
     const quiverType = data.types.data[i]
     const columnType = getColumnTypeFromQuiver(quiverType)
-    const isEditable = isEditableType(columnType) && element.editable
+    const isEditable =
+      isEditableType(columnType) && element.editable && !element.disabled
 
     const column = {
       id: `column-${columnTitle}-${i}`,
@@ -349,7 +352,7 @@ function updateSortingHeader(
  */
 type DataLoaderReturn = { numRows: number } & Pick<
   DataEditorProps,
-  "columns" | "getCellContent" | "onColumnResize" | "onCellEdited"
+  "columns" | "getCellContent" | "onColumnResize" | "onCellEdited" | "onPaste"
 >
 
 /**
@@ -359,6 +362,7 @@ type DataLoaderReturn = { numRows: number } & Pick<
  * such as column resizing, sorting, etc.
  */
 export function useDataLoader(
+  dataEditorRef: React.RefObject<DataEditorRef>,
   element: ArrowProto,
   data: Quiver,
   sort?: ColumnSortConfig | undefined
@@ -482,7 +486,54 @@ export function useDataLoader(
         updateCell(column, updatedCell)
       )
     },
-    [columns]
+    [getOriginalIndex, editingState, updatedColumns]
+  )
+
+  const onPaste = React.useCallback(
+    (target: Item, values: readonly (readonly string[])[]): boolean => {
+      const [targetCol, targetRow] = target
+
+      console.log(target)
+      console.log(values)
+      const updatedCells: { cell: [number, number] }[] = []
+
+      for (let row = 0; row < values.length; row++) {
+        const rowData = values[row]
+        if (row + targetRow >= numRows) {
+          // TODO(lukasmasuch) Add new rows if necessary
+          break
+        }
+        for (let col = 0; col < rowData.length; col++) {
+          const pasteDataValue = rowData[col]
+
+          const rowIndex = row + targetRow
+          const colIndex = col + targetCol
+
+          if (colIndex >= updatedColumns.length) {
+            // We could potentially add new columns here in the future.
+            break
+          }
+
+          const column = updatedColumns[colIndex]
+          if (!column.isEditable) {
+            // Column is not editable -> just ignore
+            continue
+          }
+
+          editingState.current.set(colIndex, getOriginalIndex(rowIndex), {
+            ...getCell(column, pasteDataValue),
+            lastUpdated: performance.now(),
+          })
+          updatedCells.push({
+            cell: [colIndex, rowIndex],
+          })
+        }
+        dataEditorRef.current?.updateCells(updatedCells)
+      }
+
+      return false
+    },
+    [updatedColumns, numRows, getOriginalIndex, editingState, dataEditorRef]
   )
 
   return {
@@ -491,6 +542,7 @@ export function useDataLoader(
     getCellContent: getCellContentSorted,
     onColumnResize,
     onCellEdited,
+    onPaste,
   }
 }
 export interface DataFrameProps {
@@ -515,8 +567,14 @@ function DataFrame({
 
   const stretchColumn = element.useContainerWidth || element.width
 
-  const { numRows, columns, getCellContent, onColumnResize, onCellEdited } =
-    useDataLoader(element, data, sort)
+  const {
+    numRows,
+    columns,
+    getCellContent,
+    onColumnResize,
+    onCellEdited,
+    onPaste,
+  } = useDataLoader(dataEditorRef, element, data, sort)
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
@@ -735,6 +793,7 @@ function DataFrame({
               setIsFocused(true)
             }
           }}
+          onPaste={false}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 0,
@@ -748,8 +807,8 @@ function DataFrame({
               onCellEdited,
               // Support fill handle for bulk editing
               fillHandle: true,
-              // Support on past of bulk ed
-              onPaste: true,
+              // Support on past of bulk editing
+              onPaste,
             })}
         />
       </Resizable>
