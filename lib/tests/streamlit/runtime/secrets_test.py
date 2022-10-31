@@ -16,6 +16,7 @@
 
 import os
 import unittest
+from collections.abc import Mapping as MappingABC
 from typing import Mapping
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -132,6 +133,7 @@ class SecretsTest(unittest.TestCase):
     def test_attr_dict_is_mapping_but_not_built_in_dict(self, *mocks):
         """Verify that AttrDict implements Mapping, but not built-in Dict"""
         self.assertTrue(isinstance(self.secrets.subsection, Mapping))
+        self.assertTrue(isinstance(self.secrets.subsection, MappingABC))
         self.assertFalse(isinstance(self.secrets.subsection, dict))
 
     @patch("streamlit.watcher.path_watcher.watch_file")
