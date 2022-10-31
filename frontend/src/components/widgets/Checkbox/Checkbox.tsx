@@ -25,6 +25,7 @@ import { Theme } from "src/theme"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import { StyledContent } from "./styled-components"
 
@@ -199,7 +200,7 @@ class Checkbox extends React.PureComponent<Props, State> {
           }}
         >
           <StyledContent>
-            {element.label}
+            <StreamlitMarkdown source={element.label} allowHTML={false} />
             {element.help && (
               <StyledWidgetLabelHelpInline color={color}>
                 <TooltipIcon
