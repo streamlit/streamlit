@@ -22,6 +22,7 @@ import { BlockNode, AppNode } from "src/lib/AppNode"
 import VerticalBlock, {
   BlockPropsWithoutWidth,
 } from "src/components/core/Block"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import { StyledTabContainer } from "./styled-components"
 
@@ -120,7 +121,9 @@ function Tabs(props: Props): ReactElement {
 
           return (
             <UITab
-              title={nodeLabel}
+              title={
+                <StreamlitMarkdown source={nodeLabel} allowHTML={false} />
+              }
               key={index}
               overrides={{
                 TabPanel: {

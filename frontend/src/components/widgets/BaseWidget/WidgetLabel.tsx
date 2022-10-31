@@ -16,6 +16,8 @@
 
 import React from "react"
 import { LabelVisibilityOptions } from "src/lib/utils"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+
 import { StyledWidgetLabel } from "./styled-components"
 
 export interface LabelProps {
@@ -50,7 +52,8 @@ export function WidgetLabel({
       disabled={disabled}
       labelVisibility={labelVisibility}
     >
-      {label}
+      <StreamlitMarkdown source={label} allowHTML={false} />
+      {/* {label} */}
       {children}
     </StyledWidgetLabel>
   )

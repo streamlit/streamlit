@@ -23,6 +23,7 @@ import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
 import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import {
   StyledTruncateText,
   StyledMetricLabelText,
@@ -75,7 +76,7 @@ export default function Metric({ element }: MetricProps): ReactElement {
     <div data-testid="metric-container">
       <StyledMetricLabelText data-testid="stMetricLabel">
         <StyledTruncateText>
-          {element.label}
+          <StreamlitMarkdown source={element.label} allowHTML={false} />
           {element.help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon
