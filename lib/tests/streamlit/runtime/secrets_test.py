@@ -16,6 +16,7 @@
 
 import os
 import unittest
+from typing import Mapping
 from unittest.mock import MagicMock, mock_open, patch
 
 from toml import TomlDecodeError
@@ -115,6 +116,23 @@ class SecretsTest(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             self.secrets.subsection.nonexistent_secret
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_getattr_raises_exception_on_attr_dict(self, *mocks):
+        """Verify that assignment to nested secrets raises TypeError."""
+        with self.assertRaises(TypeError):
+            self.secrets.subsection["new_secret"] = "123"
+
+        with self.assertRaises(TypeError):
+            self.secrets.subsection.new_secret = "123"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_attr_dict_is_mapping_but_not_build_in_dict(self, *mocks):
+        """Verify that AttrDict is implements Mapping, but not build-in Dict"""
+        self.assertTrue(isinstance(self.secrets.subsection, Mapping))
+        self.assertFalse(isinstance(self.secrets.subsection, dict))
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
