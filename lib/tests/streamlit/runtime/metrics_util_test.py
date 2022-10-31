@@ -56,12 +56,9 @@ class MetricsUtilTest(unittest.TestCase):
             mock_open(read_data=file_data),
             create=True,
         ), patch(
-            "streamlit.runtime.metrics_util.os.path.isfile"
-        ) as path_isfile:
-
-            def path_isfile(path):
-                return path == "/etc/machine-id"
-
+            "streamlit.runtime.metrics_util.os.path.isfile",
+            side_effect=lambda path: path == "/etc/machine-id",
+        ):
             machine_id = metrics_util._get_machine_id_v3()
         self.assertEqual(machine_id, file_data)
 
@@ -76,12 +73,9 @@ class MetricsUtilTest(unittest.TestCase):
             mock_open(read_data=file_data),
             create=True,
         ), patch(
-            "streamlit.runtime.metrics_util.os.path.isfile"
-        ) as path_isfile:
-
-            def path_isfile(path):
-                return path == "/var/lib/dbus/machine-id"
-
+            "streamlit.runtime.metrics_util.os.path.isfile",
+            side_effect=lambda path: path == "/var/lib/dbus/machine-id",
+        ):
             machine_id = metrics_util._get_machine_id_v3()
         self.assertEqual(machine_id, file_data)
 
@@ -97,8 +91,8 @@ class MetricsUtilTest(unittest.TestCase):
 
 
 class PageTelemetryTest(DeltaGeneratorTestCase):
-    def setUp(self):
-        super().setUp(self)
+    def setUp(self, override_root=True):
+        super().setUp(override_root)
         ctx = get_script_run_ctx()
         ctx.reset()
         ctx.gather_usage_stats = True
