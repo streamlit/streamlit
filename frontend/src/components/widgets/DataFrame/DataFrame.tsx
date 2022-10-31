@@ -135,6 +135,7 @@ export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
     accentFg: theme.colors.white,
     accentLight: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.fadedText05,
+    horizontalBorderColor: theme.colors.fadedText05,
     fontFamily: theme.genericFonts.bodyFont,
     bgSearchResult: transparentize(theme.colors.primary, 0.9),
     // Header styling:
@@ -145,6 +146,7 @@ export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
     bgHeaderHovered: theme.colors.bgMix, // uses same color as bgHeader to deactivate the hover effect
     textHeader: theme.colors.fadedText60,
     textHeaderSelected: theme.colors.white,
+    textGroupHeader: theme.colors.fadedText60,
     headerFontStyle: `${theme.fontSizes.sm}`,
     // Cell styling:
     baseFontStyle: theme.fontSizes.sm,
@@ -162,6 +164,8 @@ export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
     bgBubbleSelected: theme.colors.secondaryBg,
     linkColor: theme.colors.linkText,
     drilldownBorder: theme.colors.darkenedBgMix25,
+    // Unused settings:
+    // lineHeight
   }
 }
 
