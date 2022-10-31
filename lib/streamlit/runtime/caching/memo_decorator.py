@@ -491,29 +491,29 @@ class MemoCache(Cache):
         else:
             widgets = set()
 
-        first_stage_results: Optional[MultiCacheResults] = None
+        multi_cache_results: Optional[MultiCacheResults] = None
 
         # Try to find in mem cache, falling back to disk, then falling back
         # to a new result instance
         try:
-            first_stage_results = self._read_multi_results_from_mem_cache(key)
+            multi_cache_results = self._read_multi_results_from_mem_cache(key)
         except (CacheKeyNotFoundError, pickle.UnpicklingError):
             if self.persist == "disk":
                 try:
-                    first_stage_results = self._read_multi_results_from_disk_cache(key)
+                    multi_cache_results = self._read_multi_results_from_disk_cache(key)
                 except CacheKeyNotFoundError:
                     pass
 
-        if first_stage_results is None:
-            first_stage_results = MultiCacheResults(widget_ids=widgets, results={})
-        first_stage_results.widget_ids.update(widgets)
-        widget_key = first_stage_results.get_current_widget_key(ctx, CacheType.MEMO)
+        if multi_cache_results is None:
+            multi_cache_results = MultiCacheResults(widget_ids=widgets, results={})
+        multi_cache_results.widget_ids.update(widgets)
+        widget_key = multi_cache_results.get_current_widget_key(ctx, CacheType.MEMO)
 
         result = CachedResult(value, messages, main_id, sidebar_id)
-        first_stage_results.results[widget_key] = result
+        multi_cache_results.results[widget_key] = result
 
         try:
-            pickled_entry = pickle.dumps(first_stage_results)
+            pickled_entry = pickle.dumps(multi_cache_results)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
