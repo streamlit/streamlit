@@ -79,6 +79,9 @@ export interface VegaLiteChartElement {
 
   /** If True, will overwrite the chart width spec to fit to container. */
   useContainerWidth: boolean
+
+  /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
+  theme: string
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */
@@ -208,10 +211,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const { element: el, theme } = this.props
     const spec = JSON.parse(el.spec)
     const { useContainerWidth } = el
-    if (spec.usermeta?.embedOptions?.theme === "streamlit") {
+    if (el.theme === "streamlit") {
       spec.config = applyStreamlitTheme(spec.config, theme)
-      // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
-      spec.usermeta.embedOptions.theme = undefined
     } else {
       // Apply minor theming improvements to work better with Streamlit
       spec.config = applyThemeDefaults(spec.config, theme)
