@@ -55,10 +55,10 @@ INSTALL_REQUIRES = [
     "watchdog; platform_system != 'Darwin'",
 ]
 
-# We want to exclude some dependencies in our internal SnowPark conda distribution of
+# We want to exclude some dependencies in our internal Snowpark conda distribution of
 # Streamlit. These dependencies will be installed normally for both regular conda builds
 # and PyPI builds (that is, for people installing streamlit using either
-# `pip install streamlit` or `conda install -c conda-forge streamlit`
+# `pip install streamlit` or `conda install -c conda-forge streamlit`)
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython!=3.1.19",
     "pydeck>=0.1.dev5",
