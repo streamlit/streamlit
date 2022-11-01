@@ -34,6 +34,7 @@ import altair as alt
 import pandas as pd
 from altair.vegalite.v4.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
+from typing_extensions import Literal
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
@@ -48,13 +49,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-# Create and enable streamlit theme
-STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
-
-# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
-alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
-# We don't want to activate the Streamlit theme for all Altair as default for now.
-# However, the Streamlit theme will be activated as default for our built-in charts.
+# no theme applied to charts
 alt.themes.enable("none")
 
 
@@ -129,7 +124,7 @@ class ArrowAltairMixin:
         """
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.LINE, data, x, y, width, height)
-        marshall(proto, chart, use_container_width)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
@@ -198,7 +193,7 @@ class ArrowAltairMixin:
 
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.AREA, data, x, y, width, height)
-        marshall(proto, chart, use_container_width)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
@@ -268,7 +263,7 @@ class ArrowAltairMixin:
 
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.BAR, data, x, y, width, height)
-        marshall(proto, chart, use_container_width)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
@@ -278,6 +273,7 @@ class ArrowAltairMixin:
         self,
         altair_chart: Chart,
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -314,11 +310,16 @@ class ArrowAltairMixin:
         https://altair-viz.github.io/gallery/.
 
         """
+        if theme != "streamlit" and theme != None:
+            raise StreamlitAPIException(
+                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+            )
         proto = ArrowVegaLiteChartProto()
         marshall(
             proto,
             altair_chart,
             use_container_width=use_container_width,
+            theme=theme,
         )
 
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
@@ -534,13 +535,12 @@ def _generate_chart(
             color_column,
             title=color_title,
             type="nominal",
-            legend=alt.Legend(titlePadding=0, offset=10),
+            legend=alt.Legend(titlePadding=0, offset=10, orient="bottom"),
         )
         tooltips.append(alt.Tooltip(color_column, title="label"))
 
     chart = getattr(
-        # Built-in charts use the streamlit theme as default. So, we set usermeta explicitly here.
-        alt.Chart(data, width=width, height=height, usermeta=STREAMLIT_THEME),
+        alt.Chart(data, width=width, height=height),
         "mark_" + chart_type.value,
     )().encode(
         x=alt.X(
@@ -567,6 +567,7 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: Chart,
     use_container_width: bool = False,
+    theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs: Any,
 ) -> None:
     """Marshall chart's data into proto."""
@@ -598,5 +599,6 @@ def marshall(
             vega_lite_chart,
             chart_dict,
             use_container_width=use_container_width,
+            theme=theme,
             **kwargs,
         )
