@@ -102,6 +102,14 @@ const categoryColorsDarkTheme = [
   "#D5DAE5",
 ]
 
+export function getDecreasingRed(theme: Theme): string {
+  return hasLightBackgroundColor(theme) ? "#FF2B2B" : "#FFABAB"
+}
+
+export function getIncreasingGreen(theme: Theme): string {
+  return hasLightBackgroundColor(theme) ? "#29B09D" : "#7DEFA1"
+}
+
 /**
  * This applies categorical colors (discrete or labeled data) to
  * graphs by mapping legend groups to marker colors and customdata to marker colors.
@@ -218,7 +226,7 @@ export function applyColorscale(data: any): any {
  */
 export function applyUniqueGraphColorsData(data: any): void {
   const theme = useTheme()
-  const { genericColors, colors, genericFonts } = theme
+  const { colors, genericFonts } = theme
   data.forEach((entry: any) => {
     // entry.type is always defined
     if (entry.type === "table") {
@@ -248,14 +256,14 @@ export function applyUniqueGraphColorsData(data: any): void {
         entry = assign(entry, {
           decreasing: {
             line: {
-              color: genericColors.negativeRed,
+              color: getDecreasingRed(theme),
             },
           },
         })
         entry = assign(entry, {
           increasing: {
             line: {
-              color: genericColors.positiveGreen,
+              color: getIncreasingGreen(theme),
             },
           },
         })
@@ -273,12 +281,12 @@ export function applyUniqueGraphColorsData(data: any): void {
         entry = assign(entry, {
           decreasing: {
             marker: {
-              color: genericColors.negativeRed,
+              color: getDecreasingRed(theme),
             },
           },
           increasing: {
             marker: {
-              color: genericColors.positiveGreen,
+              color: getIncreasingGreen(theme),
             },
           },
           totals: {

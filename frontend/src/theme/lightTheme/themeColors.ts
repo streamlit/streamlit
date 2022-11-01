@@ -45,6 +45,4 @@ export default {
   axisText: colors.gray70,
   gridLine: colors.gray30,
   legendText: colors.gray90,
-  negativeRed: colors.red80,
-  positiveGreen: colors.blueGreen80,
 }
