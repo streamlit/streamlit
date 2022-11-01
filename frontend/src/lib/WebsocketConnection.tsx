@@ -74,8 +74,8 @@ type OnConnectionStateChange = (
 ) => void
 type OnRetry = (
   totalTries: number,
-  retryTimeout: number,
-  errorNode: React.ReactNode
+  errorNode: React.ReactNode,
+  retryTimeout: number
 ) => void
 
 interface Args {
@@ -588,7 +588,7 @@ export function doInitPings(
         : minimumTimeoutMs * 2 ** (totalTries - 1) * (1 + jitter)
     const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
 
-    retryCallback(totalTries, retryTimeout, errorNode)
+    retryCallback(totalTries, errorNode, retryTimeout)
 
     window.setTimeout(retryImmediately, retryTimeout)
   }
