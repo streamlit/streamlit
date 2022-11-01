@@ -30,6 +30,7 @@ export enum Kind {
   PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
   SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
   HEADER_BUTTON = "header",
+  ELEMENT_TOOLBAR = "elementToolbar",
 }
 
 export enum Size {
@@ -258,6 +259,44 @@ export const StyledHeaderButton = styled(
     },
     "&:focus-visible": {
       boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
+    },
+    "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix25,
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      backgroundColor: theme.colors.lightGray,
+      borderColor: theme.colors.transparent,
+      color: theme.colors.gray,
+    },
+  }
+})
+
+export const StyledElementToolbarButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => {
+  return {
+    backgroundColor: theme.colors.transparent,
+    border: "none",
+    padding: theme.spacing.xs,
+    fontSize: theme.fontSizes.twoSm,
+    marginLeft: theme.spacing.none,
+    marginRight: theme.spacing.none,
+    display: "flex",
+    gap: theme.spacing.xs,
+    alignItems: "center",
+    // line height should be the same as the icon size
+    lineHeight: theme.iconSizes.md,
+
+    "&:focus": {
+      outline: "none",
+      border: "none",
+      boxShadow: "none",
+    },
+    "&:focus-visible": {
+      outline: "none",
+      border: "none",
+      boxShadow: "none",
+      backgroundColor: theme.colors.darkenedBgMix25,
     },
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix25,

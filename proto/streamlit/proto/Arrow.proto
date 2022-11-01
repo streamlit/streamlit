@@ -35,6 +35,8 @@ message Arrow {
   bool editable = 8;
   // Deactivates editing
   bool disabled = 9;
+  // The form ID of the widget, this is required if the dataframe is editable
+  string form_id = 10;
 }
 
 message Styler {

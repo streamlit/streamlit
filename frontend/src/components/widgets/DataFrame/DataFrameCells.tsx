@@ -51,7 +51,8 @@ import { notNullOrUndefined } from "src/lib/utils"
  */
 export enum ColumnType {
   Text = "text",
-  Number = "number",
+  Integer = "integer",
+  Float = "float",
   Boolean = "boolean",
   List = "list",
   Url = "url",
@@ -137,9 +138,11 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
     columnType = ColumnType.DateTime
   } else if (typeName === "bool") {
     columnType = ColumnType.Boolean
-  } else if (["int64", "float64", "range"].includes(typeName)) {
+  } else if (["int64", "range"].includes(typeName)) {
     // The default index in pandas uses a range type.
-    columnType = ColumnType.Number
+    columnType = ColumnType.Integer
+  } else if (["float64"].includes(typeName)) {
+    columnType = ColumnType.Float
   } else if (typeName === "categorical") {
     columnType = ColumnType.Categorical
   } else if (typeName.startsWith("list")) {
@@ -155,10 +158,11 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
 export function isEditableType(type: ColumnType): boolean {
   return [
     ColumnType.Text,
-    ColumnType.Number,
+    ColumnType.Integer,
+    ColumnType.Float,
     ColumnType.Boolean,
     ColumnType.Date,
-    ColumnType.Time,
+    // ColumnType.Time,
     ColumnType.DateTime,
     ColumnType.Url,
     ColumnType.Categorical,
@@ -243,7 +247,8 @@ export function applyPandasStylerCss(
  */
 export function getColumnSortMode(columnType: ColumnType): string {
   if (
-    columnType === ColumnType.Number ||
+    columnType === ColumnType.Integer ||
+    columnType === ColumnType.Float ||
     columnType === ColumnType.ProgressChart
   ) {
     // Smart mode also works correctly for numbers
@@ -337,13 +342,33 @@ function fillTextCell(cell: TextCell, data: DataType): GridCell {
  * @return a filled in boolean cell.
  */
 function fillBooleanCell(cell: BooleanCell, data: any): GridCell {
-  if (notNullOrUndefined(data) && typeof data !== "boolean") {
-    return getErrorCell(`Incompatible boolean value: ${data}`)
+  let cellData = null
+
+  if (notNullOrUndefined(data)) {
+    if (typeof data === "boolean") {
+      cellData = data
+    } else {
+      switch (String(data).toLowerCase().trim()) {
+        case "true":
+        case "yes":
+        case "1":
+          cellData = true
+          break
+        case "false":
+        case "no":
+        case "0":
+          cellData = false
+          break
+        default:
+          return getErrorCell(`Incompatible boolean value: ${data}`)
+      }
+    }
   }
 
+  console.log(cellData)
   return {
     ...cell,
-    data,
+    data: cellData,
   } as BooleanCell
 }
 
@@ -358,6 +383,7 @@ function fillBooleanCell(cell: BooleanCell, data: any): GridCell {
 function fillNumberCell(
   cell: NumberCell,
   data: DataType,
+  integer: boolean = false,
   typeMetadata?: Record<string, unknown>
 ): GridCell {
   let cellData
@@ -374,6 +400,11 @@ function fillNumberCell(
 
     if (Number.isNaN(cellData)) {
       return getErrorCell(`Incompatible number value: ${data}`)
+    }
+
+    if (integer) {
+      // truncate value to integer
+      cellData = cellData < 0 ? Math.ceil(cellData) : Math.floor(cellData)
     }
 
     // If user has specified a format pattern in type metadata
@@ -644,7 +675,8 @@ export function getCell(
 
       cellTemplate = fillTextCell(cellTemplate, data)
       break
-    case ColumnType.Object || ColumnType.Time:
+    case ColumnType.Object:
+    case ColumnType.Time:
       cellTemplate = {
         kind: GridCellKind.Text,
         data: "",
@@ -669,7 +701,8 @@ export function getCell(
 
       cellTemplate = fillBooleanCell(cellTemplate, data)
       break
-    case ColumnType.Number:
+    case ColumnType.Float:
+    case ColumnType.Integer:
       cellTemplate = {
         kind: GridCellKind.Number,
         data: undefined,
@@ -682,6 +715,7 @@ export function getCell(
       cellTemplate = fillNumberCell(
         cellTemplate,
         data,
+        columnConfig.columnType === ColumnType.Integer,
         columnConfig.columnTypeMetadata
       )
       break
@@ -764,7 +798,7 @@ export function getCell(
       ) {
         return getErrorCell(
           "No options provided.",
-          "The categorical cell type requires a list of options provided in the column metadata"
+          "The categorical cell type requires a list of options provided in the column metadata."
         )
       }
 
@@ -847,6 +881,10 @@ export function processDisplayData(displayData: string): string {
   return displayData.replace(/(\r\n|\n|\r)/gm, " ")
 }
 
+export function isErrorCell(cell: GridCell): cell is ErrorCell {
+  return cell.hasOwnProperty("isError")
+}
+
 /**
  * Returns a glide-data-grid compatible cell object based on the
  * cell data from the quiver object. Different types of data will
@@ -882,7 +920,7 @@ export function getCellFromQuiver(
     cellTemplate = getCell(columnConfig, quiverCell.content)
   }
 
-  if (cellTemplate.hasOwnProperty("isError")) {
+  if (isErrorCell(cellTemplate)) {
     // Directly return error cells without any additional modification
     return cellTemplate
   }
@@ -898,7 +936,9 @@ export function getCellFromQuiver(
         ...cellTemplate,
         displayData,
       } as TextCell
-    } else if (columnConfig.columnType === ColumnType.Number) {
+    } else if (
+      [ColumnType.Integer, ColumnType.Float].includes(columnConfig.columnType)
+    ) {
       cellTemplate = {
         ...cellTemplate,
         displayData,
@@ -929,33 +969,40 @@ export function getCellFromQuiver(
   return cellTemplate
 }
 
-export function updateCell(
-  columnConfig: CustomColumn,
-  updatedCell: EditableGridCell
-): GridCell {
+export function getCellValue(columnConfig: CustomColumn, cell: GridCell): any {
+  if (isErrorCell(cell)) {
+    return undefined
+  }
+
   switch (columnConfig.columnType) {
-    case ColumnType.Text ||
-      ColumnType.Boolean ||
-      ColumnType.Number ||
-      ColumnType.Url:
-      return {
-        ...getCell(columnConfig, updatedCell.data),
-        lastUpdated: performance.now(),
-      }
+    case ColumnType.Text:
+    case ColumnType.Object:
+    case ColumnType.Time:
+      return (cell as TextCell).data
+    case ColumnType.Boolean:
+      return (cell as BooleanCell).data
+    case ColumnType.Integer:
+    case ColumnType.Float:
+      return (cell as NumberCell).data
+    case ColumnType.List:
+      return (cell as BubbleCell).data
+    case ColumnType.Url:
+      return (cell as UriCell).data
+    case ColumnType.Image:
+      return (cell as ImageCell).data
     case ColumnType.Categorical:
-      return {
-        ...getCell(columnConfig, (updatedCell as DropdownCellType).data.value),
-        lastUpdated: performance.now(),
-      }
-    case ColumnType.Date || ColumnType.DateTime:
-      return {
-        ...getCell(columnConfig, (updatedCell as DatePickerType).data.date),
-        lastUpdated: performance.now(),
-      }
+      return (cell as DropdownCellType).data.value
+    case ColumnType.DateTime:
+    case ColumnType.Date:
+      // TODO(lukasmasuch): Get just date for date type
+      return (cell as DatePickerType).data.date
+    case ColumnType.ProgressChart:
+      return (cell as RangeCellType).data.value
+    case ColumnType.LineChart:
+    case ColumnType.BarChart:
+      return (cell as SparklineCellType).data.values
     default:
       // This should never happen
-      return getErrorCell(
-        `Unsupported cell type for editing: ${columnConfig.columnType}`
-      )
+      return undefined
   }
 }

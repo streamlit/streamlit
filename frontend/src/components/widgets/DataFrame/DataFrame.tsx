@@ -33,13 +33,22 @@ import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { Resizable, Size as ResizableSize } from "re-resizable"
 import { transparentize } from "color2k"
 import { useTheme } from "@emotion/react"
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
 import { Theme } from "src/theme"
-import { notNullOrUndefined } from "src/lib/utils"
+import { isFromMac, notNullOrUndefined } from "src/lib/utils"
 import { Arrow as ArrowProto } from "src/autogen/proto"
+import Button, { Kind } from "src/components/shared/Button"
+import {
+  Search,
+  Add,
+  Fullscreen,
+  FileDownload,
+} from "@emotion-icons/material-outlined"
+import Icon from "src/components/shared/Icon"
 
 import {
   getCellFromQuiver,
@@ -48,15 +57,20 @@ import {
   ColumnType,
   getColumnTypeFromConfig,
   CustomColumn,
-  updateCell,
   getTextCell,
   getErrorCell,
   isEditableType,
   getCell,
+  isErrorCell,
+  getCellValue,
 } from "./DataFrameCells"
-import { StyledResizableContainer } from "./styled-components"
+import {
+  StyledResizableContainer,
+  StyledDataframeToolbar,
+} from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
+import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
 
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
@@ -71,6 +85,66 @@ const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
 // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
 const DEFAULT_TABLE_HEIGHT = 400
+
+export interface ActionButtonProps {
+  borderless?: boolean
+  label?: string
+  icon?: EmotionIcon
+  onClick: () => void
+}
+
+export function ActionButton({
+  label,
+  icon,
+  onClick,
+}: ActionButtonProps): ReactElement {
+  return (
+    <div className="stActionButton">
+      <Button onClick={onClick} kind={Kind.ELEMENT_TOOLBAR}>
+        {icon && <Icon content={icon} size="md" />}
+        {label && <span>{label}</span>}
+      </Button>
+    </div>
+  )
+}
+
+export function useEventListener<K extends keyof HTMLElementEventMap>(
+  eventName: K,
+  handler: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
+  element: HTMLElement | Window | null,
+  passive: boolean,
+  capture = false
+) {
+  // Create a ref that stores handler
+  const savedHandler =
+    React.useRef<(this: HTMLElement, ev: HTMLElementEventMap[K]) => any>()
+
+  // Update ref.current value if handler changes.
+  // This allows our effect below to always get latest handler ...
+  // ... without us needing to pass it in effect deps array ...
+  // ... and potentially cause effect to re-run every render.
+  savedHandler.current = handler
+  React.useEffect(
+    () => {
+      // Make sure element supports addEventListener
+      if (element === null || element.addEventListener === undefined) return
+      const el = element as HTMLElement
+
+      // Create event listener that calls handler function stored in ref
+      const eventListener = (event: HTMLElementEventMap[K]) => {
+        savedHandler.current?.call(el, event)
+      }
+
+      el.addEventListener(eventName, eventListener, { passive, capture })
+
+      // Remove event listener on cleanup
+      return () => {
+        el.removeEventListener(eventName, eventListener, { capture })
+      }
+    },
+    [eventName, element, passive, capture] // Re-run if eventName or element changes
+  )
+}
 
 /**
  * Options to configure columns.
@@ -304,6 +378,7 @@ export function getColumns(
     const columnTitle = data.columns[0][i]
     const quiverType = data.types.data[i]
     const columnType = getColumnTypeFromQuiver(quiverType)
+    // TODO(lukasmasuch): Use disabled from props
     const isEditable =
       isEditableType(columnType) && element.editable && !element.disabled
 
@@ -349,6 +424,30 @@ function updateSortingHeader(
     }
     return column
   })
+}
+
+function getCurrentState(
+  element: ArrowProto,
+  widgetMgr: WidgetStateManager
+): any {
+  let currentState
+  const currentStateString = widgetMgr.getJsonValue(element as WidgetInfo)
+
+  if (currentStateString !== undefined) {
+    currentState = JSON.parse(currentStateString)
+  }
+
+  if (currentState === undefined) {
+    currentState = {
+      edits: {},
+    }
+  }
+
+  if (currentState.edits === undefined) {
+    currentState.edits = {}
+  }
+
+  return currentState
 }
 
 /**
@@ -406,8 +505,8 @@ export function useDataLoader(
   const onColumnResize = React.useCallback(
     (
       column: GridColumn,
-      newSize: number,
-      colIndex: number,
+      _newSize: number,
+      _colIndex: number,
       newSizeWithGrow: number
     ) => {
       if (column.id) {
@@ -484,11 +583,10 @@ export function useDataLoader(
     ): void => {
       const column = updatedColumns[col]
 
-      editingState.current.set(
-        col,
-        getOriginalIndex(row),
-        updateCell(column, updatedCell)
-      )
+      editingState.current.set(col, getOriginalIndex(row), {
+        ...getCell(column, getCellValue(column, updatedCell)),
+        lastUpdated: performance.now(),
+      })
     },
     [getOriginalIndex, editingState, updatedColumns]
   )
@@ -497,8 +595,6 @@ export function useDataLoader(
     (target: Item, values: readonly (readonly string[])[]): boolean => {
       const [targetCol, targetRow] = target
 
-      console.log(target)
-      console.log(values)
       const updatedCells: { cell: [number, number] }[] = []
 
       for (let row = 0; row < values.length; row++) {
@@ -523,9 +619,14 @@ export function useDataLoader(
             // Column is not editable -> just ignore
             continue
           }
+          const newCell = getCell(column, pasteDataValue)
+          if (isErrorCell(newCell)) {
+            // If new cell value leads to error -> just ignore
+            continue
+          }
 
           editingState.current.set(colIndex, getOriginalIndex(rowIndex), {
-            ...getCell(column, pasteDataValue),
+            ...newCell,
             lastUpdated: performance.now(),
           })
           updatedCells.push({
@@ -554,6 +655,8 @@ export interface DataFrameProps {
   data: Quiver
   width: number
   height?: number
+  disabled: boolean
+  widgetMgr: WidgetStateManager
   isFullScreen?: boolean
 }
 
@@ -562,6 +665,8 @@ function DataFrame({
   data,
   width: containerWidth,
   height: containerHeight,
+  disabled,
+  widgetMgr,
   isFullScreen,
 }: DataFrameProps): ReactElement {
   const extraCellArgs = useExtraCells()
@@ -580,6 +685,7 @@ function DataFrame({
     onPaste,
   } = useDataLoader(dataEditorRef, element, data, sort)
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
+  const [showSearch, setShowSearch] = React.useState(false)
 
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
     columns: CompactSelection.empty(),
@@ -700,6 +806,30 @@ function DataFrame({
     }
   }, [isFullScreen])
 
+  useEventListener(
+    "keydown",
+    React.useCallback(
+      event => {
+        if (!isFocused) {
+          return
+        }
+
+        if (
+          event.code === "KeyF" &&
+          ((!isFromMac() && event.ctrlKey) || (isFromMac() && event.metaKey))
+        ) {
+          setShowSearch(cv => !cv)
+          event.stopPropagation()
+          event.preventDefault()
+        }
+      },
+      [isFocused]
+    ),
+    window,
+    false,
+    true
+  )
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -714,6 +844,18 @@ function DataFrame({
         }
       }}
     >
+      <StyledDataframeToolbar>
+        {/* <ActionButton label={"Add Row"} icon={Add} onClick={() => {}} /> */}
+        <ActionButton icon={FileDownload} onClick={() => {}} />
+        <ActionButton
+          icon={Search}
+          onClick={() => {
+            setIsFocused(true)
+            setShowSearch(true)
+          }}
+        />
+        <ActionButton icon={Fullscreen} onClick={() => {}} />
+      </StyledDataframeToolbar>
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
@@ -764,6 +906,10 @@ function DataFrame({
           headerHeight={ROW_HEIGHT}
           getCellContent={getCellContent}
           onColumnResize={onColumnResize}
+          showSearch={showSearch}
+          onSearchClose={() => {
+            setShowSearch(false)
+          }}
           // Freeze all index columns:
           freezeColumns={
             columns.filter(col => (col as CustomColumn).isIndex).length
@@ -788,7 +934,7 @@ function DataFrame({
           columnSelect={"none"}
           rowSelect={"none"}
           // Activate search:
-          keybindings={{ search: true }}
+          keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
           onHeaderClicked={onHeaderClick}
           gridSelection={gridSelection}
@@ -813,13 +959,26 @@ function DataFrame({
           customRenderers={extraCellArgs.customRenderers}
           // If element is editable, add additional properties:
           {...(element.editable &&
-            !element.disabled && {
+            !disabled && {
               // Support editing:
               onCellEdited,
               // Support fill handle for bulk editing
               fillHandle: true,
               // Support on past of bulk editing
               onPaste,
+              // Support adding rows
+              trailingRowOptions: {
+                sticky: true,
+                tint: true,
+                // hint: "Add row...",
+              },
+              onRowAppended: () => {},
+              rowMarkers: "checkbox",
+              onDeleteRows: (rows: number[]) => {
+                console.log("Delete rows", rows)
+              },
+              rowSelect: "multi",
+              rowSelectionMode: "auto",
             })}
         />
       </Resizable>

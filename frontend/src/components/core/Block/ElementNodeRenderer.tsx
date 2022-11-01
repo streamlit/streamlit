@@ -216,16 +216,6 @@ const RawElementNodeRenderer = (
     case "balloons":
       return <Balloons scriptRunId={props.scriptRunId} />
 
-    case "arrowDataFrame":
-      return (
-        <ArrowDataFrame
-          element={node.element.arrowDataFrame as ArrowProto}
-          data={node.quiverElement as Quiver}
-          width={width}
-          height={height}
-        />
-      )
-
     case "arrowTable":
       return <ArrowTable element={node.quiverElement as Quiver} />
 
@@ -369,6 +359,22 @@ const RawElementNodeRenderer = (
       return <Video width={width} element={node.element.video as VideoProto} />
 
     // Widgets
+    case "arrowDataFrame":
+      const arrowProto = node.element.arrowDataFrame as ArrowProto
+      widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
+
+      return (
+        <ArrowDataFrame
+          element={arrowProto}
+          data={node.quiverElement as Quiver}
+          width={width}
+          height={height}
+          {...(arrowProto.id && {
+            key: arrowProto.id,
+          })}
+          {...widgetProps}
+        />
+      )
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto

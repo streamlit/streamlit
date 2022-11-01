@@ -34,3 +34,20 @@ export const StyledResizableContainer = styled.div(() => ({
     ["overflowY" as any]: "overlay !important",
   },
 }))
+
+export interface StyledDataframeToolbarProps {
+  disabled?: boolean | null
+}
+
+export const StyledDataframeToolbar = styled.div<StyledDataframeToolbarProps>(
+  ({ theme, disabled }) => ({
+    color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+    top: theme.spacing.threeXS,
+    right: theme.spacing.twoXS,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: theme.spacing.xs,
+    justifyContent: "flex-end",
+  })
+)
