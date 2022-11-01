@@ -49,9 +49,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-# no theme applied to charts
-alt.themes.enable("none")
-
 
 class ChartType(Enum):
     AREA = "area"
