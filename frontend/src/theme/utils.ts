@@ -636,3 +636,21 @@ export function computeSpacingStyle(value: string, theme: Theme): string {
 export function hasLightBackgroundColor(theme: Theme): boolean {
   return getLuminance(theme.colors.bgColor) > 0.5
 }
+
+export function getGray70(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray70
+    : theme.colors.gray30
+}
+
+export function getGray30(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray30
+    : theme.colors.gray85
+}
+
+export function getGray90(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray90
+    : theme.colors.gray10
+}

@@ -42,7 +42,4 @@ export default {
   infoBg: transparentize(colors.blue70, 0.9),
   danger: colors.red100,
   dangerBg: transparentize(colors.red80, 0.91),
-  axisText: colors.gray70,
-  gridLine: colors.gray30,
-  legendText: colors.gray90,
 }
