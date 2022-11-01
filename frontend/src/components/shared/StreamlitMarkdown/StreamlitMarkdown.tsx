@@ -74,7 +74,12 @@ export interface Props {
   /**
    * Disallow markdown tables/images if used in widget/expander/tab label
    */
-  isWidgetLabel?: boolean
+  isLabel?: boolean
+
+  /**
+   * Disallow markdown tables/images/link/code if used in button labels
+   */
+  isButton?: boolean
 }
 
 /**
@@ -210,14 +215,20 @@ export interface RenderedMarkdownProps {
   /**
    * Disallow markdown tables/images if used in widget/expander/tab label
    */
-  isWidgetLabel?: boolean
+  isLabel?: boolean
+
+  /**
+   * Disallow markdown tables/images/link/code if used in button labels
+   */
+  isButton?: boolean
 }
 
 export function RenderedMarkdown({
   allowHTML,
   source,
   overrideComponents,
-  isWidgetLabel,
+  isLabel,
+  isButton,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -239,6 +250,13 @@ export function RenderedMarkdown({
     rehypePlugins.push(rehypeRaw)
   }
 
+  let disallow
+  if (isLabel) {
+    disallow = ["img", "table"]
+  } else if (isButton) {
+    disallow = ["img", "table", "code", "a"]
+  }
+
   return (
     <ErrorBoundary>
       <ReactMarkdown
@@ -246,7 +264,7 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
-        disallowedElements={isWidgetLabel ? ["img", "table"] : []}
+        disallowedElements={disallow}
       >
         {source}
       </ReactMarkdown>
@@ -272,7 +290,8 @@ class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render(): ReactNode {
-    const { source, allowHTML, style, isCaption, isWidgetLabel } = this.props
+    const { source, allowHTML, style, isCaption, isLabel, isButton } =
+      this.props
     const isInSidebar = this.context
 
     return (
@@ -285,7 +304,8 @@ class StreamlitMarkdown extends PureComponent<Props> {
         <RenderedMarkdown
           source={source}
           allowHTML={allowHTML}
-          isWidgetLabel={isWidgetLabel}
+          isLabel={isLabel}
+          isButton={isButton}
         />
       </StyledStreamlitMarkdown>
     )

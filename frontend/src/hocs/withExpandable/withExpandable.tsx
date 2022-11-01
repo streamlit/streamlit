@@ -171,11 +171,7 @@ function withExpandable(
         >
           <Panel
             title={
-              <StreamlitMarkdown
-                source={label}
-                allowHTML={false}
-                isWidgetLabel
-              />
+              <StreamlitMarkdown source={label} allowHTML={false} isLabel />
             }
             key="panel"
           >

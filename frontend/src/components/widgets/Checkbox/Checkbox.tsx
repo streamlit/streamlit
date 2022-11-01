@@ -203,7 +203,7 @@ class Checkbox extends React.PureComponent<Props, State> {
             <StreamlitMarkdown
               source={element.label}
               allowHTML={false}
-              isWidgetLabel
+              isLabel
             />
             {element.help && (
               <StyledWidgetLabelHelpInline color={color}>

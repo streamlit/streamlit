@@ -49,7 +49,7 @@ function Button(props: Props): ReactElement {
           <StreamlitMarkdown
             source={element.label}
             allowHTML={false}
-            isWidgetLabel
+            isButton
           />
         </UIButton>
       </ButtonTooltip>
