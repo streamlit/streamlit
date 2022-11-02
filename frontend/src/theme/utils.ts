@@ -729,9 +729,13 @@ export function getCategoricalColorsArray(theme: Theme): string[] {
 }
 
 export function getDecreasingRed(theme: Theme): string {
-  return hasLightBackgroundColor(theme) ? "#FF2B2B" : "#FFABAB"
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.red80
+    : theme.colors.red40
 }
 
 export function getIncreasingGreen(theme: Theme): string {
-  return hasLightBackgroundColor(theme) ? "#29B09D" : "#7DEFA1"
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.blueGreen80
+    : theme.colors.green40
 }

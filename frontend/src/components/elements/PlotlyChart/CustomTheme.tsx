@@ -152,7 +152,7 @@ function applyDiscreteColors(data: any, theme: Theme): void {
  */
 export function applyColorscale(data: any, theme: Theme): any {
   data.forEach((entry: any) => {
-    entry = assign(entry, {
+    assign(entry, {
       colorscale: convertColorArrayPlotly(getSequentialColorsArray(theme)),
     })
   })
@@ -379,16 +379,14 @@ export function applyStreamlitThemeTemplateLayout(
         diverging: convertColorArrayPlotly(getDivergingColorsArray(theme)),
         sequential: convertColorArrayPlotly(getSequentialColorsArray(theme)),
         sequentialminus: convertColorArrayPlotly(
-          getSequentialColorsArray(theme).reverse()
+          getDivergingColorsArray(theme)
         ),
       },
     },
     colorscale: {
       diverging: convertColorArrayPlotly(getDivergingColorsArray(theme)),
       sequential: convertColorArrayPlotly(getSequentialColorsArray(theme)),
-      sequentialminus: convertColorArrayPlotly(
-        getSequentialColorsArray(theme).reverse()
-      ),
+      sequentialminus: convertColorArrayPlotly(getDivergingColorsArray(theme)),
     },
     // specifically for the ternary graph
     ternary: {
