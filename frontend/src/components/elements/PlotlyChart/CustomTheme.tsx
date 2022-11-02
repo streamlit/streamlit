@@ -35,6 +35,15 @@ import { logError } from "src/lib/log"
  * Plotly represents continuous colorscale through an array of pairs.
  * The pair's first index is the starting point and the next pair's first index is the end point.
  * The pair's second index is the starting color and the next pair's second index is the end color.
+ * An example would be:
+ *  [
+ *    [0, "rgb(166,206,227)"],
+ *    [0.25, "rgb(31,120,180)"],
+ *    [0.45, "rgb(178,223,138)"],
+ *    [0.65, "rgb(51,160,44)"],
+ *    [0.85, "rgb(251,154,153)"],
+ *    [1, "rgb(227,26,28)"]
+ *  ]
  * For more information, please refer to https://plotly.com/python/colorscales/
  * @param colors
  * @returns
