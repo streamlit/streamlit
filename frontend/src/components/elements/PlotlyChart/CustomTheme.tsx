@@ -222,7 +222,7 @@ export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
           totals: {
             marker: {
               color: hasLightBackgroundColor(theme)
-                ? theme.colors.green40
+                ? theme.colors.blue80
                 : theme.colors.blue40,
             },
           },
