@@ -286,11 +286,10 @@ def replay_result_messages(
             if isinstance(msg, ElementMsgData):
                 if msg.widget_metadata is not None:
                     register_widget_from_metadata(
-                        # TODO: can we provide real values for these?
                         msg.widget_metadata.metadata,
                         ctx,
-                        "",
-                        "",
+                        None,
+                        msg.delta_type,
                     )
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 maybe_dg = dg._enqueue(msg.delta_type, msg.message)
