@@ -26,8 +26,8 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class PyplotTest(DeltaGeneratorTestCase):
-    def setUp(self, override_root=True):
-        super().setUp(override_root)
+    def setUp(self):
+        super().setUp()
         if matplotlib.get_backend().lower() != "agg":
             plt.switch_backend("agg")
 

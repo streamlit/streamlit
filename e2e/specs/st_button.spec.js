@@ -21,22 +21,36 @@ describe("st.button", () => {
     cy.prepForElementSnapshots();
   });
 
-  it("shows widget correctly", () => {
-    cy.get(".stButton").should("have.length", 2);
+  it("shows default button correctly", () => {
+    cy.get(".stButton").should("have.length", 4);
 
     cy.get(".stButton")
       .first()
       .matchThemedSnapshots("button-widget");
   });
 
-  it("shows disabled widget correctly", () => {
-    cy.get(".stButton").should("have.length", 2);
+  it("shows disabled default button correctly", () => {
+    cy.get(".stButton").should("have.length", 4);
 
     cy.getIndexed(".stButton", 1).matchThemedSnapshots("disabled-button");
   });
 
+  it("shows primary button correctly", () => {
+    cy.get(".stButton").should("have.length", 4);
+
+    cy.getIndexed(".stButton", 2).matchThemedSnapshots("primary-button");
+  });
+
+  it("shows disabled primary button correctly", () => {
+    cy.get(".stButton").should("have.length", 4);
+
+    cy.get(".stButton")
+      .last()
+      .matchThemedSnapshots("disabled-primary-button");
+  });
+
   it("has correct default values", () => {
-    cy.get(".stButton button").should("have.text", "button 1" + "button 2");
+    cy.get(".stButton button").should("have.text", "button 1" + "button 2" + "button 3" + "button 4");
   });
 
   it("sets value correctly when user clicks", () => {
@@ -66,6 +80,7 @@ describe("st.button", () => {
       .first()
       .click();
 
+    cy.get(".stMarkdown", { timeout: 10000 }).should("have.length", 9);
     cy.get(".stMarkdown").contains("Button was clicked: True");
     cy.get(".stMarkdown").contains("times clicked: 1");
     cy.get(".stMarkdown").contains("arg value: 1");

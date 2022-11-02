@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import { merge, assign } from "lodash"
-
-import { useTheme } from "@emotion/react"
+import { assign } from "lodash"
 
 import {
   getDecreasingRed,
@@ -30,6 +28,8 @@ import {
   getSequentialColorsArray,
   getDivergingColorsArray,
 } from "src/theme"
+import { ensureError } from "src/lib/ErrorHandling"
+import { logError } from "src/lib/log"
 
 /**
  * Plotly represents continuous colorscale through an array of pairs.
@@ -53,8 +53,7 @@ function convertColorArrayPlotly(colors: string[]): (string | number)[][] {
  * This is done because colorway is not fully respected by plotly.
  * @param data - spec.data
  */
-export function changeDiscreteColors(data: any): void {
-  const theme: Theme = useTheme()
+function applyDiscreteColors(data: any, theme: Theme): void {
   const categoryColors = getCategoricalColorsArray(theme)
 
   const legendGroupToIndexes = new Map<string, number[]>()
@@ -142,8 +141,7 @@ export function changeDiscreteColors(data: any): void {
  * This overrides the colorscale (continuous colorscale) to all graphs.
  * @param data - spec.data
  */
-export function applyColorscale(data: any): any {
-  const theme = useTheme()
+export function applyColorscale(data: any, theme: Theme): any {
   data.forEach((entry: any) => {
     entry = assign(entry, {
       colorscale: convertColorArrayPlotly(getSequentialColorsArray(theme)),
@@ -157,8 +155,7 @@ export function applyColorscale(data: any): any {
  * because their dictionary structure is different from other more regular charts.
  * @param data - spec.data
  */
-export function applyUniqueGraphColorsData(data: any): void {
-  const theme = useTheme()
+export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
   const { colors, genericFonts } = theme
   data.forEach((entry: any) => {
     // entry.type is always defined
@@ -186,14 +183,14 @@ export function applyUniqueGraphColorsData(data: any): void {
       })
     } else if (entry.type === "candlestick") {
       if (entry.decreasing === undefined) {
-        entry = assign(entry, {
+        assign(entry, {
           decreasing: {
             line: {
               color: getDecreasingRed(theme),
             },
           },
         })
-        entry = assign(entry, {
+        assign(entry, {
           increasing: {
             line: {
               color: getIncreasingGreen(theme),
@@ -202,16 +199,16 @@ export function applyUniqueGraphColorsData(data: any): void {
         })
       }
     } else if (entry.type === "waterfall") {
-      entry = assign(entry, {
+      assign(entry, {
         connector: {
           line: {
             color: getGray30(theme),
-            width: theme.spacing.threeXSPx,
+            width: 2,
           },
         },
       })
       if (entry.decreasing === undefined) {
-        entry = assign(entry, {
+        assign(entry, {
           decreasing: {
             marker: {
               color: getDecreasingRed(theme),
@@ -225,7 +222,7 @@ export function applyUniqueGraphColorsData(data: any): void {
           totals: {
             marker: {
               color: hasLightBackgroundColor(theme)
-                ? theme.colors.blue80
+                ? theme.colors.green40
                 : theme.colors.blue40,
             },
           },
@@ -248,18 +245,10 @@ export function applyStreamlitThemeTemplateLayout(
   const { genericFonts, colors, fontSizes } = theme
 
   const streamlitTheme = {
-    // hide all text that is less than 8 px
     uniformtext: {
+      // hide all text that is less than 6 px
       minsize: 6,
       mode: "hide",
-    },
-    background: colors.bgColor,
-    header: {
-      labelColor: colors.bodyText,
-    },
-    view: {
-      continuousHeight: 350,
-      continuousWidth: 400,
     },
     font: {
       color: getGray70(theme),
@@ -270,7 +259,7 @@ export function applyStreamlitThemeTemplateLayout(
       color: colors.headingColor,
       subtitleColor: colors.bodyText,
       font: {
-        family: genericFonts.bodyFont,
+        family: genericFonts.headingFont,
         size: fontSizes.mdPx,
         color: colors.headingColor,
       },
@@ -430,6 +419,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
   }
 
+  // cant use merge. use assign because plotly already has properties defined.
   assign(layout, streamlitTheme)
 }
 
@@ -438,16 +428,15 @@ export function applyStreamlitThemeTemplateLayout(
  * for in general through assigning properties in spec.data
  * @param data - spec.data
  */
-export function applyStreamlitThemeData(data: any): void {
-  const { colors } = useTheme()
-  applyColorscale(data)
-  applyUniqueGraphColorsData(data)
-  changeDiscreteColors(data)
+export function applyStreamlitThemeData(data: any, theme: Theme): void {
+  applyColorscale(data, theme)
+  applyUniqueGraphColorsData(data, theme)
+  applyDiscreteColors(data, theme)
   data.forEach((entry: any) => {
     if (entry.marker !== undefined) {
       entry.marker.line = assign(entry.marker.line, {
         width: 0,
-        color: colors.transparent,
+        color: theme.colors.transparent,
       })
     }
   })
@@ -486,57 +475,46 @@ export function applyStreamlitThemeTemplateData(
  * spec.data, spec.layout.template.data, and spec.layout.template.layout
  * @param spec - spec
  */
-export function applyStreamlitTheme(spec: any): void {
-  const theme: Theme = useTheme()
-  applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
-  applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
-  applyStreamlitThemeData(spec.data)
+export function applyStreamlitTheme(spec: any, theme: Theme): void {
+  try {
+    applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
+    applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
+    applyStreamlitThemeData(spec.data, theme)
+  } catch (e) {
+    const err = ensureError(e)
+    logError(err)
+  }
   if ("title" in spec.layout) {
-    spec.layout.title = assign({
-      text: `<b>${spec.layout.title.text}</b>`,
-    })
+    spec.layout.title = { text: `<b>${spec.layout.title.text}</b>` }
   }
 }
 
-export function applyThemeDefaults(config: any, theme: Theme): any {
-  const { colors, fontSizes, genericFonts } = theme
-  const themeFonts = {
-    labelFont: genericFonts.bodyFont,
-    titleFont: genericFonts.bodyFont,
-    labelFontSize: fontSizes.twoSmPx,
-    titleFontSize: fontSizes.twoSmPx,
-  }
+/**
+ * Apply minimum changes to graph to fit streamlit
+ * @param layout - spec.layout
+ * @param theme - theme from useTheme()
+ * @returns modified spec.layout
+ */
+export function layoutWithThemeDefaults(layout: any, theme: Theme): any {
+  const { colors, genericFonts } = theme
+
   const themeDefaults = {
-    background: colors.bgColor,
-    axis: {
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
-      gridColor: colors.fadedText10,
-      ...themeFonts,
-    },
-    legend: {
-      labelColor: colors.bodyText,
-      titleColor: colors.bodyText,
-      ...themeFonts,
-    },
-    title: {
+    font: {
       color: colors.bodyText,
-      subtitleColor: colors.bodyText,
-      ...themeFonts,
+      family: genericFonts.bodyFont,
     },
-    header: {
-      labelColor: colors.bodyText,
-    },
-    view: {
-      continuousHeight: 350,
-      continuousWidth: 400,
-    },
+    paper_bgcolor: colors.bgColor,
+    plot_bgcolor: colors.secondaryBg,
   }
 
-  if (!config) {
-    return themeDefaults
+  // Fill in theme defaults where the user didn't specify layout options.
+  return {
+    ...layout,
+    font: {
+      ...themeDefaults.font,
+      ...layout.font,
+    },
+    paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
+    plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
   }
-
-  // Fill in theme defaults where the user didn't specify config options.
-  return merge({}, themeDefaults, config || {})
 }

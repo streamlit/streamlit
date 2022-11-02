@@ -28,9 +28,8 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(fig)
 
         el = self.get_delta_from_queue().new_element
-        print(el)
-        self.assertTrue(el.plotly_chart.figure.spec != None)
-        self.assertTrue(el.plotly_chart.figure.config != None)
+        self.assertNotEqual(el.plotly_chart.figure.spec, None)
+        self.assertNotEqual(el.plotly_chart.figure.config, None)
 
     @parameterized.expand(
         [
@@ -39,7 +38,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         ]
     )
     def test_theme(self, theme_value, proto_value):
-        """Test that plotly object works."""
         df = px.data.gapminder().query("country=='Canada'")
         fig = px.line(df, x="year", y="lifeExp", title="Life expectancy in Canada")
         st.plotly_chart(fig, theme=theme_value)
@@ -48,13 +46,12 @@ class PyDeckTest(DeltaGeneratorTestCase):
         self.assertEqual(el.plotly_chart.theme, proto_value)
 
     def test_bad_theme(self):
-        """Test that plotly object works."""
         df = px.data.gapminder().query("country=='Canada'")
         fig = px.line(df, x="year", y="lifeExp", title="Life expectancy in Canada")
         with self.assertRaises(StreamlitAPIException) as exc:
             st.plotly_chart(fig, theme="bad_theme")
 
         self.assertEqual(
-            f"""You set theme=\"bad_theme\" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme. """,
+            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
             str(exc.exception),
         )

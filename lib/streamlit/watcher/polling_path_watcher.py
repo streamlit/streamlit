@@ -14,7 +14,6 @@
 
 """A class that watches a given path via polling."""
 
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional

@@ -44,7 +44,7 @@ _LOGGER = get_logger(__name__)
 
 
 class WriteMixin:
-    @gather_metrics
+    @gather_metrics("write")
     def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
         """Write arguments to the app.
 
@@ -93,16 +93,6 @@ class WriteMixin:
             security. For more information, see:
 
             https://github.com/streamlit/streamlit/issues/152
-
-            **Also note that `unsafe_allow_html` is a temporary measure and may be
-            removed from Streamlit at any time.**
-
-            If you decide to turn on HTML anyway, we ask you to please tell us your
-            exact use case here:
-            https://discuss.streamlit.io/t/96 .
-
-            This will help us come up with safe APIs that allow you to do what you
-            want.
 
         Example
         -------
@@ -191,6 +181,9 @@ class WriteMixin:
             # Order matters!
             if isinstance(arg, str):
                 string_buffer.append(arg)
+            elif type_util.is_snowpark_or_pyspark_data_object(arg):
+                flush_buffer()
+                self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):
                 flush_buffer()
                 if len(np.shape(arg)) > 2:

@@ -285,11 +285,11 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.number_input("the label", label_visibility="wrong_value")
-            self.assertEquals(
-                str(e),
-                "Unsupported label_visibility option 'wrong_value'. Valid values are "
-                "'visible', 'hidden' or 'collapsed'.",
-            )
+        self.assertEquals(
+            str(e.exception),
+            "Unsupported label_visibility option 'wrong_value'. Valid values are "
+            "'visible', 'hidden' or 'collapsed'.",
+        )
 
     def test_should_keep_type_of_return_value_after_rerun(self):
         # Generate widget id and reset context

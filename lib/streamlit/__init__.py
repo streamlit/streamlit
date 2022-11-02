@@ -52,8 +52,6 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from typing import Any as _Any
-
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.caching import (
@@ -82,7 +80,9 @@ from streamlit.commands.execution_control import (
     rerun as _rerun,
 )
 
-cache = _gather_metrics(_cache)
+# We add the metrics tracking for caching here,
+# since the actual cache function calls itself recursively
+cache = _gather_metrics("cache", _cache)
 
 
 def _update_logger() -> None:
@@ -184,30 +184,23 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
 # Config
 get_option = _config.get_option
-set_option = _gather_metrics(_config.set_user_option)
+# We add the metrics tracking here, since importing
+# gather_metrics in config causes a circular dependency
+set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
 session_state = _SessionStateProxy()
 
 # Beta APIs
-beta_container = _gather_metrics(_main.beta_container)
-beta_expander = _gather_metrics(_main.beta_expander)
-beta_columns = _gather_metrics(_main.beta_columns)
+beta_container = _gather_metrics("beta_container", _main.beta_container)
+beta_expander = _gather_metrics("beta_expander", _main.beta_expander)
+beta_columns = _gather_metrics("beta_columns", _main.beta_columns)
 
 # Experimental APIs
 experimental_user = _UserInfoProxy()
 experimental_singleton = _singleton
 experimental_memo = _memo
-experimental_get_query_params = _gather_metrics(_get_query_params)
-experimental_set_query_params = _gather_metrics(_set_query_params)
-experimental_show = _gather_metrics(_show)
+experimental_get_query_params = _get_query_params
+experimental_set_query_params = _set_query_params
+experimental_show = _show
 experimental_rerun = _rerun
-
-
-@_gather_metrics
-def _transparent_write(*args: _Any) -> _Any:
-    """This is just st.write, but returns the arguments you passed to it."""
-    write(*args)
-    if len(args) == 1:
-        return args[0]
-    return args

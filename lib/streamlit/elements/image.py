@@ -63,7 +63,7 @@ ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
 class ImageMixin:
-    @gather_metrics
+    @gather_metrics("image")
     def image(
         self,
         image: ImageOrImageList,
@@ -329,13 +329,14 @@ def image_to_url(
             if p.scheme:
                 return image
         except UnicodeDecodeError:
+            # If the string runs into a UnicodeDecodeError, we assume it is not a valid URL.
             pass
 
         # Otherwise, try to open it as a file.
         try:
             with open(image, "rb") as f:
                 image_data = f.read()
-        except:
+        except Exception:
             # When we aren't able to open the image file, we still pass the path to
             # the MediaFileManager - its storage backend may have access to files
             # that Streamlit does not.

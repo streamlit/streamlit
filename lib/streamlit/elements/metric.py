@@ -41,7 +41,7 @@ class MetricColorAndDirection:
 
 
 class MetricMixin:
-    @gather_metrics
+    @gather_metrics("metric")
     def metric(
         self,
         label: str,
@@ -147,6 +147,7 @@ class MetricMixin:
                 if isinstance(value.item(), float) or isinstance(value.item(), int):
                     return str(value.item())
             except Exception:
+                # If the numpy item is not a valid value, the TypeError below will be raised.
                 pass
 
         raise TypeError(

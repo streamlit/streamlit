@@ -68,7 +68,7 @@ class SelectboxSerde(Generic[T]):
 
 
 class SelectboxMixin:
-    @gather_metrics
+    @gather_metrics("selectbox")
     def selectbox(
         self,
         label: str,

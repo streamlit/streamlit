@@ -29,8 +29,16 @@ class ButtonTest(DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, False)
         self.assertEqual(c.form_id, "")
+        self.assertEqual(c.type, "secondary")
         self.assertEqual(c.is_form_submitter, False)
         self.assertEqual(c.disabled, False)
+
+    def test_type(self):
+        """Test that it can be called with type param."""
+        st.button("the label", type="primary")
+
+        c = self.get_delta_from_queue().new_element.button
+        self.assertEqual(c.type, "primary")
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""

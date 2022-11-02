@@ -28,6 +28,8 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
+from tests.streamlit import pyspark_mocks
+from tests.streamlit.snowpark_mocks import DataFrame, Row
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -173,6 +175,34 @@ class StreamlitWriteTest(unittest.TestCase):
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write(SessionStateProxy())
 
+            p.assert_called_once()
+
+    def test_snowpark_dataframe_write(self):
+        """Test st.write with snowflake.snowpark.dataframe.DataFrame."""
+
+        # SnowparkDataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
+            st.write(DataFrame())
+            p.assert_called_once()
+
+        # SnowparkRow inside list should call streamlit.delta_generator.DeltaGenerator.dataframe
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
+            st.write(
+                [
+                    Row(),
+                ]
+            )
+            p.assert_called_once()
+
+    def test_pyspark_dataframe_write(self):
+        """Test st.write with pyspark.sql.DataFrame."""
+
+        # PySpark DataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
+            snowpark_dataframe = (
+                pyspark_mocks.create_pyspark_dataframe_with_mocked_personal_data()
+            )
+            st.write(snowpark_dataframe)
             p.assert_called_once()
 
     @patch("streamlit.delta_generator.DeltaGenerator.markdown")

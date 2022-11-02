@@ -281,13 +281,13 @@ export class App extends PureComponent<Props, State> {
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
       getHostAuthToken: this.getHostAuthToken,
+      setHostAllowedOrigins: this.props.hostCommunication.setAllowedOrigins,
     })
 
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
     }
 
-    this.props.hostCommunication.connect()
     this.props.hostCommunication.sendMessage({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
@@ -367,17 +367,6 @@ export class App extends PureComponent<Props, State> {
     logMessage(
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
-
-    const { connectionState: currState } = this.state
-
-    if (
-      currState === ConnectionState.CONNECTED &&
-      newState === ConnectionState.PINGING_SERVER
-    ) {
-      this.props.hostCommunication.sendMessage({
-        type: "WEBSOCKET_DISCONNECTED",
-      })
-    }
 
     this.setState({ connectionState: newState })
 
@@ -826,7 +815,7 @@ export class App extends PureComponent<Props, State> {
         // we pick up any new changes to it).
         this.setAndSendTheme(customTheme)
       }
-    } else if (!themeInput) {
+    } else {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
@@ -1243,14 +1232,21 @@ export class App extends PureComponent<Props, State> {
   }
 
   addScriptFinishedHandler = (func: () => void): void => {
-    this.setState({
-      scriptFinishedHandlers: concat(this.state.scriptFinishedHandlers, func),
+    this.setState((prevState, _) => {
+      return {
+        scriptFinishedHandlers: concat(prevState.scriptFinishedHandlers, func),
+      }
     })
   }
 
   removeScriptFinishedHandler = (func: () => void): void => {
-    this.setState({
-      scriptFinishedHandlers: without(this.state.scriptFinishedHandlers, func),
+    this.setState((prevState, _) => {
+      return {
+        scriptFinishedHandlers: without(
+          prevState.scriptFinishedHandlers,
+          func
+        ),
+      }
     })
   }
 

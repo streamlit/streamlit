@@ -92,7 +92,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
           </StyledInstruction>
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={Kind.PRIMARY} onClick={this.handleStartButton}>
+          <ModalButton kind={Kind.SECONDARY} onClick={this.handleStartButton}>
             Start recording!
           </ModalButton>
         </ModalFooter>

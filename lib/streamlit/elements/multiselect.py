@@ -142,7 +142,7 @@ class MultiSelectSerde(Generic[T]):
 
 
 class MultiSelectMixin:
-    @gather_metrics
+    @gather_metrics("multiselect")
     def multiselect(
         self,
         label: str,

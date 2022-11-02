@@ -67,11 +67,11 @@ export class ScriptChangedDialog extends PureComponent<Props> {
           </ModalBody>
           <ModalFooter>
             {this.props.allowRunOnSave ? (
-              <ModalButton kind={Kind.SECONDARY} onClick={this.alwaysRerun}>
+              <ModalButton kind={Kind.TERTIARY} onClick={this.alwaysRerun}>
                 <StyledShortcutLabel>Always rerun</StyledShortcutLabel>
               </ModalButton>
             ) : null}
-            <ModalButton kind={Kind.PRIMARY} onClick={this.rerun}>
+            <ModalButton kind={Kind.SECONDARY} onClick={this.rerun}>
               <StyledShortcutLabel>Rerun</StyledShortcutLabel>
             </ModalButton>
           </ModalFooter>

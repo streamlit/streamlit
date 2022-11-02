@@ -320,7 +320,7 @@ class DeltaGeneratorExpanderTest(DeltaGeneratorTestCase):
     def test_nested_expanders(self):
         level1 = st.expander("level 1")
         with self.assertRaises(StreamlitAPIException):
-            level2 = level1.expander("level 2")
+            level1.expander("level 2")
 
 
 class DeltaGeneratorWithTest(DeltaGeneratorTestCase):

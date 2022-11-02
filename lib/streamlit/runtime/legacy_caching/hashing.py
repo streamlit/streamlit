@@ -28,19 +28,14 @@ import sys
 import tempfile
 import textwrap
 import threading
-import typing
 import unittest.mock
 import weakref
-from typing import Any, Callable, Dict, List, Optional, Pattern, Union
+from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
 
 from streamlit import config, file_util, type_util, util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.folder_black_list import FolderBlackList
-from streamlit.logger import get_logger
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
-_LOGGER = get_logger(__name__)
-
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
@@ -84,7 +79,7 @@ Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
 # when the hasher encounters an object, it will first check to see if its type
 # matches a key in this dict and, if so, will use the provided function to
 # generate a hash for it.
-HashFuncsDict = Dict[Union[str, typing.Type[Any]], Callable[[Any], Any]]
+HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
 
 
 class HashReason(enum.Enum):
@@ -152,7 +147,7 @@ class _HashStack:
         def to_str(v):
             try:
                 return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
-            except:
+            except Exception:
                 return "<Unable to convert item to string>"
 
         # IDEA: Maybe we should remove our internal "hash_funcs" from the
@@ -375,8 +370,8 @@ class _CodeHasher:
             # Re-raise exceptions we hand-raise internally.
             raise
 
-        except BaseException as e:
-            raise InternalHashError(e, obj)
+        except Exception as ex:
+            raise InternalHashError(ex, obj)
 
         finally:
             # In case an UnhashableTypeError (or other) error is thrown, clean up the
@@ -427,8 +422,8 @@ class _CodeHasher:
             hash_func = self._hash_funcs[type_util.get_fqn_type(obj)]
             try:
                 output = hash_func(obj)
-            except BaseException as e:
-                raise UserHashError(e, obj, hash_func=hash_func)
+            except Exception as ex:
+                raise UserHashError(ex, obj, hash_func=hash_func)
 
             return self.to_bytes(output)
 
@@ -679,8 +674,8 @@ class _CodeHasher:
             h = hashlib.new("md5")
             try:
                 reduce_data = obj.__reduce__()
-            except BaseException as e:
-                raise UnhashableTypeError(e, obj)
+            except Exception as ex:
+                raise UnhashableTypeError(ex, obj)
 
             for item in reduce_data:
                 self.update(h, item, context)
@@ -966,24 +961,19 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
     hash_source = hash_stacks.current.hash_source
 
     failed_obj_type_str = type_util.get_fqn_type(failed_obj)
+    object_part = ""
 
     if hash_source is None or hash_reason is None:
         object_desc = "something"
-        object_part = ""
-        additional_explanation = ""
 
     elif hash_reason is HashReason.CACHING_BLOCK:
         object_desc = "a code block"
-        object_part = ""
-        additional_explanation = ""
 
     else:
         if hasattr(hash_source, "__name__"):
-            object_desc = "`%s()`" % hash_source.__name__
-            object_desc_specific = object_desc
+            object_desc = f"`{hash_source.__name__}()`"
         else:
             object_desc = "a function"
-            object_desc_specific = "that function"
 
         if hash_reason is HashReason.CACHING_FUNC_ARGS:
             object_part = "the arguments of"

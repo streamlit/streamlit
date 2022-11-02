@@ -30,6 +30,7 @@ message PlotlyChart {
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 5;
 
+  // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
 
   reserved 3, 4;

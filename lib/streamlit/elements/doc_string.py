@@ -41,7 +41,7 @@ CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
-    @gather_metrics
+    @gather_metrics("help")
     def help(self, obj: Any) -> "DeltaGenerator":
         """Display object's doc string, nicely formatted.
 
@@ -84,6 +84,8 @@ def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
     try:
         doc_string_proto.name = obj.__name__
     except AttributeError:
+        # Some objects might not have a __name__ attribute.
+        # In that case we just don't set the name.
         pass
 
     module_name = getattr(obj, "__module__", None)

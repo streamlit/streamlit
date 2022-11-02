@@ -63,6 +63,8 @@ class Slider extends React.PureComponent<Props, State> {
 
   private sliderRef = React.createRef<HTMLDivElement>()
 
+  private thumbRef: React.MutableRefObject<HTMLDivElement> | undefined
+
   private thumbValueRef = React.createRef<HTMLDivElement>()
 
   private readonly commitWidgetValueDebounced: (source: Source) => void
@@ -131,8 +133,11 @@ class Slider extends React.PureComponent<Props, State> {
    * form is submitted. Restore our default value and update the WidgetManager.
    */
   private onFormCleared = (): void => {
-    this.setState({ value: this.props.element.default }, () =>
-      this.commitWidgetValue({ fromUi: true })
+    this.setState(
+      (_, prevProps) => {
+        return { value: prevProps.element.default }
+      },
+      () => this.commitWidgetValue({ fromUi: true })
     )
   }
 
@@ -199,20 +204,29 @@ class Slider extends React.PureComponent<Props, State> {
 
   private thumbValueAlignment(): void {
     const slider = this.sliderRef.current
-    const thumb = this.thumbValueRef.current
+    const thumb = this.thumbRef?.current
+    const thumbValue = this.thumbValueRef.current
 
-    if (slider && thumb) {
+    if (slider && thumb && thumbValue) {
       const sliderPosition = slider.getBoundingClientRect()
       const thumbPosition = thumb.getBoundingClientRect()
+      const thumbValuePosition = thumbValue.getBoundingClientRect()
 
-      thumb.style.left = thumbPosition.left < sliderPosition.left ? "0" : ""
-      thumb.style.right = thumbPosition.right > sliderPosition.right ? "0" : ""
+      const thumbMidpoint = thumbPosition.left + thumbPosition.width / 2
+      const thumbValueOverflowsLeft =
+        thumbMidpoint - thumbValuePosition.width / 2 < sliderPosition.left
+      const thumbValueOverflowsRight =
+        thumbMidpoint + thumbValuePosition.width / 2 > sliderPosition.right
+
+      thumbValue.style.left = thumbValueOverflowsLeft ? "0" : ""
+      thumbValue.style.right = thumbValueOverflowsRight ? "0" : ""
     }
   }
 
   // eslint-disable-next-line react/display-name
   private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
     (props: SharedProps, ref): JSX.Element => {
+      this.thumbRef = ref as React.MutableRefObject<HTMLDivElement>
       const { $value, $thumbIndex } = props
       const formattedValue = $value
         ? this.formatValue($value[$thumbIndex as number])
