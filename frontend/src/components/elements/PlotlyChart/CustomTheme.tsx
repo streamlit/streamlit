@@ -19,101 +19,32 @@ import { merge, assign } from "lodash"
 import { useTheme } from "@emotion/react"
 
 import {
+  getDecreasingRed,
   getGray30,
   getGray70,
   getGray90,
+  getIncreasingGreen,
   hasLightBackgroundColor,
+  getCategoricalColorsArray,
   Theme,
+  getSequentialColorsArray,
+  getDivergingColorsArray,
 } from "src/theme"
 
-// TODO: for these colors below, these likely need to move to our theme!
-// For the meantime, these colors will be defined for plotly.
-
-const divergingColorscaleLightTheme = [
-  [0.1, "#004280"],
-  [0.2, "#0054A3"],
-  [0.3, "#1C83E1"],
-  [0.4, "#60B4FF"],
-  [0.5, "#A6DCFF"],
-  [0.6, "#FFC7C7"],
-  [0.7, "#FF8C8C"],
-  [0.8, "#FF4B4B"],
-  [0.9, "#BD4043"],
-  [1.0, "#7D353B"],
-]
-
-const divergingColorscaleDarkTheme = [
-  [0, "#A6DCFF"],
-  [0.1, "#A6DCFF"],
-  [0.2, "#60B4FF"],
-  [0.3, "#1C83E1"],
-  [0.4, "#0054A3"],
-  [0.5, "#004280"],
-  [0.6, "#7D353B"],
-  [0.7, "#BD4043"],
-  [0.8, "#FF4B4B"],
-  [0.9, "#FF8C8C"],
-  [1.0, "#FFC7C7"],
-]
-
-const sequentialColorscaleLightTheme = [
-  [0, "#E4F5FF"],
-  [0.1111111111111111, "#C7EBFF"],
-  [0.2222222222222222, "#A6DCFF"],
-  [0.3333333333333333, "#83C9FF"],
-  [0.4444444444444444, "#60B4FF"],
-  [0.5555555555555556, "#3D9DF3"],
-  [0.6666666666666666, "#1C83E1"],
-  [0.7777777777777778, "#0068C9"],
-  [0.8888888888888888, "#0054A3"],
-  [1, "#004280"],
-]
-
-const sequentialColorscaleDarkTheme = [
-  [0, "#004280"],
-  [0.1111111111111111, "#0054A3"],
-  [0.2222222222222222, "#0068C9"],
-  [0.3333333333333333, "#1C83E1"],
-  [0.4444444444444444, "#3D9DF3"],
-  [0.5555555555555556, "#60B4FF"],
-  [0.6666666666666666, "#83C9FF"],
-  [0.7777777777777778, "#A6DCFF"],
-  [0.8888888888888888, "#C7EBFF"],
-  [1, "#E4F5FF"],
-]
-
-const categoryColorsLightTheme = [
-  "#0068C9",
-  "#83C9FF",
-  "#FF2B2B",
-  "#FFABAB",
-  "#29B09D",
-  "#7DEFA1",
-  "#FF8700",
-  "#FFD16A",
-  "#6D3FC0",
-  "#D5DAE5",
-]
-
-const categoryColorsDarkTheme = [
-  "#83C9FF",
-  "#0068C9",
-  "#FFABAB",
-  "#FF2B2B",
-  "#7DEFA1",
-  "#29B09D",
-  "#FFD16A",
-  "#FF8700",
-  "#6D3FC0",
-  "#D5DAE5",
-]
-
-export function getDecreasingRed(theme: Theme): string {
-  return hasLightBackgroundColor(theme) ? "#FF2B2B" : "#FFABAB"
-}
-
-export function getIncreasingGreen(theme: Theme): string {
-  return hasLightBackgroundColor(theme) ? "#29B09D" : "#7DEFA1"
+/**
+ * Plotly represents continuous colorscale through an array of pairs.
+ * The pair's first index is the starting point and the next pair's first index is the end point.
+ * The pair's second index is the starting color and the next pair's second index is the end color.
+ * For more information, please refer to https://plotly.com/python/colorscales/
+ * @param colors
+ * @returns
+ */
+function convertColorArrayPlotly(colors: string[]): (string | number)[][] {
+  const plotlyColorArray: (string | number)[][] = []
+  colors.forEach((color: string, index: number) => {
+    plotlyColorArray.push([index / (colors.length - 1), color])
+  })
+  return plotlyColorArray
 }
 
 /**
@@ -124,9 +55,7 @@ export function getIncreasingGreen(theme: Theme): string {
  */
 export function changeDiscreteColors(data: any): void {
   const theme: Theme = useTheme()
-  const categoryColors = hasLightBackgroundColor(theme)
-    ? categoryColorsLightTheme
-    : categoryColorsDarkTheme
+  const categoryColors = getCategoricalColorsArray(theme)
 
   const legendGroupToIndexes = new Map<string, number[]>()
   const customDataToDataIdx = new Map<string, number[]>()
@@ -217,9 +146,7 @@ export function applyColorscale(data: any): any {
   const theme = useTheme()
   data.forEach((entry: any) => {
     entry = assign(entry, {
-      colorscale: hasLightBackgroundColor(theme)
-        ? sequentialColorscaleLightTheme
-        : sequentialColorscaleDarkTheme,
+      colorscale: convertColorArrayPlotly(getSequentialColorsArray(theme)),
     })
   })
   return data
@@ -297,7 +224,9 @@ export function applyUniqueGraphColorsData(data: any): void {
           },
           totals: {
             marker: {
-              color: hasLightBackgroundColor(theme) ? "#0068C9" : "#83C9FF",
+              color: hasLightBackgroundColor(theme)
+                ? theme.colors.blue80
+                : theme.colors.blue40,
             },
           },
         })
@@ -351,9 +280,7 @@ export function applyStreamlitThemeTemplateLayout(
       xanchor: "left",
       x: 0,
     },
-    colorway: hasLightBackgroundColor(theme)
-      ? categoryColorsLightTheme
-      : categoryColorsDarkTheme,
+    colorway: getCategoricalColorsArray(theme),
     legend: {
       title: {
         font: {
@@ -372,9 +299,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
     paper_bgcolor: colors.bgColor,
     plot_bgcolor: colors.bgColor,
-    colorDiscreteSequence: hasLightBackgroundColor(theme)
-      ? categoryColorsLightTheme
-      : categoryColorsDarkTheme,
+    colorDiscreteSequence: getCategoricalColorsArray(theme),
     yaxis: {
       ticklabelposition: "outside",
       zerolinecolor: getGray30(theme),
@@ -453,31 +378,19 @@ export function applyStreamlitThemeTemplateLayout(
         },
       },
       colorscale: {
-        ...(hasLightBackgroundColor(theme)
-          ? {
-              diverging: divergingColorscaleLightTheme,
-              sequential: sequentialColorscaleLightTheme,
-              sequentialminus: sequentialColorscaleDarkTheme,
-            }
-          : {
-              diverging: divergingColorscaleDarkTheme,
-              sequential: sequentialColorscaleDarkTheme,
-              sequentialminus: sequentialColorscaleLightTheme,
-            }),
+        diverging: convertColorArrayPlotly(getDivergingColorsArray(theme)),
+        sequential: convertColorArrayPlotly(getSequentialColorsArray(theme)),
+        sequentialminus: convertColorArrayPlotly(
+          getSequentialColorsArray(theme).reverse()
+        ),
       },
     },
     colorscale: {
-      ...(hasLightBackgroundColor(theme)
-        ? {
-            diverging: divergingColorscaleLightTheme,
-            sequential: sequentialColorscaleLightTheme,
-            sequentialminus: sequentialColorscaleDarkTheme,
-          }
-        : {
-            diverging: divergingColorscaleDarkTheme,
-            sequential: sequentialColorscaleDarkTheme,
-            sequentialminus: sequentialColorscaleLightTheme,
-          }),
+      diverging: convertColorArrayPlotly(getDivergingColorsArray(theme)),
+      sequential: convertColorArrayPlotly(getSequentialColorsArray(theme)),
+      sequentialminus: convertColorArrayPlotly(
+        getSequentialColorsArray(theme).reverse()
+      ),
     },
     // specifically for the ternary graph
     ternary: {
