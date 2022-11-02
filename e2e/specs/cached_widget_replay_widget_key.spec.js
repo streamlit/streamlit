@@ -22,7 +22,7 @@ describe("widget replay cache selection", () => {
   it("runs cached function with new widget values", () => {
     cy.get(".stRadio").should("have.length", 1);
     cy.get("[data-testid='stText']").should("have.text", "['function ran']");
-    cy.get(".stButton").first().click();
+    cy.get(".stButton button").first().click();
     cy.get("[data-testid='stStatusWidget']", { timeout: 10000 }).should(
       "exist"
     );
@@ -35,7 +35,7 @@ describe("widget replay cache selection", () => {
     cy.get(".stRadio").first().find("input").last().click({ force: true });
     cy.get(".stRadio").should("have.length", 1);
     cy.get("[data-testid='stText']").should("have.text", "['function ran']");
-    cy.get(".stButton").first().click();
+    cy.get(".stButton button").first().click();
     cy.get("[data-testid='stStatusWidget']", { timeout: 10000 }).should(
       "exist"
     );
