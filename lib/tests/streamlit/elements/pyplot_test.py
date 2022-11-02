@@ -14,11 +14,13 @@
 
 """st.pyplot unit tests."""
 
+from typing import Optional
 from unittest.mock import patch
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.web.server.server import MEDIA_ENDPOINT
@@ -30,6 +32,11 @@ class PyplotTest(DeltaGeneratorTestCase):
         super().setUp()
         if matplotlib.get_backend().lower() != "agg":
             plt.switch_backend("agg")
+
+    def tearDown(self):
+        # Clear the global pyplot figure between tests
+        plt.clf()
+        super().tearDown()
 
     def test_st_pyplot(self):
         """Test st.pyplot.
@@ -55,33 +62,30 @@ class PyplotTest(DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.imgs[0].caption, "")
         self.assertTrue(el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT))
 
-    def test_st_pyplot_clear_figure(self):
-        """st.pyplot should clear the passed-in figure."""
-        # Assert that plt.clf() is called by st.pyplot() only if
-        # clear_fig is True
-        for clear_figure in [True, False, None]:
-            plt.hist(np.random.normal(1, 1, size=100), bins=20)
-            with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
-                st.pyplot(clear_figure=clear_figure)
+    @parameterized.expand([("true", True), ("false", False), ("none", None)])
+    def test_st_pyplot_clear_global_figure(self, _, clear_figure: Optional[bool]):
+        """st.pyplot should clear the global figure if `clear_figure` is
+        True *or* None.
+        """
+        plt.hist(np.random.normal(1, 1, size=100), bins=20)
+        with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
+            st.pyplot(clear_figure=clear_figure)
 
-                if clear_figure is False:
-                    plt_clf.assert_not_called()
-                else:
-                    plt_clf.assert_called_once()
+            if clear_figure in (True, None):
+                plt_clf.assert_called_once()
+            else:
+                plt_clf.assert_not_called()
 
-            # Manually clear for the next loop iteration
-            plt.clf()
+    @parameterized.expand([("true", True), ("false", False), ("none", None)])
+    def test_st_pyplot_clear_figure(self, _, clear_figure: Optional[bool]):
+        """st.pyplot should clear the passed-in figure if `clear_figure` is True."""
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+        ax1.hist(np.random.normal(1, 1, size=100), bins=20)
+        with patch.object(fig, "clf", wraps=fig.clf, autospec=True) as fig_clf:
+            st.pyplot(fig, clear_figure=clear_figure)
 
-        # Assert that fig.clf() is called by st.pyplot(fig) only if
-        # clear_figure is True
-        for clear_figure in [True, False, None]:
-            fig = plt.figure()
-            ax1 = fig.add_subplot(111)
-            ax1.hist(np.random.normal(1, 1, size=100), bins=20)
-            with patch.object(fig, "clf", wraps=fig.clf, autospec=True) as fig_clf:
-                st.pyplot(fig, clear_figure=clear_figure)
-
-                if clear_figure:
-                    fig_clf.assert_called_once()
-                else:
-                    fig_clf.assert_not_called()
+            if clear_figure is True:
+                fig_clf.assert_called_once()
+            else:
+                fig_clf.assert_not_called()
