@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext } from "react"
+import React, { ReactElement, useContext, useEffect } from "react"
 import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
 import UIButton, {
@@ -37,22 +37,28 @@ function DownloadButton(props: Props): ReactElement {
   const style = { width }
   const { getBaseUriParts } = useContext(AppContext)
 
+  useEffect(() => {
+    if (element.readyToDownload) {
+      const link = document.createElement("a")
+      const uri = `${buildMediaUri(
+        element.url,
+        getBaseUriParts()
+      )}?title=${encodeURIComponent(document.title)}`
+      link.setAttribute("href", uri)
+      link.setAttribute("target", "_blank")
+      link.click()
+    }
+  }, [element.readyToDownload])
+
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
     widgetMgr.setTriggerValue(element, { fromUi: true })
-    const link = document.createElement("a")
-    const uri = `${buildMediaUri(
-      element.url,
-      getBaseUriParts()
-    )}?title=${encodeURIComponent(document.title)}`
-    link.setAttribute("href", uri)
-    link.setAttribute("target", "_blank")
-    link.click()
   }
 
   return (
     <div className="row-widget stDownloadButton" style={style}>
+      <div>{element.readyToDownload.toString()}</div>
       <ButtonTooltip help={element.help}>
         <UIButton
           kind={Kind.SECONDARY}

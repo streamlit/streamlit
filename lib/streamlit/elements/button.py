@@ -38,7 +38,6 @@ from streamlit.type_util import Key, to_key
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-
 FORM_DOCS_INFO: Final = """
 
 For more information, refer to the
@@ -291,9 +290,11 @@ class ButtonMixin:
 
         download_button_proto.label = label
         download_button_proto.default = False
-        marshall_file(
-            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
-        )
+        download_button_proto.ready_to_download = False
+
+        # marshall_file(
+        #     self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
+        # )
 
         if help is not None:
             download_button_proto.help = dedent(help)
@@ -315,6 +316,16 @@ class ButtonMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         download_button_proto.disabled = disabled
+        if button_state.value:
+            download_button_proto.ready_to_download = True
+            print("SET READY TO DOWNLOAD TO TRUE")
+            marshall_file(
+                self.dg._get_delta_path_str(),
+                data,
+                download_button_proto,
+                mime,
+                file_name,
+            )
 
         self.dg._enqueue("download_button", download_button_proto)
         return button_state.value
@@ -431,8 +442,12 @@ def marshall_file(
             file_name=file_name,
             is_for_static_download=True,
         )
+        ready_to_download = True
+        print("READY TO DOWNLOAD SETTED!!!!")
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
         file_url = ""
+        ready_to_download = False
 
     proto_download_button.url = file_url
+    proto_download_button.ready_to_download = ready_to_download
