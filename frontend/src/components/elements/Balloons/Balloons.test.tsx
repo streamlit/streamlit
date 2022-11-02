@@ -17,13 +17,10 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 
-import Balloons, { NUM_BALLOONS, Props } from "./Balloons"
-import Snow from "../Snow/Snow"
+import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
-const getProps = (props: Partial<Props> = {}): Props => ({
+const getProps = (): Props => ({
   scriptRunId: "51522269",
-  isVisible: true,
-  ...props,
 })
 
 describe("Balloons element", () => {
@@ -51,12 +48,5 @@ describe("Balloons element", () => {
     const wrapper = mount(<Balloons {...props} />)
 
     expect(wrapper.find("div").prop("className")).toContain("stHidden")
-  })
-
-  it("renders as empty element when isVisible prop equal to false", () => {
-    const props = getProps({ isVisible: false })
-    const wrapper = mount(<Snow {...props} />)
-
-    expect(wrapper.find("div")).toHaveLength(0)
   })
 })

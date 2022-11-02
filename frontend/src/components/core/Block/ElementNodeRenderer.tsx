@@ -164,6 +164,10 @@ interface RawElementNodeRendererProps extends ElementNodeRendererProps {
   isStale: boolean
 }
 
+function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
+  return isStale ? <></> : component
+}
+
 // Render ElementNodes (i.e. leaf nodes).
 const RawElementNodeRenderer = (
   props: RawElementNodeRendererProps
@@ -218,8 +222,9 @@ const RawElementNodeRenderer = (
       return <Audio width={width} element={node.element.audio as AudioProto} />
 
     case "balloons":
-      return (
-        <Balloons scriptRunId={props.scriptRunId} isVisible={!props.isStale} />
+      return hideIfStale(
+        props.isStale,
+        <Balloons scriptRunId={props.scriptRunId} />
       )
 
     case "arrowDataFrame":
@@ -553,8 +558,9 @@ const RawElementNodeRenderer = (
     }
 
     case "snow":
-      return (
-        <Snow scriptRunId={props.scriptRunId} isVisible={!props.isStale} />
+      return hideIfStale(
+        props.isStale,
+        <Snow scriptRunId={props.scriptRunId} />
       )
 
     case "textArea": {

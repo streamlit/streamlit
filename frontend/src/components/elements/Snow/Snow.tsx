@@ -37,16 +37,16 @@ const NUM_FLAKE_TYPES = FLAKE_IMAGES.length
 
 export interface Props {
   scriptRunId: string
-  isVisible: boolean
 }
 
 const Flake: FC<ParticleProps> = ({ particleType }) => (
   <StyledFlake src={FLAKE_IMAGES[particleType]} />
 )
 
-const Snow: FC<Props> = ({ scriptRunId, isVisible }) =>
+const Snow: FC<Props> = function Snow({ scriptRunId }) {
+  // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  isVisible ? (
+  return (
     <Particles
       className="snow"
       scriptRunId={scriptRunId}
@@ -54,8 +54,7 @@ const Snow: FC<Props> = ({ scriptRunId, isVisible }) =>
       numParticles={NUM_FLAKES}
       ParticleComponent={Flake}
     />
-  ) : (
-    <></>
   )
+}
 
 export default memo(Snow)

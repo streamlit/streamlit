@@ -20,9 +20,10 @@ import {
   ForwardMsgMetadata,
   Snow as SnowProto,
 } from "src/autogen/proto"
-import { mount } from "src/lib/test_util"
+import { render } from "src/lib/test_util"
 import { ElementNode } from "src/lib/AppNode"
 import { ScriptRunState } from "src/lib/ScriptRunState"
+import { waitFor } from "@testing-library/dom"
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
@@ -82,50 +83,73 @@ function getProps(
 
 describe("ElementNodeRenderer Block Component", () => {
   describe("render Balloons", () => {
-    it("should NOT render a stale component", () => {
+    it("should NOT render a stale component", async () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const props = getProps({
         node: createBalloonNode(scriptRunId),
         scriptRunId: "NEW_SCRIPT_ID",
       })
-      const wrapper = mount(<ElementNodeRenderer {...props} />)
+      const wrapper = render(<ElementNodeRenderer {...props} />)
 
-      expect(wrapper.find(".balloons.stHidden")).toHaveLength(0)
+      await waitFor(() =>
+        expect(wrapper.baseElement.textContent).not.toContain("Loading...")
+      )
+      expect(
+        wrapper.baseElement.querySelectorAll(".element-container > *")
+      ).toHaveLength(0)
     })
 
-    it("should render a fresh component", () => {
+    it("should render a fresh component", async () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const props = getProps({
         node: createBalloonNode(scriptRunId),
         scriptRunId,
       })
-      const wrapper = mount(<ElementNodeRenderer {...props} />)
 
-      expect(wrapper.find(".balloons.stHidden")).toHaveLength(1)
+      const wrapper = render(<ElementNodeRenderer {...props} />)
+
+      await waitFor(() =>
+        expect(wrapper.baseElement.textContent).not.toContain("Loading...")
+      )
+      expect(
+        wrapper.baseElement.querySelectorAll(".element-container > *")
+      ).toHaveLength(1)
+      expect(wrapper.baseElement.querySelectorAll(".balloons")).toHaveLength(1)
     })
   })
 
   describe("render Snow", () => {
-    it("should NOT render a stale component", () => {
+    it("should NOT render a stale component", async () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const props = getProps({
         node: createSnowNode(scriptRunId),
         scriptRunId: "NEW_SCRIPT_ID",
       })
-      const wrapper = mount(<ElementNodeRenderer {...props} />)
+      const wrapper = render(<ElementNodeRenderer {...props} />)
 
-      expect(wrapper.find(".snow.stHidden")).toHaveLength(0)
+      await waitFor(() =>
+        expect(wrapper.baseElement.textContent).not.toContain("Loading...")
+      )
+      expect(
+        wrapper.baseElement.querySelectorAll(".element-container > *")
+      ).toHaveLength(0)
     })
 
-    it("should render a fresh component", () => {
+    it("should render a fresh component", async () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const props = getProps({
         node: createSnowNode(scriptRunId),
         scriptRunId,
       })
-      const wrapper = mount(<ElementNodeRenderer {...props} />)
+      const wrapper = render(<ElementNodeRenderer {...props} />)
 
-      expect(wrapper.find(".snow.stHidden")).toHaveLength(1)
+      await waitFor(() =>
+        expect(wrapper.baseElement.textContent).not.toContain("Loading...")
+      )
+      expect(
+        wrapper.baseElement.querySelectorAll(".element-container > *")
+      ).toHaveLength(1)
+      expect(wrapper.baseElement.querySelectorAll(".snow")).toHaveLength(1)
     })
   })
 })
