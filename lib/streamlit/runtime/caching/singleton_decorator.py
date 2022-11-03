@@ -29,10 +29,14 @@ from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     CacheMessagesCallStack,
     CacheWarningCallStack,
+    ElementMsgData,
     MsgData,
+    MultiCacheResults,
+    _make_widget_key,
     create_cache_wrapper,
 )
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
@@ -49,7 +53,9 @@ class SingletonCaches(CacheStatsProvider):
         self._caches_lock = threading.Lock()
         self._function_caches: Dict[str, "SingletonCache"] = {}
 
-    def get_cache(self, key: str, display_name: str) -> "SingletonCache":
+    def get_cache(
+        self, key: str, display_name: str, allow_widgets: bool
+    ) -> "SingletonCache":
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -64,7 +70,9 @@ class SingletonCaches(CacheStatsProvider):
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug("Creating new SingletonCache (key=%s)", key)
-            cache = SingletonCache(key=key, display_name=display_name)
+            cache = SingletonCache(
+                key=key, display_name=display_name, allow_widgets=allow_widgets
+            )
             self._function_caches[key] = cache
             return cache
 
@@ -116,7 +124,9 @@ class SingletonFunction(CachedFunction):
 
     def get_function_cache(self, function_key: str) -> Cache:
         return _singleton_caches.get_cache(
-            key=function_key, display_name=self.display_name
+            key=function_key,
+            display_name=self.display_name,
+            allow_widgets=self.allow_widgets,
         )
 
 
@@ -142,19 +152,21 @@ class SingletonAPI:
         *,
         show_spinner: Union[bool, str] = True,
         suppress_st_warning=False,
+        experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
 
     # __call__ should be a static method, but there's a mypy bug that
     # breaks type checking for overloaded static functions:
     # https://github.com/python/mypy/issues/7781
-    @gather_metrics
+    @gather_metrics("experimental_singleton")
     def __call__(
         self,
         func: Optional[F] = None,
         *,
         show_spinner: Union[bool, str] = True,
         suppress_st_warning=False,
+        experimental_allow_widgets: bool = False,
     ):
         """Function decorator to store singleton objects.
 
@@ -237,6 +249,7 @@ class SingletonAPI:
                     func=f,
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
+                    allow_widgets=experimental_allow_widgets,
                 )
             )
 
@@ -245,11 +258,12 @@ class SingletonAPI:
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
+                allow_widgets=experimental_allow_widgets,
             )
         )
 
     @staticmethod
-    @gather_metrics
+    @gather_metrics("clear_singleton")
     def clear() -> None:
         """Clear all singleton caches."""
         _singleton_caches.clear_all()
@@ -258,11 +272,12 @@ class SingletonAPI:
 class SingletonCache(Cache):
     """Manages cached values for a single st.singleton function."""
 
-    def __init__(self, key: str, display_name: str):
+    def __init__(self, key: str, display_name: str, allow_widgets: bool = False):
         self.key = key
         self.display_name = display_name
-        self._mem_cache: Dict[str, CachedResult] = {}
+        self._mem_cache: Dict[str, MultiCacheResults] = {}
         self._mem_cache_lock = threading.Lock()
+        self.allow_widgets = allow_widgets
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -270,18 +285,52 @@ class SingletonCache(Cache):
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
-                return self._mem_cache[key]
+                multi_results = self._mem_cache[key]
 
+                ctx = get_script_run_ctx()
+                if not ctx:
+                    raise CacheKeyNotFoundError()
+
+                widget_key = multi_results.get_current_widget_key(
+                    ctx, CacheType.SINGLETON
+                )
+                if widget_key in multi_results.results:
+                    return multi_results.results[widget_key]
+                else:
+                    raise CacheKeyNotFoundError()
             else:
                 raise CacheKeyNotFoundError()
 
-    @gather_metrics
+    @gather_metrics("_cache_singleton_object")
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+
         main_id = st._main.id
         sidebar_id = st.sidebar.id
+        if self.allow_widgets:
+            widgets = {
+                msg.widget_metadata.widget_id
+                for msg in messages
+                if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
+            }
+        else:
+            widgets = set()
+
         with self._mem_cache_lock:
-            self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
+            try:
+                multi_results = self._mem_cache[key]
+            except KeyError:
+                multi_results = MultiCacheResults(widget_ids=widgets, results={})
+
+            multi_results.widget_ids.update(widgets)
+            widget_key = multi_results.get_current_widget_key(ctx, CacheType.SINGLETON)
+
+            result = CachedResult(value, messages, main_id, sidebar_id)
+            multi_results.results[widget_key] = result
+            self._mem_cache[key] = multi_results
 
     def clear(self) -> None:
         with self._mem_cache_lock:

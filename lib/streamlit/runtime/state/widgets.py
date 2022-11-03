@@ -184,10 +184,58 @@ def register_widget(
     widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
+    # Create the widget's updated metadata, and register it with session_state.
+    metadata = WidgetMetadata(
+        widget_id,
+        deserializer,
+        serializer,
+        value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
+        callback=on_change_handler,
+        callback_args=args,
+        callback_kwargs=kwargs,
+    )
+    return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
+
+
+def user_key_from_widget_id(wid: str) -> Optional[str]:
+    """Extract the user key used to generate a widget id, from that id.
+
+    Returns `None` instead of `"None"` if there was no user key,
+    for compatibility with the rest of the codebase, which represents it that way.
+
+    TODO This will incorrectly indicate no user key if the user actually provides
+    "None" as a key, but we can't avoid this kind of problem while storing the
+    string representation of the no-user-key sentinel as part of the widget id.
+    """
+    user_key = wid.split("-", maxsplit=2)[-1]
+    user_key = None if user_key == "None" else user_key
+    return user_key
+
+
+def register_widget_from_metadata(
+    metadata: WidgetMetadata[T],
+    ctx: Optional["ScriptRunContext"],
+    widget_func_name: Optional[str],
+    element_type: ElementType,
+) -> RegisterWidgetResult[T]:
+    """Register a widget and return its value, using an already constructed
+    `WidgetMetadata`.
+
+    This is split out from `register_widget` to allow caching code to replay
+    widgets by saving and reusing the completed metadata.
+
+    See `register_widget` for details on what this returns.
+    """
+    # Local import to avoid import cycle
+    import streamlit.runtime.caching as caching
+
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
-        return RegisterWidgetResult.failure(deserializer=deserializer)
+        return RegisterWidgetResult.failure(deserializer=metadata.deserializer)
+
+    widget_id = metadata.id
+    user_key = user_key_from_widget_id(widget_id)
 
     # Ensure another widget with the same user key hasn't already been registered.
     if user_key is not None:
@@ -212,17 +260,8 @@ def register_widget(
                 user_key,
             )
         )
-
-    # Create the widget's updated metadata, and register it with session_state.
-    metadata = WidgetMetadata(
-        widget_id,
-        deserializer,
-        serializer,
-        value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
-        callback=on_change_handler,
-        callback_args=args,
-        callback_kwargs=kwargs,
-    )
+    # Save the widget metadata for cached result replay
+    caching.save_widget_metadata(metadata)
     return ctx.session_state.register_widget(metadata, user_key)
 
 

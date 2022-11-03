@@ -15,7 +15,7 @@
 import base64
 import binascii
 import json
-from typing import Any, Awaitable, Dict, Optional, Union
+from typing import Any, Awaitable, Dict, List, Optional, Union
 
 import tornado.concurrent
 import tornado.locks
@@ -33,7 +33,7 @@ from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedE
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import is_url_from_allowed_origins
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
@@ -60,6 +60,28 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             self.write_message(serialize_forward_msg(msg), binary=True)
         except tornado.websocket.WebSocketClosedError as e:
             raise SessionClientDisconnectedError from e
+
+    def select_subprotocol(self, subprotocols: List[str]) -> Optional[str]:
+        """Return the first subprotocol in the given list.
+
+        This method is used by Tornado to select a protocol when the
+        Sec-WebSocket-Protocol header is set in an HTTP Upgrade request.
+
+        NOTE: We repurpose the Sec-WebSocket-Protocol header here in a slightly
+        unfortunate (but necessary) way. The browser WebSocket API doesn't allow us to
+        set arbitrary HTTP headers, and this header is the only one where we have the
+        ability to set it to arbitrary values, so we use it to pass an auth token from
+        client to server as the *second* value in the list.
+
+        The reason why the auth token is set as the second value is that, when
+        Sec-WebSocket-Protocol is set, many clients expect the server to respond with a
+        selected subprotocol to use. We don't want that reply to be the auth token, so
+        we just hard-code it to "streamlit".
+        """
+        if subprotocols:
+            return subprotocols[0]
+
+        return None
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
         # Extract user info from the X-Streamlit-User header
@@ -116,11 +138,11 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
             msg = BackMsg()
             msg.ParseFromString(payload)
-            LOGGER.debug("Received the following back message:\n%s", msg)
+            _LOGGER.debug("Received the following back message:\n%s", msg)
 
-        except BaseException as e:
-            LOGGER.error(e)
-            self._runtime.handle_backmsg_deserialization_exception(self._session_id, e)
+        except Exception as ex:
+            _LOGGER.error(ex)
+            self._runtime.handle_backmsg_deserialization_exception(self._session_id, ex)
             return
 
         if msg.WhichOneof("type") == "close_connection":
@@ -129,7 +151,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             if config.get_option("global.developmentMode"):
                 self._runtime.stop()
             else:
-                LOGGER.warning(
+                _LOGGER.warning(
                     "Client tried to close connection when " "not in development mode"
                 )
         else:

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import json
-import unittest
 from unittest import mock
 
 import pandas as pd
@@ -21,12 +20,12 @@ import pydeck as pdk
 
 import streamlit as st
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
 
-class PyDeckTest(testutil.DeltaGeneratorTestCase):
+class PyDeckTest(DeltaGeneratorTestCase):
     def test_basic(self):
         """Test that pydeck object works."""
 

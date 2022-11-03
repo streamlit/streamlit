@@ -16,7 +16,6 @@ import asyncio
 import sys
 import time
 import traceback
-from asyncio import Future
 from enum import Enum
 from typing import Awaitable, Dict, NamedTuple, Optional, Tuple
 
@@ -138,10 +137,10 @@ class AsyncObjects(NamedTuple):
 
     # Completed when the Runtime has started.
     # (`Future` is not generic in Python 3.8, so we need to use quote-typing.)
-    started: "Future[None]"
+    started: "asyncio.Future[None]"
 
     # Completed when the Runtime has stopped.
-    stopped: "Future[None]"
+    stopped: "asyncio.Future[None]"
 
 
 class Runtime:

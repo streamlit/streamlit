@@ -21,7 +21,7 @@ import pyarrow as pa
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 
@@ -30,7 +30,7 @@ df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
 
 
-class LegacyVegaLiteTest(testutil.DeltaGeneratorTestCase):
+class LegacyVegaLiteTest(DeltaGeneratorTestCase):
     """Test ability to marshall vega_lite_chart protos."""
 
     def test_no_args(self):

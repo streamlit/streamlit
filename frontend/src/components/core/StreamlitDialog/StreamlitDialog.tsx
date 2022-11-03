@@ -149,7 +149,7 @@ function aboutDialog(props: AboutProps): ReactElement {
           </StyledAboutInfo>
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
+          <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
             Close
           </ModalButton>
         </ModalFooter>
@@ -174,7 +174,7 @@ function aboutDialog(props: AboutProps): ReactElement {
         </div>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
+        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
           Close
         </ModalButton>
       </ModalFooter>
@@ -223,12 +223,12 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
             </div>
           </ModalBody>
           <ModalFooter>
-            <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+            <ModalButton kind={Kind.TERTIARY} onClick={props.onClose}>
               Cancel
             </ModalButton>
             <ModalButton
               autoFocus
-              kind={Kind.PRIMARY}
+              kind={Kind.SECONDARY}
               onClick={props.confirmCallback}
             >
               Clear caches
@@ -284,11 +284,11 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
           </div>
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+          <ModalButton kind={Kind.TERTIARY} onClick={props.onClose}>
             Cancel
           </ModalButton>
           <ModalButton
-            kind={Kind.PRIMARY}
+            kind={Kind.SECONDARY}
             onClick={() => props.rerunCallback()}
           >
             Rerun
@@ -321,7 +321,7 @@ function scriptCompileErrorDialog(
         </div>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
+        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
           Close
         </ModalButton>
       </ModalFooter>
@@ -352,7 +352,7 @@ function warningDialog(props: WarningProps): ReactElement {
       <ModalHeader>{props.title}</ModalHeader>
       <ModalBody>{props.msg}</ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
+        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
           Done
         </ModalButton>
       </ModalFooter>
@@ -394,10 +394,10 @@ function deployErrorDialog({
         <StyledDeployErrorContent>{msg}</StyledDeployErrorContent>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={onTryAgain}>
+        <ModalButton kind={Kind.TERTIARY} onClick={onTryAgain}>
           Try again
         </ModalButton>
-        <ModalButton kind={Kind.PRIMARY} onClick={handlePrimaryButton}>
+        <ModalButton kind={Kind.SECONDARY} onClick={handlePrimaryButton}>
           {onContinue ? "Continue anyway" : "Close"}
         </ModalButton>
       </ModalFooter>

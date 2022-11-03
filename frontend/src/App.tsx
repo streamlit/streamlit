@@ -280,6 +280,8 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
+      getHostAuthToken: this.getHostAuthToken,
+      setHostAllowedOrigins: this.props.hostCommunication.setAllowedOrigins,
     })
 
     if (isEmbeddedInIFrame()) {
@@ -760,7 +762,6 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.props.hostCommunication.connect()
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
@@ -814,7 +815,7 @@ export class App extends PureComponent<Props, State> {
         // we pick up any new changes to it).
         this.setAndSendTheme(customTheme)
       }
-    } else if (!themeInput) {
+    } else {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
@@ -1172,6 +1173,12 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Returns the authToken set by the withHostCommunication hoc.
+   */
+  private getHostAuthToken = (): string | undefined =>
+    this.props.hostCommunication.currentState.authToken
+
+  /**
    * Updates the app body when there's a connection error.
    */
   handleConnectionError = (errNode: ReactNode): void => {
@@ -1225,14 +1232,21 @@ export class App extends PureComponent<Props, State> {
   }
 
   addScriptFinishedHandler = (func: () => void): void => {
-    this.setState({
-      scriptFinishedHandlers: concat(this.state.scriptFinishedHandlers, func),
+    this.setState((prevState, _) => {
+      return {
+        scriptFinishedHandlers: concat(prevState.scriptFinishedHandlers, func),
+      }
     })
   }
 
   removeScriptFinishedHandler = (func: () => void): void => {
-    this.setState({
-      scriptFinishedHandlers: without(this.state.scriptFinishedHandlers, func),
+    this.setState((prevState, _) => {
+      return {
+        scriptFinishedHandlers: without(
+          prevState.scriptFinishedHandlers,
+          func
+        ),
+      }
     })
   }
 

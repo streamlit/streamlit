@@ -109,36 +109,11 @@ pyformat:
 .PHONY: pytest
 # Run Python unit tests.
 pytest:
-	# Just testing. No code coverage.
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
 			-l tests/ \
-			$(PYTHON_MODULES)
-
-.PHONY: pycoverage
-# Show Python test coverage.
-pycoverage:
-	# testing + code coverage
-	cd lib; \
-		PYTHONPATH=. \
-		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
-			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
-			--cov-report=term-missing tests/ \
-			$(PYTHON_MODULES)
-
-.PHONY: pycoverage_html
-# Generate HTML report of Python test coverage.
-pycoverage_html:
-	# testing + code coverage
-	cd lib; \
-		PYTHONPATH=. \
-		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
-			-l $(foreach dir,$(PYTHON_MODULES),--cov=$(dir)) \
-			--cov-report=html tests/ \
 			$(PYTHON_MODULES)
 
 .PHONY: mypy
@@ -191,12 +166,11 @@ conda-distribution:
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
 	# NOTE: Running the following command requires both conda and conda-build to
 	# be installed.
-	ST_CONDA_BUILD=1 GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
+	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
 conda-package: mini-devel frontend conda-distribution
-
 
 .PHONY: clean
 # Remove all generated files.

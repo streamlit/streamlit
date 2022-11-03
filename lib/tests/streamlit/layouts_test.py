@@ -14,10 +14,10 @@
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class ColumnsTest(testutil.DeltaGeneratorTestCase):
+class ColumnsTest(DeltaGeneratorTestCase):
     """Test columns."""
 
     def test_equal_width_columns(self):
@@ -30,9 +30,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:4]
-        widgets = all_deltas[4:]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
         self.assertEqual(columns_blocks[0].add_block.column.weight, 1.0 / 3)
@@ -51,9 +49,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:4]
-        widgets = all_deltas[4:]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
         self.assertEqual(columns_blocks[0].add_block.column.weight, 3.0 / sum_weights)
@@ -72,7 +68,6 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:]
         # 4 elements will be created: 1 horizontal block, 3 columns
         self.assertEqual(len(all_deltas), 4)
@@ -84,7 +79,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
     def test_columns_with_default_small_gap(self):
         """Test that it works correctly with no gap argument (gap size is default of small)"""
 
-        columns = st.columns(3)
+        st.columns(3)
 
         all_deltas = self.get_all_deltas_from_queue()
 
@@ -133,11 +128,11 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(columns_blocks[2].add_block.column.gap, "large")
 
 
-class ExpanderTest(testutil.DeltaGeneratorTestCase):
+class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""
         with self.assertRaises(TypeError):
-            expander = st.expander()
+            st.expander()
 
     def test_just_label(self):
         """Test that it can be called with no params"""
@@ -151,22 +146,22 @@ class ExpanderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
 
 
-class TabsTest(testutil.DeltaGeneratorTestCase):
+class TabsTest(DeltaGeneratorTestCase):
     def test_tab_required(self):
         """Test that at least one tab is required."""
         with self.assertRaises(TypeError):
-            tabs = st.tabs()
+            st.tabs()
 
         with self.assertRaises(StreamlitAPIException):
-            tabs = st.tabs([])
+            st.tabs([])
 
     def test_only_label_strings_allowed(self):
         """Test that only strings are allowed as tab labels."""
         with self.assertRaises(StreamlitAPIException):
-            tabs = st.tabs(["tab1", True])
+            st.tabs(["tab1", True])
 
         with self.assertRaises(StreamlitAPIException):
-            tabs = st.tabs(["tab1", 10])
+            st.tabs(["tab1", 10])
 
     def test_returns_all_expected_tabs(self):
         """Test that all labels are added in correct order."""
@@ -180,7 +175,6 @@ class TabsTest(testutil.DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
         tabs_block = all_deltas[1:]
         # 6 elements will be created: 1 horizontal block, 5 tabs
         self.assertEqual(len(all_deltas), 6)

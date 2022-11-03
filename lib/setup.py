@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.13.0"  # PEP-440
+VERSION = "1.14.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -41,15 +41,12 @@ INSTALL_REQUIRES = [
     "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",
-    "pydeck>=0.1.dev5",
     "pympler>=0.9",
     "python-dateutil",
     "requests>=2.4",
     "rich>=10.11.0",
     "semver",
     "toml",
-    # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
-    "tornado>=5.0",
     "typing-extensions>=3.10.0.0",
     "tzlocal>=1.1",
     "validators>=0.2",
@@ -58,19 +55,19 @@ INSTALL_REQUIRES = [
     "watchdog; platform_system != 'Darwin'",
 ]
 
-# We want to exclude some dependencies in our internal conda distribution of
-# Streamlit.
-CONDA_OPTIONAL_DEPENDENCIES = [
+# We want to exclude some dependencies in our internal Snowpark conda distribution of
+# Streamlit. These dependencies will be installed normally for both regular conda builds
+# and PyPI builds (that is, for people installing streamlit using either
+# `pip install streamlit` or `conda install -c conda-forge streamlit`)
+SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython!=3.1.19",
+    "pydeck>=0.1.dev5",
+    # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
+    "tornado>=5.0",
 ]
 
-# NOTE: ST_CONDA_BUILD is used here (even though CONDA_BUILD is set
-# automatically when using the `conda build` command) because the
-# `load_setup_py_data()` conda build helper function does not have the
-# CONDA_BUILD environment variable set when it runs to generate our build
-# recipe from meta.yaml.
-if not os.getenv("ST_CONDA_BUILD"):
-    INSTALL_REQUIRES.extend(CONDA_OPTIONAL_DEPENDENCIES)
+if not os.getenv("SNOWPARK_CONDA_BUILD"):
+    INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
 
 class VerifyVersionCommand(install):
@@ -88,11 +85,21 @@ class VerifyVersionCommand(install):
             sys.exit(info)
 
 
+readme_path = THIS_DIRECTORY / ".." / "README.md"
+if readme_path.exists():
+    long_description = readme_path.read_text()
+else:
+    # In some build environments (specifically in conda), we may not have the README file
+    # readily available. In these cases, just let long_description be the empty string.
+    # Note that long_description isn't used at all in these build environments, so it
+    # being missing isn't problematic.
+    long_description = ""
+
 setuptools.setup(
     name=NAME,
     version=VERSION,
     description="The fastest way to build data apps in Python",
-    long_description=(THIS_DIRECTORY / ".." / "README.md").read_text(),
+    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://streamlit.io",
     project_urls={

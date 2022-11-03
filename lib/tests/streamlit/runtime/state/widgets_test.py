@@ -15,7 +15,7 @@
 """Tests widget-related functionality"""
 
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from parameterized import parameterized
@@ -24,14 +24,15 @@ import streamlit as st
 from streamlit import errors
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import coalesce_widget_states
 from streamlit.runtime.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     SessionState,
     WidgetMetadata,
 )
-from streamlit.runtime.state.widgets import _get_widget_id
-from tests import testutil
+from streamlit.runtime.state.widgets import _get_widget_id, user_key_from_widget_id
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def _create_widget(id, states):
@@ -75,22 +76,6 @@ class WidgetManagerTests(unittest.TestCase):
     def test_get_nonexistent(self):
         session_state = SessionState()
         self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])
-
-    @pytest.mark.skip
-    def test_get_keyed_widget_values(self):
-        states = WidgetStates()
-        _create_widget("trigger", states).trigger_value = True
-        _create_widget("trigger2", states).trigger_value = True
-
-        session_state = SessionState()
-        session_state.set_widgets_from_proto(states)
-
-        session_state._set_widget_metadata(
-            create_metadata("trigger", "trigger_value", True)
-        )
-        session_state._set_widget_metadata(create_metadata("trigger2", "trigger_value"))
-
-        self.assertEqual(dict(session_state.values()), {"trigger": True})
 
     def test_get_prev_widget_value_nonexistent(self):
         session_state = SessionState()
@@ -266,7 +251,7 @@ class WidgetHelperTests(unittest.TestCase):
         )
 
 
-class WidgetIdDisabledTests(testutil.DeltaGeneratorTestCase):
+class WidgetIdDisabledTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (st.button,),
@@ -310,3 +295,36 @@ class WidgetIdDisabledTests(testutil.DeltaGeneratorTestCase):
 
         with self.assertRaises(errors.DuplicateWidgetID):
             widget_func("my_widget", options, disabled=True)
+
+
+@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
+class WidgetUserKeyTests(DeltaGeneratorTestCase):
+    def test_get_widget_user_key(self):
+        state = get_script_run_ctx().session_state._state
+        st.checkbox("checkbox", key="c")
+
+        k = list(state._keys())[0]
+        assert user_key_from_widget_id(k) == "c"
+
+    def test_get_widget_user_key_none(self):
+        state = get_script_run_ctx().session_state._state
+        st.selectbox("selectbox", options=["foo", "bar"])
+
+        k = list(state._keys())[0]
+        # Absence of a user key is represented as None throughout our code
+        assert user_key_from_widget_id(k) is None
+
+    def test_get_widget_user_key_hyphens(self):
+        state = get_script_run_ctx().session_state._state
+        st.slider("slider", key="my-slider")
+
+        k = list(state._keys())[0]
+        assert user_key_from_widget_id(k) == "my-slider"
+
+    def test_get_widget_user_key_incorrect_none(self):
+        state = get_script_run_ctx().session_state._state
+        st.checkbox("checkbox", key="None")
+
+        k = list(state._keys())[0]
+        # Incorrectly inidcates no user key
+        assert user_key_from_widget_id(k) == None

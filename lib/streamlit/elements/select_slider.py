@@ -103,7 +103,7 @@ class SelectSliderSerde(Generic[T]):
 
 
 class SelectSliderMixin:
-    @gather_metrics
+    @gather_metrics("select_slider")
     def select_slider(
         self,
         label: str,

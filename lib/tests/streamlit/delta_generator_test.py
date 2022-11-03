@@ -16,14 +16,20 @@
 
 import functools
 import json
+import logging
+import re
+import unittest
+from unittest.mock import MagicMock, patch
 
 from parameterized import parameterized
 
 import streamlit as st
+import streamlit.delta_generator as delta_generator
 import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -31,7 +37,7 @@ from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.runtime.state.widgets import _build_duplicate_widget_message
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def identity(x):
@@ -43,7 +49,31 @@ register_widget = functools.partial(
 )
 
 
-class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
+class RunWarningTest(unittest.TestCase):
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=False))
+    def test_run_warning_presence(self):
+        """Using Streamlit without `streamlit run` produces a warning."""
+        with self.assertLogs(level=logging.WARNING) as logs:
+            delta_generator._use_warning_has_been_displayed = False
+            st.write("Using delta generator")
+            output = "".join(logs.output)
+            # Warning produced exactly once
+            self.assertEqual(len(re.findall(r"streamlit run", output)), 1)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_run_warning_absence(self):
+        """Using Streamlit through the CLI results in a Runtime being instantiated,
+        so it produces no usage warning."""
+        with self.assertLogs(level=logging.WARNING) as logs:
+            delta_generator._use_warning_has_been_displayed = False
+            st.write("Using delta generator")
+            # assertLogs is being used as a context manager, but it also checks
+            # that some log output was captured, so we have to let it capture something
+            get_logger("root").warning("irrelevant warning so assertLogs passes")
+            self.assertNotRegex("".join(logs.output), r"streamlit run")
+
+
+class DeltaGeneratorTest(DeltaGeneratorTestCase):
     """Test streamlit.delta_generator methods."""
 
     def test_nonexistent_method(self):
@@ -162,7 +192,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             )
 
 
-class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Class."""
 
     def test_constructor(self):
@@ -222,7 +252,7 @@ class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(msg.delta.new_element.text.body, test_data)
 
 
-class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorContainerTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Container."""
 
     def test_container(self):
@@ -242,7 +272,7 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
         )
 
 
-class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Columns."""
 
     def test_equal_columns(self):
@@ -286,14 +316,14 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
             level2, _ = level1.columns(2)
 
 
-class DeltaGeneratorExpanderTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorExpanderTest(DeltaGeneratorTestCase):
     def test_nested_expanders(self):
         level1 = st.expander("level 1")
         with self.assertRaises(StreamlitAPIException):
-            level2 = level1.expander("level 2")
+            level1.expander("level 2")
 
 
-class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
     """Test the `with DG` feature"""
 
     def test_with(self):
@@ -334,7 +364,7 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
             )
 
 
-class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Text, Alert, Json, and Markdown Classes."""
 
     def test_json_list(self):
@@ -481,7 +511,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(element.empty, EmptyProto())
 
 
-class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Progress."""
 
     def test_progress_int(self):
@@ -513,7 +543,7 @@ class DeltaGeneratorProgressTest(testutil.DeltaGeneratorTestCase):
             st.progress("some string")
 
 
-class AutogeneratedWidgetIdTests(testutil.DeltaGeneratorTestCase):
+class AutogeneratedWidgetIdTests(DeltaGeneratorTestCase):
     def test_ids_are_equal_when_proto_is_equal(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
@@ -577,7 +607,7 @@ class AutogeneratedWidgetIdTests(testutil.DeltaGeneratorTestCase):
         self.assertNotEqual(element1.text_input.id, element2.text_area.id)
 
 
-class KeyWidgetIdTests(testutil.DeltaGeneratorTestCase):
+class KeyWidgetIdTests(DeltaGeneratorTestCase):
     def test_ids_are_diff_when_keys_are_diff(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
@@ -609,7 +639,7 @@ class KeyWidgetIdTests(testutil.DeltaGeneratorTestCase):
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
 
-class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):
+class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Images"""
 
     def test_image_from_url(self):

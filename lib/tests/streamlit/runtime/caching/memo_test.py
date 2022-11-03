@@ -18,6 +18,7 @@ import pickle
 import re
 import unittest
 from datetime import timedelta
+from typing import Any
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import streamlit as st
@@ -25,18 +26,41 @@ from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.caching import memo_decorator
-from streamlit.runtime.caching.cache_errors import CacheError
-from streamlit.runtime.caching.cache_utils import CachedResult, ElementMsgData
+from streamlit.runtime.caching.cache_errors import CacheError, CacheType
+from streamlit.runtime.caching.cache_utils import (
+    CachedResult,
+    ElementMsgData,
+    MultiCacheResults,
+    _make_widget_key,
+)
 from streamlit.runtime.caching.memo_decorator import (
     get_cache_path,
     get_memo_stats_provider,
 )
 from streamlit.runtime.stats import CacheStat
-from tests.testutil import DeltaGeneratorTestCase
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.runtime.caching.common_cache_test import (
+    as_cached_result as _as_cached_result,
+)
 
 
-def as_cached_result(value):
-    return CachedResult(value, [], st._main.id, st.sidebar.id)
+def as_cached_result(value: Any) -> MultiCacheResults:
+    return _as_cached_result(value, CacheType.MEMO)
+
+
+def as_replay_test_data() -> MultiCacheResults:
+    """Creates cached results for a function that returned 1
+    and executed `st.text(1)`.
+    """
+    widget_key = _make_widget_key([], CacheType.MEMO)
+    d = {}
+    d[widget_key] = CachedResult(
+        1,
+        [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
+        st._main.id,
+        st.sidebar.id,
+    )
+    return MultiCacheResults(set(), d)
 
 
 class MemoTest(unittest.TestCase):
@@ -329,16 +353,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
         "streamlit.file_util.open",
-        wraps=mock_open(
-            read_data=pickle.dumps(
-                CachedResult(
-                    1,
-                    [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
-                    st._main.id,
-                    st.sidebar.id,
-                )
-            )
-        ),
+        wraps=mock_open(read_data=pickle.dumps(as_replay_test_data())),
     )
     def test_cached_st_function_replay(self, _):
         @st.experimental_memo(persist="disk")

@@ -18,6 +18,7 @@ import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import embed from "vega-embed"
 import * as vega from "vega"
+import { expressionInterpreter } from "vega-interpreter"
 
 import { logMessage } from "src/lib/log"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
@@ -78,6 +79,9 @@ export interface VegaLiteChartElement {
 
   /** If True, will overwrite the chart width spec to fit to container. */
   useContainerWidth: boolean
+
+  /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
+  vegaLiteTheme: string
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */
@@ -163,7 +167,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       prevSpec !== spec ||
       prevTheme !== theme ||
       prevProps.width !== this.props.width ||
-      prevProps.height !== this.props.height
+      prevProps.height !== this.props.height ||
+      prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme
     ) {
       logMessage("Vega spec changed.")
       try {
@@ -207,10 +212,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const { element: el, theme } = this.props
     const spec = JSON.parse(el.spec)
     const { useContainerWidth } = el
-    if (spec.usermeta?.embedOptions?.theme === "streamlit") {
+    if (el.vegaLiteTheme === "streamlit") {
       spec.config = applyStreamlitTheme(spec.config, theme)
-      // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
-      spec.usermeta.embedOptions.theme = undefined
     } else {
       // Apply minor theming improvements to work better with Streamlit
       spec.config = applyThemeDefaults(spec.config, theme)
@@ -317,9 +320,14 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
     const el = this.props.element
     const spec = this.generateSpec()
-    const { vgSpec, view, finalize } = await embed(this.element, spec, {
+    const options = {
       defaultStyle: true,
-    })
+      // Adds interpreter support for Vega expressions that is compliant with CSP
+      ast: true,
+      expr: expressionInterpreter,
+    }
+
+    const { vgSpec, view, finalize } = await embed(this.element, spec, options)
 
     this.vegaView = view
     this.vegaFinalizer = finalize

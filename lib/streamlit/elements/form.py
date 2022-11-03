@@ -15,6 +15,8 @@
 import textwrap
 from typing import NamedTuple, Optional, cast
 
+from typing_extensions import Literal
+
 import streamlit
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
@@ -111,7 +113,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
 
 
 class FormMixin:
-    @gather_metrics
+    @gather_metrics("form")
     def form(self, key: str, clear_on_submit: bool = False):
         """Create a form that batches elements together with a "Submit" button.
 
@@ -172,6 +174,7 @@ class FormMixin:
         >>> form.form_submit_button("Submit")
 
         """
+        # Import this here to avoid circular imports.
         from streamlit.elements.utils import check_session_state_rules
 
         if is_in_form(self.dg):
@@ -200,7 +203,7 @@ class FormMixin:
         block_dg._form_data = FormData(form_id)
         return block_dg
 
-    @gather_metrics
+    @gather_metrics("form_submit_button")
     def form_submit_button(
         self,
         label: str = "Submit",
@@ -209,6 +212,7 @@ class FormMixin:
         args=None,
         kwargs=None,
         *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
     ) -> bool:
         """Display a form submit button.
@@ -236,6 +240,10 @@ class FormMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False. This argument can only be supplied by keyword.
@@ -246,12 +254,21 @@ class FormMixin:
             True if the button was clicked.
         """
         ctx = get_script_run_ctx()
+
+        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.button must be "primary" or "secondary". \n'
+                f'The argument passed was "{type}".'
+            )
+
         return self._form_submit_button(
             label=label,
             help=help,
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            type=type,
             disabled=disabled,
             ctx=ctx,
         )
@@ -264,6 +281,7 @@ class FormMixin:
         args=None,
         kwargs=None,
         *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
@@ -277,6 +295,7 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            type=type,
             disabled=disabled,
             ctx=ctx,
         )

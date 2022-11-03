@@ -18,6 +18,7 @@ import unittest
 
 from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
+from tests.exception_capturing_thread import call_on_threads
 
 FILE_1 = UploadedFileRec(id=0, name="file1", type="type", data=b"file1")
 FILE_2 = UploadedFileRec(id=0, name="file2", type="type", data=b"file222")
@@ -86,7 +87,7 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.remove_session_files("non-report")
 
         # Add two files with different session IDs, but the same widget ID.
-        f1 = self.mgr.add_file("session1", "widget", FILE_1)
+        self.mgr.add_file("session1", "widget", FILE_1)
         f2 = self.mgr.add_file("session2", "widget", FILE_1)
 
         self.mgr.remove_files("session1", "widget")
@@ -98,8 +99,8 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.remove_session_files("non-report")
 
         # Add two files with different session IDs, but the same widget ID.
-        f1 = self.mgr.add_file("session1", "widget1", FILE_1)
-        f2 = self.mgr.add_file("session1", "widget2", FILE_1)
+        self.mgr.add_file("session1", "widget1", FILE_1)
+        self.mgr.add_file("session1", "widget2", FILE_1)
         f3 = self.mgr.add_file("session2", "widget", FILE_1)
 
         self.mgr.remove_session_files("session1")
@@ -164,3 +165,118 @@ class UploadedFileManagerTest(unittest.TestCase):
             ),
         ]
         self.assertEqual(expected, self.mgr.get_stats())
+
+
+class UploadedFileManagerThreadingTest(unittest.TestCase):
+    # The number of threads to run our tests on
+    NUM_THREADS = 50
+
+    def setUp(self) -> None:
+        self.mgr = UploadedFileManager()
+
+    def test_add_file(self):
+        """`add_file` is thread-safe."""
+        # Call `add_file` from a bunch of threads
+        added_files = []
+
+        def add_file(index: int) -> None:
+            file = UploadedFileRec(
+                id=0, name=f"file_{index}", type="type", data=bytes(f"{index}", "utf-8")
+            )
+            added_files.append(self.mgr.add_file("session", f"widget_{index}", file))
+
+        call_on_threads(add_file, num_threads=self.NUM_THREADS)
+
+        # Ensure all our files are present
+        for ii in range(self.NUM_THREADS):
+            files = self.mgr.get_all_files("session", f"widget_{ii}")
+            self.assertEqual(1, len(files))
+            self.assertEqual(bytes(f"{ii}", "utf-8"), files[0].data)
+
+        # Ensure all files have unique IDs
+        file_ids = set()
+        for file_list in self.mgr._files_by_id.values():
+            file_ids.update(file.id for file in file_list)
+        self.assertEqual(self.NUM_THREADS, len(file_ids))
+
+    def test_remove_file(self):
+        """`remove_file` is thread-safe."""
+        # Add a bunch of files to a single widget
+        file_ids = []
+        for ii in range(self.NUM_THREADS):
+            file = UploadedFileRec(id=0, name=f"file_{ii}", type="type", data=b"123")
+            file_ids.append(self.mgr.add_file("session", "widget", file).id)
+
+        # Have each thread remove a single file
+        def remove_file(index: int) -> None:
+            file_id = file_ids[index]
+
+            # Ensure our file exists
+            get_files_result = self.mgr.get_files("session", "widget", [file_id])
+            self.assertEqual(1, len(get_files_result))
+
+            # Remove our file
+            was_removed = self.mgr.remove_file("session", "widget", file_id)
+            self.assertTrue(was_removed)
+
+            # Ensure our file no longer exists
+            get_files_result = self.mgr.get_files("session", "widget", [file_id])
+            self.assertEqual(0, len(get_files_result))
+
+        call_on_threads(remove_file, self.NUM_THREADS)
+
+        self.assertEqual(0, len(self.mgr.get_all_files("session", "widget")))
+
+    def test_remove_session_files(self):
+        """`remove_session_files` is thread-safe."""
+        # Add a bunch of files, each to a different session
+        file_ids = []
+        for ii in range(self.NUM_THREADS):
+            file = UploadedFileRec(id=0, name=f"file_{ii}", type="type", data=b"123")
+            file_ids.append(self.mgr.add_file(f"session_{ii}", "widget", file).id)
+
+        # Have each thread remove its session's file
+        def remove_session_files(index: int) -> None:
+            session_id = f"session_{index}"
+            # Our file should exist
+            session_files = self.mgr.get_all_files(session_id, "widget")
+            self.assertEqual(1, len(session_files))
+            self.assertEqual(file_ids[index], session_files[0].id)
+
+            # Remove session files
+            self.mgr.remove_session_files(session_id)
+
+            # Our file should no longer exist
+            session_files = self.mgr.get_all_files(session_id, "widget")
+            self.assertEqual(0, len(session_files))
+
+        call_on_threads(remove_session_files, num_threads=self.NUM_THREADS)
+
+    def test_remove_orphaned_files(self):
+        """`remove_orphaned_files` is thread-safe."""
+        # Add a bunch of "active" files to a single widget
+        active_file_ids = []
+        for ii in range(self.NUM_THREADS):
+            file = UploadedFileRec(id=0, name=f"file_{ii}", type="type", data=b"123")
+            active_file_ids.append(self.mgr.add_file("session", "widget", file).id)
+
+        # Now add some "inactive" files to the same widget
+        inactive_file_ids = []
+        for ii in range(self.NUM_THREADS, self.NUM_THREADS + 50):
+            file = UploadedFileRec(id=0, name=f"file_{ii}", type="type", data=b"123")
+            inactive_file_ids.append(self.mgr.add_file("session", "widget", file).id)
+
+        newest_file_id = inactive_file_ids[len(inactive_file_ids) - 1] + 1
+
+        # Call `remove_orphaned_files` from each thread.
+        # Our active_files should remain intact, and our orphans should be removed!
+        def remove_orphans(_: int) -> None:
+            self.mgr.remove_orphaned_files(
+                "session", "widget", newest_file_id, active_file_ids
+            )
+            remaining_ids = [
+                file.id for file in self.mgr.get_all_files("session", "widget")
+            ]
+            self.assertEqual(sorted(active_file_ids), sorted(remaining_ids))
+
+        call_on_threads(remove_orphans, num_threads=self.NUM_THREADS)

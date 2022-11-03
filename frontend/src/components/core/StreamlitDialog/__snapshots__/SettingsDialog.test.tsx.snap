@@ -49,7 +49,7 @@ exports[`SettingsDialog renders without crashing 1`] = `
         />
         <div>
           <Button
-            kind="primary"
+            kind="secondary"
             onClick={[MockFunction]}
           >
             Edit active theme
@@ -163,7 +163,7 @@ exports[`SettingsDialog should show theme creator button if in developer mode 1`
         />
         <div>
           <Button
-            kind="primary"
+            kind="secondary"
             onClick={[MockFunction]}
           >
             Edit active theme

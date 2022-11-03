@@ -17,8 +17,7 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { CLOUD_COMM_WHITELIST } from "src/urls"
-import { isValidURL } from "src/lib/UriUtil"
+import { isValidOrigin } from "src/lib/UriUtil"
 
 import {
   IGuestToHostMessage,
@@ -31,10 +30,10 @@ import {
 
 export interface HostCommunicationHOC {
   currentState: HostCommunicationState
-  connect: () => void
   sendMessage: (message: IGuestToHostMessage) => void
   onModalReset: () => void
   onPageChanged: () => void
+  setAllowedOrigins: (allowedOrigins: string[]) => void
 }
 
 export const HOST_COMM_VERSION = 1
@@ -54,7 +53,11 @@ function withHostCommunication(
 ): ComponentType<any> {
   function ComponentWithHostCommunication(props: any): ReactElement {
     // TODO(vdonato): Refactor this to use useReducer to make this less
-    // unwieldy.
+    // unwieldy. We may want to consider installing the redux-toolkit package
+    // even if we're not using redux just because it's so useful for reducing
+    // this type of boilerplate.
+    const [allowedOrigins, setAllowedOrigins] = useState<string[]>([])
+    const [authToken, setAuthToken] = useState<string | undefined>(undefined)
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [hideSidebarNav, setHideSidebarNav] = useState(false)
     const [isOwner, setIsOwner] = useState(false)
@@ -70,21 +73,17 @@ function withHostCommunication(
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
-        let origin: string
         const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
-        try {
-          const url = new URL(event.origin)
-
-          origin = url.hostname
-        } catch (e) {
-          origin = event.origin
-        }
-
+        // Messages coming from the parent frame of a deployed Streamlit app
+        // may not be coming from a trusted source (even if we've set the CSP
+        // frame-anscestors header, it doesn't hurt to be extra safe). We avoid
+        // processing messages received from origins we haven't explicitly
+        // labeled as trusted here to lower the probability that we end up
+        // processing malicious input.
         if (
-          !origin ||
           message.stCommVersion !== HOST_COMM_VERSION ||
-          !CLOUD_COMM_WHITELIST.find(el => isValidURL(el, origin))
+          !allowedOrigins.find(allowed => isValidOrigin(allowed, event.origin))
         ) {
           return
         }
@@ -95,6 +94,10 @@ function withHostCommunication(
 
         if (message.type === "REQUEST_PAGE_CHANGE") {
           setRequestedPageScriptHash(message.pageScriptHash)
+        }
+
+        if (message.type === "SET_AUTH_TOKEN") {
+          setAuthToken(message.authToken)
         }
 
         if (message.type === "SET_IS_OWNER") {
@@ -134,18 +137,24 @@ function withHostCommunication(
         }
       }
 
+      if (!allowedOrigins.length) {
+        return () => {}
+      }
+
       window.addEventListener("message", receiveMessage)
+      sendMessageToHost({ type: "GUEST_READY" })
 
       return () => {
         window.removeEventListener("message", receiveMessage)
       }
-    }, [])
+    }, [allowedOrigins])
 
     return (
       <WrappedComponent
         hostCommunication={
           {
             currentState: {
+              authToken,
               forcedModalClose,
               hideSidebarNav,
               isOwner,
@@ -157,11 +166,6 @@ function withHostCommunication(
               deployedAppMetadata,
               toolbarItems,
             },
-            connect: () => {
-              sendMessageToHost({
-                type: "GUEST_READY",
-              })
-            },
             onModalReset: () => {
               setForcedModalClose(false)
             },
@@ -169,6 +173,7 @@ function withHostCommunication(
               setRequestedPageScriptHash(null)
             },
             sendMessage: sendMessageToHost,
+            setAllowedOrigins,
           } as HostCommunicationHOC
         }
         {...props}

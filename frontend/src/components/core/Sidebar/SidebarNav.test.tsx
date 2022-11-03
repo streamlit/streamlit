@@ -27,7 +27,6 @@ import { useIsOverflowing } from "src/lib/Hooks"
 import { mount, shallow } from "src/lib/test_util"
 import { BaseUriParts } from "src/lib/UriUtil"
 
-import { OverflowTooltip } from "src/components/shared/Tooltip"
 import SidebarNav, { Props } from "./SidebarNav"
 import {
   StyledSidebarNavItems,
@@ -90,10 +89,12 @@ describe("SidebarNav", () => {
   it("replaces underscores with spaces in pageName", () => {
     const wrapper = shallow(<SidebarNav {...getProps()} />)
 
-    const links = wrapper.find(StyledSidebarNavLink).find(OverflowTooltip)
+    const links = wrapper
+      .find(StyledSidebarNavLink)
+      .find(StyledSidebarLinkText)
 
-    expect(links.at(0).props().content).toBe("streamlit app")
-    expect(links.at(1).props().content).toBe("my other page")
+    expect(links.at(0).text()).toBe("streamlit app")
+    expect(links.at(1).text()).toBe("my other page")
   })
 
   describe("page links", () => {

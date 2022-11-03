@@ -16,17 +16,19 @@
 
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
-import { transparentize } from "color2k"
+import { darken, transparentize } from "color2k"
 import { Theme } from "src/theme"
 
 export enum Kind {
   PRIMARY = "primary",
   SECONDARY = "secondary",
+  TERTIARY = "tertiary",
   LINK = "link",
   ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
   MINIMAL = "minimal",
-  FORM_SUBMIT = "formSubmit",
+  PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
+  SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
   HEADER_BUTTON = "header",
 }
 
@@ -95,6 +97,27 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
 export const StyledPrimaryButton = styled(
   StyledBaseButton
 )<RequiredButtonProps>(({ theme }) => ({
+  backgroundColor: theme.colors.primary,
+  color: theme.colors.white,
+  border: `1px solid ${theme.colors.primary}`,
+  "&:hover": {
+    backgroundColor: darken(theme.colors.primary, 0.05),
+  },
+  "&:active": {
+    backgroundColor: "transparent",
+    color: theme.colors.primary,
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    borderColor: theme.colors.fadedText10,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
+}))
+
+export const StyledSecondaryButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   border: `1px solid ${theme.colors.fadedText10}`,
   "&:hover": {
@@ -111,14 +134,14 @@ export const StyledPrimaryButton = styled(
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText40,
+    borderColor: theme.colors.fadedText10,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
   },
 }))
 
-export const StyledSecondaryButton = styled(
+export const StyledTertiaryButton = styled(
   StyledBaseButton
 )<RequiredButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
@@ -177,8 +200,12 @@ export const StyledMinimalButton = styled(
   },
 }))
 
-export const StyledFormSubmitButton =
+export const StyledPrimaryFormSubmitButton =
   styled(StyledPrimaryButton)<RequiredButtonProps>()
+
+export const StyledSecondaryFormSubmitButton = styled(
+  StyledSecondaryButton
+)<RequiredButtonProps>()
 
 export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   ({ size, theme }) => {

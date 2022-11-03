@@ -30,22 +30,16 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Pattern
 
 from streamlit import type_util, util
-from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import CacheType, UnhashableTypeError
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
-_LOGGER = get_logger(__name__)
-
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
 _PANDAS_SAMPLE_SIZE = 10000
 
-
 # Similar to dataframes, we also sample large numpy arrays.
 _NP_SIZE_LARGE = 1000000
 _NP_SAMPLE_SIZE = 100000
-
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
@@ -291,6 +285,13 @@ class _CacheFuncHasher:
 
             self.update(h, obj.tobytes())
             return h.digest()
+        elif type_util.is_type(obj, "PIL.Image.Image"):
+            import numpy as np
+
+            # we don't just hash the results of obj.tobytes() because we want to use
+            # the sampling logic for numpy data
+            np_array = np.frombuffer(obj.tobytes(), dtype="uint8")
+            return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):
             return bytes(obj.__name__.encode())
@@ -379,8 +380,8 @@ class _CacheFuncHasher:
             h = hashlib.new("md5")
             try:
                 reduce_data = obj.__reduce__()
-            except BaseException as e:
-                raise UnhashableTypeError() from e
+            except Exception as ex:
+                raise UnhashableTypeError() from ex
 
             for item in reduce_data:
                 self.update(h, item)

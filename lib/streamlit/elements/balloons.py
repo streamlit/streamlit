@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class BalloonsMixin:
-    @gather_metrics
+    @gather_metrics("balloons")
     def balloons(self) -> "DeltaGenerator":
         """Draw celebratory balloons.
 

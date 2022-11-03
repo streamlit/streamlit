@@ -26,10 +26,10 @@ from streamlit.commands.page_config import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.string_util import is_emoji
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class PageConfigTest(testutil.DeltaGeneratorTestCase):
+class PageConfigTest(DeltaGeneratorTestCase):
     def test_set_page_config_title(self):
         st.set_page_config(page_title="Hello")
         c = self.get_message_from_queue().page_config_changed
@@ -100,10 +100,10 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
     def test_set_page_config_sidebar_invalid(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.set_page_config(initial_sidebar_state="INVALID")
-            self.assertEquals(
-                str(e),
-                '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" (got "INVALID")',
-            )
+        self.assertEquals(
+            str(e.exception),
+            '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" (got "INVALID")',
+        )
 
     def test_set_page_config_menu_items_about(self):
         menu_items = {" about": "*This is an about. This accepts markdown.*"}
@@ -130,7 +130,7 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as e:
             menu_items = {"report a bug": "", "GET HELP": "", "about": ""}
             st.set_page_config(menu_items=menu_items)
-            self.assertEquals(str(e), "' ' is not a valid URL!")
+        self.assertEquals(str(e.exception), '"" is a not a valid URL!')
 
     def test_set_page_config_menu_items_none(self):
         menu_items = {"report a bug": None, "GET HELP": None, "about": None}
@@ -144,10 +144,11 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as e:
             menu_items = {"invalid": "fdsa"}
             st.set_page_config(menu_items=menu_items)
-            self.assertEquals(
-                str(e),
-                "We only accept the keys: 'Get help', 'Report a bug', and 'About' ('invalid' is not a valid key.)",
-            )
+        self.assertEquals(
+            str(e.exception),
+            'We only accept the keys: "Get help", "Report a bug", and "About" '
+            '("invalid" is not a valid key.)',
+        )
 
     def test_set_page_config_menu_items_empty_dict(self):
         st.set_page_config(menu_items={})

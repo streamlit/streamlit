@@ -44,6 +44,7 @@ from pympler.asizeof import asizeof
 
 import streamlit as st
 from streamlit import config, file_util, util
+from streamlit.elements.spinner import spinner
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
@@ -311,6 +312,7 @@ def _write_to_disk_cache(key: str, value: Any) -> None:
         try:
             os.remove(path)
         except (FileNotFoundError, IOError, OSError):
+            # If we can't remove the file, it's not a big deal.
             pass
         raise CacheError("Unable to write to cache: %s" % e)
 
@@ -348,7 +350,7 @@ def _read_from_cache(
         raise e
 
 
-@gather_metrics
+@gather_metrics("_cache_object")
 def _write_to_cache(
     mem_cache: MemCache,
     key: str,
@@ -618,7 +620,7 @@ def cache(
             return return_value
 
         if show_spinner:
-            with st.spinner(message):
+            with spinner(message):
                 return get_or_create_cached_value()
         else:
             return get_or_create_cached_value()
@@ -628,6 +630,7 @@ def cache(
     try:
         wrapped_func.__dict__.update(non_optional_func.__dict__)
     except AttributeError:
+        # For normal functions this should never happen, but if so it's not problematic.
         pass
 
     return cast(F, wrapped_func)

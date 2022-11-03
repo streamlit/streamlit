@@ -15,7 +15,7 @@
 """st.caching unit tests."""
 import threading
 import types
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from parameterized import parameterized
 
@@ -24,6 +24,7 @@ from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.runtime.legacy_caching import caching, hashing
 from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class NotHashable:
@@ -33,7 +34,7 @@ class NotHashable:
         raise NotImplementedError
 
 
-class CacheTest(testutil.DeltaGeneratorTestCase):
+class CacheTest(DeltaGeneratorTestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
@@ -261,8 +262,6 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual([0, 1, 2], bar_vals)
 
     # Reduce the huge amount of logspam we get from hashing/caching
-    @patch("streamlit.runtime.legacy_caching.hashing._LOGGER.debug", MagicMock())
-    @patch("streamlit.runtime.legacy_caching.caching._LOGGER.debug", MagicMock())
     def test_no_max_size(self):
         """If max_size is None, the cache is unbounded."""
         called_values = []
@@ -415,7 +414,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         str_hash_func.assert_called_once_with("ahoy")
 
 
-class CacheErrorsTest(testutil.DeltaGeneratorTestCase):
+class CacheErrorsTest(DeltaGeneratorTestCase):
     """Make sure user-visible error messages look correct.
 
     These errors are a little annoying to test, but they're important! So we

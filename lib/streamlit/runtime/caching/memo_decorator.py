@@ -41,10 +41,13 @@ from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     CacheMessagesCallStack,
     CacheWarningCallStack,
+    ElementMsgData,
     MsgData,
+    MultiCacheResults,
     create_cache_wrapper,
 )
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
@@ -59,7 +62,7 @@ _TTLCACHE_TIMER = time.monotonic
 _CACHE_DIR_NAME = "cache"
 
 MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
-MEMO_MESSAGES_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
+MEMO_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
 
 
 class MemoizedFunction(CachedFunction):
@@ -73,8 +76,9 @@ class MemoizedFunction(CachedFunction):
         persist: Optional[str],
         max_entries: Optional[int],
         ttl: Optional[float],
+        allow_widgets: bool,
     ):
-        super().__init__(func, show_spinner, suppress_st_warning)
+        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
@@ -89,7 +93,7 @@ class MemoizedFunction(CachedFunction):
 
     @property
     def message_call_stack(self) -> CacheMessagesCallStack:
-        return MEMO_MESSAGES_CALL_STACK
+        return MEMO_MESSAGE_CALL_STACK
 
     @property
     def display_name(self) -> str:
@@ -103,6 +107,7 @@ class MemoizedFunction(CachedFunction):
             max_entries=self.max_entries,
             ttl=self.ttl,
             display_name=self.display_name,
+            allow_widgets=self.allow_widgets,
         )
 
 
@@ -120,6 +125,7 @@ class MemoCaches(CacheStatsProvider):
         max_entries: Optional[Union[int, float]],
         ttl: Optional[Union[int, float]],
         display_name: str,
+        allow_widgets: bool,
     ) -> "MemoCache":
         """Return the mem cache for the given key.
 
@@ -156,6 +162,7 @@ class MemoCaches(CacheStatsProvider):
                 max_entries=max_entries,
                 ttl=ttl,
                 display_name=display_name,
+                allow_widgets=allow_widgets,
             )
             self._function_caches[key] = cache
             return cache
@@ -216,13 +223,14 @@ class MemoAPI:
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
         ttl: Optional[Union[float, timedelta]] = None,
+        experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
 
     # __call__ should be a static method, but there's a mypy bug that
     # breaks type checking for overloaded static functions:
     # https://github.com/python/mypy/issues/7781
-    @gather_metrics
+    @gather_metrics("experimental_memo")
     def __call__(
         self,
         func: Optional[F] = None,
@@ -232,6 +240,7 @@ class MemoAPI:
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
         ttl: Optional[Union[float, timedelta]] = None,
+        experimental_allow_widgets: bool = False,
     ):
         """Function decorator to memoize function executions.
 
@@ -356,6 +365,7 @@ class MemoAPI:
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl_seconds,
+                    allow_widgets=experimental_allow_widgets,
                 )
             )
 
@@ -372,11 +382,12 @@ class MemoAPI:
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl_seconds,
+                allow_widgets=experimental_allow_widgets,
             )
         )
 
     @staticmethod
-    @gather_metrics
+    @gather_metrics("clear_memo")
     def clear() -> None:
         """Clear all in-memory and on-disk memo caches."""
         _memo_caches.clear_all()
@@ -392,6 +403,7 @@ class MemoCache(Cache):
         max_entries: float,
         ttl: float,
         display_name: str,
+        allow_widgets: bool = False,
     ):
         self.key = key
         self.display_name = display_name
@@ -400,6 +412,7 @@ class MemoCache(Cache):
             maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
+        self.allow_widgets = allow_widgets
 
     @property
     def max_entries(self) -> float:
@@ -439,25 +452,68 @@ class MemoCache(Cache):
 
         try:
             entry = pickle.loads(pickled_entry)
-            if not isinstance(entry, CachedResult):
+            if not isinstance(entry, MultiCacheResults):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.
                 self._remove_from_disk_cache(key)
                 raise CacheKeyNotFoundError()
-            return entry
+
+            ctx = get_script_run_ctx()
+            if not ctx:
+                raise CacheKeyNotFoundError()
+
+            widget_key = entry.get_current_widget_key(ctx, CacheType.MEMO)
+            if widget_key in entry.results:
+                return entry.results[widget_key]
+            else:
+                raise CacheKeyNotFoundError()
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
-    @gather_metrics
+    @gather_metrics("_cache_memo_object")
     def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+
+        main_id = st._main.id
+        sidebar_id = st.sidebar.id
+
+        if self.allow_widgets:
+            widgets = {
+                msg.widget_metadata.widget_id
+                for msg in messages
+                if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
+            }
+        else:
+            widgets = set()
+
+        multi_cache_results: Optional[MultiCacheResults] = None
+
+        # Try to find in mem cache, falling back to disk, then falling back
+        # to a new result instance
         try:
-            main_id = st._main.id
-            sidebar_id = st.sidebar.id
-            entry = CachedResult(value, messages, main_id, sidebar_id)
-            pickled_entry = pickle.dumps(entry)
+            multi_cache_results = self._read_multi_results_from_mem_cache(key)
+        except (CacheKeyNotFoundError, pickle.UnpicklingError):
+            if self.persist == "disk":
+                try:
+                    multi_cache_results = self._read_multi_results_from_disk_cache(key)
+                except CacheKeyNotFoundError:
+                    pass
+
+        if multi_cache_results is None:
+            multi_cache_results = MultiCacheResults(widget_ids=widgets, results={})
+        multi_cache_results.widget_ids.update(widgets)
+        widget_key = multi_cache_results.get_current_widget_key(ctx, CacheType.MEMO)
+
+        result = CachedResult(value, messages, main_id, sidebar_id)
+        multi_cache_results.results[widget_key] = result
+
+        try:
+            pickled_entry = pickle.dumps(multi_cache_results)
         except pickle.PicklingError as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
@@ -478,27 +534,57 @@ class MemoCache(Cache):
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = bytes(self._mem_cache[key])
-                _LOGGER.debug("Memory cache HIT: %s", key)
+                _LOGGER.debug("Memory cache first stage HIT: %s", key)
                 return entry
 
             else:
                 _LOGGER.debug("Memory cache MISS: %s", key)
                 raise CacheKeyNotFoundError("Key not found in mem cache")
 
+    def _read_multi_results_from_mem_cache(self, key: str) -> MultiCacheResults:
+        """Look up the results and ensure it has the right type.
+
+        Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
+        entry is malformed.
+        """
+        pickled = self._read_from_mem_cache(key)
+        maybe_results = pickle.loads(pickled)
+        if isinstance(maybe_results, MultiCacheResults):
+            return maybe_results
+        else:
+            with self._mem_cache_lock:
+                del self._mem_cache[key]
+            raise CacheKeyNotFoundError()
+
     def _read_from_disk_cache(self, key: str) -> bytes:
         path = self._get_file_path(key)
         try:
             with streamlit_read(path, binary=True) as input:
                 value = input.read()
-                _LOGGER.debug("Disk cache HIT: %s", key)
+                _LOGGER.debug("Disk cache first stage HIT: %s", key)
                 # The value is a pickled CachedResult, but we don't unpickle it yet
                 # so we can avoid having to repickle it when writing to the mem_cache
                 return bytes(value)
         except FileNotFoundError:
             raise CacheKeyNotFoundError("Key not found in disk cache")
-        except BaseException as e:
-            _LOGGER.error(e)
-            raise CacheError("Unable to read from cache") from e
+        except Exception as ex:
+            _LOGGER.error(ex)
+            raise CacheError("Unable to read from cache") from ex
+
+    def _read_multi_results_from_disk_cache(self, key: str) -> MultiCacheResults:
+        """Look up the results from disk and ensure it has the right type.
+
+        Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
+        entry is the wrong type, which usually means it was written by another
+        version of streamlit.
+        """
+        pickled = self._read_from_disk_cache(key)
+        maybe_results = pickle.loads(pickled)
+        if isinstance(maybe_results, MultiCacheResults):
+            return maybe_results
+        else:
+            self._remove_from_disk_cache(key)
+            raise CacheKeyNotFoundError("Key not found in disk cache")
 
     def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
         with self._mem_cache_lock:
@@ -515,6 +601,7 @@ class MemoCache(Cache):
             try:
                 os.remove(path)
             except (FileNotFoundError, IOError, OSError):
+                # If we can't remove the file, it's not a big deal.
                 pass
             raise CacheError("Unable to write to cache") from e
 
@@ -526,9 +613,12 @@ class MemoCache(Cache):
         try:
             os.remove(path)
         except FileNotFoundError:
+            # The file is already removed.
             pass
-        except BaseException as e:
-            _LOGGER.exception("Unable to remove a file from the disk cache", e)
+        except Exception as ex:
+            _LOGGER.exception(
+                "Unable to remove a file from the disk cache", exc_info=ex
+            )
 
     def _get_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""

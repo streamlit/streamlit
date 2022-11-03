@@ -41,7 +41,7 @@ Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]
 
 
 class ArrowMixin:
-    @gather_metrics
+    @gather_metrics("_arrow_dataframe")
     def _arrow_dataframe(
         self,
         data: Data = None,
@@ -54,7 +54,7 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -93,6 +93,7 @@ class ArrowMixin:
         >>> st._arrow_dataframe(df.style.highlight_max(axis=0))
 
         """
+
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
@@ -108,7 +109,7 @@ class ArrowMixin:
         marshall(proto, data, default_uuid)
         return self.dg._enqueue("arrow_data_frame", proto)
 
-    @gather_metrics
+    @gather_metrics("_arrow_table")
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 
@@ -117,7 +118,7 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
             The table data.
 
         Example
@@ -129,6 +130,14 @@ class ArrowMixin:
         >>> st._arrow_table(df)
 
         """
+
+        # Check if data is uncollected, and collect it but with 100 rows max, instead of 10k rows, which is done in all other cases.
+        # Avoid this and use 100 rows in st.table, because large tables render slowly, take too much screen space, and can crush the app.
+        if type_util.is_snowpark_data_object(data) or type_util.is_type(
+            data, type_util._PYSPARK_DF_TYPE_STR
+        ):
+            data = type_util.convert_anything_to_df(data, max_unevaluated_rows=100)
+
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
@@ -153,7 +162,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
     proto : proto.Arrow
         Output. The protobuf for Streamlit Arrow proto.
 
-    data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+    data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
         Something that is or can be converted to a dataframe.
 
     default_uuid : Optional[str]

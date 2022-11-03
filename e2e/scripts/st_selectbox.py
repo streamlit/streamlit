@@ -14,6 +14,7 @@
 
 import streamlit as st
 from streamlit import runtime
+from tests.streamlit import pyspark_mocks
 
 options = ("male", "female")
 i1 = st.selectbox("selectbox 1", options, 1)
@@ -59,3 +60,5 @@ if runtime.exists():
     st.selectbox("selectbox 8", options, 1, key="selectbox8", on_change=on_change)
     st.write("value 8:", st.session_state.selectbox8)
     st.write("select box changed:", "selectbox_changed" in st.session_state)
+
+st.selectbox("PySpark Selectbox", pyspark_mocks.DataFrame())  # type: ignore

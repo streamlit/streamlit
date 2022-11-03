@@ -60,7 +60,7 @@ function testCheckboxInsideForm(index) {
   cy.getIndexed(buttonSelector, index).should(
     "have.attr",
     "kind",
-    "formSubmit"
+    "secondaryFormSubmit"
   );
   cy.getIndexed(markdownSelector, index).should("have.text", "False");
 
@@ -72,7 +72,7 @@ function testCheckboxInsideForm(index) {
   cy.getIndexed(buttonSelector, index).should(
     "have.attr",
     "kind",
-    "formSubmit"
+    "secondaryFormSubmit"
   );
   cy.getIndexed(markdownSelector, index).should("have.text", "False");
 
@@ -88,7 +88,7 @@ function testCheckboxOutsideForm(index) {
   cy.getIndexed(buttonSelector, index).should(
     "have.attr",
     "kind",
-    "formSubmit"
+    "secondaryFormSubmit"
   );
   cy.getIndexed(markdownSelector, index).should("have.text", "False");
 
@@ -99,7 +99,7 @@ function testCheckboxOutsideForm(index) {
   cy.getIndexed(buttonSelector, index).should(
     "have.attr",
     "kind",
-    "formSubmit"
+    "secondaryFormSubmit"
   );
   cy.getIndexed(markdownSelector, index).should("have.text", "True");
 }

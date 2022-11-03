@@ -18,10 +18,10 @@ import sys
 import numpy as np
 
 import streamlit as st
-from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class StHelpTest(testutil.DeltaGeneratorTestCase):
+class StHelpTest(DeltaGeneratorTestCase):
     """Test st.help."""
 
     def test_basic_func_with_doc(self):
@@ -64,13 +64,25 @@ class StHelpTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("audio", ds.name)
         self.assertEqual("streamlit", ds.module)
         self.assertEqual("<class 'method'>", ds.type)
-        self.assertEqual(
-            "(data: Union[str, bytes, _io.BytesIO, io.RawIOBase, "
-            "_io.BufferedReader, ForwardRef('npt.NDArray[Any]'), NoneType], "
-            "format: str = 'audio/wav', start_time: int = 0) -> "
-            "'DeltaGenerator'",
-            ds.signature,
-        )
+
+        if sys.version_info < (3, 9):
+            # Python < 3.9 represents the signature slightly differently
+            self.assertEqual(
+                "(data: Union[str, bytes, _io.BytesIO, io.RawIOBase, "
+                "_io.BufferedReader, ForwardRef('npt.NDArray[Any]'), NoneType], "
+                "format: str = 'audio/wav', start_time: int = 0, *, "
+                "sample_rate: Union[int, NoneType] = None) -> 'DeltaGenerator'",
+                ds.signature,
+            )
+        else:
+            self.assertEqual(
+                "(data: Union[str, bytes, _io.BytesIO, io.RawIOBase, "
+                "_io.BufferedReader, ForwardRef('npt.NDArray[Any]'), NoneType], "
+                "format: str = 'audio/wav', start_time: int = 0, *, "
+                "sample_rate: Optional[int] = None) -> 'DeltaGenerator'",
+                ds.signature,
+            )
+
         self.assertTrue(ds.doc_string.startswith("Display an audio player"))
 
     def test_unwrapped_deltagenerator_func(self):

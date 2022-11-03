@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class IframeMixin:
-    @gather_metrics
+    @gather_metrics("_iframe")
     def _iframe(
         self,
         src: str,
@@ -56,7 +56,7 @@ class IframeMixin:
         )
         return self.dg._enqueue("iframe", iframe_proto)
 
-    @gather_metrics
+    @gather_metrics("_html")
     def _html(
         self,
         html: str,
