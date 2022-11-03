@@ -14,7 +14,16 @@
 
 import os
 import threading
-from typing import Any, ItemsView, Iterator, KeysView, Mapping, Optional, ValuesView
+from typing import (
+    Any,
+    ItemsView,
+    Iterator,
+    KeysView,
+    Mapping,
+    NoReturn,
+    Optional,
+    ValuesView,
+)
 
 import toml
 from blinker import Signal
@@ -83,10 +92,10 @@ class AttrDict(Mapping[str, Any]):
     def __repr__(self):
         return repr(self.__nested_secrets__)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> NoReturn:
         raise TypeError("Secrets does not support item assignment.")
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value) -> NoReturn:
         raise TypeError("Secrets does not support attribute assignment.")
 
 
