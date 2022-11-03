@@ -72,14 +72,14 @@ export interface Props {
   isCaption?: boolean
 
   /**
-   * Disallow markdown tables/images if used in widget/expander/tab label
-   */
-  isLabel?: boolean
-
-  /**
-   * Disallow markdown tables/images/link/code if used in button labels
+   * Only allows italics, bold, strikethrough, and emojis in button labels
    */
   isButton?: boolean
+
+  /**
+   * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
+   */
+  isLabel?: boolean
 }
 
 /**
@@ -213,14 +213,14 @@ export interface RenderedMarkdownProps {
   overrideComponents?: Components
 
   /**
-   * Disallow markdown tables/images if used in widget/expander/tab label
-   */
-  isLabel?: boolean
-
-  /**
-   * Disallow markdown tables/images/link/code if used in button labels
+   * Only allows italics, bold, strikethrough, and emojis in button labels
    */
   isButton?: boolean
+
+  /**
+   * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
+   */
+  isLabel?: boolean
 }
 
 export function RenderedMarkdown({
@@ -250,11 +250,12 @@ export function RenderedMarkdown({
     rehypePlugins.push(rehypeRaw)
   }
 
-  let disallow
+  // limits allowed markdown, default is allow all
+  let allowed
   if (isLabel) {
-    disallow = ["img", "table"]
+    allowed = ["p", "em", "strong", "del", "code", "a"]
   } else if (isButton) {
-    disallow = ["img", "table", "code", "a"]
+    allowed = ["p", "em", "strong", "del"]
   }
 
   return (
@@ -264,7 +265,7 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
-        disallowedElements={disallow}
+        allowedElements={allowed}
       >
         {source}
       </ReactMarkdown>
