@@ -17,7 +17,8 @@
 import os
 import unittest
 from collections.abc import Mapping as MappingABC
-from typing import Mapping
+from collections.abc import MutableMapping as MutableMappingABC
+from typing import Mapping, MutableMapping
 from unittest.mock import MagicMock, mock_open, patch
 
 from toml import TomlDecodeError
@@ -134,6 +135,8 @@ class SecretsTest(unittest.TestCase):
         """Verify that AttrDict implements Mapping, but not built-in Dict"""
         self.assertTrue(isinstance(self.secrets.subsection, Mapping))
         self.assertTrue(isinstance(self.secrets.subsection, MappingABC))
+        self.assertFalse(isinstance(self.secrets.subsection, MutableMapping))
+        self.assertFalse(isinstance(self.secrets.subsection, MutableMappingABC))
         self.assertFalse(isinstance(self.secrets.subsection, dict))
 
     @patch("streamlit.watcher.path_watcher.watch_file")

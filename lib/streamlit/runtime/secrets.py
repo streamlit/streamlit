@@ -51,33 +51,37 @@ class AttrDict(Mapping[str, Any]):
     """
 
     def __init__(self, value):
-        self.__dict__.update(value)
+        self.__dict__["__nested_secrets__"] = dict(value)
 
     @staticmethod
     def _maybe_wrap_in_attr_dict(value) -> Any:
-        if not isinstance(value, dict):
+        if not isinstance(value, Mapping):
             return value
         else:
             return AttrDict(value)
 
     def __len__(self) -> int:
-        return len(self.__dict__)
+        return len(self.__nested_secrets__)
 
     def __iter__(self) -> Iterator[str]:
-        return iter(self.__dict__)
+        return iter(self.__nested_secrets__)
 
     def __getitem__(self, key: str) -> Any:
         try:
-            value = self.__dict__[key]
+            value = self.__nested_secrets__[key]
             return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
     def __getattr__(self, attr_name: str) -> Any:
         try:
-            return self[attr_name]
+            value = self.__nested_secrets__[attr_name]
+            return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise AttributeError(_missing_attr_error_message(attr_name))
+
+    def __repr__(self):
+        return repr(self.__nested_secrets__)
 
     def __setitem__(self, key, value):
         raise TypeError("Secrets does not support item assignment.")
@@ -231,7 +235,7 @@ class Secrets(Mapping[str, Any]):
         """
         try:
             value = self._parse(True)[key]
-            if not isinstance(value, dict):
+            if not isinstance(value, Mapping):
                 return value
             else:
                 return AttrDict(value)
@@ -249,7 +253,7 @@ class Secrets(Mapping[str, Any]):
         """
         try:
             value = self._parse(True)[key]
-            if not isinstance(value, dict):
+            if not isinstance(value, Mapping):
                 return value
             else:
                 return AttrDict(value)
