@@ -153,6 +153,74 @@ describe("StreamlitMarkdown", () => {
       "hello this is a caption"
     )
   })
+
+  it("doesn't render tables/images, but allows code/links when isLabel is true", () => {
+    const table =
+      "<table><tr><th>Month</th><th>Savings</th></tr><tr><td>January</td><td>$100</td></tr></table>"
+    const image =
+      "![Corgi](https://dictionary.cambridge.org/us/dictionary/english/corgi)"
+    const link =
+      "[Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
+    const code = "`code`"
+
+    const wrapper1 = mount(
+      <StreamlitMarkdown source={table} allowHTML={true} isLabel />
+    )
+    expect(wrapper1.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper1.props().isLabel).toEqual(true)
+
+    const wrapper2 = mount(
+      <StreamlitMarkdown source={image} allowHTML={false} isLabel />
+    )
+    expect(wrapper2.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper2.props().isLabel).toEqual(true)
+
+    const wrapper3 = mount(
+      <StreamlitMarkdown source={link} allowHTML={false} isLabel />
+    )
+    expect(wrapper3.find("StyledStreamlitMarkdown").text()).toEqual("Yikes")
+    expect(wrapper3.props().isLabel).toEqual(true)
+
+    const wrapper4 = mount(
+      <StreamlitMarkdown source={code} allowHTML={false} isLabel />
+    )
+    expect(wrapper4.find("StyledStreamlitMarkdown").text()).toEqual("code")
+    expect(wrapper4.props().isLabel).toEqual(true)
+  })
+
+  it("doesn't render tables/images/links/code when isButton is true", () => {
+    const table =
+      "<table><tr><th>Month</th><th>Savings</th></tr><tr><td>January</td><td>$100</td></tr></table>"
+    const image =
+      "![Corgi](https://dictionary.cambridge.org/us/dictionary/english/corgi)"
+    const link =
+      "[Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
+    const code = "`code`"
+
+    const wrapper1 = mount(
+      <StreamlitMarkdown source={table} allowHTML={true} isButton />
+    )
+    expect(wrapper1.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper1.props().isButton).toEqual(true)
+
+    const wrapper2 = mount(
+      <StreamlitMarkdown source={image} allowHTML={false} isButton />
+    )
+    expect(wrapper2.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper2.props().isButton).toEqual(true)
+
+    const wrapper3 = mount(
+      <StreamlitMarkdown source={link} allowHTML={false} isButton />
+    )
+    expect(wrapper3.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper3.props().isButton).toEqual(true)
+
+    const wrapper4 = mount(
+      <StreamlitMarkdown source={code} allowHTML={false} isButton />
+    )
+    expect(wrapper4.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper4.props().isButton).toEqual(true)
+  })
 })
 
 const getHeadingProps = (

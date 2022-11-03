@@ -76,7 +76,11 @@ export default function Metric({ element }: MetricProps): ReactElement {
     <div data-testid="metric-container">
       <StyledMetricLabelText data-testid="stMetricLabel">
         <StyledTruncateText>
-          <StreamlitMarkdown source={element.label} allowHTML={false} />
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isLabel
+          />
           {element.help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon
