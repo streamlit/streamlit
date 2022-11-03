@@ -156,12 +156,20 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 
 class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    def setUp(self):
+        super(AllowedMessageOriginsHandlerTest, self).setUp()
+        self._is_healthy = True
+
+    async def is_healthy(self):
+        return self._is_healthy, "ok"
+
     def get_app(self):
         return tornado.web.Application(
             [
                 (
                     r"/st-allowed-message-origins",
                     AllowedMessageOriginsHandler,
+                    dict(callback=self.is_healthy),
                 )
             ]
         )
@@ -172,3 +180,26 @@ class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(
             {"allowedOrigins": ALLOWED_MESSAGE_ORIGINS}, json.loads(response.body)
         )
+
+    # NOTE: Temporary tests to verify this endpoint can also act as a healthcheck
+    # endpoint while we need it to. These tests are more or less copy-paste from the
+    # HealthHandlerTest class above.
+    def test_healthcheck_responsibilities(self):
+        response = self.fetch("/st-allowed-message-origins")
+        self.assertEqual(200, response.code)
+
+        self._is_healthy = False
+        response = self.fetch("/st-allowed-message-origins")
+        self.assertEqual(503, response.code)
+
+    def test_healthcheck_responsibilities_without_csrf(self):
+        config._set_option("server.enableXsrfProtection", False, "test")
+        response = self.fetch("/st-allowed-message-origins")
+        self.assertEqual(200, response.code)
+        self.assertNotIn("Set-Cookie", response.headers)
+
+    def test_healthcheck_responsibilities_with_csrf(self):
+        config._set_option("server.enableXsrfProtection", True, "test")
+        response = self.fetch("/st-allowed-message-origins")
+        self.assertEqual(200, response.code)
+        self.assertIn("Set-Cookie", response.headers)

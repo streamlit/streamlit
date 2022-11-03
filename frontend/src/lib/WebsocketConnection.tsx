@@ -647,7 +647,16 @@ export function doInitPings(
     // not to do so as it's semantically cleaner to not give the healthcheck
     // endpoint additional responsibilities.
     Promise.all([
-      axios.get(healthzUri, { timeout: minimumTimeoutMs }),
+      // NOTE: We temporarily avoid hitting the healthz endpoint for now
+      // because certain environments (notably GCP App Engine and Cloud Run)
+      // reserve the endpoint name, and the new /st-allowed-message-origins
+      // can be used as a healthcheck at the relatively cheap cost of some
+      // semantic clarity.
+      //
+      // Once we're able to pick up work on https://github.com/streamlit/streamlit/pull/5534
+      // again, our endpoints can be re-split into their original dedicated
+      // roles.
+      Promise.resolve(), // axios.get(healthzUri, { timeout: minimumTimeoutMs }),
       axios.get(allowedOriginsUri, { timeout: minimumTimeoutMs }),
     ])
       .then(([_, originsResp]) => {
