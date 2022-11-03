@@ -653,6 +653,11 @@ export function doInitPings(
       // can be used as a healthcheck at the relatively cheap cost of some
       // semantic clarity.
       //
+      // We keep the Promise.all and just return a resolved promise in the
+      // first element of the array instead of actually pinging the /healthz
+      // endpoint to avoid having to change the structure of the code for this
+      // temporary change.
+      //
       // Once we're able to pick up work on https://github.com/streamlit/streamlit/pull/5534
       // again, our endpoints can be re-split into their original dedicated
       // roles.

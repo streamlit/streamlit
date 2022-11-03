@@ -22,7 +22,6 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
-from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
@@ -34,6 +33,7 @@ from streamlit.web.server.server import (
     StaticFileHandler,
 )
 from tests.streamlit.message_mocks import create_dataframe_msg
+from tests.testutil import patch_config_options
 
 LOGGER = get_logger(__name__)
 
@@ -62,15 +62,15 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/healthz")
         self.assertEqual(503, response.code)
 
+    @patch_config_options({"server.enableXsrfProtection": False})
     def test_healthz_without_csrf(self):
-        config._set_option("server.enableXsrfProtection", False, "test")
         response = self.fetch("/healthz")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
         self.assertNotIn("Set-Cookie", response.headers)
 
+    @patch_config_options({"server.enableXsrfProtection": True})
     def test_healthz_with_csrf(self):
-        config._set_option("server.enableXsrfProtection", True, "test")
         response = self.fetch("/healthz")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
@@ -192,14 +192,14 @@ class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/st-allowed-message-origins")
         self.assertEqual(503, response.code)
 
+    @patch_config_options({"server.enableXsrfProtection": False})
     def test_healthcheck_responsibilities_without_csrf(self):
-        config._set_option("server.enableXsrfProtection", False, "test")
         response = self.fetch("/st-allowed-message-origins")
         self.assertEqual(200, response.code)
         self.assertNotIn("Set-Cookie", response.headers)
 
+    @patch_config_options({"server.enableXsrfProtection": True})
     def test_healthcheck_responsibilities_with_csrf(self):
-        config._set_option("server.enableXsrfProtection", True, "test")
         response = self.fetch("/st-allowed-message-origins")
         self.assertEqual(200, response.code)
         self.assertIn("Set-Cookie", response.headers)
