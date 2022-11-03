@@ -160,6 +160,7 @@ class StreamlitTest(unittest.TestCase):
         )
 
     def test_pydoc(self):
+        """Test that we can run pydoc on the streamlit package"""
         cwd = os.getcwd()
         try:
             os.chdir(tempfile.mkdtemp())
