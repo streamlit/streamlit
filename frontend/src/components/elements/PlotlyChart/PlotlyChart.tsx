@@ -60,11 +60,16 @@ function renderFigure({
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
 
+    const initialHeight = DEFAULT_HEIGHT
+
     if (isFullScreen()) {
       spec.layout.width = width
       spec.layout.height = height
     } else if (element.useContainerWidth) {
       spec.layout.width = width
+    } else {
+      spec.layout.width = width
+      spec.layout.height = initialHeight
     }
 
     spec.layout = layoutWithThemeDefaults(spec.layout, theme)
