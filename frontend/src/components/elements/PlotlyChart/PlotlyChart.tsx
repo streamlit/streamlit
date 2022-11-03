@@ -62,6 +62,7 @@ function renderFigure({
     const spec = JSON.parse(figure.spec)
 
     const initialHeight = DEFAULT_HEIGHT
+    const initialWidth = width
 
     if (isFullScreen()) {
       spec.layout.width = width
@@ -69,7 +70,7 @@ function renderFigure({
     } else if (element.useContainerWidth) {
       spec.layout.width = width
     } else {
-      spec.layout.width = width
+      spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
     if (element.theme === "streamlit") {
