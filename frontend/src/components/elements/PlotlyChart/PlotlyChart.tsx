@@ -61,7 +61,6 @@ function renderFigure({
   const generateSpec = (figure: FigureProto): any => {
     const spec = JSON.parse(figure.spec)
 
-    // placeholder as this doesn't actually render this height
     const initialHeight = DEFAULT_HEIGHT
 
     if (isFullScreen()) {
