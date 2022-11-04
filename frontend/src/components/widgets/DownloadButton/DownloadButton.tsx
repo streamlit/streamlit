@@ -50,6 +50,7 @@ function DownloadButton(props: Props): ReactElement {
       link.setAttribute("href", uri)
       link.setAttribute("target", "_blank")
       link.click()
+
       element.readyToDownload = false
       setDisabled(props.disabled)
     }

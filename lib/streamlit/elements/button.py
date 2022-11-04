@@ -292,10 +292,6 @@ class ButtonMixin:
         download_button_proto.default = False
         download_button_proto.ready_to_download = False
 
-        # marshall_file(
-        #     self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
-        # )
-
         if help is not None:
             download_button_proto.help = dedent(help)
 
@@ -318,7 +314,6 @@ class ButtonMixin:
         download_button_proto.disabled = disabled
         if button_state.value:
             download_button_proto.ready_to_download = True
-            print("SET READY TO DOWNLOAD TO TRUE")
             marshall_file(
                 self.dg._get_delta_path_str(),
                 data,
@@ -443,7 +438,6 @@ def marshall_file(
             is_for_static_download=True,
         )
         ready_to_download = True
-        print("READY TO DOWNLOAD SETTED!!!!")
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
         file_url = ""
