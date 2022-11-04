@@ -63,6 +63,32 @@ describe("doInitPings", () => {
     Promise.all = originalPromiseAll
   })
 
+  // NOTE: Temporary test until we're able to rename the /healthz endpoint
+  it("does not call the /healthz endpoint when pinging server", async () => {
+    axios.get = jest.fn().mockImplementation(url => {
+      if (url.endsWith("/healthz")) {
+        throw Error("kaboom")
+      }
+      if (url.endsWith("/st-allowed-message-origins")) {
+        return MOCK_ALLOWED_ORIGINS_RESPONSE
+      }
+      return {}
+    })
+
+    const uriIndex = await doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.userCommandLine
+    )
+    expect(uriIndex).toEqual(0)
+    expect(MOCK_PING_DATA.setHostAllowedOrigins).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_RESPONSE.data.allowedOrigins
+    )
+  })
+
   it("returns the uri index and sets allowedOrigins for the first successful ping (0)", async () => {
     Promise.all = jest
       .fn()
