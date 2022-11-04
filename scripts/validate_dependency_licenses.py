@@ -104,6 +104,33 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "Unknown",
         "Unknown",
     ),
+    (
+        # MIT license: https://github.com/dy/image-palette
+        "image-palette",
+        "2.1.0",
+        "MIT*",
+        "https://github.com/dy/image-palette.git",
+        "Unknown",
+        "Dmitry Yv",
+    ),
+    (
+        # BSD 3-clause license: https://github.com/kriszyp/json-schema/blob/master/LICENSE
+        "json-schema",
+        "0.2.3",
+        "BSD*",
+        "http://github.com/kriszyp/json-schema",
+        "Unknown",
+        "Kris Zyp",
+    ),
+    (
+        # CC0-1.0 license: https://github.com/mattcg/language-subtag-registry
+        "language-subtag-registry",
+        "0.3.21",
+        "ODC-By-1.0",
+        "https://github.com/mattcg/language-subtag-registry",
+        "https://github.com/mattcg/language-subtag-registry",
+        "Unknown",
+    ),
 }
 
 
