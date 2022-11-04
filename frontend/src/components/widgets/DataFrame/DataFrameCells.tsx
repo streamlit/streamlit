@@ -116,6 +116,10 @@ export function getColumnTypeFromConfig(typeName?: string): ColumnType {
  * Maps the data type from Quiver to a valid column type.
  */
 export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
+  if (!quiverType) {
+    return ColumnType.Object
+  }
+
   let typeName = Quiver.getTypeName(quiverType)
 
   let columnType = ColumnType.Object
@@ -166,6 +170,7 @@ export function isEditableType(type: ColumnType): boolean {
     ColumnType.DateTime,
     ColumnType.Url,
     ColumnType.Categorical,
+    ColumnType.Image,
   ].includes(type)
 }
 
@@ -365,7 +370,6 @@ function fillBooleanCell(cell: BooleanCell, data: any): GridCell {
     }
   }
 
-  console.log(cellData)
   return {
     ...cell,
     data: cellData,

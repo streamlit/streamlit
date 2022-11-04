@@ -33,8 +33,18 @@ from pandas.io.formats.style import Styler
 from typing_extensions import Literal, TypedDict
 
 from streamlit import type_util
+from streamlit.elements.form import current_form_id
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+    get_session_state,
+    register_widget,
+)
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -211,7 +221,11 @@ class ArrowMixin:
         height: Optional[int] = None,
         use_container_width: bool = False,
         columns: Optional[Dict[Union[int, str], ColumnConfig]] = None,
-    ) -> "DeltaGenerator":
+        key: Optional[Key] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> DataFrame:
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
@@ -225,10 +239,56 @@ class ArrowMixin:
         if height:
             proto.height = height
         proto.editable = True
+        proto.form_id = current_form_id(self.dg)
         marshall(proto, data, default_uuid)
         _marshall_column_config(proto, columns)
 
-        return self.dg._enqueue("arrow_data_frame", proto)
+        def deserialize_data_editor_event(ui_value, widget_id=""):
+            if ui_value is None:
+                return {}
+            if isinstance(ui_value, str):
+                return json.loads(ui_value)
+
+            return ui_value
+
+        def serialize_data_editor_event(v):
+            return json.dumps(v, default=str)
+
+        widget_state = register_widget(
+            "data_editor",
+            proto,
+            user_key=to_key(key),
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_data_editor_event,
+            serializer=serialize_data_editor_event,
+            ctx=get_script_run_ctx(),
+        )
+
+        new_df = data.copy()
+        return_value = new_df
+        widget_state_value = widget_state.value
+        if widget_state_value and "edits" in widget_state_value:
+            for edit in widget_state_value["edits"].keys():
+                col, row = edit.split(":")
+                col, row = int(
+                    col
+                ) - new_df.index.nlevels if new_df.index.nlevels else 0, int(row)
+                # TODO: Check cols as well
+                if row + 1 > new_df.shape[0]:
+                    # it is possible that there are multiple rows to add
+                    # this happens if mulitple lines are added without edits
+                    for row_idx in range(new_df.shape[0], row + 1):
+                        # Append new row with empty values
+                        # TODO: use iloc? cannot add rows?
+                        # TODO use append? but this creates new dataframe: https://stackoverflow.com/questions/34753873/type-inference-df-append-vs-df-loc
+                        new_df.loc[row_idx] = [None for _ in range(new_df.shape[1])]
+                new_df.iat[row, col] = widget_state_value["edits"][edit]
+            return_value = new_df
+
+        self.dg._enqueue("arrow_data_frame", proto)
+        return return_value
 
     @gather_metrics("_arrow_table")
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":

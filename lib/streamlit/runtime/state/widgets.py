@@ -101,6 +101,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "text_input": "string_value",
         "time_input": "string_value",
         "component_instance": "json_value",
+        "data_editor": "json_value",
     }
 )
 

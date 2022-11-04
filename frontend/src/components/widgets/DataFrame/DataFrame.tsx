@@ -49,6 +49,7 @@ import {
   FileDownload,
 } from "@emotion-icons/material-outlined"
 import Icon from "src/components/shared/Icon"
+import { debounce } from "src/lib/utils"
 
 import {
   getCellFromQuiver,
@@ -249,7 +250,7 @@ export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
 function applyColumnConfig(
   column: CustomColumn,
   columnsConfig: Map<string | number, ColumnConfigProps>
-): CustomColumn | null {
+): CustomColumn {
   if (!columnsConfig) {
     // No column config configured
     return column
@@ -267,14 +268,6 @@ function applyColumnConfig(
     return column
   }
 
-  if (
-    notNullOrUndefined(columnConfig.hidden) &&
-    columnConfig.hidden === true
-  ) {
-    // If column is hidden, return null
-    return null
-  }
-
   return {
     ...column,
     // Update title:
@@ -283,6 +276,7 @@ function applyColumnConfig(
           title: columnConfig.title,
         }
       : {}),
+
     // Update width:
     ...(notNullOrUndefined(columnConfig.width)
       ? {
@@ -302,6 +296,12 @@ function applyColumnConfig(
     ...(notNullOrUndefined(columnConfig.editable)
       ? {
           isEditable: columnConfig.editable,
+        }
+      : {}),
+    // Update hidden state:
+    ...(notNullOrUndefined(columnConfig.hidden)
+      ? {
+          isHidden: columnConfig.hidden,
         }
       : {}),
     // Add column type metadata:
@@ -368,19 +368,15 @@ export function getColumns(
     } as CustomColumn
 
     const updatedColumn = applyColumnConfig(column, columnsConfig)
-    // If column is hidden, the return value is null.
-    if (updatedColumn) {
-      columns.push(updatedColumn)
-    }
+    // TODO(lukasmasuch): Editing for index columns is currently not supported.
+    updatedColumn.isEditable = false
+    columns.push(updatedColumn)
   }
 
   for (let i = 0; i < numColumns; i++) {
     const columnTitle = data.columns[0][i]
     const quiverType = data.types.data[i]
     const columnType = getColumnTypeFromQuiver(quiverType)
-    // TODO(lukasmasuch): Use disabled from props
-    const isEditable =
-      isEditableType(columnType) && element.editable && !element.disabled
 
     const column = {
       id: `column-${columnTitle}-${i}`,
@@ -389,17 +385,24 @@ export function getColumns(
       columnType,
       quiverType,
       indexNumber: i + numIndices,
-      isEditable,
+      isEditable: isEditableType(columnType),
       isHidden: false,
       isIndex: false,
       ...(stretchColumn ? { grow: 3 } : {}),
     } as CustomColumn
-
     const updatedColumn = applyColumnConfig(column, columnsConfig)
-    // If column is hidden, the return value is null.
-    if (updatedColumn) {
-      columns.push(updatedColumn)
+
+    // Check if we need to deactivate editing:
+    if (
+      !element.editable ||
+      element.disabled ||
+      !isEditableType(updatedColumn.columnType)
+    ) {
+      // TODO(lukasmasuch): Use disabled from props
+      updatedColumn.isEditable = false
     }
+
+    columns.push(updatedColumn)
   }
   return columns
 }
@@ -465,6 +468,7 @@ type DataLoaderReturn = { numRows: number } & Pick<
  * such as column resizing, sorting, etc.
  */
 export function useDataLoader(
+  widgetMgr: WidgetStateManager,
   dataEditorRef: React.RefObject<DataEditorRef>,
   element: ArrowProto,
   data: Quiver,
@@ -482,7 +486,13 @@ export function useDataLoader(
     ? new Map(Object.entries(JSON.parse(element.columns)))
     : new Map()
 
-  const columns = getColumns(element, data, columnsConfig).map(column => {
+  const visibleColumns = getColumns(element, data, columnsConfig).filter(
+    column => {
+      return !column.isHidden
+    }
+  )
+
+  const sizedColumns = visibleColumns.map(column => {
     // Apply column widths from state
     if (
       column.id &&
@@ -513,7 +523,7 @@ export function useDataLoader(
         setColumnSizes(new Map(columnSizes).set(column.id, newSizeWithGrow))
       }
     },
-    [columns]
+    [sizedColumns]
   )
 
   const getCellContent = React.useCallback(
@@ -525,7 +535,7 @@ export function useDataLoader(
         } as GridCell
       }
 
-      if (col > columns.length - 1) {
+      if (col > sizedColumns.length - 1) {
         return getErrorCell(
           "Column index out of bounds.",
           "This should never happen. Please report this bug."
@@ -539,7 +549,7 @@ export function useDataLoader(
         )
       }
 
-      const column = columns[col]
+      const column = sizedColumns[col]
 
       if (column.isEditable) {
         const editedCell = editingState.current.get(column.indexNumber, row)
@@ -563,18 +573,36 @@ export function useDataLoader(
         )
       }
     },
-    [columns, numRows, data]
+    [sizedColumns, numRows, data, editingState]
   )
 
   const { getCellContent: getCellContentSorted, getOriginalIndex } =
     useColumnSort({
-      columns,
+      columns: sizedColumns,
       getCellContent,
       rows: numRows,
       sort,
     })
 
-  const updatedColumns = updateSortingHeader(columns, sort)
+  const updatedColumns = updateSortingHeader(sizedColumns, sort)
+
+  const commitValueToState = React.useCallback(
+    ([col, row]: readonly [number, number], value: any): void => {
+      // TODO(lukasmasuch): Debounce
+      const cellPosition = `${col}:${row}`
+      const currentState = getCurrentState(element, widgetMgr)
+      const currentStateStr = JSON.stringify(currentState)
+      currentState.edits[cellPosition] = value
+
+      // only send value if the state was actually changed
+      if (JSON.stringify(currentState) !== currentStateStr) {
+        widgetMgr.setJsonValue(element as WidgetInfo, currentState, {
+          fromUi: true,
+        })
+      }
+    },
+    [widgetMgr, element]
+  )
 
   const onCellEdited = React.useCallback(
     (
@@ -582,13 +610,17 @@ export function useDataLoader(
       updatedCell: EditableGridCell
     ): void => {
       const column = updatedColumns[col]
-
-      editingState.current.set(col, getOriginalIndex(row), {
-        ...getCell(column, getCellValue(column, updatedCell)),
+      const newCell = getCell(column, getCellValue(column, updatedCell))
+      editingState.current.set(column.indexNumber, getOriginalIndex(row), {
+        ...newCell,
         lastUpdated: performance.now(),
       })
+      commitValueToState(
+        [column.indexNumber, getOriginalIndex(row)],
+        getCellValue(column, newCell)
+      )
     },
-    [getOriginalIndex, editingState, updatedColumns]
+    [getOriginalIndex, editingState, updatedColumns, commitValueToState]
   )
 
   const onPaste = React.useCallback(
@@ -615,30 +647,50 @@ export function useDataLoader(
           }
 
           const column = updatedColumns[colIndex]
+
           if (!column.isEditable) {
             // Column is not editable -> just ignore
             continue
           }
+
           const newCell = getCell(column, pasteDataValue)
           if (isErrorCell(newCell)) {
             // If new cell value leads to error -> just ignore
             continue
           }
 
-          editingState.current.set(colIndex, getOriginalIndex(rowIndex), {
-            ...newCell,
-            lastUpdated: performance.now(),
-          })
+          editingState.current.set(
+            column.indexNumber,
+            getOriginalIndex(rowIndex),
+            {
+              ...newCell,
+              lastUpdated: performance.now(),
+            }
+          )
+
           updatedCells.push({
             cell: [colIndex, rowIndex],
           })
+
+          // TODO(lukasmasuch): Don't directly update here:
+          commitValueToState(
+            [column.indexNumber, getOriginalIndex(rowIndex)],
+            getCellValue(column, newCell)
+          )
         }
         dataEditorRef.current?.updateCells(updatedCells)
       }
 
       return false
     },
-    [updatedColumns, numRows, getOriginalIndex, editingState, dataEditorRef]
+    [
+      updatedColumns,
+      numRows,
+      getOriginalIndex,
+      editingState,
+      dataEditorRef,
+      commitValueToState,
+    ]
   )
 
   return {
@@ -683,7 +735,7 @@ function DataFrame({
     onColumnResize,
     onCellEdited,
     onPaste,
-  } = useDataLoader(dataEditorRef, element, data, sort)
+  } = useDataLoader(widgetMgr, dataEditorRef, element, data, sort)
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
   const [showSearch, setShowSearch] = React.useState(false)
 
@@ -967,18 +1019,18 @@ function DataFrame({
               // Support on past of bulk editing
               onPaste,
               // Support adding rows
-              trailingRowOptions: {
-                sticky: true,
-                tint: true,
-                // hint: "Add row...",
-              },
-              onRowAppended: () => {},
-              rowMarkers: "checkbox",
-              onDeleteRows: (rows: number[]) => {
-                console.log("Delete rows", rows)
-              },
-              rowSelect: "multi",
-              rowSelectionMode: "auto",
+              // trailingRowOptions: {
+              //   sticky: true,
+              //   tint: true,
+              //   // hint: "Add row...",
+              // },
+              // onRowAppended: () => {},
+              // rowMarkers: "checkbox",
+              // onDeleteRows: (rows: number[]) => {
+              //   console.log("Delete rows", rows)
+              // },
+              // rowSelect: "multi",
+              // rowSelectionMode: "auto",
             })}
         />
       </Resizable>
