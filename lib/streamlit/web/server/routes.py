@@ -185,14 +185,44 @@ ALLOWED_MESSAGE_ORIGINS = [
 ]
 
 
+# NOTE: We're temporarily having this endpoint duplicate much of the code that also
+# lives in HealthHandler because the /healthz endpoint name is giving us trouble in
+# certain environments (in particular, GCP products like App Engine and Cloud Run reserve
+# the healthz endpoint).
+#
+# In the future, we'll be prefixing all of our endpoints, which will allow us to have
+# this endpoint and the healthcheck endpoint return to their dedicated roles, but having
+# this endpoint double as a healthcheck is fine in the meantime.
 class AllowedMessageOriginsHandler(_SpecialRequestHandler):
-    def get(self) -> None:
-        # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
-        # disallows writing lists directly into responses due to potential XSS
-        # vulnerabilities.
-        # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
-        self.write({"allowedOrigins": ALLOWED_MESSAGE_ORIGINS})
-        self.set_status(200)
+    def initialize(self, callback):
+        """Initialize the handler
+
+        Parameters
+        ----------
+        callback : callable
+            A function that returns True if the server is healthy
+
+        """
+        self._callback = callback
+
+    async def get(self) -> None:
+        ok, msg = await self._callback()
+
+        if ok:
+            # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
+            # disallows writing lists directly into responses due to potential XSS
+            # vulnerabilities.
+            # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
+            self.write({"allowedOrigins": ALLOWED_MESSAGE_ORIGINS})
+            self.set_status(200)
+
+            if config.get_option("server.enableXsrfProtection"):
+                self.set_cookie("_xsrf", self.xsrf_token)
+
+        else:
+            # 503 = SERVICE_UNAVAILABLE
+            self.set_status(503)
+            self.write(msg)
 
 
 class MessageCacheHandler(tornado.web.RequestHandler):
