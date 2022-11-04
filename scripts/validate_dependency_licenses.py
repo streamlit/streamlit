@@ -131,8 +131,16 @@ def main() -> None:
         cast(PackageInfo, tuple(package)) for package in licenses_json["data"]["body"]
     ]
 
-    # Discover all packages that don't have an acceptable license, and that
-    # don't have an explicit exception.
+    # Discover dependency exceptions that are no longer used and can be
+    # jettisoned, and print them out with a warning.
+    unused_exceptions = PACKAGE_EXCEPTIONS.difference(set(packages))
+    if len(unused_exceptions) > 0:
+        for exception in sorted(list(unused_exceptions)):
+            print(f"Unused package exception, please remove: {exception}")
+
+    # Discover packages that don't have an acceptable license, and that don't
+    # have an explicit exception. If we have any, we print them out and exit
+    # with an error.
     bad_packages = [
         package
         for package in packages
