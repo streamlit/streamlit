@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext, useEffect } from "react"
+import React, { ReactElement, useContext, useEffect, useState } from "react"
 import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
 import UIButton, {
@@ -33,12 +33,15 @@ export interface Props {
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width } = props
+  const { element, widgetMgr, width } = props
   const style = { width }
   const { getBaseUriParts } = useContext(AppContext)
+  const [disabled, setDisabled] = useState(props.disabled)
 
   useEffect(() => {
     if (element.readyToDownload) {
+      // Downloads are only done on links, so create a hidden one and
+      // click it for the user.
       const link = document.createElement("a")
       const uri = `${buildMediaUri(
         element.url,
@@ -47,12 +50,14 @@ function DownloadButton(props: Props): ReactElement {
       link.setAttribute("href", uri)
       link.setAttribute("target", "_blank")
       link.click()
+      element.readyToDownload = false
+      setDisabled(props.disabled)
     }
   }, [element.readyToDownload])
 
   const handleDownloadClick: () => void = () => {
-    // Downloads are only done on links, so create a hidden one and click it
-    // for the user.
+    element.readyToDownload = false
+    setDisabled(true)
     widgetMgr.setTriggerValue(element, { fromUi: true })
   }
 
