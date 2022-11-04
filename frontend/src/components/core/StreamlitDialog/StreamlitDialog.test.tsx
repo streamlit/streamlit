@@ -15,7 +15,9 @@
  */
 
 import React, { Fragment } from "react"
+import Modal from "src/components/shared/Modal"
 import { mount } from "src/lib/test_util"
+import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
 import { StreamlitDialog, DialogType } from "./StreamlitDialog"
 
 function flushPromises(): Promise<void> {
@@ -71,5 +73,55 @@ describe("StreamlitDialog", () => {
     )
 
     expect(wrapper.find("StyledTertiaryButton")).toMatchSnapshot()
+  })
+})
+
+describe("aboutDialog", () => {
+  beforeEach(() => {
+    SessionInfo.current = new SessionInfo({
+      appId: "aid",
+      sessionId: "sessionId",
+      streamlitVersion: "42.42.42",
+      pythonVersion: "pv",
+      installationId: "iid",
+      installationIdV3: "iid3",
+      authorEmail: "ae",
+      maxCachedMessageAge: 2,
+      commandLine: "command line",
+      userMapboxToken: "mpt",
+    } as SessionInfoArgs)
+  })
+
+  afterEach(() => {
+    const UnsafeSessionInfo = SessionInfo as any
+    UnsafeSessionInfo.singleton = undefined
+  })
+
+  it("renders about dialog with Streamlit version included", async () => {
+    const wrapper = mount(
+      <Fragment>
+        {StreamlitDialog({
+          type: DialogType.ABOUT,
+          onClose: () => {},
+        })}
+      </Fragment>
+    )
+
+    expect(wrapper.find(Modal).text()).toContain("Streamlit v42.42.42")
+  })
+
+  it("renders about dialog without Streamlit version included", async () => {
+    SessionInfo.clearSession()
+
+    const wrapper = mount(
+      <Fragment>
+        {StreamlitDialog({
+          type: DialogType.ABOUT,
+          onClose: () => {},
+        })}
+      </Fragment>
+    )
+    expect(wrapper.find(Modal).exists()).toBe(true)
+    expect(wrapper.find(Modal).text()).not.toContain("Streamlit v42.42.42")
   })
 })
