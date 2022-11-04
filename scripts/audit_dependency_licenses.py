@@ -13,11 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Audit the licenses of all our frontend dependencies (as defined by our
+`yarn.lock` file). If any dependency has an unacceptable license, print it
+out and exit with an error code. If all dependencies have acceptable licenses,
+exit normally.
+"""
+
 import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Set, Tuple, cast
+from typing import NoReturn, Set, Tuple, cast
 
 from typing_extensions import TypeAlias
 
@@ -139,7 +145,8 @@ def get_license_type(package: PackageInfo) -> str:
     return package[2]
 
 
-def main() -> None:
+def main() -> NoReturn:
+    # Run `yarn licenses list --json`.
     licenses_output = (
         subprocess.check_output(
             ["yarn", "licenses", "list", "--json"], cwd=str(FRONTEND_DIR)
@@ -148,7 +155,7 @@ def main() -> None:
         .splitlines()
     )
 
-    # `yarn licenses list --json` outputs a bunch of lines.
+    # `yarn licenses` outputs a bunch of lines.
     # The last line contains the JSON object we care about
     licenses_json = json.loads(licenses_output[len(licenses_output) - 1])
     assert licenses_json["type"] == "table"
@@ -182,6 +189,7 @@ def main() -> None:
         sys.exit(1)
 
     print(f"No unacceptable licenses")
+    sys.exit(0)
 
 
 if __name__ == "__main__":
