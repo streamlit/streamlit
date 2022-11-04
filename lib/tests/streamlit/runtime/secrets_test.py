@@ -16,6 +16,9 @@
 
 import os
 import unittest
+from collections.abc import Mapping as MappingABC
+from collections.abc import MutableMapping as MutableMappingABC
+from typing import Mapping, MutableMapping
 from unittest.mock import MagicMock, mock_open, patch
 
 from parameterized import parameterized
@@ -137,6 +140,26 @@ class SecretsTest(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             self.secrets.subsection.nonexistent_secret
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_getattr_raises_exception_on_attr_dict(self, *mocks):
+        """Verify that assignment to nested secrets raises TypeError."""
+        with self.assertRaises(TypeError):
+            self.secrets.subsection["new_secret"] = "123"
+
+        with self.assertRaises(TypeError):
+            self.secrets.subsection.new_secret = "123"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_attr_dict_is_mapping_but_not_built_in_dict(self, *mocks):
+        """Verify that AttrDict implements Mapping, but not built-in Dict"""
+        self.assertTrue(isinstance(self.secrets.subsection, Mapping))
+        self.assertTrue(isinstance(self.secrets.subsection, MappingABC))
+        self.assertFalse(isinstance(self.secrets.subsection, MutableMapping))
+        self.assertFalse(isinstance(self.secrets.subsection, MutableMappingABC))
+        self.assertFalse(isinstance(self.secrets.subsection, dict))
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
