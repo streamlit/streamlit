@@ -17,23 +17,34 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import Set, Tuple, cast
+
+from typing_extensions import TypeAlias
+
+PackageInfo: TypeAlias = Tuple[str, str, str, str, str, str]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = SCRIPT_DIR.parent / "frontend"
 
+# Set of acceptable licenses. If a library uses one of these licenses,
+# we can include it as a dependency.
 ACCEPTABLE_LICENSES = {
     "MIT",  # https://opensource.org/licenses/MIT
     "Apache-2.0",  # https://opensource.org/licenses/Apache-2.0
+    "Apache-2.0 WITH LLVM-exception",  # https://spdx.org/licenses/LLVM-exception.html
+    "0BSD",  # https://opensource.org/licenses/0BSD
+    "BSD-2-Clause",  # https://opensource.org/licenses/BSD-2-Clause
     "BSD-3-Clause",  # https://opensource.org/licenses/BSD-3-Clause
     "ISC",  # https://opensource.org/licenses/ISC
-    "BSD-2-Clause",  # https://opensource.org/licenses/BSD-2-Clause
     "CC0-1.0",  # https://creativecommons.org/publicdomain/zero/1.0/
-    "0BSD",  # https://opensource.org/licenses/0BSD
     "CC-BY-3.0",  # https://creativecommons.org/licenses/by/3.0/
     "CC-BY-4.0",  # https://creativecommons.org/licenses/by/4.0/
     "Zlib",  # https://opensource.org/licenses/Zlib
-    "Apache-2.0 WITH LLVM-exception",  # https://spdx.org/licenses/LLVM-exception.html
+    "Unlicense",  # https://unlicense.org/
+    "WTFPL",  # http://www.wtfpl.net/about/
+    "MPL-2.0",  # https://opensource.org/licenses/MPL-2.0
+    # Dual-licenses are acceptable if at least one of the two licenses is
+    # acceptable.
     "(MIT OR Apache-2.0)",
     "(MPL-2.0 OR Apache-2.0)",
     "(MIT OR CC0-1.0)",
@@ -44,10 +55,61 @@ ACCEPTABLE_LICENSES = {
     "(WTFPL OR MIT)",
 }
 
+# Some of our dependencies have licenses that yarn fails to parse, but that
+# are still acceptable. This set contains all those exceptions. Each entry
+# should include a comment about why it's an exception.
+PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
+    (
+        # MIT license: https://github.com/mapbox/jsonlint
+        "@mapbox/jsonlint-lines-primitives",
+        "2.0.2",
+        "UNKNOWN",
+        "git://github.com/mapbox/jsonlint.git",
+        "http://zaa.ch",
+        "Zach Carter",
+    ),
+    (
+        # Apache 2.0 license: https://github.com/google/flatbuffers
+        "flatbuffers",
+        "2.0.4",
+        "SEE LICENSE IN LICENSE.txt",
+        "git+https://github.com/google/flatbuffers.git",
+        "https://google.github.io/flatbuffers/",
+        "The FlatBuffers project",
+    ),
+    (
+        # MIT license: https://github.com/dominictarr/map-stream/blob/master/LICENCE
+        "map-stream",
+        "0.1.0",
+        "UNKNOWN",
+        "git://github.com/dominictarr/map-stream.git",
+        "http://github.com/dominictarr/map-stream",
+        "Dominic Tarr",
+    ),
+    (
+        # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
+        "mapbox-gl",
+        "1.13.0",
+        "SEE LICENSE IN LICENSE.txt",
+        "git://github.com/mapbox/mapbox-gl-js.git",
+        "Unknown",
+        "Unknown",
+    ),
+    (
+        # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
+        "mapbox-gl",
+        "1.10.1",
+        "SEE LICENSE IN LICENSE.txt",
+        "git://github.com/mapbox/mapbox-gl-js.git",
+        "Unknown",
+        "Unknown",
+    ),
+}
 
-def get_license_type(entry: List[str]) -> str:
+
+def get_license_type(package: PackageInfo) -> str:
     """Return the license type string for a dependency entry."""
-    return entry[2]
+    return package[2]
 
 
 def main() -> None:
@@ -64,16 +126,24 @@ def main() -> None:
     licenses_json = json.loads(licenses_output[len(licenses_output) - 1])
     assert licenses_json["type"] == "table"
 
-    # Each entry in the list contains info about a dependency's license.
-    entries = licenses_json["data"]["body"]
-    bad_entries = [
-        entry for entry in entries if get_license_type(entry) not in ACCEPTABLE_LICENSES
+    # Pull out the list of package infos from the JSON.
+    packages = [
+        cast(PackageInfo, tuple(package)) for package in licenses_json["data"]["body"]
     ]
 
-    if len(bad_entries) > 0:
-        for entry in bad_entries:
-            print(f"Unacceptable license '{get_license_type(entry)}' (in {entry})")
-        print(f"{len(bad_entries)} unacceptable licenses")
+    # Discover all packages that don't have an acceptable license, and that
+    # don't have an explicit exception.
+    bad_packages = [
+        package
+        for package in packages
+        if (get_license_type(package) not in ACCEPTABLE_LICENSES)
+        and (package not in PACKAGE_EXCEPTIONS)
+    ]
+
+    if len(bad_packages) > 0:
+        for package in bad_packages:
+            print(f"Unacceptable license: '{get_license_type(package)}' (in {package})")
+        print(f"{len(bad_packages)} unacceptable licenses")
         sys.exit(1)
 
     print(f"No unacceptable licenses")
