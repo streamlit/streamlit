@@ -32,7 +32,7 @@ describe("label markdown", () => {
             
         cy.get(".stButton")
             .last()
-            .matchImageSnapshot("invalid_button_markdown");
+            .matchThemedSnapshots("invalid_button_markdown");
     });
 
     it("Handles markdown in widget labels correctly", () => {

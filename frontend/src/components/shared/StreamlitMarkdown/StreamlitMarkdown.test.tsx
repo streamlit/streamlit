@@ -186,11 +186,11 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("doesn't render invalid markdown (tables/images/links/code etc.) when isButton is true", () => {
-    // Invalid Markdown in button labels
+    // Invalid Markdown in button/download button labels
     const link =
       "[Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
     const code = "`code`"
-    // Valid Markdown in button labels
+    // Valid Markdown in button/download button labels
     const text = "*Italics* ~Strikethrough~ **Bold** :traffic_light:"
 
     const wrapper1 = mount(

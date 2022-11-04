@@ -72,7 +72,7 @@ export interface Props {
   isCaption?: boolean
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button labels
+   * Only allows italics, bold, strikethrough, and emojis in button/download button labels
    */
   isButton?: boolean
 
@@ -213,7 +213,7 @@ export interface RenderedMarkdownProps {
   overrideComponents?: Components
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button labels
+   * Only allows italics, bold, strikethrough, and emojis in button/download button labels
    */
   isButton?: boolean
 
