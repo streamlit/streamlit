@@ -23,6 +23,7 @@ from typing_extensions import Final
 
 import streamlit as st
 import streamlit.watcher.path_watcher
+from streamlit import runtime
 from streamlit.logger import get_logger
 
 _LOGGER = get_logger(__name__)
@@ -244,7 +245,13 @@ class Secrets(Mapping[str, Any]):
             raise KeyError(_missing_key_error_message(key))
 
     def __repr__(self) -> str:
+        # If the runtime is NOT initialized, it is a method call outside
+        # the streamlit app, so we avoid reading the secrets file as it may not exist.
+        # If the runtime is initialized, display the contents of the file and
+        # the file must already exist.
         """A string representation of the contents of the dict. Thread-safe."""
+        if not runtime.exists():
+            return f"{self.__class__.__name__}(file_path={self._file_path!r})"
         return repr(self._parse(True))
 
     def __len__(self) -> int:

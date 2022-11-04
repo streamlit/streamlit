@@ -18,6 +18,7 @@ import os
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
+from parameterized import parameterized
 from toml import TomlDecodeError
 
 from streamlit.runtime.secrets import SECRETS_FILE_LOC, Secrets
@@ -55,6 +56,27 @@ class SecretsTest(unittest.TestCase):
         self.assertEqual(self.secrets["db_username"], "Jane")
         self.assertEqual(self.secrets["subsection"]["email"], "eng@streamlit.io")
         self.assertEqual(self.secrets["subsection"].email, "eng@streamlit.io")
+
+    @parameterized.expand(
+        [
+            [
+                False,
+                "Secrets(file_path='/mock/secrets.toml')",
+            ],
+            [
+                True,
+                (
+                    "{'db_username': 'Jane', 'db_password': '12345qwerty', "
+                    "'subsection': {'email': 'eng@streamlit.io'}}"
+                ),
+            ],
+        ]
+    )
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_repr_secrets(self, runtime_exists, secrets_repr, *mocks):
+        with patch("streamlit.runtime.exists", return_value=runtime_exists):
+            self.assertEqual(repr(self.secrets), secrets_repr)
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
