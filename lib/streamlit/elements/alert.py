@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Optional, cast
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, is_emoji, clean_emoji
+from streamlit.string_util import clean_text, is_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -30,13 +30,9 @@ def validate_emoji(maybe_emoji: Optional[str]) -> str:
     elif is_emoji(maybe_emoji):
         return maybe_emoji
     else:
-        new_emoji = clean_emoji(maybe_emoji)
-        if is_emoji(new_emoji):
-            return new_emoji
-        else:
-            raise StreamlitAPIException(
-                f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
-            )
+        raise StreamlitAPIException(
+            f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
+        )
 
 
 class AlertMixin:
