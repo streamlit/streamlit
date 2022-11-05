@@ -35,6 +35,13 @@ st.selectbox(
     ("Carrier Pidgeon", "Email", "Mobile phone"),
 )
 
+table = """ Table:
+| Syntax | Description |
+| ----------- | ----------- |
+| Header | Title |
+| Paragraph | Text |
+"""
 expand = st.expander("An **expander**.. with surprises ~~widgets~~ inside :cyclone:")
+expand.text_area(table)
 
 tab1, tab2, tab3 = st.tabs(["**Cat** :cat:", "*Dog* :dog:", "~~Owl~~ :owl:"])
