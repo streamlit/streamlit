@@ -252,7 +252,7 @@ describe("st.file_uploader", () => {
         );
         cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
-          uploaderIndex
+          5
         ).should("contain.text", "True");
       });
     });
@@ -334,7 +334,7 @@ describe("st.file_uploader", () => {
         );
         cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
-          uploaderIndex
+          5
         ).should("contain.text", "True");
       });
     });

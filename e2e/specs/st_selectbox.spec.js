@@ -52,7 +52,7 @@ describe("st.selectbox", () => {
   });
 
   it("handles no options", () => {
-    cy.getIndexed(".stSelectbox div", 17).should(
+    cy.getIndexed(".stSelectbox div", 19).should(
       "have.text",
       "No options to select."
     );
