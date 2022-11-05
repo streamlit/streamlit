@@ -687,8 +687,11 @@ def _populate_config_msg(msg: Config) -> None:
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
-    msg.hide_top_bar = config.get_option("ui.hideTopBar")
-    msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
+
+    ui_opts = config.get_options_for_section("ui")
+    msg.hide_top_bar = ui_opts["hideTopBar"]
+    msg.hide_sidebar_nav = ui_opts["hideSidebarNav"]
+    msg.hide_hamburger_menu = ui_opts["hideHamburgerMenu"]
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:

@@ -140,6 +140,7 @@ interface State {
   themeHash: string | null
   gitInfo: IGitInfo | null
   formsData: FormsData
+  hideHamburgerMenu: boolean
   hideTopBar: boolean
   hideSidebarNav: boolean
   appPages: IAppPage[]
@@ -211,12 +212,13 @@ export class App extends PureComponent<Props, State> {
       formsData: createFormsData(),
       appPages: [],
       currentPageScriptHash: "",
-      // We set hideTopBar to true by default because this information isn't
-      // available on page load (we get it when the script begins to run), so
-      // the user would see top bar elements for a few ms if this defaulted to
-      // false. hideSidebarNav doesn't have this issue (app pages and the value
-      // of the config option are received simultaneously), but we set it to
-      // true as well for consistency.
+      // We set hideHamburgerMenu and hideTopBar to true by default because this
+      // information isn't available on page load (we get it when the script
+      // begins to run), so the user would see the elements for a few ms if
+      // this defaulted to false. hideSidebarNav doesn't have this issue (app
+      // pages and the value of the config option are received simultaneously),
+      // but we set it to true as well for consistency.
+      hideHamburgerMenu: true,
       hideTopBar: true,
       hideSidebarNav: true,
       latestRunTime: performance.now(),
@@ -688,6 +690,7 @@ export class App extends PureComponent<Props, State> {
     this.setState(
       {
         allowRunOnSave: config.allowRunOnSave,
+        hideHamburgerMenu: config.hideHamburgerMenu,
         hideTopBar: config.hideTopBar,
         hideSidebarNav: config.hideSidebarNav,
         appPages: newSessionProto.appPages,
@@ -1280,6 +1283,7 @@ export class App extends PureComponent<Props, State> {
       scriptRunState,
       userSettings,
       gitInfo,
+      hideHamburgerMenu,
       hideTopBar,
       hideSidebarNav,
       currentPageScriptHash,
@@ -1353,31 +1357,34 @@ export class App extends PureComponent<Props, State> {
                   />
                 </>
               )}
-              <MainMenu
-                isServerConnected={this.isServerConnected()}
-                quickRerunCallback={this.rerunScript}
-                clearCacheCallback={this.openClearCacheDialog}
-                settingsCallback={this.settingsCallback}
-                aboutCallback={this.aboutCallback}
-                screencastCallback={this.screencastCallback}
-                screenCastState={this.props.screenCast.currentState}
-                hostMenuItems={
-                  this.props.hostCommunication.currentState.menuItems
-                }
-                hostIsOwner={this.props.hostCommunication.currentState.isOwner}
-                sendMessageToHost={this.props.hostCommunication.sendMessage}
-                gitInfo={gitInfo}
-                showDeployError={this.showDeployError}
-                closeDialog={this.closeDialog}
-                isDeployErrorModalOpen={
-                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                }
-                loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
-                menuItems={menuItems}
-              />
+              {!hideHamburgerMenu && (
+                <MainMenu
+                  isServerConnected={this.isServerConnected()}
+                  quickRerunCallback={this.rerunScript}
+                  clearCacheCallback={this.openClearCacheDialog}
+                  settingsCallback={this.settingsCallback}
+                  aboutCallback={this.aboutCallback}
+                  screencastCallback={this.screencastCallback}
+                  screenCastState={this.props.screenCast.currentState}
+                  hostMenuItems={
+                    this.props.hostCommunication.currentState.menuItems
+                  }
+                  hostIsOwner={
+                    this.props.hostCommunication.currentState.isOwner
+                  }
+                  sendMessageToHost={this.props.hostCommunication.sendMessage}
+                  gitInfo={gitInfo}
+                  showDeployError={this.showDeployError}
+                  closeDialog={this.closeDialog}
+                  isDeployErrorModalOpen={
+                    this.state.dialog?.type === DialogType.DEPLOY_ERROR
+                  }
+                  loadGitInfo={this.sendLoadGitInfoBackMsg}
+                  canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
+                  menuItems={menuItems}
+                />
+              )}
             </Header>
-
             <AppView
               elements={elements}
               scriptRunId={scriptRunId}

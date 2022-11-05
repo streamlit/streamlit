@@ -98,6 +98,9 @@ message Config {
   // See config option "ui.hideSidebarNav".
   bool hide_sidebar_nav = 7;
 
+  // See config option "ui.hideHamburgerMenu".
+  bool hide_hamburger_menu = 8;
+
   reserved 1;
 }
 

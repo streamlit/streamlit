@@ -184,6 +184,7 @@ describe("App", () => {
 
     wrapper.setState({
       scriptName: "scriptName",
+      hideHamburgerMenu: false,
     })
 
     wrapper.find(MainMenu).props().screencastCallback()
@@ -221,6 +222,7 @@ describe("App", () => {
       }),
     })
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ hideHamburgerMenu: false })
 
     expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
       { type: "separator" },
@@ -360,6 +362,18 @@ describe("App", () => {
 
     expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(true)
     expect(wrapper.find("ToolbarActions").exists()).toBe(true)
+  })
+
+  it("hides the hamburger menu if hideHamburgerMenu === true", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    // hideHamburgerMenu is true by default
+    expect(wrapper.find(MainMenu).exists()).toBe(false)
+  })
+
+  it("shows the hamburger menu if hideHamburgerMenu === false", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    wrapper.setState({ hideHamburgerMenu: false })
+    expect(wrapper.find(MainMenu).exists()).toBe(true)
   })
 
   it("updates state.appPages when it receives a PagesChanged msg", () => {

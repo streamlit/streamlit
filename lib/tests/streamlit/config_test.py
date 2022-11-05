@@ -355,6 +355,7 @@ class ConfigTest(unittest.TestCase):
                 "server.runOnSave",
                 "server.maxUploadSize",
                 "server.maxMessageSize",
+                "ui.hideHamburgerMenu",
                 "ui.hideTopBar",
                 "ui.hideSidebarNav",
             ]

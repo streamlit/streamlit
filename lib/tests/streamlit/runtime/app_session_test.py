@@ -389,10 +389,12 @@ def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
     for k, v in overrides.items():
         theme_opts[k] = v
 
+    original_get_options_for_section = config.get_options_for_section
+
     def get_options_for_section(section):
         if section == "theme":
             return theme_opts
-        return config.get_options_for_section(section)
+        return original_get_options_for_section(section)
 
     return get_options_for_section
 
@@ -522,10 +524,6 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                     sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
                 )
 
-    @patch(
-        "streamlit.runtime.app_session.config.get_options_for_section",
-        MagicMock(side_effect=_mock_get_options_for_section()),
-    )
     @patch(
         "streamlit.runtime.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
