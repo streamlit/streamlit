@@ -25,9 +25,12 @@ import { ensureError } from "./ErrorHandling"
 
 /**
  * When the websocket connection retries this many times, we show a dialog
- * letting the user know we're having problems connecting.
+ * letting the user know we're having problems connecting. This happens
+ * after about 15 seconds as, before the 6th retry, we've set timeouts for
+ * a total of approximately 0.5 + 1 + 2 + 4 + 8 = 15.5 seconds (+/- some
+ * due to jitter).
  */
-const RETRY_COUNT_FOR_WARNING = 30 // around 15s
+const RETRY_COUNT_FOR_WARNING = 6
 
 interface Props {
   /**
@@ -50,6 +53,12 @@ interface Props {
    * relevant deployment scenario).
    */
   getHostAuthToken: () => string | undefined
+
+  /**
+   * Function to set the list of origins that this app should accept
+   * cross-origin messages from (if in a relevant deployment scenario).
+   */
+  setHostAllowedOrigins: (allowedOrigins: string[]) => void
 }
 
 /**
@@ -136,7 +145,11 @@ export class ConnectionManager {
 
   private showRetryError = (
     totalRetries: number,
-    latestError: ReactNode
+    latestError: ReactNode,
+    // The last argument of this function is unused and exists because the
+    // WebsocketConnection.OnRetry type allows a third argument to be set to be
+    // used in tests.
+    _retryTimeout: number
   ): void => {
     if (totalRetries === RETRY_COUNT_FOR_WARNING) {
       this.props.onConnectionError(latestError)
@@ -152,6 +165,7 @@ export class ConnectionManager {
       onConnectionStateChange: this.setConnectionState,
       onRetry: this.showRetryError,
       getHostAuthToken: this.props.getHostAuthToken,
+      setHostAllowedOrigins: this.props.setHostAllowedOrigins,
     })
   }
 }

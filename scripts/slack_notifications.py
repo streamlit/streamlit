@@ -39,6 +39,7 @@ def send_notification():
 
     workflow = sys.argv[1]
     message_key = sys.argv[2]
+    payload = None
 
     if workflow == "nightly":
         failure = nightly_slack_messages[message_key]
@@ -56,10 +57,13 @@ def send_notification():
         else:
             payload = {"text": ":blobonfire: Release failed"}
 
-    response = requests.post(webhook, json=payload)
+    if payload:
+        response = requests.post(webhook, json=payload)
 
-    if response.status_code != 200:
-        raise Exception(f"Unable to send slack message, HTTP response: {response.text}")
+        if response.status_code != 200:
+            raise Exception(
+                f"Unable to send slack message, HTTP response: {response.text}"
+            )
 
 
 def main():

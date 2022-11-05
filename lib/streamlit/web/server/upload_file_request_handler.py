@@ -124,10 +124,6 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason=str(e))
             return
 
-        LOGGER.debug(
-            f"{len(files)} file(s) received for session {session_id} widget {widget_id}"
-        )
-
         # Create an UploadedFile object for each file.
         # We assign an initial, invalid file_id to each file in this loop.
         # The file_mgr will assign unique file IDs and return in `add_file`,

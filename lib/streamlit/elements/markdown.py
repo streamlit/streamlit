@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class MarkdownMixin:
-    @gather_metrics
+    @gather_metrics("markdown")
     def markdown(
         self, body: SupportsStr, unsafe_allow_html: bool = False
     ) -> "DeltaGenerator":
@@ -59,17 +59,6 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
-            *Also note that ``unsafe_allow_html`` is a temporary measure and may
-            be removed from Streamlit at any time.*
-
-            If you decide to turn on HTML anyway, we ask you to please tell us
-            your exact use case here:
-
-            https://discuss.streamlit.io/t/96
-
-            This will help us come up with safe APIs that allow you to do what
-            you want.
-
         Example
         -------
         >>> st.markdown('Streamlit is **_really_ cool**.')
@@ -82,7 +71,7 @@ class MarkdownMixin:
 
         return self.dg._enqueue("markdown", markdown_proto)
 
-    @gather_metrics
+    @gather_metrics("code")
     def code(
         self, body: SupportsStr, language: Optional[str] = "python"
     ) -> "DeltaGenerator":
@@ -115,7 +104,7 @@ class MarkdownMixin:
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
-    @gather_metrics
+    @gather_metrics("caption")
     def caption(
         self, body: SupportsStr, unsafe_allow_html: bool = False
     ) -> "DeltaGenerator":
@@ -140,16 +129,6 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
-            **Also note that `unsafe_allow_html` is a temporary measure and may be
-            removed from Streamlit at any time.**
-
-            If you decide to turn on HTML anyway, we ask you to please tell us your
-            exact use case here:
-            https://discuss.streamlit.io/t/96 .
-
-            This will help us come up with safe APIs that allow you to do what you
-            want.
-
         Example
         -------
         >>> st.caption('This is a string that explains something above.')
@@ -161,7 +140,7 @@ class MarkdownMixin:
         caption_proto.is_caption = True
         return self.dg._enqueue("markdown", caption_proto)
 
-    @gather_metrics
+    @gather_metrics("latex")
     def latex(self, body: Union[SupportsStr, "sympy.Expr"]) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.

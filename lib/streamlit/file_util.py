@@ -64,11 +64,11 @@ def streamlit_read(path, binary=False):
     with streamlit_read('foo.txt') as foo:
         ...
 
-    opens the file `%s/foo.txt`
+    opens the file `.streamlit/foo.txt`
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """ % CONFIG_FOLDER_NAME
+    """
     filename = get_streamlit_file_path(path)
     if os.stat(filename).st_size == 0:
         raise util.Error('Read zero byte file: "%s"' % filename)
@@ -82,19 +82,18 @@ def streamlit_read(path, binary=False):
 
 @contextlib.contextmanager
 def streamlit_write(path, binary=False):
-    """
-    Opens a file for writing within the streamlit path, and
+    """Opens a file for writing within the streamlit path, and
     ensuring that the path exists. For example:
 
         with streamlit_write('foo/bar.txt') as bar:
             ...
 
-    opens the file %s/foo/bar.txt for writing,
+    opens the file .streamlit/foo/bar.txt for writing,
     creating any necessary directories along the way.
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """ % CONFIG_FOLDER_NAME
+    """
     mode = "w"
     if binary:
         mode += "b"

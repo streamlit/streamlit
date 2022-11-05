@@ -49,7 +49,7 @@ class ColorPickerSerde:
 
 
 class ColorPickerMixin:
-    @gather_metrics
+    @gather_metrics("color_picker")
     def color_picker(
         self,
         label: str,

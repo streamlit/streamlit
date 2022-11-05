@@ -43,7 +43,7 @@ class CSSStyle(NamedTuple):
 
 
 class LegacyDataFrameMixin:
-    @gather_metrics
+    @gather_metrics("_legacy_dataframe")
     def _legacy_dataframe(
         self,
         data: Data = None,
@@ -108,7 +108,7 @@ class LegacyDataFrameMixin:
             element_height=height,
         )
 
-    @gather_metrics
+    @gather_metrics("_legacy_table")
     def _legacy_table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 

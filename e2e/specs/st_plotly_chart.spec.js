@@ -20,7 +20,7 @@ describe("st.plotly_chart", () => {
   });
 
   beforeEach(() => {
-    cy.get(".element-container").should("have.length", 1);
+    cy.get(".element-container").should("have.length", 10);
   });
 
   it("displays a plotly chart", () => {
@@ -32,7 +32,8 @@ describe("st.plotly_chart", () => {
 
   it("has consistent visuals", () => {
     cy.get(".element-container .stPlotlyChart")
-      .first()
-      .matchThemedSnapshots("st_plotly_chart");
+      .each((el, idx) => {
+        return cy.wrap(el).matchThemedSnapshots("plotly_chart" + idx);
+      })
   });
 });

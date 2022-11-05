@@ -224,7 +224,7 @@ export const StyledSidebarUserContent =
     paddingTop: hasPageNavAbove
       ? theme.spacing.lg
       : theme.sizes.sidebarTopSpace,
-    paddingBottom: theme.spacing.lg,
+    paddingBottom: theme.spacing.twoXL,
     paddingLeft: theme.spacing.lg,
     paddingRight: theme.spacing.lg,
 

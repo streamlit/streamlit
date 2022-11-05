@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class SnowMixin:
-    @gather_metrics
+    @gather_metrics("snow")
     def snow(self) -> "DeltaGenerator":
         """Draw celebratory snowfall.
 

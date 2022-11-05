@@ -17,11 +17,12 @@ import inspect
 import os
 import sys
 import threading
+import time
 import uuid
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
-from typing import Any, Callable, List, Optional, Set, TypeVar, cast
+from typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast, overload
 
 from typing_extensions import Final
 
@@ -29,13 +30,17 @@ from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
-from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 # Limit the number of commands to keep the page profile message small
 # since Segment allows only a maximum of 32kb per event.
 _MAX_TRACKED_COMMANDS: Final = 200
+# Only track a maximum of 25 uses per unique command since some apps use
+# commands excessively (e.g. calling add_rows thousands of times in one rerun)
+# making the page profile useless.
+_MAX_TRACKED_PER_COMMAND: Final = 25
+
 # A mapping to convert from the actual name to preferred/shorter representations
 _OBJECT_NAME_MAPPING: Final = {
     "streamlit.delta_generator.DeltaGenerator": "DG",
@@ -47,22 +52,16 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.core.indexes.base.Index": "PandasIndex",
     "pandas.core.series.Series": "PandasSeries",
 }
-_CALLABLE_NAME_MAPPING: Final = {
-    "_transparent_write": "magic",
-    "MemoAPI.__call__": "experimental_memo",
-    "SingletonAPI.__call__": "experimental_singleton",
-    "SingletonAPI.clear": "clear_singleton",
-    "MemoAPI.clear": "clear_memo",
-    "SingletonCache.write_result": "_cache_singleton_object",
-    "MemoCache.write_result": "_cache_memo_object",
-    "_write_to_cache": "_cache_object",
-    "_get_query_params": "experimental_get_query_params",
-    "_set_query_params": "experimental_set_query_params",
-    "_show": "experimental_show",
-    "set_user_option": "set_option",
-}
+
 # A list of dependencies to check for attribution
-_ATTRIBUTIONS_TO_CHECK: Final = ["snowflake"]
+_ATTRIBUTIONS_TO_CHECK: Final = [
+    "snowflake",
+    "torch",
+    "tensorflow",
+    "streamlit_extras",
+    "streamlit_pydantic",
+    "plost",
+]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
@@ -119,6 +118,7 @@ class Installation:
 
 
 def _get_type_name(obj: object) -> str:
+    """Get a simplified name for the type of the given object."""
     with contextlib.suppress(Exception):
         obj_type = type(obj)
         type_name = "unknown"
@@ -137,25 +137,16 @@ def _get_type_name(obj: object) -> str:
     return "failed"
 
 
-def _get_callable_name(callable: Callable[..., Any]) -> str:
-    with contextlib.suppress(Exception):
-        name = "unknown"
-        if inspect.isclass(callable):
-            name = callable.__class__.__name__
-        elif hasattr(callable, "__qualname__"):
-            name = callable.__qualname__
-        elif hasattr(callable, "__name__"):
-            name = callable.__name__
-        if name in _CALLABLE_NAME_MAPPING:
-            name = _CALLABLE_NAME_MAPPING[name]
-        elif "." in name:
-            # Only return actual function name
-            name = name.split(".")[-1]
-        return name
-    return "failed"
+def _get_top_level_module(func: Callable[..., Any]) -> str:
+    """Get the top level module for the given function."""
+    module = inspect.getmodule(func)
+    if module is None or not module.__name__:
+        return "unknown"
+    return module.__name__.split(".")[0]
 
 
 def _get_arg_metadata(arg: object) -> Optional[str]:
+    """Get metadata information related to the value of the given object."""
     with contextlib.suppress(Exception):
         if isinstance(arg, (bool)):
             return f"val:{arg}"
@@ -166,16 +157,20 @@ def _get_arg_metadata(arg: object) -> Optional[str]:
     return None
 
 
-def _get_command_telemetry(callable: Callable[..., Any], *args, **kwargs) -> Command:
-    arg_keywords = inspect.getfullargspec(callable).args
+def _get_command_telemetry(
+    _command_func: Callable[..., Any], _command_name: str, *args, **kwargs
+) -> Command:
+    """Get telemetry information for the given callable and its arguments."""
+    arg_keywords = inspect.getfullargspec(_command_func).args
     self_arg: Optional[Any] = None
     arguments: List[Argument] = []
-    is_method = inspect.ismethod(callable)
+    is_method = inspect.ismethod(_command_func)
+    name = _command_name
 
     for i, arg in enumerate(args):
         pos = i
         if is_method:
-            # If the callable is a method, ignore the first argument (self)
+            # If func is a method, ignore the first argument (self)
             i = i + 1
 
         keyword = arg_keywords[i] if len(arg_keywords) > i else f"{i}"
@@ -195,7 +190,13 @@ def _get_command_telemetry(callable: Callable[..., Any], *args, **kwargs) -> Com
         if arg_metadata:
             argument.m = arg_metadata
         arguments.append(argument)
-    name = _get_callable_name(callable)
+
+    top_level_module = _get_top_level_module(_command_func)
+    if top_level_module != "streamlit":
+        # If the gather_metrics decorator is used outside of streamlit library
+        # we enforce a prefix to be added to the tracked command:
+        name = f"external:{top_level_module}:{name}"
+
     if (
         name == "create_instance"
         and self_arg
@@ -203,19 +204,78 @@ def _get_command_telemetry(callable: Callable[..., Any], *args, **kwargs) -> Com
         and self_arg.name
     ):
         name = f"component:{self_arg.name}"
+
     return Command(name=name, args=arguments)
 
 
-def to_microseconds(seconds):
-    return int(seconds * 1000000)
+def to_microseconds(seconds: float) -> int:
+    """Convert seconds into microseconds."""
+    return int(seconds * 1_000_000)
 
 
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def gather_metrics(callable: F) -> F:
-    @wraps(callable)
-    def wrap(*args, **kwargs):
+@overload
+def gather_metrics(
+    name: str,
+    func: F,
+) -> F:
+    ...
+
+
+@overload
+def gather_metrics(
+    name: str,
+    func: None = None,
+) -> Callable[[F], F]:
+    ...
+
+
+def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F], F]:
+    """Function decorator to add telemetry tracking to commands.
+
+    Parameters
+    ----------
+    func : callable
+    The function to track for telemetry.
+
+    name : str or None
+    Overwrite the function name with a custom name that is used for telemetry tracking.
+
+    Example
+    -------
+    >>> @st.gather_metrics
+    ... def my_command(url):
+    ...     return url
+
+    >>> @st.gather_metrics(name="custom_name")
+    ... def my_command(url):
+    ...     return url
+    """
+
+    if not name:
+        _LOGGER.warning("gather_metrics: name is empty")
+        name = "undefined"
+
+    if func is None:
+        # Support passing the params via function decorator
+        def wrapper(f: F) -> F:
+            return gather_metrics(
+                name=name,
+                func=f,
+            )
+
+        return wrapper
+    else:
+        # To make mypy type narrow Optional[F] -> F
+        non_optional_func = func
+
+    @wraps(non_optional_func)
+    def wrapped_func(*args, **kwargs):
+        exec_start = timer()
+        # get_script_run_ctx gets imported here to prevent circular dependencies
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
 
         ctx = get_script_run_ctx()
 
@@ -226,38 +286,45 @@ def gather_metrics(callable: F) -> F:
             and len(ctx.tracked_commands)
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
+        command_telemetry: Optional[Command] = None
 
-        # Deactivate tracking to prevent calls inside already tracked commands
-        if ctx:
-            ctx.command_tracking_deactivated = True
+        if ctx and tracking_activated:
+            try:
+                command_telemetry = _get_command_telemetry(
+                    non_optional_func, name, *args, **kwargs
+                )
 
-        exec_start = timer()
-        result = callable(*args, **kwargs)
-
-        # Activate tracking again
-        if ctx:
-            ctx.command_tracking_deactivated = False
-
-        if not tracking_activated:
-            return result
-
+                if (
+                    command_telemetry.name not in ctx.tracked_commands_counter
+                    or ctx.tracked_commands_counter[command_telemetry.name]
+                    < _MAX_TRACKED_PER_COMMAND
+                ):
+                    ctx.tracked_commands.append(command_telemetry)
+                ctx.tracked_commands_counter.update([command_telemetry.name])
+                # Deactivate tracking to prevent calls inside already tracked commands
+                ctx.command_tracking_deactivated = True
+            except Exception as ex:
+                # Always capture all exceptions since we want to make sure that
+                # the telemetry never causes any issues.
+                _LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
         try:
-            command_telemetry = _get_command_telemetry(callable, *args, **kwargs)
-            command_telemetry.time = to_microseconds(timer() - exec_start)
+            result = non_optional_func(*args, **kwargs)
+        finally:
+            # Activate tracking again if command executes without any exceptions
             if ctx:
-                ctx.tracked_commands.append(command_telemetry)
-        except Exception as ex:
-            # Always capture all exceptions since we want to make sure that
-            # the telemetry never causes any issues.
-            LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
+                ctx.command_tracking_deactivated = False
+
+        if tracking_activated and command_telemetry:
+            # Set the execution time to the measured value
+            command_telemetry.time = to_microseconds(timer() - exec_start)
         return result
 
     with contextlib.suppress(AttributeError):
         # Make this a well-behaved decorator by preserving important function
         # attributes.
-        wrap.__dict__.update(callable.__dict__)
-        wrap.__signature__ = inspect.signature(callable)  # type: ignore
-    return cast(F, wrap)
+        wrapped_func.__dict__.update(non_optional_func.__dict__)
+        wrapped_func.__signature__ = inspect.signature(non_optional_func)  # type: ignore
+    return cast(F, wrapped_func)
 
 
 def create_page_profile_message(
@@ -266,12 +333,13 @@ def create_page_profile_message(
     prep_time: int,
     uncaught_exception: Optional[str] = None,
 ) -> ForwardMsg:
-    """Create and return an PageProfile ForwardMsg."""
-
+    """Create and return the full PageProfile ForwardMsg."""
     msg = ForwardMsg()
     msg.page_profile.commands.extend(commands)
     msg.page_profile.exec_time = exec_time
     msg.page_profile.prep_time = prep_time
+
+    msg.page_profile.headless = config.get_option("server.headless")
 
     # Collect all config options that have been manually set
     config_options: Set[str] = set()
@@ -295,6 +363,8 @@ def create_page_profile_message(
         if attribution in sys.modules
     }
 
+    msg.page_profile.os = str(sys.platform)
+    msg.page_profile.timezone = str(time.tzname)
     msg.page_profile.attributions.extend(attributions)
 
     if uncaught_exception:

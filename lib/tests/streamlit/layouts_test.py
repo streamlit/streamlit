@@ -30,9 +30,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:4]
-        widgets = all_deltas[4:]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
         self.assertEqual(columns_blocks[0].add_block.column.weight, 1.0 / 3)
@@ -51,9 +49,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:4]
-        widgets = all_deltas[4:]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
         self.assertEqual(columns_blocks[0].add_block.column.weight, 3.0 / sum_weights)
@@ -72,7 +68,6 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:]
         # 4 elements will be created: 1 horizontal block, 3 columns
         self.assertEqual(len(all_deltas), 4)
@@ -84,7 +79,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
     def test_columns_with_default_small_gap(self):
         """Test that it works correctly with no gap argument (gap size is default of small)"""
 
-        columns = st.columns(3)
+        st.columns(3)
 
         all_deltas = self.get_all_deltas_from_queue()
 
@@ -137,7 +132,7 @@ class ExpanderTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""
         with self.assertRaises(TypeError):
-            expander = st.expander()
+            st.expander()
 
     def test_just_label(self):
         """Test that it can be called with no params"""
@@ -155,18 +150,18 @@ class TabsTest(DeltaGeneratorTestCase):
     def test_tab_required(self):
         """Test that at least one tab is required."""
         with self.assertRaises(TypeError):
-            tabs = st.tabs()
+            st.tabs()
 
         with self.assertRaises(StreamlitAPIException):
-            tabs = st.tabs([])
+            st.tabs([])
 
     def test_only_label_strings_allowed(self):
         """Test that only strings are allowed as tab labels."""
         with self.assertRaises(StreamlitAPIException):
-            tabs = st.tabs(["tab1", True])
+            st.tabs(["tab1", True])
 
         with self.assertRaises(StreamlitAPIException):
-            tabs = st.tabs(["tab1", 10])
+            st.tabs(["tab1", 10])
 
     def test_returns_all_expected_tabs(self):
         """Test that all labels are added in correct order."""
@@ -180,7 +175,6 @@ class TabsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        horizontal_block = all_deltas[0]
         tabs_block = all_deltas[1:]
         # 6 elements will be created: 1 horizontal block, 5 tabs
         self.assertEqual(len(all_deltas), 6)

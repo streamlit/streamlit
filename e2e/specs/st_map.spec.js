@@ -17,18 +17,34 @@
 describe("st.map", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
+
+    // Wait for all the maps to be loaded.
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 6);
   });
 
-  it("displays 3 maps", () => {
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 3)
+  it("displays 6 maps", () => {
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 6)
   });
   
-  it("displays 3 zoom buttons", () => {
-    cy.get(".element-container .zoomButton").should("have.length", 3)
+  it("displays 6 zoom buttons", () => {
+    cy.get(".element-container .zoomButton").should("have.length", 6)
+  })
+
+  it("warning about data being capped exists", () => {
+    cy.get("div [data-testid='stCaptionContainer']")
+      .should("have.length", 2)
+  })
+
+  it("warning about data being capped has proper message value", () => {
+    cy.getIndexed("div [data-testid='stCaptionContainer']", 0)
+      .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
+    cy.getIndexed("div [data-testid='stCaptionContainer']", 1)
+      .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
   })
 
   it("displays the correct snapshot", () => {
     cy.get(".mapboxgl-canvas")
     cy.get(".element-container", { waitForAnimations: true }).last().matchThemedSnapshots("stDeckGlJsonChart")
   })
+
 });

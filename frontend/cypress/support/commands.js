@@ -180,3 +180,10 @@ Cypress.Commands.add("rerunScript", () => {
     force: true,
   })
 })
+
+Cypress.Commands.add("waitForRerun", () => {
+  cy.get("[data-testid='stStatusWidget']", { timeout: 10000 }).should("exist")
+  cy.get("[data-testid='stStatusWidget']", { timeout: 10000 }).should(
+    "not.exist"
+  )
+})

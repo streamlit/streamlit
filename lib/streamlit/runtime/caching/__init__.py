@@ -13,18 +13,19 @@
 # limitations under the License.
 
 import contextlib
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 from google.protobuf.message import Message
 
 from streamlit.proto.Block_pb2 import Block
+from streamlit.runtime.state.session_state import WidgetMetadata
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 from streamlit.runtime.caching.memo_decorator import (
     MEMO_CALL_STACK,
-    MEMO_MESSAGES_CALL_STACK,
+    MEMO_MESSAGE_CALL_STACK,
     MemoAPI,
     _memo_caches,
 )
@@ -43,7 +44,11 @@ def save_element_message(
     used_dg_id: str,
     returned_dg_id: str,
 ) -> None:
-    MEMO_MESSAGES_CALL_STACK.save_element_message(
+    """Save the message for an element to a thread-local callstack, so it can
+    be used later to replay the element when a cache-decorated function's
+    execution is skipped.
+    """
+    MEMO_MESSAGE_CALL_STACK.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
     SINGLETON_MESSAGE_CALL_STACK.save_element_message(
@@ -57,12 +62,24 @@ def save_block_message(
     used_dg_id: str,
     returned_dg_id: str,
 ) -> None:
-    MEMO_MESSAGES_CALL_STACK.save_block_message(
+    """Save the message for a block to a thread-local callstack, so it can
+    be used later to replay the block when a cache-decorated function's
+    execution is skipped.
+    """
+    MEMO_MESSAGE_CALL_STACK.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
     SINGLETON_MESSAGE_CALL_STACK.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
+
+
+def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
+    """Save a widget's metadata to a thread-local callstack, so the widget
+    can be registered again when that widget is replayed.
+    """
+    MEMO_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
+    SINGLETON_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:

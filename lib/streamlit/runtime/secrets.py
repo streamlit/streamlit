@@ -14,7 +14,16 @@
 
 import os
 import threading
-from typing import Any, ItemsView, Iterator, KeysView, Mapping, Optional, ValuesView
+from typing import (
+    Any,
+    ItemsView,
+    Iterator,
+    KeysView,
+    Mapping,
+    NoReturn,
+    Optional,
+    ValuesView,
+)
 
 import toml
 from blinker import Signal
@@ -22,9 +31,10 @@ from typing_extensions import Final
 
 import streamlit as st
 import streamlit.watcher.path_watcher
+from streamlit import runtime
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
 
 
@@ -44,36 +54,50 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class AttrDict(dict):  # type: ignore[type-arg]
+class AttrDict(Mapping[str, Any]):
     """
     We use AttrDict to wrap up dictionary values from secrets
     to provide dot access to nested secrets
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
+    def __init__(self, value):
+        self.__dict__["__nested_secrets__"] = dict(value)
 
     @staticmethod
     def _maybe_wrap_in_attr_dict(value) -> Any:
-        if not isinstance(value, dict):
+        if not isinstance(value, Mapping):
             return value
         else:
-            return AttrDict(**value)
+            return AttrDict(value)
+
+    def __len__(self) -> int:
+        return len(self.__nested_secrets__)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.__nested_secrets__)
+
+    def __getitem__(self, key: str) -> Any:
+        try:
+            value = self.__nested_secrets__[key]
+            return self._maybe_wrap_in_attr_dict(value)
+        except KeyError:
+            raise KeyError(_missing_key_error_message(key))
 
     def __getattr__(self, attr_name: str) -> Any:
         try:
-            value = super(AttrDict, self).__getitem__(attr_name)
+            value = self.__nested_secrets__[attr_name]
             return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise AttributeError(_missing_attr_error_message(attr_name))
 
-    def __getitem__(self, key: str) -> Any:
-        try:
-            value = super(AttrDict, self).__getitem__(key)
-            return self._maybe_wrap_in_attr_dict(value)
-        except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+    def __repr__(self):
+        return repr(self.__nested_secrets__)
+
+    def __setitem__(self, key, value) -> NoReturn:
+        raise TypeError("Secrets does not support item assignment.")
+
+    def __setattr__(self, key, value) -> NoReturn:
+        raise TypeError("Secrets does not support attribute assignment.")
 
 
 class Secrets(Mapping[str, Any]):
@@ -103,6 +127,7 @@ class Secrets(Mapping[str, Any]):
         try:
             self._parse(print_exceptions=False)
         except FileNotFoundError:
+            # No secrets.toml file exists. That's fine.
             pass
 
     def _reset(self) -> None:
@@ -204,7 +229,7 @@ class Secrets(Mapping[str, Any]):
 
     def _on_secrets_file_changed(self, _) -> None:
         with self._lock:
-            LOGGER.debug(f"Secrets file {self._file_path} changed, reloading")
+            _LOGGER.debug("Secrets file %s changed, reloading", self._file_path)
             self._reset()
             self._parse(print_exceptions=True)
 
@@ -220,10 +245,10 @@ class Secrets(Mapping[str, Any]):
         """
         try:
             value = self._parse(True)[key]
-            if not isinstance(value, dict):
+            if not isinstance(value, Mapping):
                 return value
             else:
-                return AttrDict(**value)
+                return AttrDict(value)
         # We add FileNotFoundError since __getattr__ is expected to only raise
         # AttributeError. Without handling FileNotFoundError, unittests.mocks
         # fails during mock creation on Python3.9
@@ -238,15 +263,21 @@ class Secrets(Mapping[str, Any]):
         """
         try:
             value = self._parse(True)[key]
-            if not isinstance(value, dict):
+            if not isinstance(value, Mapping):
                 return value
             else:
-                return AttrDict(**value)
+                return AttrDict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
     def __repr__(self) -> str:
+        # If the runtime is NOT initialized, it is a method call outside
+        # the streamlit app, so we avoid reading the secrets file as it may not exist.
+        # If the runtime is initialized, display the contents of the file and
+        # the file must already exist.
         """A string representation of the contents of the dict. Thread-safe."""
+        if not runtime.exists():
+            return f"{self.__class__.__name__}(file_path={self._file_path!r})"
         return repr(self._parse(True))
 
     def __len__(self) -> int:

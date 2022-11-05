@@ -15,6 +15,13 @@
 import ast
 import sys
 
+from typing_extensions import Final
+
+# When a Streamlit app is magicified, we insert a `magic_funcs` import near the top of
+# its module's AST:
+# import streamlit.runtime.scriptrunner.magic_funcs as __streamlitmagic__
+MAGIC_MODULE_NAME: Final = "__streamlitmagic__"
+
 
 def add_magic(code, script_path):
     """Modifies the code to support magic Streamlit commands.
@@ -110,16 +117,23 @@ def _insert_import_statement(tree):
 
 
 def _build_st_import_statement():
-    """Build AST node for `import streamlit as __streamlit__`."""
-    return ast.Import(names=[ast.alias(name="streamlit", asname="__streamlit__")])
+    """Build AST node for `import magic_funcs as __streamlitmagic__`."""
+    return ast.Import(
+        names=[
+            ast.alias(
+                name="streamlit.runtime.scriptrunner.magic_funcs",
+                asname=MAGIC_MODULE_NAME,
+            )
+        ]
+    )
 
 
 def _build_st_write_call(nodes):
-    """Build AST node for `__streamlit__._transparent_write(*nodes)`."""
+    """Build AST node for `__streamlitmagic__.transparent_write(*nodes)`."""
     return ast.Call(
         func=ast.Attribute(
-            attr="_transparent_write",
-            value=ast.Name(id="__streamlit__", ctx=ast.Load()),
+            attr="transparent_write",
+            value=ast.Name(id=MAGIC_MODULE_NAME, ctx=ast.Load()),
             ctx=ast.Load(),
         ),
         args=nodes,
