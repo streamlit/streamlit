@@ -15,7 +15,7 @@ on:
         type: string
 
 # Avoid duplicate workflows on same branch
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-javascript
   cancel-in-progress: true
 
@@ -30,7 +30,7 @@ jobs:
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
@@ -47,5 +47,17 @@ jobs:
           # Run eslint as a standalone command to generate the test report.
           PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
           make jslint
+      - name: Validate NOTICES
+        run: |
+          # Run `make notices`. If it results in changes, warn the user and fail.
+          make notices
+
+          git_status=$(git status --porcelain -- NOTICES)
+          if [[ -n $git_status ]]; then
+            echo "The NOTICES file is out of date! Please run \`make notices\` and commit the result."
+            exit 1
+          else
+            echo "NOTICES is up to date."
+          fi
       - name: Run frontend tests
         run: make jstest
