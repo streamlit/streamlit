@@ -16,14 +16,19 @@
 
 import threading
 import unittest
-from typing import List
+from typing import Any, List
 from unittest.mock import patch
 
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.runtime.caching import MEMO_CALL_STACK, SINGLETON_CALL_STACK
-from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
+from streamlit.runtime.caching.cache_errors import CacheReplayClosureError, CacheType
+from streamlit.runtime.caching.cache_utils import (
+    CachedResult,
+    MultiCacheResults,
+    _make_widget_key,
+)
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
@@ -47,6 +52,17 @@ def get_text_or_block(delta):
             return element.text.body
     elif delta.WhichOneof("type") == "add_block":
         return "new_block"
+
+
+def as_cached_result(value: Any, cache_type: CacheType) -> MultiCacheResults:
+    """Creates cached results for a function that returned `value`
+    and did not execute any elements.
+    """
+    result = CachedResult(value, [], st._main.id, st.sidebar.id)
+    widget_key = _make_widget_key([], cache_type)
+    d = {widget_key: result}
+    initial = MultiCacheResults(set(), d)
+    return initial
 
 
 class CommonCacheTest(DeltaGeneratorTestCase):
@@ -260,7 +276,21 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             cached_widget()
 
-            warning.assert_called_once()
+            warning.assert_called()
+            warning.reset_mock()
+
+            # Make sure everything got reset properly
+            st.text("foo")
+            warning.assert_not_called()
+
+            # Test st.cache functions with widgets enabled
+            @cache_decorator(experimental_allow_widgets=True)
+            def cached_widget_enabled():
+                st.button("Press me too!")
+
+            cached_widget_enabled()
+
+            warning.assert_not_called()
             warning.reset_mock()
 
             # Make sure everything got reset properly

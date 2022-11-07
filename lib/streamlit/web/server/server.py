@@ -238,6 +238,7 @@ class Server:
             (
                 make_url_path_regex(base, "st-allowed-message-origins"),
                 AllowedMessageOriginsHandler,
+                dict(callback=lambda: self._runtime.is_ready_for_browser_connection),
             ),
             (
                 make_url_path_regex(

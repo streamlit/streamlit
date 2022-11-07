@@ -1,4 +1,4 @@
-name: Conda Build Test
+name: Snowpark Conda Build Test
 
 on:
   push:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build_conda_package:
+  build_snowpark_conda_package:
     runs-on: ubuntu-latest
 
     defaults:
@@ -42,8 +42,8 @@ jobs:
           curl -sO "https://repo.anaconda.com/miniconda/${MINICONDA_RELEASE}.sh"
           bash "${MINICONDA_RELEASE}.sh" -b
           conda install conda-build
-      - name: Build Conda Package - Fast
+      - name: Build Snowpark Conda Package - Fast
         timeout-minutes: 120
         run: |
           sudo apt install rsync
-          BUILD_AS_FAST_AS_POSSIBLE=1 make conda-package
+          SNOWPARK_CONDA_BUILD=1 BUILD_AS_FAST_AS_POSSIBLE=1 make conda-package

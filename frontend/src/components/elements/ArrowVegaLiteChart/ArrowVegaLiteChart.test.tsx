@@ -49,7 +49,7 @@ const MOCK = {
     },
   }),
   useContainerWidth: true,
-  theme: "",
+  vegaLiteTheme: "",
 }
 
 const getProps = (props: Partial<PropsWithHeight> = {}): PropsWithHeight => ({
@@ -87,7 +87,7 @@ describe("VegaLiteChart Element", () => {
     const props = getProps({
       element: {
         ...MOCK,
-        theme: "streamlit",
+        vegaLiteTheme: "streamlit",
         spec: JSON.stringify({
           mark: "circle",
           encoding: {

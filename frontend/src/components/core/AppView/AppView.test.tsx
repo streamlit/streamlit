@@ -178,4 +178,14 @@ describe("AppView element", () => {
 
     expect(wrapper.find("StyledAppViewFooter").prop("isWideMode")).toBe(true)
   })
+
+  it("opens link to streamlit.io in new tab", () => {
+    const wrapper = shallow(<AppView {...getProps()} />)
+    expect(wrapper.find("StyledAppViewFooterLink").props()).toEqual(
+      expect.objectContaining({
+        href: "//streamlit.io",
+        target: "_blank",
+      })
+    )
+  })
 })
