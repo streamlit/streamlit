@@ -35,7 +35,7 @@ st.selectbox(
     ("Carrier Pidgeon", "Email", "Mobile phone"),
 )
 
-table = """ Table:
+table = """Table:
 | Syntax | Description |
 | ----------- | ----------- |
 | Header | Title |

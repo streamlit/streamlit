@@ -51,9 +51,11 @@ describe("label markdown", () => {
     });
 
     it("Handles markdown in expander correctly", () => {
-        // Expander label same as widget label
-        cy.get("[data-testid='stExpander']")
-            .matchThemedSnapshots("expander_markdown");
+        // Expand widget
+        cy.get(".streamlit-expanderHeader").click()
+
+        // Expander label same as widget label & doesn't render table markdown
+        cy.get("[data-testid='stExpander']").matchThemedSnapshots("expander_markdown");
     });
 
     it("Handles markdown in tabs correctly", () => {
