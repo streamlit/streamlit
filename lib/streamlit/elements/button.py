@@ -15,7 +15,7 @@
 import io
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
+from typing import TYPE_CHECKING, BinaryIO, Callable, Optional, TextIO, Union, cast
 
 from typing_extensions import Final, Literal
 
@@ -143,7 +143,7 @@ class ButtonMixin:
     def download_button(
         self,
         label: str,
-        data: DownloadButtonDataType,
+        data: Union[DownloadButtonDataType, Callable[[], DownloadButtonDataType]],
         file_name: Optional[str] = None,
         mime: Optional[str] = None,
         key: Optional[Key] = None,
@@ -266,7 +266,7 @@ class ButtonMixin:
     def _download_button(
         self,
         label: str,
-        data: DownloadButtonDataType,
+        data: Union[DownloadButtonDataType, Callable[[], DownloadButtonDataType]],
         file_name: Optional[str] = None,
         mime: Optional[str] = None,
         key: Optional[Key] = None,
@@ -312,8 +312,12 @@ class ButtonMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         download_button_proto.disabled = disabled
+
         if button_state.value:
-            download_button_proto.ready_to_download = True
+
+            if callable(data):
+                data = data()
+
             marshall_file(
                 self.dg._get_delta_path_str(),
                 data,
@@ -321,6 +325,7 @@ class ButtonMixin:
                 mime,
                 file_name,
             )
+            download_button_proto.ready_to_download = True
 
         self.dg._enqueue("download_button", download_button_proto)
         return button_state.value

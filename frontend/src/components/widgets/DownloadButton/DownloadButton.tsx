@@ -64,7 +64,6 @@ function DownloadButton(props: Props): ReactElement {
 
   return (
     <div className="row-widget stDownloadButton" style={style}>
-      <div>{element.readyToDownload.toString()}</div>
       <ButtonTooltip help={element.help}>
         <UIButton
           kind={Kind.SECONDARY}
