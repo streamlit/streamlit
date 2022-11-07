@@ -161,6 +161,8 @@ function aboutDialog(props: AboutProps): ReactElement {
       <ModalHeader>Powered by</ModalHeader>
       <ModalBody>
         <div>
+          {/* Show our version string only if SessionInfo has been created. If Streamlit 
+          hasn't yet connected to the server, the SessionInfo singleton will be null. */}
           {SessionInfo.isSet() && (
             <>
               Streamlit v{SessionInfo.current.streamlitVersion}

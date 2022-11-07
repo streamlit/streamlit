@@ -97,7 +97,7 @@ describe("aboutDialog", () => {
     UnsafeSessionInfo.singleton = undefined
   })
 
-  it("renders about dialog with Streamlit version included", async () => {
+  it("shows version string if SessionInfo exists", async () => {
     const wrapper = mount(
       <Fragment>
         {StreamlitDialog({
@@ -110,7 +110,7 @@ describe("aboutDialog", () => {
     expect(wrapper.find(Modal).text()).toContain("Streamlit v42.42.42")
   })
 
-  it("renders about dialog without Streamlit version included", async () => {
+  it("shows no version string if SessionInfo does not exist", async () => {
     SessionInfo.clearSession()
 
     const wrapper = mount(
@@ -122,6 +122,6 @@ describe("aboutDialog", () => {
       </Fragment>
     )
     expect(wrapper.find(Modal).exists()).toBe(true)
-    expect(wrapper.find(Modal).text()).not.toContain("Streamlit v42.42.42")
+    expect(wrapper.find(Modal).text()).not.toContain("Streamlit v")
   })
 })
