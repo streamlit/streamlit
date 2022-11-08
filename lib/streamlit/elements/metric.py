@@ -29,8 +29,8 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Value: TypeAlias = Union["np.integer", "np.floating", float, str, None]
-Delta: TypeAlias = Union[float, str, None]
+Value: TypeAlias = Union["np.integer", "np.floating", float, int, str, None]
+Delta: TypeAlias = Union[float, int, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
