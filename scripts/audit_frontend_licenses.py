@@ -84,15 +84,6 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "The FlatBuffers project",
     ),
     (
-        # MIT license: https://github.com/dominictarr/map-stream/blob/master/LICENCE
-        "map-stream",
-        "0.1.0",
-        "UNKNOWN",
-        "git://github.com/dominictarr/map-stream.git",
-        "http://github.com/dominictarr/map-stream",
-        "Dominic Tarr",
-    ),
-    (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl",
         "1.13.0",
@@ -119,24 +110,6 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "Unknown",
         "Dmitry Yv",
     ),
-    (
-        # BSD 3-clause license: https://github.com/kriszyp/json-schema/blob/master/LICENSE
-        "json-schema",
-        "0.2.3",
-        "BSD*",
-        "http://github.com/kriszyp/json-schema",
-        "Unknown",
-        "Kris Zyp",
-    ),
-    (
-        # CC0-1.0 license: https://github.com/mattcg/language-subtag-registry
-        "language-subtag-registry",
-        "0.3.21",
-        "ODC-By-1.0",
-        "https://github.com/mattcg/language-subtag-registry",
-        "https://github.com/mattcg/language-subtag-registry",
-        "Unknown",
-    ),
 }
 
 
@@ -149,7 +122,8 @@ def main() -> NoReturn:
     # Run `yarn licenses list --json`.
     licenses_output = (
         subprocess.check_output(
-            ["yarn", "licenses", "list", "--json"], cwd=str(FRONTEND_DIR)
+            ["yarn", "licenses", "list", "--json", "--production", "--ignore-platform"],
+            cwd=str(FRONTEND_DIR),
         )
         .decode()
         .splitlines()
