@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 Value: TypeAlias = Union["np.integer", "np.floating", float, int, str, None]
-Delta: TypeAlias = Union[float, int, str, None]
+Delta: TypeAlias = Union["np.integer", "np.floating", float, int, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 
