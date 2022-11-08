@@ -24,6 +24,7 @@ import {
   tableFromIPC,
   Null,
   Field,
+  Dictionary,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
 import { range, unzip, zip } from "lodash"
@@ -326,7 +327,7 @@ export class Quiver {
     const styler = element.styler
       ? Quiver.parseStyler(element.styler as StylerProto)
       : undefined
-
+    console.log(types)
     // The assignment is done below to avoid partially populating the instance
     // if an error is thrown.
     this._index = index
@@ -455,6 +456,33 @@ export class Quiver {
         meta: indexColumn.metadata,
       }
     })
+  }
+
+  public getCategoricalOptions(columnIndex: number): string[] | undefined {
+    //TODO(lukasmasuch): Do something with headcolumns?
+    const { columns: numColumns } = this.dimensions
+
+    if (columnIndex < 0 || columnIndex >= numColumns) {
+      throw new Error(`Column index is out of range: ${columnIndex}`)
+    }
+
+    if (!(this._fields[columnIndex].type instanceof Dictionary)) {
+      // This is not a categorical column
+      return undefined
+    }
+
+    const categoricalDict =
+      this._data.getChildAt(columnIndex)?.data[0]?.dictionary
+    if (categoricalDict) {
+      // get all values into a list
+      const values = []
+
+      for (let i = 0; i < categoricalDict.length; i++) {
+        values.push(categoricalDict.get(i))
+      }
+      return values
+    }
+    return undefined
   }
 
   /** Parse types for each non-index column. */

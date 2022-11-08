@@ -34,7 +34,7 @@ from typing import (
 
 import pyarrow as pa
 from pandas import MultiIndex
-from pandas.api.types import infer_dtype
+from pandas.api.types import infer_dtype, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
@@ -578,15 +578,28 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 
 def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
-
     # Check all columns for mixed types and complex128 type
     # The dtype of mixed type columns is always object, the actual type of the column
     # values can be determined via the infer_dtype function:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
 
-    return (
-        column.dtype == "object" and infer_dtype(column) in ["mixed", "mixed-integer"]
-    ) or column.dtype == "complex128"
+    # mixed-integer-float is not a problem for arrow
+    # Frozensets are incompatible
+    # TODO(lukasmasuch): timedelta64[ns] is supported by pyarrow but not in the javascript arrow implementation
+    if column.dtype in ["timedelta64[ns]", "complex128"]:
+        return True
+
+    if column.dtype == "object":
+        infered_type = infer_dtype(column, skipna=True)
+        if infered_type == "mixed-integer":
+            return True
+        elif infered_type == "mixed":
+            if len(column) > 0 and is_list_like(column[0]):
+                # TODO(lukasmasuch): Mixed arrays are also not supported
+                # List objects are supported by Arrow
+                return False
+            return True
+    return False
 
 
 def fix_arrow_incompatible_column_types(
@@ -613,8 +626,14 @@ def fix_arrow_incompatible_column_types(
     The fixed dataframe.
     """
 
+    # TODO(lukasmasuch): Make a copy
     for col in selected_columns or df.columns:
+        # TODO(lukasmasuch): Sparse arrays are also not supported
+        # if str(df[col].dtype).startswith("Sparse"):
+        #     df[col] = np.array(df[col])
+
         if _is_colum_type_arrow_incompatible(df[col]):
+            print("Fix column ", col)
             df[col] = df[col].astype(str)
 
     # The index can also contain mixed types
@@ -643,9 +662,10 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
     """
     try:
         table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError):
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
         _LOGGER.info(
-            "Applying automatic fixes for column types to make the dataframe Arrow-compatible."
+            "Applying automatic fixes for column types to make the dataframe Arrow-compatible.",
+            exc_info=ex,
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)

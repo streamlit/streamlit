@@ -112,6 +112,57 @@ export function getColumnTypeFromConfig(typeName?: string): ColumnType {
   return ColumnType.Object
 }
 
+export function getIndexFromQuiver(
+  data: Quiver,
+  indexPosition: number
+): CustomColumn {
+  const quiverType = data.types.index[indexPosition]
+  const columnType = getColumnTypeFromQuiver(quiverType)
+
+  return {
+    id: `index-${indexPosition}`,
+    isEditable: false, // Indices are not editable at the moment.
+    title: "", // Indices have empty titles as default.
+    columnType,
+    quiverType,
+    isIndex: true,
+    isHidden: false,
+    hasMenu: false,
+  } as CustomColumn
+}
+
+export function getColumnFromQuiver(
+  data: Quiver,
+  columnPosition: number
+): CustomColumn {
+  const title = data.columns[0][columnPosition]
+  const quiverType = data.types.data[columnPosition]
+  const columnType = getColumnTypeFromQuiver(quiverType)
+
+  let columnTypeMetadata = undefined
+  if (columnType === ColumnType.Categorical) {
+    // Get the available categories and use it in column type metadata
+    let options = data.getCategoricalOptions(columnPosition)
+    if (notNullOrUndefined(options)) {
+      columnTypeMetadata = {
+        options: ["", ...options.filter(opt => opt !== "")],
+      }
+    }
+  }
+
+  return {
+    id: `column-${title}-${columnPosition}`,
+    isEditable: isEditableType(columnType),
+    title,
+    quiverType,
+    columnType,
+    columnTypeMetadata,
+    isIndex: false,
+    isHidden: false,
+    hasMenu: false,
+  } as CustomColumn
+}
+
 /**
  * Maps the data type from Quiver to a valid column type.
  */
@@ -130,6 +181,7 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
   }
 
   typeName = typeName.toLowerCase().trim()
+  // TODO(lukasmasuch): Add support for empty columns?
 
   // Match based on quiver types
   if (["unicode"].includes(typeName)) {
@@ -140,17 +192,31 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
     columnType = ColumnType.Time
   } else if (["datetime", "datetimetz"].includes(typeName)) {
     columnType = ColumnType.DateTime
-  } else if (typeName === "bool") {
+  } else if (["boolean", "bool"].includes(typeName)) {
     columnType = ColumnType.Boolean
-  } else if (["int64", "range"].includes(typeName)) {
+  } else if (
+    [
+      "int8",
+      "int16",
+      "int32",
+      "int64",
+      "uint8",
+      "uint16",
+      "uint32",
+      "uint64",
+      "range",
+    ].includes(typeName)
+  ) {
     // The default index in pandas uses a range type.
     columnType = ColumnType.Integer
-  } else if (["float64"].includes(typeName)) {
+  } else if (["float16", "float32", "float64"].includes(typeName)) {
     columnType = ColumnType.Float
   } else if (typeName === "categorical") {
     columnType = ColumnType.Categorical
   } else if (typeName.startsWith("list")) {
     columnType = ColumnType.List
+  } else if (["decimal", "bytes", "empty"].includes(typeName)) {
+    columnType = ColumnType.Object
   }
 
   return columnType
@@ -171,6 +237,7 @@ export function isEditableType(type: ColumnType): boolean {
     ColumnType.Url,
     ColumnType.Categorical,
     ColumnType.Image,
+    ColumnType.ProgressChart,
   ].includes(type)
 }
 
@@ -353,14 +420,21 @@ function fillBooleanCell(cell: BooleanCell, data: any): GridCell {
     if (typeof data === "boolean") {
       cellData = data
     } else {
+      // See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
       switch (String(data).toLowerCase().trim()) {
         case "true":
+        case "t":
         case "yes":
+        case "y":
+        case "off":
         case "1":
           cellData = true
           break
         case "false":
+        case "f":
         case "no":
+        case "n":
+        case "on":
         case "0":
           cellData = false
           break
@@ -449,13 +523,22 @@ function fillNumberCell(
  */
 function fillListCell(cell: GridCell, data: DataType): GridCell {
   let cellData = []
+  //TODO(lukasmasuch): Only support arrays since we don't offer editing right now?
+  // TODO(lukasmasuch): Use Array.from()
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
 
   if (notNullOrUndefined(data)) {
-    cellData = JSON.parse(
-      JSON.stringify(data, (_key, value) =>
-        typeof value === "bigint" ? Number(value) : value
+    if (typeof data === "string") {
+      //TODO(lukasmasuch): Catch error?
+      cellData = JSON.parse(data)
+    } else {
+      cellData = JSON.parse(
+        JSON.stringify(data, (_key, value) =>
+          typeof value === "bigint" ? Number(value) : value
+        )
       )
-    )
+    }
+
     if (!Array.isArray(cellData)) {
       // Transform into list
       cellData = [String(cellData)]
@@ -627,14 +710,16 @@ export function fillCategoricalCell(
   cell: DropdownCellType,
   data: DataType
 ): GridCell {
-  let cellData = cell.data.value
+  // Empty string refers to an empty cell
+  let cellData = ""
   if (notNullOrUndefined(data)) {
     cellData = data.toString()
   }
 
   if (!cell.data.allowedValues.includes(cellData)) {
-    console.log("reset", cell.data.allowedValues, cellData, data)
-    cellData = cell.data.value
+    return getErrorCell(
+      `The value is not part of allowed options: ${cellData}`
+    )
   }
   return {
     ...cell,
@@ -806,6 +891,11 @@ export function getCell(
         )
       }
 
+      const options = [
+        "",
+        ...columnConfig.columnTypeMetadata.options.filter(opt => opt !== ""), // ignore empty option if it exists
+      ]
+
       cellTemplate = {
         kind: GridCellKind.Custom,
         allowOverlay: true,
@@ -813,8 +903,8 @@ export function getCell(
         contentAlign,
         data: {
           kind: "dropdown-cell",
-          allowedValues: columnConfig.columnTypeMetadata.options,
-          value: columnConfig.columnTypeMetadata.options[0],
+          allowedValues: options,
+          value: options[0],
           readonly,
         },
       } as DropdownCellType
@@ -856,7 +946,7 @@ export function getCell(
     case ColumnType.ProgressChart:
       cellTemplate = {
         kind: GridCellKind.Custom,
-        allowOverlay: false,
+        allowOverlay: !readonly,
         copyData: "",
         contentAlign,
         data: {
@@ -867,6 +957,7 @@ export function getCell(
           step: 0.1,
           label: `0%`,
           measureLabel: "100%",
+          readonly,
         },
       } as RangeCellType
 
@@ -906,7 +997,6 @@ export function getCellFromQuiver(
   cssStyles: string | undefined = undefined
 ): GridCell {
   let cellTemplate
-
   if (columnConfig.columnType === ColumnType.Object) {
     // Always use display value from quiver for object types
     // these are special types that the dataframe only support in read-only mode.
@@ -995,7 +1085,7 @@ export function getCellValue(columnConfig: CustomColumn, cell: GridCell): any {
     case ColumnType.Image:
       return (cell as ImageCell).data
     case ColumnType.Categorical:
-      return (cell as DropdownCellType).data.value
+      return (cell as DropdownCellType).data.value || null
     case ColumnType.DateTime:
     case ColumnType.Date:
       // TODO(lukasmasuch): Get just date for date type

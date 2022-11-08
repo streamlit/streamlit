@@ -64,6 +64,8 @@ import {
   getCell,
   isErrorCell,
   getCellValue,
+  getColumnFromQuiver,
+  getIndexFromQuiver,
 } from "./DataFrameCells"
 import {
   StyledResizableContainer,
@@ -307,6 +309,7 @@ function applyColumnConfig(
     // Add column type metadata:
     ...(notNullOrUndefined(columnConfig.metadata)
       ? {
+          //TODO(lukasmasuch): Merge in metadata?
           columnTypeMetadata: columnConfig.metadata,
         }
       : {}),
@@ -318,93 +321,6 @@ function applyColumnConfig(
         }
       : {}),
   } as CustomColumn
-}
-
-/**
- * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
- */
-export function getColumns(
-  element: ArrowProto,
-  data: Quiver,
-  columnsConfig: Map<string, ColumnConfigProps>
-): CustomColumn[] {
-  const columns: CustomColumn[] = []
-  const stretchColumn = element.useContainerWidth || element.width
-
-  if (data.isEmpty()) {
-    // Tables that don't have any columns cause an exception in glide-data-grid.
-    // As a workaround, we are adding an empty index column in this case.
-    columns.push({
-      id: `empty-index`,
-      title: "",
-      hasMenu: false,
-      columnType: ColumnType.Text,
-      indexNumber: 0,
-      isEditable: false,
-      isIndex: true,
-      ...(stretchColumn ? { grow: 1 } : {}),
-    } as CustomColumn)
-    return columns
-  }
-
-  const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length ?? 0
-
-  for (let i = 0; i < numIndices; i++) {
-    const quiverType = data.types.index[i]
-    const columnType = getColumnTypeFromQuiver(quiverType)
-
-    const column = {
-      id: `index-${i}`,
-      title: "", // Indices have empty titles as default.
-      hasMenu: false,
-      columnType,
-      quiverType,
-      indexNumber: i,
-      isEditable: false,
-      isHidden: false,
-      isIndex: true,
-      ...(stretchColumn ? { grow: 1 } : {}),
-    } as CustomColumn
-
-    const updatedColumn = applyColumnConfig(column, columnsConfig)
-    // TODO(lukasmasuch): Editing for index columns is currently not supported.
-    updatedColumn.isEditable = false
-    columns.push(updatedColumn)
-  }
-
-  for (let i = 0; i < numColumns; i++) {
-    const columnTitle = data.columns[0][i]
-    const quiverType = data.types.data[i]
-    const columnType = getColumnTypeFromQuiver(quiverType)
-
-    const column = {
-      id: `column-${columnTitle}-${i}`,
-      title: columnTitle,
-      hasMenu: false,
-      columnType,
-      quiverType,
-      indexNumber: i + numIndices,
-      isEditable: isEditableType(columnType),
-      isHidden: false,
-      isIndex: false,
-      ...(stretchColumn ? { grow: 3 } : {}),
-    } as CustomColumn
-    const updatedColumn = applyColumnConfig(column, columnsConfig)
-
-    // Check if we need to deactivate editing:
-    if (
-      !element.editable ||
-      element.disabled ||
-      !isEditableType(updatedColumn.columnType)
-    ) {
-      // TODO(lukasmasuch): Use disabled from props
-      updatedColumn.isEditable = false
-    }
-
-    columns.push(updatedColumn)
-  }
-  return columns
 }
 
 /**
@@ -429,6 +345,7 @@ function updateSortingHeader(
   })
 }
 
+// TODO: Always get state from editing cache
 function getCurrentState(
   element: ArrowProto,
   widgetMgr: WidgetStateManager
@@ -453,6 +370,19 @@ function getCurrentState(
   return currentState
 }
 
+function getColumnConfig(element: ArrowProto): Map<string, any> {
+  if (!element.columns) {
+    return new Map()
+  }
+  try {
+    return new Map(Object.entries(JSON.parse(element.columns)))
+  } catch (error) {
+    // This is not expected to happen, but if it does, we'll return an empty map
+    // and log the error to the console.
+    logError(error)
+    return new Map()
+  }
+}
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.
  */
@@ -472,6 +402,7 @@ export function useDataLoader(
   dataEditorRef: React.RefObject<DataEditorRef>,
   element: ArrowProto,
   data: Quiver,
+  disabled: boolean,
   sort?: ColumnSortConfig | undefined
 ): DataLoaderReturn {
   const editingState = React.useRef<EditingState>(new EditingState())
@@ -481,16 +412,75 @@ export function useDataLoader(
     () => new Map()
   )
 
-  // TODO(lukasmasuch): Show error if column config is invalid?
-  const columnsConfig = element.columns
-    ? new Map(Object.entries(JSON.parse(element.columns)))
-    : new Map()
+  // TODO(lukasmasuch): Use state here for optimization?
+  const columnsConfig = getColumnConfig(element)
 
-  const visibleColumns = getColumns(element, data, columnsConfig).filter(
-    column => {
-      return !column.isHidden
+  /**
+   * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
+   */
+  // TODO(lukasmasuch): Does this need to be a callback?
+  const getColumns = React.useCallback((): CustomColumn[] => {
+    const columns: CustomColumn[] = []
+    const stretchColumn = element.useContainerWidth || element.width
+
+    if (data.isEmpty()) {
+      // Tables that don't have any columns cause an exception in glide-data-grid.
+      // As a workaround, we are adding an empty index column in this case.
+      columns.push({
+        id: `empty-index`,
+        title: "",
+        hasMenu: false,
+        columnType: ColumnType.Object,
+        indexNumber: 0,
+        isEditable: false,
+        isIndex: true,
+        ...(stretchColumn ? { grow: 1 } : {}),
+      } as CustomColumn)
+      return columns
     }
-  )
+
+    const numIndices = data.types?.index?.length ?? 0
+    const numColumns = data.columns?.[0]?.length ?? 0
+
+    for (let i = 0; i < numIndices; i++) {
+      const column = {
+        ...getIndexFromQuiver(data, i),
+        indexNumber: i,
+        ...(stretchColumn ? { grow: 1 } : {}),
+      } as CustomColumn
+
+      const updatedColumn = applyColumnConfig(column, columnsConfig)
+      // TODO(lukasmasuch): Editing for index columns is currently not supported.
+      // Deactivate even if it gets activated in the column config.
+      updatedColumn.isEditable = false
+      columns.push(updatedColumn)
+    }
+
+    for (let i = 0; i < numColumns; i++) {
+      const column = {
+        ...getColumnFromQuiver(data, i),
+        indexNumber: i + numIndices,
+        ...(stretchColumn ? { grow: 3 } : {}),
+      } as CustomColumn
+      const updatedColumn = applyColumnConfig(column, columnsConfig)
+
+      // Check if we need to deactivate editing:
+      if (
+        !element.editable ||
+        disabled ||
+        !isEditableType(updatedColumn.columnType)
+      ) {
+        updatedColumn.isEditable = false
+      }
+
+      columns.push(updatedColumn)
+    }
+    return columns
+  }, [element, disabled, data, columnsConfig])
+
+  const visibleColumns = getColumns().filter(column => {
+    return !column.isHidden
+  })
 
   const sizedColumns = visibleColumns.map(column => {
     // Apply column widths from state
@@ -735,7 +725,7 @@ function DataFrame({
     onColumnResize,
     onCellEdited,
     onPaste,
-  } = useDataLoader(widgetMgr, dataEditorRef, element, data, sort)
+  } = useDataLoader(widgetMgr, dataEditorRef, element, data, disabled, sort)
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
   const [showSearch, setShowSearch] = React.useState(false)
 
