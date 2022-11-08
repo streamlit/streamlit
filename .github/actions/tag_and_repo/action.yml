@@ -22,4 +22,4 @@ runs:
       run: |
         echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
         echo "GH_REPO=$GH_REPO" >> $GITHUB_ENV
-      shell: bash -eo pipefail {0}
+      shell: bash --login -eo pipefail {0}

@@ -10,7 +10,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -eo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     permissions:
     # Additional permission needed to generate release
