@@ -64,7 +64,7 @@ def setup_formatter(logger: logging.Logger) -> None:
 
     # Deregister any previous console loggers.
     if hasattr(logger, "streamlit_console_handler"):
-        logger.removeHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
+        logger.removeHandler(logger.streamlit_console_handler)
 
     logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
 

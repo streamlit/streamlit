@@ -157,11 +157,7 @@ def _get_zoom_level(distance: float) -> int:
 
 
 def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
-    # TODO(harahu): The ignore statement here is because iterables don't have
-    #  the empty attribute. This is either a bug, or the documented data type
-    #  is too broad. One or the other should be addressed, and the ignore
-    #  statement removed.
-    if data is None or data.empty:  # type: ignore[union-attr]
+    if data is None or (hasattr(data, "empty") and data.empty):
         return json.dumps(_DEFAULT_MAP)
 
     if "lat" in data:
