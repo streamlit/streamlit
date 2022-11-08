@@ -38,4 +38,4 @@ runs:
           fi
         )" >> $GITHUB_ENV
         echo "BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
-      shell: bash -ileo pipefail {0}
+      shell: bash -eo pipefail {0}

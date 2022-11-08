@@ -1,8 +1,8 @@
 name: "Set GIT_TAG & GH_REPO env variables"
 
-# Using an action to process user input (branch name) as an argument 
-# is the recommended approach for mitigating script injection attacks. 
-# It is not vulnerable to injection attacks, as the context value is not used 
+# Using an action to process user input (branch name) as an argument
+# is the recommended approach for mitigating script injection attacks.
+# It is not vulnerable to injection attacks, as the context value is not used
 # to generate a shell script, but is instead passed to the action as an argument
 # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#good-practices-for-mitigating-script-injection-attacks
 
@@ -22,4 +22,4 @@ runs:
       run: |
         echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
         echo "GH_REPO=$GH_REPO" >> $GITHUB_ENV
-      shell: bash -ileo pipefail {0}
+      shell: bash -eo pipefail {0}

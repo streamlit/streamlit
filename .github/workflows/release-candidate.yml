@@ -24,7 +24,7 @@ jobs:
     uses: ./.github/workflows/cypress.yml
     with:
       ref: ${{ github.ref_name }}
-      
+
   build-release-candidate:
     runs-on: ubuntu-latest
 
@@ -32,12 +32,12 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash -eo pipefail {0}
 
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           ref: ${{ github.ref_name }}
           persist-credentials: false
           submodules: 'recursive'
@@ -58,7 +58,7 @@ jobs:
         run: |
           echo "DESIRED_VERSION=$(echo "${BRANCH}" | sed 's/release\///')" >> $GITHUB_ENV
       - name: Set final versions for pre-release and update version
-        env: 
+        env:
           DESIRED_VERSION: ${{ env.DESIRED_VERSION }}
         run: |
           LATEST_MATCHING_RC=$(python scripts/get_latest_release_candidate.py)
@@ -87,11 +87,11 @@ jobs:
           make distribute
       - name: Successful Release Candidate Slack Message
         if: ${{ success() }}
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py candidate success
       - name: Failed Release Candidate Slack Message
         if: ${{ failure() }}
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py candidate failure
