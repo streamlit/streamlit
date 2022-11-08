@@ -119,7 +119,7 @@ def get_license_type(package: PackageInfo) -> str:
 
 
 def main() -> NoReturn:
-    # Run `yarn licenses list --json`.
+    # Run `yarn licenses`.
     licenses_output = (
         subprocess.check_output(
             ["yarn", "licenses", "list", "--json", "--production", "--ignore-platform"],
