@@ -321,7 +321,7 @@ distribute:
 # Rebuild the NOTICES file.
 notices:
 	cd frontend; \
-		yarn licenses generate-disclaimer --silent --production > ../NOTICES
+		yarn licenses generate-disclaimer --silent --production --ignore-platform > ../NOTICES
 	# NOTE: This file may need to be manually edited. Look at the Git diff and
 	# the parts that should be edited will be obvious.
 
