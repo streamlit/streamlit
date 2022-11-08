@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext, useEffect, useState } from "react"
+import React, { ReactElement, useContext, useEffect } from "react"
 import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
 import UIButton, {
@@ -33,10 +33,9 @@ export interface Props {
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { element, widgetMgr, width } = props
+  const { disabled, element, widgetMgr, width } = props
   const style = { width }
   const { getBaseUriParts } = useContext(AppContext)
-  const [disabled, setDisabled] = useState(props.disabled)
 
   useEffect(() => {
     if (element.readyToDownload) {
@@ -52,13 +51,11 @@ function DownloadButton(props: Props): ReactElement {
       link.click()
 
       element.readyToDownload = false
-      setDisabled(props.disabled)
     }
   }, [element.readyToDownload])
 
   const handleDownloadClick: () => void = () => {
     element.readyToDownload = false
-    setDisabled(true)
     widgetMgr.setTriggerValue(element, { fromUi: true })
   }
 
