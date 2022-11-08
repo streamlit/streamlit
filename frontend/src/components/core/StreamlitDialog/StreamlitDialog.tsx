@@ -161,8 +161,14 @@ function aboutDialog(props: AboutProps): ReactElement {
       <ModalHeader>Powered by</ModalHeader>
       <ModalBody>
         <div>
-          Streamlit v{SessionInfo.current.streamlitVersion}
-          <br />
+          {/* Show our version string only if SessionInfo has been created. If Streamlit 
+          hasn't yet connected to the server, the SessionInfo singleton will be null. */}
+          {SessionInfo.isSet() && (
+            <>
+              Streamlit v{SessionInfo.current.streamlitVersion}
+              <br />
+            </>
+          )}
           <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
           <br />
           Copyright {new Date().getFullYear()} Snowflake Inc. All rights
