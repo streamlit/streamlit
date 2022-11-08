@@ -55,8 +55,9 @@ jobs:
           git_status=$(git status --porcelain -- NOTICES)
           if [[ -n $git_status ]]; then
             echo "::error::The NOTICES file is out of date! Please run \`make notices\` and commit the result."
-            echo ""
+            echo "::group::git diff NOTICES"
             git diff NOTICES
+            echo "::endgroup::"
             exit 1
           else
             echo "NOTICES is up to date."
