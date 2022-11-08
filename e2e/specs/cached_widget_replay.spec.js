@@ -14,31 +14,21 @@
  * limitations under the License.
  */
 
-describe("st.graphviz_chart", () => {
+describe("widget replay", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
-
-    // Running status widget often concludes before charts loaded
-    // Add timeout until charts are no longer loading
-    cy.get('.stAlert', { timeout: 15000 }).should('not.exist');
-
-    cy.prepForElementSnapshots();
   });
 
-  beforeEach(() => {
-    return cy
-      .get(".stGraphVizChart > svg > g > title")
-      .should("have.length", 5);
+  it("replays widget on rerun", () => {
+    cy.get(".stRadio").should("have.length", 1);
+    cy.get(".stButton").first().click();
+    cy.get(".stRadio").should("have.length", 1);
   });
 
-  it("shows left and right graph", () => {
-    cy.getIndexed(".stGraphVizChart > svg > g > title", 3).should(
-      "contain",
-      "Left"
-    );
-    cy.getIndexed(".stGraphVizChart > svg > g > title", 4).should(
-      "contain",
-      "Right"
-    );
-  });
-});
+  it("updates when interacted with", () => {
+    cy.get(".stRadio").should("have.length", 1);
+    cy.get(".stMarkdown").contains("bar");
+    cy.get(".stRadio").first().find("input").last().click({ force: true });
+    cy.get(".stMarkdown").contains("qux");
+  })
+})
