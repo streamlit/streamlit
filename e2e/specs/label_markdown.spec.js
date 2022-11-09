@@ -29,7 +29,7 @@ describe("label markdown", () => {
         cy.get(".stButton")
             .first()
             .matchThemedSnapshots("valid_button_markdown");
-            
+
         cy.get(".stButton")
             .last()
             .matchThemedSnapshots("invalid_button_markdown");
