@@ -23,8 +23,9 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-# Do not import any Streamlit modules here! See below for details.
 from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
+
+# Do not import any Streamlit modules here! See below for details.
 
 os.environ["HOME"] = "/mock/home/folder"
 

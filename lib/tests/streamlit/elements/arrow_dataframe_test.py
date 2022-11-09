@@ -28,10 +28,9 @@ from streamlit.type_util import (
     pyarrow_table_to_bytes,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-
-# In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
 from tests.testutil import create_snowpark_session
 
+# In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
 if is_pandas_version_less_than("1.3.0"):
     from pandas.io.formats.style import Styler
 else:
