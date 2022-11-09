@@ -992,6 +992,9 @@ function DataFrame({
               setIsFocused(true)
             }
           }}
+          // Add shadow for index columns and header on scroll:
+          fixedShadowX={true}
+          fixedShadowY={true}
           onPaste={false}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:

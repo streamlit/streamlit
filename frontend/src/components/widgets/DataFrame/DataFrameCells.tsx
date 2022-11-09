@@ -45,6 +45,7 @@ import {
   Type as QuiverType,
 } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
+import { Theme } from "src/theme"
 
 /**
  * All the supported column types.
@@ -87,6 +88,13 @@ export type CustomColumn = GridColumn & {
   columnTypeMetadata?: Record<string, unknown>
   // The content alignment of the column.
   contentAlignment?: "left" | "center" | "right"
+}
+
+export type TableConfig = {
+  stretchColumns: boolean
+  editable: boolean
+  disabled: boolean
+  theme: Theme
 }
 
 interface ErrorCell extends TextCell {
@@ -209,7 +217,9 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
   ) {
     // The default index in pandas uses a range type.
     columnType = ColumnType.Integer
-  } else if (["float16", "float32", "float64"].includes(typeName)) {
+  } else if (
+    ["float16", "float32", "float64", "float96", "float128"].includes(typeName)
+  ) {
     columnType = ColumnType.Float
   } else if (typeName === "categorical") {
     columnType = ColumnType.Categorical
@@ -743,14 +753,16 @@ export function fillCategoricalCell(
  */
 export function getCell(
   columnConfig: CustomColumn,
-  data: any | undefined
+  data: any | undefined,
+  overwriteColumnType?: ColumnType | undefined
 ): GridCell {
   const style = columnConfig.isIndex ? "faded" : "normal"
   const readonly = !columnConfig.isEditable
   const contentAlign = columnConfig.contentAlignment
+  const columnType = overwriteColumnType || columnConfig.columnType
   let cellTemplate
 
-  switch (columnConfig.columnType) {
+  switch (columnType) {
     case ColumnType.Text:
       cellTemplate = {
         kind: GridCellKind.Text,
@@ -804,7 +816,7 @@ export function getCell(
       cellTemplate = fillNumberCell(
         cellTemplate,
         data,
-        columnConfig.columnType === ColumnType.Integer,
+        columnType === ColumnType.Integer,
         columnConfig.columnTypeMetadata
       )
       break
@@ -877,6 +889,10 @@ export function getCell(
       cellTemplate = fillDateTimeCell(cellTemplate, data)
       break
     case ColumnType.Categorical:
+      if (columnConfig.isIndex) {
+        // Categorical column type is currently not supported for index columns:
+        return getCell(columnConfig, data, ColumnType.Object)
+      }
       if (
         !(
           columnConfig.columnTypeMetadata &&
@@ -965,7 +981,7 @@ export function getCell(
       break
     default:
       // This should never happen
-      return getErrorCell(`Unsupported cell type: ${columnConfig.columnType}`)
+      return getErrorCell(`Unsupported cell type: ${columnType}`)
   }
 
   return cellTemplate
