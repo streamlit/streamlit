@@ -115,22 +115,22 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session(session_id)
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
+    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
     async def test_close_session_shuts_down_appsession(self):
         """Closing a session should shutdown its associated AppSession."""
-        with self.patch_app_session():
-            await self.runtime.start()
+        await self.runtime.start()
 
-            # Create a session and get its associated AppSession object.
-            session_id = self.runtime.create_session(
-                client=MockSessionClient(), user_info=MagicMock()
-            )
-            app_session = self.runtime._session_mgr.get_active_session_info(
-                session_id
-            ).session
+        # Create a session and get its associated AppSession object.
+        session_id = self.runtime.create_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+        app_session = self.runtime._session_mgr.get_active_session_info(
+            session_id
+        ).session
 
-            # Close the session. AppSession.shutdown should be called.
-            self.runtime.close_session(session_id)
-            app_session.shutdown.assert_called_once()
+        # Close the session. AppSession.shutdown should be called.
+        self.runtime.close_session(session_id)
+        app_session.shutdown.assert_called_once()
 
     async def test_multiple_sessions(self):
         """Multiple sessions can be connected."""
@@ -189,71 +189,72 @@ class RuntimeTest(RuntimeTestCase):
     # inactive) are shut down when the Runtime stops.
     async def test_shutdown_appsessions_on_stop(self):
         """When the Runtime stops, it should shut down open AppSessions."""
-        with self.patch_app_session():
-            await self.runtime.start()
+        await self.runtime.start()
 
-            # Create a few sessions
-            app_sessions = []
-            for _ in range(3):
-                session_id = self.runtime.create_session(
-                    MockSessionClient(), MagicMock()
-                )
-                app_session = self.runtime._session_mgr.get_active_session_info(
-                    session_id
-                ).session
-                app_sessions.append(app_session)
-
-            # Sanity check
-            for app_session in app_sessions:
-                app_session.shutdown.assert_not_called()
-
-            # Stop the Runtime
-            self.runtime.stop()
-            await self.runtime.stopped
-
-            # All sessions should be shut down
-            self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
-            for app_session in app_sessions:
-                app_session.shutdown.assert_called_once()
-
-    async def test_handle_backmsg(self):
-        """BackMsgs should be delivered to the appropriate AppSession."""
-        with self.patch_app_session():
-            await self.runtime.start()
-            session_id = self.runtime.create_session(
-                client=MockSessionClient(), user_info=MagicMock()
-            )
-
-            back_msg = MagicMock()
-            self.runtime.handle_backmsg(session_id, back_msg)
-
+        # Create a few sessions
+        app_sessions = []
+        for _ in range(3):
+            session_id = self.runtime.create_session(MockSessionClient(), MagicMock())
             app_session = self.runtime._session_mgr.get_active_session_info(
                 session_id
             ).session
-            app_session.handle_backmsg.assert_called_once_with(back_msg)
+            app_session.shutdown = MagicMock()
+            app_sessions.append(app_session)
+
+        # Sanity check
+        for app_session in app_sessions:
+            app_session.shutdown.assert_not_called()
+
+        # Stop the Runtime
+        self.runtime.stop()
+        await self.runtime.stopped
+
+        # All sessions should be shut down
+        self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
+        for app_session in app_sessions:
+            app_session.shutdown.assert_called_once()
+
+    @patch("streamlit.runtime.app_session.AppSession.handle_backmsg", new=MagicMock())
+    async def test_handle_backmsg(self):
+        """BackMsgs should be delivered to the appropriate AppSession."""
+        await self.runtime.start()
+        session_id = self.runtime.create_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+
+        back_msg = MagicMock()
+        self.runtime.handle_backmsg(session_id, back_msg)
+
+        app_session = self.runtime._session_mgr.get_active_session_info(
+            session_id
+        ).session
+        app_session.handle_backmsg.assert_called_once_with(back_msg)
 
     async def test_handle_backmsg_invalid_session(self):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.runtime.start()
         self.runtime.handle_backmsg("not_a_session_id", MagicMock())
 
+    @patch(
+        "streamlit.runtime.app_session.AppSession.handle_backmsg_exception",
+        new=MagicMock(),
+    )
     async def test_handle_backmsg_deserialization_exception(self):
         """BackMsg deserialization Exceptions should be delivered to the
         appropriate AppSession.
         """
-        with self.patch_app_session():
-            await self.runtime.start()
-            session_id = self.runtime.create_session(
-                client=MockSessionClient(), user_info=MagicMock()
-            )
+        await self.runtime.start()
+        session_id = self.runtime.create_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
 
-            exception = MagicMock()
-            self.runtime.handle_backmsg_deserialization_exception(session_id, exception)
+        exception = MagicMock()
+        self.runtime.handle_backmsg_deserialization_exception(session_id, exception)
 
-            app_session = self.runtime._session_mgr.get_active_session_info(
-                session_id
-            ).session
-            app_session.handle_backmsg_exception.assert_called_once_with(exception)
+        app_session = self.runtime._session_mgr.get_active_session_info(
+            session_id
+        ).session
+        app_session.handle_backmsg_exception.assert_called_once_with(exception)
 
     async def test_handle_backmsg_exception_invalid_session(self):
         """A BackMsg exception for an invalid session should get dropped without an
