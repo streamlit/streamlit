@@ -13,14 +13,79 @@
 # limitations under the License.
 
 import asyncio
+from typing import Callable, Dict, List, Optional
 from unittest import mock
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
+from streamlit.runtime.session_manager import (
+    SessionClient,
+    SessionData,
+    SessionInfo,
+    SessionManager,
+    SessionStorage,
+)
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
+
+
+class MockSessionManager(SessionManager):
+    """A MockSessionManager used for runtime tests.
+
+    This is done so that our runtime tests don't rely on a specific SessionManager
+    implementation.
+    """
+
+    def __init__(
+        self,
+        session_storage: SessionStorage,
+        uploaded_file_manager: UploadedFileManager,
+        message_enqueued_callback: Optional[Callable[[], None]],
+    ) -> None:
+        self._uploaded_file_mgr = uploaded_file_manager
+        self._message_enqueued_callback = message_enqueued_callback
+
+        # Mapping of AppSession.id -> SessionInfo.
+        self._session_info_by_id: Dict[str, SessionInfo] = {}
+
+    def connect_session(
+        self,
+        client: SessionClient,
+        session_data: SessionData,
+        user_info: Dict[str, Optional[str]],
+        existing_session_id: Optional[str] = None,
+    ) -> str:
+        with mock.patch(
+            "streamlit.runtime.scriptrunner.ScriptRunner", new=mock.MagicMock()
+        ):
+            session = AppSession(
+                session_data=session_data,
+                uploaded_file_manager=self._uploaded_file_mgr,
+                message_enqueued_callback=self._message_enqueued_callback,
+                local_sources_watcher=mock.MagicMock(),
+                user_info=user_info,
+            )
+
+        assert (
+            session.id not in self._session_info_by_id
+        ), f"session.id '{session.id}' registered multiple times!"
+
+        self._session_info_by_id[session.id] = SessionInfo(client, session)
+        return session.id
+
+    def close_session(self, session_id: str) -> None:
+        if session_id in self._session_info_by_id:
+            session_info = self._session_info_by_id[session_id]
+            del self._session_info_by_id[session_id]
+            session_info.session.shutdown()
+
+    def get_session_info(self, session_id: str) -> Optional[SessionInfo]:
+        return self._session_info_by_id.get(session_id, None)
+
+    def list_sessions(self) -> List[SessionInfo]:
+        return list(self._session_info_by_id.values())
 
 
 class RuntimeTestCase(IsolatedAsyncioTestCase):
@@ -33,9 +98,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
             script_path="mock/script/path.py",
             command_line="",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
-            # TODO(vdonato): Replace this with a new MockSessionManager class so that
-            # runtime tests don't rely on a real SessionManager implementation.
-            session_manager_class=WebsocketSessionManager,
+            session_manager_class=MockSessionManager,
         )
         self.runtime = Runtime(config)
 
@@ -66,25 +129,3 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
         if session_info is None:
             return
         session_info.session._enqueue_forward_msg(msg)
-
-    def patch_app_session(self):
-        """Mock the Runtime's AppSession import. Use this on tests where we don't want
-        actual sessions to be instantiated, or scripts to be run.
-        """
-        return mock.patch(
-            "streamlit.runtime.websocket_session_manager.AppSession",
-            # new_callable must return a function, not an object, or else
-            # there will only be a single AppSession mock. Hence the lambda.
-            new_callable=lambda: self._create_mock_app_session,
-        )
-
-    @classmethod
-    def _create_mock_app_session(cls, *args, **kwargs):
-        """Create a mock AppSession. Each mocked instance will have
-        its own unique ID."""
-        mock_id = mock.PropertyMock(return_value=f"mock_id:{cls._next_session_id}")
-        cls._next_session_id += 1
-
-        mock_session = mock.MagicMock(AppSession, autospec=True, *args, **kwargs)
-        type(mock_session).id = mock_id
-        return mock_session
