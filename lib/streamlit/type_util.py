@@ -33,7 +33,7 @@ from typing import (
 )
 
 import pyarrow as pa
-from pandas import MultiIndex
+from pandas import Index, MultiIndex
 from pandas.api.types import infer_dtype, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
@@ -586,16 +586,30 @@ def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     # mixed-integer-float is not a problem for arrow
     # Frozensets are incompatible
     # TODO(lukasmasuch): timedelta64[ns] is supported by pyarrow but not in the javascript arrow implementation
-    if column.dtype in ["timedelta64[ns]", "complex128"]:
+    if column.dtype in [
+        "timedelta64[ns]",
+        "complex128",
+        "complex64",
+        "complex256",
+        "complex192",
+        "complex256",
+    ]:
         return True
 
+    print(column.dtype)
+    print(type(column))
     if column.dtype == "object":
-        infered_type = infer_dtype(column, skipna=True)
-        if infered_type == "mixed-integer":
+        inferred_type = infer_dtype(column, skipna=True)
+        if inferred_type == "mixed-integer":
             return True
-        elif infered_type == "mixed":
-            if len(column) > 0 and is_list_like(column[0]):
+        elif inferred_type == "mixed":
+            if (
+                len(column) > 0
+                and hasattr(column, "iloc")
+                and is_list_like(column.iloc[0])
+            ):
                 # TODO(lukasmasuch): Mixed arrays are also not supported
+                # Also infer_dtype for the selected list and convert to string list
                 # List objects are supported by Arrow
                 return False
             return True
