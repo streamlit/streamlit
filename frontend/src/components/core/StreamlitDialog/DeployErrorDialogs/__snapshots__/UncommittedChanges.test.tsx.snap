@@ -4,7 +4,7 @@ exports[`DeployErrorDialog - RepoIsAhead should render without crashing 1`] = `
 Object {
   "body": <React.Fragment>
     <p>
-      Your repository 
+      Your repository
       <code>
         reponame
       </code>

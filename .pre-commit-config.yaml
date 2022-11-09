@@ -152,3 +152,13 @@ repos:
           (?x)
           /vendor/
           |^component-lib/declarations/apache-arrow
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: |
+          (?x)
+          ^frontend/src/assets/
+          |^NOTICES$
+          |^proto/streamlit/proto/openmetrics_data_model.proto$
+

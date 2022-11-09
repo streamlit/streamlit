@@ -22,7 +22,7 @@ exports[`SettingsDialog renders without crashing 1`] = `
             onChange={[Function]}
             type="checkbox"
           />
-           
+
           Wide mode
         </label>
         <StyledSmall>
@@ -83,7 +83,7 @@ exports[`SettingsDialog should hide the theme creator button if not in developer
             onChange={[Function]}
             type="checkbox"
           />
-           
+
           Wide mode
         </label>
         <StyledSmall>
@@ -136,7 +136,7 @@ exports[`SettingsDialog should show theme creator button if in developer mode 1`
             onChange={[Function]}
             type="checkbox"
           />
-           
+
           Wide mode
         </label>
         <StyledSmall>
