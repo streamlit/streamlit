@@ -72,6 +72,5 @@ NONWIDGET_ELEMENTS = [
 ]
 FILESYSTEM_ELEMENTS = [
     "audio",
-    # "imgs",
     "video",
 ]

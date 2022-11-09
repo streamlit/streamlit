@@ -508,7 +508,6 @@ def marshall_images(
                     proto_img.url = f"data:image/svg+xml,{image}"
                 is_svg = True
 
-        # TODO save image data when the image is an svg
         if not is_svg:
             proto_img.url = image_to_url(
                 image, width, clamp, channels, output_format, image_id
