@@ -436,12 +436,12 @@ class CacheErrorsTest(DeltaGeneratorTestCase):
             normalize_md(el.exception.message),
             normalize_md(
                 """
-Your script uses `st.markdown()` or `st.write()` to write to your Streamlit app
+Your script uses `st.markdown()` to write to your Streamlit app
 from within some cached code at `st_warning_text_func()`. This code will only be
 called when we detect a cache "miss", which can lead to unexpected results.
 
 How to fix this:
-* Move the `st.markdown()` or `st.write()` call outside `st_warning_text_func()`.
+* Move the `st.markdown()` call outside `st_warning_text_func()`.
 * Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
 to suppress the warning.
         """
