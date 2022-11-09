@@ -429,7 +429,7 @@ def cache(
         a cache miss.
 
     suppress_st_warning : boolean
-        Suppress warnings about calling Streamlit functions from within
+        Suppress warnings about calling Streamlit commands from within
         the cached function.
 
     hash_funcs : dict or None
