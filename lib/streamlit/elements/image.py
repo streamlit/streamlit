@@ -344,6 +344,7 @@ def image_to_url(
             mimetype, _ = mimetypes.guess_type(image)
             if mimetype is None:
                 mimetype = "application/octet-stream"
+            caching.save_image_data(image, mimetype, image_id)
             return runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
 
     # PIL Images
