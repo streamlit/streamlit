@@ -54,7 +54,7 @@ img = np.repeat(0, 10000).reshape(100, 100)
 gif = create_gif(64, frames=32)
 
 
-# @st.experimental_memo
+@st.experimental_memo
 def numpy_image():
     st.image(img, caption="Black Square with no output format specified", width=100)
 
@@ -63,7 +63,7 @@ numpy_image()
 numpy_image()
 
 
-# @st.experimental_memo
+@st.experimental_memo
 def svg_image():
     st.image(
         """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100">
@@ -80,7 +80,7 @@ svg_image()
 svg_image()
 
 
-# @st.experimental_memo
+@st.experimental_memo
 def gif_image():
     st.image(gif, width=100)
 
