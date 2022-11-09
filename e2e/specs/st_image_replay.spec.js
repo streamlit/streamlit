@@ -50,12 +50,12 @@ describe("st.image replay", () => {
 
 
   it("displays a GIF image twice", () => {
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 4)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 2)
       .should("have.css", "height", "100px")
       .should("have.css", "width", "100px")
       .should("have.attr", "src")
       .should("match", /^.*\.gif$/);
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 5)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 3)
       .should("have.css", "height", "100px")
       .should("have.css", "width", "100px")
       .should("have.attr", "src")
