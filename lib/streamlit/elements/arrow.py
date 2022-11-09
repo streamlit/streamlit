@@ -226,9 +226,13 @@ class ArrowMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> DataFrame:
-        # If pandas.Styler uuid is not provided, a hash of the position
-        # of the element will be used. This will cause a rerender of the table
-        # when the position of the element is changed.
+
+        data = type_util.convert_anything_to_df(data)
+        for col in data.columns:
+            if type_util._is_colum_type_arrow_incompatible(data[col]):
+                # TODO(lukasmasuch): Set column non-editbale through column config
+                print(f"Column {col} is not editable")
+
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
 
