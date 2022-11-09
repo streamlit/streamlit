@@ -62,4 +62,12 @@ describe("st.image replay", () => {
       .should("match", /^.*\.gif$/);
   });
 
+  it("displays from URL twice", () => {
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 4)
+      .should("have.css", "width", "200px")
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 5)
+      .should("have.css", "width", "200px")
+
+  })
+
 });

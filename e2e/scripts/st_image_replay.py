@@ -87,3 +87,12 @@ def gif_image():
 
 gif_image()
 gif_image()
+
+
+@st.experimental_memo
+def url_image():
+    st.image("https://avatars.githubusercontent.com/anoctopus", width=200)
+
+
+url_image()
+url_image()
