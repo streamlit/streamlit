@@ -40,6 +40,7 @@ from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
+from tests.streamlit.elements.image_test import create_image
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
@@ -462,6 +463,22 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             foo(1)
             st.text("---")
             foo(1)
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_cached_st_image_replay(self, _, cache_decorator):
+        @cache_decorator
+        def img_fn():
+            st.image(create_image(10))
+
+        img_fn()
+        img_fn()
+
+        @cache_decorator
+        def img_fn_multi():
+            st.image([create_image(5), create_image(15), create_image(1)])
+
+        img_fn_multi()
+        img_fn_multi()
 
     @parameterized.expand(
         [

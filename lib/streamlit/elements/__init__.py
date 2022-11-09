@@ -53,6 +53,7 @@ NONWIDGET_ELEMENTS = [
     "graphviz_chart",
     "heading",
     "iframe",
+    "imgs",
     "json",
     "legacy_altair",
     "legacy_data_frame",
@@ -71,6 +72,6 @@ NONWIDGET_ELEMENTS = [
 ]
 FILESYSTEM_ELEMENTS = [
     "audio",
-    "imgs",
+    # "imgs",
     "video",
 ]
