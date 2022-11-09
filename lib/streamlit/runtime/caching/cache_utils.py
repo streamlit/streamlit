@@ -301,7 +301,6 @@ def replay_result_messages(
                     )
                 if msg.media_data is not None:
                     for data in msg.media_data:
-                        _LOGGER.debug(data)
                         runtime.get_instance().media_file_mgr.add(
                             data.image_data, data.mimetype, data.image_id
                         )
