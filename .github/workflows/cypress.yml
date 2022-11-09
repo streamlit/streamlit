@@ -15,7 +15,7 @@ on:
         type: string
 
 # Avoid duplicate workflows on same branch
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-cypress
   cancel-in-progress: true
 
@@ -25,17 +25,17 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     strategy:
       fail-fast: false
       matrix:
         specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
-    
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
@@ -58,7 +58,7 @@ jobs:
           echo '[mapbox]' >  ~/.streamlit/config.toml
           MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]') \
             && echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
-          
+
           echo '[general]' >  ~/.streamlit/credentials.toml
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
       - name: Cypress Tests
@@ -103,7 +103,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     steps:
       - name: Check Cypress test matrix status

@@ -18,7 +18,7 @@ runs:
       run: |
         pip install pre-commit
         pre-commit install-hooks
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - name: Setup Node
       uses: actions/setup-node@v3
       with:
@@ -27,7 +27,7 @@ runs:
         cache-dependency-path: '**/yarn.lock'
     - name: Initialize React
       run: make react-init
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - name: Install Dependencies
       run: |
         echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
@@ -39,7 +39,7 @@ runs:
             graphviz \
             libgvc6 \
             protobuf-compiler
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.
     #
@@ -59,7 +59,7 @@ runs:
         md5sum lib/test-requirements-with-tensorflow.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
         date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - if: inputs.use_cached_venv == 'true'
       name: Restore virtualenv from cache
       id: cache-virtualenv
@@ -76,10 +76,10 @@ runs:
         make setup
         make pipenv-install
         deactivate
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - name: Activate virtualenv
       run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - name: Generate Protobufs
       run: make protobuf
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}

@@ -25,7 +25,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     steps:
       - name: Checkout Streamlit code
@@ -49,5 +49,20 @@ jobs:
           # Run eslint as a standalone command to generate the test report.
           PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
           make jslint
+      - name: Validate NOTICES
+        run: |
+          # Run `make notices`. If it results in changes, warn the user and fail.
+          make notices
+
+          git_status=$(git status --porcelain -- NOTICES)
+          if [[ -n $git_status ]]; then
+            echo "::error::The NOTICES file is out of date! Please run \`make notices\` and commit the result."
+            echo "::group::git diff NOTICES"
+            git diff NOTICES
+            echo "::endgroup::"
+            exit 1
+          else
+            echo "NOTICES is up to date."
+          fi
       - name: Run frontend tests
         run: make jstest
