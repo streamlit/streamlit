@@ -19,7 +19,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     steps:
       - name: Checkout Streamlit code
