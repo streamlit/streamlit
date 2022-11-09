@@ -22,6 +22,7 @@ import UIButton, {
   Size,
 } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 export interface Props {
   disabled: boolean
@@ -45,7 +46,11 @@ function Button(props: Props): ReactElement {
           disabled={disabled}
           onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
         >
-          {element.label}
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isButton
+          />
         </UIButton>
       </ButtonTooltip>
     </div>

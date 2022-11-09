@@ -153,6 +153,66 @@ describe("StreamlitMarkdown", () => {
       "hello this is a caption"
     )
   })
+
+  it("doesn't render invalid markdown (tables, images, etc.) when isLabel is true", () => {
+    // Invalid Markdown in widget/expander/tab labels
+    const table =
+      "<table><tr><th>Month</th><th>Savings</th></tr><tr><td>January</td><td>$100</td></tr></table>"
+    const image =
+      "![Corgi](https://dictionary.cambridge.org/us/dictionary/english/corgi)"
+    // Valid Markdown in widget/expander/tab labels
+    const valid =
+      "*Italics* ~Strikethrough~ **Bold** :traffic_light: `code` [Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
+
+    const wrapper1 = mount(
+      <StreamlitMarkdown source={table} allowHTML={true} isLabel />
+    )
+    expect(wrapper1.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper1.props().isLabel).toEqual(true)
+
+    const wrapper2 = mount(
+      <StreamlitMarkdown source={image} allowHTML={false} isLabel />
+    )
+    expect(wrapper2.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper2.props().isLabel).toEqual(true)
+
+    const wrapper3 = mount(
+      <StreamlitMarkdown source={valid} allowHTML={false} isLabel />
+    )
+    expect(wrapper3.find("StyledStreamlitMarkdown").text()).toEqual(
+      "Italics Strikethrough Bold 🚥 code Yikes"
+    )
+    expect(wrapper3.props().isLabel).toEqual(true)
+  })
+
+  it("doesn't render invalid markdown (tables/images/links/code etc.) when isButton is true", () => {
+    // Invalid Markdown in button/download button labels
+    const link =
+      "[Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
+    const code = "`code`"
+    // Valid Markdown in button/download button labels
+    const text = "*Italics* ~Strikethrough~ **Bold** :traffic_light:"
+
+    const wrapper1 = mount(
+      <StreamlitMarkdown source={link} allowHTML={false} isButton />
+    )
+    expect(wrapper1.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper1.props().isButton).toEqual(true)
+
+    const wrapper2 = mount(
+      <StreamlitMarkdown source={code} allowHTML={false} isButton />
+    )
+    expect(wrapper2.find("StyledStreamlitMarkdown").text()).toEqual("")
+    expect(wrapper2.props().isButton).toEqual(true)
+
+    const wrapper3 = mount(
+      <StreamlitMarkdown source={text} allowHTML={false} isButton />
+    )
+    expect(wrapper3.find("StyledStreamlitMarkdown").text()).toEqual(
+      "Italics Strikethrough Bold 🚥"
+    )
+    expect(wrapper3.props().isButton).toEqual(true)
+  })
 })
 
 const getHeadingProps = (
