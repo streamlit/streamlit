@@ -204,6 +204,7 @@ class Checkbox extends React.PureComponent<Props, State> {
               source={element.label}
               allowHTML={false}
               isLabel
+              isCheckbox
             />
             {element.help && (
               <StyledWidgetLabelHelpInline color={color}>

@@ -80,6 +80,11 @@ export interface Props {
    * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
    */
   isLabel?: boolean
+
+  /**
+   * Checkbox has larger label font sizing - same allowed elements as other widgets ^
+   */
+  isCheckbox?: boolean
 }
 
 /**
@@ -291,14 +296,23 @@ class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render(): ReactNode {
-    const { source, allowHTML, style, isCaption, isLabel, isButton } =
-      this.props
+    const {
+      source,
+      allowHTML,
+      style,
+      isCaption,
+      isLabel,
+      isButton,
+      isCheckbox,
+    } = this.props
     const isInSidebar = this.context
 
     return (
       <StyledStreamlitMarkdown
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
+        isLabel={isLabel}
+        isCheckbox={isCheckbox}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >
