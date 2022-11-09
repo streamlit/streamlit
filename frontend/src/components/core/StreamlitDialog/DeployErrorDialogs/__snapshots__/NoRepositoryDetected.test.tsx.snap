@@ -12,7 +12,7 @@ Object {
     <ul>
       <li>
         To deploy a public app, you must first put it in a public GitHub repo. See
-
+         
         <a
           href="https://docs.streamlit.io"
           rel="noopener noreferrer"
@@ -20,7 +20,7 @@ Object {
         >
           our documentation
         </a>
-
+         
         for more details.
       </li>
     </ul>

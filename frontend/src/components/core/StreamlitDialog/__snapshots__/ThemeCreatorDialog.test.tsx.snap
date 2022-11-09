@@ -51,7 +51,7 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
             [theme]
           </code>
            section of your
-
+           
           <code>
             .streamlit/config.toml
           </code>

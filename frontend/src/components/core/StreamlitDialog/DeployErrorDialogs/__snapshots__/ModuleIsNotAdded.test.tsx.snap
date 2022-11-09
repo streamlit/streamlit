@@ -4,7 +4,7 @@ exports[`DeployErrorDialog - ModuleIsNotAdded should render without crashing 1`]
 Object {
   "body": <React.Fragment>
     <p>
-      The file
+      The file 
       <code>
         module
       </code>

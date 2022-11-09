@@ -161,4 +161,4 @@ repos:
           ^frontend/src/assets/
           |^NOTICES$
           |^proto/streamlit/proto/openmetrics_data_model.proto$
-
+          |\.snap$
