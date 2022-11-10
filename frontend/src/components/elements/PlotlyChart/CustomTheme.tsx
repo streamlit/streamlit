@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { assign, isEqual, merge } from "lodash"
+import { assign, merge } from "lodash"
 
 import {
   getDecreasingRed,
@@ -53,33 +53,6 @@ function convertColorArrayPlotly(colors: string[]): (string | number)[][] {
     plotlyColorArray.push([index / (colors.length - 1), color])
   })
   return plotlyColorArray
-}
-
-function getDefaultPlotlyColors(): string[] {
-  return [
-    "#0d0887",
-    "#46039f",
-    "#7201a8",
-    "#9c179e",
-    "#bd3786",
-    "#d8576b",
-    "#ed7953",
-    "#fb9f3a",
-    "#fdca26",
-    "#f0f921",
-  ]
-}
-
-/**
- * Overrides the colorscale if the array is plotly's default colorscale value
- * @param colorscale
- * @returns if it's plotly's default colorscale value
- */
-function shouldOverrideColorscale(colorscale: (string | number)[][]): boolean {
-  const defaultSequentialColors = convertColorArrayPlotly(
-    getDefaultPlotlyColors()
-  )
-  return isEqual(colorscale, defaultSequentialColors)
 }
 
 /**
@@ -152,24 +125,6 @@ function overrideDefaultTableProperties(tableData: any, theme: Theme): void {
       },
     })
   }
-}
-
-/**
- * This overrides the colorscale to all graphs if it's undefined.
- * @param data - spec.data
- */
-export function applyColorscale(data: any, theme: Theme): any {
-  data.forEach((entry: any) => {
-    if (
-      entry.colorscale !== undefined &&
-      shouldOverrideColorscale(entry.colorscale)
-    ) {
-      assign(entry, {
-        colorscale: convertColorArrayPlotly(getSequentialColorsArray(theme)),
-      })
-    }
-  })
-  return data
 }
 
 /**
