@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 import plotly.io as pio
 
-import streamlit.elements.plotly.streamlit_plotly_theme
+import streamlit.elements.streamlit_plotly_theme
 
 pio.templates.default = "streamlit"
 
