@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { assign } from "lodash"
+import { assign, isEqual, merge } from "lodash"
 
 import {
   getDecreasingRed,
@@ -23,15 +23,14 @@ import {
   getGray90,
   getIncreasingGreen,
   hasLightBackgroundColor,
-  getCategoricalColorsArray,
   Theme,
   getSequentialColorsArray,
-  getDivergingColorsArray,
 } from "src/theme"
 import { ensureError } from "src/lib/ErrorHandling"
 import { logError } from "src/lib/log"
 
 /**
+ * Convert a regular array of colors to plotly's accepted type.
  * Plotly represents continuous colorscale through an array of pairs.
  * The pair's first index is the starting point and the next pair's first index is the end point.
  * The pair's second index is the starting color and the next pair's second index is the end color.
@@ -46,7 +45,7 @@ import { logError } from "src/lib/log"
  *  ]
  * For more information, please refer to https://plotly.com/python/colorscales/
  * @param colors
- * @returns
+ * @returns equal amount of color for the color array
  */
 function convertColorArrayPlotly(colors: string[]): (string | number)[][] {
   const plotlyColorArray: (string | number)[][] = []
@@ -56,141 +55,132 @@ function convertColorArrayPlotly(colors: string[]): (string | number)[][] {
   return plotlyColorArray
 }
 
-/**
- * This applies categorical colors (discrete or labeled data) to
- * graphs by mapping legend groups to marker colors and customdata to marker colors.
- * This is done because colorway is not fully respected by plotly.
- * @param data - spec.data
- */
-function applyDiscreteColors(data: any, theme: Theme): void {
-  const categoryColors = getCategoricalColorsArray(theme)
-
-  const legendGroupToIndexes = new Map<string, number[]>()
-  const customDataToDataIdx = new Map<string, number[]>()
-  const graphIdxToCustomData = new Map<number, Map<string, number[]>>()
-  data.forEach((graph: any, graphIndex: number) => {
-    if (
-      graph.customdata !== undefined &&
-      graph.marker !== undefined &&
-      Array.isArray(graph.marker.colors) &&
-      graph.marker.colors.length > 0 &&
-      typeof graph.marker.colors[0] !== "number"
-    ) {
-      graph.customdata.forEach((data: any, dataIndex: any) => {
-        const dataString = data.toString()
-        if (Array.isArray(data) && data.length > 0) {
-          if (customDataToDataIdx.has(dataString)) {
-            customDataToDataIdx.set(
-              dataString,
-              // @ts-ignore
-              customDataToDataIdx.get(dataString)?.concat(dataIndex)
-            )
-          } else {
-            customDataToDataIdx.set(dataString, [dataIndex])
-          }
-        }
-      })
-      graphIdxToCustomData.set(graphIndex, customDataToDataIdx)
-    }
-    if (graph.legendgroup !== undefined) {
-      if (legendGroupToIndexes.has(graph.legendgroup)) {
-        legendGroupToIndexes.set(
-          graph.legendgroup,
-          // @ts-ignore
-          legendGroupToIndexes.get(graph.legendgroup).concat(graphIndex)
-        )
-      } else {
-        legendGroupToIndexes.set(graph.legendgroup, [graphIndex])
-      }
-    }
-  })
-
-  let colorIndex = 0
-  legendGroupToIndexes.forEach((dataIdx: number[]) => {
-    dataIdx.forEach((index: number) => {
-      if (data[index].line !== undefined) {
-        // dont assign colors for dist plot boxes when they're transparent
-        if (
-          data[index].type !== "box" &&
-          data[index].line.color !== "rgba(255,255,255,0)" &&
-          data[index].line.color !== "transparent"
-        ) {
-          data[index].line = assign(data[index].line, {
-            color: categoryColors[colorIndex % categoryColors.length],
-          })
-        }
-      }
-      if (
-        data[index].marker !== undefined &&
-        typeof data[index].marker.color === "string"
-      ) {
-        data[index].marker = assign(data[index].marker, {
-          color: categoryColors[colorIndex % categoryColors.length],
-        })
-      }
-    })
-    colorIndex++
-  })
-
-  colorIndex = 0
-  graphIdxToCustomData.forEach(
-    (customData: Map<string, number[]>, dataIndex: number) => {
-      customData.forEach(markerIndexes => {
-        markerIndexes.forEach(markerIndex => {
-          data[dataIndex].marker.colors[markerIndex] =
-            categoryColors[colorIndex % categoryColors.length]
-        })
-        colorIndex++
-      })
-    }
-  )
+function getDefaultPlotlyColors(): string[] {
+  return [
+    "#0d0887",
+    "#46039f",
+    "#7201a8",
+    "#9c179e",
+    "#bd3786",
+    "#d8576b",
+    "#ed7953",
+    "#fb9f3a",
+    "#fdca26",
+    "#f0f921",
+  ]
 }
 
 /**
- * This overrides the colorscale (continuous colorscale) to all graphs.
+ * Overrides the colorscale if the array is plotly's default colorscale value
+ * @param colorscale
+ * @returns if it's plotly's default colorscale value
+ */
+function shouldOverrideColorscale(colorscale: (string | number)[][]): boolean {
+  const defaultSequentialColors = convertColorArrayPlotly(
+    getDefaultPlotlyColors()
+  )
+  return isEqual(colorscale, defaultSequentialColors)
+}
+
+/**
+ * This overrides table properties when entry.type === "table" and
+ * the default values are still there.
+ * All the colors come from DataFrame.tsx properties.
+ * @param tableData
+ * @param theme
+ */
+function overrideDefaultTableProperties(tableData: any, theme: Theme): void {
+  const DEFAULT_TABLE_LINE_COLOR = "white"
+  const DEFAULT_TABLE_CELLS_FILL_COLOR = "#EBF0F8"
+  const DEFAULT_TABLE_HEAD_FILL_COLOR = "#C8D4E3"
+
+  const { colors, genericFonts } = theme
+
+  if (tableData.cells.font === undefined) {
+    assign(tableData.cells, {
+      font: {
+        color: getGray90(theme),
+      },
+    })
+  }
+  // guarantees tableData.cells.font will be defined from above
+  if (tableData.cells.font.family === undefined) {
+    assign(tableData.cells.font, {
+      family: genericFonts.bodyFont,
+    })
+  }
+  if (
+    tableData.cells.fill !== undefined ||
+    tableData.cells.fill.color === DEFAULT_TABLE_CELLS_FILL_COLOR
+  ) {
+    assign(tableData.cells, {
+      fill: {
+        color: colors.bgColor,
+      },
+    })
+  }
+  // tableData.cells.line.color is always defined
+  if (tableData.cells.line.color === DEFAULT_TABLE_LINE_COLOR) {
+    assign(tableData.cells, {
+      line: { color: colors.fadedText05 },
+    })
+  }
+  if (tableData.header.font === undefined) {
+    assign(tableData.header, {
+      font: {
+        color: getGray70(theme),
+      },
+    })
+  }
+  // guarantees tableData.header.font will be defined from above
+  if (tableData.header.font.family === undefined) {
+    assign(tableData.header.font, {
+      family: genericFonts.bodyFont,
+    })
+  }
+  // tableData.header.line.color is always defined
+  if (tableData.header.line.color === DEFAULT_TABLE_LINE_COLOR) {
+    assign(tableData.header, {
+      line: { color: colors.fadedText05 },
+    })
+  }
+  // tableData.header.fill.color is always defined
+  if (tableData.header.fill.color === DEFAULT_TABLE_HEAD_FILL_COLOR) {
+    assign(tableData.header, {
+      fill: {
+        color: colors.bgMix,
+      },
+    })
+  }
+}
+
+/**
+ * This overrides the colorscale to all graphs if it's undefined.
  * @param data - spec.data
  */
 export function applyColorscale(data: any, theme: Theme): any {
   data.forEach((entry: any) => {
-    assign(entry, {
-      colorscale: convertColorArrayPlotly(getSequentialColorsArray(theme)),
-    })
+    if (
+      entry.colorscale !== undefined &&
+      shouldOverrideColorscale(entry.colorscale)
+    ) {
+      assign(entry, {
+        colorscale: convertColorArrayPlotly(getSequentialColorsArray(theme)),
+      })
+    }
   })
   return data
 }
 
 /**
- * This applies colors specifically for the table, candlestick, and waterfall plot
+ * This applies colors specifically for the candlestick and waterfall plot
  * because their dictionary structure is different from other more regular charts.
  * @param data - spec.data
  */
 export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
-  const { colors, genericFonts } = theme
   data.forEach((entry: any) => {
     // entry.type is always defined
-    if (entry.type === "table") {
-      // from dataframe.tsx cell properties
-      entry.header = assign(entry.header, {
-        font: {
-          color: getGray70(theme),
-          family: genericFonts.bodyFont,
-        },
-        line: { color: colors.fadedText05, width: 1 },
-        fill: {
-          color: colors.bgMix,
-        },
-      })
-      entry.cells = assign(entry.cells, {
-        font: {
-          color: getGray90(theme),
-          family: genericFonts.bodyFont,
-        },
-        line: { color: colors.fadedText05, width: 1 },
-        fill: {
-          color: colors.bgColor,
-        },
-      })
-    } else if (entry.type === "candlestick") {
+    if (entry.type === "candlestick") {
       if (entry.decreasing === undefined) {
         assign(entry, {
           decreasing: {
@@ -199,6 +189,8 @@ export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
             },
           },
         })
+      }
+      if (entry.increasing === undefined) {
         assign(entry, {
           increasing: {
             line: {
@@ -223,11 +215,19 @@ export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
               color: getDecreasingRed(theme),
             },
           },
+        })
+      }
+      if (entry.increasing === undefined) {
+        assign(entry, {
           increasing: {
             marker: {
               color: getIncreasingGreen(theme),
             },
           },
+        })
+      }
+      if (entry.totals === undefined) {
+        assign(entry, {
           totals: {
             marker: {
               color: hasLightBackgroundColor(theme)
@@ -278,7 +278,6 @@ export function applyStreamlitThemeTemplateLayout(
       xanchor: "left",
       x: 0,
     },
-    colorway: getCategoricalColorsArray(theme),
     legend: {
       title: {
         font: {
@@ -297,7 +296,6 @@ export function applyStreamlitThemeTemplateLayout(
     },
     paper_bgcolor: colors.bgColor,
     plot_bgcolor: colors.bgColor,
-    colorDiscreteSequence: getCategoricalColorsArray(theme),
     yaxis: {
       ticklabelposition: "outside",
       zerolinecolor: getGray30(theme),
@@ -375,18 +373,6 @@ export function applyStreamlitThemeTemplateLayout(
           size: fontSizes.twoSmPx,
         },
       },
-      colorscale: {
-        diverging: convertColorArrayPlotly(getDivergingColorsArray(theme)),
-        sequential: convertColorArrayPlotly(getSequentialColorsArray(theme)),
-        sequentialminus: convertColorArrayPlotly(
-          getDivergingColorsArray(theme)
-        ),
-      },
-    },
-    colorscale: {
-      diverging: convertColorArrayPlotly(getDivergingColorsArray(theme)),
-      sequential: convertColorArrayPlotly(getSequentialColorsArray(theme)),
-      sequentialminus: convertColorArrayPlotly(getDivergingColorsArray(theme)),
     },
     // specifically for the ternary graph
     ternary: {
@@ -426,27 +412,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
   }
 
-  // cant use merge. use assign because plotly already has properties defined.
-  assign(layout, streamlitTheme)
-}
-
-/**
- * Applies the colorscale, colors for unique graphs, and discrete coloring
- * for in general through assigning properties in spec.data
- * @param data - spec.data
- */
-export function applyStreamlitThemeData(data: any, theme: Theme): void {
-  applyColorscale(data, theme)
-  applyUniqueGraphColorsData(data, theme)
-  applyDiscreteColors(data, theme)
-  data.forEach((entry: any) => {
-    if (entry.marker !== undefined) {
-      entry.marker.line = assign(entry.marker.line, {
-        width: 0,
-        color: theme.colors.transparent,
-      })
-    }
-  })
+  merge(layout, streamlitTheme)
 }
 
 /**
@@ -462,17 +428,25 @@ export function applyStreamlitThemeTemplateData(
   if (data !== undefined) {
     data.bar.forEach((entry: any) => {
       if (entry.marker !== undefined && entry.marker.line !== undefined) {
-        entry.marker.line = assign(entry.marker.line, {
+        merge(entry.marker.line, {
           color: getGray30(theme),
         })
       }
     })
-    const graphs = Object.values(data)
-    graphs.forEach((graph: any) => {
-      if (graph.colorbar !== undefined && graph.colorbar.ticks === "") {
-        // make tick values show
-        delete graph.colorbar.ticks
-      }
+    const graphTypes = Object.values(data)
+    graphTypes.forEach((types: any) => {
+      types.forEach((graph: any) => {
+        if (graph.colorscale !== undefined) {
+          merge(graph, {
+            colorscale: convertColorArrayPlotly(
+              getSequentialColorsArray(theme)
+            ),
+          })
+        }
+        if (graph.type === "table") {
+          overrideDefaultTableProperties(graph, theme)
+        }
+      })
     })
   }
 }
@@ -485,8 +459,8 @@ export function applyStreamlitThemeTemplateData(
 export function applyStreamlitTheme(spec: any, theme: Theme): void {
   try {
     applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
+    applyUniqueGraphColorsData(spec.data, theme)
     applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
-    applyStreamlitThemeData(spec.data, theme)
   } catch (e) {
     const err = ensureError(e)
     logError(err)

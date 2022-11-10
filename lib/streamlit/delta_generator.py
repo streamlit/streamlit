@@ -72,7 +72,7 @@ from streamlit.elements.media import MediaMixin
 from streamlit.elements.metric import MetricMixin
 from streamlit.elements.multiselect import MultiSelectMixin
 from streamlit.elements.number_input import NumberInputMixin
-from streamlit.elements.plotly_chart import PlotlyMixin
+from streamlit.elements.plotly.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.radio import RadioMixin
