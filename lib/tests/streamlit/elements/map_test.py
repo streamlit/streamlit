@@ -87,7 +87,7 @@ class StMapTest(DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
-        self.assertIn(
+        self.assertEqual(
             "Map data must contain a column named 'latitude' or 'lat'. Existing columns: 'notlat', 'lon'",
             str(ctx.exception),
         )
