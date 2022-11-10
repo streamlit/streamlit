@@ -181,8 +181,7 @@ def main_run(target: str, args=None, **kwargs):
             )
         else:
             raise click.BadArgumentUsage(
-                "Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://docs.streamlit.io"
-                % extension
+                f"Streamlit requires raw Python (.py) files, not {extension}.\nFor more information, please see https://docs.streamlit.io"
             )
 
     if url(target):
@@ -258,9 +257,9 @@ def cache_clear():
     result = legacy_caching.clear_cache()
     cache_path = legacy_caching.get_cache_path()
     if result:
-        print("Cleared directory %s." % cache_path)
+        print(f"Cleared directory {cache_path}.")
     else:
-        print("Nothing to clear at %s." % cache_path)
+        print(f"Nothing to clear at {cache_path}.")
 
     caching.memo.clear()
     caching.singleton.clear()
