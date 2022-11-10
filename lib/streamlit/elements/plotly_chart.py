@@ -78,7 +78,7 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
-        theme: Union[None, Literal["streamlit"]] = None,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display an interactive Plotly chart.
