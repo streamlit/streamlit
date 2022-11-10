@@ -750,7 +750,7 @@ class CachedStFunctionWarning(StreamlitAPIWarning):
 
     def _get_message(self, st_func_name, cached_func):
         args = {
-            "st_func_name": "`st.%s()`" % st_func_name,
+            "st_func_name": "`st.%s()` or `st.write()`" % st_func_name,
             "func_name": _get_cached_func_name_md(cached_func),
         }
 
