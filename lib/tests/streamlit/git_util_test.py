@@ -35,10 +35,10 @@ class GitUtilTest(unittest.TestCase):
 
     def test_ssh_url_check(self):
         # standard ssh url
-        self.assertTrue("git@github.com:username/repo.git", GITHUB_SSH_URL)
+        self.assertRegex("git@github.com:username/repo.git", GITHUB_SSH_URL)
 
         # no .git
-        self.assertTrue("git@github.com:username/repo", GITHUB_SSH_URL)
+        self.assertRegex("git@github.com:username/repo", GITHUB_SSH_URL)
 
     def test_git_repo_invalid(self):
         with patch("git.Repo") as mock:
