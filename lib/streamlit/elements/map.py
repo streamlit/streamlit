@@ -185,7 +185,7 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
         lon = "longitude"
     else:
         raise StreamlitAPIException(
-            "Map data must contain a column called 'longitude' or 'lon'. "
+            "Map data must contain a column named 'longitude' or 'lon'. "
             f"Existing columns: {formmated_column_names}"
         )
 
