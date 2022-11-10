@@ -567,7 +567,7 @@ class CacheMessagesCallStack(threading.local):
         self._seen_dg_stack: List[Set[str]] = []
         self._most_recent_messages: List[MsgData] = []
         self._registered_metadata: Optional[WidgetMetadata[Any]] = None
-        self._image_data: Optional[List[MediaMsgData]] = None
+        self._image_data: List[MediaMsgData] = []
         self._cache_type = cache_type
         self._allow_widgets: int = 0
 
@@ -617,7 +617,7 @@ class CacheMessagesCallStack(threading.local):
                 widget_meta = None
 
             image_data = self._image_data
-            self._image_data = None
+            self._image_data = []
 
             if self._allow_widgets or widget_meta is None:
                 msgs.append(
@@ -667,9 +667,6 @@ class CacheMessagesCallStack(threading.local):
     def save_image_data(
         self, image_data: Union[bytes, str], mimetype: str, image_id: str
     ) -> None:
-        if self._image_data is None:
-            self._image_data = []
-
         self._image_data.append(MediaMsgData(image_data, mimetype, image_id))
 
     @contextlib.contextmanager
