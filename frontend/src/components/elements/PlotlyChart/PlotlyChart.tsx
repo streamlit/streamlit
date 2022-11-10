@@ -65,87 +65,29 @@ function renderFigure({
   const generateSpec = (figure: FigureProto): any => {
     let updatedSpec = figure.spec
     if (element.theme === "streamlit") {
-      updatedSpec = figure.spec.replaceAll(
-        "#000001",
-        getCategoricalColorsArray(theme)[0]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000002",
-        getCategoricalColorsArray(theme)[1]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000003",
-        getCategoricalColorsArray(theme)[2]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000004",
-        getCategoricalColorsArray(theme)[3]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000005",
-        getCategoricalColorsArray(theme)[4]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000006",
-        getCategoricalColorsArray(theme)[5]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000007",
-        getCategoricalColorsArray(theme)[6]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000008",
-        getCategoricalColorsArray(theme)[7]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000009",
-        getCategoricalColorsArray(theme)[8]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000010",
-        getCategoricalColorsArray(theme)[9]
-      )
+      const categoryColors = getCategoricalColorsArray(theme)
+      updatedSpec = figure.spec.replaceAll("#000001", categoryColors[0])
+      updatedSpec = updatedSpec.replaceAll("#000002", categoryColors[1])
+      updatedSpec = updatedSpec.replaceAll("#000003", categoryColors[2])
+      updatedSpec = updatedSpec.replaceAll("#000004", categoryColors[3])
+      updatedSpec = updatedSpec.replaceAll("#000005", categoryColors[4])
+      updatedSpec = updatedSpec.replaceAll("#000006", categoryColors[5])
+      updatedSpec = updatedSpec.replaceAll("#000007", categoryColors[6])
+      updatedSpec = updatedSpec.replaceAll("#000008", categoryColors[7])
+      updatedSpec = updatedSpec.replaceAll("#000009", categoryColors[8])
+      updatedSpec = updatedSpec.replaceAll("#000010", categoryColors[9])
 
-      updatedSpec = updatedSpec.replaceAll(
-        "#000011",
-        getSequentialColorsArray(theme)[0]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000012",
-        getSequentialColorsArray(theme)[1]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000013",
-        getSequentialColorsArray(theme)[2]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000014",
-        getSequentialColorsArray(theme)[3]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000015",
-        getSequentialColorsArray(theme)[4]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000016",
-        getSequentialColorsArray(theme)[5]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000017",
-        getSequentialColorsArray(theme)[6]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000018",
-        getSequentialColorsArray(theme)[7]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000019",
-        getSequentialColorsArray(theme)[8]
-      )
-      updatedSpec = updatedSpec.replaceAll(
-        "#000020",
-        getSequentialColorsArray(theme)[9]
-      )
+      const sequentialColors = getSequentialColorsArray(theme)
+      updatedSpec = updatedSpec.replaceAll("#000011", sequentialColors[0])
+      updatedSpec = updatedSpec.replaceAll("#000012", sequentialColors[1])
+      updatedSpec = updatedSpec.replaceAll("#000013", sequentialColors[2])
+      updatedSpec = updatedSpec.replaceAll("#000014", sequentialColors[3])
+      updatedSpec = updatedSpec.replaceAll("#000015", sequentialColors[4])
+      updatedSpec = updatedSpec.replaceAll("#000016", sequentialColors[5])
+      updatedSpec = updatedSpec.replaceAll("#000017", sequentialColors[6])
+      updatedSpec = updatedSpec.replaceAll("#000018", sequentialColors[7])
+      updatedSpec = updatedSpec.replaceAll("#000019", sequentialColors[8])
+      updatedSpec = updatedSpec.replaceAll("#000020", sequentialColors[9])
     } else {
       updatedSpec = figure.spec.replaceAll("#000001", "#636efa")
       updatedSpec = updatedSpec.replaceAll("#000002", "#EF553B")
