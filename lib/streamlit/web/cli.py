@@ -83,7 +83,7 @@ def _download_remote(main_script_path: str, url_path: str) -> None:
             resp.raise_for_status()
             fp.write(resp.content)
         except requests.exceptions.RequestException as e:
-            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
+            raise click.BadParameter(f"Unable to fetch {url_path}.\n{e}")
 
 
 @click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
@@ -203,7 +203,7 @@ def main_run(target: str, args=None, **kwargs):
             _main_run(main_script_path, args, flag_options=kwargs)
     else:
         if not os.path.exists(target):
-            raise click.BadParameter("File does not exist: {}".format(target))
+            raise click.BadParameter(f"File does not exist: {target}")
         _main_run(target, args, flag_options=kwargs)
 
 
