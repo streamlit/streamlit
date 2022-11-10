@@ -262,7 +262,9 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         """
         with mock.patch(
             "streamlit.runtime.media_file_manager.MediaFileManager.add"
-        ) as mock_mfm_add:
+        ) as mock_mfm_add, mock.patch(
+            "streamlit.runtime.caching.save_image_data"
+        ) as save_data:
             mock_mfm_add.return_value = "https://mockoutputurl.com"
 
             result = image.image_to_url(

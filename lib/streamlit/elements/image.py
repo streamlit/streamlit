@@ -344,8 +344,10 @@ def image_to_url(
             mimetype, _ = mimetypes.guess_type(image)
             if mimetype is None:
                 mimetype = "application/octet-stream"
+
+            url = runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
             caching.save_image_data(image, mimetype, image_id)
-            return runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
+            return url
 
     # PIL Images
     elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
@@ -393,8 +395,9 @@ def image_to_url(
     mimetype = _get_image_format_mimetype(image_format)
 
     if runtime.exists():
+        url = runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
         caching.save_image_data(image_data, mimetype, image_id)
-        return runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
+        return url
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
         return ""

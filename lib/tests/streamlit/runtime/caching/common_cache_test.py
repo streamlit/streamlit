@@ -303,13 +303,13 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay(self, _, cache_decorator):
         @cache_decorator
-        def foo(i):
+        def foo_replay(i):
             st.text(i)
             return i
 
-        foo(1)
+        foo_replay(1)
         st.text("---")
-        foo(1)
+        foo_replay(1)
 
         text = self.get_text_delta_contents()
 
