@@ -15,7 +15,19 @@
 import plotly.graph_objects as go
 import plotly.io as pio
 
-# Start at #0000001 because people may be likely to use #000000
+# This is the streamlit theme for plotly where we pass in a template.data
+# and a template.layout.
+
+# Template.data is for changing specific graph properties in a general aspect
+# such as Contour plots or Waterfall plots.
+
+# Template.layout is for changing things such as the x axis and fonts and other
+# general layout properties for general graphs.
+
+# We pass in temporary colors to the frontend and the frontend will replace
+# those colors because we want to change colors based on the background color.
+
+# Start at #0000001 because developers may be likely to use #000000
 CATEGORY_0 = "#000001"
 CATEGORY_1 = "#000002"
 CATEGORY_2 = "#000003"
@@ -62,6 +74,12 @@ FADED_TEXT_05_38 = "#000039"
 BG_MIX_39 = "#000040"
 
 BODY_FONT = '"Source Sans Pro", sans-serif'
+
+
+# Plotly represents continuous colorscale through an array of pairs.
+# The pair's first index is the starting point and the next pair's first index is the end point.
+# The pair's second index is the starting color and the next pair's second index is the end color.
+# For more information, please refer to https://plotly.com/python/colorscales/
 
 streamlit_colorscale = [
     [0.0, SEQUENTIAL_10],

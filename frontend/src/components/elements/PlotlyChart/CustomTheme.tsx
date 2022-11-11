@@ -200,6 +200,15 @@ export function applyStreamlitThemeTemplateLayout(
   merge(layout, streamlitTheme)
 }
 
+/**
+ * Replace the colors that we are using from streamlit_plotly_theme.py.
+ * This is done so that we change colors based on the background color
+ * as the backend has no idea of the background color.
+ * @param spec the spec that we want to update
+ * @param theme
+ * @param elTheme element.theme
+ * @returns the updated spec with the correct theme colors
+ */
 function replaceCategoricalColors(
   spec: string,
   theme: Theme,
