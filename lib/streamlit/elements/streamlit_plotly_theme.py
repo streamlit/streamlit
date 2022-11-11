@@ -111,6 +111,9 @@ pio.templates["streamlit"] = go.layout.Template(
                 ),
             )
         ],
+        histogram2d=[
+            go.layout.template.data.Histogram2d(colorscale=streamlit_colorscale)
+        ],
         waterfall=[
             go.layout.template.data.Waterfall(
                 increasing=go.waterfall.Increasing(

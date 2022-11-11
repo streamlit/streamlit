@@ -25,11 +25,6 @@ import streamlit as st
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
 
-# Add histogram data
-x1: "np.typing.NDArray[np.float_]" = np.random.randn(200) - 2
-x2: "np.typing.NDArray[np.float_]" = np.random.randn(200)
-x3: "np.typing.NDArray[np.float_]" = np.random.randn(200) + 2
-
 df_bubble = px.data.gapminder()
 fig_bubble = px.scatter(
     df_bubble.query("year==2007"),
@@ -211,4 +206,10 @@ fig = px.bar(
     height=400,
 )
 
+st.plotly_chart(fig)
+
+# Histogram chart
+df = px.data.tips()
+
+fig = px.density_heatmap(df, x="total_bill", y="tip")
 st.plotly_chart(fig)
