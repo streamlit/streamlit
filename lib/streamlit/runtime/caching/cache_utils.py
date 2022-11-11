@@ -71,6 +71,13 @@ class WidgetMsgMetadata:
 
 
 @dataclass(frozen=True)
+class MediaMsgData:
+    image_data: Union[bytes, str]
+    mimetype: str
+    image_id: str
+
+
+@dataclass(frozen=True)
 class ElementMsgData:
     """An element's message and related metadata for
     replaying that element's function call.
@@ -83,6 +90,7 @@ class ElementMsgData:
     id_of_dg_called_on: str
     returned_dgs_id: str
     widget_metadata: Optional[WidgetMsgMetadata] = None
+    media_data: Optional[List[MediaMsgData]] = None
 
 
 @dataclass(frozen=True)
@@ -291,6 +299,11 @@ def replay_result_messages(
                         None,
                         msg.delta_type,
                     )
+                if msg.media_data is not None:
+                    for data in msg.media_data:
+                        runtime.get_instance().media_file_mgr.add(
+                            data.image_data, data.mimetype, data.image_id
+                        )
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 maybe_dg = dg._enqueue(msg.delta_type, msg.message)
                 if isinstance(maybe_dg, DeltaGenerator):
@@ -552,6 +565,7 @@ class CacheMessagesCallStack(threading.local):
         self._seen_dg_stack: List[Set[str]] = []
         self._most_recent_messages: List[MsgData] = []
         self._registered_metadata: Optional[WidgetMetadata[Any]] = None
+        self._image_data: List[MediaMsgData] = []
         self._cache_type = cache_type
         self._allow_widgets: int = 0
 
@@ -596,9 +610,10 @@ class CacheMessagesCallStack(threading.local):
                 widget_meta = WidgetMsgMetadata(
                     wid, None, metadata=self._registered_metadata
                 )
-                self._registered_metadata = None
             else:
                 widget_meta = None
+
+            image_data = self._image_data
 
             if self._allow_widgets or widget_meta is None:
                 msgs.append(
@@ -608,8 +623,14 @@ class CacheMessagesCallStack(threading.local):
                         id_to_save,
                         returned_dg_id,
                         widget_meta,
+                        image_data,
                     )
                 )
+
+            # Reset instance state, now that it has been used for the
+            # associated element.
+            self._image_data = []
+            self._registered_metadata = None
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
 
@@ -643,6 +664,11 @@ class CacheMessagesCallStack(threading.local):
 
     def save_widget_metadata(self, metadata: WidgetMetadata[Any]) -> None:
         self._registered_metadata = metadata
+
+    def save_image_data(
+        self, image_data: Union[bytes, str], mimetype: str, image_id: str
+    ) -> None:
+        self._image_data.append(MediaMsgData(image_data, mimetype, image_id))
 
     @contextlib.contextmanager
     def allow_widgets(self) -> Iterator[None]:
