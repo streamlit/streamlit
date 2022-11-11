@@ -56,7 +56,7 @@ class MediaTest(DeltaGeneratorTestCase):
         """
         with mock.patch(
             "streamlit.runtime.media_file_manager.MediaFileManager.add"
-        ) as mock_mfm_add, mock.patch("streamlit.runtime.caching.save_image_data"):
+        ) as mock_mfm_add, mock.patch("streamlit.runtime.caching.save_media_data"):
             mock_mfm_add.return_value = "https://mockoutputurl.com"
 
             if media_kind is TestMediaKind.AUDIO:
