@@ -105,7 +105,7 @@ class CachedStFunctionWarning(StreamlitAPIWarning):
         cached_func: types.FunctionType,
     ):
         args = {
-            "st_func_name": f"`st.{st_func_name}()` or `st.write()`",
+            "st_func_name": f"`st.{st_func_name}()`",
             "func_name": self._get_cached_func_name_md(cached_func),
             "decorator_name": cache_type.value,
         }
