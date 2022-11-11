@@ -161,9 +161,9 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
     if data is None:
         return json.dumps(_DEFAULT_MAP)
 
-    # TODO(harahu): The ignore statement here is because iterables don't have
-    #  the empty attribute. This is either a bug, or the documented data type
-    #  is too broad. One or the other should be addressed, and the ignore
+    # TODO(harahu): iterables don't have the empty attribute. This is either
+    # a bug, or the documented data type is too broad. One or the other
+    # should be addressed
     if hasattr(data, "empty") and data.empty:
         return json.dumps(_DEFAULT_MAP)
 
