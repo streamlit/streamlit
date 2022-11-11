@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// This tests that images replay as expected. We assume that caching working
+// overall is covered by other tests.
+
 describe("st.image replay", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
