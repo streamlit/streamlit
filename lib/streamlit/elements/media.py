@@ -247,7 +247,7 @@ def _marshall_av_media(
         file_url = runtime.get_instance().media_file_mgr.add(
             data_or_filename, mimetype, coordinates
         )
-        caching.save_image_data(data_or_filename, mimetype, coordinates)
+        caching.save_media_data(data_or_filename, mimetype, coordinates)
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
         file_url = ""
