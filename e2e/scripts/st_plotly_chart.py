@@ -30,19 +30,6 @@ x1: "np.typing.NDArray[np.float_]" = np.random.randn(200) - 2
 x2: "np.typing.NDArray[np.float_]" = np.random.randn(200)
 x3: "np.typing.NDArray[np.float_]" = np.random.randn(200) + 2
 
-# Group data together
-hist_data = [x1, x2, x3]
-group_labels = ["Group 1", "Group 2", "Group 3"]
-bin_size = [0.1, 0.25, 0.5]
-
-# Create distribution plot with custom bin_size
-chart = ff.create_distplot(hist_data, group_labels, bin_size)
-
-# tests no streamlit theme plot
-st.plotly_chart(chart, theme=None)
-
-# Bubble Chart
-# Tests Discrete coloring
 df_bubble = px.data.gapminder()
 fig_bubble = px.scatter(
     df_bubble.query("year==2007"),
@@ -54,6 +41,12 @@ fig_bubble = px.scatter(
     log_x=True,
     size_max=60,
 )
+
+# tests no streamlit theme plot
+st.plotly_chart(fig_bubble, theme=None)
+
+# Bubble Chart
+# Tests Discrete coloring with streamlit theme
 st.plotly_chart(fig_bubble, theme="streamlit")
 
 # Candlestick Chart
