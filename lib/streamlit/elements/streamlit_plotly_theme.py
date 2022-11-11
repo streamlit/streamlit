@@ -100,6 +100,7 @@ pio.templates["streamlit"] = go.layout.Template(
         contourcarpet=[
             go.layout.template.data.Contourcarpet(colorscale=streamlit_colorscale)
         ],
+        heatmap=[go.layout.template.data.Heatmap(colorscale=streamlit_colorscale)],
         candlestick=[
             go.layout.template.data.Candlestick(
                 decreasing=go.candlestick.Decreasing(

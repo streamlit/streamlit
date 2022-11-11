@@ -18,7 +18,7 @@ import numpy as np
 import plotly.express as px
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
-import plotly.io as pio
+from plotly.subplots import make_subplots
 
 import streamlit as st
 
@@ -41,14 +41,8 @@ chart = ff.create_distplot(hist_data, group_labels, bin_size)
 # tests no streamlit theme plot
 st.plotly_chart(chart, theme=None)
 
-# Bar Chart
-# tests applyStreamlitThemeTemplateData and applyDiscreteColors
-long_df = px.data.medals_long()
-fig_bar = px.bar(long_df, x="nation", y="count", color="medal", title="Long-Form Input")
-st.plotly_chart(fig_bar, theme="streamlit")
-
 # Bubble Chart
-# tests applyDiscreteColors and applyStreamlitThemeData, specifically the bar line code
+# Tests Discrete coloring
 df_bubble = px.data.gapminder()
 fig_bubble = px.scatter(
     df_bubble.query("year==2007"),
@@ -63,7 +57,6 @@ fig_bubble = px.scatter(
 st.plotly_chart(fig_bubble, theme="streamlit")
 
 # Candlestick Chart
-# tests applyUniqueGraphColorsData
 open_data_candlestick = [33.0, 33.3, 33.5, 33.0, 34.1]
 high_data_candlestick = [33.1, 33.3, 33.6, 33.2, 34.8]
 low_data_candlestick = [32.7, 32.7, 32.8, 32.6, 32.8]
@@ -88,40 +81,38 @@ fig_candlestick = go.Figure(
 )
 st.plotly_chart(fig_candlestick, theme="streamlit")
 
-# Sunburst Chart
-# tests customdata code in applyDiscreteColors
+# Tests sunburst charts and color parameter using streamlit colors
 df = px.data.tips()
 fig_sunburst = px.sunburst(
     df, path=["sex", "day", "time"], values="total_bill", color="day"
 )
 st.plotly_chart(fig_sunburst, theme="streamlit")
 
-# Contour Plot
-# tests applyColorscale
-fig_contour = go.Figure(
-    data=go.Contour(
-        z=[
-            [10, 10.625, 12.5, 15.625, 20],
-            [5.625, 6.25, 8.125, 11.25, 15.625],
-            [2.5, 3.125, 5.0, 8.125, 12.5],
-            [0.625, 1.25, 3.125, 6.25, 10.625],
-            [0, 0.625, 2.5, 5.625, 10],
-        ]
-    )
+# Contour Plot and Heatmap
+fig = make_subplots(
+    rows=2, cols=2, subplot_titles=("connectgaps = False", "connectgaps = True")
 )
-st.plotly_chart(fig_contour, theme="streamlit")
+z = [
+    [None, None, None, 12, 13, 14, 15, 16],
+    [None, 1, None, 11, None, None, None, 17],
+    [None, 2, 6, 7, None, None, None, 18],
+    [None, 3, None, 8, None, None, None, 19],
+    [5, 4, 10, 9, None, None, None, 20],
+    [None, None, None, 27, None, None, None, 21],
+    [None, None, None, 26, 25, 24, 23, 22],
+]
 
-# Dist plot
-# tests applyDiscreteColors, specifically the box type code
-df = px.data.tips()
-fig_dist = px.histogram(
-    df, x="total_bill", y="tip", color="sex", marginal="rug", hover_data=df.columns
-)
-st.plotly_chart(fig_dist, theme="streamlit")
+fig.add_trace(go.Contour(z=z, showscale=False), 1, 1)
+fig.add_trace(go.Contour(z=z, showscale=False, connectgaps=True), 1, 2)
+fig.add_trace(go.Heatmap(z=z, showscale=False, zsmooth="best"), 2, 1)
+fig.add_trace(go.Heatmap(z=z, showscale=False, connectgaps=True, zsmooth="best"), 2, 2)
 
+fig["layout"]["yaxis1"].update(title="Contour map")
+fig["layout"]["yaxis3"].update(title="Heatmap")
+
+st.plotly_chart(fig, theme="streamlit")
 
 # Waterfall Chart
-# tests ApplyUniqueGraphColorsData waterfall code
 fig_waterfall = go.Figure(
     go.Waterfall(
         name="20",
@@ -146,14 +137,12 @@ fig_waterfall.update_layout(title="Profit and loss statement 2018", showlegend=T
 st.plotly_chart(fig_waterfall, theme="streamlit")
 
 # Ternary Chart
-# tests applyStreamlitThemeTemplateLayout, specifically the ternary code
 df = px.data.election()
 fig_ternary = px.scatter_ternary(df, a="Joly", b="Coderre", c="Bergeron")
 
 st.plotly_chart(fig_ternary, theme="streamlit")
 
 # Table Plot
-# tests ApplyUniqueGraphColorsData, specifically the table code
 fig_table = go.Figure(
     data=[
         go.Table(
