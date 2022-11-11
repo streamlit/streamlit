@@ -55,8 +55,6 @@ class GraphvizMixin:
 
         Example
         -------
-
-        >>> import streamlit as st
         >>> import graphviz
         >>>
         >>> # Create a graphlib graph object
