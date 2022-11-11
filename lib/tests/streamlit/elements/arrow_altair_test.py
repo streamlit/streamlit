@@ -94,6 +94,37 @@ class ArrowAltairTest(DeltaGeneratorTestCase):
         y_scale = _deep_get(spec_dict, "encoding", "y", "scale", "type")
         self.assertNotEqual(y_scale, "utc")
 
+    @parameterized.expand(
+        [
+            ("streamlit", "streamlit"),
+            (None, ""),
+        ]
+    )
+    def test_theme(self, theme_value, proto_value):
+        df = pd.DataFrame(
+            {"index": [date(2019, 8, 9), date(2019, 8, 10)], "numbers": [1, 10]}
+        ).set_index("index")
+
+        chart = altair._generate_chart(ChartType.LINE, df)
+        st._arrow_altair_chart(chart, theme=theme_value)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.arrow_vega_lite_chart.theme, proto_value)
+
+    def test_bad_theme(self):
+        df = pd.DataFrame(
+            {"index": [date(2019, 8, 9), date(2019, 8, 10)], "numbers": [1, 10]}
+        ).set_index("index")
+
+        chart = altair._generate_chart(ChartType.LINE, df)
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st._arrow_altair_chart(chart, theme="bad_theme")
+
+        self.assertEqual(
+            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
+            str(exc.exception),
+        )
+
 
 class ArrowChartsTest(DeltaGeneratorTestCase):
     """Test Arrow charts."""

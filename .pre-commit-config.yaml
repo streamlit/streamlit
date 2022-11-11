@@ -34,6 +34,15 @@ repos:
         args:
           - --filter-files
         exclude: ^lib/streamlit/__init__\.py$
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v1.7.7
+    hooks:
+      - id: autoflake
+        args:
+          - "--in-place"
+          - "--ignore-init-module-imports"
+          - "--ignore-pass-after-docstring"
+          - "--remove-unused-variables"
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
@@ -143,3 +152,13 @@ repos:
           (?x)
           /vendor/
           |^component-lib/declarations/apache-arrow
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: |
+          (?x)
+          ^frontend/src/assets/
+          |^NOTICES$
+          |^proto/streamlit/proto/openmetrics_data_model.proto$
+          |\.snap$

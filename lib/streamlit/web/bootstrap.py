@@ -102,6 +102,7 @@ def _fix_matplotlib_crash() -> None:
 
             matplotlib.use("Agg")
         except ImportError:
+            # Matplotlib is not installed. No need to do anything.
             pass
 
 
@@ -122,8 +123,6 @@ def _fix_tornado_crash() -> None:
     remove and bump tornado requirement for py38
     """
     if env_util.IS_WINDOWS and sys.version_info >= (3, 8):
-        import asyncio
-
         try:
             from asyncio import (  # type: ignore[attr-defined]
                 WindowsProactorEventLoopPolicy,
@@ -159,8 +158,8 @@ def _on_server_start(server: Server) -> None:
     # errors and display them here.
     try:
         secrets.load_if_toml_exists()
-    except BaseException as e:
-        LOGGER.error(f"Failed to load {SECRETS_FILE_LOC}", exc_info=e)
+    except Exception as ex:
+        LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):

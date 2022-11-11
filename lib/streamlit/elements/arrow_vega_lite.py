@@ -15,13 +15,14 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
 
-from typing_extensions import Final
+from typing_extensions import Final, Literal
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -42,13 +43,14 @@ class ArrowVegaLiteMixin:
         data: Data = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
 
@@ -60,6 +62,10 @@ class ArrowVegaLiteMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Vega-Lite's native `width` value.
+
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -89,12 +95,17 @@ class ArrowVegaLiteMixin:
         translated to the syntax shown above.
 
         """
+        if theme != "streamlit" and theme != None:
+            raise StreamlitAPIException(
+                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+            )
         proto = ArrowVegaLiteChartProto()
         marshall(
             proto,
             data,
             spec,
             use_container_width=use_container_width,
+            theme=theme,
             **kwargs,
         )
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
@@ -110,6 +121,7 @@ def marshall(
     data: Data = None,
     spec: Optional[Dict[str, Any]] = None,
     use_container_width: bool = False,
+    theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs,
 ):
     """Construct a Vega-Lite chart object.
@@ -172,6 +184,7 @@ def marshall(
 
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
+    proto.theme = theme or ""
 
     if data is not None:
         arrow.marshall(proto.data, data)

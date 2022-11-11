@@ -76,5 +76,5 @@ class ExceptionCapturingThread(threading.Thread):
     def run(self) -> None:
         try:
             super().run()
-        except BaseException as e:
+        except Exception as e:
             self._unhandled_exception = e

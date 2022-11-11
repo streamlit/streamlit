@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Widget Label renders WidgetLabel as expected 1`] = `
+<StyledWidgetLabel
+  aria-hidden="true"
+>
+  <StreamlitMarkdown
+    allowHTML={false}
+    isLabel={true}
+    source="Label"
+  />
+</StyledWidgetLabel>
+`;

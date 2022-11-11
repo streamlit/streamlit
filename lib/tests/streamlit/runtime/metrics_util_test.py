@@ -27,7 +27,7 @@ import streamlit.components.v1 as components
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import memo_decorator, singleton_decorator
 from streamlit.runtime.legacy_caching import caching
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -56,12 +56,9 @@ class MetricsUtilTest(unittest.TestCase):
             mock_open(read_data=file_data),
             create=True,
         ), patch(
-            "streamlit.runtime.metrics_util.os.path.isfile"
-        ) as path_isfile:
-
-            def path_isfile(path):
-                return path == "/etc/machine-id"
-
+            "streamlit.runtime.metrics_util.os.path.isfile",
+            side_effect=lambda path: path == "/etc/machine-id",
+        ):
             machine_id = metrics_util._get_machine_id_v3()
         self.assertEqual(machine_id, file_data)
 
@@ -76,12 +73,9 @@ class MetricsUtilTest(unittest.TestCase):
             mock_open(read_data=file_data),
             create=True,
         ), patch(
-            "streamlit.runtime.metrics_util.os.path.isfile"
-        ) as path_isfile:
-
-            def path_isfile(path):
-                return path == "/var/lib/dbus/machine-id"
-
+            "streamlit.runtime.metrics_util.os.path.isfile",
+            side_effect=lambda path: path == "/var/lib/dbus/machine-id",
+        ):
             machine_id = metrics_util._get_machine_id_v3()
         self.assertEqual(machine_id, file_data)
 
@@ -98,7 +92,7 @@ class MetricsUtilTest(unittest.TestCase):
 
 class PageTelemetryTest(DeltaGeneratorTestCase):
     def setUp(self):
-        super().setUp(self)
+        super().setUp()
         ctx = get_script_run_ctx()
         ctx.reset()
         ctx.gather_usage_stats = True
@@ -209,7 +203,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st._transparent_write, "magic"),
+            (magic_funcs.transparent_write, "magic"),
             (st.experimental_memo.clear, "clear_memo"),
             (st.experimental_singleton.clear, "clear_singleton"),
             (st.session_state.__setattr__, "session_state.set_attr"),

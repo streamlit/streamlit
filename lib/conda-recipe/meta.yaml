@@ -39,7 +39,7 @@ build:
     {% endfor %}
   script_env:
    - GIT_HASH
-   - ST_CONDA_BUILD
+   - SNOWPARK_CONDA_BUILD
 
 requirements:
   host:

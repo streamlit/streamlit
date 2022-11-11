@@ -148,8 +148,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      TEST_ERROR_MESSAGE
+      TEST_ERROR_MESSAGE,
+      expect.anything()
     )
   })
 
@@ -173,8 +173,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      "Connection timed out."
+      "Connection timed out.",
+      expect.anything()
     )
   })
 
@@ -202,8 +202,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      "Connection failed with status 0."
+      "Connection failed with status 0.",
+      expect.anything()
     )
   })
 
@@ -229,8 +229,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      "Connection failed with status 0."
+      "Connection failed with status 0.",
+      expect.anything()
     )
   })
 
@@ -280,8 +280,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA_LOCALHOST.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      NoResponse
+      NoResponse,
+      expect.anything()
     )
   })
 
@@ -320,8 +320,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      Forbidden
+      Forbidden,
+      expect.anything()
     )
   })
 
@@ -350,8 +350,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      `Connection failed with status ${TEST_ERROR.response.status}, and response "${TEST_ERROR.response.data}".`
+      `Connection failed with status ${TEST_ERROR.response.status}, and response "${TEST_ERROR.response.data}".`,
+      expect.anything()
     )
   })
 
@@ -396,8 +396,8 @@ describe("doInitPings", () => {
     const timeouts: number[] = []
     const callback = (
       _times: number,
-      timeout: number,
-      _errorNode: React.ReactNode
+      _errorNode: React.ReactNode,
+      timeout: number
     ): void => {
       timeouts.push(timeout)
     }
@@ -439,8 +439,8 @@ describe("doInitPings", () => {
     const timeouts: number[] = []
     const callback = (
       _times: number,
-      timeout: number,
-      _errorNode: React.ReactNode
+      _errorNode: React.ReactNode,
+      timeout: number
     ): void => {
       timeouts.push(timeout)
     }
@@ -478,8 +478,8 @@ describe("doInitPings", () => {
     const timeouts: number[] = []
     const callback = (
       _times: number,
-      timeout: number,
-      _errorNode: React.ReactNode
+      _errorNode: React.ReactNode,
+      timeout: number
     ): void => {
       timeouts.push(timeout)
     }
@@ -496,8 +496,8 @@ describe("doInitPings", () => {
     const timeouts2: number[] = []
     const callback2 = (
       _times: number,
-      timeout: number,
-      _errorNode: React.ReactNode
+      _errorNode: React.ReactNode,
+      timeout: number
     ): void => {
       timeouts2.push(timeout)
     }

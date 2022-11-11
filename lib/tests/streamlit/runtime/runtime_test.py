@@ -66,19 +66,19 @@ class RuntimeSingletonTest(unittest.TestCase):
 
     def test_multiple_runtime_error(self):
         """Creating multiple Runtimes raises an error."""
-        r1 = Runtime(MagicMock())
+        Runtime(MagicMock())
         with self.assertRaises(RuntimeError):
-            r2 = Runtime(MagicMock())
+            Runtime(MagicMock())
 
     def test_instance_class_method(self):
         """Runtime.instance() returns our singleton instance."""
         with self.assertRaises(RuntimeError):
             # No Runtime: error
-            instance = Runtime.instance()
+            Runtime.instance()
 
         # Runtime instantiated: no error
         _ = Runtime(MagicMock())
-        instance = Runtime.instance()
+        Runtime.instance()
 
     def test_exists(self):
         """Runtime.exists() returns True iff the Runtime singleton exists."""

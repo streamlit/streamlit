@@ -16,6 +16,8 @@
 "arrow") based on a config option"""
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
+from typing_extensions import Literal
+
 from streamlit import config
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -47,7 +49,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -117,7 +119,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The table data.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -165,7 +167,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -248,7 +250,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -331,7 +333,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -397,6 +399,7 @@ class DataFrameSelectorMixin:
         self,
         altair_chart: "Chart",
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -408,6 +411,10 @@ class DataFrameSelectorMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Altair's native `width` value.
+
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
 
         Example
         -------
@@ -435,7 +442,7 @@ class DataFrameSelectorMixin:
         """
 
         if _use_arrow():
-            return self.dg._arrow_altair_chart(altair_chart, use_container_width)
+            return self.dg._arrow_altair_chart(altair_chart, use_container_width, theme)
         else:
             return self.dg._legacy_altair_chart(altair_chart, use_container_width)
 
@@ -445,6 +452,7 @@ class DataFrameSelectorMixin:
         data: "Data" = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
@@ -467,6 +475,10 @@ class DataFrameSelectorMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Vega-Lite's native `width` value.
+
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -502,7 +514,7 @@ class DataFrameSelectorMixin:
         """
         if _use_arrow():
             return self.dg._arrow_vega_lite_chart(
-                data, spec, use_container_width, **kwargs
+                data, spec, use_container_width, theme, **kwargs
             )
         else:
             return self.dg._legacy_vega_lite_chart(
@@ -515,7 +527,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
             Table to concat. Optional.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).

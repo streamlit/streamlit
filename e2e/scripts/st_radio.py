@@ -16,6 +16,7 @@ import pandas as pd
 
 import streamlit as st
 from streamlit import runtime
+from tests.streamlit import pyspark_mocks
 
 options = ("female", "male")
 i1 = st.radio("radio 1", options, 1)
@@ -51,3 +52,5 @@ if runtime.exists():
     st.radio("radio 9", options, 1, key="radio9", on_change=on_change)
     st.write("value 9:", st.session_state.radio9)
     st.write("radio changed:", "radio_changed" in st.session_state)
+
+st.radio("PySpark radio", pyspark_mocks.DataFrame())  # type: ignore

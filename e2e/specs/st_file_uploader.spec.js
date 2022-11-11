@@ -127,7 +127,7 @@ describe("st.file_uploader", () => {
 
         cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
-          uploaderIndex
+          1
         ).should("contain.text", "True");
 
         cy.getIndexed(
@@ -154,7 +154,7 @@ describe("st.file_uploader", () => {
 
         cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
-          uploaderIndex
+          1
         ).should("contain.text", "True");
 
         // On rerun, make sure file is still returned
@@ -252,7 +252,7 @@ describe("st.file_uploader", () => {
         );
         cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
-          uploaderIndex
+          5
         ).should("contain.text", "True");
       });
     });
@@ -334,7 +334,7 @@ describe("st.file_uploader", () => {
         );
         cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
-          uploaderIndex
+          5
         ).should("contain.text", "True");
       });
     });

@@ -22,24 +22,14 @@ import threading
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from google.protobuf.message import Message
+from typing_extensions import Protocol, runtime_checkable
 
 import streamlit as st
-from streamlit import type_util, util
-from streamlit.elements import NONWIDGET_ELEMENTS
+from streamlit import runtime, type_util, util
+from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.elements.spinner import spinner
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -55,26 +45,47 @@ from streamlit.runtime.caching.cache_errors import (
     get_cached_func_name_md,
 )
 from streamlit.runtime.caching.hashing import update_hash
-
-if TYPE_CHECKING:
-    from streamlit.delta_generator import DeltaGenerator
+from streamlit.runtime.scriptrunner.script_run_context import (
+    ScriptRunContext,
+    get_script_run_ctx,
+)
+from streamlit.runtime.state.session_state import WidgetMetadata
 
 _LOGGER = get_logger(__name__)
 
 
-@dataclass
+@runtime_checkable
+class Widget(Protocol):
+    id: str
+
+
+@dataclass(frozen=True)
+class WidgetMsgMetadata:
+    """Everything needed for replaying a widget and treating it as an implicit
+    argument to a cached function, beyond what is stored for all elements.
+    """
+
+    widget_id: str
+    widget_value: Any
+    metadata: WidgetMetadata[Any]
+
+
+@dataclass(frozen=True)
 class ElementMsgData:
-    """A non-interactive element's message and related metadata for
+    """An element's message and related metadata for
     replaying that element's function call.
+
+    widget_metadata is filled in if and only if this element is a widget.
     """
 
     delta_type: str
     message: Message
     id_of_dg_called_on: str
     returned_dgs_id: str
+    widget_metadata: Optional[WidgetMsgMetadata] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class BlockMsgData:
     message: Block
     id_of_dg_called_on: str
@@ -82,6 +93,62 @@ class BlockMsgData:
 
 
 MsgData = Union[ElementMsgData, BlockMsgData]
+
+"""
+Note [Cache result structure]
+
+The cache for a decorated function's results is split into two parts to enable
+handling widgets invoked by the function.
+
+Widgets act as implicit additional inputs to the cached function, so they should
+be used when deriving the cache key. However, we don't know what widgets are
+involved without first calling the function! So, we use the first execution
+of the function with a particular cache key to record what widgets are used,
+and use the current values of those widgets to derive a second cache key to
+look up the function execution's results. The combination of first and second
+cache keys act as one true cache key, just split up because the second part depends
+on the first.
+
+We need to treat widgets as implicit arguments of the cached function, because
+the behavior of the function, inluding what elements are created and what it
+returns, can be and usually will be influenced by the values of those widgets.
+For example:
+> @st.memo
+> def example_fn(x):
+>     y = x + 1
+>     if st.checkbox("hi"):
+>         st.write("you checked the thing")
+>         y = 0
+>     return y
+>
+> example_fn(2)
+
+If the checkbox is checked, the function call should return 0 and the checkbox and
+message should be rendered. If the checkbox isn't checked, only the checkbox should
+render, and the function will return 3.
+
+
+There is a small catch in this. Since what widgets execute could depend on the values of
+any prior widgets, if we replace the `st.write` call in the example with a slider,
+the first time it runs, we would miss the slider because it wasn't called,
+so when we later execute the function with the checkbox checked, the widget cache key
+would not include the state of the slider, and would incorrectly get a cache hit
+for a different slider value.
+
+In principle the cache could be function+args key -> 1st widget key -> 2nd widget key
+... -> final widget key, with each widget dependent on the exact values of the widgets
+seen prior. This would prevent unnecessary cache misses due to differing values of widgets
+that wouldn't affect the function's execution because they aren't even created.
+But this would add even more complexity and both conceptual and runtime overhead, so it is
+unclear if it would be worth doing.
+
+Instead, we can keep the widgets as one cache key, and if we encounter a new widget
+while executing the function, we just update the list of widgets to include it.
+This will cause existing cached results to be invalidated, which is bad, but to
+avoid it we would need to keep around the full list of widgets and values for each
+widget cache key so we could compute the updated key, which is probably too expensive
+to be worth it.
+"""
 
 
 @dataclass
@@ -94,6 +161,32 @@ class CachedResult:
     messages: List[MsgData]
     main_id: str
     sidebar_id: str
+
+
+@dataclass
+class MultiCacheResults:
+    """Widgets called by a cache-decorated function, and a mapping of the
+    widget-derived cache key to the final results of executing the function.
+    """
+
+    widget_ids: Set[str]
+    results: Dict[str, CachedResult]
+
+    def get_current_widget_key(
+        self, ctx: ScriptRunContext, cache_type: CacheType
+    ) -> str:
+        state = ctx.session_state
+        # Compute the key using only widgets that have values. A missing widget
+        # can be ignored because we only care about getting different keys
+        # for different widget values, and for that purpose doing nothing
+        # to the running hash is just as good as including the widget with a
+        # sentinel value. But by excluding it, we might get to reuse a result
+        # saved before we knew about that widget.
+        widget_values = [
+            (wid, state[wid]) for wid in sorted(self.widget_ids) if wid in state
+        ]
+        widget_key = _make_widget_key(widget_values, cache_type)
+        return widget_key
 
 
 class Cache:
@@ -136,10 +229,12 @@ class CachedFunction:
         func: types.FunctionType,
         show_spinner: Union[bool, str],
         suppress_st_warning: bool,
+        allow_widgets: bool,
     ):
         self.func = func
         self.show_spinner = show_spinner
         self.suppress_st_warning = suppress_st_warning
+        self.allow_widgets = allow_widgets
 
     @property
     def cache_type(self) -> CacheType:
@@ -178,15 +273,24 @@ def replay_result_messages(
     call is on one of them.
     """
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widgets import register_widget_from_metadata
 
     # Maps originally recorded dg ids to this script run's version of that dg
     returned_dgs: Dict[str, DeltaGenerator] = {}
     returned_dgs[result.main_id] = st._main
     returned_dgs[result.sidebar_id] = st.sidebar
+    ctx = get_script_run_ctx()
 
     try:
         for msg in result.messages:
             if isinstance(msg, ElementMsgData):
+                if msg.widget_metadata is not None:
+                    register_widget_from_metadata(
+                        msg.widget_metadata.metadata,
+                        ctx,
+                        None,
+                        msg.delta_type,
+                    )
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 maybe_dg = dg._enqueue(msg.delta_type, msg.message)
                 if isinstance(maybe_dg, DeltaGenerator):
@@ -242,14 +346,18 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with cached_func.warning_call_stack.calling_cached_function(
-                    func
-                ), cached_func.message_call_stack.calling_cached_function():
-                    if cached_func.suppress_st_warning:
-                        with cached_func.warning_call_stack.suppress_cached_st_function_warning():
-                            return_value = func(*args, **kwargs)
-                    else:
-                        return_value = func(*args, **kwargs)
+                with cached_func.warning_call_stack.calling_cached_function(func):
+                    with cached_func.message_call_stack.calling_cached_function():
+                        with cached_func.warning_call_stack.maybe_allow_widgets(
+                            cached_func.allow_widgets
+                        ):
+                            with cached_func.message_call_stack.maybe_allow_widgets(
+                                cached_func.allow_widgets
+                            ):
+                                with cached_func.warning_call_stack.maybe_suppress_cached_st_function_warning(
+                                    cached_func.suppress_st_warning
+                                ):
+                                    return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
                 try:
@@ -260,16 +368,14 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                     ):
 
                         class UnevaluatedDataFrameError(StreamlitAPIException):
-                            def __init__(self):
-                                super().__init__(
-                                    self,
-                                    f"""
-                                    The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated 
-                                    dataframe of type `snowflake.snowpark.DataFrame`. Please call `collect()` or `to_pandas()` on the 
-                                    dataframe before returning it, so `st.experimental_memo` can serialize and cache it.""",
-                                )
+                            pass
 
-                        raise UnevaluatedDataFrameError
+                        raise UnevaluatedDataFrameError(
+                            f"""
+                            The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated dataframe
+                            of type `snowflake.snowpark.DataFrame`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
+                            so `st.experimental_memo` can serialize and cache it."""
+                        )
                     raise UnserializableReturnValueError(
                         return_value=return_value, func=cached_func.func
                     )
@@ -308,6 +414,7 @@ class CacheWarningCallStack(threading.local):
         self._cached_func_stack: List[types.FunctionType] = []
         self._suppress_st_function_warning = 0
         self._cache_type = cache_type
+        self._allow_widgets: int = 0
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -329,6 +436,16 @@ class CacheWarningCallStack(threading.local):
             self._suppress_st_function_warning -= 1
             assert self._suppress_st_function_warning >= 0
 
+    @contextlib.contextmanager
+    def maybe_suppress_cached_st_function_warning(
+        self, suppress: bool
+    ) -> Iterator[None]:
+        if suppress:
+            with self.suppress_cached_st_function_warning():
+                yield
+        else:
+            yield
+
     def maybe_show_cached_st_function_warning(
         self,
         dg: "st.delta_generator.DeltaGenerator",
@@ -349,8 +466,14 @@ class CacheWarningCallStack(threading.local):
             The name of the Streamlit function that was called.
 
         """
+        # There are some elements not in either list, which we still want to warn about.
+        # Ideally we will fix this by either updating the lists or creating a better
+        # way of categorizing elements.
         if st_func_name in NONWIDGET_ELEMENTS:
             return
+        if st_func_name in WIDGETS and self._allow_widgets > 0:
+            return
+
         if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
             cached_func = self._cached_func_stack[-1]
             self._show_cached_st_function_warning(dg, st_func_name, cached_func)
@@ -366,6 +489,23 @@ class CacheWarningCallStack(threading.local):
         with self.suppress_cached_st_function_warning():
             e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
             dg.exception(e)
+
+    @contextlib.contextmanager
+    def allow_widgets(self) -> Iterator[None]:
+        self._allow_widgets += 1
+        try:
+            yield
+        finally:
+            self._allow_widgets -= 1
+            assert self._allow_widgets >= 0
+
+    @contextlib.contextmanager
+    def maybe_allow_widgets(self, allow: bool) -> Iterator[None]:
+        if allow:
+            with self.allow_widgets():
+                yield
+        else:
+            yield
 
 
 """
@@ -411,7 +551,9 @@ class CacheMessagesCallStack(threading.local):
         self._cached_message_stack: List[List[MsgData]] = []
         self._seen_dg_stack: List[Set[str]] = []
         self._most_recent_messages: List[MsgData] = []
+        self._registered_metadata: Optional[WidgetMetadata[Any]] = None
         self._cache_type = cache_type
+        self._allow_widgets: int = 0
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -438,11 +580,36 @@ class CacheMessagesCallStack(threading.local):
         executing cached functions, so they can be replayed any time the function's
         execution is skipped because they're in the cache.
         """
+        if not runtime.exists():
+            return
+
         id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
         for msgs in self._cached_message_stack:
-            msgs.append(
-                ElementMsgData(delta_type, element_proto, id_to_save, returned_dg_id)
-            )
+            if isinstance(element_proto, Widget):
+                wid = element_proto.id
+                # TODO replace `Message` with a more precise type
+                if not self._registered_metadata:
+                    _LOGGER.error(
+                        "Trying to save widget message that wasn't registered. This should not be possible."
+                    )
+                    raise AttributeError
+                widget_meta = WidgetMsgMetadata(
+                    wid, None, metadata=self._registered_metadata
+                )
+                self._registered_metadata = None
+            else:
+                widget_meta = None
+
+            if self._allow_widgets or widget_meta is None:
+                msgs.append(
+                    ElementMsgData(
+                        delta_type,
+                        element_proto,
+                        id_to_save,
+                        returned_dg_id,
+                        widget_meta,
+                    )
+                )
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
 
@@ -473,6 +640,26 @@ class CacheMessagesCallStack(threading.local):
             return acting_on_id
         else:
             return invoked_id
+
+    def save_widget_metadata(self, metadata: WidgetMetadata[Any]) -> None:
+        self._registered_metadata = metadata
+
+    @contextlib.contextmanager
+    def allow_widgets(self) -> Iterator[None]:
+        self._allow_widgets += 1
+        try:
+            yield
+        finally:
+            self._allow_widgets -= 1
+            assert self._allow_widgets >= 0
+
+    @contextlib.contextmanager
+    def maybe_allow_widgets(self, allow: bool) -> Iterator[None]:
+        if allow:
+            with self.allow_widgets():
+                yield
+        else:
+            yield
 
 
 def _make_value_key(
@@ -588,3 +775,14 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
         return params[arg_index].name
 
     return None
+
+
+def _make_widget_key(widgets: List[Tuple[str, Any]], cache_type: CacheType) -> str:
+    """
+    widget_id + widget_value pair -> hash
+    """
+    func_hasher = hashlib.new("md5")
+    for widget_id_val in widgets:
+        update_hash(widget_id_val, func_hasher, cache_type)
+
+    return func_hasher.hexdigest()

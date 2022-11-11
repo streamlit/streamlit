@@ -55,28 +55,19 @@ INSTALL_REQUIRES = [
     "watchdog; platform_system != 'Darwin'",
 ]
 
-# We want to exclude some dependencies in our internal conda distribution of
+# We want to exclude some dependencies in our internal Snowpark conda distribution of
 # Streamlit. These dependencies will be installed normally for both regular conda builds
-# and PyPI builds.
-# NOTE: These packages are still installed normally when running
-#       `pip install streamlit` and `conda install -c conda-forge streamlit`
-# TODO(vdonato): Change the names CONDA_OPTIONAL_DEPENDENCIES and ST_CONDA_BUILD to be
-# more explicitly about internal SnowPark things so that it's less likely for someone to
-# accidentally/unknowingly create a tornado-less Streamlit package.
-CONDA_OPTIONAL_DEPENDENCIES = [
+# and PyPI builds (that is, for people installing streamlit using either
+# `pip install streamlit` or `conda install -c conda-forge streamlit`)
+SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython!=3.1.19",
     "pydeck>=0.1.dev5",
     # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
     "tornado>=5.0",
 ]
 
-# NOTE: ST_CONDA_BUILD is used here (even though CONDA_BUILD is set
-# automatically when using the `conda build` command) because the
-# `load_setup_py_data()` conda build helper function does not have the
-# CONDA_BUILD environment variable set when it runs to generate our build
-# recipe from meta.yaml.
-if not os.getenv("ST_CONDA_BUILD"):
-    INSTALL_REQUIRES.extend(CONDA_OPTIONAL_DEPENDENCIES)
+if not os.getenv("SNOWPARK_CONDA_BUILD"):
+    INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
 
 class VerifyVersionCommand(install):

@@ -147,6 +147,7 @@ class MetricMixin:
                 if isinstance(value.item(), float) or isinstance(value.item(), int):
                     return str(value.item())
             except Exception:
+                # If the numpy item is not a valid value, the TypeError below will be raised.
                 pass
 
         raise TypeError(

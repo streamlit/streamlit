@@ -13,7 +13,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     permissions:
       # Additional permission needed to generate tag
@@ -42,7 +42,7 @@ jobs:
           git config --global user.name "Streamlit Bot"
 
           TAG="$(./scripts/pypi_nightly_create_tag.py)"
-          echo "::set-output name=tag::$TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
           ./scripts/update_version.py $TAG
           ./scripts/update_name.py streamlit-nightly
@@ -55,7 +55,7 @@ jobs:
           git push origin $TAG
       - if: ${{ failure() }}
         name: Nightly Tag Failure Slack Message
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py nightly tag
 
@@ -89,12 +89,18 @@ jobs:
     if: ${{ always() }}
     # By default, jobs listed in needs must all complete successfully for the dependent job to run. always() conditional
     # added as we'd like this job to run whether or not tests pass & slack us regarding failing tests.
-    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+    needs: [create-nightly-tag, run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
     env:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
     steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.create-nightly-tag.outputs.tag }}
+          persist-credentials: false
+          submodules: 'recursive'
       - if: ${{ needs.run-python-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly python
       - if: ${{ needs.run-javascript-tests.result == 'failure' }}
@@ -103,22 +109,22 @@ jobs:
         run: python scripts/slack_notifications.py nightly py_prod
       - if: ${{ needs.run-cypress-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly cypress
-  
+
   create-nightly-build:
     runs-on: ubuntu-latest
 
-    # Tag creation & tests must all complete successfully for nightly build job to run. 
+    # Tag creation & tests must all complete successfully for nightly build job to run.
     needs: [create-nightly-tag, run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
-          ref: ${{needs.create-nightly-tag.outputs.tag}}
+        with:
+          ref: ${{ needs.create-nightly-tag.outputs.tag }}
           persist-credentials: false
           submodules: 'recursive'
       - name: Set up Python 3.10
@@ -131,7 +137,7 @@ jobs:
         run: make develop
       - name: Verify git tag vs. version
         env:
-          TAG: ${{needs.create-nightly-tag.outputs.tag}}
+          TAG: ${{ needs.create-nightly-tag.outputs.tag }}
         run: |
           cd lib
           python setup.py verify
@@ -148,6 +154,6 @@ jobs:
           make distribute
       - if: ${{ failure() }}
         name: Nightly Build Failure Slack Message
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py nightly build

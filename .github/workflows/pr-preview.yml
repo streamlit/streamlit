@@ -9,7 +9,7 @@ on:
     types: [opened, synchronize, reopened]
 
 # Avoid duplicate workflows on same branch
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -19,7 +19,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     outputs:
       enable-setup: ${{ steps.exports.outputs.enable-setup }}
@@ -29,7 +29,7 @@ jobs:
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           persist-credentials: false
           submodules: 'recursive'
       - name: Set up Python 3.10
@@ -83,9 +83,9 @@ jobs:
 
           cd ../..
           # env variables don't carry over between gh action jobs
-          echo "::set-output name=enable-setup::${{ env.AWS_ACCESS_KEY_ID != '' }}"
-          echo "::set-output name=preview-branch::$PREVIEW_BRANCH"
-          echo "::set-output name=s3-url::https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
+          echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
+          echo "preview-branch=$PREVIEW_BRANCH" >> $GITHUB_OUTPUT
+          echo "s3-url=https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}" >> $GITHUB_OUTPUT
 
   setup-preview:
     runs-on: ubuntu-latest
@@ -95,14 +95,14 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
-    
+        shell: bash --login -eo pipefail {0}
+
     steps:
       - name: Checkout Core Previews Repo
         uses: actions/checkout@v3
-        with: 
+        with:
           repository: streamlit/core-previews
-          # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo. 
+          # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
           # Accessing streamlit/core-previews repo requires a separate auth token.
           token: ${{ secrets.CORE_PREVIEWS_REPO_TOKEN }}
       - name: Setup preview repo
