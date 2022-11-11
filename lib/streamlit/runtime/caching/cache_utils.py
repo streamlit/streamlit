@@ -612,12 +612,10 @@ class CacheMessagesCallStack(threading.local):
                 widget_meta = WidgetMsgMetadata(
                     wid, None, metadata=self._registered_metadata
                 )
-                self._registered_metadata = None
             else:
                 widget_meta = None
 
             image_data = self._image_data
-            self._image_data = []
 
             if self._allow_widgets or widget_meta is None:
                 msgs.append(
@@ -630,6 +628,11 @@ class CacheMessagesCallStack(threading.local):
                         image_data,
                     )
                 )
+
+            # Reset instance state, now that it has been used for the
+            # associated element.
+            self._image_data = []
+            self._registered_metadata = None
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
 
