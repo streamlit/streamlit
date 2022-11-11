@@ -60,7 +60,9 @@ class MetricMixin:
         Parameters
         ----------
         label : str
-            The header or Title for the metric
+            The header or title for the metric. The label can optionally contain
+            Markdown and supports the following elements: Bold, Italics,
+            Strikethroughs, Inline Code, Emojis, and Links.
         value : int, float, str, or None
              Value of the metric. None is rendered as a long dash.
         delta : int, float, str, or None
