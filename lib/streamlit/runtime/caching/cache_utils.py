@@ -368,16 +368,14 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                     ):
 
                         class UnevaluatedDataFrameError(StreamlitAPIException):
-                            def __init__(self):
-                                super().__init__(
-                                    self,
-                                    f"""
-                                    The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated 
-                                    dataframe of type `snowflake.snowpark.DataFrame`. Please call `collect()` or `to_pandas()` on the 
-                                    dataframe before returning it, so `st.experimental_memo` can serialize and cache it.""",
-                                )
+                            pass
 
-                        raise UnevaluatedDataFrameError
+                        raise UnevaluatedDataFrameError(
+                            f"""
+                            The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated dataframe
+                            of type `snowflake.snowpark.DataFrame`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
+                            so `st.experimental_memo` can serialize and cache it."""
+                        )
                     raise UnserializableReturnValueError(
                         return_value=return_value, func=cached_func.func
                     )

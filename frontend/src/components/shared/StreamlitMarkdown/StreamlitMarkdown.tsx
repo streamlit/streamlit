@@ -70,6 +70,21 @@ export interface Props {
   allowHTML: boolean
   style?: CSSProperties
   isCaption?: boolean
+
+  /**
+   * Only allows italics, bold, strikethrough, and emojis in button/download button labels
+   */
+  isButton?: boolean
+
+  /**
+   * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
+   */
+  isLabel?: boolean
+
+  /**
+   * Checkbox has larger label font sizing - same allowed elements as other widgets ^
+   */
+  isCheckbox?: boolean
 }
 
 /**
@@ -201,12 +216,24 @@ export interface RenderedMarkdownProps {
   allowHTML: boolean
 
   overrideComponents?: Components
+
+  /**
+   * Only allows italics, bold, strikethrough, and emojis in button/download button labels
+   */
+  isButton?: boolean
+
+  /**
+   * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
+   */
+  isLabel?: boolean
 }
 
 export function RenderedMarkdown({
   allowHTML,
   source,
   overrideComponents,
+  isLabel,
+  isButton,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -228,6 +255,14 @@ export function RenderedMarkdown({
     rehypePlugins.push(rehypeRaw)
   }
 
+  // limits allowed markdown, default is allow all
+  let allowed
+  if (isLabel) {
+    allowed = ["p", "em", "strong", "del", "code", "a"]
+  } else if (isButton) {
+    allowed = ["p", "em", "strong", "del"]
+  }
+
   return (
     <ErrorBoundary>
       <ReactMarkdown
@@ -235,6 +270,7 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
+        allowedElements={allowed}
       >
         {source}
       </ReactMarkdown>
@@ -260,17 +296,32 @@ class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render(): ReactNode {
-    const { source, allowHTML, style, isCaption } = this.props
+    const {
+      source,
+      allowHTML,
+      style,
+      isCaption,
+      isLabel,
+      isButton,
+      isCheckbox,
+    } = this.props
     const isInSidebar = this.context
 
     return (
       <StyledStreamlitMarkdown
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
+        isLabel={isLabel}
+        isCheckbox={isCheckbox}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >
-        <RenderedMarkdown source={source} allowHTML={allowHTML} />
+        <RenderedMarkdown
+          source={source}
+          allowHTML={allowHTML}
+          isLabel={isLabel}
+          isButton={isButton}
+        />
       </StyledStreamlitMarkdown>
     )
   }

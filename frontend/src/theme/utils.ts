@@ -636,3 +636,106 @@ export function computeSpacingStyle(value: string, theme: Theme): string {
 export function hasLightBackgroundColor(theme: Theme): boolean {
   return getLuminance(theme.colors.bgColor) > 0.5
 }
+
+export function getGray70(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray70
+    : theme.colors.gray30
+}
+
+export function getGray30(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray30
+    : theme.colors.gray85
+}
+
+export function getGray90(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray90
+    : theme.colors.gray10
+}
+
+function getBlueArrayAsc(theme: Theme): string[] {
+  const { colors } = theme
+  return [
+    colors.blue10,
+    colors.blue20,
+    colors.blue30,
+    colors.blue40,
+    colors.blue50,
+    colors.blue60,
+    colors.blue70,
+    colors.blue80,
+    colors.blue90,
+    colors.blue100,
+  ]
+}
+
+function getBlueArrayDesc(theme: Theme): string[] {
+  const { colors } = theme
+  return [
+    colors.blue100,
+    colors.blue90,
+    colors.blue80,
+    colors.blue70,
+    colors.blue60,
+    colors.blue50,
+    colors.blue40,
+    colors.blue30,
+    colors.blue20,
+    colors.blue10,
+  ]
+}
+
+export function getSequentialColorsArray(theme: Theme): string[] {
+  return hasLightBackgroundColor(theme)
+    ? getBlueArrayAsc(theme)
+    : getBlueArrayDesc(theme)
+}
+
+export function getDivergingColorsArray(theme: Theme): string[] {
+  return hasLightBackgroundColor(theme)
+    ? getBlueArrayDesc(theme)
+    : getBlueArrayAsc(theme)
+}
+
+export function getCategoricalColorsArray(theme: Theme): string[] {
+  const { colors } = theme
+  return hasLightBackgroundColor(theme)
+    ? [
+        colors.blue80,
+        colors.blue40,
+        colors.red80,
+        colors.red40,
+        colors.blueGreen80,
+        colors.green40,
+        colors.orange80,
+        colors.orange50,
+        colors.purple80,
+        colors.gray40,
+      ]
+    : [
+        colors.blue40,
+        colors.blue80,
+        colors.red40,
+        colors.red80,
+        colors.green40,
+        colors.blueGreen80,
+        colors.orange50,
+        colors.orange80,
+        colors.purple80,
+        colors.gray40,
+      ]
+}
+
+export function getDecreasingRed(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.red80
+    : theme.colors.red40
+}
+
+export function getIncreasingGreen(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.blueGreen80
+    : theme.colors.green40
+}

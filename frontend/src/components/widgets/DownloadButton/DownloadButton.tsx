@@ -23,6 +23,7 @@ import UIButton, {
   Size,
 } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { buildMediaUri } from "src/lib/UriUtil"
 
 export interface Props {
@@ -60,7 +61,11 @@ function DownloadButton(props: Props): ReactElement {
           disabled={disabled}
           onClick={handleDownloadClick}
         >
-          {element.label}
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isButton
+          />
         </UIButton>
       </ButtonTooltip>
     </div>
