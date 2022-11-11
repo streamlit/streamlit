@@ -30,10 +30,8 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     import matplotlib
     import plotly.graph_objs as go
-    import plotly.io as pio
     from plotly.basedatatypes import BaseFigure
 
-    import streamlit.elements.streamlit_plotly_theme
     from streamlit.delta_generator import DeltaGenerator
 
 LOGGER: Final = get_logger(__name__)
