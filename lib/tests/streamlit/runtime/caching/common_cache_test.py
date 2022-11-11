@@ -458,7 +458,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             cont.text(i)
             return i
 
-        # TODO make exception more specific
         with self.assertRaises(CacheReplayClosureError):
             foo(1)
             st.text("---")
@@ -466,6 +465,11 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_image_replay(self, _, cache_decorator):
+        """Basic sanity check that nothing blows up. This test assumes that
+        actual caching/replay functionality are covered by e2e tests that
+        can more easily test them.
+        """
+
         @cache_decorator
         def img_fn():
             st.image(create_image(10))
