@@ -18,6 +18,7 @@ import numpy as np
 import plotly.express as px
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
+import plotly.io as pio
 
 import streamlit as st
 
@@ -38,7 +39,7 @@ bin_size = [0.1, 0.25, 0.5]
 chart = ff.create_distplot(hist_data, group_labels, bin_size)
 
 # tests no streamlit theme plot
-st.plotly_chart(chart)
+st.plotly_chart(chart, theme=None)
 
 # Bar Chart
 # tests applyStreamlitThemeTemplateData and applyDiscreteColors
@@ -162,3 +163,70 @@ fig_table = go.Figure(
     ]
 )
 st.plotly_chart(fig_table, theme="streamlit")
+
+# Continuous Customization Chart with plotly.go graph
+fig_contour = go.Figure(
+    data=go.Contour(
+        z=[
+            [10, 10.625, 12.5, 15.625, 20],
+            [5.625, 6.25, 8.125, 11.25, 15.625],
+            [2.5, 3.125, 5.0, 8.125, 12.5],
+            [0.625, 1.25, 3.125, 6.25, 10.625],
+            [0, 0.625, 2.5, 5.625, 10],
+        ],
+        colorscale="Electric",
+    )
+)
+st.plotly_chart(fig_contour)
+
+# Discrete Customization Chart
+df = px.data.wind()
+fig = px.scatter_polar(
+    df,
+    r="frequency",
+    theta="direction",
+    color="strength",
+    symbol="strength",
+    size="frequency",
+    color_discrete_sequence=px.colors.sequential.Plasma_r,
+)
+st.plotly_chart(fig)
+
+# Layout Customization Chart
+import plotly.graph_objects as go
+
+fig = go.Figure(
+    go.Sunburst(
+        labels=[
+            "Eve",
+            "Cain",
+            "Seth",
+            "Enos",
+            "Noam",
+            "Abel",
+            "Awan",
+            "Enoch",
+            "Azura",
+        ],
+        parents=["", "Eve", "Eve", "Seth", "Seth", "Eve", "Eve", "Awan", "Eve"],
+        values=[65, 14, 12, 10, 2, 6, 6, 4, 4],
+        branchvalues="total",
+    )
+)
+fig.update_layout(margin=dict(t=10, l=100, r=100, b=110))
+st.plotly_chart(fig)
+
+# Separate template Customization Chart
+df = px.data.gapminder().query("country == 'Canada'")
+fig = px.bar(
+    df,
+    x="year",
+    y="pop",
+    hover_data=["lifeExp", "gdpPercap"],
+    color="lifeExp",
+    template="plotly",
+    labels={"pop": "population of Canada"},
+    height=400,
+)
+
+st.plotly_chart(fig)
