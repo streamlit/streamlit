@@ -114,10 +114,8 @@ class PlotlyMixin:
 
         The example below comes straight from the examples at
         https://plot.ly/python:
-
-        >>> import streamlit as st
-        >>> import plotly.figure_factory as ff
         >>> import numpy as np
+        >>> import plotly.figure_factory as ff
         >>>
         >>> # Add histogram data
         >>> x1 = np.random.randn(200) - 2
