@@ -257,6 +257,11 @@ class Server:
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
             (
+                make_url_path_regex(base, "assetz/(.*)"),
+                AssetsFileHandler,
+                {"path": "%s/assetzz/" % os.path.join(os.getcwd())},
+            ),
+            (
                 make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
                 MediaFileHandler,
                 {"path": ""},
