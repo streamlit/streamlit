@@ -24,6 +24,7 @@ from streamlit import runtime, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
+from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -246,6 +247,7 @@ def _marshall_av_media(
         file_url = runtime.get_instance().media_file_mgr.add(
             data_or_filename, mimetype, coordinates
         )
+        caching.save_image_data(data_or_filename, mimetype, coordinates)
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
         file_url = ""
