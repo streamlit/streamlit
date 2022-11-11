@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { assign, merge } from "lodash"
+import { merge } from "lodash"
 
 import {
   getDecreasingRed,
@@ -25,176 +25,11 @@ import {
   hasLightBackgroundColor,
   Theme,
   getSequentialColorsArray,
+  getCategoricalColorsArray,
+  getDivergingColorsArray,
 } from "src/theme"
 import { ensureError } from "src/lib/ErrorHandling"
 import { logError } from "src/lib/log"
-
-/**
- * Convert a regular array of colors to plotly's accepted type.
- * Plotly represents continuous colorscale through an array of pairs.
- * The pair's first index is the starting point and the next pair's first index is the end point.
- * The pair's second index is the starting color and the next pair's second index is the end color.
- * An example would be:
- *  [
- *    [0, "rgb(166,206,227)"],
- *    [0.25, "rgb(31,120,180)"],
- *    [0.45, "rgb(178,223,138)"],
- *    [0.65, "rgb(51,160,44)"],
- *    [0.85, "rgb(251,154,153)"],
- *    [1, "rgb(227,26,28)"]
- *  ]
- * For more information, please refer to https://plotly.com/python/colorscales/
- * @param colors
- * @returns equal amount of color for the color array
- */
-function convertColorArrayPlotly(colors: string[]): (string | number)[][] {
-  const plotlyColorArray: (string | number)[][] = []
-  colors.forEach((color: string, index: number) => {
-    plotlyColorArray.push([index / (colors.length - 1), color])
-  })
-  return plotlyColorArray
-}
-
-/**
- * This overrides table properties when entry.type === "table" and
- * the default values are still there.
- * All the colors come from DataFrame.tsx properties.
- * @param tableData
- * @param theme
- */
-function overrideDefaultTableProperties(tableData: any, theme: Theme): void {
-  const DEFAULT_TABLE_LINE_COLOR = "white"
-  const DEFAULT_TABLE_CELLS_FILL_COLOR = "#EBF0F8"
-  const DEFAULT_TABLE_HEAD_FILL_COLOR = "#C8D4E3"
-
-  const { colors, genericFonts } = theme
-
-  if (tableData.cells.font === undefined) {
-    assign(tableData.cells, {
-      font: {
-        color: getGray90(theme),
-      },
-    })
-  }
-  // guarantees tableData.cells.font will be defined from above
-  if (tableData.cells.font.family === undefined) {
-    assign(tableData.cells.font, {
-      family: genericFonts.bodyFont,
-    })
-  }
-  if (
-    tableData.cells.fill !== undefined ||
-    tableData.cells.fill.color === DEFAULT_TABLE_CELLS_FILL_COLOR
-  ) {
-    assign(tableData.cells, {
-      fill: {
-        color: colors.bgColor,
-      },
-    })
-  }
-  // tableData.cells.line.color is always defined
-  if (tableData.cells.line.color === DEFAULT_TABLE_LINE_COLOR) {
-    assign(tableData.cells, {
-      line: { color: colors.fadedText05 },
-    })
-  }
-  if (tableData.header.font === undefined) {
-    assign(tableData.header, {
-      font: {
-        color: getGray70(theme),
-      },
-    })
-  }
-  // guarantees tableData.header.font will be defined from above
-  if (tableData.header.font.family === undefined) {
-    assign(tableData.header.font, {
-      family: genericFonts.bodyFont,
-    })
-  }
-  // tableData.header.line.color is always defined
-  if (tableData.header.line.color === DEFAULT_TABLE_LINE_COLOR) {
-    assign(tableData.header, {
-      line: { color: colors.fadedText05 },
-    })
-  }
-  // tableData.header.fill.color is always defined
-  if (tableData.header.fill.color === DEFAULT_TABLE_HEAD_FILL_COLOR) {
-    assign(tableData.header, {
-      fill: {
-        color: colors.bgMix,
-      },
-    })
-  }
-}
-
-/**
- * This applies colors specifically for the candlestick and waterfall plot
- * because their dictionary structure is different from other more regular charts.
- * @param data - spec.data
- */
-export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
-  data.forEach((entry: any) => {
-    // entry.type is always defined
-    if (entry.type === "candlestick") {
-      if (entry.decreasing === undefined) {
-        assign(entry, {
-          decreasing: {
-            line: {
-              color: getDecreasingRed(theme),
-            },
-          },
-        })
-      }
-      if (entry.increasing === undefined) {
-        assign(entry, {
-          increasing: {
-            line: {
-              color: getIncreasingGreen(theme),
-            },
-          },
-        })
-      }
-    } else if (entry.type === "waterfall") {
-      assign(entry, {
-        connector: {
-          line: {
-            color: getGray30(theme),
-            width: 2,
-          },
-        },
-      })
-      if (entry.decreasing === undefined) {
-        assign(entry, {
-          decreasing: {
-            marker: {
-              color: getDecreasingRed(theme),
-            },
-          },
-        })
-      }
-      if (entry.increasing === undefined) {
-        assign(entry, {
-          increasing: {
-            marker: {
-              color: getIncreasingGreen(theme),
-            },
-          },
-        })
-      }
-      if (entry.totals === undefined) {
-        assign(entry, {
-          totals: {
-            marker: {
-              color: hasLightBackgroundColor(theme)
-                ? theme.colors.blue80
-                : theme.colors.blue40,
-            },
-          },
-        })
-      }
-    }
-  })
-}
 
 /**
  * This applies general layout changes to things such as x axis,
@@ -209,11 +44,6 @@ export function applyStreamlitThemeTemplateLayout(
   const { genericFonts, colors, fontSizes } = theme
 
   const streamlitTheme = {
-    uniformtext: {
-      // hide all text that is less than 6 px
-      minsize: 6,
-      mode: "hide",
-    },
     font: {
       color: getGray70(theme),
       family: genericFonts.bodyFont,
@@ -370,40 +200,166 @@ export function applyStreamlitThemeTemplateLayout(
   merge(layout, streamlitTheme)
 }
 
-/**
- * This applies specific changes for spec.layout.template.data because
- * spec.data does not fully catch these and neither does spec.layout.template.layout
- * @param data - spec.layout.template.data
- * @param theme - Theme from useTheme()
- */
-export function applyStreamlitThemeTemplateData(
-  data: any,
-  theme: Theme
-): void {
-  if (data !== undefined) {
-    data.bar.forEach((entry: any) => {
-      if (entry.marker !== undefined && entry.marker.line !== undefined) {
-        merge(entry.marker.line, {
-          color: getGray30(theme),
-        })
-      }
-    })
-    const graphTypes = Object.values(data)
-    graphTypes.forEach((types: any) => {
-      types.forEach((graph: any) => {
-        if (graph.colorscale !== undefined) {
-          merge(graph, {
-            colorscale: convertColorArrayPlotly(
-              getSequentialColorsArray(theme)
-            ),
-          })
-        }
-        if (graph.type === "table") {
-          overrideDefaultTableProperties(graph, theme)
-        }
-      })
-    })
+function replaceCategoricalColors(
+  spec: string,
+  theme: Theme,
+  elTheme: string
+): string {
+  const CATEGORY_0 = "#000001"
+  const CATEGORY_1 = "#000002"
+  const CATEGORY_2 = "#000003"
+  const CATEGORY_3 = "#000004"
+  const CATEGORY_4 = "#000005"
+  const CATEGORY_5 = "#000006"
+  const CATEGORY_6 = "#000007"
+  const CATEGORY_7 = "#000008"
+  const CATEGORY_8 = "#000009"
+  const CATEGORY_9 = "#000010"
+
+  if (elTheme === "streamlit") {
+    const categoryColors = getCategoricalColorsArray(theme)
+    spec = spec.replaceAll(CATEGORY_0, categoryColors[0])
+    spec = spec.replaceAll(CATEGORY_1, categoryColors[1])
+    spec = spec.replaceAll(CATEGORY_2, categoryColors[2])
+    spec = spec.replaceAll(CATEGORY_3, categoryColors[3])
+    spec = spec.replaceAll(CATEGORY_4, categoryColors[4])
+    spec = spec.replaceAll(CATEGORY_5, categoryColors[5])
+    spec = spec.replaceAll(CATEGORY_6, categoryColors[6])
+    spec = spec.replaceAll(CATEGORY_7, categoryColors[7])
+    spec = spec.replaceAll(CATEGORY_8, categoryColors[8])
+    spec = spec.replaceAll(CATEGORY_9, categoryColors[9])
+  } else {
+    // Default plotly colors
+    spec = spec.replaceAll(CATEGORY_0, "#636efa")
+    spec = spec.replaceAll(CATEGORY_1, "#EF553B")
+    spec = spec.replaceAll(CATEGORY_2, "#00cc96")
+    spec = spec.replaceAll(CATEGORY_3, "#ab63fa")
+    spec = spec.replaceAll(CATEGORY_4, "#FFA15A")
+    spec = spec.replaceAll(CATEGORY_5, "#19d3f3")
+    spec = spec.replaceAll(CATEGORY_6, "#FF6692")
+    spec = spec.replaceAll(CATEGORY_7, "#B6E880")
+    spec = spec.replaceAll(CATEGORY_8, "#FF97FF")
+    spec = spec.replaceAll(CATEGORY_9, "#FECB52")
   }
+  return spec
+}
+
+function replaceSequentialColors(
+  spec: string,
+  theme: Theme,
+  elTheme: string
+): string {
+  const SEQUENTIAL_0 = "#000011"
+  const SEQUENTIAL_1 = "#000012"
+  const SEQUENTIAL_2 = "#000013"
+  const SEQUENTIAL_3 = "#000014"
+  const SEQUENTIAL_4 = "#000015"
+  const SEQUENTIAL_5 = "#000016"
+  const SEQUENTIAL_6 = "#000017"
+  const SEQUENTIAL_7 = "#000018"
+  const SEQUENTIAL_8 = "#000019"
+  const SEQUENTIAL_9 = "#000020"
+
+  if (elTheme === "streamlit") {
+    const sequentialColors = getSequentialColorsArray(theme)
+    spec = spec.replaceAll(SEQUENTIAL_0, sequentialColors[0])
+    spec = spec.replaceAll(SEQUENTIAL_1, sequentialColors[1])
+    spec = spec.replaceAll(SEQUENTIAL_2, sequentialColors[2])
+    spec = spec.replaceAll(SEQUENTIAL_3, sequentialColors[3])
+    spec = spec.replaceAll(SEQUENTIAL_4, sequentialColors[4])
+    spec = spec.replaceAll(SEQUENTIAL_5, sequentialColors[5])
+    spec = spec.replaceAll(SEQUENTIAL_6, sequentialColors[6])
+    spec = spec.replaceAll(SEQUENTIAL_7, sequentialColors[7])
+    spec = spec.replaceAll(SEQUENTIAL_8, sequentialColors[8])
+    spec = spec.replaceAll(SEQUENTIAL_9, sequentialColors[9])
+  } else {
+    // Default plotly colors
+    spec = spec.replaceAll(SEQUENTIAL_0, "#0d0887")
+    spec = spec.replaceAll(SEQUENTIAL_1, "#46039f")
+    spec = spec.replaceAll(SEQUENTIAL_2, "#7201a8")
+    spec = spec.replaceAll(SEQUENTIAL_3, "#9c179e")
+    spec = spec.replaceAll(SEQUENTIAL_4, "#bd3786")
+    spec = spec.replaceAll(SEQUENTIAL_5, "#d8576b")
+    spec = spec.replaceAll(SEQUENTIAL_6, "#ed7953")
+    spec = spec.replaceAll(SEQUENTIAL_7, "#fb9f3a")
+    spec = spec.replaceAll(SEQUENTIAL_8, "#fdca26")
+    spec = spec.replaceAll(SEQUENTIAL_9, "#f0f921")
+  }
+  return spec
+}
+
+function replaceDivergingColors(
+  spec: string,
+  theme: Theme,
+  elTheme: string
+): string {
+  const DIVERGING_0 = "#000021"
+  const DIVERGING_1 = "#000022"
+  const DIVERGING_2 = "#000023"
+  const DIVERGING_3 = "#000024"
+  const DIVERGING_4 = "#000025"
+  const DIVERGING_5 = "#000026"
+  const DIVERGING_6 = "#000027"
+  const DIVERGING_7 = "#000028"
+  const DIVERGING_8 = "#000029"
+  const DIVERGING_9 = "#000030"
+  const DIVERGING_10 = "#000031"
+
+  if (elTheme === "streamlit") {
+    const divergingColors = getDivergingColorsArray(theme)
+    spec = spec.replaceAll(DIVERGING_0, divergingColors[0])
+    spec = spec.replaceAll(DIVERGING_1, divergingColors[1])
+    spec = spec.replaceAll(DIVERGING_2, divergingColors[2])
+    spec = spec.replaceAll(DIVERGING_3, divergingColors[3])
+    spec = spec.replaceAll(DIVERGING_4, divergingColors[4])
+    spec = spec.replaceAll(DIVERGING_5, divergingColors[5])
+    spec = spec.replaceAll(DIVERGING_6, divergingColors[6])
+    spec = spec.replaceAll(DIVERGING_7, divergingColors[7])
+    spec = spec.replaceAll(DIVERGING_8, divergingColors[8])
+    spec = spec.replaceAll(DIVERGING_9, divergingColors[9])
+    spec = spec.replaceAll(DIVERGING_10, divergingColors[10])
+  } else {
+    // Default plotly colors
+    spec = spec.replaceAll(DIVERGING_0, "#8e0152")
+    spec = spec.replaceAll(DIVERGING_1, "#c51b7d")
+    spec = spec.replaceAll(DIVERGING_2, "#de77ae")
+    spec = spec.replaceAll(DIVERGING_3, "#f1b6da")
+    spec = spec.replaceAll(DIVERGING_4, "#fde0ef")
+    spec = spec.replaceAll(DIVERGING_5, "#f7f7f7")
+    spec = spec.replaceAll(DIVERGING_6, "#e6f5d0")
+    spec = spec.replaceAll(DIVERGING_7, "#b8e186")
+    spec = spec.replaceAll(DIVERGING_8, "#7fbc41")
+    spec = spec.replaceAll(DIVERGING_9, "#4d9221")
+    spec = spec.replaceAll(DIVERGING_10, "#276419")
+  }
+  return spec
+}
+
+export function replaceTemporaryColors(
+  spec: string,
+  theme: Theme,
+  elTheme: string
+): string {
+  spec = spec.replaceAll("#000032", getIncreasingGreen(theme))
+  spec = spec.replaceAll("#000033", getDecreasingRed(theme))
+  spec = spec.replaceAll(
+    "#000034",
+    hasLightBackgroundColor(theme) ? theme.colors.blue80 : theme.colors.blue40
+  )
+
+  spec = spec.replaceAll("#000035", getGray30(theme))
+  spec = spec.replaceAll("#000036", getGray70(theme))
+  spec = spec.replaceAll("#000037", getGray90(theme))
+
+  spec = spec.replaceAll("#000038", theme.colors.bgColor)
+  spec = spec.replaceAll("#000039", theme.colors.fadedText05)
+  spec = spec.replaceAll("#000040", theme.colors.bgMix)
+  spec = spec.replaceAll('"Source Sans Pro", sans-serif', theme.fonts.bodyFont)
+
+  spec = replaceCategoricalColors(spec, theme, elTheme)
+  spec = replaceSequentialColors(spec, theme, elTheme)
+  spec = replaceDivergingColors(spec, theme, elTheme)
+  return spec
 }
 
 /**
@@ -414,8 +370,6 @@ export function applyStreamlitThemeTemplateData(
 export function applyStreamlitTheme(spec: any, theme: Theme): void {
   try {
     applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
-    applyUniqueGraphColorsData(spec.data, theme)
-    applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
   } catch (e) {
     const err = ensureError(e)
     logError(err)

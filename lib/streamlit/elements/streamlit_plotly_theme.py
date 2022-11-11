@@ -16,94 +16,142 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 # Start at #0000001 because people may be likely to use #000000
-TEMP_COLOR_0 = "#000001"
-TEMP_COLOR_1 = "#000002"
-TEMP_COLOR_2 = "#000003"
-TEMP_COLOR_3 = "#000004"
-TEMP_COLOR_4 = "#000005"
-TEMP_COLOR_5 = "#000006"
-TEMP_COLOR_6 = "#000007"
-TEMP_COLOR_7 = "#000008"
-TEMP_COLOR_8 = "#000009"
-TEMP_COLOR_9 = "#000010"
-TEMP_COLOR_10 = "#000011"
-TEMP_COLOR_11 = "#000012"
-TEMP_COLOR_12 = "#000013"
-TEMP_COLOR_13 = "#000014"
-TEMP_COLOR_14 = "#000015"
-TEMP_COLOR_15 = "#000016"
-TEMP_COLOR_16 = "#000017"
-TEMP_COLOR_17 = "#000018"
-TEMP_COLOR_18 = "#000019"
-TEMP_COLOR_19 = "#000020"
+CATEGORY_0 = "#000001"
+CATEGORY_1 = "#000002"
+CATEGORY_2 = "#000003"
+CATEGORY_3 = "#000004"
+CATEGORY_4 = "#000005"
+CATEGORY_5 = "#000006"
+CATEGORY_6 = "#000007"
+CATEGORY_7 = "#000008"
+CATEGORY_8 = "#000009"
+CATEGORY_9 = "#000010"
+
+SEQUENTIAL_10 = "#000011"
+SEQUENTIAL_11 = "#000012"
+SEQUENTIAL_12 = "#000013"
+SEQUENTIAL_13 = "#000014"
+SEQUENTIAL_14 = "#000015"
+SEQUENTIAL_15 = "#000016"
+SEQUENTIAL_16 = "#000017"
+SEQUENTIAL_17 = "#000018"
+SEQUENTIAL_18 = "#000019"
+SEQUENTIAL_19 = "#000020"
+
+DIVERGING_20 = "#000021"
+DIVERGING_21 = "#000022"
+DIVERGING_22 = "#000023"
+DIVERGING_23 = "#000024"
+DIVERGING_24 = "#000025"
+DIVERGING_25 = "#000026"
+DIVERGING_26 = "#000027"
+DIVERGING_27 = "#000028"
+DIVERGING_28 = "#000029"
+DIVERGING_29 = "#000030"
+DIVERGING_30 = "#000031"
+
+INCREASING_31 = "#000032"
+DECREASING_32 = "#000033"
+TOTAL_33 = "#000034"
+
+GRAY_30_34 = "#000035"
+GRAY_70_35 = "#000036"
+GRAY_90_36 = "#000037"
+BG_COLOR_37 = "#000038"
+FADED_TEXT_05_38 = "#000039"
+BG_MIX_39 = "#000040"
+
+BODY_FONT = '"Source Sans Pro", sans-serif'
+
+streamlit_colorscale = [
+    [0.0, SEQUENTIAL_10],
+    [0.1111111111111111, SEQUENTIAL_11],
+    [0.2222222222222222, SEQUENTIAL_12],
+    [0.3333333333333333, SEQUENTIAL_13],
+    [0.4444444444444444, SEQUENTIAL_14],
+    [0.5555555555555556, SEQUENTIAL_15],
+    [0.6666666666666666, SEQUENTIAL_16],
+    [0.7777777777777778, SEQUENTIAL_17],
+    [0.8888888888888888, SEQUENTIAL_18],
+    [1.0, SEQUENTIAL_19],
+]
 
 pio.templates["streamlit"] = go.layout.Template(
-    data=pio.templates["plotly"].data,
+    data=go.layout.template.Data(
+        contour=[go.layout.template.data.Contour(colorscale=streamlit_colorscale)],
+        contourcarpet=[
+            go.layout.template.data.Contourcarpet(colorscale=streamlit_colorscale)
+        ],
+        candlestick=[
+            go.layout.template.data.Candlestick(
+                decreasing=go.candlestick.Decreasing(
+                    line=go.candlestick.decreasing.Line(color=DECREASING_32)
+                ),
+                increasing=go.candlestick.Increasing(
+                    line=go.candlestick.increasing.Line(color=INCREASING_31)
+                ),
+            )
+        ],
+        waterfall=[
+            go.layout.template.data.Waterfall(
+                increasing=go.waterfall.Increasing(
+                    marker=go.waterfall.increasing.Marker(color=INCREASING_31)
+                ),
+                decreasing=go.waterfall.Decreasing(
+                    marker=go.waterfall.decreasing.Marker(color=DECREASING_32)
+                ),
+                totals=go.waterfall.Totals(
+                    marker=go.waterfall.totals.Marker(color=TOTAL_33)
+                ),
+                connector=go.waterfall.Connector(
+                    line=go.waterfall.connector.Line(color=GRAY_70_35, width=2)
+                ),
+            )
+        ],
+        table=[
+            go.layout.template.data.Table(
+                cells=go.table.Cells(
+                    fill=go.table.cells.Fill(color=BG_COLOR_37),
+                    font=go.table.cells.Font(family=BODY_FONT, color=GRAY_90_36),
+                    line=go.table.cells.Line(color=FADED_TEXT_05_38),
+                ),
+                header=go.table.Header(
+                    font=go.table.header.Font(family=BODY_FONT, color=GRAY_70_35),
+                    line=go.table.header.Line(color=FADED_TEXT_05_38),
+                    fill=go.table.header.Fill(color=BG_MIX_39),
+                ),
+            )
+        ],
+    ),
     layout=go.Layout(
         colorway=[
-            "#000001",
-            "#000002",
-            "#000003",
-            "#000004",
-            "#000005",
-            "#000006",
-            "#000007",
-            "#000008",
-            "#000009",
-            "#000010",
+            CATEGORY_0,
+            CATEGORY_1,
+            CATEGORY_2,
+            CATEGORY_3,
+            CATEGORY_4,
+            CATEGORY_5,
+            CATEGORY_6,
+            CATEGORY_7,
+            CATEGORY_8,
+            CATEGORY_9,
         ],
         colorscale=go.layout.Colorscale(
-            sequential=[
-                [0.0, "#000011"],
-                [0.1111111111111111, "#000012"],
-                [0.2222222222222222, "#000013"],
-                [0.3333333333333333, "#000014"],
-                [0.4444444444444444, "#000015"],
-                [0.5555555555555556, "#000016"],
-                [0.6666666666666666, "#000017"],
-                [0.7777777777777778, "#000018"],
-                [0.8888888888888888, "#000019"],
-                [1.0, "#000020"],
-            ],
-            sequentialminus=[
-                [0.0, "#000011"],
-                [0.1111111111111111, "#000012"],
-                [0.2222222222222222, "#000013"],
-                [0.3333333333333333, "#000014"],
-                [0.4444444444444444, "#000015"],
-                [0.5555555555555556, "#000016"],
-                [0.6666666666666666, "#000017"],
-                [0.7777777777777778, "#000018"],
-                [0.8888888888888888, "#000019"],
-                [1.0, "#000020"],
-            ],
-            # this is not really used but here just in case.
+            sequential=streamlit_colorscale,
+            sequentialminus=streamlit_colorscale,
             diverging=[
-                [0.0, "#000011"],
-                [0.1111111111111111, "#000012"],
-                [0.2222222222222222, "#000013"],
-                [0.3333333333333333, "#000014"],
-                [0.4444444444444444, "#000015"],
-                [0.5555555555555556, "#000016"],
-                [0.6666666666666666, "#000017"],
-                [0.7777777777777778, "#000018"],
-                [0.8888888888888888, "#000019"],
-                [1.0, "#000020"],
+                [0.0, DIVERGING_20],
+                [0.1111111111111111, DIVERGING_21],
+                [0.2222222222222222, DIVERGING_22],
+                [0.3333333333333333, DIVERGING_23],
+                [0.4444444444444444, DIVERGING_24],
+                [0.5555555555555556, DIVERGING_25],
+                [0.6666666666666666, DIVERGING_26],
+                [0.7777777777777778, DIVERGING_27],
+                [0.8888888888888888, DIVERGING_28],
+                [1.0, DIVERGING_29],
             ],
         ),
-        coloraxis=go.layout.Coloraxis(
-            colorscale=[
-                [0.0, "#000011"],
-                [0.1111111111111111, "#000012"],
-                [0.2222222222222222, "#000013"],
-                [0.3333333333333333, "#000014"],
-                [0.4444444444444444, "#000015"],
-                [0.5555555555555556, "#000016"],
-                [0.6666666666666666, "#000017"],
-                [0.7777777777777778, "#000018"],
-                [0.8888888888888888, "#000019"],
-                [1.0, "#000020"],
-            ]
-        ),
+        coloraxis=go.layout.Coloraxis(colorscale=streamlit_colorscale),
     ),
 )
