@@ -96,11 +96,6 @@ streamlit_colorscale = [
 
 pio.templates["streamlit"] = go.layout.Template(
     data=go.layout.template.Data(
-        contour=[go.layout.template.data.Contour(colorscale=streamlit_colorscale)],
-        contourcarpet=[
-            go.layout.template.data.Contourcarpet(colorscale=streamlit_colorscale)
-        ],
-        heatmap=[go.layout.template.data.Heatmap(colorscale=streamlit_colorscale)],
         candlestick=[
             go.layout.template.data.Candlestick(
                 decreasing=go.candlestick.Decreasing(
@@ -111,8 +106,35 @@ pio.templates["streamlit"] = go.layout.Template(
                 ),
             )
         ],
+        contour=[go.layout.template.data.Contour(colorscale=streamlit_colorscale)],
+        contourcarpet=[
+            go.layout.template.data.Contourcarpet(colorscale=streamlit_colorscale)
+        ],
+        heatmap=[go.layout.template.data.Heatmap(colorscale=streamlit_colorscale)],
         histogram2d=[
             go.layout.template.data.Histogram2d(colorscale=streamlit_colorscale)
+        ],
+        icicle=[
+            go.layout.template.data.Icicle(textfont=go.icicle.Textfont(color="white"))
+        ],
+        scatter=[
+            go.layout.template.data.Scatter(
+                marker=go.scatter.Marker(line=go.scatter.marker.Line(width=0))
+            )
+        ],
+        table=[
+            go.layout.template.data.Table(
+                cells=go.table.Cells(
+                    fill=go.table.cells.Fill(color=BG_COLOR_37),
+                    font=go.table.cells.Font(family=BODY_FONT, color=GRAY_90_36),
+                    line=go.table.cells.Line(color=FADED_TEXT_05_38),
+                ),
+                header=go.table.Header(
+                    font=go.table.header.Font(family=BODY_FONT, color=GRAY_70_35),
+                    line=go.table.header.Line(color=FADED_TEXT_05_38),
+                    fill=go.table.header.Fill(color=BG_MIX_39),
+                ),
+            )
         ],
         waterfall=[
             go.layout.template.data.Waterfall(
@@ -127,20 +149,6 @@ pio.templates["streamlit"] = go.layout.Template(
                 ),
                 connector=go.waterfall.Connector(
                     line=go.waterfall.connector.Line(color=GRAY_70_35, width=2)
-                ),
-            )
-        ],
-        table=[
-            go.layout.template.data.Table(
-                cells=go.table.Cells(
-                    fill=go.table.cells.Fill(color=BG_COLOR_37),
-                    font=go.table.cells.Font(family=BODY_FONT, color=GRAY_90_36),
-                    line=go.table.cells.Line(color=FADED_TEXT_05_38),
-                ),
-                header=go.table.Header(
-                    font=go.table.header.Font(family=BODY_FONT, color=GRAY_70_35),
-                    line=go.table.header.Line(color=FADED_TEXT_05_38),
-                    fill=go.table.header.Fill(color=BG_MIX_39),
                 ),
             )
         ],

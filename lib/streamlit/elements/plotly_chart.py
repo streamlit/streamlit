@@ -64,14 +64,14 @@ FigureOrData: TypeAlias = Union[
     "matplotlib.figure.Figure",
 ]
 
-import plotly.io as pio
-
-import streamlit.elements.streamlit_plotly_theme
-
-pio.templates.default = "streamlit"
-
 
 class PlotlyMixin:
+    import plotly.io as pio
+
+    import streamlit.elements.streamlit_plotly_theme
+
+    pio.templates.default = "streamlit"
+
     @gather_metrics("plotly_chart")
     def plotly_chart(
         self,
