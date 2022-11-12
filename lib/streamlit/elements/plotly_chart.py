@@ -64,6 +64,12 @@ FigureOrData: TypeAlias = Union[
     "matplotlib.figure.Figure",
 ]
 
+import plotly.io as pio
+
+import streamlit.elements.streamlit_plotly_theme
+
+pio.templates.default = "streamlit"
+
 
 class PlotlyMixin:
     @gather_metrics("plotly_chart")
@@ -181,12 +187,7 @@ def marshall(
     # for their main parameter. I don't like the name, but its best to keep
     # it in sync with what Plotly calls it.
 
-    import plotly.io as pio
     import plotly.tools
-
-    import streamlit.elements.streamlit_plotly_theme
-
-    pio.templates.default = "streamlit"
 
     if type_util.is_type(figure_or_data, "matplotlib.figure.Figure"):
         figure = plotly.tools.mpl_to_plotly(figure_or_data)
