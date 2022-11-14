@@ -86,7 +86,7 @@ class CliTest(unittest.TestCase):
 
             result = self.runner.invoke(cli, ["run", "file_name.py"])
         self.assertNotEqual(0, result.exit_code)
-        self.assertTrue("File does not exist" in result.output)
+        self.assertIn("File does not exist", result.output)
 
     def test_run_not_allowed_file_extension(self):
         """streamlit run should fail if a not allowed file extension is passed."""
@@ -94,8 +94,8 @@ class CliTest(unittest.TestCase):
         result = self.runner.invoke(cli, ["run", "file_name.doc"])
 
         self.assertNotEqual(0, result.exit_code)
-        self.assertTrue(
-            "Streamlit requires raw Python (.py) files, not .doc." in result.output
+        self.assertIn(
+            "Streamlit requires raw Python (.py) files, not .doc.", result.output
         )
 
     @tempdir()
@@ -132,7 +132,7 @@ class CliTest(unittest.TestCase):
                 result = self.runner.invoke(cli, ["run", "http://url/app.py"])
 
         self.assertNotEqual(0, result.exit_code)
-        self.assertTrue("Unable to fetch" in result.output)
+        self.assertIn("Unable to fetch", result.output)
 
     def test_run_arguments(self):
         """The correct command line should be passed downstream."""

@@ -18,6 +18,8 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+
 import { Checkbox as UICheckbox } from "baseui/checkbox"
 import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import Checkbox, { OwnProps } from "./Checkbox"
@@ -78,7 +80,10 @@ describe("Checkbox widget", () => {
   it("renders a label", () => {
     const props = getProps()
     const wrapper = mount(<Checkbox {...props} />)
-    expect(wrapper.find("StyledContent").text()).toBe(props.element.label)
+    expect(wrapper.find(StreamlitMarkdown).props().source).toBe(
+      props.element.label
+    )
+    expect(wrapper.find(StreamlitMarkdown).props().isLabel).toBe(true)
   })
 
   it("is unchecked by default", () => {

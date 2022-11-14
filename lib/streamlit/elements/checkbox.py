@@ -64,6 +64,8 @@ class CheckboxMixin:
         ----------
         label : str
             A short label explaining to the user what this checkbox is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
         value : bool
             Preselect the checkbox when it first renders. This will be
             cast to bool internally.
@@ -91,6 +93,7 @@ class CheckboxMixin:
 
         Example
         -------
+        >>> import streamlit as st
         >>> agree = st.checkbox('I agree')
         >>>
         >>> if agree:

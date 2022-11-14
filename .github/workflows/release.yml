@@ -1,6 +1,6 @@
 name: Build Release
 
-on: 
+on:
   # Manual Trigger GH CLI -> gh workflow run release.yml --ref <tag>
   workflow_dispatch:
 
@@ -10,9 +10,9 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
-    permissions: 
+    permissions:
     # Additional permission needed to generate release
       contents: write
 
@@ -41,7 +41,7 @@ jobs:
           pip install requests
           echo "GH_PR_BRANCH=$(python scripts/get_release_branch.py)" >> $GITHUB_ENV
       - name: Ensure that version tag matches branch version
-        env: 
+        env:
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
         run: |
           BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | sed 's/release\///' )
@@ -102,11 +102,11 @@ jobs:
           python scripts/create_release.py
       - name: Successful Release Slack Message
         if: ${{ success() }}
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py release success
       - name: Failed Release Slack Message
         if: ${{ failure() }}
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py release failure

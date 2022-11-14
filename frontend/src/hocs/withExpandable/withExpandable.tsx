@@ -17,6 +17,8 @@
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 import Icon from "src/components/shared/Icon"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+
 import classNames from "classnames"
 import {
   StatelessAccordion as Accordion,
@@ -167,7 +169,12 @@ function withExpandable(
             },
           }}
         >
-          <Panel title={label} key="panel">
+          <Panel
+            title={
+              <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+            }
+            key="panel"
+          >
             <WrappedComponent {...componentProps} disabled={widgetsDisabled} />
           </Panel>
         </Accordion>

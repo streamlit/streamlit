@@ -15,8 +15,11 @@
  */
 
 import React from "react"
-import { Metric as MetricProto } from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
+
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+
+import { Metric as MetricProto } from "src/autogen/proto"
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
@@ -33,6 +36,15 @@ describe("Metric element", () => {
     const props = getProps()
     const wrapper = mount(<Metric {...props} />)
     expect(wrapper).toBeDefined()
+  })
+
+  it("renders metric label as expected", () => {
+    const props = getProps()
+    const wrapper = mount(<Metric {...props} />)
+    const wrappedMetricLabel = wrapper.find(StreamlitMarkdown)
+
+    expect(wrappedMetricLabel.props().source).toBe(getProps().element.label)
+    expect(wrappedMetricLabel.props().isLabel).toBe(true)
   })
 
   it("renders direction icon based on props", () => {

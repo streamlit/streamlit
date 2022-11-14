@@ -87,7 +87,7 @@ class StMapTest(DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
-        self.assertTrue("Map data must contain a column named" in str(ctx.exception))
+        self.assertIn("Map data must contain a column named", str(ctx.exception))
 
     def test_nan_exception(self):
         """Test st.map with NaN in data."""
@@ -95,7 +95,7 @@ class StMapTest(DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
-        self.assertTrue("data must be numeric." in str(ctx.exception))
+        self.assertIn("data must be numeric.", str(ctx.exception))
 
     def test_unevaluated_snowpark_table(self):
         """Test st.map with unevaluated Snowpark Table"""
