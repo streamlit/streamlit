@@ -34,14 +34,14 @@ export interface Props {
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width } = props
+  const { disabled, element, width } = props
   const style = { width }
   const { getBaseUriParts } = useContext(AppContext)
 
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
-    widgetMgr.setTriggerValue(element, { fromUi: true })
+    // widgetMgr.setTriggerValue(element, { fromUi: true })
     const link = document.createElement("a")
     const uri = `${buildMediaUri(
       element.url,

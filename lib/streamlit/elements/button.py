@@ -156,7 +156,7 @@ class ButtonMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> bool:
+    ) -> None:
         """Display a download button widget.
 
         This is useful when you would like to provide a way for your users
@@ -336,7 +336,7 @@ class ButtonMixin:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> bool:
+    ) -> None:
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -384,8 +384,6 @@ class ButtonMixin:
         button_proto.disabled = disabled
 
         self.dg._enqueue("button", button_proto)
-
-        return button_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":
