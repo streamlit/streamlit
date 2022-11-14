@@ -117,6 +117,11 @@ pio.templates["streamlit"] = go.layout.Template(
         icicle=[
             go.layout.template.data.Icicle(textfont=go.icicle.Textfont(color="white"))
         ],
+        sankey=[
+            go.layout.template.data.Sankey(
+                textfont=go.sankey.Textfont(color=GRAY_70_35, family=BODY_FONT)
+            )
+        ],
         scatter=[
             go.layout.template.data.Scatter(
                 marker=go.scatter.Marker(line=go.scatter.marker.Line(width=0))
