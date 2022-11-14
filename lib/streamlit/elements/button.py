@@ -282,7 +282,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> bool:
+    ) -> None:
 
         key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -321,7 +321,6 @@ class ButtonMixin:
         download_button_proto.disabled = disabled
 
         self.dg._enqueue("download_button", download_button_proto)
-        return button_state.value
 
     def _button(
         self,
@@ -336,7 +335,7 @@ class ButtonMixin:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> None:
+    ) -> bool:
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -384,6 +383,8 @@ class ButtonMixin:
         button_proto.disabled = disabled
 
         self.dg._enqueue("button", button_proto)
+
+        return button_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":
