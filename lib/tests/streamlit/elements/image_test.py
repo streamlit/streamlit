@@ -263,7 +263,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         # Mock out save_image_data to avoid polluting the cache for later tests
         with mock.patch(
             "streamlit.runtime.media_file_manager.MediaFileManager.add"
-        ) as mock_mfm_add, mock.patch("streamlit.runtime.caching.save_image_data"):
+        ) as mock_mfm_add, mock.patch("streamlit.runtime.caching.save_media_data"):
             mock_mfm_add.return_value = "https://mockoutputurl.com"
 
             result = image.image_to_url(

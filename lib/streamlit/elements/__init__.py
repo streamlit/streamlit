@@ -41,6 +41,7 @@ NONWIDGET_ELEMENTS = [
     "arrow_line_chart",
     "arrow_table",
     "arrow_vega_lite_chart",
+    "audio",
     "balloons",
     "bar_chart",
     "bokeh_chart",
@@ -68,9 +69,6 @@ NONWIDGET_ELEMENTS = [
     "table",
     "text",
     "vega_lite_chart",
-    "write",
-]
-FILESYSTEM_ELEMENTS = [
-    "audio",
     "video",
+    "write",
 ]
