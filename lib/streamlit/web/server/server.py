@@ -257,11 +257,6 @@ class Server:
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
             (
-                make_url_path_regex(base, "assetz/(.*)"),
-                AssetsFileHandler,
-                {"path": "%s/assetzz/" % os.path.join(os.getcwd())},
-            ),
-            (
                 make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
                 MediaFileHandler,
                 {"path": ""},
@@ -283,6 +278,21 @@ class Server:
                             callback=lambda: self._runtime.does_script_run_without_error()
                         ),
                     )
+                ]
+            )
+
+        if config.get_option("server.staticServingEnabled"):
+            folder_name = config.get_option("server.staticServingDirectory")
+            # TODO [KAREN] add validation for folder name, check that directory exists
+            # TODO [KAREN] add folder_name sanitization, for example to not allow "../."
+
+            routes.extend(
+                [
+                    (
+                        make_url_path_regex(base, "assetz/(.*)"),
+                        AssetsFileHandler,
+                        {"path": "%s/%s/" % (os.path.join(os.getcwd()), folder_name)},
+                    ),
                 ]
             )
 

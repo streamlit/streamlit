@@ -695,6 +695,26 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.staticServingEnabled",
+    description="""
+        Enable static file serving from a directory in the
+         running app's directory.
+        """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.staticServingDirectory",
+    description="""
+        Directory to serve static files from,
+        relative to running app's location.
+        """,
+    default_val="/assets",
+    type_=str,
+)
+
 
 # Config Section: Browser #
 
