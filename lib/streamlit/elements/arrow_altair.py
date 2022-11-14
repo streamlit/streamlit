@@ -124,7 +124,7 @@ class ArrowAltairMixin:
         """
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.LINE, data, x, y, width, height)
-        marshall(proto, chart, use_container_width, theme="streamlit")
+        marshall(proto, chart, use_container_width, theme=None)
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
@@ -193,7 +193,7 @@ class ArrowAltairMixin:
 
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.AREA, data, x, y, width, height)
-        marshall(proto, chart, use_container_width, theme="streamlit")
+        marshall(proto, chart, use_container_width, theme=None)
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
@@ -263,7 +263,7 @@ class ArrowAltairMixin:
 
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.BAR, data, x, y, width, height)
-        marshall(proto, chart, use_container_width, theme="streamlit")
+        marshall(proto, chart, use_container_width, theme=None)
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
