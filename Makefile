@@ -328,6 +328,7 @@ notices:
 	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/public/vendor/bokeh/bokeh-LICENSE.txt
 	./scripts/append_license.sh frontend/public/vendor/viz/viz.js-LICENSE.txt
 
 .PHONY: headers
