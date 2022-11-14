@@ -333,6 +333,7 @@ notices:
 	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
 	./scripts/append_license.sh frontend/src/vendor/Segment-LICENSE.txt
 	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
 # Update the license header on all source files.
