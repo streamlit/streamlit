@@ -270,26 +270,34 @@ class ArrowMixin:
             ctx=get_script_run_ctx(),
         )
 
+        # TODO(lukasmasuch): Clean this app
+        # loc: only work on index
+        # iloc: work on position
+        # at: get scalar values. It's a very fast loc
+        # iat: Get scalar values. It's a very fast iloc
+
         new_df = data.copy()
         return_value = new_df
         widget_state_value = widget_state.value
-        if widget_state_value and "edits" in widget_state_value:
-            for edit in widget_state_value["edits"].keys():
+        print(widget_state_value)
+        if widget_state_value and "edited_cells" in widget_state_value:
+            for edit in widget_state_value["edited_cells"].keys():
                 col, row = edit.split(":")
                 col, row = int(
                     col
                 ) - new_df.index.nlevels if new_df.index.nlevels else 0, int(row)
-                # TODO: Check cols as well
-                if row + 1 > new_df.shape[0]:
-                    # it is possible that there are multiple rows to add
-                    # this happens if mulitple lines are added without edits
-                    for row_idx in range(new_df.shape[0], row + 1):
-                        # Append new row with empty values
-                        # TODO: use iloc? cannot add rows?
-                        # TODO use append? but this creates new dataframe: https://stackoverflow.com/questions/34753873/type-inference-df-append-vs-df-loc
-                        new_df.loc[row_idx] = [None for _ in range(new_df.shape[1])]
-                new_df.iat[row, col] = widget_state_value["edits"][edit]
+                new_df.iat[row, col] = widget_state_value["edited_cells"][edit]
             return_value = new_df
+
+        if widget_state_value and "added_rows" in widget_state_value:
+            # TODO: implement appending rows:
+            # via append, concat, or loc??
+            # new_df.loc[row_idx] = [None for _ in range(new_df.shape[1])]
+            pass
+
+        if widget_state_value and "deleted_rows" in widget_state_value:
+            # https://stackoverflow.com/questions/55851802/remove-rows-of-a-dataframe-based-on-the-row-number
+            new_df.drop(new_df.index[widget_state_value["deleted_rows"]], inplace=True)
 
         self.dg._enqueue("arrow_data_frame", proto)
         return return_value

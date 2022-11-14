@@ -76,6 +76,7 @@ import "@glideapps/glide-data-grid/dist/index.css"
 import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
 
 const ROW_HEIGHT = 35
+// Min column width used for manual and automatic resizing
 const MIN_COLUMN_WIDTH = 35
 // Max column width used for manual resizing
 const MAX_COLUMN_WIDTH = 1000
@@ -88,6 +89,9 @@ const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
 // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
 const DEFAULT_TABLE_HEIGHT = 400
+// Debounce time for triggering a widget state update
+// This prevents to rapid updates to the widget state.
+const DEBOUNCE_TIME_MS = 100
 
 export interface ActionButtonProps {
   borderless?: boolean
@@ -175,26 +179,158 @@ type ColumnSortConfig = {
  * The editing state of the DataFrame.
  */
 class EditingState {
-  // column -> row -> value
-  private cachedContent: Map<number, Map<number, GridCell>> = new Map()
+  // row -> column -> GridCell
+  // Using [number, number] as a key for a Map would not work.
+  private editedCells: Map<number, Map<number, GridCell>> = new Map()
+  // List of rows represented by of column -> GridCell mappings
+  private addedRows: Array<Map<number, GridCell>> = new Array()
+  private deletedRows: number[] = new Array()
+  private numRows: number = 0
 
-  get(col: number, row: number): GridCell | undefined {
-    const colCache = this.cachedContent.get(col)
+  constructor(numRows: number) {
+    this.numRows = numRows
+  }
 
-    if (colCache === undefined) {
+  toJson(columns: CustomColumn[]): string {
+    const columnsByIndex = new Map<number, CustomColumn>()
+    columns.forEach(column => {
+      columnsByIndex.set(column.indexNumber, column)
+    })
+
+    const currentState = {
+      edited_cells: {} as Record<string, any>,
+      added_rows: [] as Map<number, any>[],
+      deleted_rows: [] as number[],
+    }
+
+    this.editedCells.forEach(
+      (row: Map<number, GridCell>, rowIndex: number, _map) => {
+        row.forEach((cell: GridCell, colIndex: number, _map) => {
+          const column = columnsByIndex.get(colIndex)
+          if (column) {
+            currentState.edited_cells[`${colIndex}:${rowIndex}`] =
+              getCellValue(column, cell)
+          }
+        })
+      }
+    )
+
+    // TODO(lukasmasuch): Support adding rows
+    // this.addedRows.forEach((row: Map<number, GridCell>) => {
+    //   currentState.edited_cells.push(row[0])
+    // })
+
+    currentState.deleted_rows = this.deletedRows
+
+    return JSON.stringify(currentState)
+  }
+
+  isAddedRow(row: number): boolean {
+    return row >= this.numRows
+  }
+
+  getCell(col: number, row: number): GridCell | undefined {
+    if (this.isAddedRow(row)) {
+      // Added rows have their own editing state
+      return this.addedRows[row - this.numRows].get(col)
+    }
+
+    const rowCache = this.editedCells.get(row)
+    if (rowCache === undefined) {
       return undefined
     }
 
-    return colCache.get(row)
+    return rowCache.get(col)
   }
 
-  set(col: number, row: number, value: GridCell): void {
-    if (this.cachedContent.get(col) === undefined) {
-      this.cachedContent.set(col, new Map())
+  setCell(col: number, row: number, cell: GridCell): void {
+    console.log(
+      "setCell",
+      col,
+      row,
+      cell,
+      this.editedCells,
+      this.addedRows,
+      this.isAddedRow(row)
+    )
+    if (this.isAddedRow(row)) {
+      // Added rows have their own editing state
+      //TODO(lukasmasuch): Do we have to do something here if the index actually not exist?
+      this.addedRows[row - this.numRows].set(col, cell)
+    } else {
+      if (this.editedCells.get(row) === undefined) {
+        this.editedCells.set(row, new Map())
+      }
+
+      const rowCache = this.editedCells.get(row) as Map<number, GridCell>
+      rowCache.set(col, cell)
+    }
+  }
+
+  addRow(rowCells: Map<number, GridCell>): void {
+    this.addedRows.push(rowCells)
+  }
+
+  deleteRows(rows: number[]): void {
+    rows
+      .sort((a, b) => b - a)
+      .forEach(row => {
+        this.deleteRow(row)
+      })
+  }
+
+  deleteRow(row: number): void {
+    if (!notNullOrUndefined(row) || row < 0) {
+      // This should never happen
+      return
     }
 
-    const rowCache = this.cachedContent.get(col) as Map<number, GridCell>
-    rowCache.set(row, value)
+    console.log(
+      "Delete row",
+      row,
+      this.isAddedRow(row),
+      this.deletedRows.includes(row)
+    )
+    console.log("Deleted Rows:", this.deletedRows)
+
+    console.log("Added Rows:", this.addedRows)
+
+    console.log("Edited Cells:", this.editedCells)
+
+    console.log("Num Rows:", this.numRows)
+
+    if (this.isAddedRow(row)) {
+      // Remove from added rows:
+      this.addedRows.splice(row - this.numRows, 1)
+      // there is nothing more we have to do
+      return
+    }
+
+    if (!this.deletedRows.includes(row)) {
+      // Add to the set and sort the deleted rows (important for calculation of the original row index)
+      this.deletedRows.push(row)
+      this.deletedRows = this.deletedRows.sort()
+      console.log(this.deletedRows)
+    }
+
+    // Remove all cells from cell state associated with this row:
+    this.editedCells.delete(row)
+  }
+
+  getOriginalRowIndex(row: number): number {
+    // Just count all deleted rows before this row to determine the original row index:
+    let originalIndex = row
+    for (let i = 0; i < this.deletedRows.length; i++) {
+      if (this.deletedRows[i] > originalIndex) {
+        break
+      }
+      originalIndex += 1
+    }
+    return originalIndex
+  }
+
+  getNumRows(): number {
+    return this.numRows + this.addedRows.length - this.deletedRows.length
   }
 }
 
@@ -345,31 +481,6 @@ function updateSortingHeader(
   })
 }
 
-// TODO: Always get state from editing cache
-function getCurrentState(
-  element: ArrowProto,
-  widgetMgr: WidgetStateManager
-): any {
-  let currentState
-  const currentStateString = widgetMgr.getJsonValue(element as WidgetInfo)
-
-  if (currentStateString !== undefined) {
-    currentState = JSON.parse(currentStateString)
-  }
-
-  if (currentState === undefined) {
-    currentState = {
-      edits: {},
-    }
-  }
-
-  if (currentState.edits === undefined) {
-    currentState.edits = {}
-  }
-
-  return currentState
-}
-
 function getColumnConfig(element: ArrowProto): Map<string, any> {
   if (!element.columns) {
     return new Map()
@@ -388,7 +499,13 @@ function getColumnConfig(element: ArrowProto): Map<string, any> {
  */
 type DataLoaderReturn = { numRows: number } & Pick<
   DataEditorProps,
-  "columns" | "getCellContent" | "onColumnResize" | "onCellEdited" | "onPaste"
+  | "columns"
+  | "getCellContent"
+  | "onColumnResize"
+  | "onCellEdited"
+  | "onPaste"
+  | "onRowAppended"
+  | "onDelete"
 >
 
 /**
@@ -403,9 +520,28 @@ export function useDataLoader(
   element: ArrowProto,
   data: Quiver,
   disabled: boolean,
+  clearSelection: () => void,
   sort?: ColumnSortConfig | undefined
 ): DataLoaderReturn {
-  const editingState = React.useRef<EditingState>(new EditingState())
+  // Number of rows of the table minus 1 for the header row:
+  const originalNumRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
+  const editingState = React.useRef<EditingState>(
+    new EditingState(originalNumRows)
+  )
+
+  const [numRows, setNumRows] = useState(editingState.current.getNumRows())
+
+  React.useEffect(() => {
+    editingState.current = new EditingState(originalNumRows)
+    setNumRows(editingState.current.getNumRows())
+  }, [originalNumRows])
+
+  console.log(
+    "numRows",
+    numRows,
+    originalNumRows,
+    editingState.current.getNumRows()
+  )
   // The columns with the corresponding empty template for every type:
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [columnSizes, setColumnSizes] = useState<Map<string, number>>(
@@ -498,8 +634,6 @@ export function useDataLoader(
     return column
   })
 
-  // Number of rows of the table minus 1 for the header row:
-  const numRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
   // TODO(lukasmasuch): Remove? const numIndices = data.types?.index?.length ?? 0
 
   const onColumnResize = React.useCallback(
@@ -519,6 +653,7 @@ export function useDataLoader(
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       if (data.isEmpty()) {
+        // TODO(lukasmasuch): Is this still needed for editable tables?
         return {
           ...getTextCell(true, true),
           displayData: "empty",
@@ -538,12 +673,16 @@ export function useDataLoader(
           "This should never happen. Please report this bug."
         )
       }
-
       const column = sizedColumns[col]
 
-      if (column.isEditable) {
-        const editedCell = editingState.current.get(column.indexNumber, row)
-
+      const originalCol = column.indexNumber
+      const originalRow = editingState.current.getOriginalRowIndex(row)
+      // Use editing state if editable or if it is an appended row
+      if (column.isEditable || editingState.current.isAddedRow(originalRow)) {
+        const editedCell = editingState.current.getCell(
+          originalCol,
+          originalRow
+        )
         if (editedCell !== undefined) {
           return editedCell
         }
@@ -551,7 +690,7 @@ export function useDataLoader(
 
       try {
         // Quiver has the header in first row
-        const quiverCell = data.getCell(row + 1, column.indexNumber)
+        const quiverCell = data.getCell(originalRow + 1, originalCol)
         return getCellFromQuiver(column, quiverCell, data.cssStyles)
       } catch (error) {
         // This should not happen in read-only table.
@@ -566,32 +705,47 @@ export function useDataLoader(
     [sizedColumns, numRows, data, editingState]
   )
 
+  const onRowAppended = React.useCallback(() => {
+    const newRow: Map<number, GridCell> = new Map()
+    sizedColumns.forEach(column => {
+      newRow.set(column.indexNumber, getCell(column, undefined))
+    })
+    editingState.current.addRow(newRow)
+    setNumRows(editingState.current.getNumRows())
+  }, [sizedColumns, editingState])
+
   const { getCellContent: getCellContentSorted, getOriginalIndex } =
     useColumnSort({
       columns: sizedColumns,
       getCellContent,
-      rows: numRows,
+      rows: editingState.current.getNumRows(),
       sort,
     })
 
   const updatedColumns = updateSortingHeader(sizedColumns, sort)
 
-  const commitValueToState = React.useCallback(
-    ([col, row]: readonly [number, number], value: any): void => {
-      // TODO(lukasmasuch): Debounce
-      const cellPosition = `${col}:${row}`
-      const currentState = getCurrentState(element, widgetMgr)
-      const currentStateStr = JSON.stringify(currentState)
-      currentState.edits[cellPosition] = value
+  const triggerUpdate = React.useCallback(
+    debounce(DEBOUNCE_TIME_MS, () => {
+      const currentStateStr = editingState.current.toJson(updatedColumns)
+      let widgetStateStr = widgetMgr.getJsonValue(element as WidgetInfo)
 
-      // only send value if the state was actually changed
-      if (JSON.stringify(currentState) !== currentStateStr) {
-        widgetMgr.setJsonValue(element as WidgetInfo, currentState, {
+      if (widgetStateStr === undefined) {
+        const emptyState = {
+          edited_cells: {} as Map<string, any>,
+          added_rows: [] as Map<number, any>[],
+          deleted_rows: [] as number[],
+        }
+        widgetStateStr = JSON.stringify(emptyState)
+      }
+
+      if (currentStateStr !== widgetStateStr) {
+        // Only update if there is actually a difference
+        widgetMgr.setJsonValue(element as WidgetInfo, currentStateStr, {
           fromUi: true,
         })
       }
-    },
-    [widgetMgr, element]
+    }),
+    [editingState, updatedColumns, widgetMgr, element]
   )
 
   const onCellEdited = React.useCallback(
@@ -599,18 +753,83 @@ export function useDataLoader(
       [col, row]: readonly [number, number],
       updatedCell: EditableGridCell
     ): void => {
+      console.log("onCellEdited", col, row, updatedCell)
       const column = updatedColumns[col]
-      const newCell = getCell(column, getCellValue(column, updatedCell))
-      editingState.current.set(column.indexNumber, getOriginalIndex(row), {
+
+      const originalCol = column.indexNumber
+      const originalRow = editingState.current.getOriginalRowIndex(
+        getOriginalIndex(row)
+      )
+      const currentValue = getCellValue(
+        column,
+        getCellContentSorted([col, row])
+      )
+      const newValue = getCellValue(column, updatedCell)
+      if (newValue === currentValue) {
+        // No editing is required since the values did not change
+        return
+      }
+
+      const newCell = getCell(column, newValue)
+
+      editingState.current.setCell(originalCol, originalRow, {
         ...newCell,
         lastUpdated: performance.now(),
       })
-      commitValueToState(
-        [column.indexNumber, getOriginalIndex(row)],
-        getCellValue(column, newCell)
-      )
+
+      triggerUpdate()
     },
-    [getOriginalIndex, editingState, updatedColumns, commitValueToState]
+    [getOriginalIndex, editingState, updatedColumns, sort]
+  )
+
+  const onDelete = React.useCallback(
+    (selection: GridSelection): GridSelection | boolean => {
+      if (selection.rows.length > 0) {
+        const rowsToDelete = selection.rows.toArray().map(row => {
+          return editingState.current.getOriginalRowIndex(
+            getOriginalIndex(row)
+          )
+        })
+        // We need to delete all rows at once, so that the indexes work correct
+        editingState.current.deleteRows(rowsToDelete)
+        setNumRows(editingState.current.getNumRows())
+        clearSelection()
+        triggerUpdate()
+        return false
+      }
+      if (selection.current?.range) {
+        const updatedCells: { cell: [number, number] }[] = []
+        console.log("Delete Current", selection.current)
+        const selected_area = selection.current.range
+        for (
+          let row = selected_area.y;
+          row < selected_area.y + selected_area.height;
+          row++
+        ) {
+          for (
+            let col = selected_area.x;
+            col < selected_area.x + selected_area.width;
+            col++
+          ) {
+            const column = updatedColumns[col]
+            if (column.isEditable) {
+              updatedCells.push({
+                cell: [col, row],
+              })
+              onCellEdited(
+                [col, row],
+                getCell(column, undefined) as EditableGridCell
+              )
+            }
+          }
+        }
+        triggerUpdate()
+        dataEditorRef.current?.updateCells(updatedCells)
+        return false
+      }
+      return true
+    },
+    [getOriginalIndex, editingState, sort]
   )
 
   const onPaste = React.useCallback(
@@ -622,8 +841,14 @@ export function useDataLoader(
       for (let row = 0; row < values.length; row++) {
         const rowData = values[row]
         if (row + targetRow >= numRows) {
-          // TODO(lukasmasuch) Add new rows if necessary
-          break
+          //TODO(lukasmasuch) break if if rows are fixed
+
+          if (sort) {
+            // Sorting and adding appending new rows via paste is currently
+            // not compatible because the sort index isn't updated.
+            break
+          }
+          onRowAppended()
         }
         for (let col = 0; col < rowData.length; col++) {
           const pasteDataValue = rowData[col]
@@ -649,25 +874,33 @@ export function useDataLoader(
             continue
           }
 
-          editingState.current.set(
-            column.indexNumber,
-            getOriginalIndex(rowIndex),
-            {
-              ...newCell,
-              lastUpdated: performance.now(),
-            }
+          const originalCol = column.indexNumber
+          const originalRow = editingState.current.getOriginalRowIndex(
+            getOriginalIndex(rowIndex)
           )
+
+          const currentValue = getCellValue(
+            column,
+            getCellContentSorted([colIndex, rowIndex])
+          )
+
+          const newValue = getCellValue(column, newCell)
+          if (newValue === currentValue) {
+            // No editing is required since the values did not change
+            continue
+          }
+
+          editingState.current.setCell(originalCol, originalRow, {
+            ...newCell,
+            lastUpdated: performance.now(),
+          })
 
           updatedCells.push({
             cell: [colIndex, rowIndex],
           })
-
-          // TODO(lukasmasuch): Don't directly update here:
-          commitValueToState(
-            [column.indexNumber, getOriginalIndex(rowIndex)],
-            getCellValue(column, newCell)
-          )
         }
+
+        triggerUpdate()
         dataEditorRef.current?.updateCells(updatedCells)
       }
 
@@ -679,7 +912,7 @@ export function useDataLoader(
       getOriginalIndex,
       editingState,
       dataEditorRef,
-      commitValueToState,
+      sort,
     ]
   )
 
@@ -690,6 +923,8 @@ export function useDataLoader(
     onColumnResize,
     onCellEdited,
     onPaste,
+    onRowAppended,
+    onDelete,
   }
 }
 export interface DataFrameProps {
@@ -718,6 +953,23 @@ function DataFrame({
 
   const stretchColumn = element.useContainerWidth || element.width
 
+  const [isFocused, setIsFocused] = React.useState<boolean>(true)
+  const [showSearch, setShowSearch] = React.useState(false)
+
+  const [gridSelection, setGridSelection] = React.useState<GridSelection>({
+    columns: CompactSelection.empty(),
+    rows: CompactSelection.empty(),
+    current: undefined,
+  })
+
+  const clearSelection = React.useCallback(() => {
+    setGridSelection({
+      columns: CompactSelection.empty(),
+      rows: CompactSelection.empty(),
+      current: undefined,
+    })
+  }, [])
+
   const {
     numRows,
     columns,
@@ -725,14 +977,17 @@ function DataFrame({
     onColumnResize,
     onCellEdited,
     onPaste,
-  } = useDataLoader(widgetMgr, dataEditorRef, element, data, disabled, sort)
-  const [isFocused, setIsFocused] = React.useState<boolean>(true)
-  const [showSearch, setShowSearch] = React.useState(false)
-
-  const [gridSelection, setGridSelection] = React.useState<GridSelection>({
-    columns: CompactSelection.empty(),
-    rows: CompactSelection.empty(),
-  })
+    onRowAppended,
+    onDelete,
+  } = useDataLoader(
+    widgetMgr,
+    dataEditorRef,
+    element,
+    data,
+    disabled,
+    clearSelection,
+    sort
+  )
 
   const resizableRef = React.useRef<Resizable>(null)
 
@@ -764,9 +1019,10 @@ function DataFrame({
 
   // Automatic table height calculation: numRows +1 because of header, and +2 pixels for borders
   let maxHeight = Math.max(
-    (numRows + 1) * ROW_HEIGHT + 1 + 2,
+    (numRows + 1) * ROW_HEIGHT + 1 + 2 + (element.editable ? ROW_HEIGHT : 0),
     MIN_TABLE_HEIGHT
   )
+  element.editable
   let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
 
   if (element.height) {
@@ -878,11 +1134,7 @@ function DataFrame({
       onBlur={() => {
         // If the container loses focus, clear the current selection
         if (!isFocused) {
-          setGridSelection({
-            columns: CompactSelection.empty(),
-            rows: CompactSelection.empty(),
-            current: undefined,
-          } as GridSelection)
+          clearSelection()
         }
       }}
     >
@@ -1003,28 +1255,26 @@ function DataFrame({
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
           // If element is editable, add additional properties:
-          {...(element.editable &&
-            !disabled && {
-              // Support editing:
-              onCellEdited,
-              // Support fill handle for bulk editing
-              fillHandle: true,
-              // Support on past of bulk editing
-              onPaste,
-              // Support adding rows
-              // trailingRowOptions: {
-              //   sticky: true,
-              //   tint: true,
-              //   // hint: "Add row...",
-              // },
-              // onRowAppended: () => {},
-              // rowMarkers: "checkbox",
-              // onDeleteRows: (rows: number[]) => {
-              //   console.log("Delete rows", rows)
-              // },
-              // rowSelect: "multi",
-              // rowSelectionMode: "auto",
-            })}
+          {...(element.editable && {
+            // Support fill handle for bulk editing
+            fillHandle: true,
+            // Support adding rows
+            trailingRowOptions: {
+              sticky: false,
+              tint: true,
+            },
+            rowMarkers: "checkbox",
+            rowSelect: "multi",
+            rowSelectionMode: "auto",
+            // Support editing:
+            onCellEdited: disabled ? undefined : onCellEdited,
+            // Support pasting data for bulk editing:
+            onPaste: disabled ? undefined : onPaste,
+            // Support adding rows
+            onRowAppended: disabled ? undefined : onRowAppended,
+            // Support deleting rows
+            onDelete: disabled ? undefined : onDelete,
+          })}
         />
       </Resizable>
     </StyledResizableContainer>

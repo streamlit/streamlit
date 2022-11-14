@@ -27,7 +27,6 @@ import {
   ImageCell,
   CustomCell,
   LoadingCell,
-  EditableGridCell,
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
 import { sprintf } from "sprintf-js"
@@ -241,13 +240,12 @@ export function isEditableType(type: ColumnType): boolean {
     ColumnType.Integer,
     ColumnType.Float,
     ColumnType.Boolean,
-    ColumnType.Date,
+    // ColumnType.Date,
     // ColumnType.Time,
-    ColumnType.DateTime,
+    // ColumnType.DateTime,
     ColumnType.Url,
     ColumnType.Categorical,
     ColumnType.Image,
-    ColumnType.ProgressChart,
   ].includes(type)
 }
 
