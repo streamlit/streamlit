@@ -2,7 +2,7 @@
 name: Feature request
 about: Suggest a feature or enhancement for Streamlit
 title: ""
-labels: enhancement, needs triage
+labels: type:enhancement
 assignees: ""
 ---
 
