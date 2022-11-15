@@ -42,6 +42,8 @@ try:
 
     pio.templates.default = "streamlit"
 except ModuleNotFoundError:
+    # We have imports here because it takes too loo long to load the template default for the first graph to load
+    # We do nothing if Plotly is not installed. This is expected since Plotly is an optional dependency.
     pass
 
 LOGGER: Final = get_logger(__name__)
