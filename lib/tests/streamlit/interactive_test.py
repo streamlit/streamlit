@@ -55,12 +55,7 @@ class InteractiveScriptTest(AsyncTestCase):
 
     def test_widgets_script(self):
         scriptrunner = TestScriptRunner("widgets_script.py")
-        scriptrunner.request_rerun(RerunData())
-        scriptrunner.start()
-
-        require_widgets_deltas([scriptrunner])
-
-        tree = parse_tree_from_messages(scriptrunner.forward_msgs())
+        tree = scriptrunner.run()
 
         # main and sidebar
         assert len(tree) == 2

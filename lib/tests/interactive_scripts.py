@@ -131,6 +131,14 @@ class TestScriptRunner(ScriptRunner):
                 return widget.id
         return None
 
+    def run(self, widget_state: Optional[WidgetStates] = None) -> Block:
+        rerun_data = RerunData(widget_states=widget_state)
+        self.request_rerun(rerun_data)
+        self.start()
+        require_widgets_deltas([self])
+        tree = parse_tree_from_messages(self.forward_msgs())
+        return tree
+
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     """
