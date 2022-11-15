@@ -62,6 +62,7 @@ vega_element_3 = st._arrow_vega_lite_chart(
         },
     },
     use_container_width=True,
+    theme="streamlit",
 )
 altair_element = st._arrow_altair_chart(
     alt.Chart(df).mark_line(point=True).encode(x="a", y="b").interactive(),

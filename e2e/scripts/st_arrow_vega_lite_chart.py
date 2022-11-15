@@ -80,7 +80,7 @@ st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
 st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
 st._arrow_vega_lite_chart(df, spec, theme="streamlit")
 st._arrow_vega_lite_chart(df, spec_with_width, theme="streamlit")
-st._arrow_vega_lite_chart(interactive_spec, None)
+st._arrow_vega_lite_chart(interactive_spec, None, theme="streamlit")
 
 # Screenshot comparison
 

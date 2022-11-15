@@ -43,26 +43,26 @@ st._arrow_area_chart()
 
 # 6 errors
 try:
-    st._arrow_vega_lite_chart({}, use_container_width=True)
+    st._arrow_vega_lite_chart({}, use_container_width=True, theme="streamlit")
 except Exception as e:
     st.write(e)
 
 try:
-    st._arrow_vega_lite_chart(data, {}, use_container_width=True)
+    st._arrow_vega_lite_chart(data, {}, use_container_width=True, theme="streamlit")
 except Exception as e:
     st.write(e)
 
 try:
-    st._arrow_vega_lite_chart(data, use_container_width=True)
+    st._arrow_vega_lite_chart(data, use_container_width=True, theme="streamlit")
 except Exception as e:
     st.write(e)
 
 try:
-    st._arrow_vega_lite_chart(use_container_width=True)
+    st._arrow_vega_lite_chart(use_container_width=True, theme="streamlit")
 except Exception as e:
     st.write(e)
 
 try:
-    st._arrow_altair_chart(use_container_width=True)  # type: ignore[call-arg]
+    st._arrow_altair_chart(use_container_width=True, theme="streamlit")  # type: ignore[call-arg]
 except Exception as e:
     st.write(e)
