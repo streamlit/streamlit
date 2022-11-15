@@ -25,7 +25,7 @@ with c1:
     st.text("%s" % text_area)
 
 with c2:
-    radio = st.radio("radio", ("0", "1", "2"), 0)
+    radio = st.radio("radio", ("0", "1", "2"), 1)
     st.text("%s" % radio)
 
 button = st.button("button")

@@ -75,7 +75,11 @@ class InteractiveScriptTest(AsyncTestCase):
         # first column has 4 elements
         assert len(main.children[0].children[0]) == 4
 
-        for node in tree:
-            print(node.type)
+        print([e.value for e in tree.get("text")])
+        print([e.value for e in tree.get("radio")])
+
+        radios = tree.get("radio")
+        assert radios[0].value == "1"
+        assert radios[1].value == "a"
 
         assert False

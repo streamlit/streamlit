@@ -16,13 +16,15 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union, overload
 
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Radio_pb2 import Radio as RadioProto
+from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
@@ -189,6 +191,48 @@ class Element:
     def __iter__(self):
         yield self
 
+    @property
+    def value(self):
+        p = getattr(self.proto, self.type)
+        return p.value
+
+
+@dataclass(init=False)
+class Text(Element):
+    proto: TextProto
+    type: str = "text"
+
+    def __init__(self, proto: TextProto):
+        self.proto = proto
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
+
+
+@dataclass(init=False)
+class Radio(Element):
+    proto: RadioProto
+
+    def __init__(self, proto: RadioProto):
+        self.proto = proto
+
+    @property
+    def value(self) -> str:
+        if self.proto.set_value:
+            v = self.proto.value
+        else:
+            v = self.proto.default
+        return self.proto.options[v]
+
+    @property
+    def type(self) -> str:
+        return "radio"
+
+    @property
+    def label(self) -> str:
+        return self.proto.label
+
 
 @dataclass(init=False)
 class Block:
@@ -221,19 +265,35 @@ class Block:
             for c in self.children[child_idx]:
                 yield c
 
+    @overload
+    def get(self, elt: Literal["text"]) -> List[Text]:
+        ...
+
+    @overload
+    def get(self, elt: Literal["radio"]) -> List[Radio]:
+        ...
+
+    def get(self, elt: str) -> List[Union[Element, Block]]:
+        return [e for e in self if e.type == elt]
+
 
 def parse_tree_from_messages(messages: List[ForwardMsg]) -> Block:
     root = Block(type="root")
     root.children = {0: Block(type="main"), 1: Block(type="sidebar")}
-    # breakpoint()
+
     for msg in messages:
         if not msg.HasField("delta"):
             continue
         delta_path = msg.metadata.delta_path
-        print(delta_path)
         delta = msg.delta
         if delta.WhichOneof("type") == "new_element":
-            new_node = Element(delta.new_element)
+            elt = delta.new_element
+            if elt.WhichOneof("type") == "text":
+                new_node = Text(elt.text)
+            elif elt.WhichOneof("type") == "radio":
+                new_node = Radio(elt.radio)
+            else:
+                new_node = Element(elt)
         elif delta.WhichOneof("type") == "add_block":
             new_node = Block(delta.add_block)
         else:
