@@ -28,7 +28,7 @@ spec = {
 }
 
 # 5 empty charts
-st._arrow_vega_lite_chart(spec, use_container_width=True)
+st._arrow_vega_lite_chart(spec, use_container_width=True, theme="streamlit")
 fig, ax = plt.subplots()
 st.pyplot(fig)
 st._arrow_line_chart()
