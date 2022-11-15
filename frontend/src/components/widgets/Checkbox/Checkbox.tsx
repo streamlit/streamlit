@@ -143,6 +143,7 @@ class Checkbox extends React.PureComponent<Props, State> {
           checked={this.state.value}
           disabled={disabled}
           onChange={this.onChange}
+          aria-label={element.label}
           overrides={{
             Root: {
               style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
