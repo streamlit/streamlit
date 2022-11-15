@@ -34,6 +34,16 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
+
+try:
+    import plotly.io as pio
+
+    import streamlit.elements.streamlit_plotly_theme
+
+    pio.templates.default = "streamlit"
+except ModuleNotFoundError:
+    pass
+
 LOGGER: Final = get_logger(__name__)
 
 SharingMode: TypeAlias = Literal["streamlit", "private", "public", "secret"]
@@ -66,12 +76,6 @@ FigureOrData: TypeAlias = Union[
 
 
 class PlotlyMixin:
-    import plotly.io as pio
-
-    import streamlit.elements.streamlit_plotly_theme
-
-    pio.templates.default = "streamlit"
-
     @gather_metrics("plotly_chart")
     def plotly_chart(
         self,
