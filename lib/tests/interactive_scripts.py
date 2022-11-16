@@ -153,7 +153,7 @@ def script_from_string(path: pathlib.Path, script: str) -> TestScriptRunner:
     return TestScriptRunner(str(path))
 
 
-def filepath_runner(script_name: str) -> TestScriptRunner:
+def script_from_filename(script_name: str) -> TestScriptRunner:
     script_path = os.path.join(
         os.path.dirname(__file__), "streamlit", "test_data", script_name
     )

@@ -20,11 +20,7 @@ import pytest
 from streamlit.runtime import Runtime
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from tests.interactive_scripts import (
-    TestScriptRunner,
-    filepath_runner,
-    script_from_string,
-)
+from tests.interactive_scripts import script_from_filename, script_from_string
 
 
 @pytest.fixture(scope="class")
@@ -52,7 +48,7 @@ class InteractiveScriptTest(unittest.TestCase):
         Runtime._instance = None
 
     def test_widgets_script(self):
-        scriptrunner = filepath_runner("widgets_script.py")
+        scriptrunner = script_from_filename("widgets_script.py")
         tree = scriptrunner.run()
 
         # main and sidebar
@@ -76,7 +72,7 @@ class InteractiveScriptTest(unittest.TestCase):
 
     def test_cached_widget_replay_rerun(self):
         scriptrunner = script_from_string(
-            self.script_dir / "cached_widget_replay",
+            self.script_dir / "cached_widget_replay.py",
             """
 import streamlit as st
 
@@ -100,7 +96,7 @@ st.text(r)
 
     def test_cached_widget_replay_interaction(self):
         scriptrunner = script_from_string(
-            self.script_dir / "cached_widget_replay",
+            self.script_dir / "cached_widget_replay.py",
             """
 import streamlit as st
 
