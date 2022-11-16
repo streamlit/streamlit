@@ -16,9 +16,16 @@
 
 import { Video } from "@emotion-icons/open-iconic"
 import { useTheme } from "@emotion/react"
-import React, { ReactElement, useRef, useState } from "react"
+import React, {
+  ReactElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
+import { debounce } from "src/lib/utils"
 
 import Icon from "src/components/shared/Icon"
 import { Theme } from "src/theme"
@@ -88,6 +95,16 @@ const WebcamComponent = ({
   )
   const videoRef = useRef<Webcam>(null)
 
+  const [debouncedWidth, setDebouncedWidth] = useState(width)
+  const memoizedSetDebouncedCallback = useCallback(
+    debounce(1000, setDebouncedWidth),
+    [debouncedWidth]
+  )
+
+  useEffect(() => {
+    memoizedSetDebouncedCallback(width)
+  }, [width])
+
   function capture(): void {
     if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
@@ -98,11 +115,11 @@ const WebcamComponent = ({
   const theme: Theme = useTheme()
 
   return (
-    <StyledCameraInput width={width}>
+    <StyledCameraInput width={debouncedWidth}>
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
       !clearPhotoInProgress ? (
-        <AskForCameraPermission width={width} />
+        <AskForCameraPermission width={debouncedWidth} />
       ) : (
         isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
       )}
@@ -112,7 +129,7 @@ const WebcamComponent = ({
           !disabled &&
           !clearPhotoInProgress
         }
-        width={width}
+        width={debouncedWidth}
       >
         {!disabled && (
           <Webcam
@@ -120,10 +137,10 @@ const WebcamComponent = ({
             ref={videoRef}
             screenshotFormat="image/jpeg"
             screenshotQuality={1}
-            width={width}
+            width={debouncedWidth}
             // We keep Aspect ratio of container always equal 16 / 9.
             // The aspect ration of video stream may be different depending on a camera.
-            height={(width * 9) / 16}
+            height={(debouncedWidth * 9) / 16}
             style={{
               borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
             }}
@@ -135,7 +152,7 @@ const WebcamComponent = ({
               setClearPhotoInProgress(false)
             }}
             videoConstraints={{
-              width: { ideal: width },
+              width: { ideal: debouncedWidth },
               facingMode,
             }}
           />
