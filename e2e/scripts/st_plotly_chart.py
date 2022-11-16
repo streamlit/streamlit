@@ -154,7 +154,7 @@ fig_contour = go.Figure(
         colorscale="Electric",
     )
 )
-st.plotly_chart(fig_contour)
+st.plotly_chart(fig_contour, theme="streamlit")
 
 # Discrete Customization Chart
 df = px.data.wind()
@@ -167,7 +167,7 @@ fig = px.scatter_polar(
     size="frequency",
     color_discrete_sequence=px.colors.sequential.Plasma_r,
 )
-st.plotly_chart(fig)
+st.plotly_chart(fig, theme="streamlit")
 
 # Layout Customization Chart
 import plotly.graph_objects as go
@@ -191,7 +191,7 @@ fig = go.Figure(
     )
 )
 fig.update_layout(margin=dict(t=10, l=100, r=100, b=110))
-st.plotly_chart(fig)
+st.plotly_chart(fig, theme="streamlit")
 
 # Separate template Customization Chart
 df = px.data.gapminder().query("country == 'Canada'")
@@ -206,10 +206,10 @@ fig = px.bar(
     height=400,
 )
 
-st.plotly_chart(fig)
+st.plotly_chart(fig, theme="streamlit")
 
 # Histogram chart
 df = px.data.tips()
 
 fig = px.density_heatmap(df, x="total_bill", y="tip")
-st.plotly_chart(fig)
+st.plotly_chart(fig, theme="streamlit")
