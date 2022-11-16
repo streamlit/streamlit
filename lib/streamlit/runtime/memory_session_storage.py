@@ -36,10 +36,33 @@ class MemorySessionStorage(SessionStorage):
     def __init__(
         self,
         maxsize: int = 128,
-        ttl: int = 5 * 60,  # 5 minutes
+        ttl_seconds: int = 5 * 60,  # 5 minutes
     ) -> None:
+        """Instantiate a new MemorySessionStorage.
+
+        Parameters
+        ----------
+        maxsize
+            The maximum number of sessions we allow to be stored in this
+            MemorySessionStorage. If an entry needs to be removed because we have
+            exceeded this number, either
+              * an expired entry is removed, or
+              * the least recently used entry is removed (if no entries have expired).
+
+        ttl_seconds
+            The time in seconds for an entry added to a MemorySessionStorage to live.
+            After this amount of time has passed for a given entry, it becomes
+            inaccessible and will be removed eventually.
+
+            TODO(vdonato): We'll have to do some testing to see what the TTLCache
+            documentation means by "eventually". It's possible that we'll want to add
+            our own mechanism to force cleanups of expired entries more frequently than
+            TTLCache does by default (which is easy to do with some of the methods that
+            TTLCache exposes).
+        """
+
         self._cache: MutableMapping[str, SessionInfo] = TTLCache(
-            maxsize=maxsize, ttl=ttl
+            maxsize=maxsize, ttl=ttl_seconds
         )
 
     def get(self, session_id: str) -> Optional[SessionInfo]:

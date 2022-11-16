@@ -15,6 +15,8 @@
 import unittest
 from unittest.mock import MagicMock
 
+from cachetools import TTLCache
+
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 
 
@@ -25,6 +27,17 @@ class MemorySessionStorageTest(unittest.TestCase):
     testing cachetools.TTLCache. We try to just verify that we've wrapped TTLCache
     correctly, and in particular we avoid testing cache expiry functionality.
     """
+
+    def test_uses_ttl_cache(self):
+        """Verify that the backing cache of a MemorySessionStorage is a TTLCache.
+
+        We do this because we're intentionally avoiding writing tests around cache
+        expiry because the cachetools library should do this for us. In the case
+        that the backing cache for a MemorySessionStorage ever changes, we'll likely be
+        responsible for adding our own tests.
+        """
+        store = MemorySessionStorage()
+        self.assertIsInstance(store._cache, TTLCache)
 
     def test_get(self):
         store = MemorySessionStorage()
