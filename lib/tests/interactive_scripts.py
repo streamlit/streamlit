@@ -178,7 +178,6 @@ def require_widgets_deltas(runner: TestScriptRunner, timeout: float = 3) -> None
     """
 
     t0 = time.time()
-    num_complete = 0
     while time.time() - t0 < timeout:
         time.sleep(0.1)
         if runner.script_stopped():
@@ -186,7 +185,7 @@ def require_widgets_deltas(runner: TestScriptRunner, timeout: float = 3) -> None
 
     # If we get here, at least 1 runner hasn't yet completed before our
     # timeout. Create an error string for debugging.
-    err_string = f"require_widgets_deltas() timed out after {timeout}s ({num_complete}/{len(runners)} runners complete)"
+    err_string = f"require_widgets_deltas() timed out after {timeout}s)"
 
     # Shutdown all runners before throwing an error, so that the script
     # doesn't hang forever.
