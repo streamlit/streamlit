@@ -131,13 +131,14 @@ class TestScriptRunner(ScriptRunner):
                 return widget.id
         return None
 
-    def run(self, widget_state: Optional[WidgetStates] = None) -> Block:
+    def run(self, widget_state: Optional[WidgetStates] = None) -> Root:
         rerun_data = RerunData(widget_states=widget_state)
         self.request_rerun(rerun_data)
         if not self._script_thread:
             self.start()
         require_widgets_deltas(self)
         tree = parse_tree_from_messages(self.forward_msgs())
+        tree.script_runner = self
         return tree
 
     def script_stopped(self) -> bool:
@@ -211,6 +212,12 @@ class Element:
     def widget_state(self) -> Optional[WidgetState]:
         return None
 
+    def run(self) -> Root:
+        assert self.root.script_runner is not None
+
+        widget_states = self.root.get_widget_states()
+        return self.root.script_runner.run(widget_states)
+
 
 @dataclass(init=False)
 class Text(Element):
@@ -266,8 +273,9 @@ class Radio(Element):
     def id(self) -> str:
         return self.proto.id
 
-    def set_value(self, v: str) -> None:
+    def set_value(self, v: str) -> Radio:
         self._index = list(self.proto.options).index(v)
+        return self
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
@@ -336,19 +344,28 @@ class Block:
 
         return ws
 
+    def run(self) -> Root:
+        assert self.root.script_runner is not None
+
+        widget_states = self.get_widget_states()
+        return self.root.script_runner.run(widget_states)
+
 
 @dataclass(init=False)
 class Root(Block):
+    script_runner: Optional[TestScriptRunner]
+
     def __init__(self):
         self.children = {}
         self.root = self
+        self.script_runner = None
 
     @property
     def type(self) -> str:
         return "root"
 
 
-def parse_tree_from_messages(messages: List[ForwardMsg]) -> Block:
+def parse_tree_from_messages(messages: List[ForwardMsg]) -> Root:
     root = Root()
     root.children = {
         0: Block(type="main", root=root),

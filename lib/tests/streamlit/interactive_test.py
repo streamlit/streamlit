@@ -82,7 +82,7 @@ class InteractiveScriptTest(AsyncTestCase):
 
         assert len(sr.get("radio")) == 1
         # sr2 = sr.get("button")[0].click().run()
-        sr2 = scriptrunner.run(sr.get_widget_states())
+        sr2 = sr.run()
         assert len(sr2.get("radio")) == 1
 
     def test_cached_widget_replay_interaction(self):
@@ -92,8 +92,5 @@ class InteractiveScriptTest(AsyncTestCase):
         assert len(sr.get("radio")) == 1
         assert sr.get("text")[0].value == "bar"
 
-        sr.get("radio")[0].set_value("qux")
-        click = sr.get_widget_states()
-        sr2 = scriptrunner.run(click)
-
+        sr2 = sr.get("radio")[0].set_value("qux").run()
         assert sr2.get("text")[0].value == "qux"
