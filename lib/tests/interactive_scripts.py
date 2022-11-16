@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional, Union, overload
@@ -42,19 +43,14 @@ class TestScriptRunner(ScriptRunner):
     # To prevent PytestCollectionWarning we set __test__ property to False
     __test__ = False
 
-    def __init__(self, script_name: str):
+    def __init__(self, script_path: str):
         """Initializes the ScriptRunner for the given script_name"""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
 
-        main_script_path = os.path.join(
-            os.path.dirname(__file__), "streamlit", "test_data", script_name
-        )
-        # main_script_path = script_name
-
         super().__init__(
             session_id="test session id",
-            main_script_path=main_script_path,
+            main_script_path=script_path,
             client_state=ClientState(),
             session_state=SessionState(),
             uploaded_file_mgr=UploadedFileManager(),
@@ -150,6 +146,18 @@ class TestScriptRunner(ScriptRunner):
             ):
                 return True
         return False
+
+
+def script_from_string(path: pathlib.Path, script: str) -> TestScriptRunner:
+    path.write_text(script)
+    return TestScriptRunner(str(path))
+
+
+def filepath_runner(script_name: str) -> TestScriptRunner:
+    script_path = os.path.join(
+        os.path.dirname(__file__), "streamlit", "test_data", script_name
+    )
+    return TestScriptRunner(script_path)
 
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
