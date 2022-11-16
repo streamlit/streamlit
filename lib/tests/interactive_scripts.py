@@ -191,9 +191,9 @@ def require_widgets_deltas(runner: TestScriptRunner, timeout: float = 3) -> None
 class Element:
     type: str
     proto: ElementProto = field(repr=False)
-    root: Optional[Block] = field(repr=False)
+    root: Block = field(repr=False)
 
-    def __init__(self, proto: ElementProto, root: Optional[Block] = None):
+    def __init__(self, proto: ElementProto, root: Block = None):
         self.proto = proto
         self.root = root
         ty = proto.WhichOneof("type")
@@ -215,9 +215,9 @@ class Element:
 @dataclass(init=False)
 class Text(Element):
     proto: TextProto
-    root: Optional[Block] = field(repr=False)
+    root: Block = field(repr=False)
 
-    def __init__(self, proto: TextProto, root: Optional[Block] = None):
+    def __init__(self, proto: TextProto, root: Block):
         self.proto = proto
         self.root = root
 
@@ -234,9 +234,9 @@ class Text(Element):
 class Radio(Element):
     proto: RadioProto
     _index: Any
-    root: Optional[Block] = field(repr=False)
+    root: Block = field(repr=False)
 
-    def __init__(self, proto: RadioProto, root: Optional[Block] = None):
+    def __init__(self, proto: RadioProto, root: Block):
         self.proto = proto
         self.root = root
         self._index = None
@@ -284,13 +284,13 @@ class Block:
     type: str
     children: Dict[int, Union[Element, Block]]
     proto: Optional[BlockProto] = field(repr=False)
-    root: Optional[Block] = field(repr=False)
+    root: Block = field(repr=False)
 
     def __init__(
         self,
+        root: Block,
         proto: Optional[BlockProto] = None,
         type: Optional[str] = None,
-        root: Optional[Block] = None,
     ):
         self.children = {}
         self.proto = proto
@@ -338,7 +338,7 @@ class Block:
 
 
 def parse_tree_from_messages(messages: List[ForwardMsg]) -> Block:
-    root = Block(type="root")
+    root = Block(type="root", root=None)  # type: ignore
     root.root = root
     root.children = {
         0: Block(type="main", root=root),
@@ -359,7 +359,7 @@ def parse_tree_from_messages(messages: List[ForwardMsg]) -> Block:
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":
-            new_node = Block(delta.add_block, root=root)
+            new_node = Block(proto=delta.add_block, root=root)
         else:
             # add_rows
             continue
