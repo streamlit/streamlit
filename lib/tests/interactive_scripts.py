@@ -139,10 +139,10 @@ class TestScriptRunner(ScriptRunner):
 
     def script_stopped(self) -> bool:
         for e in self.events:
-            if (
-                e == ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
-                or e == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
-                or e == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            if e in (
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
             ):
                 return True
         return False
