@@ -13,9 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+import unittest
 from unittest.mock import MagicMock, patch
-
-from tornado.testing import AsyncTestCase
 
 from streamlit.runtime import Runtime
 from streamlit.runtime.media_file_manager import MediaFileManager
@@ -25,7 +24,7 @@ from tests.interactive_scripts import TestScriptRunner
 
 # TODO wrangle pytest tmp_path fixture to generate a tmp script location
 @patch("streamlit.source_util._cached_pages", new=None)
-class InteractiveScriptTest(AsyncTestCase):
+class InteractiveScriptTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         mock_runtime = MagicMock(spec=Runtime)
