@@ -45,6 +45,7 @@ from streamlit.runtime.state import (
     SessionState,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
 _LOGGER = get_logger(__name__)
 
@@ -691,35 +692,6 @@ def _clean_problem_modules() -> None:
 def _new_module(name: str) -> types.ModuleType:
     """Create a new module with the given name."""
     return types.ModuleType(name)
-
-
-# Code modified from IPython (BSD license)
-# Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
-class modified_sys_path:
-    """A context for prepending a directory to sys.path for a second."""
-
-    def __init__(self, main_script_path: str):
-        self._main_script_path = main_script_path
-        self._added_path = False
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def __enter__(self):
-        if self._main_script_path not in sys.path:
-            sys.path.insert(0, self._main_script_path)
-            self._added_path = True
-
-    def __exit__(self, type, value, traceback):
-        if self._added_path:
-            try:
-                sys.path.remove(self._main_script_path)
-            except ValueError:
-                # It's already removed.
-                pass
-
-        # Returning False causes any exceptions to be re-raised.
-        return False
 
 
 # The reason this is not a decorator is because we want to make it clear at the
