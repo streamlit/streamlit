@@ -15,27 +15,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from tornado.testing import AsyncTestCase
 
-from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.Element_pb2 import Element as ElementProto
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime.scriptrunner import RerunData
-from tests.interactive_scripts import (
-    Block,
-    TestScriptRunner,
-    _create_widget,
-    parse_tree_from_messages,
-    require_widgets_deltas,
-)
+from tests.interactive_scripts import TestScriptRunner
 
 
 # TODO wrangle pytest tmp_path fixture to generate a tmp script location
