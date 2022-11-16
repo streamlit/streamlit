@@ -31,14 +31,17 @@ describe("st.camera_input", () => {
       .contains("Learn how to allow access.")
       .should("not.exist");
 
-    cy.get("[data-testid='stCameraInput']")
-      .should("have.length.at.least", 1)
+    cy.get("[data-testid='stCameraInputButton']")
+      .should("have.length.at.least", 2)
+      .first()
+      .wait(1000)
       .should("not.be.disabled")
       .contains("Take Photo")
       .click();
 
+
     // Add timeout until image is displayed
-    cy.get("img", { timeout: 10000 }).should("have.length.at.least", 2);
+    cy.get("img", { timeout: 1000 }).should("have.length.at.least", 2);
 
     cy.get("[data-testid='stImage']").should("have.length.at.least", 1);
   });
