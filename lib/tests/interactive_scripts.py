@@ -160,21 +160,9 @@ def script_from_filename(script_name: str) -> TestScriptRunner:
     return TestScriptRunner(script_path)
 
 
-def _create_widget(id: str, states: WidgetStates) -> WidgetState:
-    """
-    Returns
-    -------
-    streamlit.proto.WidgetStates_pb2.WidgetState
-
-    """
-    states.widgets.add().id = id
-    return states.widgets[-1]
-
-
 def require_widgets_deltas(runner: TestScriptRunner, timeout: float = 3) -> None:
-    """Wait for the given ScriptRunners to each produce the appropriate
-    number of deltas for widgets_script.py before a timeout. If the timeout
-    is reached, the runners will all be shutdown and an error will be thrown.
+    """Wait for the given ScriptRunner to emit a completion event. If the timeout
+    is reached, the runner will be shutdown and an error will be thrown.
     """
 
     t0 = time.time()
@@ -183,11 +171,11 @@ def require_widgets_deltas(runner: TestScriptRunner, timeout: float = 3) -> None
         if runner.script_stopped():
             return
 
-    # If we get here, at least 1 runner hasn't yet completed before our
+    # If we get here, the runner hasn't yet completed before our
     # timeout. Create an error string for debugging.
     err_string = f"require_widgets_deltas() timed out after {timeout}s)"
 
-    # Shutdown all runners before throwing an error, so that the script
+    # Shutdown the runner before throwing an error, so that the script
     # doesn't hang forever.
     runner.request_stop()
     runner.join()
