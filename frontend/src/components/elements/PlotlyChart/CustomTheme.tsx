@@ -206,14 +206,15 @@ export function applyStreamlitThemeTemplateLayout(
  * as the backend has no idea of the background color.
  * @param spec the spec that we want to update
  * @param theme
- * @param elTheme element.theme
+ * @param elementTheme element.theme
  * @returns the updated spec with the correct theme colors
  */
 function replaceCategoricalColors(
   spec: string,
   theme: Theme,
-  elTheme: string
+  elementTheme: string
 ): string {
+  // All the placeholder constants defined here are matching the placeholders in the python implementation.
   const CATEGORY_0 = "#000001"
   const CATEGORY_1 = "#000002"
   const CATEGORY_2 = "#000003"
@@ -225,7 +226,7 @@ function replaceCategoricalColors(
   const CATEGORY_8 = "#000009"
   const CATEGORY_9 = "#000010"
 
-  if (elTheme === "streamlit") {
+  if (elementTheme === "streamlit") {
     const categoryColors = getCategoricalColorsArray(theme)
     spec = spec.replaceAll(CATEGORY_0, categoryColors[0])
     spec = spec.replaceAll(CATEGORY_1, categoryColors[1])
@@ -256,8 +257,9 @@ function replaceCategoricalColors(
 function replaceSequentialColors(
   spec: string,
   theme: Theme,
-  elTheme: string
+  elementTheme: string
 ): string {
+  // All the placeholder constants defined here are matching the placeholders in the python implementation.
   const SEQUENTIAL_0 = "#000011"
   const SEQUENTIAL_1 = "#000012"
   const SEQUENTIAL_2 = "#000013"
@@ -269,7 +271,7 @@ function replaceSequentialColors(
   const SEQUENTIAL_8 = "#000019"
   const SEQUENTIAL_9 = "#000020"
 
-  if (elTheme === "streamlit") {
+  if (elementTheme === "streamlit") {
     const sequentialColors = getSequentialColorsArray(theme)
     spec = spec.replaceAll(SEQUENTIAL_0, sequentialColors[0])
     spec = spec.replaceAll(SEQUENTIAL_1, sequentialColors[1])
@@ -300,8 +302,9 @@ function replaceSequentialColors(
 function replaceDivergingColors(
   spec: string,
   theme: Theme,
-  elTheme: string
+  elementTheme: string
 ): string {
+  // All the placeholder constants defined here are matching the placeholders in the python implementation.
   const DIVERGING_0 = "#000021"
   const DIVERGING_1 = "#000022"
   const DIVERGING_2 = "#000023"
@@ -314,7 +317,7 @@ function replaceDivergingColors(
   const DIVERGING_9 = "#000030"
   const DIVERGING_10 = "#000031"
 
-  if (elTheme === "streamlit") {
+  if (elementTheme === "streamlit") {
     const divergingColors = getDivergingColorsArray(theme)
     spec = spec.replaceAll(DIVERGING_0, divergingColors[0])
     spec = spec.replaceAll(DIVERGING_1, divergingColors[1])
@@ -344,30 +347,49 @@ function replaceDivergingColors(
   return spec
 }
 
-export function replaceTemporaryColors(
-  spec: string,
-  theme: Theme,
-  elTheme: string
-): string {
-  spec = spec.replaceAll("#000032", getIncreasingGreen(theme))
-  spec = spec.replaceAll("#000033", getDecreasingRed(theme))
+/**
+ * Because Template.layout doesn't affect the go(plotly.graph_objects) graphs,
+ * we use this method to specifically replace these graph properties.
+ * */
+function replaceGOSpecificColors(spec: string, theme: Theme): string {
+  // All the placeholder constants defined here are matching the placeholders in the python implementation.
+  const INCREASING = "#000032"
+  const DECREASING = "#000033"
+  const TOTAL = "#000034"
+
+  const GRAY_30 = "#000035"
+  const GRAY_70 = "#000036"
+  const GRAY_90 = "#000037"
+  const BG_COLOR = "#000038"
+  const FADED_TEXT_05 = "#000039"
+  const BG_MIX = "#000040"
+
+  spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
+  spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
   spec = spec.replaceAll(
-    "#000034",
+    TOTAL,
     hasLightBackgroundColor(theme) ? theme.colors.blue80 : theme.colors.blue40
   )
 
-  spec = spec.replaceAll("#000035", getGray30(theme))
-  spec = spec.replaceAll("#000036", getGray70(theme))
-  spec = spec.replaceAll("#000037", getGray90(theme))
+  spec = spec.replaceAll(GRAY_30, getGray30(theme))
+  spec = spec.replaceAll(GRAY_70, getGray70(theme))
+  spec = spec.replaceAll(GRAY_90, getGray90(theme))
 
-  spec = spec.replaceAll("#000038", theme.colors.bgColor)
-  spec = spec.replaceAll("#000039", theme.colors.fadedText05)
-  spec = spec.replaceAll("#000040", theme.colors.bgMix)
-  spec = spec.replaceAll('"Source Sans Pro", sans-serif', theme.fonts.bodyFont)
+  spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
+  spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
+  spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
+  return spec
+}
 
-  spec = replaceCategoricalColors(spec, theme, elTheme)
-  spec = replaceSequentialColors(spec, theme, elTheme)
-  spec = replaceDivergingColors(spec, theme, elTheme)
+export function replaceTemporaryColors(
+  spec: string,
+  theme: Theme,
+  elementTheme: string
+): string {
+  spec = replaceGOSpecificColors(spec, theme)
+  spec = replaceCategoricalColors(spec, theme, elementTheme)
+  spec = replaceSequentialColors(spec, theme, elementTheme)
+  spec = replaceDivergingColors(spec, theme, elementTheme)
   return spec
 }
 

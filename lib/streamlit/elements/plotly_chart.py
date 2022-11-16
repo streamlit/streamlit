@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 try:
     import plotly.io as pio
 
-    import streamlit.elements.streamlit_plotly_theme
+    import streamlit.elements.lib.streamlit_plotly_theme
 
     pio.templates.default = "streamlit"
 except ModuleNotFoundError:
@@ -84,7 +84,7 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
+        theme: Union[None, Literal["streamlit"]] = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display an interactive Plotly chart.

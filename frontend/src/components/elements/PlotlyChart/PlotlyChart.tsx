@@ -61,12 +61,11 @@ function renderFigure({
   const isFullScreen = (): boolean => !!height
 
   const theme: Theme = useTheme()
-  let updatedSpec = figure.spec
 
-  const generateSpec = (figure: FigureProto): any => {
-    updatedSpec = replaceTemporaryColors(updatedSpec, theme, element.theme)
-
-    const spec = JSON.parse(updatedSpec)
+  const generateSpec = (): any => {
+    const spec = JSON.parse(
+      replaceTemporaryColors(figure.spec, theme, element.theme)
+    )
     const initialHeight = DEFAULT_HEIGHT
 
     if (isFullScreen()) {
@@ -89,12 +88,12 @@ function renderFigure({
   }
 
   const [config, setConfig] = useState(JSON.parse(figure.config))
-  const [spec, setSpec] = useState(generateSpec(figure))
+  const [spec, setSpec] = useState(generateSpec())
 
   // Update config and spec references iff the theme or props change
   useEffect(() => {
     setConfig(JSON.parse(figure.config))
-    setSpec(generateSpec(figure))
+    setSpec(generateSpec())
   }, [element, theme, height, width])
 
   const { data, layout, frames } = spec
