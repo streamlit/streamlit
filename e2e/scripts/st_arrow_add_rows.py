@@ -36,6 +36,7 @@ vega_element_1 = st._arrow_vega_lite_chart(
         },
     },
     use_container_width=True,
+    theme="streamlit",
 )
 vega_element_2 = st._arrow_vega_lite_chart(
     {
@@ -48,6 +49,7 @@ vega_element_2 = st._arrow_vega_lite_chart(
         },
     },
     use_container_width=True,
+    theme="streamlit",
 )
 vega_element_3 = st._arrow_vega_lite_chart(
     {
@@ -60,10 +62,12 @@ vega_element_3 = st._arrow_vega_lite_chart(
         },
     },
     use_container_width=True,
+    theme="streamlit",
 )
 altair_element = st._arrow_altair_chart(
     alt.Chart(df).mark_line(point=True).encode(x="a", y="b").interactive(),
     use_container_width=True,
+    theme="streamlit",
 )
 
 table_element._arrow_add_rows(df)

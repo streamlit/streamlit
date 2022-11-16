@@ -49,7 +49,7 @@ data = pd.DataFrame(
 chart = alt.Chart(data).mark_bar().encode(x="a", y="b")
 
 st.write("Bar chart with default theme:")
-st._arrow_altair_chart(chart)
+st._arrow_altair_chart(chart, theme=None)
 
 st.write("Bar chart with streamlit theme:")
 st._arrow_altair_chart(chart, theme="streamlit")
