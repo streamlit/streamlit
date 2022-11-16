@@ -70,11 +70,30 @@ class InteractiveScriptTest(AsyncTestCase):
         # first column has 4 elements
         assert len(main.children[0].children[0]) == 4
 
-        print([e.value for e in tree.get("text")])
-        print([e.value for e in tree.get("radio")])
-
         radios = tree.get("radio")
         assert radios[0].value == "1"
         assert radios[1].value == "a"
 
-        assert False
+        tree.get_widget_states()
+
+    def test_cached_widget_replay_rerun(self):
+        scriptrunner = TestScriptRunner("cached_widget_replay.py")
+        sr = scriptrunner.run()
+
+        assert len(sr.get("radio")) == 1
+        # sr2 = sr.get("button")[0].click().run()
+        sr2 = scriptrunner.run(sr.get_widget_states())
+        assert len(sr2.get("radio")) == 1
+
+    def test_cached_widget_replay_interaction(self):
+        scriptrunner = TestScriptRunner("cached_widget_replay.py")
+        sr = scriptrunner.run()
+
+        assert len(sr.get("radio")) == 1
+        assert sr.get("text")[0].value == "bar"
+
+        sr.get("radio")[0].set_value("qux")
+        click = sr.get_widget_states()
+        sr2 = scriptrunner.run(click)
+
+        assert sr2.get("text")[0].value == "qux"

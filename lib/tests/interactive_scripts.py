@@ -134,10 +134,21 @@ class TestScriptRunner(ScriptRunner):
     def run(self, widget_state: Optional[WidgetStates] = None) -> Block:
         rerun_data = RerunData(widget_states=widget_state)
         self.request_rerun(rerun_data)
-        self.start()
-        require_widgets_deltas([self])
+        if not self._script_thread:
+            self.start()
+        require_widgets_deltas(self)
         tree = parse_tree_from_messages(self.forward_msgs())
         return tree
+
+    def script_stopped(self) -> bool:
+        for e in self.events:
+            if (
+                e == ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+                or e == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
+                or e == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            ):
+                return True
+        return False
 
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
@@ -151,36 +162,27 @@ def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     return states.widgets[-1]
 
 
-def require_widgets_deltas(runners: List[TestScriptRunner], timeout: float = 3) -> None:
+def require_widgets_deltas(runner: TestScriptRunner, timeout: float = 3) -> None:
     """Wait for the given ScriptRunners to each produce the appropriate
     number of deltas for widgets_script.py before a timeout. If the timeout
     is reached, the runners will all be shutdown and an error will be thrown.
     """
-    NUM_DELTAS = 10
 
     t0 = time.time()
     num_complete = 0
     while time.time() - t0 < timeout:
         time.sleep(0.1)
-        num_complete = sum(
-            1 for runner in runners if len(runner.deltas()) >= NUM_DELTAS
-        )
-        if num_complete == len(runners):
+        if runner.script_stopped():
             return
 
     # If we get here, at least 1 runner hasn't yet completed before our
     # timeout. Create an error string for debugging.
     err_string = f"require_widgets_deltas() timed out after {timeout}s ({num_complete}/{len(runners)} runners complete)"
-    for runner in runners:
-        if len(runner.deltas()) < NUM_DELTAS:
-            err_string += f"\n- incomplete deltas: {runner.deltas()}"
 
     # Shutdown all runners before throwing an error, so that the script
     # doesn't hang forever.
-    for runner in runners:
-        runner.request_stop()
-    for runner in runners:
-        runner.join()
+    runner.request_stop()
+    runner.join()
 
     raise RuntimeError(err_string)
 
@@ -189,9 +191,11 @@ def require_widgets_deltas(runners: List[TestScriptRunner], timeout: float = 3) 
 class Element:
     type: str
     proto: ElementProto = field(repr=False)
+    root: Optional[Block] = field(repr=False)
 
-    def __init__(self, proto: ElementProto):
+    def __init__(self, proto: ElementProto, root: Optional[Block] = None):
         self.proto = proto
+        self.root = root
         ty = proto.WhichOneof("type")
         assert ty is not None
         self.type = ty
@@ -204,33 +208,50 @@ class Element:
         p = getattr(self.proto, self.type)
         return p.value
 
+    def widget_state(self) -> Optional[WidgetState]:
+        return None
+
 
 @dataclass(init=False)
 class Text(Element):
     proto: TextProto
-    type: str = "text"
+    root: Optional[Block] = field(repr=False)
 
-    def __init__(self, proto: TextProto):
+    def __init__(self, proto: TextProto, root: Optional[Block] = None):
         self.proto = proto
+        self.root = root
 
     @property
     def value(self) -> str:
         return self.proto.body
 
+    @property
+    def type(self) -> str:
+        return "text"
+
 
 @dataclass(init=False)
 class Radio(Element):
     proto: RadioProto
+    _index: Any
+    root: Optional[Block] = field(repr=False)
 
-    def __init__(self, proto: RadioProto):
+    def __init__(self, proto: RadioProto, root: Optional[Block] = None):
         self.proto = proto
+        self.root = root
+        self._index = None
 
     @property
-    def value(self) -> str:
+    def index(self) -> int:
         if self.proto.set_value:
             v = self.proto.value
         else:
             v = self.proto.default
+        return v
+
+    @property
+    def value(self) -> str:
+        v = self.index
         return self.proto.options[v]
 
     @property
@@ -241,17 +262,35 @@ class Radio(Element):
     def label(self) -> str:
         return self.proto.label
 
+    @property
+    def id(self) -> str:
+        return self.proto.id
+
+    def set_value(self, v: str) -> None:
+        self._index = list(self.proto.options).index(v)
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        if self._index is not None:
+            ws.int_value = self._index
+        else:
+            ws.int_value = self.index
+        return ws
+
 
 @dataclass(init=False)
 class Block:
     type: str
     children: Dict[int, Union[Element, Block]]
     proto: Optional[BlockProto] = field(repr=False)
+    root: Optional[Block] = field(repr=False)
 
     def __init__(
         self,
         proto: Optional[BlockProto] = None,
         type: Optional[str] = None,
+        root: Optional[Block] = None,
     ):
         self.children = {}
         self.proto = proto
@@ -263,6 +302,7 @@ class Block:
             self.type = type
         else:
             self.type = ""
+        self.root = root
 
     def __len__(self) -> int:
         return len(self.children)
@@ -284,10 +324,26 @@ class Block:
     def get(self, elt: str) -> List[Union[Element, Block]]:
         return [e for e in self if e.type == elt]
 
+    def widget_state(self) -> Optional[WidgetState]:
+        return None
+
+    def get_widget_states(self) -> WidgetStates:
+        ws = WidgetStates()
+        for node in self.root:
+            w = node.widget_state()
+            if w is not None:
+                ws.widgets.append(w)
+
+        return ws
+
 
 def parse_tree_from_messages(messages: List[ForwardMsg]) -> Block:
     root = Block(type="root")
-    root.children = {0: Block(type="main"), 1: Block(type="sidebar")}
+    root.root = root
+    root.children = {
+        0: Block(type="main", root=root),
+        1: Block(type="sidebar", root=root),
+    }
 
     for msg in messages:
         if not msg.HasField("delta"):
@@ -297,13 +353,13 @@ def parse_tree_from_messages(messages: List[ForwardMsg]) -> Block:
         if delta.WhichOneof("type") == "new_element":
             elt = delta.new_element
             if elt.WhichOneof("type") == "text":
-                new_node = Text(elt.text)
+                new_node = Text(elt.text, root=root)
             elif elt.WhichOneof("type") == "radio":
-                new_node = Radio(elt.radio)
+                new_node = Radio(elt.radio, root=root)
             else:
-                new_node = Element(elt)
+                new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":
-            new_node = Block(delta.add_block)
+            new_node = Block(delta.add_block, root=root)
         else:
             # add_rows
             continue
@@ -314,7 +370,7 @@ def parse_tree_from_messages(messages: List[ForwardMsg]) -> Block:
             children = current_node.children
             child = children.get(idx)
             if child is None:
-                child = Block()
+                child = Block(root=root)
                 children[idx] = child
             current_node = child
             assert isinstance(current_node, Block)
