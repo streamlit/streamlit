@@ -694,9 +694,19 @@ export function getSequentialColorsArray(theme: Theme): string[] {
 }
 
 export function getDivergingColorsArray(theme: Theme): string[] {
-  return hasLightBackgroundColor(theme)
-    ? getBlueArrayDesc(theme)
-    : getBlueArrayAsc(theme)
+  const { colors } = theme
+  return [
+    colors.red100,
+    colors.red90,
+    colors.red70,
+    colors.red50,
+    colors.red30,
+    colors.blue30,
+    colors.blue50,
+    colors.blue70,
+    colors.blue90,
+    colors.blue100,
+  ]
 }
 
 export function getCategoricalColorsArray(theme: Theme): string[] {
