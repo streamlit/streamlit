@@ -48,8 +48,8 @@ class InteractiveScriptTest(unittest.TestCase):
         Runtime._instance = None
 
     def test_widgets_script(self):
-        scriptrunner = script_from_filename("widgets_script.py")
-        tree = scriptrunner.run()
+        script = script_from_filename("widgets_script.py")
+        tree = script.run()
 
         # main and sidebar
         assert len(tree) == 2
@@ -71,7 +71,7 @@ class InteractiveScriptTest(unittest.TestCase):
         tree.get_widget_states()
 
     def test_cached_widget_replay_rerun(self):
-        scriptrunner = script_from_string(
+        script = script_from_string(
             self.script_dir / "cached_widget_replay.py",
             """
 import streamlit as st
@@ -87,7 +87,7 @@ r = foo(1)
 st.text(r)
         """,
         )
-        sr = scriptrunner.run()
+        sr = script.run()
 
         assert len(sr.get("radio")) == 1
         # sr2 = sr.get("button")[0].click().run()
@@ -95,7 +95,7 @@ st.text(r)
         assert len(sr2.get("radio")) == 1
 
     def test_cached_widget_replay_interaction(self):
-        scriptrunner = script_from_string(
+        script = script_from_string(
             self.script_dir / "cached_widget_replay.py",
             """
 import streamlit as st
@@ -111,7 +111,7 @@ r = foo(1)
 st.text(r)
         """,
         )
-        sr = scriptrunner.run()
+        sr = script.run()
 
         assert len(sr.get("radio")) == 1
         assert sr.get("text")[0].value == "bar"
