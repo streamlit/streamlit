@@ -191,9 +191,9 @@ def require_widgets_deltas(runner: TestScriptRunner, timeout: float = 3) -> None
 class Element:
     type: str
     proto: ElementProto = field(repr=False)
-    root: Block = field(repr=False)
+    root: Root = field(repr=False)
 
-    def __init__(self, proto: ElementProto, root: Block = None):
+    def __init__(self, proto: ElementProto, root: Root):
         self.proto = proto
         self.root = root
         ty = proto.WhichOneof("type")
@@ -215,9 +215,9 @@ class Element:
 @dataclass(init=False)
 class Text(Element):
     proto: TextProto
-    root: Block = field(repr=False)
+    root: Root = field(repr=False)
 
-    def __init__(self, proto: TextProto, root: Block):
+    def __init__(self, proto: TextProto, root: Root):
         self.proto = proto
         self.root = root
 
@@ -234,9 +234,9 @@ class Text(Element):
 class Radio(Element):
     proto: RadioProto
     _index: Any
-    root: Block = field(repr=False)
+    root: Root = field(repr=False)
 
-    def __init__(self, proto: RadioProto, root: Block):
+    def __init__(self, proto: RadioProto, root: Root):
         self.proto = proto
         self.root = root
         self._index = None
@@ -284,11 +284,11 @@ class Block:
     type: str
     children: Dict[int, Union[Element, Block]]
     proto: Optional[BlockProto] = field(repr=False)
-    root: Block = field(repr=False)
+    root: Root = field(repr=False)
 
     def __init__(
         self,
-        root: Block,
+        root: Root,
         proto: Optional[BlockProto] = None,
         type: Optional[str] = None,
     ):
@@ -337,9 +337,19 @@ class Block:
         return ws
 
 
+@dataclass(init=False)
+class Root(Block):
+    def __init__(self):
+        self.children = {}
+        self.root = self
+
+    @property
+    def type(self) -> str:
+        return "root"
+
+
 def parse_tree_from_messages(messages: List[ForwardMsg]) -> Block:
-    root = Block(type="root", root=None)  # type: ignore
-    root.root = root
+    root = Root()
     root.children = {
         0: Block(type="main", root=root),
         1: Block(type="sidebar", root=root),
