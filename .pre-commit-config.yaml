@@ -27,6 +27,10 @@ repos:
           # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
           - --target-version=py37
         files: \.py$|\.pyi$
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.2.2
+    hooks:
+    -   id: pyupgrade
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
     hooks:
