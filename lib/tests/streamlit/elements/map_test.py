@@ -116,7 +116,7 @@ class StMapTest(DeltaGeneratorTestCase):
         """Check if map data was cut to 10k rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 10000)
 
-    @pytest.mark.require_snowflake()
+    @pytest.mark.require_snowflake
     def test_unevaluated_snowpark_table_integration(self):
         """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
         with create_snowpark_session() as snowpark_session:
@@ -154,7 +154,7 @@ class StMapTest(DeltaGeneratorTestCase):
         """Check if map data was cut to 10k rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 10000)
 
-    @pytest.mark.require_snowflake()
+    @pytest.mark.require_snowflake
     def test_unevaluated_snowpark_dataframe_integration(self):
         """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
         with create_snowpark_session() as snowpark_session:

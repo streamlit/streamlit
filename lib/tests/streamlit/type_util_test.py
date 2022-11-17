@@ -254,7 +254,7 @@ dtype: object""",
             )
         )
 
-    @pytest.mark.require_snowflake()
+    @pytest.mark.require_snowflake
     def test_is_snowpark_dataframe_integration(self):
         with create_snowpark_session() as snowpark_session:
             self.assertTrue(
