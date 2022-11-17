@@ -87,7 +87,10 @@ class StMapTest(DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
-        self.assertIn("Map data must contain a column named", str(ctx.exception))
+        self.assertEqual(
+            "Map data must contain a column named 'latitude' or 'lat'. Existing columns: 'notlat', 'lon'",
+            str(ctx.exception),
+        )
 
     def test_nan_exception(self):
         """Test st.map with NaN in data."""
