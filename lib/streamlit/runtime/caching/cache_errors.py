@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import enum
 import types
 from typing import Any, Optional
 
@@ -22,9 +21,10 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitAPIWarning,
 )
+from streamlit.runtime.caching.cache_utils import CacheType, get_decorator_api_name
 
 
-def get_cached_func_name_md(func) -> str:
+def get_cached_func_name_md(func: Any) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return "`%s()`" % func.__name__
@@ -33,15 +33,10 @@ def get_cached_func_name_md(func) -> str:
     return f"`{type(func)}`"
 
 
-def get_return_value_type(return_value) -> str:
+def get_return_value_type(return_value: Any) -> str:
     if hasattr(return_value, "__module__") and hasattr(type(return_value), "__name__"):
         return f"`{return_value.__module__}.{type(return_value).__name__}`"
     return get_cached_func_name_md(return_value)
-
-
-class CacheType(enum.Enum):
-    MEMO = "experimental_memo"
-    SINGLETON = "experimental_singleton"
 
 
 class UnhashableTypeError(Exception):
@@ -81,7 +76,7 @@ To address this, you can tell Streamlit not to hash this argument by adding a
 leading underscore to the argument's name in the function signature:
 
 ```
-@st.{cache_type.value}
+@st.{get_decorator_api_name(cache_type)}
 def {func_name}({arg_replacement_name}, ...):
     ...
 ```
@@ -107,7 +102,7 @@ class CachedStFunctionWarning(StreamlitAPIWarning):
         args = {
             "st_func_name": f"`st.{st_func_name}()`",
             "func_name": self._get_cached_func_name_md(cached_func),
-            "decorator_name": cache_type.value,
+            "decorator_name": get_decorator_api_name(cache_type),
         }
 
         msg = (
@@ -142,7 +137,7 @@ class CacheReplayClosureError(StreamlitAPIException):
         cached_func: types.FunctionType,
     ):
         func_name = get_cached_func_name_md(cached_func)
-        decorator_name = (cache_type.value,)
+        decorator_name = get_decorator_api_name(cache_type)
 
         msg = (
             f"""

@@ -15,6 +15,7 @@
 """Common cache logic shared by st.memo and st.singleton."""
 
 import contextlib
+import enum
 import functools
 import hashlib
 import inspect
@@ -38,7 +39,6 @@ from streamlit.runtime.caching.cache_errors import (
     CachedStFunctionWarning,
     CacheKeyNotFoundError,
     CacheReplayClosureError,
-    CacheType,
     UnhashableParamError,
     UnhashableTypeError,
     UnserializableReturnValueError,
@@ -52,6 +52,22 @@ from streamlit.runtime.scriptrunner.script_run_context import (
 from streamlit.runtime.state.session_state import WidgetMetadata
 
 _LOGGER = get_logger(__name__)
+
+
+class CacheType(enum.Enum):
+    """The function cache types we implement."""
+
+    MEMO = "MEMO"
+    SINGLETON = "SINGLETON"
+
+
+def get_decorator_api_name(cache_type: CacheType) -> str:
+    """Return the name of the public decorator API for the given CacheType."""
+    if cache_type is CacheType.MEMO:
+        return "experimental_memo"
+    if cache_type is CacheType.SINGLETON:
+        return "experimental_singleton"
+    raise RuntimeError(f"Unrecognized CacheType '{cache_type}'")
 
 
 @runtime_checkable
