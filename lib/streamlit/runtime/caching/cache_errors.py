@@ -40,8 +40,8 @@ def get_return_value_type(return_value) -> str:
 
 
 class CacheType(enum.Enum):
-    MEMO = "experimental_memo"
-    SINGLETON = "experimental_singleton"
+    DATA = "experimental_memo"
+    RESOURCE = "experimental_singleton"
 
 
 class UnhashableTypeError(Exception):

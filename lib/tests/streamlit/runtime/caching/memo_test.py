@@ -25,17 +25,17 @@ import streamlit as st
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.runtime.caching import memo_decorator
+from streamlit.runtime.caching import cache_data_decorator
+from streamlit.runtime.caching.cache_data_decorator import (
+    get_cache_path,
+    get_data_cache_stats_provider,
+)
 from streamlit.runtime.caching.cache_errors import CacheError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     ElementMsgData,
     MultiCacheResults,
     _make_widget_key,
-)
-from streamlit.runtime.caching.memo_decorator import (
-    get_cache_path,
-    get_memo_stats_provider,
 )
 from streamlit.runtime.stats import CacheStat
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -45,14 +45,14 @@ from tests.streamlit.runtime.caching.common_cache_test import (
 
 
 def as_cached_result(value: Any) -> MultiCacheResults:
-    return _as_cached_result(value, CacheType.MEMO)
+    return _as_cached_result(value, CacheType.DATA)
 
 
 def as_replay_test_data() -> MultiCacheResults:
     """Creates cached results for a function that returned 1
     and executed `st.text(1)`.
     """
-    widget_key = _make_widget_key([], CacheType.MEMO)
+    widget_key = _make_widget_key([], CacheType.DATA)
     d = {}
     d[widget_key] = CachedResult(
         1,
@@ -67,8 +67,8 @@ class MemoTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        memo_decorator.MEMO_CALL_STACK._cached_func_stack = []
-        memo_decorator.MEMO_CALL_STACK._suppress_st_function_warning = 0
+        memo_decorator.CACHE_DATA_CALL_STACK._cached_func_stack = []
+        memo_decorator.CACHE_DATA_CALL_STACK._suppress_st_function_warning = 0
         st.experimental_memo.clear()
 
     @patch.object(st, "exception")
@@ -416,7 +416,7 @@ class MemoStatsProviderTest(unittest.TestCase):
         st.experimental_memo.clear()
 
     def test_no_stats(self):
-        self.assertEqual([], get_memo_stats_provider().get_stats())
+        self.assertEqual([], get_data_cache_stats_provider().get_stats())
 
     def test_multiple_stats(self):
         @st.experimental_memo
@@ -455,7 +455,9 @@ class MemoStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        self.assertEqual(set(expected), set(get_memo_stats_provider().get_stats()))
+        self.assertEqual(
+            set(expected), set(get_data_cache_stats_provider().get_stats())
+        )
 
 
 def get_byte_length(value):

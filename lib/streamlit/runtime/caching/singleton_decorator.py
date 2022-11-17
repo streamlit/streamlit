@@ -42,8 +42,8 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 _LOGGER = get_logger(__name__)
 
 
-SINGLETON_CALL_STACK = CacheWarningCallStack(CacheType.SINGLETON)
-SINGLETON_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.SINGLETON)
+SINGLETON_CALL_STACK = CacheWarningCallStack(CacheType.RESOURCE)
+SINGLETON_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.RESOURCE)
 
 
 class SingletonCaches(CacheStatsProvider):
@@ -107,7 +107,7 @@ class SingletonFunction(CachedFunction):
 
     @property
     def cache_type(self) -> CacheType:
-        return CacheType.SINGLETON
+        return CacheType.RESOURCE
 
     @property
     def warning_call_stack(self) -> CacheWarningCallStack:
@@ -303,7 +303,7 @@ class SingletonCache(Cache):
                     raise CacheKeyNotFoundError()
 
                 widget_key = multi_results.get_current_widget_key(
-                    ctx, CacheType.SINGLETON
+                    ctx, CacheType.RESOURCE
                 )
                 if widget_key in multi_results.results:
                     return multi_results.results[widget_key]
@@ -337,7 +337,7 @@ class SingletonCache(Cache):
                 multi_results = MultiCacheResults(widget_ids=widgets, results={})
 
             multi_results.widget_ids.update(widgets)
-            widget_key = multi_results.get_current_widget_key(ctx, CacheType.SINGLETON)
+            widget_key = multi_results.get_current_widget_key(ctx, CacheType.RESOURCE)
 
             result = CachedResult(value, messages, main_id, sidebar_id)
             multi_results.results[widget_key] = result

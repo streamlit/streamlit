@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""@st.memo: pickle-based caching"""
+"""@st.cache_data: pickle-based caching"""
+
 import math
 import os
 import pickle
@@ -56,17 +57,21 @@ _LOGGER = get_logger(__name__)
 # is exposed here as a constant so that it can be patched in unit tests.
 _TTLCACHE_TIMER = time.monotonic
 
-# Streamlit directory where persisted memoized items live.
-# (This is the same directory that @st.cache persisted items live. But memoized
-# items have a different extension, so they don't overlap.)
+# Streamlit directory where persisted @st.cache_data objects live.
+# (This is the same directory that @st.cache persisted objects live.
+# But @st.cache_data uses a different extension, so they don't overlap.)
 _CACHE_DIR_NAME = "cache"
 
-MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
-MEMO_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
+# The extension for our persisted @st.cache_data objects.
+# (`@st.cache_data` was originally called `@st.memo`)
+_CACHED_FILE_EXTENSION = "memo"
+
+CACHE_DATA_CALL_STACK = CacheWarningCallStack(CacheType.DATA)
+CACHE_DATA_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.DATA)
 
 
-class MemoizedFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.memo"""
+class CacheDataFunction(CachedFunction):
+    """Implements the CachedFunction protocol for @st.cache_data"""
 
     def __init__(
         self,
@@ -85,15 +90,15 @@ class MemoizedFunction(CachedFunction):
 
     @property
     def cache_type(self) -> CacheType:
-        return CacheType.MEMO
+        return CacheType.DATA
 
     @property
     def warning_call_stack(self) -> CacheWarningCallStack:
-        return MEMO_CALL_STACK
+        return CACHE_DATA_CALL_STACK
 
     @property
     def message_call_stack(self) -> CacheMessagesCallStack:
-        return MEMO_MESSAGE_CALL_STACK
+        return CACHE_DATA_MESSAGE_CALL_STACK
 
     @property
     def display_name(self) -> str:
@@ -101,7 +106,7 @@ class MemoizedFunction(CachedFunction):
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
     def get_function_cache(self, function_key: str) -> Cache:
-        return _memo_caches.get_cache(
+        return _data_caches.get_cache(
             key=function_key,
             persist=self.persist,
             max_entries=self.max_entries,
@@ -111,12 +116,12 @@ class MemoizedFunction(CachedFunction):
         )
 
 
-class MemoCaches(CacheStatsProvider):
-    """Manages all MemoCache instances"""
+class DataCaches(CacheStatsProvider):
+    """Manages all DataCache instances"""
 
     def __init__(self):
         self._caches_lock = threading.Lock()
-        self._function_caches: Dict[str, "MemoCache"] = {}
+        self._function_caches: Dict[str, "DataCache"] = {}
 
     def get_cache(
         self,
@@ -126,7 +131,7 @@ class MemoCaches(CacheStatsProvider):
         ttl: Optional[Union[int, float]],
         display_name: str,
         allow_widgets: bool,
-    ) -> "MemoCache":
+    ) -> "DataCache":
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -150,13 +155,13 @@ class MemoCaches(CacheStatsProvider):
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug(
-                "Creating new MemoCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
+                "Creating new DataCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
                 key,
                 persist,
                 max_entries,
                 ttl,
             )
-            cache = MemoCache(
+            cache = DataCache(
                 key=key,
                 persist=persist,
                 max_entries=max_entries,
@@ -190,18 +195,18 @@ class MemoCaches(CacheStatsProvider):
         return stats
 
 
-# Singleton MemoCaches instance
-_memo_caches = MemoCaches()
+# Singleton DataCaches instance
+_data_caches = DataCaches()
 
 
-def get_memo_stats_provider() -> CacheStatsProvider:
-    """Return the StatsProvider for all memoized functions."""
-    return _memo_caches
+def get_data_cache_stats_provider() -> CacheStatsProvider:
+    """Return the StatsProvider for all @st.cache_data functions."""
+    return _data_caches
 
 
-class MemoAPI:
-    """Implements the public st.memo API: the @st.memo decorator, and
-    st.memo.clear().
+class CacheDataAPI:
+    """Implements the public st.cache_data API: the @st.cache_data decorator, and
+    st.cache_data.clear().
     """
 
     # Type-annotate the decorator function.
@@ -242,19 +247,19 @@ class MemoAPI:
         ttl: Optional[Union[float, timedelta]] = None,
         experimental_allow_widgets: bool = False,
     ):
-        """Function decorator to memoize function executions.
+        """Function decorator to cache function executions.
 
-        Memoized data is stored in "pickled" form, which means that the return
-        value of a memoized function must be pickleable.
+        Cached data is stored in "pickled" form, which means that the return
+        value of a cached function must be pickleable.
 
-        Each caller of a memoized function gets its own copy of the cached data.
+        Each caller of the cached function gets its own copy of the cached data.
 
-        You can clear a memoized function's cache with f.clear().
+        You can clear a cached function's cache with f.clear().
 
         Parameters
         ----------
         func : callable
-            The function to memoize. Streamlit hashes the function's source code.
+            The function to cache. Streamlit hashes the function's source code.
 
         persist : str or None
             Optional location to persist cached data to. Currently, the only
@@ -280,18 +285,18 @@ class MemoAPI:
             ignored if `persist` is specified.
 
         experimental_allow_widgets : boolean
-            Allow widgets to be used in the memoized function. Defaults to False.
+            Allow widgets to be used in the cached function. Defaults to False.
 
         .. note::
             Support for widgets in cached functions is currently experimental.
             To enable it, set the parameter ``experimental_allow_widgets=True``
-            in ``@st.experimental_memo``. Note that this may lead to excessive memory
+            in ``@st.cache_data``. Note that this may lead to excessive memory
             use since the widget value is treated as an additional input parameter
             to the cache. We may remove support for this option at any time without notice.
 
         Example
         -------
-        >>> @st.experimental_memo
+        >>> @st.cache_data
         ... def fetch_and_clean_data(url):
         ...     # Fetch data from URL here, and then clean it up.
         ...     return data
@@ -309,16 +314,16 @@ class MemoAPI:
 
         To set the ``persist`` parameter, use this command as follows:
 
-        >>> @st.experimental_memo(persist="disk")
+        >>> @st.cache_data(persist="disk")
         ... def fetch_and_clean_data(url):
         ...     # Fetch data from URL here, and then clean it up.
         ...     return data
 
-        By default, all parameters to a memoized function must be hashable.
+        By default, all parameters to a cached function must be hashable.
         Any parameter whose name begins with ``_`` will not be hashed. You can use
         this as an "escape hatch" for parameters that are not hashable:
 
-        >>> @st.experimental_memo
+        >>> @st.cache_data
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
@@ -334,9 +339,9 @@ class MemoAPI:
         >>> # value - even though the _database_connection parameter was different
         >>> # in both calls.
 
-        A memoized function's cache can be procedurally cleared:
+        A cached function's cache can be procedurally cleared:
 
-        >>> @st.experimental_memo
+        >>> @st.cache_data
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
@@ -364,11 +369,11 @@ class MemoAPI:
             # warning in case both persist="disk" and ttl parameters specified
             if persist == "disk" and ttl is not None:
                 _LOGGER.warning(
-                    f"The memoized function '{f.__name__}' has a TTL that will be "
-                    f"ignored. Persistent memo caches currently don't support TTL."
+                    f"The cached function '{f.__name__}' has a TTL that will be "
+                    f"ignored. Persistent cached functions currently don't support TTL."
                 )
             return create_cache_wrapper(
-                MemoizedFunction(
+                CacheDataFunction(
                     func=f,
                     persist=persist,
                     show_spinner=show_spinner,
@@ -380,12 +385,12 @@ class MemoAPI:
             )
 
         # Support passing the params via function decorator, e.g.
-        # @st.memo(persist=True, show_spinner=False)
+        # @st.cache_data(persist=True, show_spinner=False)
         if func is None:
             return wrapper
 
         return create_cache_wrapper(
-            MemoizedFunction(
+            CacheDataFunction(
                 func=cast(types.FunctionType, func),
                 persist=persist,
                 show_spinner=show_spinner,
@@ -399,12 +404,12 @@ class MemoAPI:
     @staticmethod
     @gather_metrics("clear_memo")
     def clear() -> None:
-        """Clear all in-memory and on-disk memo caches."""
-        _memo_caches.clear_all()
+        """Clear all in-memory and on-disk data caches."""
+        _data_caches.clear_all()
 
 
-class MemoCache(Cache):
-    """Manages cached values for a single st.memo-ized function."""
+class DataCache(Cache):
+    """Manages cached values for a single st.cache_data function."""
 
     def __init__(
         self,
@@ -438,7 +443,7 @@ class MemoCache(Cache):
             for item_key, item_value in self._mem_cache.items():
                 stats.append(
                     CacheStat(
-                        category_name="st_memo",
+                        category_name="st_cache_data",
                         cache_name=self.display_name,
                         byte_length=len(item_value),
                     )
@@ -472,7 +477,7 @@ class MemoCache(Cache):
             if not ctx:
                 raise CacheKeyNotFoundError()
 
-            widget_key = entry.get_current_widget_key(ctx, CacheType.MEMO)
+            widget_key = entry.get_current_widget_key(ctx, CacheType.DATA)
             if widget_key in entry.results:
                 return entry.results[widget_key]
             else:
@@ -517,7 +522,7 @@ class MemoCache(Cache):
         if multi_cache_results is None:
             multi_cache_results = MultiCacheResults(widget_ids=widgets, results={})
         multi_cache_results.widget_ids.update(widgets)
-        widget_key = multi_cache_results.get_current_widget_key(ctx, CacheType.MEMO)
+        widget_key = multi_cache_results.get_current_widget_key(ctx, CacheType.DATA)
 
         result = CachedResult(value, messages, main_id, sidebar_id)
         multi_cache_results.results[widget_key] = result
@@ -632,7 +637,9 @@ class MemoCache(Cache):
 
     def _get_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""
-        return get_streamlit_file_path(_CACHE_DIR_NAME, f"{self.key}-{value_key}.memo")
+        return get_streamlit_file_path(
+            _CACHE_DIR_NAME, f"{self.key}-{value_key}.{_CACHED_FILE_EXTENSION}"
+        )
 
 
 def get_cache_path() -> str:

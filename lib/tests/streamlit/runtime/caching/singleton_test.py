@@ -32,7 +32,7 @@ from tests.streamlit.runtime.caching.common_cache_test import (
 
 
 def as_cached_result(value: Any) -> MultiCacheResults:
-    return _as_cached_result(value, CacheType.MEMO)
+    return _as_cached_result(value, CacheType.DATA)
 
 
 class SingletonTest(unittest.TestCase):

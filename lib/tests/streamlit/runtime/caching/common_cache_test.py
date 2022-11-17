@@ -22,7 +22,7 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.runtime.caching import MEMO_CALL_STACK, SINGLETON_CALL_STACK
+from streamlit.runtime.caching import CACHE_DATA_CALL_STACK, SINGLETON_CALL_STACK
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
@@ -191,7 +191,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("memo", memo, MEMO_CALL_STACK),
+            ("memo", memo, CACHE_DATA_CALL_STACK),
             ("singleton", singleton, SINGLETON_CALL_STACK),
         ]
     )
@@ -612,8 +612,8 @@ class CommonCacheThreadingTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.
         # Reset default values on teardown.
-        MEMO_CALL_STACK._cached_func_stack = []
-        MEMO_CALL_STACK._suppress_st_function_warning = 0
+        CACHE_DATA_CALL_STACK._cached_func_stack = []
+        CACHE_DATA_CALL_STACK._suppress_st_function_warning = 0
         SINGLETON_CALL_STACK._cached_func_stack = []
         SINGLETON_CALL_STACK._suppress_st_function_warning = 0
 
@@ -696,7 +696,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
         self.assertEqual(42, foo())
 
     @parameterized.expand(
-        [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
+        [("memo", CACHE_DATA_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
     )
     def test_multithreaded_call_stack(self, _, call_stack):
         """CachedFunctionCallStack works across multiple threads."""
