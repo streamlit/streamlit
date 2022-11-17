@@ -21,7 +21,10 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import { Checkbox as UICheckbox } from "baseui/checkbox"
-import { Checkbox as CheckboxProto } from "src/autogen/proto"
+import {
+  Checkbox as CheckboxProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+} from "src/autogen/proto"
 import Checkbox, { OwnProps } from "./Checkbox"
 
 const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
@@ -84,6 +87,30 @@ describe("Checkbox widget", () => {
       props.element.label
     )
     expect(wrapper.find(StreamlitMarkdown).props().isLabel).toBe(true)
+  })
+
+  it("pass labelVisibility prop to StyledContent correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = mount(<Checkbox {...props} />)
+    expect(wrapper.find("StyledContent").prop("visibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    )
+  })
+
+  it("pass labelVisibility prop to StyledContent correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<Checkbox {...props} />)
+    expect(wrapper.find("StyledContent").prop("visibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    )
   })
 
   it("is unchecked by default", () => {

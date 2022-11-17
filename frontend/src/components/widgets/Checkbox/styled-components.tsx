@@ -16,9 +16,19 @@
 
 import styled from "@emotion/styled"
 
-export const StyledContent = styled.div(({ theme }) => ({
-  verticalAlign: "middle",
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-}))
+import { LabelVisibilityOptions } from "src/lib/utils"
+
+export interface StyledContentProps {
+  visibility?: LabelVisibilityOptions
+}
+
+export const StyledContent = styled.div<StyledContentProps>(
+  ({ theme, visibility }) => ({
+    display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
+    visibility:
+      visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
+    verticalAlign: "middle",
+    flexDirection: "row",
+    alignItems: "center",
+  })
+)

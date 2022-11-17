@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message Checkbox {
   string id = 1;
   string label = 2;
@@ -25,4 +27,5 @@ message Checkbox {
   bool value = 6;
   bool set_value = 7;
   bool disabled = 8;
+  LabelVisibilityMessage label_visibility = 9;
 }

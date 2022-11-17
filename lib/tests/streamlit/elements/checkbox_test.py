@@ -19,6 +19,9 @@ from unittest.mock import MagicMock, patch
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.type_util import _LOGGER
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -37,6 +40,10 @@ class CheckboxTest(DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, False)
         self.assertEqual(c.disabled, False)
+        self.assertEqual(
+            c.label_visibility.value,
+            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        )
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -99,3 +106,38 @@ hello
         self.assertEqual(c.label, "Checkbox label")
         self.assertEqual(c.default, True)
         self.assertEqual(c.help, "hello\n world\n")
+
+    @parameterized.expand(
+        [
+            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that it can be called with label_visibility param."""
+        st.checkbox("the label", label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.label_visibility.value, proto_value)
+
+    def test_label_visibility_wrong_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.checkbox("the label", label_visibility="wrong_value")
+        self.assertEqual(
+            str(e.exception),
+            "Unsupported label_visibility option 'wrong_value'. Valid values are "
+            "'visible', 'hidden' or 'collapsed'.",
+        )
+
+    def test_empty_label_warning(self):
+        """Test that a warning is logged if st.checkbox was called with empty label."""
+
+        with self.assertLogs(_LOGGER) as logs:
+            st.checkbox(label="")
+
+        self.assertIn(
+            "`label` got an empty value. This is discouraged for accessibility reasons",
+            logs.records[0].msg,
+        )
