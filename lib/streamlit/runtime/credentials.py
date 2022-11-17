@@ -46,7 +46,7 @@ _Activation = namedtuple(
 
 # IMPORTANT: Break the text below at 80 chars.
 _EMAIL_PROMPT = """
-  {0}%(welcome)s
+  {}%(welcome)s
 
   If you’d like to receive helpful onboarding emails, news, offers, promotions,
   and the occasional swag, please enter your email address below. Otherwise,
@@ -61,22 +61,22 @@ _EMAIL_PROMPT = """
 
 # IMPORTANT: Break the text below at 80 chars.
 _TELEMETRY_TEXT = """
-  You can find our privacy policy at %(link)s
+  You can find our privacy policy at {link}
 
   Summary:
   - This open source library collects usage statistics.
   - We cannot see and do not store information contained inside Streamlit apps,
     such as text, charts, images, etc.
   - Telemetry data is stored in servers in the United States.
-  - If you'd like to opt out, add the following to %(config)s,
+  - If you'd like to opt out, add the following to {config},
     creating that file if necessary:
 
     [browser]
     gatherUsageStats = false
-""" % {
-    "link": click.style("https://streamlit.io/privacy-policy", underline=True),
-    "config": click.style(_CONFIG_FILE_PATH),
-}
+""".format(
+    link=click.style("https://streamlit.io/privacy-policy", underline=True),
+    config=click.style(_CONFIG_FILE_PATH),
+)
 
 _TELEMETRY_HEADLESS_TEXT = """
 Collecting usage statistics. To deactivate, set browser.gatherUsageStats to False.
@@ -84,16 +84,16 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to Fals
 
 # IMPORTANT: Break the text below at 80 chars.
 _INSTRUCTIONS_TEXT = """
-  %(start)s
-  %(prompt)s %(hello)s
-""" % {
-    "start": click.style("Get started by typing:", fg="blue", bold=True),
-    "prompt": click.style("$", fg="blue"),
-    "hello": click.style("streamlit hello", bold=True),
-}
+  {start}
+  {prompt} {hello}
+""".format(
+    start=click.style("Get started by typing:", fg="blue", bold=True),
+    prompt=click.style("$", fg="blue"),
+    hello=click.style("streamlit hello", bold=True),
+)
 
 
-class Credentials(object):
+class Credentials:
     """Credentials class."""
 
     _singleton = None  # type: Optional[Credentials]
@@ -128,7 +128,7 @@ class Credentials(object):
             return
 
         try:
-            with open(self._conf_file, "r") as f:
+            with open(self._conf_file) as f:
                 data = toml.load(f).get("general")
             if data is None:
                 raise Exception

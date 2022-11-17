@@ -22,9 +22,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Iterable,
-    List,
     NamedTuple,
-    Optional,
     Sequence,
     TypeVar,
     Union,
@@ -157,11 +155,11 @@ def is_type(
 
 
 @overload
-def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     ...
 
 
-def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     """Check type without importing expensive modules.
 
     Parameters
@@ -335,7 +333,7 @@ def is_keras_model(obj: object) -> bool:
     )
 
 
-def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
+def is_plotly_chart(obj: object) -> TypeGuard[Figure | list[Any] | dict[str, Any]]:
     """True if input looks like a Plotly chart."""
     return (
         is_type(obj, "plotly.graph_objs._figure.Figure")
@@ -346,7 +344,7 @@ def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str,
 
 def is_graphviz_chart(
     obj: object,
-) -> TypeGuard[Union[graphviz.Graph, graphviz.Digraph]]:
+) -> TypeGuard[graphviz.Graph | graphviz.Digraph]:
     """True if input looks like a GraphViz chart."""
     return (
         # GraphViz < 0.18
@@ -519,7 +517,7 @@ def ensure_iterable(obj: DataFrame) -> Iterable[Any]:
     ...
 
 
-def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
+def ensure_iterable(obj: DataFrame | Iterable[V_co]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -600,7 +598,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
+def _is_colum_type_arrow_incompatible(column: Series | Index) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
 
     # Check all columns for mixed types and complex128 type
@@ -614,7 +612,7 @@ def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
 
 
 def fix_arrow_incompatible_column_types(
-    df: DataFrame, selected_columns: Optional[List[str]] = None
+    df: DataFrame, selected_columns: list[str] | None = None
 ) -> DataFrame:
     """Fix column types that are not supported by Arrow table.
 
@@ -700,14 +698,14 @@ def to_key(key: Key) -> str:
     ...
 
 
-def to_key(key: Optional[Key]) -> Optional[str]:
+def to_key(key: Key | None) -> str | None:
     if key is None:
         return None
     else:
         return str(key)
 
 
-def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[str]):
+def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
     if not label:
         _LOGGER.warning(
             "`label` got an empty value. This is discouraged for accessibility "

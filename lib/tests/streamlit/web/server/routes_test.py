@@ -42,7 +42,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /healthz endpoint"""
 
     def setUp(self):
-        super(HealthHandlerTest, self).setUp()
+        super().setUp()
         self._is_healthy = True
 
     async def is_healthy(self):
@@ -157,7 +157,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self):
-        super(AllowedMessageOriginsHandlerTest, self).setUp()
+        super().setUp()
         self._is_healthy = True
 
     async def is_healthy(self):

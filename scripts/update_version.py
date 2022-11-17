@@ -103,7 +103,7 @@ def update_files(data, version):
             line = re.sub(regex, r"\g<pre>%s\g<post>" % version, line.rstrip())
             print(line)
         if not matched:
-            raise Exception('In file "%s", did not find regex "%s"' % (filename, regex))
+            raise Exception('In file "{}", did not find regex "{}"'.format(filename, regex))
 
 
 def main():

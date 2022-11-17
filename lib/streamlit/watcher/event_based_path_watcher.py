@@ -105,7 +105,7 @@ class EventBasedPathWatcher:
         path_watcher.stop_watching_path(self._path, self._on_changed)
 
 
-class _MultiPathWatcher(object):
+class _MultiPathWatcher:
     """Watches multiple paths."""
 
     _singleton: Optional["_MultiPathWatcher"] = None
@@ -127,7 +127,7 @@ class _MultiPathWatcher(object):
         """Constructor."""
         if _MultiPathWatcher._singleton is not None:
             raise RuntimeError("Use .get_singleton() instead")
-        return super(_MultiPathWatcher, cls).__new__(cls)
+        return super().__new__(cls)
 
     def __init__(self) -> None:
         """Constructor."""
@@ -218,7 +218,7 @@ class _MultiPathWatcher(object):
             self._observer.join(timeout=5)
 
 
-class WatchedPath(object):
+class WatchedPath:
     """Emits notifications when a single path is modified."""
 
     def __init__(
@@ -254,7 +254,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
     """
 
     def __init__(self) -> None:
-        super(_FolderEventHandler, self).__init__()
+        super().__init__()
         self._watched_paths: Dict[str, WatchedPath] = {}
         self._lock = threading.Lock()  # for watched_paths mutations
 

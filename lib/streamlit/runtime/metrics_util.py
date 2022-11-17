@@ -78,11 +78,11 @@ def _get_machine_id_v3() -> str:
 
     machine_id = str(uuid.getnode())
     if os.path.isfile(_ETC_MACHINE_ID_PATH):
-        with open(_ETC_MACHINE_ID_PATH, "r") as f:
+        with open(_ETC_MACHINE_ID_PATH) as f:
             machine_id = f.read()
 
     elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
-        with open(_DBUS_MACHINE_ID_PATH, "r") as f:
+        with open(_DBUS_MACHINE_ID_PATH) as f:
             machine_id = f.read()
 
     return machine_id

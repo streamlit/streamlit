@@ -25,7 +25,7 @@ from streamlit.type_util import _LOGGER
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class SomeObj(object):
+class SomeObj:
     pass
 
 

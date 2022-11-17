@@ -115,9 +115,7 @@ class MediaFileManagerTest(TestCase):
     def test_calculate_file_id(self):
         """Test that file_id generation from data works as expected."""
 
-        fake_bytes = "\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00".encode(
-            "utf-8"
-        )
+        fake_bytes = "\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00".encode()
         test_hash = "2ba850426b188d25adc5a37ad313080c346f5e88e069e0807d0cdb2b"
         self.assertEqual(test_hash, _calculate_file_id(fake_bytes, "media/any"))
 

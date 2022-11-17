@@ -181,15 +181,15 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(d2), get_hash(d1))
 
     def test_reduce_(self):
-        class A(object):
+        class A:
             def __init__(self):
                 self.x = [1, 2, 3]
 
-        class B(object):
+        class B:
             def __init__(self):
                 self.x = [1, 2, 3]
 
-        class C(object):
+        class C:
             def __init__(self):
                 self.x = (x for x in range(1))
 
@@ -203,7 +203,7 @@ class HashTest(unittest.TestCase):
 
     def test_generator(self):
         with self.assertRaises(UnhashableTypeError):
-            get_hash((x for x in range(1)))
+            get_hash(x for x in range(1))
 
     def test_hashing_broken_code(self):
         import datetime
@@ -234,7 +234,7 @@ class HashTest(unittest.TestCase):
             self.assertEqual(exc.find(code_msg) >= 0, True)
 
     def test_hash_funcs_acceptable_keys(self):
-        class C(object):
+        class C:
             def __init__(self):
                 self.x = (x for x in range(1))
 
@@ -368,8 +368,8 @@ class HashTest(unittest.TestCase):
         temp1 = tempfile.NamedTemporaryFile()
         temp2 = tempfile.NamedTemporaryFile()
 
-        with open(__file__, "r") as f:
-            with open(__file__, "r") as g:
+        with open(__file__) as f:
+            with open(__file__) as g:
                 self.assertEqual(get_hash(f), get_hash(g))
 
             self.assertNotEqual(get_hash(f), get_hash(temp1))
@@ -378,7 +378,7 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(temp1), get_hash(temp2))
 
     def test_file_position(self):
-        with open(__file__, "r") as f:
+        with open(__file__) as f:
             h1 = get_hash(f)
             self.assertEqual(h1, get_hash(f))
             f.readline()
@@ -590,24 +590,24 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(
             hash_engine(auth_url),
-            hash_engine("%s=%s" % (url, params_foo)),
+            hash_engine("{}={}".format(url, params_foo)),
         )
         self.assertNotEqual(
-            hash_engine("%s=%s" % (url, params_foo)),
-            hash_engine("%s=%s" % (url, params_bar)),
+            hash_engine("{}={}".format(url, params_foo)),
+            hash_engine("{}={}".format(url, params_bar)),
         )
 
         # Note: False negative because the ordering of the keys affects
         # the hash
         self.assertNotEqual(
-            hash_engine("%s=%s" % (url, params_foo)),
-            hash_engine("%s=%s" % (url, params_foo_order)),
+            hash_engine("{}={}".format(url, params_foo)),
+            hash_engine("{}={}".format(url, params_foo_order)),
         )
 
         # Note: False negative because the keys are case insensitive
         self.assertNotEqual(
-            hash_engine("%s=%s" % (url, params_foo)),
-            hash_engine("%s=%s" % (url, params_foo_caps)),
+            hash_engine("{}={}".format(url, params_foo)),
+            hash_engine("{}={}".format(url, params_foo_caps)),
         )
 
         # Note: False negative because `connect_args` doesn't affect the
@@ -780,7 +780,7 @@ class CodeHashTest(unittest.TestCase):
             print(12)
 
         def code_with_type():
-            type(12)
+            int
 
         self.assertNotEqual(get_hash(code_with_print), get_hash(code_with_type))
 

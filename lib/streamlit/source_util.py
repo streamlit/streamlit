@@ -41,7 +41,7 @@ def open_python_file(filename):
         # found, opens as utf-8.
         return tokenize.open(filename)
     else:
-        return open(filename, "r", encoding="utf-8")
+        return open(filename, encoding="utf-8")
 
 
 PAGE_FILENAME_REGEX = re.compile(r"([0-9]*)[_ -]*(.*)\.py")

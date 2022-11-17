@@ -52,7 +52,7 @@ class Module:
     @classmethod
     def header(cls) -> str:
         fmt = "%-*s  %-*s  %-*s  %-*s"
-        return ("%s\n%s" % (fmt, fmt)) % tuple(
+        return ("{}\n{}".format(fmt, fmt)) % tuple(
             itertools.chain(
                 *zip(cls._COLUMNS, cls._HEADERS),
                 *zip(cls._COLUMNS, ["-" * len(h) for h in cls._HEADERS]),

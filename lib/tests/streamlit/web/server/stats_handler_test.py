@@ -45,11 +45,11 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(200, response.code)
 
         expected_body = (
-            "# TYPE cache_memory_bytes gauge\n"
-            "# UNIT cache_memory_bytes bytes\n"
-            "# HELP Total memory consumed by a cache.\n"
-            "# EOF\n"
-        ).encode("utf-8")
+            b"# TYPE cache_memory_bytes gauge\n"
+            b"# UNIT cache_memory_bytes bytes\n"
+            b"# HELP Total memory consumed by a cache.\n"
+            b"# EOF\n"
+        )
 
         self.assertEqual(expected_body, response.body)
 
@@ -74,13 +74,13 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
         expected_body = (
-            "# TYPE cache_memory_bytes gauge\n"
-            "# UNIT cache_memory_bytes bytes\n"
-            "# HELP Total memory consumed by a cache.\n"
-            'cache_memory_bytes{cache_type="st.singleton",cache="foo"} 128\n'
-            'cache_memory_bytes{cache_type="st.memo",cache="bar"} 256\n'
-            "# EOF\n"
-        ).encode("utf-8")
+            b"# TYPE cache_memory_bytes gauge\n"
+            b"# UNIT cache_memory_bytes bytes\n"
+            b"# HELP Total memory consumed by a cache.\n"
+            b'cache_memory_bytes{cache_type="st.singleton",cache="foo"} 128\n'
+            b'cache_memory_bytes{cache_type="st.memo",cache="bar"} 256\n'
+            b"# EOF\n"
+        )
 
         self.assertEqual(expected_body, response.body)
 

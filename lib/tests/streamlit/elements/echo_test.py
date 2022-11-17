@@ -39,7 +39,7 @@ class EchoTest(DeltaGeneratorTestCase):
 
                 print(y)
 
-            class MyClass(object):
+            class MyClass:
                 def do_x(self):
                     pass
 

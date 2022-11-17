@@ -21,7 +21,7 @@ from streamlit import util
 # tempfile.mkdtemp
 
 
-class TemporaryDirectory(object):
+class TemporaryDirectory:
     """Temporary directory context manager.
 
     Creates a temporary directory that exists within the context manager scope.

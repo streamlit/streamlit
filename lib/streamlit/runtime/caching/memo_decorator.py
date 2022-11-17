@@ -610,7 +610,7 @@ class MemoCache(Cache):
             # Clean up file so we don't leave zero byte files.
             try:
                 os.remove(path)
-            except (FileNotFoundError, IOError, OSError):
+            except (FileNotFoundError, OSError):
                 # If we can't remove the file, it's not a big deal.
                 pass
             raise CacheError("Unable to write to cache") from e

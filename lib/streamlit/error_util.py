@@ -31,7 +31,7 @@ def _print_rich_exception(e: BaseException):
             box=box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
             **kwargs,
         ):
-            super(ConfigurablePanel, self).__init__(renderable, box, **kwargs)
+            super().__init__(renderable, box, **kwargs)
 
     from rich import traceback as rich_traceback
 

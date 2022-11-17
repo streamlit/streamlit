@@ -79,7 +79,7 @@ class VerifyVersionCommand(install):
         tag = os.getenv("TAG")
 
         if tag != VERSION:
-            info = "Git tag: {0} does not match the version of this app: {1}".format(
+            info = "Git tag: {} does not match the version of this app: {}".format(
                 tag, VERSION
             )
             sys.exit(info)

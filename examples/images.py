@@ -23,7 +23,7 @@ from PIL import Image, ImageDraw
 import streamlit as st
 
 
-class StreamlitImages(object):
+class StreamlitImages:
     def __init__(self, size=200, step=10):
         self._size = size
         self._step = step

@@ -27,7 +27,7 @@ class MessageSizeError(MarkdownFormattedException):
 
     def __init__(self, failed_msg_str: Any):
         msg = self._get_message(failed_msg_str)
-        super(MessageSizeError, self).__init__(msg)
+        super().__init__(msg)
 
     def _get_message(self, failed_msg_str: Any) -> str:
         # This needs to have zero indentation otherwise the markdown will render incorrectly.

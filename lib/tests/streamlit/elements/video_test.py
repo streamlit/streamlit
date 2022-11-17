@@ -30,7 +30,7 @@ class VideoTest(DeltaGeneratorTestCase):
         """Test st.video using fake bytes data."""
         # Make up some bytes to pretend we have a video.  The server should not vet
         # the video before sending it to the browser.
-        fake_video_data = "\x12\x10\x35\x44\x55\x66".encode("utf-8")
+        fake_video_data = "\x12\x10\x35\x44\x55\x66".encode()
 
         st.video(fake_video_data)
 
@@ -84,13 +84,13 @@ class VideoTest(DeltaGeneratorTestCase):
     def test_st_video_other_inputs(self):
         """Test that our other data types don't result in an error."""
         st.video(b"bytes_data")
-        st.video("str_data".encode("utf-8"))
+        st.video(b"str_data")
         st.video(BytesIO(b"bytesio_data"))
         st.video(np.array([0, 1, 2, 3]))
 
     def test_st_video_options(self):
         """Test st.video with options."""
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode()
         st.video(fake_video_data, format="video/mp4", start_time=10)
 
         el = self.get_delta_from_queue().new_element

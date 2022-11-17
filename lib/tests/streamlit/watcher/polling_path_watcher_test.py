@@ -22,7 +22,7 @@ class PollingPathWatcherTest(unittest.TestCase):
     """Test PollingPathWatcher."""
 
     def setUp(self):
-        super(PollingPathWatcherTest, self).setUp()
+        super().setUp()
         self.util_patch = mock.patch("streamlit.watcher.polling_path_watcher.util")
         self.util_mock = self.util_patch.start()
 
@@ -44,7 +44,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         self.sleep_patch.start()
 
     def tearDown(self):
-        super(PollingPathWatcherTest, self).tearDown()
+        super().tearDown()
         self.util_patch.stop()
         self.executor_patch.stop()
         self.sleep_patch.stop()

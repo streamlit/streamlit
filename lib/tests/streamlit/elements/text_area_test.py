@@ -163,5 +163,5 @@ This is a test
         )
 
 
-class SomeObj(object):
+class SomeObj:
     pass

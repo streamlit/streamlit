@@ -14,7 +14,6 @@
 
 """st.audio unit tests"""
 
-import io
 import os
 from io import BytesIO
 
@@ -37,7 +36,7 @@ class AudioTest(DeltaGeneratorTestCase):
         """Test st.audio using fake audio bytes."""
 
         # Fake audio data: expect the resultant mimetype to be audio default.
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode()
 
         st.audio(fake_audio_data)
 
@@ -128,7 +127,7 @@ class AudioTest(DeltaGeneratorTestCase):
         """Test st.audio raises streamlit warning when sample_rate parameter provided,
         but data is not a numpy array."""
 
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode()
         sample_rate = 44100
 
         st.audio(fake_audio_data, sample_rate=sample_rate)
@@ -191,7 +190,7 @@ class AudioTest(DeltaGeneratorTestCase):
     def test_maybe_convert_to_wave_bytes_with_sample_rate(self):
         """Test _maybe_convert_to_wave_bytes works correctly with bytes."""
 
-        fake_audio_data_bytes = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data_bytes = "\x11\x22\x33\x44\x55\x66".encode()
         sample_rate = 44100
 
         computed_bytes = _maybe_convert_to_wav_bytes(
@@ -221,7 +220,7 @@ class AudioTest(DeltaGeneratorTestCase):
 
         wavfile.write("test.wav", sample_rate, y)
 
-        with io.open("test.wav", "rb") as f:
+        with open("test.wav", "rb") as f:
             st.audio(f)
 
         el = self.get_delta_from_queue().new_element
@@ -254,13 +253,13 @@ class AudioTest(DeltaGeneratorTestCase):
     def test_st_audio_other_inputs(self):
         """Test that our other data types don't result in an error."""
         st.audio(b"bytes_data")
-        st.audio("str_data".encode("utf-8"))
+        st.audio(b"str_data")
         st.audio(BytesIO(b"bytesio_data"))
         st.audio(np.array([0, 1, 2, 3]), sample_rate=44100)
 
     def test_st_audio_options(self):
         """Test st.audio with options."""
-        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode()
         st.audio(fake_audio_data, format="audio/mp3", start_time=10)
 
         el = self.get_delta_from_queue().new_element

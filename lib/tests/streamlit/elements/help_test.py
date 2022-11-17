@@ -203,7 +203,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         """When the type of the object is type and no docs are defined,
         we expect docs are not available"""
 
-        class MyClass(object):
+        class MyClass:
             pass
 
         st.help(MyClass)

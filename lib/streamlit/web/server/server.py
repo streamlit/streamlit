@@ -15,7 +15,6 @@
 import errno
 import logging
 import os
-import socket
 import sys
 from typing import Any, Awaitable, List, Optional
 
@@ -132,7 +131,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
             http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
-        except (OSError, socket.error) as e:
+        except OSError as e:
             if e.errno == errno.EADDRINUSE:
                 if server_port_is_manually_set():
                     LOGGER.error("Port %s is already in use", port)
@@ -295,14 +294,12 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "get_pages": lambda: set(
-                                [
+                            "get_pages": lambda: {
                                     page_info["page_name"]
                                     for page_info in source_util.get_pages(
                                         self.main_script_path
                                     ).values()
-                                ]
-                            ),
+                            },
                         },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),

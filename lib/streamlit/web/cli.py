@@ -77,7 +77,7 @@ def _download_remote(main_script_path, url_path):
             resp.raise_for_status()
             fp.write(resp.content)
         except requests.exceptions.RequestException as e:
-            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
+            raise click.BadParameter("Unable to fetch {}.\n{}".format(url_path, e))
 
 
 @click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})

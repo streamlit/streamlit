@@ -167,7 +167,7 @@ def marshall(
 
 class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
     def __init__(self) -> None:
-        super(PyplotGlobalUseWarning, self).__init__(
+        super().__init__(
             msg=self._get_message(), config_option="deprecation.showPyplotGlobalUse"
         )
 

@@ -217,7 +217,7 @@ class LegacyDataFrameStylingTest(DeltaGeneratorTestCase):
         for row in range(len(expected_styles)):
             proto_cell_style = get_cell_style(proto_df, col, row)
             # throw the `repeated CSSStyle styles` into a set of serialized strings
-            cell_styles = set((proto_to_str(css) for css in proto_cell_style.css))
+            cell_styles = {proto_to_str(css) for css in proto_cell_style.css}
             self.assertEqual(expected_styles[row], cell_styles)
 
 

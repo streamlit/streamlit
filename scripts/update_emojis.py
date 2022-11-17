@@ -33,7 +33,7 @@ emoji_unicodes = set(EMOJI_DATA.keys())
 
 generated_code = 'ALL_EMOJIS = {"' + '","'.join(sorted(emoji_unicodes)) + '"}'
 
-with open(EMOJIS_SCRIPT_PATH, "r") as file:
+with open(EMOJIS_SCRIPT_PATH) as file:
     script_content = file.read()
 
 updated_script_content = re.sub(EMOJI_SET_REGEX, generated_code, script_content)

@@ -28,7 +28,7 @@ st.markdown("[link](href)")
 
 st.markdown("[][]")
 
-st.markdown("Inline math with $\KaTeX$")
+st.markdown(r"Inline math with $\KaTeX$")
 
 st.markdown(
     """

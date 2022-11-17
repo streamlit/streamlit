@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import io
 import os
 import wave
 
@@ -94,7 +93,7 @@ fh.writeframes(sine_wave)
 
 fh.close()
 
-with io.open("sound.wav", "rb") as f:
+with open("sound.wav", "rb") as f:
     x.text("Sending wave...")
     x.audio(f)
 

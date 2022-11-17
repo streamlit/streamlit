@@ -570,7 +570,7 @@ Object of type tests.streamlit.runtime.legacy_caching.caching_test.NotHashable:
         self.assertEqual(list(hf_key_as_type()), list(hf_key_as_str()))
 
     def test_user_hash_error(self):
-        class MyObj(object):
+        class MyObj:
             pass
 
         def bad_hash_func(x):

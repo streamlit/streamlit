@@ -311,7 +311,7 @@ def _write_to_disk_cache(key: str, value: Any) -> None:
         # Clean up file so we don't leave zero byte files.
         try:
             os.remove(path)
-        except (FileNotFoundError, IOError, OSError):
+        except (FileNotFoundError, OSError):
             # If we can't remove the file, it's not a big deal.
             pass
         raise CacheError("Unable to write to cache: %s" % e)
@@ -582,7 +582,7 @@ def cache(
 
             # Avoid recomputing the body's hash by just appending the
             # previously-computed hash to the arg hash.
-            value_key = "%s-%s" % (value_key, cache_key)
+            value_key = "{}-{}".format(value_key, cache_key)
 
             _LOGGER.debug("Cache key: %s", value_key)
 
@@ -746,7 +746,7 @@ class CachedObjectMutationError(ValueError):
 class CachedStFunctionWarning(StreamlitAPIWarning):
     def __init__(self, st_func_name, cached_func):
         msg = self._get_message(st_func_name, cached_func)
-        super(CachedStFunctionWarning, self).__init__(msg)
+        super().__init__(msg)
 
     def _get_message(self, st_func_name, cached_func):
         args = {
@@ -772,7 +772,7 @@ to suppress the warning.
 class CachedObjectMutationWarning(StreamlitAPIWarning):
     def __init__(self, orig_exc):
         msg = self._get_message(orig_exc)
-        super(CachedObjectMutationWarning, self).__init__(msg)
+        super().__init__(msg)
 
     def _get_message(self, orig_exc):
         return (

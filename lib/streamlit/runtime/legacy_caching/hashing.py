@@ -146,7 +146,7 @@ class _HashStack:
     def pretty_print(self):
         def to_str(v):
             try:
-                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
+                return "Object of type {}: {}".format(type_util.get_fqn_type(v), str(v))
             except Exception:
                 return "<Unable to convert item to string>"
 
@@ -617,7 +617,7 @@ class _CodeHasher:
             if obj.__module__.startswith("streamlit"):
                 # Ignore streamlit modules even if they are in the CWD
                 # (e.g. during development).
-                return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
+                return self.to_bytes("{}.{}".format(obj.__module__, obj.__name__))
 
             h = hashlib.new("md5")
 
@@ -790,7 +790,7 @@ class NoResult:
 class UnhashableTypeError(StreamlitAPIException):
     def __init__(self, orig_exc, failed_obj):
         msg = self._get_message(orig_exc, failed_obj)
-        super(UnhashableTypeError, self).__init__(msg)
+        super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     def _get_message(self, orig_exc, failed_obj):
@@ -840,7 +840,7 @@ class UserHashError(StreamlitAPIException):
         else:
             msg = self._get_message_from_code(orig_exc, cached_func_or_code, lineno)
 
-        super(UserHashError, self).__init__(msg)
+        super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     def _get_message_from_func(self, orig_exc, cached_func, hash_func):
@@ -912,7 +912,7 @@ class InternalHashError(MarkdownFormattedException):
 
     def __init__(self, orig_exc: BaseException, failed_obj: Any):
         msg = self._get_message(orig_exc, failed_obj)
-        super(InternalHashError, self).__init__(msg)
+        super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     def _get_message(self, orig_exc: BaseException, failed_obj: Any) -> str:
