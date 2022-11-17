@@ -21,6 +21,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.type_util import _LOGGER
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -128,4 +129,15 @@ hello
             str(e.exception),
             "Unsupported label_visibility option 'wrong_value'. Valid values are "
             "'visible', 'hidden' or 'collapsed'.",
+        )
+
+    def test_empty_label_warning(self):
+        """Test that a warning is logged if st.checkbox was called with empty label."""
+
+        with self.assertLogs(_LOGGER) as logs:
+            st.checkbox(label="")
+
+        self.assertIn(
+            "`label` got an empty value. This is discouraged for accessibility reasons",
+            logs.records[0].msg,
         )
