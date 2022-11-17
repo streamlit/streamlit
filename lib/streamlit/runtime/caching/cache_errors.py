@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import types
 from typing import Any, Optional
 
@@ -21,7 +22,22 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitAPIWarning,
 )
-from streamlit.runtime.caching.cache_utils import CacheType, get_decorator_api_name
+
+
+class CacheType(enum.Enum):
+    """The function cache types we implement."""
+
+    MEMO = "MEMO"
+    SINGLETON = "SINGLETON"
+
+
+def get_decorator_api_name(cache_type: CacheType) -> str:
+    """Return the name of the public decorator API for the given CacheType."""
+    if cache_type is CacheType.MEMO:
+        return "experimental_memo"
+    if cache_type is CacheType.SINGLETON:
+        return "experimental_singleton"
+    raise RuntimeError(f"Unrecognized CacheType '{cache_type}'")
 
 
 def get_cached_func_name_md(func: Any) -> str:
