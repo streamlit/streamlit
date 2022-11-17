@@ -136,7 +136,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st._arrow_dataframe(styler)
         mock_styler_translate.assert_called_once_with(False, False)
 
-    @pytest.mark.require_snowflake()
+    @pytest.mark.require_snowflake
     def test_snowpark_uncollected(self):
         """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
         with create_snowpark_session() as snowpark_session:
@@ -152,7 +152,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)
 
-    @pytest.mark.require_snowflake()
+    @pytest.mark.require_snowflake
     def test_snowpark_collected(self):
         """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
         with create_snowpark_session() as snowpark_session:
