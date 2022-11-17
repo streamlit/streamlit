@@ -122,9 +122,6 @@ class PlotlyMixin:
 
         Example
         -------
-
-        The example below comes straight from the examples at
-        https://plot.ly/python:
         >>> import numpy as np
         >>> import plotly.figure_factory as ff
         >>>
