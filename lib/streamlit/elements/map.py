@@ -167,23 +167,34 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
         return json.dumps(_DEFAULT_MAP)
 
     data = type_util.convert_anything_to_df(data)
+    formmated_column_names = ", ".join(map(repr, list(data.columns)))
 
     if "lat" in data:
         lat = "lat"
     elif "latitude" in data:
         lat = "latitude"
+    elif "LAT" in data:
+        lat = "LAT"
+    elif "LATITUDE" in data:
+        lat = "LATITUDE"
     else:
         raise StreamlitAPIException(
-            'Map data must contain a column named "latitude" or "lat".'
+            "Map data must contain a column named 'latitude' or 'lat'. "
+            f"Existing columns: {formmated_column_names}"
         )
 
     if "lon" in data:
         lon = "lon"
     elif "longitude" in data:
         lon = "longitude"
+    elif "LON" in data:
+        lon = "LON"
+    elif "LONGITUDE" in data:
+        lon = "LONGITUDE"
     else:
         raise StreamlitAPIException(
-            'Map data must contain a column called "longitude" or "lon".'
+            "Map data must contain a column named 'longitude' or 'lon'. "
+            f"Existing columns: {formmated_column_names}"
         )
 
     if data[lon].isnull().values.any() or data[lat].isnull().values.any():
