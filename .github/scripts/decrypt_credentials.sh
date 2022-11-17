@@ -21,8 +21,6 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-# For details, see:
-# https://snowflakecomputing.atlassian.net/wiki/spaces/EN/pages/1942651295/Password+update+process+for+drivers+.
 gpg \
   --quiet \
   --batch \
