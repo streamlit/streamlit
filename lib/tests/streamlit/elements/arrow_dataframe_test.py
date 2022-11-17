@@ -138,7 +138,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
     @pytest.mark.require_snowflake
     def test_snowpark_uncollected(self):
-        """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
+        """Tests that data can be read from Snowpark's uncollected Dataframe"""
         with create_snowpark_session() as snowpark_session:
             df = snowpark_session.sql("SELECT 40+2 as COL1")
             print("===" * 20)
@@ -154,7 +154,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
     @pytest.mark.require_snowflake
     def test_snowpark_collected(self):
-        """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
+        """Tests that data can be read from Snowpark's collected Dataframe"""
         with create_snowpark_session() as snowpark_session:
             df = snowpark_session.sql("SELECT 40+2 as COL1").collect()
             st._arrow_dataframe(df)
