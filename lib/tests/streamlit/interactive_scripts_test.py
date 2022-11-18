@@ -49,11 +49,11 @@ class InteractiveScriptTest(unittest.TestCase):
 
     def test_widgets_script(self):
         script = script_from_filename("widgets_script.py")
-        tree = script.run()
+        sr = script.run()
 
         # main and sidebar
-        assert len(tree) == 2
-        main = tree.children[0]
+        assert len(sr) == 2
+        main = sr.children[0]
 
         # columns live within a horizontal block, + 2 more elements
         assert len(main) == 3
@@ -64,11 +64,11 @@ class InteractiveScriptTest(unittest.TestCase):
         # first column has 4 elements
         assert len(main.children[0].children[0]) == 4
 
-        radios = tree.get("radio")
+        radios = sr.get("radio")
         assert radios[0].value == "1"
         assert radios[1].value == "a"
 
-        tree.get_widget_states()
+        sr.get_widget_states()
 
     def test_cached_widget_replay_rerun(self):
         script = script_from_string(
