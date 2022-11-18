@@ -663,7 +663,7 @@ class AppSession:
 
         """
         legacy_caching.clear_cache()
-        caching.memo.clear()
+        caching.cache_data.clear()
         caching.singleton.clear()
         self._session_state.clear()
 

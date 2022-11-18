@@ -105,5 +105,5 @@ from streamlit.runtime.caching.singleton_decorator import (
 )
 
 # Create and export public API singletons.
-memo = CacheDataAPI()
+cache_data = CacheDataAPI()
 singleton = SingletonAPI()

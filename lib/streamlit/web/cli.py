@@ -261,7 +261,7 @@ def cache_clear():
     else:
         print(f"Nothing to clear at {cache_path}.")
 
-    caching.memo.clear()
+    caching.cache_data.clear()
     caching.singleton.clear()
 
 
