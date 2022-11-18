@@ -437,17 +437,17 @@ class MemoStatsProviderTest(unittest.TestCase):
 
         expected = [
             CacheStat(
-                category_name="st_memo",
+                category_name="st_cache_data",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14])),
             ),
             CacheStat(
-                category_name="st_memo",
+                category_name="st_cache_data",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14] * 53)),
             ),
             CacheStat(
-                category_name="st_memo",
+                category_name="st_cache_data",
                 cache_name=bar_cache_name,
                 byte_length=get_byte_length(as_cached_result("shivermetimbers")),
             ),
