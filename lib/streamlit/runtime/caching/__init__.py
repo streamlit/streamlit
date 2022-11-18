@@ -102,7 +102,7 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 # Explicitly export public symbols
 from streamlit.runtime.caching.cache_data_decorator import (
-    get_data_cache_stats_provider as get_memo_stats_provider,
+    get_data_cache_stats_provider as get_data_cache_stats_provider,
 )
 from streamlit.runtime.caching.singleton_decorator import (
     get_singleton_stats_provider as get_singleton_stats_provider,
