@@ -597,35 +597,36 @@ class CacheMessagesCallStack(threading.local):
         """
         if not runtime.exists():
             return
+        if len(self._cached_message_stack) >= 1:
 
-        id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
-        if isinstance(element_proto, Widget):
-            wid = element_proto.id
-            # TODO replace `Message` with a more precise type
-            if not self._registered_metadata:
-                _LOGGER.error(
-                    "Trying to save widget message that wasn't registered. This should not be possible."
+            id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
+            if isinstance(element_proto, Widget):
+                wid = element_proto.id
+                # TODO replace `Message` with a more precise type
+                if not self._registered_metadata:
+                    _LOGGER.error(
+                        "Trying to save widget message that wasn't registered. This should not be possible."
+                    )
+                    raise AttributeError
+                widget_meta = WidgetMsgMetadata(
+                    wid, None, metadata=self._registered_metadata
                 )
-                raise AttributeError
-            widget_meta = WidgetMsgMetadata(
-                wid, None, metadata=self._registered_metadata
+            else:
+                widget_meta = None
+
+            media_data = self._media_data
+
+            element_msg_data = ElementMsgData(
+                delta_type,
+                element_proto,
+                id_to_save,
+                returned_dg_id,
+                widget_meta,
+                media_data,
             )
-        else:
-            widget_meta = None
-
-        media_data = self._media_data
-
-        element_msg_data = ElementMsgData(
-            delta_type,
-            element_proto,
-            id_to_save,
-            returned_dg_id,
-            widget_meta,
-            media_data,
-        )
-        for msgs in self._cached_message_stack:
-            if self._allow_widgets or widget_meta is None:
-                msgs.append(element_msg_data)
+            for msgs in self._cached_message_stack:
+                if self._allow_widgets or widget_meta is None:
+                    msgs.append(element_msg_data)
 
         # Reset instance state, now that it has been used for the
         # associated element.
