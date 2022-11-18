@@ -83,11 +83,11 @@ jobs:
           fi
       - name: Check that all screenshot have been committed
         run: |
-          UNTRACKED_FILE_COUNT=$(git ls-files --others --exclude-standard | wc -l | bc -l)
+          UNTRACKED_FILE_COUNT=$(git ls-files --others --exclude-standard | grep cypress | wc -l | bc -l)
           echo "Untracked files count: ${UNTRACKED_FILE_COUNT}"
           if [[ "${UNTRACKED_FILE_COUNT}" -gt 0 ]]; then
             echo "Untracked files:";
-            git ls-files --others --exclude-standard;
+            git ls-files --others --exclude-standard | grep cypress;
             exit 1;
           fi
       - name: Store Videos
