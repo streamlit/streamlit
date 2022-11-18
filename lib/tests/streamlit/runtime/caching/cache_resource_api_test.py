@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.singleton unit tests."""
+"""st.cache_resource unit tests."""
 
 import threading
 import unittest
@@ -38,7 +38,7 @@ def as_cached_result(value: Any) -> MultiCacheResults:
     return _as_cached_result(value, CacheType.DATA)
 
 
-class SingletonTest(unittest.TestCase):
+class CacheResourceTest(unittest.TestCase):
     def tearDown(self):
         st.experimental_singleton.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
@@ -48,7 +48,7 @@ class SingletonTest(unittest.TestCase):
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
-        """Mutating a singleton return value is legal, and *will* affect
+        """Mutating a cache_resource return value is legal, and *will* affect
         future accessors of the data."""
 
         @st.experimental_singleton
@@ -67,7 +67,7 @@ class SingletonTest(unittest.TestCase):
         self.assertEqual(r2, [1, 1])
 
 
-class SingletonStatsProviderTest(unittest.TestCase):
+class CacheResourceStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
@@ -121,6 +121,6 @@ class SingletonStatsProviderTest(unittest.TestCase):
         )
 
 
-def get_byte_length(value):
+def get_byte_length(value: Any) -> int:
     """Return the byte length of the pickled value."""
     return asizeof(value)
