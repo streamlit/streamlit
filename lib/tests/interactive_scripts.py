@@ -162,6 +162,10 @@ class Element:
 
     @property
     def value(self):
+        """FIXME: this does not reflect state changes from interactions
+        after a script run. We can work around this for now by writing to
+        `st.text` and checking that instead.
+        """
         p = getattr(self.proto, self.type)
         return p.value
 
