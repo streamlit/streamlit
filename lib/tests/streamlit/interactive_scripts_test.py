@@ -68,7 +68,26 @@ class InteractiveScriptTest(unittest.TestCase):
         assert radios[0].value == "1"
         assert radios[1].value == "a"
 
-        sr.get_widget_states()
+        # iteration follows delta path order, with a block coming before
+        # its children, which come before its siblings. main comes before
+        # the sidebar
+        assert [e.type for e in sr] == [
+            "root",
+            "main",
+            "horizontal",
+            "column",
+            "checkbox",
+            "text",
+            "text_area",
+            "text",
+            "column",
+            "radio",
+            "text",
+            "button",
+            "text",
+            "sidebar",
+            "radio",
+        ]
 
     def test_cached_widget_replay_rerun(self):
         script = script_from_string(
