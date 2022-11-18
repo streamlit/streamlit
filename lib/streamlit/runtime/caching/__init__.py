@@ -13,16 +13,11 @@
 # limitations under the License.
 
 import contextlib
-from typing import TYPE_CHECKING, Any, Iterator, Union
+from typing import Any, Iterator, Union
 
 from google.protobuf.message import Message
 
 from streamlit.proto.Block_pb2 import Block
-from streamlit.runtime.state.session_state import WidgetMetadata
-
-if TYPE_CHECKING:
-    from streamlit.delta_generator import DeltaGenerator
-
 from streamlit.runtime.caching.cache_data_api import (
     CACHE_DATA_CALL_STACK,
     CACHE_DATA_MESSAGE_CALL_STACK,
@@ -35,6 +30,7 @@ from streamlit.runtime.caching.singleton_decorator import (
     SingletonAPI,
     _singleton_caches,
 )
+from streamlit.runtime.state.session_state import WidgetMetadata
 
 
 def save_element_message(
