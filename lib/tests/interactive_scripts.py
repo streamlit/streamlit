@@ -17,11 +17,12 @@ import os
 import pathlib
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Optional, Union, overload
+from typing import Any, Dict, List, Optional, Union, overload
+
+from typing_extensions import Literal
 
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
