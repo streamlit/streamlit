@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Common cache logic shared by st.memo and st.singleton."""
+from __future__ import annotations
 
 import contextlib
 import functools
@@ -22,7 +23,7 @@ import threading
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Iterator, Optional, Set, Tuple
 
 from google.protobuf.message import Message
 from typing_extensions import Protocol, runtime_checkable
@@ -72,7 +73,7 @@ class WidgetMsgMetadata:
 
 @dataclass(frozen=True)
 class MediaMsgData:
-    media: Union[bytes, str]
+    media: bytes | str
     mimetype: str
     media_id: str
 
@@ -91,7 +92,7 @@ class ElementMsgData:
     id_of_dg_called_on: str
     returned_dgs_id: str
     widget_metadata: Optional[WidgetMsgMetadata] = None
-    media_data: Optional[List[MediaMsgData]] = None
+    media_data: Optional[list[MediaMsgData]] = None
 
 
 @dataclass(frozen=True)
@@ -101,7 +102,7 @@ class BlockMsgData:
     returned_dgs_id: str
 
 
-MsgData = Union[ElementMsgData, BlockMsgData]
+MsgData = ElementMsgData | BlockMsgData
 
 """
 Note [Cache result structure]
@@ -167,7 +168,7 @@ class CachedResult:
     """
 
     value: Any
-    messages: List[MsgData]
+    messages: list[MsgData]
     main_id: str
     sidebar_id: str
 
@@ -179,7 +180,7 @@ class MultiCacheResults:
     """
 
     widget_ids: Set[str]
-    results: Dict[str, CachedResult]
+    results: dict[str, CachedResult]
 
     def get_current_widget_key(
         self, ctx: ScriptRunContext, cache_type: CacheType
@@ -214,7 +215,7 @@ class Cache:
         raise NotImplementedError
 
     @abstractmethod
-    def write_result(self, value_key: str, value: Any, messages: List[MsgData]) -> None:
+    def write_result(self, value_key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache, overwriting any existing
         result that uses the value_key.
         """
@@ -236,7 +237,7 @@ class CachedFunction:
     def __init__(
         self,
         func: types.FunctionType,
-        show_spinner: Union[bool, str],
+        show_spinner: bool | str,
         suppress_st_warning: bool,
         allow_widgets: bool,
     ):
@@ -250,11 +251,11 @@ class CachedFunction:
         raise NotImplementedError
 
     @property
-    def warning_call_stack(self) -> "CacheWarningCallStack":
+    def warning_call_stack(self) -> CacheWarningCallStack:
         raise NotImplementedError
 
     @property
-    def message_call_stack(self) -> "CacheMessagesCallStack":
+    def message_call_stack(self) -> CacheMessagesCallStack:
         raise NotImplementedError
 
     def get_function_cache(self, function_key: str) -> Cache:
@@ -285,7 +286,7 @@ def replay_result_messages(
     from streamlit.runtime.state.widgets import register_widget_from_metadata
 
     # Maps originally recorded dg ids to this script run's version of that dg
-    returned_dgs: Dict[str, DeltaGenerator] = {}
+    returned_dgs: dict[str, DeltaGenerator] = {}
     returned_dgs[result.main_id] = st._main
     returned_dgs[result.sidebar_id] = st.sidebar
     ctx = get_script_run_ctx()
@@ -425,7 +426,7 @@ class CacheWarningCallStack(threading.local):
     """
 
     def __init__(self, cache_type: CacheType):
-        self._cached_func_stack: List[types.FunctionType] = []
+        self._cached_func_stack: list[types.FunctionType] = []
         self._suppress_st_function_warning = 0
         self._cache_type = cache_type
         self._allow_widgets: int = 0
@@ -562,11 +563,11 @@ class CacheMessagesCallStack(threading.local):
     """
 
     def __init__(self, cache_type: CacheType):
-        self._cached_message_stack: List[List[MsgData]] = []
-        self._seen_dg_stack: List[Set[str]] = []
-        self._most_recent_messages: List[MsgData] = []
+        self._cached_message_stack: list[list[MsgData]] = []
+        self._seen_dg_stack: list[Set[str]] = []
+        self._most_recent_messages: list[MsgData] = []
         self._registered_metadata: Optional[WidgetMetadata[Any]] = None
-        self._media_data: List[MediaMsgData] = []
+        self._media_data: list[MediaMsgData] = []
         self._cache_type = cache_type
         self._allow_widgets: int = 0
 
@@ -667,7 +668,7 @@ class CacheMessagesCallStack(threading.local):
         self._registered_metadata = metadata
 
     def save_image_data(
-        self, image_data: Union[bytes, str], mimetype: str, image_id: str
+        self, image_data: bytes | str, mimetype: str, image_id: str
     ) -> None:
         self._media_data.append(MediaMsgData(image_data, mimetype, image_id))
 
@@ -706,7 +707,7 @@ def _make_value_key(
 
     # Create a (name, value) list of all *args and **kwargs passed to the
     # function.
-    arg_pairs: List[Tuple[Optional[str], Any]] = []
+    arg_pairs: list[Tuple[Optional[str], Any]] = []
     for arg_idx in range(len(args)):
         arg_name = _get_positional_arg_name(func, arg_idx)
         arg_pairs.append((arg_name, args[arg_idx]))
@@ -761,7 +762,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
 
     # Include the function's source code in its hash. If the source code can't
     # be retrieved, fall back to the function's bytecode instead.
-    source_code: Union[str, bytes]
+    source_code: str | bytes
     try:
         source_code = inspect.getsource(func)
     except OSError as e:
@@ -791,7 +792,7 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
     if arg_index < 0:
         return None
 
-    params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
+    params: list[inspect.Parameter] = list(inspect.signature(func).parameters.values())
     if arg_index >= len(params):
         return None
 
@@ -804,7 +805,7 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
     return None
 
 
-def _make_widget_key(widgets: List[Tuple[str, Any]], cache_type: CacheType) -> str:
+def _make_widget_key(widgets: list[Tuple[str, Any]], cache_type: CacheType) -> str:
     """
     widget_id + widget_value pair -> hash
     """
