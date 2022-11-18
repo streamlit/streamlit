@@ -13,10 +13,11 @@
 # limitations under the License.
 
 """@st.singleton implementation"""
+from __future__ import annotations
 
 import threading
 import types
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, cast, overload
+from typing import Any, Callable, Optional, TypeVar, cast, overload
 
 from pympler import asizeof
 
@@ -51,11 +52,11 @@ class SingletonCaches(CacheStatsProvider):
 
     def __init__(self):
         self._caches_lock = threading.Lock()
-        self._function_caches: Dict[str, "SingletonCache"] = {}
+        self._function_caches: dict[str, SingletonCache] = {}
 
     def get_cache(
         self, key: str, display_name: str, allow_widgets: bool
-    ) -> "SingletonCache":
+    ) -> SingletonCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -81,13 +82,13 @@ class SingletonCaches(CacheStatsProvider):
         with self._caches_lock:
             self._function_caches = {}
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
             function_caches = self._function_caches.copy()
 
-        stats: List[CacheStat] = []
+        stats: list[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
         return stats
@@ -150,7 +151,7 @@ class SingletonAPI:
     def __call__(
         self,
         *,
-        show_spinner: Union[bool, str] = True,
+        show_spinner: bool | str = True,
         suppress_st_warning=False,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
@@ -164,7 +165,7 @@ class SingletonAPI:
         self,
         func: Optional[F] = None,
         *,
-        show_spinner: Union[bool, str] = True,
+        show_spinner: bool | str = True,
         suppress_st_warning=False,
         experimental_allow_widgets: bool = False,
     ):
@@ -286,7 +287,7 @@ class SingletonCache(Cache):
     def __init__(self, key: str, display_name: str, allow_widgets: bool = False):
         self.key = key
         self.display_name = display_name
-        self._mem_cache: Dict[str, MultiCacheResults] = {}
+        self._mem_cache: dict[str, MultiCacheResults] = {}
         self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
 
@@ -313,7 +314,7 @@ class SingletonCache(Cache):
                 raise CacheKeyNotFoundError()
 
     @gather_metrics("_cache_singleton_object")
-    def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
+    def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -347,14 +348,14 @@ class SingletonCache(Cache):
         with self._mem_cache_lock:
             self._mem_cache.clear()
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         # Shallow clone our cache. Computing item sizes is potentially
         # expensive, and we want to minimize the time we spend holding
         # the lock.
         with self._mem_cache_lock:
             mem_cache = self._mem_cache.copy()
 
-        stats: List[CacheStat] = []
+        stats: list[CacheStat] = []
         for item_key, item_value in mem_cache.items():
             stats.append(
                 CacheStat(
