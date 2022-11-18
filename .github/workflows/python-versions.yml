@@ -62,7 +62,8 @@ jobs:
   py_snowflake:
     runs-on: ubuntu-latest
 
-    if: github.repository == 'streamlit/streamlit'
+    # Won't run if PR from fork, since that PR wouldn't have secrets access
+    if: github.event.pull_request.head.repo.full_name == github.repository
 
     steps:
       - name: Checkout Streamlit code
