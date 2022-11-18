@@ -78,48 +78,14 @@ class LocalScriptRunner(ScriptRunner):
 
         self.on_event.connect(record_event, weak=False)
 
-    def _run_script_thread(self) -> None:
-        try:
-            super()._run_script_thread()
-        except BaseException as e:
-            self.script_thread_exceptions.append(e)
-
-    def _run_script(self, rerun_data: RerunData) -> None:
-        self.forward_msg_queue.clear()
-        super()._run_script(rerun_data)
-
     def join(self) -> None:
         """Join the script_thread if it's running."""
         if self._script_thread is not None:
             self._script_thread.join()
 
-    def clear_forward_msgs(self) -> None:
-        """Clear all messages from our ForwardMsgQueue."""
-        self.forward_msg_queue.clear()
-
     def forward_msgs(self) -> List[ForwardMsg]:
         """Return all messages in our ForwardMsgQueue."""
         return self.forward_msg_queue._queue
-
-    def deltas(self) -> List[Delta]:
-        """Return the delta messages in our ForwardMsgQueue."""
-        return [
-            msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
-        ]
-
-    def elements(self) -> List[ElementProto]:
-        """Return the delta.new_element messages in our ForwardMsgQueue."""
-        return [delta.new_element for delta in self.deltas()]
-
-    def get_widget_id(self, widget_type: str, label: str) -> Optional[str]:
-        """Returns the id of the widget with the specified type and label"""
-        for delta in self.deltas():
-            new_element = getattr(delta, "new_element", None)
-            widget = getattr(new_element, widget_type, None)
-            widget_label = getattr(widget, "label", None)
-            if widget_label == label:
-                return widget.id
-        return None
 
     def run(self, widget_state: Optional[WidgetStates] = None) -> Root:
         rerun_data = RerunData(widget_states=widget_state)
