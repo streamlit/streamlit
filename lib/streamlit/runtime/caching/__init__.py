@@ -24,11 +24,11 @@ from streamlit.runtime.caching.cache_data_api import (
     CacheDataAPI,
     _data_caches,
 )
-from streamlit.runtime.caching.singleton_decorator import (
-    SINGLETON_CALL_STACK,
-    SINGLETON_MESSAGE_CALL_STACK,
-    SingletonAPI,
-    _singleton_caches,
+from streamlit.runtime.caching.cache_resource_api import (
+    CACHE_RESOURCE_CALL_STACK,
+    CACHE_RESOURCE_MESSAGE_CALL_STACK,
+    CacheResourceAPI,
+    _resource_caches,
 )
 from streamlit.runtime.state.session_state import WidgetMetadata
 
@@ -47,7 +47,7 @@ def save_element_message(
     CACHE_DATA_MESSAGE_CALL_STACK.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
-    SINGLETON_MESSAGE_CALL_STACK.save_element_message(
+    CACHE_RESOURCE_MESSAGE_CALL_STACK.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
 
@@ -65,7 +65,7 @@ def save_block_message(
     CACHE_DATA_MESSAGE_CALL_STACK.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
-    SINGLETON_MESSAGE_CALL_STACK.save_block_message(
+    CACHE_RESOURCE_MESSAGE_CALL_STACK.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
 
@@ -75,24 +75,24 @@ def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
     can be registered again when that widget is replayed.
     """
     CACHE_DATA_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
-    SINGLETON_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
+    CACHE_RESOURCE_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
 
 
 def save_media_data(
     image_data: Union[bytes, str], mimetype: str, image_id: str
 ) -> None:
     CACHE_DATA_MESSAGE_CALL_STACK.save_image_data(image_data, mimetype, image_id)
-    SINGLETON_MESSAGE_CALL_STACK.save_image_data(image_data, mimetype, image_id)
+    CACHE_RESOURCE_MESSAGE_CALL_STACK.save_image_data(image_data, mimetype, image_id)
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
     CACHE_DATA_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
-    SINGLETON_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
+    CACHE_RESOURCE_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
 
 
 @contextlib.contextmanager
 def suppress_cached_st_function_warning() -> Iterator[None]:
-    with CACHE_DATA_CALL_STACK.suppress_cached_st_function_warning(), SINGLETON_CALL_STACK.suppress_cached_st_function_warning():
+    with CACHE_DATA_CALL_STACK.suppress_cached_st_function_warning(), CACHE_RESOURCE_CALL_STACK.suppress_cached_st_function_warning():
         yield
 
 
@@ -100,10 +100,10 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 from streamlit.runtime.caching.cache_data_api import (
     get_data_cache_stats_provider as get_data_cache_stats_provider,
 )
-from streamlit.runtime.caching.singleton_decorator import (
-    get_singleton_stats_provider as get_singleton_stats_provider,
+from streamlit.runtime.caching.cache_resource_api import (
+    get_resource_cache_stats_provider as get_singleton_stats_provider,
 )
 
 # Create and export public API singletons.
 cache_data = CacheDataAPI()
-singleton = SingletonAPI()
+singleton = CacheResourceAPI()

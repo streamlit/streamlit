@@ -25,7 +25,7 @@ from parameterized import parameterized
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.runtime import metrics_util
-from streamlit.runtime.caching import cache_data_api, singleton_decorator
+from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.web.server import websocket_headers
@@ -210,7 +210,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (st.session_state.__setitem__, "session_state.set_item"),
             (cache_data_api.DataCache.write_result, "_cache_memo_object"),
             (
-                singleton_decorator.SingletonCache.write_result,
+                singleton_decorator.ResourceCache.write_result,
                 "_cache_singleton_object",
             ),
             (caching._write_to_cache, "_cache_object"),

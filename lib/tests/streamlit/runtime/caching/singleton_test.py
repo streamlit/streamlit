@@ -22,7 +22,10 @@ from unittest.mock import patch
 from pympler.asizeof import asizeof
 
 import streamlit as st
-from streamlit.runtime.caching import get_singleton_stats_provider, singleton_decorator
+from streamlit.runtime.caching import (
+    cache_resource_api,
+    get_resource_cache_stats_provider,
+)
 from streamlit.runtime.caching.cache_errors import CacheType
 from streamlit.runtime.caching.cache_utils import MultiCacheResults
 from streamlit.runtime.stats import CacheStat
@@ -40,8 +43,8 @@ class SingletonTest(unittest.TestCase):
         st.experimental_singleton.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack = []
-        singleton_decorator.SINGLETON_CALL_STACK._suppress_st_function_warning = 0
+        singleton_decorator.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
+        singleton_decorator.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -74,7 +77,7 @@ class SingletonStatsProviderTest(unittest.TestCase):
         st.experimental_singleton.clear()
 
     def test_no_stats(self):
-        self.assertEqual([], get_singleton_stats_provider().get_stats())
+        self.assertEqual([], get_resource_cache_stats_provider().get_stats())
 
     def test_multiple_stats(self):
         @st.experimental_singleton
@@ -113,7 +116,9 @@ class SingletonStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        self.assertEqual(set(expected), set(get_singleton_stats_provider().get_stats()))
+        self.assertEqual(
+            set(expected), set(get_resource_cache_stats_provider().get_stats())
+        )
 
 
 def get_byte_length(value):
