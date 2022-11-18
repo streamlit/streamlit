@@ -280,8 +280,10 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
-      getHostAuthToken: this.getHostAuthToken,
-      setHostAllowedOrigins: this.props.hostCommunication.setAllowedOrigins,
+      claimHostAuthToken: this.props.hostCommunication.claimAuthToken,
+      resetHostAuthToken: this.props.hostCommunication.resetAuthToken,
+      setAllowedOriginsResp:
+        this.props.hostCommunication.setAllowedOriginsResp,
     })
 
     if (isEmbeddedInIFrame()) {
@@ -1171,12 +1173,6 @@ export class App extends PureComponent<Props, State> {
       logError(`Not connected. Cannot send back message: ${msg}`)
     }
   }
-
-  /**
-   * Returns the authToken set by the withHostCommunication hoc.
-   */
-  private getHostAuthToken = (): string | undefined =>
-    this.props.hostCommunication.currentState.authToken
 
   /**
    * Updates the app body when there's a connection error.

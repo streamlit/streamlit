@@ -28,7 +28,6 @@ export type DeployedAppMetadata = {
 }
 
 export interface HostCommunicationState {
-  authToken?: string
   deployedAppMetadata: DeployedAppMetadata
   forcedModalClose: boolean
   hideSidebarNav: boolean
@@ -155,3 +154,8 @@ export type IGuestToHostMessage =
 export type VersionedMessage<Message> = {
   stCommVersion: number
 } & Message
+
+export type IAllowedMessageOriginsResponse = {
+  allowedOrigins: string[]
+  useExternalAuthToken: boolean
+}

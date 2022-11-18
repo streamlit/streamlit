@@ -20,6 +20,7 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 import { isValidOrigin } from "src/lib/UriUtil"
 
 import {
+  IAllowedMessageOriginsResponse,
   IGuestToHostMessage,
   IHostToGuestMessage,
   IMenuItem,
@@ -29,11 +30,13 @@ import {
 } from "./types"
 
 export interface HostCommunicationHOC {
+  claimAuthToken: () => Promise<string | undefined>
   currentState: HostCommunicationState
-  sendMessage: (message: IGuestToHostMessage) => void
   onModalReset: () => void
   onPageChanged: () => void
-  setAllowedOrigins: (allowedOrigins: string[]) => void
+  resetAuthToken: () => void
+  sendMessage: (message: IGuestToHostMessage) => void
+  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
 }
 
 export const HOST_COMM_VERSION = 1
@@ -48,6 +51,27 @@ export function sendMessageToHost(message: IGuestToHostMessage): void {
   )
 }
 
+// The DeferredValue type is just an object containing both a Promise along
+// with its resolver function. We introduce it as it makes asynchronously
+// receiving an external auth token from the parent frame much cleaner than
+// trying to do so with more idiomatic Promise patterns. These situations are
+// rare, though, so we should try to avoid further usage of it unless we have a
+// very good reason to do so.
+type DeferredValue = {
+  promise: Promise<string | undefined>
+  resolve: (value?: string) => void
+}
+
+const createDeferredValue = (): DeferredValue => {
+  let resolve: (value?: string) => void
+  const promise = new Promise<string | undefined>(r => {
+    resolve = r
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  return { promise, resolve: resolve! }
+}
+
 function withHostCommunication(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
@@ -56,8 +80,6 @@ function withHostCommunication(
     // unwieldy. We may want to consider installing the redux-toolkit package
     // even if we're not using redux just because it's so useful for reducing
     // this type of boilerplate.
-    const [allowedOrigins, setAllowedOrigins] = useState<string[]>([])
-    const [authToken, setAuthToken] = useState<string | undefined>(undefined)
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [hideSidebarNav, setHideSidebarNav] = useState(false)
     const [isOwner, setIsOwner] = useState(false)
@@ -71,7 +93,21 @@ function withHostCommunication(
     const [deployedAppMetadata, setDeployedAppMetadata] = useState({})
     const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
 
+    const [allowedOriginsResp, setAllowedOriginsResp] =
+      useState<IAllowedMessageOriginsResponse | null>(null)
+    const [deferredAuthToken, setDeferredAuthToken] =
+      useState<DeferredValue>(createDeferredValue)
+
     useEffect(() => {
+      if (!allowedOriginsResp) {
+        return () => {}
+      }
+
+      const { allowedOrigins, useExternalAuthToken } = allowedOriginsResp
+      if (!useExternalAuthToken) {
+        deferredAuthToken.resolve()
+      }
+
       function receiveMessage(event: MessageEvent): void {
         const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
@@ -97,7 +133,7 @@ function withHostCommunication(
         }
 
         if (message.type === "SET_AUTH_TOKEN") {
-          setAuthToken(message.authToken)
+          deferredAuthToken.resolve(message.authToken)
         }
 
         if (message.type === "SET_IS_OWNER") {
@@ -147,14 +183,13 @@ function withHostCommunication(
       return () => {
         window.removeEventListener("message", receiveMessage)
       }
-    }, [allowedOrigins])
+    }, [allowedOriginsResp])
 
     return (
       <WrappedComponent
         hostCommunication={
           {
             currentState: {
-              authToken,
               forcedModalClose,
               hideSidebarNav,
               isOwner,
@@ -166,6 +201,10 @@ function withHostCommunication(
               deployedAppMetadata,
               toolbarItems,
             },
+            claimAuthToken: () => deferredAuthToken.promise,
+            resetAuthToken: () => {
+              setDeferredAuthToken(createDeferredValue())
+            },
             onModalReset: () => {
               setForcedModalClose(false)
             },
@@ -173,7 +212,7 @@ function withHostCommunication(
               setRequestedPageScriptHash(null)
             },
             sendMessage: sendMessageToHost,
-            setAllowedOrigins,
+            setAllowedOriginsResp,
           } as HostCommunicationHOC
         }
         {...props}

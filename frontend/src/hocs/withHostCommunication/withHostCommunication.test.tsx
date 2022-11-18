@@ -78,7 +78,10 @@ describe("withHostCommunication HOC", () => {
       .prop("hostCommunication")
 
     act(() => {
-      hostCommunication.setAllowedOrigins(["https://devel.streamlit.test"])
+      hostCommunication.setAllowedOriginsResp({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
     })
   })
 })
@@ -87,7 +90,6 @@ describe("withHostCommunication HOC receiving messages", () => {
   let dispatchEvent: any
   let originalHash: any
   let wrapper: any
-  let hostCommunication: any
 
   beforeEach(() => {
     // We need to save and restore window.location.hash for each test because
@@ -97,12 +99,15 @@ describe("withHostCommunication HOC receiving messages", () => {
     dispatchEvent = mockEventListeners()
     wrapper = mount(<TestComponent />)
 
-    hostCommunication = wrapper
+    const hostCommunication = wrapper
       .find(TestComponentNaked)
       .prop("hostCommunication")
 
     act(() => {
-      hostCommunication.setAllowedOrigins(["http://devel.streamlit.test"])
+      hostCommunication.setAllowedOriginsResp({
+        allowedOrigins: ["http://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
     })
   })
 
@@ -256,31 +261,17 @@ describe("withHostCommunication HOC receiving messages", () => {
     )
   })
 
-  it("can process a received SET_AUTH_TOKEN message", () => {
-    act(() => {
-      dispatchEvent(
-        "message",
-        new MessageEvent("message", {
-          data: {
-            stCommVersion: HOST_COMM_VERSION,
-            type: "SET_AUTH_TOKEN",
-            authToken: "i am an auth token",
-          },
-          origin: "http://devel.streamlit.test",
-        })
-      )
-    })
-
-    wrapper.update()
-
-    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
-    expect(props.currentState.authToken).toBe("i am an auth token")
-  })
-
   describe("Test different origins", () => {
     it("exact pattern", () => {
+      const hostCommunication = wrapper
+        .find(TestComponentNaked)
+        .prop("hostCommunication")
+
       act(() => {
-        hostCommunication.setAllowedOrigins(["http://share.streamlit.io"])
+        hostCommunication.setAllowedOriginsResp({
+          allowedOrigins: ["http://share.streamlit.io"],
+          useExternalAuthToken: false,
+        })
       })
 
       dispatchEvent(
@@ -299,8 +290,15 @@ describe("withHostCommunication HOC receiving messages", () => {
     })
 
     it("wildcard pattern", () => {
+      const hostCommunication = wrapper
+        .find(TestComponentNaked)
+        .prop("hostCommunication")
+
       act(() => {
-        hostCommunication.setAllowedOrigins(["http://*.streamlitapp.com"])
+        hostCommunication.setAllowedOriginsResp({
+          allowedOrigins: ["http://*.streamlitapp.com"],
+          useExternalAuthToken: false,
+        })
       })
 
       dispatchEvent(
@@ -319,8 +317,15 @@ describe("withHostCommunication HOC receiving messages", () => {
     })
 
     it("ignores non-matching origins", () => {
+      const hostCommunication = wrapper
+        .find(TestComponentNaked)
+        .prop("hostCommunication")
+
       act(() => {
-        hostCommunication.setAllowedOrigins(["http://share.streamlit.io"])
+        hostCommunication.setAllowedOriginsResp({
+          allowedOrigins: ["http://share.streamlit.io"],
+          useExternalAuthToken: false,
+        })
       })
 
       dispatchEvent(
@@ -337,5 +342,100 @@ describe("withHostCommunication HOC receiving messages", () => {
 
       expect(window.location.hash).toEqual("")
     })
+  })
+})
+
+describe("withHostCommunication HOC external auth token handling", () => {
+  it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
+    const wrapper = mount(<TestComponent />)
+
+    let authTokenPromise
+    const hostCommunication = wrapper
+      .find(TestComponentNaked)
+      .prop("hostCommunication")
+
+    act(() => {
+      authTokenPromise = hostCommunication.claimAuthToken()
+      hostCommunication.setAllowedOriginsResp({
+        allowedOrigins: ["http://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+    })
+
+    await expect(authTokenPromise).resolves.toBe(undefined)
+  })
+
+  it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
+    const dispatchEvent = mockEventListeners()
+    const wrapper = mount(<TestComponent />)
+
+    let authTokenPromise
+    let hostCommunication = wrapper
+      .find(TestComponentNaked)
+      .prop("hostCommunication")
+
+    act(() => {
+      authTokenPromise = hostCommunication.claimAuthToken()
+      hostCommunication.setAllowedOriginsResp({
+        allowedOrigins: ["http://devel.streamlit.test"],
+        useExternalAuthToken: true,
+      })
+    })
+
+    setTimeout(() => {
+      act(() => {
+        dispatchEvent(
+          "message",
+          new MessageEvent("message", {
+            data: {
+              stCommVersion: HOST_COMM_VERSION,
+              type: "SET_AUTH_TOKEN",
+              authToken: "i am an auth token",
+            },
+            origin: "http://devel.streamlit.test",
+          })
+        )
+      })
+    })
+
+    await expect(authTokenPromise).resolves.toBe("i am an auth token")
+
+    act(() => {
+      hostCommunication.resetAuthToken()
+    })
+    wrapper.update()
+
+    hostCommunication = wrapper
+      .find(TestComponentNaked)
+      .prop("hostCommunication")
+
+    // Simulate the browser tab disconnecting and reconnecting, which from the
+    // withHostCommunication hoc's perspective is only seen as a new call to
+    // setAllowedOriginsResp.
+    act(() => {
+      authTokenPromise = hostCommunication.claimAuthToken()
+      hostCommunication.setAllowedOriginsResp({
+        allowedOrigins: ["http://devel.streamlit.test"],
+        useExternalAuthToken: true,
+      })
+    })
+
+    setTimeout(() => {
+      act(() => {
+        dispatchEvent(
+          "message",
+          new MessageEvent("message", {
+            data: {
+              stCommVersion: HOST_COMM_VERSION,
+              type: "SET_AUTH_TOKEN",
+              authToken: "i am a NEW auth token",
+            },
+            origin: "http://devel.streamlit.test",
+          })
+        )
+      })
+    })
+
+    await expect(authTokenPromise).resolves.toBe("i am a NEW auth token")
   })
 })
