@@ -63,7 +63,7 @@ def as_replay_test_data() -> MultiCacheResults:
     return MultiCacheResults(set(), d)
 
 
-class MemoTest(unittest.TestCase):
+class CacheDataTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
@@ -92,7 +92,7 @@ class MemoTest(unittest.TestCase):
         self.assertEqual(r2, [0, 1])
 
     @patch("streamlit.runtime.caching.cache_data_api._TTLCACHE_TIMER")
-    def test_ttl(self, timer_patch):
+    def test_ttl(self, timer_patch: MagicMock):
         """Entries should expire after the given ttl."""
         one_day = 60 * 60 * 24
 
@@ -208,8 +208,8 @@ class MemoTest(unittest.TestCase):
         self.assertEqual([0, 0], bar_vals)
 
 
-class MemoPersistTest(DeltaGeneratorTestCase):
-    """st.memo disk persistence tests"""
+class CacheDataPersistTest(DeltaGeneratorTestCase):
+    """st.cache_data disk persistence tests"""
 
     def tearDown(self) -> None:
         st.experimental_memo.clear()
@@ -406,7 +406,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
             )
 
 
-class MemoStatsProviderTest(unittest.TestCase):
+class CacheDataStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
