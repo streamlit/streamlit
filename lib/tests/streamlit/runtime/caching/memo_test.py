@@ -25,8 +25,8 @@ import streamlit as st
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.runtime.caching import cache_data_decorator
-from streamlit.runtime.caching.cache_data_decorator import (
+from streamlit.runtime.caching import cache_data_api
+from streamlit.runtime.caching.cache_data_api import (
     get_cache_path,
     get_data_cache_stats_provider,
 )
@@ -403,7 +403,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
 
             output = "".join(logs.output)
             self.assertIn(
-                "The memoized function 'user_function' has a TTL that will be ignored.",
+                "The cached function 'user_function' has a TTL that will be ignored.",
                 output,
             )
 

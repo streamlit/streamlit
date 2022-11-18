@@ -23,7 +23,7 @@ from streamlit.runtime.state.session_state import WidgetMetadata
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-from streamlit.runtime.caching.cache_data_decorator import (
+from streamlit.runtime.caching.cache_data_api import (
     CACHE_DATA_CALL_STACK,
     CACHE_DATA_MESSAGE_CALL_STACK,
     CacheDataAPI,
@@ -101,7 +101,7 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 # Explicitly export public symbols
-from streamlit.runtime.caching.cache_data_decorator import (
+from streamlit.runtime.caching.cache_data_api import (
     get_data_cache_stats_provider as get_data_cache_stats_provider,
 )
 from streamlit.runtime.caching.singleton_decorator import (

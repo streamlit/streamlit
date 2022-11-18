@@ -25,7 +25,7 @@ from parameterized import parameterized
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.runtime import metrics_util
-from streamlit.runtime.caching import cache_data_decorator, singleton_decorator
+from streamlit.runtime.caching import cache_data_api, singleton_decorator
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.web.server import websocket_headers
