@@ -262,7 +262,7 @@ def cache_clear():
         print(f"Nothing to clear at {cache_path}.")
 
     caching.cache_data.clear()
-    caching.singleton.clear()
+    caching.cache_resource.clear()
 
 
 # SUBCOMMAND: config

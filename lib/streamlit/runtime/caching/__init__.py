@@ -106,4 +106,4 @@ from streamlit.runtime.caching.cache_resource_api import (
 
 # Create and export public API singletons.
 cache_data = CacheDataAPI()
-singleton = CacheResourceAPI()
+cache_resource = CacheResourceAPI()

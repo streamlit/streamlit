@@ -55,7 +55,7 @@ __version__ = _STREAMLIT_VERSION_STRING
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.caching import (
-    singleton as _singleton,
+    cache_resource as _cache_resource,
     cache_data as _cache_data,
 )
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
@@ -198,7 +198,7 @@ beta_columns = _gather_metrics("beta_columns", _main.beta_columns)
 
 # Experimental APIs
 experimental_user = _UserInfoProxy()
-experimental_singleton = _singleton
+experimental_singleton = _cache_resource
 experimental_memo = _cache_data
 experimental_get_query_params = _get_query_params
 experimental_set_query_params = _set_query_params
