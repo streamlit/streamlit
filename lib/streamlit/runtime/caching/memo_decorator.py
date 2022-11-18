@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """@st.memo: pickle-based caching"""
+from __future__ import annotations
+
 import math
 import os
 import pickle
@@ -21,7 +23,7 @@ import threading
 import time
 import types
 from datetime import timedelta
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, cast, overload
+from typing import Any, Callable, Optional, TypeVar, cast, overload
 
 from cachetools import TTLCache
 
@@ -71,7 +73,7 @@ class MemoizedFunction(CachedFunction):
     def __init__(
         self,
         func: types.FunctionType,
-        show_spinner: Union[bool, str],
+        show_spinner: bool | str,
         suppress_st_warning: bool,
         persist: Optional[str],
         max_entries: Optional[int],
@@ -116,17 +118,17 @@ class MemoCaches(CacheStatsProvider):
 
     def __init__(self):
         self._caches_lock = threading.Lock()
-        self._function_caches: Dict[str, "MemoCache"] = {}
+        self._function_caches: dict[str, MemoCache] = {}
 
     def get_cache(
         self,
         key: str,
         persist: Optional[str],
-        max_entries: Optional[Union[int, float]],
-        ttl: Optional[Union[int, float]],
+        max_entries: int | float | None,
+        ttl: int | float | None,
         display_name: str,
         allow_widgets: bool,
-    ) -> "MemoCache":
+    ) -> MemoCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -178,13 +180,13 @@ class MemoCaches(CacheStatsProvider):
             if os.path.isdir(cache_path):
                 shutil.rmtree(cache_path)
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
             function_caches = self._function_caches.copy()
 
-        stats: List[CacheStat] = []
+        stats: list[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
         return stats
@@ -219,10 +221,10 @@ class MemoAPI:
         self,
         *,
         persist: Optional[str] = None,
-        show_spinner: Union[bool, str] = True,
+        show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
-        ttl: Optional[Union[float, timedelta]] = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
@@ -236,10 +238,10 @@ class MemoAPI:
         func: Optional[F] = None,
         *,
         persist: Optional[str] = None,
-        show_spinner: Union[bool, str] = True,
+        show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
-        ttl: Optional[Union[float, timedelta]] = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ):
         """Function decorator to memoize function executions.
@@ -432,8 +434,8 @@ class MemoCache(Cache):
     def ttl(self) -> float:
         return cast(float, self._mem_cache.ttl)
 
-    def get_stats(self) -> List[CacheStat]:
-        stats: List[CacheStat] = []
+    def get_stats(self) -> list[CacheStat]:
+        stats: list[CacheStat] = []
         with self._mem_cache_lock:
             for item_key, item_value in self._mem_cache.items():
                 stats.append(
@@ -481,7 +483,7 @@ class MemoCache(Cache):
             raise CacheError(f"Failed to unpickle {key}") from exc
 
     @gather_metrics("_cache_memo_object")
-    def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
+    def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
