@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.memo unit tests."""
+"""st.cache_data unit tests."""
+
 import logging
 import pickle
 import re
@@ -149,7 +150,7 @@ class CacheDataTest(unittest.TestCase):
         self.assertEqual([0, 0], bar_vals)
 
     @patch("streamlit.runtime.caching.cache_data_api._TTLCACHE_TIMER")
-    def test_ttl_timedelta(self, timer_patch):
+    def test_ttl_timedelta(self, timer_patch: MagicMock):
         """Entries should expire after the given ttl."""
         one_day_seconds = 60 * 60 * 24
         one_day_timedelta = timedelta(days=1)
