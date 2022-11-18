@@ -215,8 +215,11 @@ class LayoutsMixin:
         Parameters
         ----------
         tabs : list of strings
-            Creates a tab for each string in the list. The string is used as the name of the tab.
-            The first tab is selected by default.
+            Creates a tab for each string in the list. The first tab is selected by default.
+            The string is used as the name of the tab and can optionally contain Markdown,
+            supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,
+            Emojis, and Links.
+
 
         Returns
         -------
@@ -302,7 +305,9 @@ class LayoutsMixin:
         Parameters
         ----------
         label : str
-            A string to use as the header for the expander.
+            A string to use as the header for the expander. The label can optionally
+            contain Markdown and supports the following elements: Bold, Italics,
+            Strikethroughs, Inline Code, Emojis, and Links.
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).

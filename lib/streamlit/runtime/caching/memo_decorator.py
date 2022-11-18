@@ -265,7 +265,7 @@ class MemoAPI:
             a cache miss.
 
         suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit functions from within
+            Suppress warnings about calling Streamlit commands from within
             the cached function.
 
         max_entries : int or None
@@ -278,6 +278,16 @@ class MemoAPI:
             None if cache entries should not expire. The default is None.
             Note that ttl is incompatible with `persist="disk"` - `ttl` will be
             ignored if `persist` is specified.
+
+        experimental_allow_widgets : boolean
+            Allow widgets to be used in the memoized function. Defaults to False.
+
+        .. note::
+            Support for widgets in cached functions is currently experimental.
+            To enable it, set the parameter ``experimental_allow_widgets=True``
+            in ``@st.experimental_memo``. Note that this may lead to excessive memory
+            use since the widget value is treated as an additional input parameter
+            to the cache. We may remove support for this option at any time without notice.
 
         Example
         -------

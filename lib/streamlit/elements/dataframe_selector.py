@@ -77,6 +77,9 @@ class DataFrameSelectorMixin:
 
         Examples
         --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df = pd.DataFrame(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
@@ -128,6 +131,9 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df = pd.DataFrame(
         ...    np.random.randn(10, 5),
         ...    columns=('col %d' % i for i in range(5)))
@@ -199,6 +205,9 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -282,6 +291,9 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -365,8 +377,11 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(50, 3),
+        ...     np.random.randn(20, 3),
         ...     columns=["a", "b", "c"])
         ...
         >>> st.bar_chart(chart_data)
@@ -399,7 +414,7 @@ class DataFrameSelectorMixin:
         self,
         altair_chart: "Chart",
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
+        theme: Union[None, Literal["streamlit"]] = None,
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -423,11 +438,11 @@ class DataFrameSelectorMixin:
         >>> import numpy as np
         >>> import altair as alt
         >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
         ...
-        >>> c = alt.Chart(df).mark_circle().encode(
+        >>> c = alt.Chart(chart_data).mark_circle().encode(
         ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
         >>> st.altair_chart(c, use_container_width=True)
@@ -452,7 +467,7 @@ class DataFrameSelectorMixin:
         data: "Data" = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
+        theme: Union[None, Literal["streamlit"]] = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
@@ -485,15 +500,14 @@ class DataFrameSelectorMixin:
 
         Example
         -------
-
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
+        >>> chart_data = pd.DataFrame(
         ...     np.random.randn(200, 3),
         ...     columns=['a', 'b', 'c'])
         >>>
-        >>> st.vega_lite_chart(df, {
+        >>> st.vega_lite_chart(chart_data, {
         ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},

@@ -116,6 +116,16 @@ pytest:
 			-l tests/ \
 			$(PYTHON_MODULES)
 
+# Run Python integration tests for snowflake.
+pytest-snowflake:
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			--require-snowflake \
+			-l tests/ \
+			$(PYTHON_MODULES)
+
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
@@ -328,6 +338,12 @@ notices:
 	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/public/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/public/vendor/viz/viz.js-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/Segment-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
 # Update the license header on all source files.

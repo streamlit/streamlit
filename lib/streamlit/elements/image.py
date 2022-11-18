@@ -34,6 +34,7 @@ from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -343,7 +344,10 @@ def image_to_url(
             mimetype, _ = mimetypes.guess_type(image)
             if mimetype is None:
                 mimetype = "application/octet-stream"
-            return runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
+
+            url = runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
+            caching.save_media_data(image, mimetype, image_id)
+            return url
 
     # PIL Images
     elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
@@ -391,7 +395,9 @@ def image_to_url(
     mimetype = _get_image_format_mimetype(image_format)
 
     if runtime.exists():
-        return runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
+        url = runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
+        caching.save_media_data(image_data, mimetype, image_id)
+        return url
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
         return ""
@@ -505,6 +511,7 @@ def marshall_images(
                 else:
                     proto_img.url = f"data:image/svg+xml,{image}"
                 is_svg = True
+
         if not is_svg:
             proto_img.url = image_to_url(
                 image, width, clamp, channels, output_format, image_id
