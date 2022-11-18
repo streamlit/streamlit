@@ -358,15 +358,15 @@ class CliTest(unittest.TestCase):
         self.assertEqual(0, result.exit_code)
 
     @patch("streamlit.runtime.legacy_caching.clear_cache")
-    @patch("streamlit.runtime.caching.memo.clear")
+    @patch("streamlit.runtime.caching.cache_data.clear")
     @patch("streamlit.runtime.caching.singleton.clear")
     def test_cache_clear_all_caches(
-        self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
+        self, clear_singleton_cache, clear_data_cache, clear_legacy_cache
     ):
         """cli.clear_cache should clear st.cache, st.memo and st.singleton"""
         self.runner.invoke(cli, ["cache", "clear"])
         clear_singleton_cache.assert_called_once()
-        clear_memo_cache.assert_called_once()
+        clear_data_cache.assert_called_once()
         clear_legacy_cache.assert_called_once()
 
     @patch("builtins.print")
