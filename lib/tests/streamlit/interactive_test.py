@@ -90,7 +90,6 @@ st.text(r)
         sr = script.run()
 
         assert len(sr.get("radio")) == 1
-        # sr2 = sr.get("button")[0].click().run()
         sr2 = sr.run()
         assert len(sr2.get("radio")) == 1
 
@@ -118,3 +117,27 @@ st.text(r)
 
         sr2 = sr.get("radio")[0].set_value("qux").run()
         assert sr2.get("text")[0].value == "qux"
+
+    def test_radio_interaction(self):
+        script = script_from_string(
+            self.script_dir / "radio_interaction.py",
+            """
+import streamlit as st
+
+r1 = st.radio("radio", options=["a", "b", "c"])
+st.text(r1)
+r2 = st.radio("default index", options=["a", "b", "c"], index=2)
+st.text(r2)
+            """,
+        )
+        sr = script.run()
+        assert sr.get("radio")
+        assert sr.get("radio")[0].value == "a"
+        assert sr.get("radio")[1].value == "c"
+        assert [t.value for t in sr.get("text")] == ["a", "c"]
+
+        r = sr.get("radio")[0].set_value("b")
+        assert r._index == 1
+        sr2 = r.run()
+        # assert sr2.get("radio")[0].value == "b"
+        assert [t.value for t in sr2.get("text")] == ["b", "c"]

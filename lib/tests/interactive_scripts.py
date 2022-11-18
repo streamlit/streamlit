@@ -33,20 +33,14 @@ from streamlit.runtime.state.session_state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
-class TestScriptRunner(ScriptRunner):
+class LocalScriptRunner(ScriptRunner):
     """Subclasses ScriptRunner to provide some testing features."""
-
-    # PyTest is unable to collect Test classes with __init__,
-    # and issues PytestCollectionWarning: cannot collect test class
-    # Since class TestScriptRunner is a helper class,
-    # there is no need for class TestScriptRunner to be collected by PyTest
-    # To prevent PytestCollectionWarning we set __test__ property to False
-    __test__ = False
 
     def __init__(self, script_path: str):
         """Initializes the ScriptRunner for the given script_name"""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
+        self.script_path = script_path
 
         super().__init__(
             session_id="test session id",
@@ -134,7 +128,7 @@ class TestScriptRunner(ScriptRunner):
             self.start()
         require_widgets_deltas(self)
         tree = parse_tree_from_messages(self.forward_msgs())
-        tree.script_runner = self
+        tree.script_path = self.script_path
         return tree
 
     def script_stopped(self) -> bool:
@@ -148,19 +142,20 @@ class TestScriptRunner(ScriptRunner):
         return False
 
 
-def script_from_string(path: pathlib.Path, script: str) -> TestScriptRunner:
+def script_from_string(path: pathlib.Path, script: str) -> LocalScriptRunner:
+    # TODO strip indentation so scripts can be aligned with the string start
     path.write_text(script)
-    return TestScriptRunner(str(path))
+    return LocalScriptRunner(str(path))
 
 
-def script_from_filename(script_name: str) -> TestScriptRunner:
+def script_from_filename(script_name: str) -> LocalScriptRunner:
     script_path = os.path.join(
         os.path.dirname(__file__), "streamlit", "test_data", script_name
     )
-    return TestScriptRunner(script_path)
+    return LocalScriptRunner(script_path)
 
 
-def require_widgets_deltas(runner: TestScriptRunner, timeout: float = 3) -> None:
+def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> None:
     """Wait for the given ScriptRunner to emit a completion event. If the timeout
     is reached, the runner will be shutdown and an error will be thrown.
     """
@@ -208,10 +203,7 @@ class Element:
         return None
 
     def run(self) -> Root:
-        assert self.root.script_runner is not None
-
-        widget_states = self.root.get_widget_states()
-        return self.root.script_runner.run(widget_states)
+        return self.root.run()
 
 
 @dataclass(init=False)
@@ -235,7 +227,7 @@ class Text(Element):
 @dataclass(init=False)
 class Radio(Element):
     proto: RadioProto
-    _index: Any
+    _index: Optional[int]
     root: Root = field(repr=False)
 
     def __init__(self, proto: RadioProto, root: Root):
@@ -244,7 +236,41 @@ class Radio(Element):
         self._index = None
 
     @property
+    def type(self) -> str:
+        return "radio"
+
+    @property
+    def id(self) -> str:
+        return self.proto.id
+
+    @property
+    def label(self) -> str:
+        return self.proto.label
+
+    @property
+    def options(self) -> List[str]:
+        return list(self.proto.options)
+
+    @property
+    def help(self) -> str:
+        return self.proto.help
+
+    @property
+    def form_id(self) -> str:
+        # TODO what if not in a form?
+        return self.proto.form_id
+
+    @property
+    def disabled(self) -> bool:
+        return self.proto.disabled
+
+    @property
+    def horizontal(self) -> bool:
+        return self.proto.horizontal
+
+    @property
     def index(self) -> int:
+        # TODO tests to make sure this is the right behavior
         if self.proto.set_value:
             v = self.proto.value
         else:
@@ -253,26 +279,19 @@ class Radio(Element):
 
     @property
     def value(self) -> str:
+        """The currently selected value from the options."""
         v = self.index
-        return self.proto.options[v]
-
-    @property
-    def type(self) -> str:
-        return "radio"
-
-    @property
-    def label(self) -> str:
-        return self.proto.label
-
-    @property
-    def id(self) -> str:
-        return self.proto.id
+        return self.options[v]
 
     def set_value(self, v: str) -> Radio:
-        self._index = list(self.proto.options).index(v)
+        self._index = self.options.index(v)
         return self
 
     def widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
         ws = WidgetState()
         ws.id = self.id
         if self._index is not None:
@@ -330,9 +349,26 @@ class Block:
     def widget_state(self) -> Optional[WidgetState]:
         return None
 
+    def run(self) -> Root:
+        return self.root.run()
+
+
+@dataclass(init=False)
+class Root(Block):
+    script_path: Optional[str] = field(repr=False)
+
+    def __init__(self):
+        self.children = {}
+        self.root = self
+        self.script_path = None
+
+    @property
+    def type(self) -> str:
+        return "root"
+
     def get_widget_states(self) -> WidgetStates:
         ws = WidgetStates()
-        for node in self.root:
+        for node in self:
             w = node.widget_state()
             if w is not None:
                 ws.widgets.append(w)
@@ -340,24 +376,11 @@ class Block:
         return ws
 
     def run(self) -> Root:
-        assert self.root.script_runner is not None
+        assert self.script_path is not None
 
         widget_states = self.get_widget_states()
-        return self.root.script_runner.run(widget_states)
-
-
-@dataclass(init=False)
-class Root(Block):
-    script_runner: Optional[TestScriptRunner]
-
-    def __init__(self):
-        self.children = {}
-        self.root = self
-        self.script_runner = None
-
-    @property
-    def type(self) -> str:
-        return "root"
+        runner = LocalScriptRunner(self.script_path)
+        return runner.run(widget_states)
 
 
 def parse_tree_from_messages(messages: List[ForwardMsg]) -> Root:
