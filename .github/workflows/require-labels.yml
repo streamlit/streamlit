@@ -12,7 +12,8 @@ jobs:
       pull-requests: read
 
     steps:
-      - uses: mheap/github-action-required-labels@v2
+      # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
+      - uses: mheap/github-action-required-labels@7b0461786d3bd0c6a8487e9b57814ba3e2c00227
         with:
           mode: exactly
           count: 1
