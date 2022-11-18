@@ -32,7 +32,6 @@ from streamlit.runtime.caching.cache_utils import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
-    _make_widget_key,
     create_cache_wrapper,
 )
 from streamlit.runtime.metrics_util import gather_metrics
