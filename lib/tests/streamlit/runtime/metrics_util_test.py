@@ -210,7 +210,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (st.session_state.__setitem__, "session_state.set_item"),
             (cache_data_api.DataCache.write_result, "_cache_memo_object"),
             (
-                singleton_decorator.ResourceCache.write_result,
+                cache_resource_api.ResourceCache.write_result,
                 "_cache_singleton_object",
             ),
             (caching._write_to_cache, "_cache_object"),

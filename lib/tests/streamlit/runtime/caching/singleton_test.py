@@ -43,8 +43,8 @@ class SingletonTest(unittest.TestCase):
         st.experimental_singleton.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        singleton_decorator.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
-        singleton_decorator.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -98,17 +98,17 @@ class SingletonStatsProviderTest(unittest.TestCase):
 
         expected = [
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14])),
             ),
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14] * 53)),
             ),
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=bar_cache_name,
                 byte_length=get_byte_length(as_cached_result(bar())),
             ),

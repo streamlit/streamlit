@@ -101,7 +101,7 @@ from streamlit.runtime.caching.cache_data_api import (
     get_data_cache_stats_provider as get_data_cache_stats_provider,
 )
 from streamlit.runtime.caching.cache_resource_api import (
-    get_resource_cache_stats_provider as get_singleton_stats_provider,
+    get_resource_cache_stats_provider as get_resource_cache_stats_provider,
 )
 
 # Create and export public API singletons.
