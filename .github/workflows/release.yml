@@ -5,8 +5,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  run-python-tests:
+    uses: ./.github/workflows/python-versions.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-javascript-tests:
+    uses: ./.github/workflows/js-tests.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-py-prod-deps-smoke-test:
+    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-cypress-tests:
+    uses: ./.github/workflows/cypress.yml
+    with:
+      ref: ${{ github.ref_name }}
+
   build-release:
     runs-on: ubuntu-latest
+
+    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
     defaults:
       run:
