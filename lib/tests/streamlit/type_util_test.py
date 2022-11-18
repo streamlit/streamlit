@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 import pandas as pd
 import plotly.graph_objs as go
+import pytest
 from pandas.api.types import infer_dtype
 
 from streamlit import type_util
@@ -29,6 +30,7 @@ from streamlit.type_util import (
     to_bytes,
 )
 from tests.streamlit.snowpark_mocks import DataFrame, Row
+from tests.testutil import create_snowpark_session
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -251,3 +253,20 @@ dtype: object""",
                 ]
             )
         )
+
+    @pytest.mark.require_snowflake
+    def test_is_snowpark_dataframe_integration(self):
+        with create_snowpark_session() as snowpark_session:
+            self.assertTrue(
+                is_snowpark_data_object(snowpark_session.sql("SELECT 40+2 as COL1"))
+            )
+            self.assertTrue(
+                is_snowpark_data_object(
+                    snowpark_session.sql("SELECT 40+2 as COL1").collect()
+                )
+            )
+            self.assertTrue(
+                is_snowpark_data_object(
+                    snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
+                )
+            )

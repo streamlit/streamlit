@@ -52,4 +52,4 @@ types-typed-ast = "*"
 # Dependencies for releases of the Streamlit library itself should be added in
 # setup.py. See https://pipenv.pypa.io/en/latest/advanced/#pipfile-vs-setup-py
 # for more information on why things are done in this way.
-streamlit = {editable = true, path = "."}
+streamlit = {editable = true, extras = ["snowflake"], path = "."}

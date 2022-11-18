@@ -116,6 +116,16 @@ pytest:
 			-l tests/ \
 			$(PYTHON_MODULES)
 
+# Run Python integration tests for snowflake.
+pytest-snowflake:
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			--require-snowflake \
+			-l tests/ \
+			$(PYTHON_MODULES)
+
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
