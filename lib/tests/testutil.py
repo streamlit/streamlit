@@ -19,10 +19,26 @@ from typing import TYPE_CHECKING, Any, Dict
 from unittest.mock import patch
 
 from streamlit import config
+from streamlit.runtime.scriptrunner import ScriptRunContext
+from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
 
 if TYPE_CHECKING:
     from snowflake.snowpark import Session
+
+
+def create_mock_script_run_ctx() -> ScriptRunContext:
+    """Create a ScriptRunContext for testing with."""
+    return ScriptRunContext(
+        session_id="mock_session_id",
+        _enqueue=lambda msg: None,
+        query_string="mock_query_string",
+        session_state=SafeSessionState(SessionState()),
+        uploaded_file_mgr=UploadedFileManager(),
+        page_script_hash="mock_page_script_hash",
+        user_info={"email": "mock@test.com"},
+    )
 
 
 @contextmanager
