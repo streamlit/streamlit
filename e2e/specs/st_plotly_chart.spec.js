@@ -16,7 +16,7 @@
 
 describe("st.plotly_chart", () => {
   before(() => {
-    cy.loadApp("http://localhost:3000/", 20000);
+    cy.loadApp("http://localhost:3000/");
   });
 
   beforeEach(() => {

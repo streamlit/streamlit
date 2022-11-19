@@ -20,7 +20,7 @@ describe("Legacy Dataframes and Tables snapshots", () => {
     // dataframes and tables to be rendered.
     Cypress.config("defaultCommandTimeout", 30000);
 
-    cy.loadApp("http://localhost:3000/", 20000);
+    cy.loadApp("http://localhost:3000/");
 
     cy.prepForElementSnapshots();
 

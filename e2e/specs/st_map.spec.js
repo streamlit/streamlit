@@ -16,7 +16,7 @@
 
 describe("st.map", () => {
   before(() => {
-    cy.loadApp("http://localhost:3000/", 20000);
+    cy.loadApp("http://localhost:3000/");
 
     // Wait for all the maps to be loaded.
     cy.get(".element-container .stDeckGlJsonChart").should("have.length", 6);
