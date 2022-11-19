@@ -373,6 +373,7 @@ export class WebsocketConnection {
     // to the frame containing the Streamlit app.
     return this.args.claimHostAuthToken().then(hostAuthToken => {
       this.args.resetHostAuthToken()
+      logMessage(LOG, "creating WebSocket")
 
       // NOTE: We repurpose the Sec-WebSocket-Protocol header (set via the second
       // parameter to the WebSocket constructor) here in a slightly unfortunate
