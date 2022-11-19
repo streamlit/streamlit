@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 def create_mock_script_run_ctx() -> ScriptRunContext:
-    """Create a ScriptRunContext for testing with."""
+    """Create a ScriptRunContext for use in tests."""
     return ScriptRunContext(
         session_id="mock_session_id",
         _enqueue=lambda msg: None,
