@@ -155,11 +155,11 @@ class SecretsTest(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_attr_dict_is_mapping_but_not_built_in_dict(self, *mocks):
         """Verify that AttrDict implements Mapping, but not built-in Dict"""
-        self.assertTrue(isinstance(self.secrets.subsection, Mapping))
-        self.assertTrue(isinstance(self.secrets.subsection, MappingABC))
-        self.assertFalse(isinstance(self.secrets.subsection, MutableMapping))
-        self.assertFalse(isinstance(self.secrets.subsection, MutableMappingABC))
-        self.assertFalse(isinstance(self.secrets.subsection, dict))
+        self.assertIsInstance(self.secrets.subsection, Mapping)
+        self.assertIsInstance(self.secrets.subsection, MappingABC)
+        self.assertNotIsInstance(self.secrets.subsection, MutableMapping)
+        self.assertNotIsInstance(self.secrets.subsection, MutableMappingABC)
+        self.assertNotIsInstance(self.secrets.subsection, dict)
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)

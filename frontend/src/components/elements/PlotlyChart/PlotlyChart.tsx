@@ -23,7 +23,11 @@ import {
 } from "src/autogen/proto"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
-import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
+import {
+  applyStreamlitTheme,
+  layoutWithThemeDefaults,
+  replaceTemporaryColors,
+} from "./CustomTheme"
 
 export interface PlotlyChartProps {
   width: number
@@ -58,9 +62,10 @@ function renderFigure({
 
   const theme: Theme = useTheme()
 
-  const generateSpec = (figure: FigureProto): any => {
-    const spec = JSON.parse(figure.spec)
-
+  const generateSpec = (): any => {
+    const spec = JSON.parse(
+      replaceTemporaryColors(figure.spec, theme, element.theme)
+    )
     const initialHeight = DEFAULT_HEIGHT
 
     if (isFullScreen()) {
@@ -83,12 +88,12 @@ function renderFigure({
   }
 
   const [config, setConfig] = useState(JSON.parse(figure.config))
-  const [spec, setSpec] = useState(generateSpec(figure))
+  const [spec, setSpec] = useState(generateSpec())
 
   // Update config and spec references iff the theme or props change
   useEffect(() => {
     setConfig(JSON.parse(figure.config))
-    setSpec(generateSpec(figure))
+    setSpec(generateSpec())
   }, [element, theme, height, width])
 
   const { data, layout, frames } = spec
