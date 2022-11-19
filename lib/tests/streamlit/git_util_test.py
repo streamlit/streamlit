@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 import unittest
 from unittest.mock import patch
 
@@ -24,30 +23,22 @@ from streamlit.git_util import GITHUB_HTTP_URL, GITHUB_SSH_URL, GitRepo
 class GitUtilTest(unittest.TestCase):
     def test_https_url_check(self):
         # standard https url with and without .git
-        self.assertTrue(
-            re.search(GITHUB_HTTP_URL, "https://github.com/username/repo.git")
-        )
-        self.assertTrue(re.search(GITHUB_HTTP_URL, "https://github.com/username/repo"))
+        self.assertRegex("https://github.com/username/repo.git", GITHUB_HTTP_URL)
+        self.assertRegex("https://github.com/username/repo", GITHUB_HTTP_URL)
 
         # with www with and without .git
-        self.assertTrue(
-            re.search(GITHUB_HTTP_URL, "https://www.github.com/username/repo.git")
-        )
-        self.assertTrue(
-            re.search(GITHUB_HTTP_URL, "https://www.github.com/username/repo")
-        )
+        self.assertRegex("https://www.github.com/username/repo.git", GITHUB_HTTP_URL)
+        self.assertRegex("https://www.github.com/username/repo", GITHUB_HTTP_URL)
 
         # not http
-        self.assertFalse(
-            re.search(GITHUB_HTTP_URL, "http://www.github.com/username/repo.git")
-        )
+        self.assertNotRegex("http://www.github.com/username/repo.git", GITHUB_HTTP_URL)
 
     def test_ssh_url_check(self):
         # standard ssh url
-        self.assertTrue(re.search(GITHUB_SSH_URL, "git@github.com:username/repo.git"))
+        self.assertRegex("git@github.com:username/repo.git", GITHUB_SSH_URL)
 
         # no .git
-        self.assertTrue(re.search(GITHUB_SSH_URL, "git@github.com:username/repo"))
+        self.assertRegex("git@github.com:username/repo", GITHUB_SSH_URL)
 
     def test_git_repo_invalid(self):
         with patch("git.Repo") as mock:

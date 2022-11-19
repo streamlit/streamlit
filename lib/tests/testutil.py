@@ -13,12 +13,16 @@
 # limitations under the License.
 
 """Utility functions to use in our tests."""
-
+import json
 from contextlib import contextmanager
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from unittest.mock import patch
 
 from streamlit import config
+from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
+
+if TYPE_CHECKING:
+    from snowflake.snowpark import Session
 
 
 @contextmanager
@@ -94,3 +98,15 @@ def normalize_md(txt: str) -> str:
     txt = txt.replace("OMG_LINK", "](")
 
     return txt.strip()
+
+
+@contextmanager
+def create_snowpark_session() -> "Session":
+    from snowflake.snowpark import Session
+
+    credential = json.loads(SNOWFLAKE_CREDENTIAL_FILE.read_text())
+    session = Session.builder.configs(credential).create()
+    try:
+        yield session
+    finally:
+        session.close()

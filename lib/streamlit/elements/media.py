@@ -24,6 +24,7 @@ from streamlit import runtime, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
+from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -56,9 +57,9 @@ class MediaMixin:
                 io.open().
             Raw audio data, filename, or a URL pointing to the file to load.
             Raw data formats must include all necessary file headers to match the file
-            format specified via `format`.
-            If `data` is a numpy array, it must either be a 1D array of the waveform
-            or a 2D array of shape `(num_channels, num_samples)` with waveforms
+            format specified via ``format``.
+            If ``data`` is a numpy array, it must either be a 1D array of the waveform
+            or a 2D array of shape ``(num_channels, num_samples)`` with waveforms
             for all channels. See the default channel order at
             http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
         format : str
@@ -68,18 +69,30 @@ class MediaMixin:
             The time from which this element should start playing.
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
-            `data` is a numpy array.
+            ``data`` is a numpy array.
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
         >>> audio_file = open('myaudio.ogg', 'rb')
         >>> audio_bytes = audio_file.read()
         >>>
         >>> st.audio(audio_bytes, format='audio/ogg')
+        >>>
+        >>> sample_rate = 44100  # 44100 samples per second
+        >>> seconds = 2  # Note duration of 2 seconds
+        >>> frequency_la = 440  # Our played note will be 440 Hz
+        >>> # Generate array with seconds*sample_rate steps, ranging between 0 and seconds
+        >>> t = np.linspace(0, seconds, seconds * sample_rate, False)
+        >>> # Generate a 440 Hz sine wave
+        >>> note_la = np.sin(frequency_la * t * 2 * np.pi)
+        >>>
+        >>> st.audio(note_la, sample_rate=sample_rate)
 
         .. output::
            https://doc-audio.streamlitapp.com/
-           height: 465px
+           height: 865px
 
         """
         audio_proto = AudioProto()
@@ -234,6 +247,7 @@ def _marshall_av_media(
         file_url = runtime.get_instance().media_file_mgr.add(
             data_or_filename, mimetype, coordinates
         )
+        caching.save_media_data(data_or_filename, mimetype, coordinates)
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
         file_url = ""

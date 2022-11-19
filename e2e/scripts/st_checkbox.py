@@ -38,3 +38,9 @@ st.write("value 5:", i5)
 
 i6 = st.checkbox("checkbox 6", value=True, disabled=True)
 st.write("value 6:", i6)
+
+i7 = st.checkbox("checkbox 7", label_visibility="hidden")
+st.write("value 7:", i7)
+
+i8 = st.checkbox("checkbox 8", label_visibility="collapsed")
+st.write("value 8:", i8)

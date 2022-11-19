@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import contextlib
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, Union
 
 from google.protobuf.message import Message
 
@@ -80,6 +80,13 @@ def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
     """
     MEMO_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
     SINGLETON_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
+
+
+def save_media_data(
+    image_data: Union[bytes, str], mimetype: str, image_id: str
+) -> None:
+    MEMO_MESSAGE_CALL_STACK.save_image_data(image_data, mimetype, image_id)
+    SINGLETON_MESSAGE_CALL_STACK.save_image_data(image_data, mimetype, image_id)
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
