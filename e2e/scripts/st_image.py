@@ -77,9 +77,12 @@ col2.image(img, use_column_width=True)  # column
 
 col2.image(img800, use_column_width="auto")  # column
 
-st.image("""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100">
-    <image href='https://avatars.githubusercontent.com/karriebear' width=50 height=50/>   
-      </svg> """)
+st.image(
+    """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100">
+    <image href="https://avatars.githubusercontent.com/karriebear" width="50" height="50" clip-path="url(#clipCircle)"/>
+</svg>
+"""
+)
       
 st.image(
     """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100">
