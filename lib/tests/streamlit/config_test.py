@@ -355,7 +355,7 @@ class ConfigTest(unittest.TestCase):
                 "server.runOnSave",
                 "server.maxUploadSize",
                 "server.maxMessageSize",
-                "server.staticServingEnabled",
+                "server.enableStaticServing",
                 "server.staticServingDirectory",
                 "ui.hideTopBar",
                 "ui.hideSidebarNav",

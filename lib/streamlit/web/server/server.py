@@ -281,7 +281,7 @@ class Server:
                 ]
             )
 
-        if config.get_option("server.staticServingEnabled"):
+        if config.get_option("server.enableStaticServing"):
             folder_name = config.get_option("server.staticServingDirectory")
             # TODO [KAREN] add validation for folder name, check that directory exists
             # TODO [KAREN] add folder_name sanitization, for example to not allow "../."
@@ -289,7 +289,7 @@ class Server:
             routes.extend(
                 [
                     (
-                        make_url_path_regex(base, "assetz/(.*)"),
+                        make_url_path_regex(base, "user-static/(.*)"),
                         AssetsFileHandler,
                         {"path": "%s/%s/" % (os.path.join(os.getcwd()), folder_name)},
                     ),

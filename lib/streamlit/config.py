@@ -696,10 +696,10 @@ _create_option(
 )
 
 _create_option(
-    "server.staticServingEnabled",
+    "server.enableStaticServing",
     description="""
         Enable static file serving from a directory in the
-         running app's directory.
+        running app's directory.
         """,
     default_val=False,
     type_=bool,
