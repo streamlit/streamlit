@@ -23,7 +23,7 @@ import threading
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator, Optional, Set, Tuple
+from typing import Any, Callable, Iterator, Optional, Set, Tuple, Union
 
 from google.protobuf.message import Message
 from typing_extensions import Protocol, runtime_checkable
@@ -102,7 +102,7 @@ class BlockMsgData:
     returned_dgs_id: str
 
 
-MsgData = ElementMsgData | BlockMsgData
+MsgData = Union[ElementMsgData, BlockMsgData]
 
 """
 Note [Cache result structure]
