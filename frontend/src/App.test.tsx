@@ -57,6 +57,7 @@ jest.mock("src/lib/ConnectionManager")
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>
 ): HostCommunicationState => ({
+  authTokenPromise: Promise.resolve(undefined),
   forcedModalClose: false,
   hideSidebarNav: false,
   isOwner: true,
@@ -73,7 +74,6 @@ const getHostCommunicationState = (
 const getHostCommunicationProp = (
   extend?: Partial<HostCommunicationHOC>
 ): HostCommunicationHOC => ({
-  claimAuthToken: () => Promise.resolve(undefined),
   currentState: getHostCommunicationState({}),
   onModalReset: jest.fn(),
   onPageChanged: jest.fn(),

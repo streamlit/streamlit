@@ -349,33 +349,31 @@ describe("withHostCommunication HOC external auth token handling", () => {
   it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
     const wrapper = mount(<TestComponent />)
 
-    let authTokenPromise
     const hostCommunication = wrapper
       .find(TestComponentNaked)
       .prop("hostCommunication")
 
     act(() => {
-      authTokenPromise = hostCommunication.claimAuthToken()
       hostCommunication.setAllowedOriginsResp({
         allowedOrigins: ["http://devel.streamlit.test"],
         useExternalAuthToken: false,
       })
     })
 
-    await expect(authTokenPromise).resolves.toBe(undefined)
+    await expect(
+      hostCommunication.currentState.authTokenPromise
+    ).resolves.toBe(undefined)
   })
 
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
     const dispatchEvent = mockEventListeners()
     const wrapper = mount(<TestComponent />)
 
-    let authTokenPromise
     let hostCommunication = wrapper
       .find(TestComponentNaked)
       .prop("hostCommunication")
 
     act(() => {
-      authTokenPromise = hostCommunication.claimAuthToken()
       hostCommunication.setAllowedOriginsResp({
         allowedOrigins: ["http://devel.streamlit.test"],
         useExternalAuthToken: true,
@@ -398,7 +396,9 @@ describe("withHostCommunication HOC external auth token handling", () => {
       })
     })
 
-    await expect(authTokenPromise).resolves.toBe("i am an auth token")
+    await expect(
+      hostCommunication.currentState.authTokenPromise
+    ).resolves.toBe("i am an auth token")
 
     act(() => {
       hostCommunication.resetAuthToken()
@@ -413,7 +413,6 @@ describe("withHostCommunication HOC external auth token handling", () => {
     // withHostCommunication hoc's perspective is only seen as a new call to
     // setAllowedOriginsResp.
     act(() => {
-      authTokenPromise = hostCommunication.claimAuthToken()
       hostCommunication.setAllowedOriginsResp({
         allowedOrigins: ["http://devel.streamlit.test"],
         useExternalAuthToken: true,
@@ -436,6 +435,8 @@ describe("withHostCommunication HOC external auth token handling", () => {
       })
     })
 
-    await expect(authTokenPromise).resolves.toBe("i am a NEW auth token")
+    await expect(
+      hostCommunication.currentState.authTokenPromise
+    ).resolves.toBe("i am a NEW auth token")
   })
 })

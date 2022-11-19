@@ -28,6 +28,7 @@ export type DeployedAppMetadata = {
 }
 
 export interface HostCommunicationState {
+  authTokenPromise: Promise<string | undefined>
   deployedAppMetadata: DeployedAppMetadata
   forcedModalClose: boolean
   hideSidebarNav: boolean

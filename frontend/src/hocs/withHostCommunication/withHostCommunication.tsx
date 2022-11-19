@@ -30,7 +30,6 @@ import {
 } from "./types"
 
 export interface HostCommunicationHOC {
-  claimAuthToken: () => Promise<string | undefined>
   currentState: HostCommunicationState
   onModalReset: () => void
   onPageChanged: () => void
@@ -190,6 +189,7 @@ function withHostCommunication(
         hostCommunication={
           {
             currentState: {
+              authTokenPromise: deferredAuthToken.promise,
               forcedModalClose,
               hideSidebarNav,
               isOwner,
@@ -201,7 +201,6 @@ function withHostCommunication(
               deployedAppMetadata,
               toolbarItems,
             },
-            claimAuthToken: () => deferredAuthToken.promise,
             resetAuthToken: () => {
               setDeferredAuthToken(createDeferredValue())
             },
