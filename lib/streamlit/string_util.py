@@ -43,7 +43,7 @@ def clean_text(text: "SupportsStr") -> str:
 
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
-    return text in ALL_EMOJIS
+    return text.replace("\U0000FE0F", "") in ALL_EMOJIS
 
 
 def extract_leading_emoji(text: str) -> Tuple[str, str]:
