@@ -84,6 +84,7 @@ class AsyncSubprocess:
         # Popen object to capture the output to its own internal buffer),
         # because large amounts of output can cause it to deadlock.
         self._stdout_file = TemporaryFile("w+")
+        print("args=", self.args)
         self._proc = subprocess.Popen(
             self.args,
             cwd=self.cwd,
@@ -444,10 +445,12 @@ def run_e2e_tests(
 
     try:
         p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
+        print("tests=", tests)
         if tests:
             paths = [Path(t).resolve() for t in tests]
         else:
             paths = sorted(p.glob("*.spec.js"))
+        print("paths=", paths)
         for spec_path in paths:
             if basename(spec_path) == "st_hello.spec.js":
                 if flaky_tests:
@@ -487,6 +490,13 @@ def run_e2e_tests(
                         show_output=verbose,
                     )
 
+            elif basename(spec_path) == "st_arrow_dataframe_canvas_rendering.spec.js":
+                test_path = join(
+                    ctx.tests_dir, "scripts", "st_arrow_dataframe_canvas_rendering.py"
+                )
+                ctx.cypress_env_vars["CYPRESS_BROWSER_WINDOW_SIZE"] = '3000x1200'
+                run_test(ctx, str(spec_path), ["streamlit", "run", test_path], show_output=verbose,)
+                del ctx.cypress_env_vars["CYPRESS_BROWSER_WINDOW_SIZE"]
             else:
                 test_name, _ = splitext(basename(spec_path))
                 test_name, _ = splitext(test_name)

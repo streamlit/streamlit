@@ -43,6 +43,27 @@ module.exports = (on, config) => {
     },
   })
 
+  on("before:browser:launch", (browser, launchOptions) => {
+    if ('CYPRESS_BROWSER_WINDOW_SIZE' in process.env) {
+      const [width, height] = process.env.CYPRESS_BROWSER_WINDOW_SIZE.toLowerCase.split('x', 2).map(d => parseInt(d))
+      if (browser.name === "chrome" && browser.isHeadless) {
+        launchOptions.args.push(`--window-size=${width},${height}`)
+
+        // force screen to be non-retina
+        launchOptions.args.push("--force-device-scale-factor=1")
+      }
+
+      if (browser.name === "electron" && browser.isHeadless) {
+        launchOptions.preferences.width = width
+        launchOptions.preferences.height = height
+      }
+
+      throw new Error("" + browser)
+    }
+
+    return launchOptions
+  })
+
   // https://github.com/palmerhq/cypress-image-snapshot#installation
   addMatchImageSnapshotPlugin(on, config)
 }
