@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+import functools
+from typing import Any, Callable, List, TypeVar, cast
 
 import streamlit
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def _show_beta_warning(name: str, date: str) -> None:
@@ -24,7 +27,7 @@ def _show_beta_warning(name: str, date: str) -> None:
     )
 
 
-def function_beta_warning(func, date):
+def function_beta_warning(func: F, date: str) -> F:
     """Wrapper for functions that are no longer in beta.
 
     Wrapped functions will run as normal, but then proceed to show an st.warning
@@ -40,9 +43,8 @@ def function_beta_warning(func, date):
         support for the beta_ prefix.
     """
 
+    @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
-        # Note: Since we use a wrapper, beta_ functions will not autocomplete
-        # correctly on VSCode.
         result = func(*args, **kwargs)
         _show_beta_warning(func.__name__, date)
         return result
@@ -50,10 +52,10 @@ def function_beta_warning(func, date):
     # Update the wrapped func's name & docstring so st.help does the right thing
     wrapped_func.__name__ = "beta_" + func.__name__
     wrapped_func.__doc__ = func.__doc__
-    return wrapped_func
+    return cast(F, wrapped_func)
 
 
-def object_beta_warning(obj, obj_name, date):
+def object_beta_warning(obj: object, obj_name: str, date: str) -> object:
     """Wrapper for objects that are no longer in beta.
 
     Wrapped objects will run as normal, but then proceed to show an st.warning
