@@ -494,8 +494,13 @@ def run_e2e_tests(
                 test_path = join(
                     ctx.tests_dir, "scripts", "st_arrow_dataframe_canvas_rendering.py"
                 )
-                ctx.cypress_env_vars["CYPRESS_BROWSER_WINDOW_SIZE"] = '3000x1200'
-                run_test(ctx, str(spec_path), ["streamlit", "run", test_path], show_output=verbose,)
+                ctx.cypress_env_vars["CYPRESS_BROWSER_WINDOW_SIZE"] = "3000x1200"
+                run_test(
+                    ctx,
+                    str(spec_path),
+                    ["streamlit", "run", test_path],
+                    show_output=verbose,
+                )
                 del ctx.cypress_env_vars["CYPRESS_BROWSER_WINDOW_SIZE"]
             else:
                 test_name, _ = splitext(basename(spec_path))

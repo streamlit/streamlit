@@ -43,9 +43,12 @@ module.exports = (on, config) => {
     },
   })
 
-  on("before:browser:launch", (browser, launchOptions) => {
-    if ('CYPRESS_BROWSER_WINDOW_SIZE' in process.env) {
-      const [width, height] = process.env.CYPRESS_BROWSER_WINDOW_SIZE.toLowerCase.split('x', 2).map(d => parseInt(d))
+  on("before:browser:launch", (browser, launchOptions, ...args) => {
+    if ("CYPRESS_BROWSER_WINDOW_SIZE" in config.env) {
+      const [width, height] =
+        config.env.CYPRESS_BROWSER_WINDOW_SIZE.toLowerCase()
+          .split("x", 2)
+          .map(d => parseInt(d))
       if (browser.name === "chrome" && browser.isHeadless) {
         launchOptions.args.push(`--window-size=${width},${height}`)
 
@@ -57,8 +60,6 @@ module.exports = (on, config) => {
         launchOptions.preferences.width = width
         launchOptions.preferences.height = height
       }
-
-      throw new Error("" + browser)
     }
 
     return launchOptions
