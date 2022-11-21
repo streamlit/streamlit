@@ -14,7 +14,7 @@
 
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 
-from streamlit.beta_util import function_beta_warning
+from streamlit.deprecation_util import function_beta_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics

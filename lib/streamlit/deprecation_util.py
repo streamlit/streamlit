@@ -20,14 +20,14 @@ import streamlit
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def _show_beta_warning(name: str, date: str) -> None:
+def _show_beta_warning(name: str, removal_date: str) -> None:
     streamlit.warning(
         f"Please replace `st.beta_{name}` with `st.{name}`.\n\n"
-        f"`st.beta_{name}` will be removed after {date}."
+        f"`st.beta_{name}` will be removed after {removal_date}."
     )
 
 
-def function_beta_warning(func: F, date: str) -> F:
+def function_beta_warning(func: F, removal_date: str) -> F:
     """Wrapper for functions that are no longer in beta.
 
     Wrapped functions will run as normal, but then proceed to show an st.warning
@@ -38,7 +38,7 @@ def function_beta_warning(func: F, date: str) -> F:
     func: callable
         The `st.` function that used to be in beta.
 
-    date: str
+    removal_date: str
         A date like "2020-01-01", indicating the last day we'll guarantee
         support for the beta_ prefix.
     """
@@ -46,7 +46,7 @@ def function_beta_warning(func: F, date: str) -> F:
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         result = func(*args, **kwargs)
-        _show_beta_warning(func.__name__, date)
+        _show_beta_warning(func.__name__, removal_date)
         return result
 
     # Update the wrapped func's name & docstring so st.help does the right thing
@@ -55,7 +55,7 @@ def function_beta_warning(func: F, date: str) -> F:
     return cast(F, wrapped_func)
 
 
-def object_beta_warning(obj: object, obj_name: str, date: str) -> object:
+def object_beta_warning(obj: object, obj_name: str, removal_date: str) -> object:
     """Wrapper for objects that are no longer in beta.
 
     Wrapped objects will run as normal, but then proceed to show an st.warning
@@ -69,7 +69,7 @@ def object_beta_warning(obj: object, obj_name: str, date: str) -> object:
     obj_name: str
         The name of the object within __init__.py
 
-    date: str
+    removal_date: str
         A date like "2020-01-01", indicating the last day we'll guarantee
         support for the beta_ prefix.
     """
@@ -80,7 +80,7 @@ def object_beta_warning(obj: object, obj_name: str, date: str) -> object:
         nonlocal has_shown_beta_warning
         if not has_shown_beta_warning:
             has_shown_beta_warning = True
-            _show_beta_warning(obj_name, date)
+            _show_beta_warning(obj_name, removal_date)
 
     class Wrapper:
         def __init__(self, obj):
