@@ -84,7 +84,6 @@ class AsyncSubprocess:
         # Popen object to capture the output to its own internal buffer),
         # because large amounts of output can cause it to deadlock.
         self._stdout_file = TemporaryFile("w+")
-        print("args=", self.args)
         self._proc = subprocess.Popen(
             self.args,
             cwd=self.cwd,
@@ -445,12 +444,10 @@ def run_e2e_tests(
 
     try:
         p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
-        print("tests=", tests)
         if tests:
             paths = [Path(t).resolve() for t in tests]
         else:
             paths = sorted(p.glob("*.spec.js"))
-        print("paths=", paths)
         for spec_path in paths:
             if basename(spec_path) == "st_hello.spec.js":
                 if flaky_tests:
