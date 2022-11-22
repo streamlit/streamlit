@@ -37,7 +37,7 @@ def _get_function_name_prefix(api_type: PrereleaseAPIType) -> str:
 
 
 def _show_api_graduation_warning(
-    name: str, api_type: PrereleaseAPIType, removal_date: str
+    api_type: PrereleaseAPIType, name: str, removal_date: str
 ) -> None:
     prefix = _get_function_name_prefix(api_type)
     streamlit.warning(
@@ -47,7 +47,7 @@ def _show_api_graduation_warning(
 
 
 def function_prerelease_graduation_warning(
-    func: TFunc, api_type: PrereleaseAPIType, removal_date: str
+    api_type: PrereleaseAPIType, func: TFunc, removal_date: str
 ) -> TFunc:
     """Wrapper for functions that have "graduated" from pre-release.
 
@@ -56,11 +56,11 @@ def function_prerelease_graduation_warning(
 
     Parameters
     ----------
-    func: callable
-        The `st.` function that has graduated from beta/experimental.
-
     api_type : PrereleaseAPIType
         The type of prerelease API that's graduating to release.
+
+    func: callable
+        The `st.` function that has graduated from beta/experimental.
 
     removal_date: str
         A date like "2020-01-01", indicating the last day we'll guarantee
@@ -70,7 +70,7 @@ def function_prerelease_graduation_warning(
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         result = func(*args, **kwargs)
-        _show_api_graduation_warning(func.__name__, api_type, removal_date)
+        _show_api_graduation_warning(api_type, func.__name__, removal_date)
         return result
 
     # Update the wrapped func's name & docstring so st.help does the right thing
@@ -80,7 +80,7 @@ def function_prerelease_graduation_warning(
 
 
 def object_prerelease_graduation_warning(
-    obj: TObj, obj_name: str, api_type: PrereleaseAPIType, removal_date: str
+    api_type: PrereleaseAPIType, obj: TObj, obj_name: str, removal_date: str
 ) -> TObj:
     """Wrapper for objects that have "graduated" from pre-release.
 
@@ -109,7 +109,7 @@ def object_prerelease_graduation_warning(
         nonlocal has_shown_grduation_warning
         if not has_shown_grduation_warning:
             has_shown_grduation_warning = True
-            _show_api_graduation_warning(obj_name, api_type, removal_date)
+            _show_api_graduation_warning(api_type, obj_name, removal_date)
 
     class Wrapper:
         def __init__(self, obj):

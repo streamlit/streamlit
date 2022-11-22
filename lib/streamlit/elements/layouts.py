@@ -371,11 +371,11 @@ class LayoutsMixin:
 
     # Deprecated beta_ functions
     beta_container = function_prerelease_graduation_warning(
-        container, PrereleaseAPIType.BETA, "2021-11-02"
+        PrereleaseAPIType.BETA, container, "2021-11-02"
     )
     beta_expander = function_prerelease_graduation_warning(
-        expander, PrereleaseAPIType.BETA, "2021-11-02"
+        PrereleaseAPIType.BETA, expander, "2021-11-02"
     )
     beta_columns = function_prerelease_graduation_warning(
-        columns, PrereleaseAPIType.BETA, "2021-11-02"
+        PrereleaseAPIType.BETA, columns, "2021-11-02"
     )

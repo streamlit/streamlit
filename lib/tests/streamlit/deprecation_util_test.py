@@ -47,7 +47,7 @@ class DeprecationUtilTest(unittest.TestCase):
             return a * b
 
         prerelease_multiply = function_prerelease_graduation_warning(
-            multiply, api_type, "1980-01-01"
+            api_type, multiply, "1980-01-01"
         )
 
         self.assertEqual(prerelease_multiply(3, 2), 6)
@@ -76,7 +76,7 @@ class DeprecationUtilTest(unittest.TestCase):
                 return a * b
 
         prerelease_multiplier = object_prerelease_graduation_warning(
-            Multiplier(), "multiplier", api_type, "1980-01-01"
+            api_type, Multiplier(), "multiplier", "1980-01-01"
         )
 
         self.assertEqual(prerelease_multiplier.multiply(3, 2), 6)
@@ -109,7 +109,7 @@ class DeprecationUtilTest(unittest.TestCase):
             pass
 
         beta_dict = object_prerelease_graduation_warning(
-            DictClass(), "my_dict", api_type, "1980-01-01"
+            api_type, DictClass(), "my_dict", "1980-01-01"
         )
 
         beta_dict["foo"] = "bar"
