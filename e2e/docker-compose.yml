@@ -39,6 +39,7 @@ services:
         target: /home/circleci/repo/frontend/node_modules/.cache/hard-source
         volume:
           nocopy: true
+
 volumes:
   hard_source_webpack_plugin_cache:
 # TODO

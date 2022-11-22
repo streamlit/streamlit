@@ -60,6 +60,7 @@ module.exports = (on, config) => {
         launchOptions.preferences.width = width
         launchOptions.preferences.height = height
       }
+      throw new Error(`Updated browser size: ${browser.name}`)
     }
 
     return launchOptions
