@@ -81,6 +81,17 @@ jobs:
             echo "${js_specs[@]:${startIndex}:${interval}}"
             scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
           fi
+      - name: Check that all screenshot have been committed
+        run: |
+          set -x;
+
+          UNTRACKED_FILE_COUNT=$(git ls-files --others --exclude-standard | grep cypress | wc -l | bc -l || echo '0')
+          echo "Untracked files count: ${UNTRACKED_FILE_COUNT}"
+          if [[ "${UNTRACKED_FILE_COUNT}" -gt 0 ]]; then
+            echo "Untracked files:";
+            git ls-files --others --exclude-standard | grep cypress;
+            exit 1;
+          fi
       - name: Store Videos
         uses: actions/upload-artifact@v3
         if: always()
