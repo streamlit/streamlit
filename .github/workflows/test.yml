@@ -3,7 +3,7 @@ name: Test for python workflow call
 on:
   schedule:
     # Run job at 12.30pm PST
-    - cron:  '30 20 * * *'
+    - cron:  '0 21 * * *'
 
 jobs:
   python:
