@@ -12,22 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import functools
 from typing import Any, Callable, List, TypeVar, cast
 
 import streamlit
 
-F = TypeVar("F", bound=Callable[..., Any])
+TFunc = TypeVar("TFunc", bound=Callable[..., Any])
+TObj = TypeVar("TObj", bound=object)
 
 
-def _show_beta_warning(name: str, removal_date: str) -> None:
+class PrereleaseAPIType(enum.Enum):
+    BETA = "BETA"
+    EXPERIMENTAL = "EXPERIMENTAL"
+
+
+def _get_function_name_prefix(api_type: PrereleaseAPIType) -> str:
+    if api_type is PrereleaseAPIType.BETA:
+        return "beta_"
+    if api_type is PrereleaseAPIType.EXPERIMENTAL:
+        return "experimental_"
+    raise RuntimeError(f"Unrecognized PrereleaseAPIType: {api_type}")
+
+
+def _show_api_graduation_warning(
+    name: str, api_type: PrereleaseAPIType, removal_date: str
+) -> None:
+    prefix = _get_function_name_prefix(api_type)
     streamlit.warning(
-        f"Please replace `st.beta_{name}` with `st.{name}`.\n\n"
-        f"`st.beta_{name}` will be removed after {removal_date}."
+        f"Please replace `st.{prefix}{name}` with `st.{name}`.\n\n"
+        f"`st.{prefix}{name}` will be removed after {removal_date}."
     )
 
 
-def function_beta_warning(func: F, removal_date: str) -> F:
+def function_beta_warning(func: TFunc, removal_date: str) -> TFunc:
     """Wrapper for functions that are no longer in beta.
 
     Wrapped functions will run as normal, but then proceed to show an st.warning
@@ -46,16 +64,18 @@ def function_beta_warning(func: F, removal_date: str) -> F:
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         result = func(*args, **kwargs)
-        _show_beta_warning(func.__name__, removal_date)
+        _show_api_graduation_warning(
+            func.__name__, PrereleaseAPIType.BETA, removal_date
+        )
         return result
 
     # Update the wrapped func's name & docstring so st.help does the right thing
     wrapped_func.__name__ = "beta_" + func.__name__
     wrapped_func.__doc__ = func.__doc__
-    return cast(F, wrapped_func)
+    return cast(TFunc, wrapped_func)
 
 
-def object_beta_warning(obj: object, obj_name: str, removal_date: str) -> object:
+def object_beta_warning(obj: TObj, obj_name: str, removal_date: str) -> TObj:
     """Wrapper for objects that are no longer in beta.
 
     Wrapped objects will run as normal, but then proceed to show an st.warning
@@ -80,7 +100,7 @@ def object_beta_warning(obj: object, obj_name: str, removal_date: str) -> object
         nonlocal has_shown_beta_warning
         if not has_shown_beta_warning:
             has_shown_beta_warning = True
-            _show_beta_warning(obj_name, removal_date)
+            _show_api_graduation_warning(obj_name, PrereleaseAPIType.BETA, removal_date)
 
     class Wrapper:
         def __init__(self, obj):
@@ -124,4 +144,4 @@ def object_beta_warning(obj: object, obj_name: str, removal_date: str) -> object
 
             return proxy
 
-    return Wrapper(obj)
+    return cast(TObj, Wrapper(obj))
