@@ -14,7 +14,10 @@
 
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 
-from streamlit.deprecation_util import function_beta_warning
+from streamlit.deprecation_util import (
+    PrereleaseAPIType,
+    function_prerelease_graduation_warning,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -367,6 +370,12 @@ class LayoutsMixin:
         return cast("DeltaGenerator", self)
 
     # Deprecated beta_ functions
-    beta_container = function_beta_warning(container, "2021-11-02")
-    beta_expander = function_beta_warning(expander, "2021-11-02")
-    beta_columns = function_beta_warning(columns, "2021-11-02")
+    beta_container = function_prerelease_graduation_warning(
+        container, PrereleaseAPIType.BETA, "2021-11-02"
+    )
+    beta_expander = function_prerelease_graduation_warning(
+        expander, PrereleaseAPIType.BETA, "2021-11-02"
+    )
+    beta_columns = function_prerelease_graduation_warning(
+        columns, PrereleaseAPIType.BETA, "2021-11-02"
+    )

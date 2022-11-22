@@ -13,56 +13,103 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from streamlit.deprecation_util import function_beta_warning, object_beta_warning
+from parameterized import parameterized
+
+from streamlit.deprecation_util import (
+    PrereleaseAPIType,
+    function_prerelease_graduation_warning,
+    object_prerelease_graduation_warning,
+)
 
 
 class DeprecationUtilTest(unittest.TestCase):
+    @parameterized.expand(
+        [
+            (
+                PrereleaseAPIType.BETA,
+                "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
+                "`st.beta_multiply` will be removed after 1980-01-01.",
+            ),
+            (
+                PrereleaseAPIType.EXPERIMENTAL,
+                "Please replace `st.experimental_multiply` with `st.multiply`.\n\n"
+                "`st.experimental_multiply` will be removed after 1980-01-01.",
+            ),
+        ]
+    )
     @patch("streamlit.warning")
-    def test_function_beta_warning(self, mock_warning):
+    def test_function_prerelease_graduation_warning(
+        self, api_type: PrereleaseAPIType, warning_msg: str, mock_warning: Mock
+    ):
         def multiply(a, b):
             return a * b
 
-        beta_multiply = function_beta_warning(multiply, "1980-01-01")
-
-        self.assertEqual(beta_multiply(3, 2), 6)
-        mock_warning.assert_called_once_with(
-            "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
-            "`st.beta_multiply` will be removed after 1980-01-01."
+        prerelease_multiply = function_prerelease_graduation_warning(
+            multiply, api_type, "1980-01-01"
         )
 
+        self.assertEqual(prerelease_multiply(3, 2), 6)
+        mock_warning.assert_called_once_with(warning_msg)
+
+    @parameterized.expand(
+        [
+            (
+                PrereleaseAPIType.BETA,
+                "Please replace `st.beta_multiplier` with `st.multiplier`.\n\n"
+                "`st.beta_multiplier` will be removed after 1980-01-01.",
+            ),
+            (
+                PrereleaseAPIType.EXPERIMENTAL,
+                "Please replace `st.experimental_multiplier` with `st.multiplier`.\n\n"
+                "`st.experimental_multiplier` will be removed after 1980-01-01.",
+            ),
+        ]
+    )
     @patch("streamlit.warning")
-    def test_object_beta_warning(self, mock_warning):
+    def test_object_beta_warning(
+        self, api_type: PrereleaseAPIType, warning_msg: str, mock_warning: Mock
+    ):
         class Multiplier:
             def multiply(self, a, b):
                 return a * b
 
-        beta_multiplier = object_beta_warning(Multiplier(), "multiplier", "1980-01-01")
-
-        expected_warning = (
-            "Please replace `st.beta_multiplier` with `st.multiplier`.\n\n"
-            "`st.beta_multiplier` will be removed after 1980-01-01."
+        prerelease_multiplier = object_prerelease_graduation_warning(
+            Multiplier(), "multiplier", api_type, "1980-01-01"
         )
 
-        self.assertEqual(beta_multiplier.multiply(3, 2), 6)
-        self.assertEqual(beta_multiplier.multiply(5, 4), 20)
+        self.assertEqual(prerelease_multiplier.multiply(3, 2), 6)
+        self.assertEqual(prerelease_multiplier.multiply(5, 4), 20)
 
         # We only show the warning a single time for a given object.
-        mock_warning.assert_called_once_with(expected_warning)
+        mock_warning.assert_called_once_with(warning_msg)
 
+    @parameterized.expand(
+        [
+            (
+                PrereleaseAPIType.BETA,
+                "Please replace `st.beta_my_dict` with `st.my_dict`.\n\n"
+                "`st.beta_my_dict` will be removed after 1980-01-01.",
+            ),
+            (
+                PrereleaseAPIType.EXPERIMENTAL,
+                "Please replace `st.experimental_my_dict` with `st.my_dict`.\n\n"
+                "`st.experimental_my_dict` will be removed after 1980-01-01.",
+            ),
+        ]
+    )
     @patch("streamlit.warning")
-    def test_object_beta_warning_magic_function(self, mock_warning):
+    def test_object_beta_warning_magic_function(
+        self, api_type: PrereleaseAPIType, warning_msg: str, mock_warning: Mock
+    ):
         """Test that we override dunder methods."""
 
         class DictClass(dict):
             pass
 
-        beta_dict = object_beta_warning(DictClass(), "my_dict", "1980-01-01")
-
-        expected_warning = (
-            "Please replace `st.beta_my_dict` with `st.my_dict`.\n\n"
-            "`st.beta_my_dict` will be removed after 1980-01-01."
+        beta_dict = object_prerelease_graduation_warning(
+            DictClass(), "my_dict", api_type, "1980-01-01"
         )
 
         beta_dict["foo"] = "bar"
@@ -71,4 +118,4 @@ class DeprecationUtilTest(unittest.TestCase):
         self.assertEqual(list(beta_dict), ["foo"])
 
         # We only show the warning a single time for a given object.
-        mock_warning.assert_called_once_with(expected_warning)
+        mock_warning.assert_called_once_with(warning_msg)
