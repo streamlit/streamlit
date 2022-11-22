@@ -484,6 +484,21 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         img_fn_multi()
         img_fn_multi()
 
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_nested_widget_replay(self, _, cache_decorator):
+        """Regression test for GH#5677"""
+
+        @cache_decorator(experimental_allow_widgets=True)
+        def foo():
+            x = st.number_input("AAAA", 1, 100, 12)
+            return x**2
+
+        @cache_decorator(experimental_allow_widgets=True)
+        def baz(y):
+            return foo() + y
+
+        st.write(baz(10))
+
     @parameterized.expand(
         [
             ("memo", memo, memo.clear),
