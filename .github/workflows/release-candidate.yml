@@ -9,6 +9,8 @@ jobs:
     uses: ./.github/workflows/python-versions.yml
     with:
       ref: ${{ github.ref_name }}
+    secrets:
+      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
 
   run-javascript-tests:
     uses: ./.github/workflows/js-tests.yml

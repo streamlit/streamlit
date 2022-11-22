@@ -64,6 +64,8 @@ jobs:
     uses: ./.github/workflows/python-versions.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
+    secrets:
+      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
 
   run-javascript-tests:
     needs: create-nightly-tag

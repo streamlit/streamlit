@@ -13,6 +13,10 @@ on:
       ref:
         required: true
         type: string
+    secrets:
+      PARAMETER_PASSWORD:
+        description: 'Token passed from caller workflows for snowflake integration tests'
+        required: true
 
 # Avoid duplicate workflows on same branch
 concurrency:
