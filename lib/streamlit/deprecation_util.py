@@ -103,16 +103,16 @@ def object_prerelease_graduation_warning(
         support for the beta_ prefix.
     """
 
-    has_shown_grduation_warning = False
+    has_shown_graduation_warning = False
 
     def show_wrapped_obj_warning():
-        nonlocal has_shown_grduation_warning
-        if not has_shown_grduation_warning:
-            has_shown_grduation_warning = True
+        nonlocal has_shown_graduation_warning
+        if not has_shown_graduation_warning:
+            has_shown_graduation_warning = True
             _show_api_graduation_warning(api_type, obj_name, removal_date)
 
     class Wrapper:
-        def __init__(self, obj):
+        def __init__(self, obj: object):
             self._obj = obj
 
             # Override all the Wrapped object's magic functions
