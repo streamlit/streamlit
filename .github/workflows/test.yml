@@ -14,6 +14,10 @@ jobs:
         shell: bash --login -eo pipefail {0}
 
     steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
       - name: Test Nightly Slack Message
         env:
           SLACK_WEBHOOK: ${{ secrets.TEST_WEBHOOK }}
