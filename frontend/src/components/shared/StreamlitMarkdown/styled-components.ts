@@ -164,3 +164,41 @@ export const StyledHeaderContent = styled.span(() => ({
   flex: "1",
   marginLeft: "calc(2.5rem + 0.5rem)",
 }))
+
+// These are the variables and components which are used to color markdown
+// each of the color listed here, maps into one of the Styled<Color>Span component
+export const ColorNames = ["blue", "cyan", "teal", "red", "violet", "orange"]
+export const SentenceWithColorRegex = new RegExp(
+  "\\[\\w+](([^[])*(\\w+)*([\\n\\r\\s]+\\w+)*)\\[\\/\\w+\\b]"
+)
+export const SentenceWithColorRegexes = ColorNames.map((color: string) => {
+  return new RegExp(
+    `\\[${color}](([^[])*(\\w+)*([\\n\\r\\s]+\\w+)*)\\[\\/${color}\\b]`
+  )
+})
+export const ColorStartRegex = new RegExp("\\[\\w+]")
+export const ColorStartRegexes = ColorNames.map((color: string) => {
+  return new RegExp(`\\[${color}]`)
+})
+export const ColorEndRegexes = ColorNames.map((color: string) => {
+  return new RegExp(`\\[\\/${color}]`)
+})
+
+export const StyledBlueSpan = styled.span(({ theme }) => ({
+  color: theme.colors.mdBlue,
+}))
+export const StyledCyanSpan = styled.span(({ theme }) => ({
+  color: theme.colors.mdCyan,
+}))
+export const StyledTealSpan = styled.span(({ theme }) => ({
+  color: theme.colors.mdTeal,
+}))
+export const StyledRedSpan = styled.span(({ theme }) => ({
+  color: theme.colors.mdRed,
+}))
+export const StyledVioletSpan = styled.span(({ theme }) => ({
+  color: theme.colors.mdViolet,
+}))
+export const StyledOrangeSpan = styled.span(({ theme }) => ({
+  color: theme.colors.mdOrange,
+}))

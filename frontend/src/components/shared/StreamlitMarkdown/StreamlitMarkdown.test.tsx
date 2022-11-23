@@ -284,3 +284,28 @@ describe("Heading", () => {
     expect(wrapper.find("table")).toHaveLength(0)
   })
 })
+
+describe("Colours markdown with predefined colors", () => {
+  it("Captures properly written [red] tags and does not render them", () => {
+    const textImportantRed = "This is [red]important[/red]!"
+    const wrapperOfTextImportantRed = mount(
+      <StreamlitMarkdown source={textImportantRed} allowHTML={false} />
+    )
+    expect(
+      wrapperOfTextImportantRed.find("StyledStreamlitMarkdown").text()
+    ).toEqual("This is important!")
+  })
+
+  it("Does not capture tags which do not define a proper colour", () => {
+    const textWithTagButWithoutAColour = "This is [not]red[/not]!"
+    const wrapper = mount(
+      <StreamlitMarkdown
+        source={textWithTagButWithoutAColour}
+        allowHTML={false}
+      />
+    )
+    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+      textWithTagButWithoutAColour
+    )
+  })
+})

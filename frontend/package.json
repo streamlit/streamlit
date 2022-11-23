@@ -110,6 +110,8 @@
     "styletron-engine-atomic": "^1.4.6",
     "styletron-react": "^5.2.6",
     "typed-signals": "^2.2.0",
+    "unist-util-is": "^5.1.1",
+    "unist-util-visit": "^4.1.1",
     "vega": "^5.17.3",
     "vega-embed": "^6.21.0",
     "vega-interpreter": "^1.0.4",

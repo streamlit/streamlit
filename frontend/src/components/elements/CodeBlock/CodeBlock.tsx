@@ -18,6 +18,10 @@ import React, { ReactElement, ReactNode, FunctionComponent } from "react"
 import { ReactMarkdownProps } from "react-markdown/src/ast-to-react"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 
+import {
+  CheckIfChildrenIncludesValidColors,
+  PrepareColoredSpanJSXElements,
+} from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import CopyButton from "./CopyButton"
 import {
   StyledPre,
@@ -70,12 +74,63 @@ export const CodeTag: FunctionComponent<CodeTagProps> = ({
     </code>
   )
 }
+export const CodeTagWithColoredText: FunctionComponent<CodeTagProps> = ({
+  node,
+  inline,
+  className,
+  children,
+  ...props
+}) => {
+  const match = /language-(\w+)/.exec(className || "")
+  const codeText = String(children).trim().replace(/\n$/, "")
+
+  return !inline ? (
+    <>
+      {codeText && (
+        <StyledCopyButtonContainer>
+          <CopyButton text={codeText} />
+        </StyledCopyButtonContainer>
+      )}
+      <StyledPre>
+        <SyntaxHighlighter
+          language={(match && match[1]) || ""}
+          PreTag="div"
+          customStyle={{ backgroundColor: "transparent" }}
+          style={{}}
+        >
+          {codeText}
+        </SyntaxHighlighter>
+      </StyledPre>
+    </>
+  ) : (
+    <code className={className} {...props}>
+      {PrepareColoredSpanJSXElements(children)
+        ? PrepareColoredSpanJSXElements(children).map(c => c)
+        : children}
+    </code>
+  )
+}
 
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
-export default function CodeBlock({
+export function CodeBlock({ children }: Record<any, any>): ReactElement {
+  return <StyledCodeBlock className="stCodeBlock">{children}</StyledCodeBlock>
+}
+export function CodeBlockWithColoredText({
   children,
+  disableColoredText,
 }: Record<any, any>): ReactElement {
+  if (
+    children &&
+    children.length > 0 &&
+    CheckIfChildrenIncludesValidColors(children)
+  ) {
+    return (
+      <StyledCodeBlock className="stCodeBlock">
+        {PrepareColoredSpanJSXElements(children).map(c => c)}
+      </StyledCodeBlock>
+    )
+  }
   return <StyledCodeBlock className="stCodeBlock">{children}</StyledCodeBlock>
 }

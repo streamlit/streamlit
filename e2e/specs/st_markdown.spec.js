@@ -22,7 +22,7 @@ describe("st.markdown", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 13);
+    cy.get(".element-container .stMarkdown").should("have.length", 14);
   });
 
   it("displays markdown", () => {
@@ -41,6 +41,11 @@ describe("st.markdown", () => {
       expect(els[9].textContent).to.eq("Some header 2");
       expect(els[10].textContent).to.eq("Some header 3");
       expect(els[11].textContent).to.eq("Col1Col2SomeData");
+
+      expect(els[12].textContent).to.eq("This is important!")
+      // displays colored text
+      cy.get("[data-testid='stMdRed']").should("have.length", 1)
+
 
       cy.wrap(els[3])
         .find("a")

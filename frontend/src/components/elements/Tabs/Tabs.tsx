@@ -125,7 +125,8 @@ function Tabs(props: Props): ReactElement {
                 <StreamlitMarkdown
                   source={nodeLabel}
                   allowHTML={false}
-                  isLabel
+                  isLabel={true}
+                  isTabs={true}
                 />
               }
               key={index}

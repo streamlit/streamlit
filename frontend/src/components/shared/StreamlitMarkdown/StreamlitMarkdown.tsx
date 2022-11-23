@@ -21,7 +21,6 @@ import React, {
   CSSProperties,
   HTMLProps,
   FunctionComponent,
-  Fragment,
 } from "react"
 import ReactMarkdown, { PluggableList } from "react-markdown"
 import {
@@ -36,7 +35,12 @@ import { Link as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import AppContext from "src/components/core/AppContext"
-import CodeBlock, { CodeTag } from "src/components/elements/CodeBlock/"
+import {
+  CodeBlock,
+  CodeBlockWithColoredText,
+  CodeTag,
+  CodeTagWithColoredText,
+} from "src/components/elements/CodeBlock/"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
@@ -47,9 +51,21 @@ import {
   StyledLinkIcon,
   StyledHeaderContent,
   StyledHeaderContainer,
+
+  // These are the variables and components which are used to color markdown
+  ColorNames,
+  ColorStartRegex,
+  SentenceWithColorRegex,
+  StyledBlueSpan,
+  StyledCyanSpan,
+  StyledTealSpan,
+  StyledRedSpan,
+  StyledVioletSpan,
+  StyledOrangeSpan,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
+import remarkColoredText from "./RemarkColoredText"
 
 enum Tags {
   H1 = "h1",
@@ -72,7 +88,7 @@ export interface Props {
   isCaption?: boolean
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button/download button labels
+   * Only allows italics, bold, strikethrough, and emojis in button/download button labels, does not allow colored text
    */
   isButton?: boolean
 
@@ -82,9 +98,15 @@ export interface Props {
   isLabel?: boolean
 
   /**
-   * Checkbox has larger label font sizing - same allowed elements as other widgets ^
+   * Checkbox has larger label font sizing - same allowed elements as other widgets ^, does not allow colored text
    */
   isCheckbox?: boolean
+
+  /**
+   * Does not allow colored text
+   */
+  isExpander?: boolean
+  isTabs?: boolean
 }
 
 /**
@@ -111,6 +133,132 @@ function transformLinkUri(href: string): string {
 const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
 })
+
+type TypeCheckIfChildrenIncludesValidColors = (children: Array<any>) => boolean
+export const CheckIfChildrenIncludesValidColors: TypeCheckIfChildrenIncludesValidColors =
+  children => {
+    if (!children || children.length === 0) {
+      return false
+    }
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      if (child && child.toString().length > 0) {
+        const match = child.toString().match(SentenceWithColorRegex)
+        if (match) {
+          const colorMatch = match[0].match(ColorStartRegex)
+          if (colorMatch) {
+            const color = colorMatch[0]
+              .replace("[", "")
+              .replace("]", "")
+              .toLowerCase()
+            if (color && ColorNames.includes(color)) {
+              return true
+            }
+          }
+        }
+      }
+    }
+    return false
+  }
+
+type TypePrepareColoredSpanJSXElements = (
+  children: Array<any>
+) => Array<JSX.Element>
+export const PrepareColoredSpanJSXElements: TypePrepareColoredSpanJSXElements =
+  children => {
+    if (!CheckIfChildrenIncludesValidColors(children)) {
+      return children
+    }
+    let idx = 0
+    const components: Array<JSX.Element> = []
+    children.forEach(child => {
+      if (
+        child &&
+        (typeof child === "string" || child instanceof String) &&
+        child.toString().length > 0
+      ) {
+        let text = child.toString()
+        let match = text.match(SentenceWithColorRegex)
+        if (!match) {
+          components.push(<span key={idx++}>{text}</span>)
+        }
+        // I've never managed to infinite loop this version of the code,
+        // however for safety, let's limit number of iterations to 1 000 000
+        let numOfIterations = 0
+        while (match && match.index !== undefined) {
+          if (numOfIterations++ > 1000000) {
+            break
+          }
+          const prefix = text.substring(0, match.index)
+          if (prefix.length > 0) {
+            components.push(<span key={idx++}>{prefix}</span>)
+            text = text.substring(match.index)
+          }
+          match = text.match(SentenceWithColorRegex)
+          if (match) {
+            const colorMatch = match[0].match(ColorStartRegex)
+            if (colorMatch) {
+              const color = colorMatch[0]
+                .replace("[", "")
+                .replace("]", "")
+                .toLowerCase()
+              if (color === "blue") {
+                components.push(
+                  <StyledBlueSpan data-testid="stMdBlue" key={idx++}>
+                    {match[1]}
+                  </StyledBlueSpan>
+                )
+              } else if (color === "cyan") {
+                components.push(
+                  <StyledCyanSpan data-testid="stMdCyan" key={idx++}>
+                    {match[1]}
+                  </StyledCyanSpan>
+                )
+              } else if (color === "teal") {
+                components.push(
+                  <StyledTealSpan data-testid="stMdTeal" key={idx++}>
+                    {match[1]}
+                  </StyledTealSpan>
+                )
+              } else if (color === "red") {
+                components.push(
+                  <StyledRedSpan data-testid="stMdRed" key={idx++}>
+                    {match[1]}
+                  </StyledRedSpan>
+                )
+              } else if (color === "violet") {
+                components.push(
+                  <StyledVioletSpan data-testid="stMdViolet" key={idx++}>
+                    {match[1]}
+                  </StyledVioletSpan>
+                )
+              } else if (color === "orange") {
+                components.push(
+                  <StyledOrangeSpan data-testid="stMdOrange" key={idx++}>
+                    {match[1]}
+                  </StyledOrangeSpan>
+                )
+              }
+              text = text.substring(match[0].length)
+            }
+          }
+          match = text.match(SentenceWithColorRegex)
+          if (!match && text.length > 0) {
+            components.push(<span key={idx++}>{text}</span>)
+          }
+        }
+      } else if (child && child.type === "strong") {
+        components.push(
+          <strong>
+            {PrepareColoredSpanJSXElements(child.props.children).map(c => c)}
+          </strong>
+        )
+      } else if (child) {
+        components.push(child)
+      }
+    })
+    return components
+  }
 
 interface HeadingWithAnchorProps {
   tag: string
@@ -203,6 +351,39 @@ export const CustomHeading: FunctionComponent<HeadingProps> = ({
     </StyledHeaderContainer>
   )
 }
+export const CustomHeadingWithColoredText: FunctionComponent<HeadingProps> = ({
+  node,
+  children,
+  level,
+  ...rest
+}) => {
+  const anchor = rest["data-anchor"]
+  if (!children || children.length === 0) {
+    return (
+      <StyledHeaderContainer>
+        <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
+          {children}
+        </HeadingWithAnchor>
+      </StyledHeaderContainer>
+    )
+  }
+  if (!CheckIfChildrenIncludesValidColors(children)) {
+    return (
+      <StyledHeaderContainer>
+        <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
+          {children}
+        </HeadingWithAnchor>
+      </StyledHeaderContainer>
+    )
+  }
+  return (
+    <StyledHeaderContainer>
+      <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
+        {PrepareColoredSpanJSXElements(children).map(c => c)}
+      </HeadingWithAnchor>
+    </StyledHeaderContainer>
+  )
+}
 export interface RenderedMarkdownProps {
   /**
    * The Markdown formatted text to render.
@@ -218,7 +399,7 @@ export interface RenderedMarkdownProps {
   overrideComponents?: Components
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button/download button labels
+   * Only allows italics, bold, strikethrough, and emojis in button/download button labels, does not allow colored text
    */
   isButton?: boolean
 
@@ -226,6 +407,104 @@ export interface RenderedMarkdownProps {
    * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
    */
   isLabel?: boolean
+
+  /**
+   * Does not allow colored text
+   */
+  isCheckbox?: boolean
+  isExpander?: boolean
+  isTabs?: boolean
+}
+
+type PColoredTextProps = JSX.IntrinsicElements["p"] & ReactMarkdownProps
+export const PColoredText: FunctionComponent<PColoredTextProps> = ({
+  node,
+  children,
+  ...rest
+}) => {
+  if (!children || children.length === 0) {
+    return <p>{children}</p>
+  }
+  if (!CheckIfChildrenIncludesValidColors(children)) {
+    return <p>{children}</p>
+  }
+  return <p>{PrepareColoredSpanJSXElements(children).map(c => c)}</p>
+}
+
+type SpanColoredTextProps = JSX.IntrinsicElements["span"] & ReactMarkdownProps
+export const SpanColoredText: FunctionComponent<SpanColoredTextProps> = ({
+  node,
+  children,
+  ...rest
+}) => {
+  if (!children || children.length === 0) {
+    return <span>{children}</span>
+  }
+  if (!CheckIfChildrenIncludesValidColors(children)) {
+    return <span>{children}</span>
+  }
+  return <span>{PrepareColoredSpanJSXElements(children).map(c => c)}</span>
+}
+
+type StrongColoredTextProps = JSX.IntrinsicElements["strong"] &
+  ReactMarkdownProps
+export const StrongColoredText: FunctionComponent<StrongColoredTextProps> = ({
+  node,
+  children,
+  ...rest
+}) => {
+  if (!children || children.length === 0) {
+    return <strong>{children}</strong>
+  }
+  if (!CheckIfChildrenIncludesValidColors(children)) {
+    return <strong>{children}</strong>
+  }
+  return <strong>{PrepareColoredSpanJSXElements(children).map(c => c)}</strong>
+}
+
+type DelColoredTextProps = JSX.IntrinsicElements["del"] & ReactMarkdownProps
+export const DelColoredText: FunctionComponent<DelColoredTextProps> = ({
+  node,
+  children,
+  ...rest
+}) => {
+  if (!children || children.length === 0) {
+    return <del>{children}</del>
+  }
+  if (!CheckIfChildrenIncludesValidColors(children)) {
+    return <del>{children}</del>
+  }
+  return <del>{PrepareColoredSpanJSXElements(children).map(c => c)}</del>
+}
+
+type EmColoredTextProps = JSX.IntrinsicElements["em"] & ReactMarkdownProps
+export const EmColoredText: FunctionComponent<EmColoredTextProps> = ({
+  node,
+  children,
+  ...rest
+}) => {
+  if (!children || children.length === 0) {
+    return <em>{children}</em>
+  }
+  if (!CheckIfChildrenIncludesValidColors(children)) {
+    return <em>{children}</em>
+  }
+  return <em>{PrepareColoredSpanJSXElements(children).map(c => c)}</em>
+}
+
+type LIColoredTextProps = JSX.IntrinsicElements["li"] & ReactMarkdownProps
+export const LIColoredText: FunctionComponent<LIColoredTextProps> = ({
+  node,
+  children,
+  ...rest
+}) => {
+  if (!children || children.length === 0) {
+    return <li>{children}</li>
+  }
+  if (!CheckIfChildrenIncludesValidColors(children)) {
+    return <li>{children}</li>
+  }
+  return <li>{PrepareColoredSpanJSXElements(children).map(c => c)}</li>
 }
 
 export function RenderedMarkdown({
@@ -234,21 +513,46 @@ export function RenderedMarkdown({
   overrideComponents,
   isLabel,
   isButton,
+  isCheckbox,
+  isExpander,
+  isTabs,
 }: RenderedMarkdownProps): ReactElement {
-  const renderers: Components = {
-    pre: CodeBlock,
-    code: CodeTag,
-    a: LinkWithTargetBlank,
-    h1: CustomHeading,
-    h2: CustomHeading,
-    h3: CustomHeading,
-    h4: CustomHeading,
-    h5: CustomHeading,
-    h6: CustomHeading,
-    ...(overrideComponents || {}),
-  }
-
+  const enableColoredText = !(isButton || isCheckbox || isExpander || isTabs)
   const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
+  let renderers: Components
+  if (enableColoredText) {
+    plugins.push(remarkColoredText)
+    renderers = {
+      pre: CodeBlockWithColoredText,
+      code: CodeTagWithColoredText,
+      a: LinkWithTargetBlankWithColoredText,
+      p: PColoredText,
+      li: LIColoredText,
+      em: EmColoredText,
+      del: DelColoredText,
+      h1: CustomHeadingWithColoredText,
+      h2: CustomHeadingWithColoredText,
+      h3: CustomHeadingWithColoredText,
+      h4: CustomHeadingWithColoredText,
+      h5: CustomHeadingWithColoredText,
+      h6: CustomHeadingWithColoredText,
+      strong: StrongColoredText,
+      ...(overrideComponents || {}),
+    }
+  } else {
+    renderers = {
+      pre: CodeBlock,
+      code: CodeTag,
+      a: LinkWithTargetBlank,
+      h1: CustomHeading,
+      h2: CustomHeading,
+      h3: CustomHeading,
+      h4: CustomHeading,
+      h5: CustomHeading,
+      h6: CustomHeading,
+      ...(overrideComponents || {}),
+    }
+  }
   const rehypePlugins: PluggableList = [rehypeKatex]
 
   if (allowHTML) {
@@ -259,7 +563,8 @@ export function RenderedMarkdown({
   let allowed
   if (isLabel) {
     allowed = ["p", "em", "strong", "del", "code", "a"]
-  } else if (isButton) {
+  }
+  if (isButton || isCheckbox || isExpander || isTabs) {
     allowed = ["p", "em", "strong", "del"]
   }
 
@@ -304,9 +609,10 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isLabel,
       isButton,
       isCheckbox,
+      isExpander,
+      isTabs,
     } = this.props
     const isInSidebar = this.context
-
     return (
       <StyledStreamlitMarkdown
         isCaption={Boolean(isCaption)}
@@ -320,7 +626,10 @@ class StreamlitMarkdown extends PureComponent<Props> {
           source={source}
           allowHTML={allowHTML}
           isLabel={isLabel}
+          isCheckbox={isCheckbox}
           isButton={isButton}
+          isExpander={isExpander}
+          isTabs={isTabs}
         />
       </StyledStreamlitMarkdown>
     )
@@ -359,6 +668,54 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     </a>
   )
 }
+export function LinkWithTargetBlankWithColoredText(
+  props: LinkProps
+): ReactElement {
+  // if it's a #hash link, don't open in new tab
+  const { href } = props
+  if (href && href.startsWith("#")) {
+    const { children, node, ...rest } = props
+    if (!children || children.length === 0) {
+      return <a {...rest}>{children}</a>
+    }
+    if (!CheckIfChildrenIncludesValidColors(children)) {
+      return <a {...rest}>{children}</a>
+    }
+    return (
+      <a {...rest}>{PrepareColoredSpanJSXElements(children).map(c => c)}</a>
+    )
+  }
+
+  const { title, children, node, target, rel, ...rest } = props
+  if (
+    !children ||
+    children.length === 0 ||
+    !CheckIfChildrenIncludesValidColors(children)
+  ) {
+    return (
+      <a
+        href={href}
+        title={title}
+        target={target || "_blank"}
+        rel={rel || "noopener noreferrer"}
+        {...rest}
+      >
+        {children}
+      </a>
+    )
+  }
+  return (
+    <a
+      href={href}
+      title={title}
+      target={target || "_blank"}
+      rel={rel || "noopener noreferrer"}
+      {...rest}
+    >
+      {PrepareColoredSpanJSXElements(children).map(c => c)}
+    </a>
+  )
+}
 
 function makeMarkdownHeading(tag: string, markdown: string): string {
   switch (tag.toLowerCase()) {
@@ -394,13 +751,13 @@ export function Heading(props: HeadingProtoProps): ReactElement {
             allowHTML={false}
             // this is purely an inline string
             overrideComponents={{
-              p: Fragment,
-              h1: Fragment,
-              h2: Fragment,
-              h3: Fragment,
-              h4: Fragment,
-              h5: Fragment,
-              h6: Fragment,
+              p: SpanColoredText,
+              h1: SpanColoredText,
+              h2: SpanColoredText,
+              h3: SpanColoredText,
+              h4: SpanColoredText,
+              h5: SpanColoredText,
+              h6: SpanColoredText,
             }}
           />
         </HeadingWithAnchor>

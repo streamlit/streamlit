@@ -41,4 +41,12 @@ export default {
   blue: colors.blue80,
   green: colors.green80,
   yellow: colors.yellow80,
+
+  // colors with md prefix, are used when coloring markdown
+  mdBlue: "#1C83E1",
+  mdCyan: "#00C0F2",
+  mdTeal: "#00D4B1",
+  mdRed: "#FF4B4B",
+  mdViolet: "#803DF5",
+  mdOrange: "#FF8700",
 }

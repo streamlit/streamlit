@@ -50,6 +50,8 @@ st.markdown(
 """
 )
 
+st.markdown("This is [red]important[/red]!")
+
 with st.container():
     st.markdown("# some really long header " + " ".join(["lol"] * 10))
     np.random.seed(0)

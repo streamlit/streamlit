@@ -16,7 +16,7 @@
 
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
-import CodeBlock, { CodeTag, CodeTagProps, CodeBlockProps } from "./CodeBlock"
+import { CodeTag, CodeBlock, CodeTagProps, CodeBlockProps } from "./CodeBlock"
 import CopyButton from "./CopyButton"
 
 const getTagProps = (props: Partial<CodeTagProps> = {}): CodeTagProps => {
