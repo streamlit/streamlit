@@ -157,6 +157,12 @@ export function getColumnFromQuiver(
     }
   }
 
+  if (columnType === ColumnType.Boolean) {
+    columnTypeMetadata = {
+      options: ["", "true", "false"],
+    }
+  }
+
   return {
     id: `column-${title}-${columnPosition}`,
     isEditable: isEditableType(columnType),
@@ -245,7 +251,7 @@ export function isEditableType(type: ColumnType): boolean {
     // ColumnType.DateTime,
     ColumnType.Url,
     ColumnType.Categorical,
-    ColumnType.Image,
+    // ColumnType.Image,
   ].includes(type)
 }
 
@@ -434,7 +440,7 @@ function fillBooleanCell(cell: BooleanCell, data: any): GridCell {
         case "t":
         case "yes":
         case "y":
-        case "off":
+        case "on":
         case "1":
           cellData = true
           break
@@ -442,7 +448,7 @@ function fillBooleanCell(cell: BooleanCell, data: any): GridCell {
         case "f":
         case "no":
         case "n":
-        case "on":
+        case "off":
         case "0":
           cellData = false
           break
@@ -537,6 +543,7 @@ function fillListCell(cell: GridCell, data: DataType): GridCell {
 
   if (notNullOrUndefined(data)) {
     if (typeof data === "string") {
+      // TODO: Should we really do this?
       //TODO(lukasmasuch): Catch error?
       cellData = JSON.parse(data)
     } else {
@@ -846,7 +853,7 @@ export function getCell(
         kind: GridCellKind.Image,
         data: [],
         displayData: [],
-        allowAdd: !readonly,
+        allowAdd: false,
         allowOverlay: true,
         contentAlign,
         style,
@@ -912,14 +919,14 @@ export function getCell(
 
       cellTemplate = {
         kind: GridCellKind.Custom,
-        allowOverlay: true,
+        allowOverlay: !readonly,
         copyData: "",
         contentAlign,
         data: {
           kind: "dropdown-cell",
           allowedValues: options,
           value: options[0],
-          readonly,
+          readonly: readonly,
         },
       } as DropdownCellType
       cellTemplate = fillCategoricalCell(cellTemplate, data)
@@ -960,7 +967,7 @@ export function getCell(
     case ColumnType.ProgressChart:
       cellTemplate = {
         kind: GridCellKind.Custom,
-        allowOverlay: !readonly,
+        allowOverlay: false,
         copyData: "",
         contentAlign,
         data: {
@@ -971,7 +978,7 @@ export function getCell(
           step: 0.1,
           label: `0%`,
           measureLabel: "100%",
-          readonly,
+          readonly: true,
         },
       } as RangeCellType
 

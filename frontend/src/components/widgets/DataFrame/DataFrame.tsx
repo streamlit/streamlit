@@ -45,6 +45,7 @@ import Button, { Kind } from "src/components/shared/Button"
 import {
   Search,
   Add,
+  Remove,
   Fullscreen,
   FileDownload,
 } from "@emotion-icons/material-outlined"
@@ -254,8 +255,12 @@ class EditingState {
       this.isAddedRow(row)
     )
     if (this.isAddedRow(row)) {
+      if (row - this.numRows >= this.addedRows.length) {
+        // Added row does not exist. This is only expected to happen
+        // in relation to a trailing row issue in glide-data-grid.
+        return
+      }
       // Added rows have their own editing state
-      //TODO(lukasmasuch): Do we have to do something here if the index actually not exist?
       this.addedRows[row - this.numRows].set(col, cell)
     } else {
       if (this.editedCells.get(row) === undefined) {
@@ -285,19 +290,19 @@ class EditingState {
       return
     }
 
-    console.log(
-      "Delete row",
-      row,
-      this.isAddedRow(row),
-      this.deletedRows.includes(row)
-    )
-    console.log("Deleted Rows:", this.deletedRows)
+    // console.log(
+    //   "Delete row",
+    //   row,
+    //   this.isAddedRow(row),
+    //   this.deletedRows.includes(row)
+    // )
+    // console.log("Deleted Rows:", this.deletedRows)
 
-    console.log("Added Rows:", this.addedRows)
+    // console.log("Added Rows:", this.addedRows)
 
-    console.log("Edited Cells:", this.editedCells)
+    // console.log("Edited Cells:", this.editedCells)
 
-    console.log("Num Rows:", this.numRows)
+    // console.log("Num Rows:", this.numRows)
 
     if (this.isAddedRow(row)) {
       // Remove from added rows:
@@ -310,7 +315,7 @@ class EditingState {
       // Add to the set and sort the deleted rows (important for calculation of the original row index)
       this.deletedRows.push(row)
       this.deletedRows = this.deletedRows.sort()
-      console.log(this.deletedRows)
+      // console.log(this.deletedRows)
     }
 
     // Remove all cells from cell state associated with this row:
@@ -535,13 +540,15 @@ export function useDataLoader(
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
+  // TODO(lukasmasuch): This should be also dependent on element or data
+  // But this currently triggers updates on every rerender.
 
-  console.log(
-    "numRows",
-    numRows,
-    originalNumRows,
-    editingState.current.getNumRows()
-  )
+  // console.log(
+  //   "numRows",
+  //   numRows,
+  //   originalNumRows,
+  //   editingState.current.getNumRows()
+  // )
   // The columns with the corresponding empty template for every type:
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [columnSizes, setColumnSizes] = useState<Map<string, number>>(
@@ -1139,7 +1146,8 @@ function DataFrame({
       }}
     >
       <StyledDataframeToolbar>
-        {/* <ActionButton label={"Add Row"} icon={Add} onClick={() => {}} /> */}
+        <ActionButton label={"Delete"} icon={Remove} onClick={() => {}} />
+        <ActionButton icon={Add} onClick={() => {}} />
         <ActionButton icon={FileDownload} onClick={() => {}} />
         <ActionButton
           icon={Search}
