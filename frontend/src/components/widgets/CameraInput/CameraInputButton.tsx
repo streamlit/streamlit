@@ -42,6 +42,7 @@ function CameraInputButton({
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       progress={progress || null}
+      data-testid="stCameraInputButton"
     >
       {children}
       {progress && (
