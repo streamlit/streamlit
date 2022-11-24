@@ -1,0 +1,5 @@
+{
+  "account": "snowhouse",
+  "user" : "<LDAP>",
+  "authenticator": "EXTERNALBROWSER"
+}

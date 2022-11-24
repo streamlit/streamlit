@@ -43,7 +43,7 @@ class ArrowVegaLiteMixin:
         data: Data = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
+        theme: Union[None, Literal["streamlit"]] = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
@@ -121,7 +121,7 @@ def marshall(
     data: Data = None,
     spec: Optional[Dict[str, Any]] = None,
     use_container_width: bool = False,
-    theme: Union[None, Literal["streamlit"]] = "streamlit",
+    theme: Union[None, Literal["streamlit"]] = None,
     **kwargs,
 ):
     """Construct a Vega-Lite chart object.
