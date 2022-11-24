@@ -711,7 +711,7 @@ _create_option(
         Directory to serve static files from,
         relative to running app's location.
         """,
-    default_val="/assets",
+    default_val="assets/",
     type_=str,
 )
 
@@ -1231,8 +1231,34 @@ def on_config_parsed(
     return disconnect
 
 
+def _check_static_files_config():
+    # Import logger locally to prevent circular references
+    from streamlit.logger import get_logger
+
+    LOGGER = get_logger(__name__)
+
+    # TODO [KAREN] Rephrase warning messages
+
+    if get_option("server.enableStaticServing"):
+        try:
+            static_file_config_dir = file_util.sanitize_user_static_path(
+                get_option("server.staticServingDirectory")
+            )
+        except RuntimeError as e:
+            LOGGER.error(str(e))
+            set_option(
+                "server.enableStaticServing", False, ConfigOption.STREAMLIT_DEFINITION
+            )
+
+        else:
+            LOGGER.info(
+                "STATIC FILE SERVING ENABLED FROM FOLDER %s" % static_file_config_dir
+            )
+
+
 # Run _check_conflicts only once the config file is parsed in order to avoid
 # loops. We also need to grab the lock when running _check_conflicts since it
 # may edit config options based on the values of other config options.
 on_config_parsed(_check_conflicts, lock=True)
+on_config_parsed(_check_static_files_config)
 on_config_parsed(_set_development_mode)

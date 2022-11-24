@@ -124,6 +124,36 @@ def get_assets_dir():
     return os.path.normpath(os.path.join(dirname, "static/assets"))
 
 
+def sanitize_user_static_path(user_path):
+    full_path = os.path.realpath(os.path.join(os.getcwd(), user_path))
+    main_script_directory = os.getcwd()
+
+    if not os.path.isdir(full_path):
+        raise RuntimeError(f"Directory '{full_path}' does not exist")
+
+    if (
+        os.path.commonprefix([full_path, main_script_directory])
+        != main_script_directory
+    ):
+        raise RuntimeError(
+            f"Static file directory {user_path} is served outside of "
+            f"Streamlit project root."
+        )
+
+    if full_path == main_script_directory:
+        raise RuntimeError(
+            "For security reasons we dont allow expose whole " "project directory"
+        )
+
+    if os.path.abspath(CONFIG_FOLDER_NAME) == full_path:
+        raise RuntimeError(
+            "STATIC FOLDER COULD NOT BE .streamlit because of security, "
+            "this could lead to secrets and configs exposure."
+        )
+
+    return full_path
+
+
 def get_streamlit_file_path(*filepath) -> str:
     """Return the full path to a file in ~/.streamlit.
 

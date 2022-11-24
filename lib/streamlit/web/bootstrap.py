@@ -23,9 +23,10 @@ import click
 
 from streamlit import config, env_util, net_util, secrets, url_util, util, version
 from streamlit.config import CONFIG_FILENAMES
+from streamlit.config_option import ConfigOption
+from streamlit.file_util import sanitize_user_static_path
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
-from streamlit.runtime.secrets import SECRETS_FILE_LOC
 from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
