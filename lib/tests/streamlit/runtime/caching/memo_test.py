@@ -16,6 +16,7 @@
 import logging
 import pickle
 import re
+import threading
 import unittest
 from datetime import timedelta
 from typing import Any
@@ -37,11 +38,13 @@ from streamlit.runtime.caching.memo_decorator import (
     get_cache_path,
     get_memo_stats_provider,
 )
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
+from tests.testutil import create_mock_script_run_ctx
 
 
 def as_cached_result(value: Any) -> MultiCacheResults:
@@ -64,6 +67,10 @@ def as_replay_test_data() -> MultiCacheResults:
 
 
 class MemoTest(unittest.TestCase):
+    def setUp(self) -> None:
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
@@ -213,6 +220,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
 
     def tearDown(self) -> None:
         st.experimental_memo.clear()
+        super().tearDown()
 
     @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
     def test_dont_persist_by_default(self, mock_write):
@@ -408,6 +416,9 @@ class MemoPersistTest(DeltaGeneratorTestCase):
 
 class MemoStatsProviderTest(unittest.TestCase):
     def setUp(self):
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
         st.experimental_memo.clear()
