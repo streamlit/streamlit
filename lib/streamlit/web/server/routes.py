@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+from typing import Optional
 
 import tornado.web
 
@@ -91,6 +92,23 @@ class AssetsFileHandler(tornado.web.StaticFileHandler):
     # to this endpoint from the inner iframe.
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
+
+
+class UserStaticFileHandler(AssetsFileHandler):
+    def validate_absolute_path(self, root: str, absolute_path: str) -> Optional[str]:
+        full_path = os.path.realpath(absolute_path)
+        directory = os.path.realpath(root)
+
+        if os.path.isdir(full_path):
+            # we don't want to serve directories, and serve only files
+            raise tornado.web.HTTPError(404)
+
+        if os.path.commonprefix([full_path, directory]) != directory:
+            # Don't allow misbehaving clients to break out of the static files directory
+            _LOGGER.warning("TRY TO ACCESS FILE OUTSIDE OF STATIC DIRECTORY!")
+            raise tornado.web.HTTPError(404)
+
+        return super().validate_absolute_path(root, absolute_path)
 
 
 class AddSlashHandler(tornado.web.RequestHandler):

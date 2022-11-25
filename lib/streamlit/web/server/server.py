@@ -45,6 +45,7 @@ from streamlit.web.server.routes import (
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
+    UserStaticFileHandler,
 )
 from streamlit.web.server.server_util import make_url_path_regex
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
@@ -290,7 +291,7 @@ class Server:
                 [
                     (
                         make_url_path_regex(base, "user-static/(.*)"),
-                        AssetsFileHandler,
+                        UserStaticFileHandler,
                         {"path": "%s/%s/" % (os.path.join(os.getcwd()), folder_name)},
                     ),
                 ]
