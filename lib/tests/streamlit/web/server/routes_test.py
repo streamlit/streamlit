@@ -31,6 +31,7 @@ from streamlit.web.server.server import (
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
+    UserStaticFileHandler,
 )
 from tests.streamlit.message_mocks import create_dataframe_msg
 from tests.testutil import patch_config_options
@@ -149,6 +150,49 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             self.fetch("/nonexistent"),
             self.fetch("/page2/nonexistent"),
             self.fetch(f"/page3/{self._filename}"),
+        ]
+
+        for r in responses:
+            assert r.code == 404
+
+
+class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    def setUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._tmpfile = tempfile.NamedTemporaryFile(dir=self._tmpdir.name, delete=False)
+        self._filename = os.path.basename(self._tmpfile.name)
+
+        super().setUp()
+
+    def tearDown(self) -> None:
+        super().tearDown()
+
+        self._tmpdir.cleanup()
+
+    def get_app(self):
+        return tornado.web.Application(
+            [
+                (
+                    r"/user-static/(.*)",
+                    UserStaticFileHandler,
+                    {"path": "%s/" % self._tmpdir.name},
+                )
+            ]
+        )
+
+    def test_parse_url_path_200(self):
+
+        responses = [
+            self.fetch(f"/user-static/{self._filename}"),
+        ]
+        for r in responses:
+            assert r.code == 200
+
+    def test_parse_url_path_404(self):
+        responses = [
+            self.fetch("/user-static"),
+            self.fetch("/user-static/"),
+            self.fetch("/user-static/nonexistent.jpg"),
         ]
 
         for r in responses:
