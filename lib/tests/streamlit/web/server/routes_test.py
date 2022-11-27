@@ -160,6 +160,18 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory()
         self._tmpfile = tempfile.NamedTemporaryFile(dir=self._tmpdir.name, delete=False)
+
+        self._symlink_outside_directory = "symlink_outside"
+        self._symlink_inside_directory = "symlink_inside"
+
+        os.symlink(
+            "/", os.path.join(self._tmpdir.name, self._symlink_outside_directory)
+        )
+        os.symlink(
+            self._tmpfile.name,
+            os.path.join(self._tmpdir.name, self._symlink_inside_directory),
+        )
+
         self._filename = os.path.basename(self._tmpfile.name)
 
         super().setUp()
@@ -184,6 +196,7 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         responses = [
             self.fetch(f"/user-static/{self._filename}"),
+            self.fetch(f"/user-static/{self._symlink_inside_directory}"),
         ]
         for r in responses:
             assert r.code == 200
@@ -192,6 +205,7 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         responses = [
             self.fetch("/user-static"),
             self.fetch("/user-static/"),
+            self.fetch(f"/user-static/{self._symlink_outside_directory}"),
             self.fetch("/user-static/nonexistent.jpg"),
         ]
 
