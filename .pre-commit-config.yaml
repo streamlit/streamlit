@@ -163,13 +163,13 @@ repos:
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
 
-  # - repo: https://github.com/pycqa/pydocstyle
-  #   rev: 6.1.1
-  #   hooks:
-  #     - id: pydocstyle
-  #       name: Run pydocstyle
-  #       args:
-  #         - --convention=numpy
-  #         - --add-ignore=D100,D101,D104,D105,D106,D107
-  #        git st - --add-select=D417
-  #         - --match-dir=(lib\/streamlit\/)(?!vendor)(?!watcher)
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.1.1
+    hooks:
+      - id: pydocstyle
+        name: Run pydocstyle
+        args:
+          - --convention=numpy
+          - --add-ignore=D100,D101,D104,D105,D106,D107
+          - --add-select=D417
+          - --match-dir=(lib\/streamlit\/)(?!vendor)(?!watcher)
