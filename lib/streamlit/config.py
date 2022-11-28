@@ -156,7 +156,7 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
         The name of the config section to fetch options for.
 
     Returns
-    ----------
+    -------
     Dict[str, Any]
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
@@ -1061,7 +1061,7 @@ def get_config_options(
         Config options that we received via CLI flag.
 
     Returns
-    ----------
+    -------
     Dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """

@@ -55,7 +55,7 @@ class JSNumber(object):
             in any exception that is thrown.
 
         Raises
-        -------
+        ------
         JSNumberBoundsException
             Raised with a human-readable explanation if the value falls outside
             JavaScript int bounds.
@@ -87,7 +87,7 @@ class JSNumber(object):
             in any exception that is thrown.
 
         Raises
-        -------
+        ------
         JSNumberBoundsException
             Raised with a human-readable explanation if the value falls outside
             JavaScript float bounds.

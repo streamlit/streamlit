@@ -99,8 +99,8 @@ def unflatten(flat_dict, encodings=None):
         #   }
         # }
 
-    Args:
-    -----
+    Args
+    ----
     flat_dict: dict
         A flat dict where keys are fully-qualified paths separated by
         underscores.
