@@ -65,7 +65,7 @@ describe("Component template", () => {
   it("sends data back to Streamlit", () => {
     getIframeBody(0)
       .find("button")
-      .click();
+      .click({ force: true });
 
     cy.get(".element-container > .stMarkdown p")
       .eq(0)
