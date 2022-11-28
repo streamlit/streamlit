@@ -53,7 +53,8 @@ jobs:
         run: make develop
       - name: Run Linters
         run: |
-          PRE_COMMIT_NO_CONCURRENCY=true pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+          # Skip pydocstyle in CI. Only run locally.
+          PRE_COMMIT_NO_CONCURRENCY=true SKIP=pydocstyle pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
       - name: Run Type Checkers
         run: scripts/mypy --report
       - name: Run Python Tests
