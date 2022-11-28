@@ -145,7 +145,7 @@ def sanitize_user_static_path(user_path):
 
     if full_path == main_script_directory:
         raise RuntimeError(
-            "For security reasons we dont allow expose whole " "project directory"
+            "For security reasons we dont allow expose whole project directory"
         )
 
     if os.path.commonpath([pages_directory, full_path]) == pages_directory:
