@@ -287,7 +287,7 @@ class Server:
             routes.extend(
                 [
                     (
-                        make_url_path_regex(base, "static/(.*)"),
+                        make_url_path_regex(base, "user-static/(.*)"),
                         UserStaticFileHandler,
                         {"path": "%s/%s/" % (os.path.join(os.getcwd()), folder_name)},
                     ),
