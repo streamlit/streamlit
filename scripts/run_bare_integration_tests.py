@@ -27,6 +27,7 @@ import subprocess
 import sys
 from multiprocessing import Lock
 from multiprocessing.pool import ThreadPool
+from typing import Set
 
 import click
 

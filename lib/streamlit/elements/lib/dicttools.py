@@ -14,7 +14,7 @@
 
 """Tools for working with dicts."""
 
-pass
+from typing import Any, Dict, Optional
 
 
 def _unflatten_single_dict(flat_dict):
