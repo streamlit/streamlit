@@ -23,7 +23,7 @@ import threading
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator, Optional, Union
+from typing import Any, Callable, Iterator, Union
 
 from google.protobuf.message import Message
 from typing_extensions import Protocol, runtime_checkable
@@ -91,8 +91,8 @@ class ElementMsgData:
     message: Message
     id_of_dg_called_on: str
     returned_dgs_id: str
-    widget_metadata: Optional[WidgetMsgMetadata] = None
-    media_data: Optional[list[MediaMsgData]] = None
+    widget_metadata: WidgetMsgMetadata | None = None
+    media_data: list[MediaMsgData] | None = None
 
 
 @dataclass(frozen=True)
@@ -566,7 +566,7 @@ class CacheMessagesCallStack(threading.local):
         self._cached_message_stack: list[list[MsgData]] = []
         self._seen_dg_stack: list[set[str]] = []
         self._most_recent_messages: list[MsgData] = []
-        self._registered_metadata: Optional[WidgetMetadata[Any]] = None
+        self._registered_metadata: WidgetMetadata[Any] | None = None
         self._media_data: list[MediaMsgData] = []
         self._cache_type = cache_type
         self._allow_widgets: int = 0
@@ -707,7 +707,7 @@ def _make_value_key(
 
     # Create a (name, value) list of all *args and **kwargs passed to the
     # function.
-    arg_pairs: list[tuple[Optional[str], Any]] = []
+    arg_pairs: list[tuple[str | None, Any]] = []
     for arg_idx in range(len(args)):
         arg_name = _get_positional_arg_name(func, arg_idx)
         arg_pairs.append((arg_name, args[arg_idx]))
@@ -782,7 +782,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
     return cache_key
 
 
-def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Optional[str]:
+def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> str | None:
     """Return the name of a function's positional argument.
 
     If arg_index is out of range, or refers to a parameter that is not a

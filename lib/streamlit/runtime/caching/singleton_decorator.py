@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import threading
 import types
-from typing import Any, Callable, Optional, TypeVar, cast, overload
+from typing import Any, Callable, TypeVar, cast, overload
 
 from pympler import asizeof
 
@@ -163,7 +163,7 @@ class SingletonAPI:
     @gather_metrics("experimental_singleton")
     def __call__(
         self,
-        func: Optional[F] = None,
+        func: F | None = None,
         *,
         show_spinner: bool | str = True,
         suppress_st_warning=False,

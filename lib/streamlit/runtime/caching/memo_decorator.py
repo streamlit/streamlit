@@ -23,7 +23,7 @@ import threading
 import time
 import types
 from datetime import timedelta
-from typing import Any, Callable, Optional, TypeVar, cast, overload
+from typing import Any, Callable, TypeVar, cast, overload
 
 from cachetools import TTLCache
 
@@ -75,9 +75,9 @@ class MemoizedFunction(CachedFunction):
         func: types.FunctionType,
         show_spinner: bool | str,
         suppress_st_warning: bool,
-        persist: Optional[str],
-        max_entries: Optional[int],
-        ttl: Optional[float],
+        persist: str | None,
+        max_entries: int | None,
+        ttl: float | None,
         allow_widgets: bool,
     ):
         super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
@@ -123,7 +123,7 @@ class MemoCaches(CacheStatsProvider):
     def get_cache(
         self,
         key: str,
-        persist: Optional[str],
+        persist: str | None,
         max_entries: int | float | None,
         ttl: int | float | None,
         display_name: str,
@@ -220,10 +220,10 @@ class MemoAPI:
     def __call__(
         self,
         *,
-        persist: Optional[str] = None,
+        persist: str | None = None,
         show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
-        max_entries: Optional[int] = None,
+        max_entries: int | None = None,
         ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
@@ -235,12 +235,12 @@ class MemoAPI:
     @gather_metrics("experimental_memo")
     def __call__(
         self,
-        func: Optional[F] = None,
+        func: F | None = None,
         *,
-        persist: Optional[str] = None,
+        persist: str | None = None,
         show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
-        max_entries: Optional[int] = None,
+        max_entries: int | None = None,
         ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ):
@@ -354,7 +354,7 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        ttl_seconds: Optional[float]
+        ttl_seconds: float | None
 
         if isinstance(ttl, timedelta):
             ttl_seconds = ttl.total_seconds()
@@ -411,7 +411,7 @@ class MemoCache(Cache):
     def __init__(
         self,
         key: str,
-        persist: Optional[str],
+        persist: str | None,
         max_entries: float,
         ttl: float,
         display_name: str,
@@ -503,7 +503,7 @@ class MemoCache(Cache):
         else:
             widgets = set()
 
-        multi_cache_results: Optional[MultiCacheResults] = None
+        multi_cache_results: MultiCacheResults | None = None
 
         # Try to find in mem cache, falling back to disk, then falling back
         # to a new result instance
