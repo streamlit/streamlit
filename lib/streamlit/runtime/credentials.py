@@ -18,7 +18,6 @@ import os
 import sys
 import textwrap
 from collections import namedtuple
-from typing import Optional
 
 import click
 import toml

@@ -18,7 +18,7 @@ import functools
 import hashlib
 import os
 import subprocess
-from typing import Any, Dict, Iterable, List, Mapping, TypeVar
+from typing import Any, Dict, Iterable, Mapping, TypeVar
 
 from typing_extensions import Final
 
