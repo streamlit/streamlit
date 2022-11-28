@@ -37,18 +37,18 @@ fig_bubble = px.scatter(
     size_max=60,
 )
 
-# # tests no streamlit theme plot
+# tests no streamlit theme plot
 st.plotly_chart(fig_bubble, theme=None)
 import pandas as pd
 import plotly.express as px
 
 import streamlit as st
 
-# # Bubble Chart
-# # Tests Discrete coloring with streamlit theme
+# Bubble Chart
+# Tests Discrete coloring with streamlit theme
 st.plotly_chart(fig_bubble, theme="streamlit")
 
-# # Candlestick Chart
+# Candlestick Chart
 open_data_candlestick = [33.0, 33.3, 33.5, 33.0, 34.1]
 high_data_candlestick = [33.1, 33.3, 33.6, 33.2, 34.8]
 low_data_candlestick = [32.7, 32.7, 32.8, 32.6, 32.8]

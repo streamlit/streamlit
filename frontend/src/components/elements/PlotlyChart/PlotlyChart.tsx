@@ -42,7 +42,6 @@ export interface PlotlyIFrameProps {
 }
 
 export const DEFAULT_HEIGHT = 450
-export const DEFAULT_WIDTH = 450
 
 function renderIFrame({
   url,
