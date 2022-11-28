@@ -37,14 +37,18 @@ fig_bubble = px.scatter(
     size_max=60,
 )
 
-# tests no streamlit theme plot
+# # tests no streamlit theme plot
 st.plotly_chart(fig_bubble, theme=None)
+import pandas as pd
+import plotly.express as px
 
-# Bubble Chart
-# Tests Discrete coloring with streamlit theme
+import streamlit as st
+
+# # Bubble Chart
+# # Tests Discrete coloring with streamlit theme
 st.plotly_chart(fig_bubble, theme="streamlit")
 
-# Candlestick Chart
+# # Candlestick Chart
 open_data_candlestick = [33.0, 33.3, 33.5, 33.0, 34.1]
 high_data_candlestick = [33.1, 33.3, 33.6, 33.2, 34.8]
 low_data_candlestick = [32.7, 32.7, 32.8, 32.6, 32.8]
@@ -213,3 +217,21 @@ df = px.data.tips()
 
 fig = px.density_heatmap(df, x="total_bill", y="tip")
 st.plotly_chart(fig, theme="streamlit")
+
+data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])
+
+fig = px.line(data, height=100, width=300)
+fig.update_xaxes(visible=False, fixedrange=True)
+fig.update_yaxes(visible=False, fixedrange=True)
+fig.update_layout(annotations=[], overwrite=True)
+fig.update_layout(
+    showlegend=False, plot_bgcolor="white", margin=dict(t=10, l=10, b=10, r=10)
+)
+st.plotly_chart(fig, config=dict(displayModeBar=False))
+
+fig.update_layout(
+    width=400,
+)
+st.plotly_chart(fig, use_container_width=False)
+
+st.plotly_chart(fig, use_container_width=True)

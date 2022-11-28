@@ -48,26 +48,6 @@ describe("PlotlyChart Element", () => {
     expect(wrapper.find(Plot).length).toBe(1)
   })
 
-  it("renders properly when entering fullscreen and out of fullscreen", () => {
-    const fullScreenProps = {
-      ...getProps(),
-      height: 400,
-      width: 400,
-    }
-
-    const nonFullScreenProps = {
-      ...getProps(),
-      height: undefined,
-      width: 50,
-    }
-    const wrapper = mount(<PlotlyChart {...fullScreenProps} />)
-    wrapper.setProps(nonFullScreenProps)
-    wrapper.update()
-
-    expect(wrapper.find(Plot).props().layout.width).toBe(50)
-    expect(wrapper.find(Plot).props().layout.height).toBe(450)
-  })
-
   describe("Dimensions", () => {
     it("fullscreen", () => {
       const props = {
@@ -85,10 +65,33 @@ describe("PlotlyChart Element", () => {
         ...getProps({
           useContainerWidth: true,
         }),
-        width: 400,
       }
       const wrapper = mount(<PlotlyChart {...props} />)
-      expect(wrapper.find(Plot).props()).toMatchSnapshot()
+
+      // an explicit value because useContainerWidth is passed
+      expect(wrapper.find(Plot).props().layout.width).toBe(0)
+      expect(wrapper.find(Plot).props().layout.height).toBe(undefined)
+    })
+
+    it("renders properly when entering fullscreen and out of fullscreen", () => {
+      const fullScreenProps = {
+        ...getProps(),
+        height: 400,
+        width: 400,
+      }
+
+      const nonFullScreenProps = {
+        ...getProps(),
+        height: undefined,
+      }
+      const wrapper = mount(<PlotlyChart {...fullScreenProps} />)
+      wrapper.setProps(nonFullScreenProps)
+      wrapper.update()
+
+      // undefined because useContainerWidth is not passed and
+      // plotly will render its own default height and width
+      expect(wrapper.find(Plot).props().layout.width).toBe(undefined)
+      expect(wrapper.find(Plot).props().layout.height).toBe(undefined)
     })
   })
 

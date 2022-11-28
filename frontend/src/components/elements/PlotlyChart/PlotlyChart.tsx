@@ -42,6 +42,7 @@ export interface PlotlyIFrameProps {
 }
 
 export const DEFAULT_HEIGHT = 450
+export const DEFAULT_WIDTH = 450
 
 function renderIFrame({
   url,
@@ -66,7 +67,8 @@ function renderFigure({
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
-    const initialHeight = DEFAULT_HEIGHT
+    const initialHeight = spec.layout.height
+    const initialWidth = spec.layout.width
 
     if (isFullScreen()) {
       spec.layout.width = width
@@ -74,7 +76,7 @@ function renderFigure({
     } else if (element.useContainerWidth) {
       spec.layout.width = width
     } else {
-      spec.layout.width = width
+      spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
     if (element.theme === "streamlit") {
