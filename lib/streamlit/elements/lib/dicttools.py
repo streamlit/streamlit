@@ -76,7 +76,8 @@ def _unflatten_single_dict(flat_dict):
 def unflatten(flat_dict, encodings=None):
     """Converts a flat dict of key-value pairs to a spec tree.
 
-    Example:
+    Example
+    -------
         unflatten({
           foo_bar_baz: 123,
           foo_bar_biz: 456,
@@ -107,8 +108,8 @@ def unflatten(flat_dict, encodings=None):
     encodings: set
         Key names that should be automatically moved into the 'encoding' key.
 
-    Returns:
-    --------
+    Returns
+    -------
     A tree made of dicts inside of dicts.
     """
     if encodings is None:
