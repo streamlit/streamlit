@@ -605,7 +605,6 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 
 def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
-
     # Check all columns for mixed types and complex128 type
     # The dtype of mixed type columns is always object, the actual type of the column
     # values can be determined via the infer_dtype function:
@@ -639,7 +638,6 @@ def fix_arrow_incompatible_column_types(
     -------
     The fixed dataframe.
     """
-
     for col in selected_columns or df.columns:
         if _is_colum_type_arrow_incompatible(df[col]):
             df[col] = df[col].astype(str)
@@ -688,7 +686,6 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
         A bytes object to convert.
 
     """
-
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
 

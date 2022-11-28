@@ -102,7 +102,6 @@ def object_prerelease_graduation_warning(
         A date like "2020-01-01", indicating the last day we'll guarantee
         support for the beta_ prefix.
     """
-
     has_shown_graduation_warning = False
 
     def show_wrapped_obj_warning():
