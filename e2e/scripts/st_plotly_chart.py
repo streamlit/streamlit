@@ -227,11 +227,11 @@ fig.update_layout(annotations=[], overwrite=True)
 fig.update_layout(
     showlegend=False, plot_bgcolor="white", margin=dict(t=10, l=10, b=10, r=10)
 )
-st.plotly_chart(fig, config=dict(displayModeBar=False))
+st.plotly_chart(fig, config=dict(displayModeBar=False), theme="streamlit")
 
 fig.update_layout(
     width=400,
 )
-st.plotly_chart(fig, use_container_width=False)
+st.plotly_chart(fig, use_container_width=False, theme="streamlit")
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, theme="streamlit")
