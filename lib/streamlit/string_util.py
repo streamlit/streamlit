@@ -62,7 +62,7 @@ def extract_leading_emoji(text: str) -> Tuple[str, str]:
 
 
 def escape_markdown(raw_string: str) -> str:
-    """Returns a new string which escapes all markdown metacharacters.
+    r"""Returns a new string which escapes all markdown metacharacters.
 
     Args
     ----
