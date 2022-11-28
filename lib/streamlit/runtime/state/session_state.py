@@ -663,6 +663,14 @@ class SessionState:
 
         return RegisterWidgetResult(widget_value, widget_value_changed)
 
+    def __contains__(self, key: str) -> bool:
+        try:
+            self[key]
+        except KeyError:
+            return False
+        else:
+            return True
+
     def get_stats(self) -> List[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]

@@ -15,7 +15,7 @@
 """Tests widget-related functionality"""
 
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from parameterized import parameterized
@@ -24,13 +24,14 @@ import streamlit as st
 from streamlit import errors
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import coalesce_widget_states
 from streamlit.runtime.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     SessionState,
     WidgetMetadata,
 )
-from streamlit.runtime.state.widgets import _get_widget_id
+from streamlit.runtime.state.widgets import _get_widget_id, user_key_from_widget_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -84,11 +85,9 @@ class WidgetManagerTests(unittest.TestCase):
         session_state = SessionState()
         session_state._set_widget_metadata(create_metadata("fake_widget_id", ""))
 
-        self.assertTrue(
-            isinstance(
-                session_state._new_widget_state.widget_metadata["fake_widget_id"],
-                WidgetMetadata,
-            )
+        self.assertIsInstance(
+            session_state._new_widget_state.widget_metadata["fake_widget_id"],
+            WidgetMetadata,
         )
 
     def test_call_callbacks(self):
@@ -294,3 +293,36 @@ class WidgetIdDisabledTests(DeltaGeneratorTestCase):
 
         with self.assertRaises(errors.DuplicateWidgetID):
             widget_func("my_widget", options, disabled=True)
+
+
+@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
+class WidgetUserKeyTests(DeltaGeneratorTestCase):
+    def test_get_widget_user_key(self):
+        state = get_script_run_ctx().session_state._state
+        st.checkbox("checkbox", key="c")
+
+        k = list(state._keys())[0]
+        assert user_key_from_widget_id(k) == "c"
+
+    def test_get_widget_user_key_none(self):
+        state = get_script_run_ctx().session_state._state
+        st.selectbox("selectbox", options=["foo", "bar"])
+
+        k = list(state._keys())[0]
+        # Absence of a user key is represented as None throughout our code
+        assert user_key_from_widget_id(k) is None
+
+    def test_get_widget_user_key_hyphens(self):
+        state = get_script_run_ctx().session_state._state
+        st.slider("slider", key="my-slider")
+
+        k = list(state._keys())[0]
+        assert user_key_from_widget_id(k) == "my-slider"
+
+    def test_get_widget_user_key_incorrect_none(self):
+        state = get_script_run_ctx().session_state._state
+        st.checkbox("checkbox", key="None")
+
+        k = list(state._keys())[0]
+        # Incorrectly inidcates no user key
+        assert user_key_from_widget_id(k) == None

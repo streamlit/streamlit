@@ -96,8 +96,7 @@ class MapMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict,
-            or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The data to be plotted. Must have columns called 'lat', 'lon',
             'latitude', or 'longitude'.
         zoom : int
@@ -161,30 +160,41 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
     if data is None:
         return json.dumps(_DEFAULT_MAP)
 
-    # TODO(harahu): The ignore statement here is because iterables don't have
-    #  the empty attribute. This is either a bug, or the documented data type
-    #  is too broad. One or the other should be addressed, and the ignore
-    if hasattr(data, "empty") and data.empty:  # type: ignore
+    # TODO(harahu): iterables don't have the empty attribute. This is either
+    # a bug, or the documented data type is too broad. One or the other
+    # should be addressed
+    if hasattr(data, "empty") and data.empty:
         return json.dumps(_DEFAULT_MAP)
 
     data = type_util.convert_anything_to_df(data)
+    formmated_column_names = ", ".join(map(repr, list(data.columns)))
 
     if "lat" in data:
         lat = "lat"
     elif "latitude" in data:
         lat = "latitude"
+    elif "LAT" in data:
+        lat = "LAT"
+    elif "LATITUDE" in data:
+        lat = "LATITUDE"
     else:
         raise StreamlitAPIException(
-            'Map data must contain a column named "latitude" or "lat".'
+            "Map data must contain a column named 'latitude' or 'lat'. "
+            f"Existing columns: {formmated_column_names}"
         )
 
     if "lon" in data:
         lon = "lon"
     elif "longitude" in data:
         lon = "longitude"
+    elif "LON" in data:
+        lon = "LON"
+    elif "LONGITUDE" in data:
+        lon = "LONGITUDE"
     else:
         raise StreamlitAPIException(
-            'Map data must contain a column called "longitude" or "lon".'
+            "Map data must contain a column named 'longitude' or 'lon'. "
+            f"Existing columns: {formmated_column_names}"
         )
 
     if data[lon].isnull().values.any() or data[lat].isnull().values.any():

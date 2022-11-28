@@ -31,8 +31,10 @@ describe("st.camera_input", () => {
       .contains("Learn how to allow access.")
       .should("not.exist");
 
-    cy.get("[data-testid='stCameraInput']")
-      .should("have.length.at.least", 1)
+    cy.get("[data-testid='stCameraInputButton']")
+      .should("have.length.at.least", 2)
+      .first()
+      .wait(1000)
       .should("not.be.disabled")
       .contains("Take Photo")
       .click();

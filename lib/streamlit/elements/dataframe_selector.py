@@ -16,6 +16,8 @@
 "arrow") based on a config option"""
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
+from typing_extensions import Literal
+
 from streamlit import config
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -47,7 +49,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -75,6 +77,9 @@ class DataFrameSelectorMixin:
 
         Examples
         --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df = pd.DataFrame(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
@@ -117,7 +122,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The table data.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -126,6 +131,9 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df = pd.DataFrame(
         ...    np.random.randn(10, 5),
         ...    columns=('col %d' % i for i in range(5)))
@@ -165,7 +173,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -197,6 +205,9 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -248,7 +259,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -280,6 +291,9 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -331,7 +345,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).
@@ -363,8 +377,11 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(50, 3),
+        ...     np.random.randn(20, 3),
         ...     columns=["a", "b", "c"])
         ...
         >>> st.bar_chart(chart_data)
@@ -397,6 +414,7 @@ class DataFrameSelectorMixin:
         self,
         altair_chart: "Chart",
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = None,
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -409,6 +427,10 @@ class DataFrameSelectorMixin:
             If True, set the chart width to the column width. This takes
             precedence over Altair's native `width` value.
 
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
+
         Example
         -------
 
@@ -416,11 +438,11 @@ class DataFrameSelectorMixin:
         >>> import numpy as np
         >>> import altair as alt
         >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
         ...
-        >>> c = alt.Chart(df).mark_circle().encode(
+        >>> c = alt.Chart(chart_data).mark_circle().encode(
         ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
         >>> st.altair_chart(c, use_container_width=True)
@@ -435,7 +457,7 @@ class DataFrameSelectorMixin:
         """
 
         if _use_arrow():
-            return self.dg._arrow_altair_chart(altair_chart, use_container_width)
+            return self.dg._arrow_altair_chart(altair_chart, use_container_width, theme)
         else:
             return self.dg._legacy_altair_chart(altair_chart, use_container_width)
 
@@ -445,6 +467,7 @@ class DataFrameSelectorMixin:
         data: "Data" = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
+        theme: Union[None, Literal["streamlit"]] = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
@@ -468,20 +491,23 @@ class DataFrameSelectorMixin:
             If True, set the chart width to the column width. This takes
             precedence over Vega-Lite's native `width` value.
 
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
+
         **kwargs : any
             Same as spec, but as keywords.
 
         Example
         -------
-
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
+        >>> chart_data = pd.DataFrame(
         ...     np.random.randn(200, 3),
         ...     columns=['a', 'b', 'c'])
         >>>
-        >>> st.vega_lite_chart(df, {
+        >>> st.vega_lite_chart(chart_data, {
         ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},
@@ -502,7 +528,7 @@ class DataFrameSelectorMixin:
         """
         if _use_arrow():
             return self.dg._arrow_vega_lite_chart(
-                data, spec, use_container_width, **kwargs
+                data, spec, use_container_width, theme, **kwargs
             )
         else:
             return self.dg._legacy_vega_lite_chart(
@@ -515,7 +541,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
             Table to concat. Optional.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
             (i.e. with `config.dataFrameSerialization = "legacy"`).

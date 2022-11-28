@@ -13,7 +13,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     permissions:
       # Additional permission needed to generate tag
@@ -55,7 +55,7 @@ jobs:
           git push origin $TAG
       - if: ${{ failure() }}
         name: Nightly Tag Failure Slack Message
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py nightly tag
 
@@ -64,6 +64,8 @@ jobs:
     uses: ./.github/workflows/python-versions.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
+    secrets:
+      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
 
   run-javascript-tests:
     needs: create-nightly-tag
@@ -97,7 +99,7 @@ jobs:
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           persist-credentials: false
           submodules: 'recursive'
@@ -109,21 +111,21 @@ jobs:
         run: python scripts/slack_notifications.py nightly py_prod
       - if: ${{ needs.run-cypress-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly cypress
-  
+
   create-nightly-build:
     runs-on: ubuntu-latest
 
-    # Tag creation & tests must all complete successfully for nightly build job to run. 
+    # Tag creation & tests must all complete successfully for nightly build job to run.
     needs: [create-nightly-tag, run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           persist-credentials: false
           submodules: 'recursive'
@@ -154,6 +156,6 @@ jobs:
           make distribute
       - if: ${{ failure() }}
         name: Nightly Build Failure Slack Message
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py nightly build

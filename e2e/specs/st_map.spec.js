@@ -17,14 +17,17 @@
 describe("st.map", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
+
+    // Wait for all the maps to be loaded.
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 6);
   });
 
-  it("displays 5 maps", () => {
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 5)
+  it("displays 6 maps", () => {
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 6)
   });
-  
-  it("displays 5 zoom buttons", () => {
-    cy.get(".element-container .zoomButton").should("have.length", 5)
+
+  it("displays 6 zoom buttons", () => {
+    cy.get(".element-container .zoomButton").should("have.length", 6)
   })
 
   it("warning about data being capped exists", () => {

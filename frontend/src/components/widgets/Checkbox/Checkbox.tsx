@@ -16,6 +16,7 @@
 
 import React from "react"
 import { withTheme } from "@emotion/react"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
 import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import { transparentize } from "color2k"
@@ -25,6 +26,7 @@ import { Theme } from "src/theme"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import { StyledContent } from "./styled-components"
 
@@ -141,6 +143,7 @@ class Checkbox extends React.PureComponent<Props, State> {
           checked={this.state.value}
           disabled={disabled}
           onChange={this.onChange}
+          aria-label={element.label}
           overrides={{
             Root: {
               style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
@@ -198,8 +201,17 @@ class Checkbox extends React.PureComponent<Props, State> {
             },
           }}
         >
-          <StyledContent>
-            {element.label}
+          <StyledContent
+            visibility={labelVisibilityProtoValueToEnum(
+              element.labelVisibility?.value
+            )}
+          >
+            <StreamlitMarkdown
+              source={element.label}
+              allowHTML={false}
+              isLabel
+              isCheckbox
+            />
             {element.help && (
               <StyledWidgetLabelHelpInline color={color}>
                 <TooltipIcon

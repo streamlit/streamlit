@@ -63,6 +63,32 @@ describe("doInitPings", () => {
     Promise.all = originalPromiseAll
   })
 
+  // NOTE: Temporary test until we're able to rename the /healthz endpoint
+  it("does not call the /healthz endpoint when pinging server", async () => {
+    axios.get = jest.fn().mockImplementation(url => {
+      if (url.endsWith("/healthz")) {
+        throw Error("kaboom")
+      }
+      if (url.endsWith("/st-allowed-message-origins")) {
+        return MOCK_ALLOWED_ORIGINS_RESPONSE
+      }
+      return {}
+    })
+
+    const uriIndex = await doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.userCommandLine
+    )
+    expect(uriIndex).toEqual(0)
+    expect(MOCK_PING_DATA.setHostAllowedOrigins).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_RESPONSE.data.allowedOrigins
+    )
+  })
+
   it("returns the uri index and sets allowedOrigins for the first successful ping (0)", async () => {
     Promise.all = jest
       .fn()
@@ -122,8 +148,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      TEST_ERROR_MESSAGE
+      TEST_ERROR_MESSAGE,
+      expect.anything()
     )
   })
 
@@ -147,8 +173,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      "Connection timed out."
+      "Connection timed out.",
+      expect.anything()
     )
   })
 
@@ -176,8 +202,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      "Connection failed with status 0."
+      "Connection failed with status 0.",
+      expect.anything()
     )
   })
 
@@ -203,8 +229,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      "Connection failed with status 0."
+      "Connection failed with status 0.",
+      expect.anything()
     )
   })
 
@@ -254,8 +280,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA_LOCALHOST.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      NoResponse
+      NoResponse,
+      expect.anything()
     )
   })
 
@@ -294,8 +320,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      Forbidden
+      Forbidden,
+      expect.anything()
     )
   })
 
@@ -324,8 +350,8 @@ describe("doInitPings", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
-      expect.anything(),
-      `Connection failed with status ${TEST_ERROR.response.status}, and response "${TEST_ERROR.response.data}".`
+      `Connection failed with status ${TEST_ERROR.response.status}, and response "${TEST_ERROR.response.data}".`,
+      expect.anything()
     )
   })
 
@@ -370,8 +396,8 @@ describe("doInitPings", () => {
     const timeouts: number[] = []
     const callback = (
       _times: number,
-      timeout: number,
-      _errorNode: React.ReactNode
+      _errorNode: React.ReactNode,
+      timeout: number
     ): void => {
       timeouts.push(timeout)
     }
@@ -413,8 +439,8 @@ describe("doInitPings", () => {
     const timeouts: number[] = []
     const callback = (
       _times: number,
-      timeout: number,
-      _errorNode: React.ReactNode
+      _errorNode: React.ReactNode,
+      timeout: number
     ): void => {
       timeouts.push(timeout)
     }
@@ -452,8 +478,8 @@ describe("doInitPings", () => {
     const timeouts: number[] = []
     const callback = (
       _times: number,
-      timeout: number,
-      _errorNode: React.ReactNode
+      _errorNode: React.ReactNode,
+      timeout: number
     ): void => {
       timeouts.push(timeout)
     }
@@ -470,8 +496,8 @@ describe("doInitPings", () => {
     const timeouts2: number[] = []
     const callback2 = (
       _times: number,
-      timeout: number,
-      _errorNode: React.ReactNode
+      _errorNode: React.ReactNode,
+      timeout: number
     ): void => {
       timeouts2.push(timeout)
     }

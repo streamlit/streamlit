@@ -76,11 +76,11 @@ interactive_spec = {
     "config": {"scale": {"bandPaddingInner": 0.2}},
 }
 
-st._arrow_vega_lite_chart(df, spec, use_container_width=True)
-st._arrow_vega_lite_chart(df, spec, use_container_width=True)
-st._arrow_vega_lite_chart(df, spec)
-st._arrow_vega_lite_chart(df, spec_with_width)
-st._arrow_vega_lite_chart(interactive_spec, None)
+st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
+st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
+st._arrow_vega_lite_chart(df, spec, theme="streamlit")
+st._arrow_vega_lite_chart(df, spec_with_width, theme="streamlit")
+st._arrow_vega_lite_chart(interactive_spec, None, theme="streamlit")
 
 # Screenshot comparison
 
@@ -100,6 +100,7 @@ st._arrow_vega_lite_chart(
         },
     },
     use_container_width=True,
+    theme="streamlit",
 )
 
 st.write("Using a top-level `df` and keywords as a spec:")
@@ -112,6 +113,7 @@ st._arrow_vega_lite_chart(
     y_field="b",
     y_type="quantitative",
     use_container_width=True,
+    theme="streamlit",
 )
 
 st.write("Putting the `df` inside the spec, as a `dataset`:")
@@ -127,6 +129,7 @@ st._arrow_vega_lite_chart(
         },
     },
     use_container_width=True,
+    theme="streamlit",
 )
 
 st.write("Putting the `df` inside the spec, as inline `data`:")
@@ -141,6 +144,7 @@ st._arrow_vega_lite_chart(
         },
     },
     use_container_width=True,
+    theme="streamlit",
 )
 
 st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
@@ -153,15 +157,14 @@ st._arrow_vega_lite_chart(
             "x": {"field": "a", "type": "ordinal"},
             "y": {"field": "b", "type": "quantitative"},
         },
-    }
+    },
+    theme="streamlit",
 )
 
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 
 st.write("Show streamlit theme:")
-spec["usermeta"] = {"embedOptions": {"theme": "streamlit"}}
-st._arrow_vega_lite_chart(df, spec, use_container_width=True)
+st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
 
 st.write("Show default theme:")
-spec["usermeta"] = {"embedOptions": {"theme": "none"}}
-st._arrow_vega_lite_chart(df, spec, use_container_width=True)
+st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme=None)

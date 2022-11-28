@@ -14,311 +14,22 @@
  * limitations under the License.
  */
 
-import { assign } from "lodash"
+import { merge } from "lodash"
 
-import { hasLightBackgroundColor, Theme } from "src/theme"
+import {
+  getDecreasingRed,
+  getGray30,
+  getGray70,
+  getGray90,
+  getIncreasingGreen,
+  hasLightBackgroundColor,
+  Theme,
+  getSequentialColorsArray,
+  getCategoricalColorsArray,
+  getDivergingColorsArray,
+} from "src/theme"
 import { ensureError } from "src/lib/ErrorHandling"
 import { logError } from "src/lib/log"
-
-// TODO: for these colors below, these likely need to move to our theme!
-// For the meantime, these colors will be defined for plotly.
-
-const divergingColorscaleLightTheme = [
-  [0.1, "#004280"],
-  [0.2, "#0054A3"],
-  [0.3, "#1C83E1"],
-  [0.4, "#60B4FF"],
-  [0.5, "#A6DCFF"],
-  [0.6, "#FFC7C7"],
-  [0.7, "#FF8C8C"],
-  [0.8, "#FF4B4B"],
-  [0.9, "#BD4043"],
-  [1.0, "#7D353B"],
-]
-
-const divergingColorscaleDarkTheme = [
-  [0, "#A6DCFF"],
-  [0.1, "#A6DCFF"],
-  [0.2, "#60B4FF"],
-  [0.3, "#1C83E1"],
-  [0.4, "#0054A3"],
-  [0.5, "#004280"],
-  [0.6, "#7D353B"],
-  [0.7, "#BD4043"],
-  [0.8, "#FF4B4B"],
-  [0.9, "#FF8C8C"],
-  [1.0, "#FFC7C7"],
-]
-
-const sequentialColorscaleLightTheme = [
-  [0, "#E4F5FF"],
-  [0.1111111111111111, "#C7EBFF"],
-  [0.2222222222222222, "#A6DCFF"],
-  [0.3333333333333333, "#83C9FF"],
-  [0.4444444444444444, "#60B4FF"],
-  [0.5555555555555556, "#3D9DF3"],
-  [0.6666666666666666, "#1C83E1"],
-  [0.7777777777777778, "#0068C9"],
-  [0.8888888888888888, "#0054A3"],
-  [1, "#004280"],
-]
-
-const sequentialColorscaleDarkTheme = [
-  [0, "#004280"],
-  [0.1111111111111111, "#0054A3"],
-  [0.2222222222222222, "#0068C9"],
-  [0.3333333333333333, "#1C83E1"],
-  [0.4444444444444444, "#3D9DF3"],
-  [0.5555555555555556, "#60B4FF"],
-  [0.6666666666666666, "#83C9FF"],
-  [0.7777777777777778, "#A6DCFF"],
-  [0.8888888888888888, "#C7EBFF"],
-  [1, "#E4F5FF"],
-]
-
-const categoryColorsLightTheme = [
-  "#0068C9",
-  "#83C9FF",
-  "#FF2B2B",
-  "#FFABAB",
-  "#29B09D",
-  "#7DEFA1",
-  "#FF8700",
-  "#FFD16A",
-  "#6D3FC0",
-  "#D5DAE5",
-]
-
-const categoryColorsDarkTheme = [
-  "#83C9FF",
-  "#0068C9",
-  "#FFABAB",
-  "#FF2B2B",
-  "#7DEFA1",
-  "#29B09D",
-  "#FFD16A",
-  "#FF8700",
-  "#6D3FC0",
-  "#D5DAE5",
-]
-
-function getGray70(theme: Theme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray70
-    : theme.colors.gray30
-}
-
-function getGray30(theme: Theme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray30
-    : theme.colors.gray85
-}
-
-function getGray90(theme: Theme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray90
-    : theme.colors.gray10
-}
-
-function getDecreasingRed(theme: Theme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.red80
-    : theme.colors.red40
-}
-
-function getIncreasingGreen(theme: Theme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.blueGreen80
-    : theme.colors.green40
-}
-
-/**
- * This applies categorical colors (discrete or labeled data) to
- * graphs by mapping legend groups to marker colors and customdata to marker colors.
- * This is done because colorway is not fully respected by plotly.
- * @param data - spec.data
- */
-function applyDiscreteColors(data: any, theme: Theme): void {
-  const categoryColors = hasLightBackgroundColor(theme)
-    ? categoryColorsLightTheme
-    : categoryColorsDarkTheme
-
-  const legendGroupToIndexes = new Map<string, number[]>()
-  const customDataToDataIdx = new Map<string, number[]>()
-  const graphIdxToCustomData = new Map<number, Map<string, number[]>>()
-  data.forEach((graph: any, graphIndex: number) => {
-    if (
-      graph.customdata !== undefined &&
-      graph.marker !== undefined &&
-      Array.isArray(graph.marker.colors) &&
-      graph.marker.colors.length > 0 &&
-      typeof graph.marker.colors[0] !== "number"
-    ) {
-      graph.customdata.forEach((data: any, dataIndex: any) => {
-        const dataString = data.toString()
-        if (Array.isArray(data) && data.length > 0) {
-          if (customDataToDataIdx.has(dataString)) {
-            customDataToDataIdx.set(
-              dataString,
-              // @ts-ignore
-              customDataToDataIdx.get(dataString)?.concat(dataIndex)
-            )
-          } else {
-            customDataToDataIdx.set(dataString, [dataIndex])
-          }
-        }
-      })
-      graphIdxToCustomData.set(graphIndex, customDataToDataIdx)
-    }
-    if (graph.legendgroup !== undefined) {
-      if (legendGroupToIndexes.has(graph.legendgroup)) {
-        legendGroupToIndexes.set(
-          graph.legendgroup,
-          // @ts-ignore
-          legendGroupToIndexes.get(graph.legendgroup).concat(graphIndex)
-        )
-      } else {
-        legendGroupToIndexes.set(graph.legendgroup, [graphIndex])
-      }
-    }
-  })
-
-  let colorIndex = 0
-  legendGroupToIndexes.forEach((dataIdx: number[]) => {
-    dataIdx.forEach((index: number) => {
-      if (data[index].line !== undefined) {
-        // dont assign colors for dist plot boxes when they're transparent
-        if (
-          data[index].type !== "box" &&
-          data[index].line.color !== "rgba(255,255,255,0)" &&
-          data[index].line.color !== "transparent"
-        ) {
-          data[index].line = assign(data[index].line, {
-            color: categoryColors[colorIndex % categoryColors.length],
-          })
-        }
-      }
-      if (
-        data[index].marker !== undefined &&
-        typeof data[index].marker.color === "string"
-      ) {
-        data[index].marker = assign(data[index].marker, {
-          color: categoryColors[colorIndex % categoryColors.length],
-        })
-      }
-    })
-    colorIndex++
-  })
-
-  colorIndex = 0
-  graphIdxToCustomData.forEach(
-    (customData: Map<string, number[]>, dataIndex: number) => {
-      customData.forEach(markerIndexes => {
-        markerIndexes.forEach(markerIndex => {
-          data[dataIndex].marker.colors[markerIndex] =
-            categoryColors[colorIndex % categoryColors.length]
-        })
-        colorIndex++
-      })
-    }
-  )
-}
-
-/**
- * This overrides the colorscale (continuous colorscale) to all graphs.
- * @param data - spec.data
- */
-export function applyColorscale(data: any, theme: Theme): any {
-  data.forEach((entry: any) => {
-    assign(entry, {
-      colorscale: hasLightBackgroundColor(theme)
-        ? sequentialColorscaleLightTheme
-        : sequentialColorscaleDarkTheme,
-    })
-  })
-  return data
-}
-
-/**
- * This applies colors specifically for the table, candlestick, and waterfall plot
- * because their dictionary structure is different from other more regular charts.
- * @param data - spec.data
- */
-export function applyUniqueGraphColorsData(data: any, theme: Theme): void {
-  const { colors, genericFonts } = theme
-  data.forEach((entry: any) => {
-    // entry.type is always defined
-    if (entry.type === "table") {
-      entry.header = assign(entry.header, {
-        font: {
-          color: getGray70(theme),
-          family: genericFonts.bodyFont,
-        },
-        line: { color: colors.fadedText05, width: 1 },
-        fill: {
-          color: colors.bgMix,
-        },
-      })
-      entry.cells = assign(entry.cells, {
-        font: {
-          color: getGray90(theme),
-          family: genericFonts.bodyFont,
-        },
-        line: { color: colors.fadedText05, width: 1 },
-        fill: {
-          color: colors.bgColor,
-        },
-      })
-    } else if (entry.type === "candlestick") {
-      if (entry.decreasing === undefined) {
-        assign(entry, {
-          decreasing: {
-            line: {
-              color: getDecreasingRed(theme),
-            },
-          },
-        })
-        assign(entry, {
-          increasing: {
-            line: {
-              color: getIncreasingGreen(theme),
-            },
-          },
-        })
-      }
-    } else if (entry.type === "waterfall") {
-      assign(entry, {
-        connector: {
-          line: {
-            color: getGray30(theme),
-            width: 2,
-          },
-        },
-      })
-      if (entry.decreasing === undefined) {
-        assign(entry, {
-          decreasing: {
-            marker: {
-              color: getDecreasingRed(theme),
-            },
-          },
-          increasing: {
-            marker: {
-              color: getIncreasingGreen(theme),
-            },
-          },
-          totals: {
-            marker: {
-              color: hasLightBackgroundColor(theme)
-                ? theme.colors.green40
-                : theme.colors.blue40,
-            },
-          },
-        })
-      }
-    }
-  })
-}
 
 /**
  * This applies general layout changes to things such as x axis,
@@ -333,11 +44,6 @@ export function applyStreamlitThemeTemplateLayout(
   const { genericFonts, colors, fontSizes } = theme
 
   const streamlitTheme = {
-    uniformtext: {
-      // hide all text that is less than 6 px
-      minsize: 6,
-      mode: "hide",
-    },
     font: {
       color: getGray70(theme),
       family: genericFonts.bodyFont,
@@ -352,14 +58,11 @@ export function applyStreamlitThemeTemplateLayout(
         color: colors.headingColor,
       },
       pad: {
-        l: 4,
+        l: theme.spacing.twoXSPx,
       },
       xanchor: "left",
       x: 0,
     },
-    colorway: hasLightBackgroundColor(theme)
-      ? categoryColorsLightTheme
-      : categoryColorsDarkTheme,
     legend: {
       title: {
         font: {
@@ -370,7 +73,7 @@ export function applyStreamlitThemeTemplateLayout(
       },
       valign: "top",
       bordercolor: colors.transparent,
-      borderwidth: 0,
+      borderwidth: theme.spacing.nonePx,
       font: {
         size: fontSizes.twoSmPx,
         color: getGray90(theme),
@@ -378,9 +81,6 @@ export function applyStreamlitThemeTemplateLayout(
     },
     paper_bgcolor: colors.bgColor,
     plot_bgcolor: colors.bgColor,
-    colorDiscreteSequence: hasLightBackgroundColor(theme)
-      ? categoryColorsLightTheme
-      : categoryColorsDarkTheme,
     yaxis: {
       ticklabelposition: "outside",
       zerolinecolor: getGray30(theme),
@@ -389,7 +89,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
-        standoff: 24,
+        standoff: theme.spacing.twoXLPx,
       },
       tickcolor: getGray30(theme),
       tickfont: {
@@ -416,7 +116,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
-        standoff: 12,
+        standoff: theme.spacing.mdPx,
       },
       minor: {
         gridcolor: getGray30(theme),
@@ -425,9 +125,9 @@ export function applyStreamlitThemeTemplateLayout(
       automargin: true,
     },
     margin: {
-      pad: 16,
-      r: 0,
-      l: 0,
+      pad: theme.spacing.lgPx,
+      r: theme.spacing.nonePx,
+      l: theme.spacing.nonePx,
     },
     hoverlabel: {
       bgcolor: colors.bgColor,
@@ -441,7 +141,7 @@ export function applyStreamlitThemeTemplateLayout(
     coloraxis: {
       colorbar: {
         thickness: 16,
-        xpad: 24,
+        xpad: theme.spacing.twoXLPx,
         ticklabelposition: "outside",
         outlinecolor: colors.transparent,
         outlinewidth: 8,
@@ -458,36 +158,6 @@ export function applyStreamlitThemeTemplateLayout(
           size: fontSizes.twoSmPx,
         },
       },
-      colorscale: {
-        ...(hasLightBackgroundColor(theme)
-          ? {
-              diverging: divergingColorscaleLightTheme,
-              sequential: sequentialColorscaleLightTheme,
-              // reverse to dark for sequential minus
-              sequentialminus: sequentialColorscaleDarkTheme,
-            }
-          : {
-              diverging: divergingColorscaleDarkTheme,
-              sequential: sequentialColorscaleDarkTheme,
-              // reverse to light for sequential minus
-              sequentialminus: sequentialColorscaleLightTheme,
-            }),
-      },
-    },
-    colorscale: {
-      ...(hasLightBackgroundColor(theme)
-        ? {
-            diverging: divergingColorscaleLightTheme,
-            sequential: sequentialColorscaleLightTheme,
-            // reverse to dark for sequential minus
-            sequentialminus: sequentialColorscaleDarkTheme,
-          }
-        : {
-            diverging: divergingColorscaleDarkTheme,
-            sequential: sequentialColorscaleDarkTheme,
-            // reverse to light for sequential minus
-            sequentialminus: sequentialColorscaleLightTheme,
-          }),
     },
     // specifically for the ternary graph
     ternary: {
@@ -527,55 +197,200 @@ export function applyStreamlitThemeTemplateLayout(
     },
   }
 
-  // cant use merge. use assign because plotly already has properties defined.
-  assign(layout, streamlitTheme)
+  merge(layout, streamlitTheme)
 }
 
 /**
- * Applies the colorscale, colors for unique graphs, and discrete coloring
- * for in general through assigning properties in spec.data
- * @param data - spec.data
+ * Replace the colors that we are using from streamlit_plotly_theme.py.
+ * This is done so that we change colors based on the background color
+ * as the backend has no idea of the background color.
+ * @param spec the spec that we want to update
+ * @param theme
+ * @param elementTheme element.theme
+ * @returns the updated spec with the correct theme colors
  */
-export function applyStreamlitThemeData(data: any, theme: Theme): void {
-  applyColorscale(data, theme)
-  applyUniqueGraphColorsData(data, theme)
-  applyDiscreteColors(data, theme)
-  data.forEach((entry: any) => {
-    if (entry.marker !== undefined) {
-      entry.marker.line = assign(entry.marker.line, {
-        width: 0,
-        color: theme.colors.transparent,
-      })
-    }
-  })
-}
+function replaceCategoricalColors(
+  spec: string,
+  theme: Theme,
+  elementTheme: string
+): string {
+  // All the placeholder constants defined here are matching the placeholders in the python implementation.
+  const CATEGORY_0 = "#000001"
+  const CATEGORY_1 = "#000002"
+  const CATEGORY_2 = "#000003"
+  const CATEGORY_3 = "#000004"
+  const CATEGORY_4 = "#000005"
+  const CATEGORY_5 = "#000006"
+  const CATEGORY_6 = "#000007"
+  const CATEGORY_7 = "#000008"
+  const CATEGORY_8 = "#000009"
+  const CATEGORY_9 = "#000010"
 
-/**
- * This applies specific changes for spec.layout.template.data because
- * spec.data does not fully catch these and neither does spec.layout.template.layout
- * @param data - spec.layout.template.data
- * @param theme - Theme from useTheme()
- */
-export function applyStreamlitThemeTemplateData(
-  data: any,
-  theme: Theme
-): void {
-  if (data !== undefined) {
-    data.bar.forEach((entry: any) => {
-      if (entry.marker !== undefined && entry.marker.line !== undefined) {
-        entry.marker.line = assign(entry.marker.line, {
-          color: getGray30(theme),
-        })
-      }
-    })
-    const graphs = Object.values(data)
-    graphs.forEach((graph: any) => {
-      if (graph.colorbar !== undefined && graph.colorbar.ticks === "") {
-        // make tick values show
-        delete graph.colorbar.ticks
-      }
-    })
+  if (elementTheme === "streamlit") {
+    const categoryColors = getCategoricalColorsArray(theme)
+    spec = spec.replaceAll(CATEGORY_0, categoryColors[0])
+    spec = spec.replaceAll(CATEGORY_1, categoryColors[1])
+    spec = spec.replaceAll(CATEGORY_2, categoryColors[2])
+    spec = spec.replaceAll(CATEGORY_3, categoryColors[3])
+    spec = spec.replaceAll(CATEGORY_4, categoryColors[4])
+    spec = spec.replaceAll(CATEGORY_5, categoryColors[5])
+    spec = spec.replaceAll(CATEGORY_6, categoryColors[6])
+    spec = spec.replaceAll(CATEGORY_7, categoryColors[7])
+    spec = spec.replaceAll(CATEGORY_8, categoryColors[8])
+    spec = spec.replaceAll(CATEGORY_9, categoryColors[9])
+  } else {
+    // Default plotly colors
+    spec = spec.replaceAll(CATEGORY_0, "#636efa")
+    spec = spec.replaceAll(CATEGORY_1, "#EF553B")
+    spec = spec.replaceAll(CATEGORY_2, "#00cc96")
+    spec = spec.replaceAll(CATEGORY_3, "#ab63fa")
+    spec = spec.replaceAll(CATEGORY_4, "#FFA15A")
+    spec = spec.replaceAll(CATEGORY_5, "#19d3f3")
+    spec = spec.replaceAll(CATEGORY_6, "#FF6692")
+    spec = spec.replaceAll(CATEGORY_7, "#B6E880")
+    spec = spec.replaceAll(CATEGORY_8, "#FF97FF")
+    spec = spec.replaceAll(CATEGORY_9, "#FECB52")
   }
+  return spec
+}
+
+function replaceSequentialColors(
+  spec: string,
+  theme: Theme,
+  elementTheme: string
+): string {
+  // All the placeholder constants defined here are matching the placeholders in the python implementation.
+  const SEQUENTIAL_0 = "#000011"
+  const SEQUENTIAL_1 = "#000012"
+  const SEQUENTIAL_2 = "#000013"
+  const SEQUENTIAL_3 = "#000014"
+  const SEQUENTIAL_4 = "#000015"
+  const SEQUENTIAL_5 = "#000016"
+  const SEQUENTIAL_6 = "#000017"
+  const SEQUENTIAL_7 = "#000018"
+  const SEQUENTIAL_8 = "#000019"
+  const SEQUENTIAL_9 = "#000020"
+
+  if (elementTheme === "streamlit") {
+    const sequentialColors = getSequentialColorsArray(theme)
+    spec = spec.replaceAll(SEQUENTIAL_0, sequentialColors[0])
+    spec = spec.replaceAll(SEQUENTIAL_1, sequentialColors[1])
+    spec = spec.replaceAll(SEQUENTIAL_2, sequentialColors[2])
+    spec = spec.replaceAll(SEQUENTIAL_3, sequentialColors[3])
+    spec = spec.replaceAll(SEQUENTIAL_4, sequentialColors[4])
+    spec = spec.replaceAll(SEQUENTIAL_5, sequentialColors[5])
+    spec = spec.replaceAll(SEQUENTIAL_6, sequentialColors[6])
+    spec = spec.replaceAll(SEQUENTIAL_7, sequentialColors[7])
+    spec = spec.replaceAll(SEQUENTIAL_8, sequentialColors[8])
+    spec = spec.replaceAll(SEQUENTIAL_9, sequentialColors[9])
+  } else {
+    // Default plotly colors
+    spec = spec.replaceAll(SEQUENTIAL_0, "#0d0887")
+    spec = spec.replaceAll(SEQUENTIAL_1, "#46039f")
+    spec = spec.replaceAll(SEQUENTIAL_2, "#7201a8")
+    spec = spec.replaceAll(SEQUENTIAL_3, "#9c179e")
+    spec = spec.replaceAll(SEQUENTIAL_4, "#bd3786")
+    spec = spec.replaceAll(SEQUENTIAL_5, "#d8576b")
+    spec = spec.replaceAll(SEQUENTIAL_6, "#ed7953")
+    spec = spec.replaceAll(SEQUENTIAL_7, "#fb9f3a")
+    spec = spec.replaceAll(SEQUENTIAL_8, "#fdca26")
+    spec = spec.replaceAll(SEQUENTIAL_9, "#f0f921")
+  }
+  return spec
+}
+
+function replaceDivergingColors(
+  spec: string,
+  theme: Theme,
+  elementTheme: string
+): string {
+  // All the placeholder constants defined here are matching the placeholders in the python implementation.
+  const DIVERGING_0 = "#000021"
+  const DIVERGING_1 = "#000022"
+  const DIVERGING_2 = "#000023"
+  const DIVERGING_3 = "#000024"
+  const DIVERGING_4 = "#000025"
+  const DIVERGING_5 = "#000026"
+  const DIVERGING_6 = "#000027"
+  const DIVERGING_7 = "#000028"
+  const DIVERGING_8 = "#000029"
+  const DIVERGING_9 = "#000030"
+  const DIVERGING_10 = "#000031"
+
+  if (elementTheme === "streamlit") {
+    const divergingColors = getDivergingColorsArray(theme)
+    spec = spec.replaceAll(DIVERGING_0, divergingColors[0])
+    spec = spec.replaceAll(DIVERGING_1, divergingColors[1])
+    spec = spec.replaceAll(DIVERGING_2, divergingColors[2])
+    spec = spec.replaceAll(DIVERGING_3, divergingColors[3])
+    spec = spec.replaceAll(DIVERGING_4, divergingColors[4])
+    spec = spec.replaceAll(DIVERGING_5, divergingColors[5])
+    spec = spec.replaceAll(DIVERGING_6, divergingColors[6])
+    spec = spec.replaceAll(DIVERGING_7, divergingColors[7])
+    spec = spec.replaceAll(DIVERGING_8, divergingColors[8])
+    spec = spec.replaceAll(DIVERGING_9, divergingColors[9])
+    spec = spec.replaceAll(DIVERGING_10, divergingColors[10])
+  } else {
+    // Default plotly colors
+    spec = spec.replaceAll(DIVERGING_0, "#8e0152")
+    spec = spec.replaceAll(DIVERGING_1, "#c51b7d")
+    spec = spec.replaceAll(DIVERGING_2, "#de77ae")
+    spec = spec.replaceAll(DIVERGING_3, "#f1b6da")
+    spec = spec.replaceAll(DIVERGING_4, "#fde0ef")
+    spec = spec.replaceAll(DIVERGING_5, "#f7f7f7")
+    spec = spec.replaceAll(DIVERGING_6, "#e6f5d0")
+    spec = spec.replaceAll(DIVERGING_7, "#b8e186")
+    spec = spec.replaceAll(DIVERGING_8, "#7fbc41")
+    spec = spec.replaceAll(DIVERGING_9, "#4d9221")
+    spec = spec.replaceAll(DIVERGING_10, "#276419")
+  }
+  return spec
+}
+
+/**
+ * Because Template.layout doesn't affect the go(plotly.graph_objects) graphs,
+ * we use this method to specifically replace these graph properties.
+ * */
+function replaceGOSpecificColors(spec: string, theme: Theme): string {
+  // All the placeholder constants defined here are matching the placeholders in the python implementation.
+  const INCREASING = "#000032"
+  const DECREASING = "#000033"
+  const TOTAL = "#000034"
+
+  const GRAY_30 = "#000035"
+  const GRAY_70 = "#000036"
+  const GRAY_90 = "#000037"
+  const BG_COLOR = "#000038"
+  const FADED_TEXT_05 = "#000039"
+  const BG_MIX = "#000040"
+
+  spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
+  spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
+  spec = spec.replaceAll(
+    TOTAL,
+    hasLightBackgroundColor(theme) ? theme.colors.blue80 : theme.colors.blue40
+  )
+
+  spec = spec.replaceAll(GRAY_30, getGray30(theme))
+  spec = spec.replaceAll(GRAY_70, getGray70(theme))
+  spec = spec.replaceAll(GRAY_90, getGray90(theme))
+
+  spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
+  spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
+  spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
+  return spec
+}
+
+export function replaceTemporaryColors(
+  spec: string,
+  theme: Theme,
+  elementTheme: string
+): string {
+  spec = replaceGOSpecificColors(spec, theme)
+  spec = replaceCategoricalColors(spec, theme, elementTheme)
+  spec = replaceSequentialColors(spec, theme, elementTheme)
+  spec = replaceDivergingColors(spec, theme, elementTheme)
+  return spec
 }
 
 /**
@@ -586,8 +401,6 @@ export function applyStreamlitThemeTemplateData(
 export function applyStreamlitTheme(spec: any, theme: Theme): void {
   try {
     applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
-    applyStreamlitThemeTemplateData(spec.layout.template.data, theme)
-    applyStreamlitThemeData(spec.data, theme)
   } catch (e) {
     const err = ensureError(e)
     logError(err)

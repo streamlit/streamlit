@@ -19,6 +19,7 @@ import { shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import UIButton from "src/components/shared/Button"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import { Button as ButtonProto } from "src/autogen/proto"
 import Button, { Props } from "./Button"
@@ -66,9 +67,11 @@ describe("Button widget", () => {
     const wrapper = shallow(<Button {...getProps()} />)
 
     const wrappedUIButton = wrapper.find(UIButton)
+    const wrappedButtonLabel = wrappedUIButton.find(StreamlitMarkdown)
 
     expect(wrappedUIButton.length).toBe(1)
-    expect(wrappedUIButton.props().children).toBe(getProps().element.label)
+    expect(wrappedButtonLabel.props().source).toBe(getProps().element.label)
+    expect(wrappedButtonLabel.props().isButton).toBe(true)
   })
 
   describe("UIButton props should work", () => {

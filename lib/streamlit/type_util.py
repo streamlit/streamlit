@@ -206,6 +206,7 @@ _NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
+_PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -242,6 +243,13 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
 
+def is_snowpark_or_pyspark_data_object(obj: object) -> bool:
+    """True if if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
+    True when obj is a list which contains snowflake.snowpark.row.Row or True when obj is of type pyspark.sql.dataframe.DataFrame
+    False otherwise"""
+    return is_snowpark_data_object(obj) or is_pyspark_data_object(obj)
+
+
 def is_snowpark_data_object(obj: object) -> bool:
     """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row,
@@ -257,6 +265,15 @@ def is_snowpark_data_object(obj: object) -> bool:
     if not hasattr(obj[0], "__class__"):
         return False
     return is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
+
+
+def is_pyspark_data_object(obj: object) -> bool:
+    """True if obj is of type pyspark.sql.dataframe.DataFrame"""
+    return (
+        is_type(obj, _PYSPARK_DF_TYPE_STR)
+        and hasattr(obj, "toPandas")
+        and callable(getattr(obj, "toPandas"))
+    )
 
 
 def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
@@ -455,8 +472,15 @@ def convert_anything_to_df(
     if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
         return pd.DataFrame([])
 
-    if is_type(df, _SNOWPARK_DF_TYPE_STR) or is_type(df, _SNOWPARK_TABLE_TYPE_STR):
-        df = pd.DataFrame(df.take(max_unevaluated_rows))
+    if (
+        is_type(df, _SNOWPARK_DF_TYPE_STR)
+        or is_type(df, _SNOWPARK_TABLE_TYPE_STR)
+        or is_type(df, _PYSPARK_DF_TYPE_STR)
+    ):
+        if is_type(df, _PYSPARK_DF_TYPE_STR):
+            df = df.limit(max_unevaluated_rows).toPandas()
+        else:
+            df = pd.DataFrame(df.take(max_unevaluated_rows))
         if df.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
@@ -503,14 +527,14 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
 
     Parameters
     ----------
-    obj : list, tuple, numpy.ndarray, pandas.Series, pandas.DataFrame, snowflake.snowpark.dataframe.DataFrame or snowflake.snowpark.table.Table
+    obj : list, tuple, numpy.ndarray, pandas.Series, pandas.DataFrame, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame or snowflake.snowpark.table.Table
 
     Returns
     -------
     iterable
 
     """
-    if is_snowpark_data_object(obj):
+    if is_snowpark_or_pyspark_data_object(obj):
         obj = convert_anything_to_df(obj)
 
     if is_dataframe(obj):

@@ -16,6 +16,7 @@
 
 import React, { ComponentType } from "react"
 import { mount } from "src/lib/test_util"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { StatelessAccordion } from "baseui/accordion"
 import withExpandable, { Props } from "./withExpandable"
 
@@ -36,6 +37,17 @@ describe("withExpandable HOC", () => {
     // @ts-ignore
     const wrapper = mount(<WithHoc {...props} />)
     expect(wrapper.find(StatelessAccordion).exists()).toBe(true)
+  })
+
+  it("renders expander label as expected", () => {
+    const props = getProps()
+    const WithHoc = withExpandable(testComponent)
+    // @ts-ignore
+    const wrapper = mount(<WithHoc {...props} />)
+    const wrappedExpandLabel = wrapper.find(StreamlitMarkdown)
+
+    expect(wrappedExpandLabel.props().source).toBe(getProps().label)
+    expect(wrappedExpandLabel.props().isLabel).toBe(true)
   })
 
   it("should render a expanded component", () => {

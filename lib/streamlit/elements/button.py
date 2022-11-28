@@ -77,6 +77,8 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, and Emojis.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -168,6 +170,8 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, and Emojis.
         data : str or bytes or file
             The contents of the file to be downloaded. See example below for
             caching techniques to avoid recomputing this data unnecessarily.

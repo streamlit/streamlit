@@ -15,7 +15,7 @@ on:
         type: string
 
 # Avoid duplicate workflows on same branch
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-cypress
   cancel-in-progress: true
 
@@ -25,17 +25,17 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     strategy:
       fail-fast: false
       matrix:
-        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 ]
-    
+        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
@@ -58,7 +58,7 @@ jobs:
           echo '[mapbox]' >  ~/.streamlit/config.toml
           MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]') \
             && echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
-          
+
           echo '[general]' >  ~/.streamlit/credentials.toml
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
       - name: Cypress Tests
@@ -67,16 +67,31 @@ jobs:
         run: |
           js_specs=(e2e/specs/*)
           # get how many specs to be split up into 21 runs
-          (( interval=(${#js_specs[@]}+21-1)/21 ))
+          (( interval=(${#js_specs[@]})/21 ))
           if [ "$CURRENT_RUN" -eq 1 ]
           then
             startIndex=0
           else
             (( startIndex = (${CURRENT_RUN} - 1) * ${interval} ))
           fi
-          echo "Specs tested in this job:"
-          echo "${js_specs[@]:${startIndex}:${interval}}"
-          scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
+          # ensure no blank specs list (which causes every spec to run)
+          if [[ "${js_specs[@]:${startIndex}:${interval}}" != "" ]]
+          then
+            echo "Specs tested in this job:"
+            echo "${js_specs[@]:${startIndex}:${interval}}"
+            scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
+          fi
+      - name: Check that all screenshot have been committed
+        run: |
+          set -x;
+
+          UNTRACKED_FILE_COUNT=$(git ls-files --others --exclude-standard | grep cypress | wc -l | bc -l || echo '0')
+          echo "Untracked files count: ${UNTRACKED_FILE_COUNT}"
+          if [[ "${UNTRACKED_FILE_COUNT}" -gt 0 ]]; then
+            echo "Untracked files:";
+            git ls-files --others --exclude-standard | grep cypress;
+            exit 1;
+          fi
       - name: Store Videos
         uses: actions/upload-artifact@v3
         if: always()
@@ -99,7 +114,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     steps:
       - name: Check Cypress test matrix status

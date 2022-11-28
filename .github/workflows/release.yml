@@ -1,18 +1,42 @@
 name: Build Release
 
-on: 
+on:
   # Manual Trigger GH CLI -> gh workflow run release.yml --ref <tag>
   workflow_dispatch:
 
 jobs:
+  run-python-tests:
+    uses: ./.github/workflows/python-versions.yml
+    with:
+      ref: ${{ github.ref_name }}
+    secrets:
+      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
+
+  run-javascript-tests:
+    uses: ./.github/workflows/js-tests.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-py-prod-deps-smoke-test:
+    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
+    with:
+      ref: ${{ github.ref_name }}
+
+  run-cypress-tests:
+    uses: ./.github/workflows/cypress.yml
+    with:
+      ref: ${{ github.ref_name }}
+
   build-release:
     runs-on: ubuntu-latest
 
+    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
-    permissions: 
+    permissions:
     # Additional permission needed to generate release
       contents: write
 
@@ -41,7 +65,7 @@ jobs:
           pip install requests
           echo "GH_PR_BRANCH=$(python scripts/get_release_branch.py)" >> $GITHUB_ENV
       - name: Ensure that version tag matches branch version
-        env: 
+        env:
           GH_PR_BRANCH: ${{ env.GH_PR_BRANCH }}
         run: |
           BRANCH_VERSION=$(echo "$GH_PR_BRANCH" | sed 's/release\///' )
@@ -102,11 +126,11 @@ jobs:
           python scripts/create_release.py
       - name: Successful Release Slack Message
         if: ${{ success() }}
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py release success
       - name: Failed Release Slack Message
         if: ${{ failure() }}
-        env: 
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: python scripts/slack_notifications.py release failure

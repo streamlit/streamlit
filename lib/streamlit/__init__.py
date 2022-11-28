@@ -52,8 +52,6 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from typing import Any as _Any
-
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.caching import (
@@ -207,12 +205,3 @@ experimental_set_query_params = _set_query_params
 experimental_show = _show
 experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
-
-
-@_gather_metrics("magic")
-def _transparent_write(*args: _Any) -> _Any:
-    """This is just st.write, but returns the arguments you passed to it."""
-    write(*args)
-    if len(args) == 1:
-        return args[0]
-    return args

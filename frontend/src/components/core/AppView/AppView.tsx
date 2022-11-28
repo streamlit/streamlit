@@ -147,7 +147,7 @@ function AppView(props: AppViewProps): ReactElement {
         {renderBlock(elements.main)}
         <StyledAppViewFooter isEmbedded={embedded} isWideMode={wideMode}>
           Made with{" "}
-          <StyledAppViewFooterLink href="//streamlit.io">
+          <StyledAppViewFooterLink href="//streamlit.io" target="_blank">
             Streamlit
           </StyledAppViewFooterLink>
         </StyledAppViewFooter>

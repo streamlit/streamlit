@@ -40,8 +40,15 @@ all-devel: init develop pre-commit-install
 	@echo ""
 
 .PHONY: mini-devel
-# Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
+# Get minimal dependencies for development and install Streamlit into Python
+# environment -- but do not build the frontend.
 mini-devel: mini-init develop pre-commit-install
+
+.PHONY: build-deps
+# An even smaller installation than mini-devel. Installs the bare minimum
+# necessary to build Streamlit (by leaving out some dependencies necessary for
+# the development process). Does not build the frontend.
+build-deps: mini-init develop
 
 .PHONY: init
 # Install all Python and JS dependencies.
@@ -116,6 +123,16 @@ pytest:
 			-l tests/ \
 			$(PYTHON_MODULES)
 
+# Run Python integration tests for snowflake.
+pytest-snowflake:
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			--require-snowflake \
+			-l tests/ \
+			$(PYTHON_MODULES)
+
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
@@ -156,7 +173,7 @@ distribution:
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
-package: mini-devel frontend distribution
+package: build-deps frontend distribution
 
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
@@ -166,12 +183,11 @@ conda-distribution:
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
 	# NOTE: Running the following command requires both conda and conda-build to
 	# be installed.
-	ST_CONDA_BUILD=1 GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
+	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: mini-devel frontend conda-distribution
-
+conda-package: build-deps frontend conda-distribution
 
 .PHONY: clean
 # Remove all generated files.
@@ -322,16 +338,19 @@ distribute:
 # Rebuild the NOTICES file.
 notices:
 	cd frontend; \
-		yarn licenses generate-disclaimer --silent --production > ../NOTICES
-	# NOTE: This file may need to be manually edited. Look at the Git diff and
-	# the parts that should be edited will be obvious.
+		yarn licenses generate-disclaimer --silent --production --ignore-platform > ../NOTICES
 
-	./scripts/append_license.sh frontend/src/assets/font/Source_Code_Pro/Source-Code-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/font/Source_Sans_Pro/Source-Sans-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/font/Source_Serif_Pro/Source-Serif-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Noto-Emoji-Font.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/public/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/public/vendor/viz/viz.js-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/Segment-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
 # Update the license header on all source files.

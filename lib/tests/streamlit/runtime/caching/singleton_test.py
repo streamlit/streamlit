@@ -16,21 +16,32 @@
 
 import threading
 import unittest
+from typing import Any
 from unittest.mock import patch
 
 from pympler.asizeof import asizeof
 
 import streamlit as st
 from streamlit.runtime.caching import get_singleton_stats_provider, singleton_decorator
-from streamlit.runtime.caching.cache_utils import CachedResult
+from streamlit.runtime.caching.cache_errors import CacheType
+from streamlit.runtime.caching.cache_utils import MultiCacheResults
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
+from tests.streamlit.runtime.caching.common_cache_test import (
+    as_cached_result as _as_cached_result,
+)
+from tests.testutil import create_mock_script_run_ctx
 
 
-def as_cached_result(value):
-    return CachedResult(value, [], st._main.id, st.sidebar.id)
+def as_cached_result(value: Any) -> MultiCacheResults:
+    return _as_cached_result(value, CacheType.MEMO)
 
 
 class SingletonTest(unittest.TestCase):
+    def setUp(self) -> None:
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
     def tearDown(self):
         st.experimental_singleton.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
@@ -64,6 +75,9 @@ class SingletonStatsProviderTest(unittest.TestCase):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
         st.experimental_singleton.clear()
+
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self):
         st.experimental_singleton.clear()

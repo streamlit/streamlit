@@ -155,14 +155,22 @@ const NumberInput = React.lazy(
   () => import("src/components/widgets/NumberInput/")
 )
 
-interface ElementNodeRendererProps extends BaseBlockProps {
+export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
   width?: number
 }
 
+interface RawElementNodeRendererProps extends ElementNodeRendererProps {
+  isStale: boolean
+}
+
+function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
+  return isStale ? <></> : component
+}
+
 // Render ElementNodes (i.e. leaf nodes).
 const RawElementNodeRenderer = (
-  props: ElementNodeRendererProps
+  props: RawElementNodeRendererProps
 ): ReactElement => {
   const { node } = props
 
@@ -214,7 +222,10 @@ const RawElementNodeRenderer = (
       return <Audio width={width} element={node.element.audio as AudioProto} />
 
     case "balloons":
-      return <Balloons scriptRunId={props.scriptRunId} />
+      return hideIfStale(
+        props.isStale,
+        <Balloons scriptRunId={props.scriptRunId} />
+      )
 
     case "arrowTable":
       return <ArrowTable element={node.quiverElement as Quiver} />
@@ -553,7 +564,10 @@ const RawElementNodeRenderer = (
     }
 
     case "snow":
-      return <Snow scriptRunId={props.scriptRunId} />
+      return hideIfStale(
+        props.isStale,
+        <Snow scriptRunId={props.scriptRunId} />
+      )
 
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
@@ -639,7 +653,7 @@ const ElementNodeRenderer = (
               <Alert body="Loading..." kind={Kind.INFO} width={width} />
             }
           >
-            <RawElementNodeRenderer {...props} />
+            <RawElementNodeRenderer {...props} isStale={isStale} />
           </Suspense>
         </ErrorBoundary>
       </StyledElementContainer>
