@@ -42,7 +42,9 @@ st.plotly_chart(fig_bubble, theme=None)
 
 # Bubble Chart
 # Tests Discrete coloring with streamlit theme
-st.plotly_chart(fig_bubble, theme="streamlit")
+# Tests use container width when updating layout
+fig_bubble.update_layout(height=300, width=300)
+st.plotly_chart(fig_bubble, use_container_width=True, theme="streamlit")
 
 # Candlestick Chart
 open_data_candlestick = [33.0, 33.3, 33.5, 33.0, 34.1]
@@ -190,7 +192,7 @@ fig = go.Figure(
         branchvalues="total",
     )
 )
-fig.update_layout(margin=dict(t=10, l=100, r=100, b=110), width=700, height=700)
+fig.update_layout(margin=dict(t=10, l=100, r=100, b=110))
 st.plotly_chart(fig, theme="streamlit")
 
 # Separate template Customization Chart
@@ -221,6 +223,8 @@ fig.update_xaxes(visible=False, fixedrange=True)
 fig.update_yaxes(visible=False, fixedrange=True)
 fig.update_layout(annotations=[], overwrite=True)
 fig.update_layout(showlegend=False, margin=dict(t=10, l=10, b=10, r=10))
-st.plotly_chart(fig, config=dict(displayModeBar=False), theme=None)
+st.plotly_chart(
+    fig, config=dict(displayModeBar=False), use_container_width=False, theme=None
+)
 
 st.plotly_chart(fig, use_container_width=True, theme=None)
