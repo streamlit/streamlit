@@ -23,7 +23,7 @@ import threading
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator, Optional, Set, Tuple, Union
+from typing import Any, Callable, Iterator, Optional, Union
 
 from google.protobuf.message import Message
 from typing_extensions import Protocol, runtime_checkable
@@ -179,7 +179,7 @@ class MultiCacheResults:
     widget-derived cache key to the final results of executing the function.
     """
 
-    widget_ids: Set[str]
+    widget_ids: set[str]
     results: dict[str, CachedResult]
 
     def get_current_widget_key(
@@ -564,7 +564,7 @@ class CacheMessagesCallStack(threading.local):
 
     def __init__(self, cache_type: CacheType):
         self._cached_message_stack: list[list[MsgData]] = []
-        self._seen_dg_stack: list[Set[str]] = []
+        self._seen_dg_stack: list[set[str]] = []
         self._most_recent_messages: list[MsgData] = []
         self._registered_metadata: Optional[WidgetMetadata[Any]] = None
         self._media_data: list[MediaMsgData] = []
@@ -707,7 +707,7 @@ def _make_value_key(
 
     # Create a (name, value) list of all *args and **kwargs passed to the
     # function.
-    arg_pairs: list[Tuple[Optional[str], Any]] = []
+    arg_pairs: list[tuple[Optional[str], Any]] = []
     for arg_idx in range(len(args)):
         arg_name = _get_positional_arg_name(func, arg_idx)
         arg_pairs.append((arg_name, args[arg_idx]))
@@ -805,7 +805,7 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
     return None
 
 
-def _make_widget_key(widgets: list[Tuple[str, Any]], cache_type: CacheType) -> str:
+def _make_widget_key(widgets: list[tuple[str, Any]], cache_type: CacheType) -> str:
     """
     widget_id + widget_value pair -> hash
     """
