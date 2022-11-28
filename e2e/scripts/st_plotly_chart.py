@@ -124,7 +124,7 @@ fig_waterfall = go.Figure(
 fig_waterfall.update_layout(
     title="Profit and loss statement 2018", height=300, width=300, showlegend=True
 )
-st.plotly_chart(fig_waterfall, use_container_width=True, theme="streamlit")
+st.plotly_chart(fig_waterfall, use_container_width=False, theme="streamlit")
 
 # Ternary Chart
 df = px.data.election()
@@ -172,8 +172,6 @@ fig = px.scatter_polar(
 st.plotly_chart(fig, theme="streamlit")
 
 # Layout Customization Chart
-import plotly.graph_objects as go
-
 fig = go.Figure(
     go.Sunburst(
         labels=[
