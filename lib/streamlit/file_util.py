@@ -125,11 +125,14 @@ def get_assets_dir():
 
 
 def sanitize_user_static_path(user_path):
-    full_path = os.path.realpath(os.path.join(os.getcwd(), user_path))
     main_script_directory = os.getcwd()
+    full_path = os.path.realpath(os.path.abspath(user_path))
+
+    pages_directory = os.path.abspath("pages")
+    config_directory = os.path.abspath(CONFIG_FOLDER_NAME)
 
     if not os.path.isdir(full_path):
-        raise RuntimeError(f"Directory '{full_path}' does not exist")
+        raise RuntimeError(f"Directory '{full_path}' does not exist.")
 
     if (
         os.path.commonprefix([full_path, main_script_directory])
@@ -145,10 +148,16 @@ def sanitize_user_static_path(user_path):
             "For security reasons we dont allow expose whole " "project directory"
         )
 
-    if os.path.abspath(CONFIG_FOLDER_NAME) == full_path:
+    if os.path.commonpath([pages_directory, full_path]) == pages_directory:
         raise RuntimeError(
-            "STATIC FOLDER COULD NOT BE .streamlit because of security, "
-            "this could lead to secrets and configs exposure."
+            f"Static file dir couldn't be 'pages' or inside 'pages' "
+            f"directory. Current  specified directory {user_path}"
+        )
+
+    if os.path.commonpath([config_directory, full_path]) == config_directory:
+        raise RuntimeError(
+            "STATIC FOLDER COULD NOT BE .streamlit or inside .streamlit because of "
+            "security, this could lead to secrets and configs exposure."
         )
 
     return full_path
