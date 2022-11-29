@@ -42,7 +42,7 @@ st.plotly_chart(fig_bubble, theme=None)
 
 # Bubble Chart
 # Tests Discrete coloring with streamlit theme
-# Tests use container width when updating layout
+# check that use_container_width sets width even when height and width are specified
 fig_bubble.update_layout(height=300, width=300)
 st.plotly_chart(fig_bubble, use_container_width=True, theme="streamlit")
 
@@ -126,8 +126,8 @@ fig_waterfall = go.Figure(
 fig_waterfall.update_layout(
     title="Profit and loss statement 2018", height=300, width=300, showlegend=True
 )
-# Check that height and width are correct (300x300)
-st.plotly_chart(fig_waterfall, theme="streamlit")
+# check that use_container_width=False doesn't set width when height and width are specified
+st.plotly_chart(fig_waterfall, use_container_width=False, theme="streamlit")
 
 # Ternary Chart
 df = px.data.election()
@@ -224,6 +224,9 @@ fig.update_xaxes(visible=False, fixedrange=True)
 fig.update_yaxes(visible=False, fixedrange=True)
 fig.update_layout(annotations=[], overwrite=True)
 fig.update_layout(showlegend=False, margin=dict(t=10, l=10, b=10, r=10))
+
+# check that use_container_width=False doesn't set width when height and width are specified
 st.plotly_chart(fig, config=dict(displayModeBar=False), theme=None)
 
+# check that use_container_width sets width even when height and width are specified
 st.plotly_chart(fig, use_container_width=True, theme=None)
