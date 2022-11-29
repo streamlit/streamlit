@@ -27,8 +27,8 @@ from streamlit.errors import (
 class CacheType(enum.Enum):
     """The function cache types we implement."""
 
-    DATA = "MEMO"
-    RESOURCE = "SINGLETON"
+    DATA = "DATA"
+    RESOURCE = "RESOURCE"
 
 
 def get_decorator_api_name(cache_type: CacheType) -> str:
