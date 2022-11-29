@@ -34,9 +34,9 @@ class CacheType(enum.Enum):
 def get_decorator_api_name(cache_type: CacheType) -> str:
     """Return the name of the public decorator API for the given CacheType."""
     if cache_type is CacheType.DATA:
-        return "experimental_memo"
+        return "cache_data"
     if cache_type is CacheType.RESOURCE:
-        return "experimental_singleton"
+        return "cache_resource"
     raise RuntimeError(f"Unrecognized CacheType '{cache_type}'")
 
 
