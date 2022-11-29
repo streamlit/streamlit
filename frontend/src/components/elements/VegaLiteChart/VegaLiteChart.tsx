@@ -29,7 +29,6 @@ import { ensureError } from "src/lib/ErrorHandling"
 import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
-import { expressionInterpreter } from "vega-interpreter"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -284,13 +283,7 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
     const el = this.props.element
     const spec = this.generateSpec()
-    const options = {
-      // Adds interpreter support for Vega expressions that is compliant with CSP
-      ast: true,
-      expr: expressionInterpreter,
-    }
-
-    const { vgSpec, view, finalize } = await embed(this.element, spec, options)
+    const { vgSpec, view, finalize } = await embed(this.element, spec)
 
     this.vegaView = view
     this.vegaFinalizer = finalize
