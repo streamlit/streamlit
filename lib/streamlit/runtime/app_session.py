@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import asyncio
 import sys
 import uuid
@@ -78,7 +77,7 @@ class AppSession:
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
         user_info: Dict[str, Optional[str]],
-    ):
+    ) -> None:
         """Initialize the AppSession.
 
         Parameters
@@ -121,19 +120,13 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        self._local_sources_watcher = local_sources_watcher
-        self._local_sources_watcher.register_file_change_callback(
-            self._on_source_file_changed
-        )
-        self._stop_config_listener = config.on_config_parsed(
-            self._on_source_file_changed, force_connect=True
-        )
-        self._stop_pages_listener = source_util.register_pages_changed_callback(
-            self._on_pages_changed
-        )
+        self._local_sources_watcher: Optional[
+            LocalSourcesWatcher
+        ] = local_sources_watcher
+        self._stop_config_listener: Optional[Callable[[], bool]] = None
+        self._stop_pages_listener: Optional[Callable[[], bool]] = None
 
-        # The script should rerun when the `secrets.toml` file has been changed.
-        secrets_singleton._file_change_listener.connect(self._on_secrets_file_changed)
+        self._register_file_watchers()
 
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -148,6 +141,43 @@ class AppSession:
         self._debug_last_backmsg_id: Optional[str] = None
 
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
+
+    def __del__(self) -> None:
+        """Ensure that we call shutdown() when an AppSession is garbage collected."""
+        self.shutdown()
+
+    def _register_file_watchers(self) -> None:
+        if self._local_sources_watcher is None:
+            self._local_sources_watcher = LocalSourcesWatcher(
+                self._session_data.main_script_path
+            )
+
+        self._local_sources_watcher.register_file_change_callback(
+            self._on_source_file_changed
+        )
+        self._stop_config_listener = config.on_config_parsed(
+            self._on_source_file_changed, force_connect=True
+        )
+        self._stop_pages_listener = source_util.register_pages_changed_callback(
+            self._on_pages_changed
+        )
+        secrets_singleton._file_change_listener.connect(self._on_secrets_file_changed)
+
+    def _disconnect_file_watchers(self) -> None:
+        if self._local_sources_watcher is not None:
+            self._local_sources_watcher.close()
+        if self._stop_config_listener is not None:
+            self._stop_config_listener()
+        if self._stop_pages_listener is not None:
+            self._stop_pages_listener()
+
+        secrets_singleton._file_change_listener.disconnect(
+            self._on_secrets_file_changed
+        )
+
+        self._local_sources_watcher = None
+        self._stop_config_listener = None
+        self._stop_pages_listener = None
 
     def flush_browser_queue(self) -> List[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
@@ -175,8 +205,10 @@ class AppSession:
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
-            runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
-            runtime.get_instance().media_file_mgr.remove_orphaned_files()
+
+            if runtime.exists():
+                runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
+                runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -185,14 +217,10 @@ class AppSession:
                 self._scriptrunner.request_stop()
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
-            self._local_sources_watcher.close()
-            if self._stop_config_listener is not None:
-                self._stop_config_listener()
-            if self._stop_pages_listener is not None:
-                self._stop_pages_listener()
-            secrets_singleton._file_change_listener.disconnect(
-                self._on_secrets_file_changed
-            )
+
+            # Disconnect all file watchers if we haven't already, although we will have
+            # generally already done so by the time we get here.
+            self._disconnect_file_watchers()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
@@ -371,11 +399,6 @@ class AppSession:
         self._on_source_file_changed()
 
     def _on_pages_changed(self, _) -> None:
-        # TODO: Double-check the product behavior we want on this. In the spec,
-        # it says that we should notify the client of a pages dir change only
-        # if "run on save" is true, but I feel like always sending updates is
-        # quite reasonable behavior since the pages nav updating is not
-        # potentially disruptive like a script rerunning is.
         msg = ForwardMsg()
         _populate_app_pages(msg.pages_changed, self._session_data.main_script_path)
         self._enqueue_forward_msg(msg)
@@ -495,7 +518,8 @@ class AppSession:
                 # The script completed successfully: update our
                 # LocalSourcesWatcher to account for any source code changes
                 # that change which modules should be watched.
-                self._local_sources_watcher.update_watched_modules()
+                if self._local_sources_watcher:
+                    self._local_sources_watcher.update_watched_modules()
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
@@ -513,7 +537,8 @@ class AppSession:
                 ForwardMsg.FINISHED_EARLY_FOR_RERUN
             )
             self._enqueue_forward_msg(script_finished_msg)
-            self._local_sources_watcher.update_watched_modules()
+            if self._local_sources_watcher:
+                self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
             assert (

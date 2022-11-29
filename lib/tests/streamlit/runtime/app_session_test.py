@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+import gc
 import threading
 import unittest
 from asyncio import AbstractEventLoop
@@ -371,6 +372,83 @@ class AppSessionTest(unittest.TestCase):
         session._enqueue_forward_msg(msg)
 
         self.assertEqual(msg.debug_last_backmsg_id, "some backmsg id")
+
+    @patch("streamlit.runtime.app_session.config.on_config_parsed")
+    @patch("streamlit.runtime.app_session.source_util.register_pages_changed_callback")
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.connect"
+    )
+    def test_registers_file_watchers(
+        self,
+        patched_secrets_connect,
+        patched_register_pages_changed_callback,
+        patched_on_config_parsed,
+    ):
+        session = _create_test_session()
+
+        session._local_sources_watcher.register_file_change_callback.assert_called_once_with(
+            session._on_source_file_changed
+        )
+        patched_on_config_parsed.assert_called_once_with(
+            session._on_source_file_changed, force_connect=True
+        )
+        patched_register_pages_changed_callback.assert_called_once_with(
+            session._on_pages_changed
+        )
+        patched_secrets_connect.assert_called_once_with(
+            session._on_secrets_file_changed
+        )
+
+    def test_recreates_local_sources_watcher_if_none(self):
+        session = _create_test_session()
+        session._local_sources_watcher = None
+
+        session._register_file_watchers()
+        self.assertIsNotNone(session._local_sources_watcher)
+
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
+    )
+    def test_disconnect_file_watchers(self, patched_secrets_disconnect):
+        session = _create_test_session()
+
+        with patch.object(
+            session._local_sources_watcher, "close"
+        ) as patched_close_local_sources_watcher, patch.object(
+            session, "_stop_config_listener"
+        ) as patched_stop_config_listener, patch.object(
+            session, "_stop_pages_listener"
+        ) as patched_stop_pages_listener:
+            session._disconnect_file_watchers()
+
+            patched_close_local_sources_watcher.assert_called_once()
+            patched_stop_config_listener.assert_called_once()
+            patched_stop_pages_listener.assert_called_once()
+            patched_secrets_disconnect.assert_called_once_with(
+                session._on_secrets_file_changed
+            )
+
+            self.assertIsNone(session._local_sources_watcher)
+            self.assertIsNone(session._stop_config_listener)
+            self.assertIsNone(session._stop_pages_listener)
+
+    def test_disconnect_file_watchers_removes_refs(self):
+        """Test that calling _disconnect_file_watchers on the AppSession
+        removes references to it so it is eligible to be garbage collected after the
+        method is called.
+        """
+        session = _create_test_session()
+
+        # Various listeners should have references to session file/pages/secrets changed
+        # handlers.
+        self.assertGreater(len(gc.get_referrers(session)), 0)
+
+        session._disconnect_file_watchers()
+        # Ensure that we don't count refs to session from an object that would have been
+        # garbage collected along with it.
+        gc.collect(2)
+
+        self.assertEqual(len(gc.get_referrers(session)), 0)
 
 
 def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
