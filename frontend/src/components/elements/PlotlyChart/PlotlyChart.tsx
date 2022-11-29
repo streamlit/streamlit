@@ -92,6 +92,8 @@ function renderFigure({
   const [spec, setSpec] = useState(generateSpec())
 
   // Update config and spec references iff the theme or props change
+  // Use useLayoutEffect to synchronize rerender by updating state
+  // More information: https://kentcdodds.com/blog/useeffect-vs-uselayouteffect
   useLayoutEffect(() => {
     setConfig(JSON.parse(figure.config))
     setSpec(generateSpec())
