@@ -20,7 +20,7 @@ describe("st.plotly_chart", () => {
   });
 
   beforeEach(() => {
-    cy.get(".element-container").should("have.length", 13);
+    cy.get(".element-container").should("have.length", 15);
   });
 
   it("displays a plotly chart", () => {
