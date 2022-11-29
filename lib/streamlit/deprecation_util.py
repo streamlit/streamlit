@@ -103,13 +103,34 @@ def object_prerelease_graduation_warning(
         support for the beta_ prefix.
     """
 
-    has_shown_graduation_warning = False
+    return _create_deprecated_object_wrapper(
+        obj, lambda: _show_api_graduation_warning(api_type, obj_name, removal_date)
+    )
 
-    def show_wrapped_obj_warning():
-        nonlocal has_shown_graduation_warning
-        if not has_shown_graduation_warning:
-            has_shown_graduation_warning = True
-            _show_api_graduation_warning(api_type, obj_name, removal_date)
+
+def deprecate_object_with_console_warning(obj: TObj, warning: str) -> TObj:
+    """Create a wrapper for an object that has been deprecated. The first
+    time any of the object's properties or functions is accessed, the
+    given warning text will be written to the console.
+    """
+    return _create_deprecated_object_wrapper(obj, lambda: print(warning))
+
+
+def _create_deprecated_object_wrapper(
+    obj: TObj, show_warning: Callable[[], Any]
+) -> TObj:
+    """Create a wrapper for an object that has been deprecated. The first
+    time one of the object's properties or functions is accessed, the
+    given `show_warning` callback will be called.
+    """
+    has_shown_warning = False
+
+    def maybe_show_warning() -> None:
+        # Call `show_warning` if it hasn't already been called once.
+        nonlocal has_shown_warning
+        if not has_shown_warning:
+            has_shown_warning = True
+            show_warning()
 
     class Wrapper:
         def __init__(self, obj: object):
@@ -131,7 +152,7 @@ def object_prerelease_graduation_warning(
             if attr in self.__dict__:
                 return getattr(self, attr)
 
-            show_wrapped_obj_warning()
+            maybe_show_warning()
             return getattr(self._obj, attr)
 
         @staticmethod
@@ -148,7 +169,7 @@ def object_prerelease_graduation_warning(
         @staticmethod
         def _make_magic_function_proxy(name):
             def proxy(self, *args):
-                show_wrapped_obj_warning()
+                maybe_show_warning()
                 return getattr(self._obj, name)
 
             return proxy
