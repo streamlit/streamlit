@@ -57,6 +57,8 @@ from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
+    experimental_singleton as _experimental_singleton,
+    experimental_memo as _experimental_memo,
 )
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
@@ -191,6 +193,10 @@ set_option = _gather_metrics("set_option", _config.set_user_option)
 # Session State
 session_state = _SessionStateProxy()
 
+# Caching
+cache_data = _cache_data
+cache_resource = _cache_resource
+
 # Beta APIs
 beta_container = _gather_metrics("beta_container", _main.beta_container)
 beta_expander = _gather_metrics("beta_expander", _main.beta_expander)
@@ -198,8 +204,8 @@ beta_columns = _gather_metrics("beta_columns", _main.beta_columns)
 
 # Experimental APIs
 experimental_user = _UserInfoProxy()
-experimental_singleton = _cache_resource
-experimental_memo = _cache_data
+experimental_singleton = _experimental_singleton
+experimental_memo = _experimental_memo
 experimental_get_query_params = _get_query_params
 experimental_set_query_params = _set_query_params
 experimental_show = _show

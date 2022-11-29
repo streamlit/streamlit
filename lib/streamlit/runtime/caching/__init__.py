@@ -17,6 +17,7 @@ from typing import Any, Iterator, Union
 
 from google.protobuf.message import Message
 
+from streamlit.deprecation_util import deprecate_object_with_console_warning
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_data_api import (
     CACHE_DATA_CALL_STACK,
@@ -107,3 +108,14 @@ from streamlit.runtime.caching.cache_resource_api import (
 # Create and export public API singletons.
 cache_data = CacheDataAPI()
 cache_resource = CacheResourceAPI()
+
+# Deprecated singletons
+MEMO_DEPRECATION_TEXT = "st.experimental_singleton was renamed to st.cache_resource. Please use this new command. The behavior did not change, so you can just replace it. More information here."
+SINGLETON_DEPRECATION_TEXT = "st.experimental_memo was renamed to st.cache_data. Please use this new command. The behavior did not change, so you can just replace it. More information here. "
+
+experimental_memo = deprecate_object_with_console_warning(
+    cache_data, MEMO_DEPRECATION_TEXT
+)
+experimental_singleton = deprecate_object_with_console_warning(
+    cache_resource, SINGLETON_DEPRECATION_TEXT
+)
