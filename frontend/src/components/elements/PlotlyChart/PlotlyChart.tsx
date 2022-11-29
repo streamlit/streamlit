@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useState } from "react"
+import React, { ReactElement, useLayoutEffect, useState } from "react"
 import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import {
@@ -92,7 +92,7 @@ function renderFigure({
   const [spec, setSpec] = useState(generateSpec())
 
   // Update config and spec references iff the theme or props change
-  useEffect(() => {
+  useLayoutEffect(() => {
     setConfig(JSON.parse(figure.config))
     setSpec(generateSpec())
   }, [element, theme, height, width])
