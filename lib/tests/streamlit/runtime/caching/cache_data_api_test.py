@@ -27,7 +27,7 @@ import streamlit as st
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.runtime.caching import cache_data_api
+from streamlit.runtime.caching import MEMO_DEPRECATION_TEXT, cache_data_api
 from streamlit.runtime.caching.cache_data_api import (
     get_cache_path,
     get_data_cache_stats_provider,
@@ -214,6 +214,30 @@ class CacheDataTest(unittest.TestCase):
         bar(0)
         self.assertEqual([0, 0, 0], foo_vals)
         self.assertEqual([0, 0], bar_vals)
+
+    @patch("builtins.print")
+    def test_deprecated_experimental_memo(self, mock_print: Mock):
+        """@st.experimental_memo is an alias for @st.cache_data, but it also
+        prints a deprecation warning to the console.
+        """
+
+        @st.experimental_memo
+        def memo_func():
+            return "ahoy!"
+
+        @st.cache_data
+        def cache_data_func():
+            return "ahoy!"
+
+        # Using the deprecated decorator produces a console warning once only.
+        self.assertEqual("ahoy!", memo_func())
+        self.assertEqual("ahoy!", memo_func())
+        mock_print.assert_called_once_with(MEMO_DEPRECATION_TEXT)
+
+        # Using the new decorator produces no warning.
+        mock_print.reset_mock()
+        self.assertEqual("ahoy!", cache_data_func())
+        mock_print.assert_not_called()
 
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
