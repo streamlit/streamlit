@@ -117,7 +117,6 @@ describe("PlotlyChart Element", () => {
       }
       const wrapper = mount(<PlotlyChart {...props} />)
 
-      // an explicit value because useContainerWidth is passed
       expect(wrapper.find(Plot).props().layout.width).toBeUndefined()
       expect(wrapper.find(Plot).props().layout.height).toBeUndefined()
     })
