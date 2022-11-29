@@ -646,7 +646,7 @@ _create_option(
 _create_option(
     "server.enableCORS",
     description="""
-    Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+    Enables support for Cross-Origin Resource Sharing (CORS) protection, for added security.
 
     Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
     `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.

@@ -14,7 +14,10 @@
 
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 
-from streamlit.beta_util import function_beta_warning
+from streamlit.deprecation_util import (
+    PrereleaseAPIType,
+    function_prerelease_graduation_warning,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -215,8 +218,11 @@ class LayoutsMixin:
         Parameters
         ----------
         tabs : list of strings
-            Creates a tab for each string in the list. The string is used as the name of the tab.
-            The first tab is selected by default.
+            Creates a tab for each string in the list. The first tab is selected by default.
+            The string is used as the name of the tab and can optionally contain Markdown,
+            supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,
+            Emojis, and Links.
+
 
         Returns
         -------
@@ -302,7 +308,9 @@ class LayoutsMixin:
         Parameters
         ----------
         label : str
-            A string to use as the header for the expander.
+            A string to use as the header for the expander. The label can optionally
+            contain Markdown and supports the following elements: Bold, Italics,
+            Strikethroughs, Inline Code, Emojis, and Links.
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
@@ -362,6 +370,12 @@ class LayoutsMixin:
         return cast("DeltaGenerator", self)
 
     # Deprecated beta_ functions
-    beta_container = function_beta_warning(container, "2021-11-02")
-    beta_expander = function_beta_warning(expander, "2021-11-02")
-    beta_columns = function_beta_warning(columns, "2021-11-02")
+    beta_container = function_prerelease_graduation_warning(
+        PrereleaseAPIType.BETA, container, "2021-11-02"
+    )
+    beta_expander = function_prerelease_graduation_warning(
+        PrereleaseAPIType.BETA, expander, "2021-11-02"
+    )
+    beta_columns = function_prerelease_graduation_warning(
+        PrereleaseAPIType.BETA, columns, "2021-11-02"
+    )

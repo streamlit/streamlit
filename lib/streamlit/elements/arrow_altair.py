@@ -273,7 +273,7 @@ class ArrowAltairMixin:
         self,
         altair_chart: Chart,
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
+        theme: Union[None, Literal["streamlit"]] = None,
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -567,7 +567,7 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: Chart,
     use_container_width: bool = False,
-    theme: Union[None, Literal["streamlit"]] = "streamlit",
+    theme: Union[None, Literal["streamlit"]] = None,
     **kwargs: Any,
 ) -> None:
     """Marshall chart's data into proto."""

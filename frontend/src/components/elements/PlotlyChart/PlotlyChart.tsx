@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useState } from "react"
+import React, { ReactElement, useLayoutEffect, useState } from "react"
 import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import {
@@ -23,7 +23,11 @@ import {
 } from "src/autogen/proto"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
-import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
+import {
+  applyStreamlitTheme,
+  layoutWithThemeDefaults,
+  replaceTemporaryColors,
+} from "./CustomTheme"
 
 export interface PlotlyChartProps {
   width: number
@@ -58,10 +62,12 @@ function renderFigure({
 
   const theme: Theme = useTheme()
 
-  const generateSpec = (figure: FigureProto): any => {
-    const spec = JSON.parse(figure.spec)
-
-    const initialHeight = DEFAULT_HEIGHT
+  const generateSpec = (): any => {
+    const spec = JSON.parse(
+      replaceTemporaryColors(figure.spec, theme, element.theme)
+    )
+    const initialHeight = spec.layout.height
+    const initialWidth = spec.layout.width
 
     if (isFullScreen()) {
       spec.layout.width = width
@@ -69,7 +75,7 @@ function renderFigure({
     } else if (element.useContainerWidth) {
       spec.layout.width = width
     } else {
-      spec.layout.width = width
+      spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
     if (element.theme === "streamlit") {
@@ -83,12 +89,14 @@ function renderFigure({
   }
 
   const [config, setConfig] = useState(JSON.parse(figure.config))
-  const [spec, setSpec] = useState(generateSpec(figure))
+  const [spec, setSpec] = useState(generateSpec())
 
   // Update config and spec references iff the theme or props change
-  useEffect(() => {
+  // Use useLayoutEffect to synchronize rerender by updating state
+  // More information: https://kentcdodds.com/blog/useeffect-vs-uselayouteffect
+  useLayoutEffect(() => {
     setConfig(JSON.parse(figure.config))
-    setSpec(generateSpec(figure))
+    setSpec(generateSpec())
   }, [element, theme, height, width])
 
   const { data, layout, frames } = spec

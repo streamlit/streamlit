@@ -12,76 +12,107 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+import enum
+import functools
+from typing import Any, Callable, List, TypeVar, cast
 
 import streamlit
 
+TFunc = TypeVar("TFunc", bound=Callable[..., Any])
+TObj = TypeVar("TObj", bound=object)
 
-def _show_beta_warning(name: str, date: str) -> None:
+
+class PrereleaseAPIType(enum.Enum):
+    BETA = "BETA"
+    EXPERIMENTAL = "EXPERIMENTAL"
+
+
+def _get_function_name_prefix(api_type: PrereleaseAPIType) -> str:
+    """Return the function name prefix (e.g. 'beta_') for the given PrereleaseAPIType."""
+    if api_type is PrereleaseAPIType.BETA:
+        return "beta_"
+    if api_type is PrereleaseAPIType.EXPERIMENTAL:
+        return "experimental_"
+    raise RuntimeError(f"Unrecognized PrereleaseAPIType: {api_type}")
+
+
+def _show_api_graduation_warning(
+    api_type: PrereleaseAPIType, name: str, removal_date: str
+) -> None:
+    prefix = _get_function_name_prefix(api_type)
     streamlit.warning(
-        f"Please replace `st.beta_{name}` with `st.{name}`.\n\n"
-        f"`st.beta_{name}` will be removed after {date}."
+        f"Please replace `st.{prefix}{name}` with `st.{name}`.\n\n"
+        f"`st.{prefix}{name}` will be removed after {removal_date}."
     )
 
 
-def function_beta_warning(func, date):
-    """Wrapper for functions that are no longer in beta.
+def function_prerelease_graduation_warning(
+    api_type: PrereleaseAPIType, func: TFunc, removal_date: str
+) -> TFunc:
+    """Wrapper for functions that have "graduated" from pre-release.
 
     Wrapped functions will run as normal, but then proceed to show an st.warning
-    saying that the beta_ version will be removed in ~3 months.
+    saying that the beta_/experimental_ version will be removed in ~3 months.
 
     Parameters
     ----------
-    func: callable
-        The `st.` function that used to be in beta.
+    api_type : PrereleaseAPIType
+        The type of prerelease API that's graduating to release.
 
-    date: str
+    func: callable
+        The `st.` function that has graduated from beta/experimental.
+
+    removal_date: str
         A date like "2020-01-01", indicating the last day we'll guarantee
-        support for the beta_ prefix.
+        support for the beta_/experimental_ prefix.
     """
 
+    @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
-        # Note: Since we use a wrapper, beta_ functions will not autocomplete
-        # correctly on VSCode.
         result = func(*args, **kwargs)
-        _show_beta_warning(func.__name__, date)
+        _show_api_graduation_warning(api_type, func.__name__, removal_date)
         return result
 
     # Update the wrapped func's name & docstring so st.help does the right thing
-    wrapped_func.__name__ = "beta_" + func.__name__
+    wrapped_func.__name__ = f"{_get_function_name_prefix(api_type)}{func.__name__}"
     wrapped_func.__doc__ = func.__doc__
-    return wrapped_func
+    return cast(TFunc, wrapped_func)
 
 
-def object_beta_warning(obj, obj_name, date):
-    """Wrapper for objects that are no longer in beta.
+def object_prerelease_graduation_warning(
+    api_type: PrereleaseAPIType, obj: TObj, obj_name: str, removal_date: str
+) -> TObj:
+    """Wrapper for objects that have "graduated" from pre-release.
 
     Wrapped objects will run as normal, but then proceed to show an st.warning
-    saying that the beta_ version will be removed in ~3 months.
+    saying that the beta_/experimental_ version will be removed in ~3 months.
 
     Parameters
     ----------
     obj: Any
         The `st.` object that used to be in beta.
 
+    api_type : PrereleaseAPIType
+        The type of prerelease API that's graduating to release.
+
     obj_name: str
         The name of the object within __init__.py
 
-    date: str
+    removal_date: str
         A date like "2020-01-01", indicating the last day we'll guarantee
         support for the beta_ prefix.
     """
 
-    has_shown_beta_warning = False
+    has_shown_graduation_warning = False
 
     def show_wrapped_obj_warning():
-        nonlocal has_shown_beta_warning
-        if not has_shown_beta_warning:
-            has_shown_beta_warning = True
-            _show_beta_warning(obj_name, date)
+        nonlocal has_shown_graduation_warning
+        if not has_shown_graduation_warning:
+            has_shown_graduation_warning = True
+            _show_api_graduation_warning(api_type, obj_name, removal_date)
 
     class Wrapper:
-        def __init__(self, obj):
+        def __init__(self, obj: object):
             self._obj = obj
 
             # Override all the Wrapped object's magic functions
@@ -122,4 +153,4 @@ def object_beta_warning(obj, obj_name, date):
 
             return proxy
 
-    return Wrapper(obj)
+    return cast(TObj, Wrapper(obj))

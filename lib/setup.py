@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.14.0"  # PEP-440
+VERSION = "1.15.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -68,6 +68,8 @@ SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
 
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
+
+EXTRA_REQUIRES = {"snowflake": ["snowflake-snowpark-python; python_version=='3.8'"]}
 
 
 class VerifyVersionCommand(install):
@@ -140,6 +142,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
     install_requires=INSTALL_REQUIRES,
+    extras_require=EXTRA_REQUIRES,
     zip_safe=False,  # install source files not egg
     include_package_data=True,  # copy html and friends
     entry_points={"console_scripts": ["streamlit = streamlit.web.cli:main"]},

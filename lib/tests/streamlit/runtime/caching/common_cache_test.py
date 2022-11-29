@@ -40,6 +40,7 @@ from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
+from tests.streamlit.elements.image_test import create_image
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
@@ -302,13 +303,13 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_cached_st_function_replay(self, _, cache_decorator):
         @cache_decorator
-        def foo(i):
+        def foo_replay(i):
             st.text(i)
             return i
 
-        foo(1)
+        foo_replay(1)
         st.text("---")
-        foo(1)
+        foo_replay(1)
 
         text = self.get_text_delta_contents()
 
@@ -457,11 +458,46 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             cont.text(i)
             return i
 
-        # TODO make exception more specific
         with self.assertRaises(CacheReplayClosureError):
             foo(1)
             st.text("---")
             foo(1)
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_cached_st_image_replay(self, _, cache_decorator):
+        """Basic sanity check that nothing blows up. This test assumes that
+        actual caching/replay functionality are covered by e2e tests that
+        can more easily test them.
+        """
+
+        @cache_decorator
+        def img_fn():
+            st.image(create_image(10))
+
+        img_fn()
+        img_fn()
+
+        @cache_decorator
+        def img_fn_multi():
+            st.image([create_image(5), create_image(15), create_image(1)])
+
+        img_fn_multi()
+        img_fn_multi()
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_nested_widget_replay(self, _, cache_decorator):
+        """Regression test for GH#5677"""
+
+        @cache_decorator(experimental_allow_widgets=True)
+        def foo():
+            x = st.number_input("AAAA", 1, 100, 12)
+            return x**2
+
+        @cache_decorator(experimental_allow_widgets=True)
+        def baz(y):
+            return foo() + y
+
+        st.write(baz(10))
 
     @parameterized.expand(
         [

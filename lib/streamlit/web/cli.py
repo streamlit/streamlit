@@ -16,14 +16,16 @@
 
 import os
 import sys
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import click
 
-import streamlit
+import streamlit.runtime.caching as caching
+import streamlit.runtime.legacy_caching as legacy_caching
 import streamlit.web.bootstrap as bootstrap
 from streamlit import config as _config
 from streamlit.case_converters import to_snake_case
+from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials, check_credentials
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
@@ -31,16 +33,20 @@ ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 LOG_LEVELS = ("error", "warning", "info", "debug")
 
 
-def _convert_config_option_to_click_option(config_option):
+def _convert_config_option_to_click_option(
+    config_option: ConfigOption,
+) -> Dict[str, Any]:
     """Composes given config option options as options for click lib."""
-    option = "--{}".format(config_option.key)
+    option = f"--{config_option.key}"
     param = config_option.key.replace(".", "_")
     description = config_option.description
     if config_option.deprecated:
-        description += "\n {} - {}".format(
-            config_option.deprecation_text, config_option.expiration_date
+        if description is None:
+            description = ""
+        description += (
+            f"\n {config_option.deprecation_text} - {config_option.expiration_date}"
         )
-    envvar = "STREAMLIT_{}".format(to_snake_case(param).upper())
+    envvar = f"STREAMLIT_{to_snake_case(param).upper()}"
 
     return {
         "param": param,
@@ -67,8 +73,8 @@ def configurator_options(func):
     return func
 
 
-# Fetch remote file at url_path to main_script_path
-def _download_remote(main_script_path, url_path):
+def _download_remote(main_script_path: str, url_path: str) -> None:
+    """Fetch remote file at url_path to main_script_path"""
     import requests
 
     with open(main_script_path, "wb") as fp:
@@ -77,14 +83,13 @@ def _download_remote(main_script_path, url_path):
             resp.raise_for_status()
             fp.write(resp.content)
         except requests.exceptions.RequestException as e:
-            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
+            raise click.BadParameter(f"Unable to fetch {url_path}.\n{e}")
 
 
 @click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
 @click.version_option(prog_name="Streamlit")
-@click.pass_context
-def main(ctx, log_level="info"):
+def main(log_level="info"):
     """Try out a demo with:
 
         $ streamlit hello
@@ -105,24 +110,21 @@ def main(ctx, log_level="info"):
 
 
 @main.command("help")
-@click.pass_context
-def help(ctx):
+def help():
     """Print this help message."""
-    # Pretend user typed 'streamlit --help' instead of 'streamlit help'.
-    import sys
-
     # We use _get_command_line_as_string to run some error checks but don't do
     # anything with its return value.
     _get_command_line_as_string()
 
     assert len(sys.argv) == 2  # This is always true, but let's assert anyway.
+
+    # Pretend user typed 'streamlit --help' instead of 'streamlit help'.
     sys.argv[1] = "--help"
     main(prog_name="streamlit")
 
 
 @main.command("version")
-@click.pass_context
-def main_version(ctx):
+def main_version():
     """Print Streamlit's version number."""
     # Pretend user typed 'streamlit --version' instead of 'streamlit version'
     import sys
@@ -160,7 +162,7 @@ def main_hello(**kwargs):
 @configurator_options
 @click.argument("target", required=True, envvar="STREAMLIT_RUN_TARGET")
 @click.argument("args", nargs=-1)
-def main_run(target, args=None, **kwargs):
+def main_run(target: str, args=None, **kwargs):
     """Run a Python script, piping stderr to Streamlit.
 
     The script can be local or it can be an url. In the latter case, Streamlit
@@ -179,8 +181,7 @@ def main_run(target, args=None, **kwargs):
             )
         else:
             raise click.BadArgumentUsage(
-                "Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://docs.streamlit.io"
-                % extension
+                f"Streamlit requires raw Python (.py) files, not {extension}.\nFor more information, please see https://docs.streamlit.io"
             )
 
     if url(target):
@@ -201,7 +202,7 @@ def main_run(target, args=None, **kwargs):
             _main_run(main_script_path, args, flag_options=kwargs)
     else:
         if not os.path.exists(target):
-            raise click.BadParameter("File does not exist: {}".format(target))
+            raise click.BadParameter(f"File does not exist: {target}")
         _main_run(target, args, flag_options=kwargs)
 
 
@@ -223,7 +224,11 @@ def _get_command_line_as_string() -> Optional[str]:
     return subprocess.list2cmdline(cmd_line_as_list)
 
 
-def _main_run(file, args=None, flag_options=None):
+def _main_run(
+    file,
+    args: Optional[List[str]] = None,
+    flag_options: Optional[Dict[str, Any]] = None,
+) -> None:
     if args is None:
         args = []
 
@@ -249,15 +254,15 @@ def cache():
 @cache.command("clear")
 def cache_clear():
     """Clear st.cache, st.memo, and st.singleton caches."""
-    result = streamlit.runtime.legacy_caching.clear_cache()
-    cache_path = streamlit.runtime.legacy_caching.get_cache_path()
+    result = legacy_caching.clear_cache()
+    cache_path = legacy_caching.get_cache_path()
     if result:
-        print("Cleared directory %s." % cache_path)
+        print(f"Cleared directory {cache_path}.")
     else:
-        print("Nothing to clear at %s." % cache_path)
+        print(f"Nothing to clear at {cache_path}.")
 
-    streamlit.runtime.caching.memo.clear()
-    streamlit.runtime.caching.singleton.clear()
+    caching.memo.clear()
+    caching.singleton.clear()
 
 
 # SUBCOMMAND: config

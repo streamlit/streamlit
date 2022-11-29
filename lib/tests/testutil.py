@@ -13,12 +13,32 @@
 # limitations under the License.
 
 """Utility functions to use in our tests."""
-
+import json
 from contextlib import contextmanager
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from unittest.mock import patch
 
 from streamlit import config
+from streamlit.runtime.scriptrunner import ScriptRunContext
+from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
+
+if TYPE_CHECKING:
+    from snowflake.snowpark import Session
+
+
+def create_mock_script_run_ctx() -> ScriptRunContext:
+    """Create a ScriptRunContext for use in tests."""
+    return ScriptRunContext(
+        session_id="mock_session_id",
+        _enqueue=lambda msg: None,
+        query_string="mock_query_string",
+        session_state=SafeSessionState(SessionState()),
+        uploaded_file_mgr=UploadedFileManager(),
+        page_script_hash="mock_page_script_hash",
+        user_info={"email": "mock@test.com"},
+    )
 
 
 @contextmanager
@@ -94,3 +114,15 @@ def normalize_md(txt: str) -> str:
     txt = txt.replace("OMG_LINK", "](")
 
     return txt.strip()
+
+
+@contextmanager
+def create_snowpark_session() -> "Session":
+    from snowflake.snowpark import Session
+
+    credential = json.loads(SNOWFLAKE_CREDENTIAL_FILE.read_text())
+    session = Session.builder.configs(credential).create()
+    try:
+        yield session
+    finally:
+        session.close()
