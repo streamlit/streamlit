@@ -94,7 +94,7 @@ class AssetsFileHandler(tornado.web.StaticFileHandler):
         self.set_header("Access-Control-Allow-Origin", "*")
 
 
-class UserStaticFileHandler(AssetsFileHandler):
+class AppStaticFileHandler(AssetsFileHandler):
     def validate_absolute_path(self, root: str, absolute_path: str) -> Optional[str]:
         full_path = os.path.realpath(absolute_path)
         directory = os.path.realpath(root)

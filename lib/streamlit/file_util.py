@@ -124,43 +124,43 @@ def get_assets_dir():
     return os.path.normpath(os.path.join(dirname, "static/assets"))
 
 
-def sanitize_user_static_path(user_path):
+# TODO Rename function to more meaningful name
+def sanitize_user_static_path():
     main_script_directory = os.getcwd()
-    full_path = os.path.realpath(os.path.abspath(user_path))
+    static_folder_path = os.path.abspath("app-static")
+    real_path = os.path.realpath(static_folder_path)
 
     pages_directory = os.path.abspath("pages")
     config_directory = os.path.abspath(CONFIG_FOLDER_NAME)
 
-    if not os.path.isdir(full_path):
-        raise RuntimeError(f"Directory '{full_path}' does not exist.")
-
     if (
-        os.path.commonprefix([full_path, main_script_directory])
+        os.path.commonprefix([real_path, main_script_directory])
         != main_script_directory
     ):
         raise RuntimeError(
-            f"Static file directory {user_path} is served outside of "
+            f"Static file directory {real_path} is served outside of "
             f"Streamlit project root."
         )
 
-    if full_path == main_script_directory:
+    # TODO [KAREN] Add comment about symlink
+    if real_path == main_script_directory:
         raise RuntimeError(
             "For security reasons we dont allow expose whole project directory"
         )
 
-    if os.path.commonpath([pages_directory, full_path]) == pages_directory:
+    if os.path.commonpath([pages_directory, real_path]) == pages_directory:
         raise RuntimeError(
             f"Static file dir couldn't be 'pages' or inside 'pages' "
-            f"directory. Current  specified directory {user_path}"
+            f"directory. Current  specified directory {real_path}"
         )
 
-    if os.path.commonpath([config_directory, full_path]) == config_directory:
+    if os.path.commonpath([config_directory, real_path]) == config_directory:
         raise RuntimeError(
             "STATIC FOLDER COULD NOT BE .streamlit or inside .streamlit because of "
             "security, this could lead to secrets and configs exposure."
         )
 
-    return full_path
+    return real_path
 
 
 def get_streamlit_file_path(*filepath) -> str:

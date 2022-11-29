@@ -28,10 +28,10 @@ from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.routes import ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
     AllowedMessageOriginsHandler,
+    AppStaticFileHandler,
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
-    UserStaticFileHandler,
 )
 from tests.streamlit.message_mocks import create_dataframe_msg
 from tests.testutil import patch_config_options
@@ -185,8 +185,8 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         return tornado.web.Application(
             [
                 (
-                    r"/user-static/(.*)",
-                    UserStaticFileHandler,
+                    r"/app-static/(.*)",
+                    AppStaticFileHandler,
                     {"path": "%s/" % self._tmpdir.name},
                 )
             ]
@@ -195,18 +195,18 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_parse_url_path_200(self):
 
         responses = [
-            self.fetch(f"/user-static/{self._filename}"),
-            self.fetch(f"/user-static/{self._symlink_inside_directory}"),
+            self.fetch(f"/app-static/{self._filename}"),
+            self.fetch(f"/app-static/{self._symlink_inside_directory}"),
         ]
         for r in responses:
             assert r.code == 200
 
     def test_parse_url_path_404(self):
         responses = [
-            self.fetch("/user-static"),
-            self.fetch("/user-static/"),
-            self.fetch(f"/user-static/{self._symlink_outside_directory}"),
-            self.fetch("/user-static/nonexistent.jpg"),
+            self.fetch("/app-static"),
+            self.fetch("/app-static/"),
+            self.fetch(f"/app-static/{self._symlink_outside_directory}"),
+            self.fetch("/app-static/nonexistent.jpg"),
         ]
 
         for r in responses:

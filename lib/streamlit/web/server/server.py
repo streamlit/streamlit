@@ -41,11 +41,11 @@ from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
     AllowedMessageOriginsHandler,
+    AppStaticFileHandler,
     AssetsFileHandler,
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
-    UserStaticFileHandler,
 )
 from streamlit.web.server.server_util import make_url_path_regex
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
@@ -283,13 +283,12 @@ class Server:
             )
 
         if config.get_option("server.enableStaticServing"):
-            folder_name = config.get_option("server.staticServingDirectory")
             routes.extend(
                 [
                     (
-                        make_url_path_regex(base, "user-static/(.*)"),
-                        UserStaticFileHandler,
-                        {"path": "%s/%s/" % (os.path.join(os.getcwd()), folder_name)},
+                        make_url_path_regex(base, "app-static/(.*)"),
+                        AppStaticFileHandler,
+                        {"path": "%s/%s/" % (os.path.join(os.getcwd()), "app-static")},
                     ),
                 ]
             )

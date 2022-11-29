@@ -705,17 +705,6 @@ _create_option(
     type_=bool,
 )
 
-_create_option(
-    "server.staticServingDirectory",
-    description="""
-        Directory to serve static files from,
-        relative to running app's location.
-        """,
-    default_val="assets/",
-    type_=str,
-)
-
-
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")
@@ -1238,12 +1227,17 @@ def _check_static_files_config():
     LOGGER = get_logger(__name__)
 
     # TODO [KAREN] Rephrase warning messages
-
     if get_option("server.enableStaticServing"):
         try:
-            static_file_config_dir = file_util.sanitize_user_static_path(
-                get_option("server.staticServingDirectory")
-            )
+            static_folder_path = os.path.abspath("app-static")
+            real_path = os.path.realpath(static_folder_path)
+            if not os.path.isdir(real_path):
+                LOGGER.warning(
+                    "STATIC FILE SERVING ENABLED, but folder assets/"
+                    "doesn't exist :( :( :("
+                )
+
+            static_file_config_dir = file_util.sanitize_user_static_path()
         except RuntimeError as e:
             LOGGER.error(str(e))
             set_option(
