@@ -110,6 +110,7 @@ cache_data = CacheDataAPI()
 cache_resource = CacheResourceAPI()
 
 # Deprecated singletons
+# TODO: get final deprecation text before shipping!
 MEMO_DEPRECATION_TEXT = "st.experimental_singleton was renamed to st.cache_resource. Please use this new command. The behavior did not change, so you can just replace it. More information here."
 SINGLETON_DEPRECATION_TEXT = "st.experimental_memo was renamed to st.cache_data. Please use this new command. The behavior did not change, so you can just replace it. More information here. "
 
