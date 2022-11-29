@@ -126,7 +126,8 @@ fig_waterfall = go.Figure(
 fig_waterfall.update_layout(
     title="Profit and loss statement 2018", height=300, width=300, showlegend=True
 )
-st.plotly_chart(fig_waterfall, use_container_width=False, theme="streamlit")
+# Check that height and width are correct (300x300)
+st.plotly_chart(fig_waterfall, theme="streamlit")
 
 # Ternary Chart
 df = px.data.election()
