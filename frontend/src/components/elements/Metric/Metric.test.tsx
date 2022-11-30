@@ -19,7 +19,10 @@ import { mount } from "src/lib/test_util"
 
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
-import { Metric as MetricProto } from "src/autogen/proto"
+import {
+  Metric as MetricProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+} from "src/autogen/proto"
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
@@ -45,6 +48,30 @@ describe("Metric element", () => {
 
     expect(wrappedMetricLabel.props().source).toBe(getProps().element.label)
     expect(wrappedMetricLabel.props().isLabel).toBe(true)
+  })
+
+  it("pass labelVisibility prop to StyledTruncateText correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = mount(<Metric {...props} />)
+    expect(
+      wrapper.find("StyledTruncateText").first().prop("visibility")
+    ).toEqual(LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN)
+  })
+
+  it("pass labelVisibility prop to StyledTruncateText correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    const wrapper = mount(<Metric {...props} />)
+    expect(
+      wrapper.find("StyledTruncateText").first().prop("visibility")
+    ).toEqual(LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED)
   })
 
   it("renders direction icon based on props", () => {
