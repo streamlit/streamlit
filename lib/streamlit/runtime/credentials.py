@@ -96,7 +96,7 @@ _INSTRUCTIONS_TEXT = """
 class Credentials(object):
     """Credentials class."""
 
-    _singleton: Optional[Credentials] = None
+    _singleton: Optional["Credentials"] = None
 
     @classmethod
     def get_current(cls):
