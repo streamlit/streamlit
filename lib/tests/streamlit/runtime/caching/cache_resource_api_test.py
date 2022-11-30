@@ -17,13 +17,12 @@
 import threading
 import unittest
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from pympler.asizeof import asizeof
 
 import streamlit as st
 from streamlit.runtime.caching import (
-    SINGLETON_DEPRECATION_TEXT,
     cache_resource_api,
     get_resource_cache_stats_provider,
 )
@@ -72,30 +71,6 @@ class CacheResourceTest(unittest.TestCase):
 
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [1, 1])
-
-    @patch("builtins.print")
-    def test_deprecated_experimental_singleton(self, mock_print: Mock):
-        """@st.experimental_singleton is an alias for @st.cache_resource, but it also
-        prints a deprecation warning to the console.
-        """
-
-        @st.experimental_singleton
-        def singleton_func():
-            return "ahoy!"
-
-        @st.cache_resource
-        def cache_resource_func():
-            return "ahoy!"
-
-        # Using the deprecated decorator produces a console warning once only.
-        self.assertEqual("ahoy!", singleton_func())
-        self.assertEqual("ahoy!", singleton_func())
-        mock_print.assert_called_once_with(SINGLETON_DEPRECATION_TEXT)
-
-        # Using the new decorator produces no warning.
-        mock_print.reset_mock()
-        self.assertEqual("ahoy!", cache_resource_func())
-        mock_print.assert_not_called()
 
 
 class CacheResourceStatsProviderTest(unittest.TestCase):
