@@ -515,12 +515,12 @@ DataEditorCompatible: TypeAlias = Union[
     pd.DataFrame, pd.Series, pa.Table, np.ndarray, list, tuple, set
 ]
 
-InputDataType = TypeVar("InputDataType", bound=DataEditorCompatible)
+EditableDataInput = TypeVar("EditableDataInput", bound=DataEditorCompatible)
 
 
 def convert_df_to_reference(
-    df: pd.DataFrame, reference_data: InputDataType
-) -> InputDataType:
+    df: pd.DataFrame, reference_data: EditableDataInput
+) -> EditableDataInput:
     """Try to convert a dataframe to the type and structure of the reference data.
 
     Parameters
@@ -606,6 +606,7 @@ def convert_df_to_reference(
             if isinstance(first_value, pd.Series):
                 # -> Column series mapping: {column -> Series(values)}
                 return df.to_dict(orient="series")
+            # TODO(lukasmasuch): We could potentially also support the tight & split formats here?
 
         if len(df.columns) == 1 and infer_dtype(reference_data.values()) not in [
             "mixed",
