@@ -27,15 +27,15 @@ from streamlit.errors import (
 class CacheType(enum.Enum):
     """The function cache types we implement."""
 
-    MEMO = "MEMO"
-    SINGLETON = "SINGLETON"
+    DATA = "DATA"
+    RESOURCE = "RESOURCE"
 
 
 def get_decorator_api_name(cache_type: CacheType) -> str:
     """Return the name of the public decorator API for the given CacheType."""
-    if cache_type is CacheType.MEMO:
+    if cache_type is CacheType.DATA:
         return "experimental_memo"
-    if cache_type is CacheType.SINGLETON:
+    if cache_type is CacheType.RESOURCE:
         return "experimental_singleton"
     raise RuntimeError(f"Unrecognized CacheType '{cache_type}'")
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.singleton unit tests."""
+"""st.cache_resource unit tests."""
 
 import threading
 import unittest
@@ -22,7 +22,10 @@ from unittest.mock import patch
 from pympler.asizeof import asizeof
 
 import streamlit as st
-from streamlit.runtime.caching import get_singleton_stats_provider, singleton_decorator
+from streamlit.runtime.caching import (
+    cache_resource_api,
+    get_resource_cache_stats_provider,
+)
 from streamlit.runtime.caching.cache_errors import CacheType
 from streamlit.runtime.caching.cache_utils import MultiCacheResults
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -34,10 +37,10 @@ from tests.testutil import create_mock_script_run_ctx
 
 
 def as_cached_result(value: Any) -> MultiCacheResults:
-    return _as_cached_result(value, CacheType.MEMO)
+    return _as_cached_result(value, CacheType.RESOURCE)
 
 
-class SingletonTest(unittest.TestCase):
+class CacheResourceTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
@@ -46,12 +49,12 @@ class SingletonTest(unittest.TestCase):
         st.experimental_singleton.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack = []
-        singleton_decorator.SINGLETON_CALL_STACK._suppress_st_function_warning = 0
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
-        """Mutating a singleton return value is legal, and *will* affect
+        """Mutating a cache_resource return value is legal, and *will* affect
         future accessors of the data."""
 
         @st.experimental_singleton
@@ -70,7 +73,7 @@ class SingletonTest(unittest.TestCase):
         self.assertEqual(r2, [1, 1])
 
 
-class SingletonStatsProviderTest(unittest.TestCase):
+class CacheResourceStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
@@ -83,7 +86,7 @@ class SingletonStatsProviderTest(unittest.TestCase):
         st.experimental_singleton.clear()
 
     def test_no_stats(self):
-        self.assertEqual([], get_singleton_stats_provider().get_stats())
+        self.assertEqual([], get_resource_cache_stats_provider().get_stats())
 
     def test_multiple_stats(self):
         @st.experimental_singleton
@@ -104,17 +107,17 @@ class SingletonStatsProviderTest(unittest.TestCase):
 
         expected = [
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14])),
             ),
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14] * 53)),
             ),
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=bar_cache_name,
                 byte_length=get_byte_length(as_cached_result(bar())),
             ),
@@ -122,9 +125,11 @@ class SingletonStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        self.assertEqual(set(expected), set(get_singleton_stats_provider().get_stats()))
+        self.assertEqual(
+            set(expected), set(get_resource_cache_stats_provider().get_stats())
+        )
 
 
-def get_byte_length(value):
+def get_byte_length(value: Any) -> int:
     """Return the byte length of the pickled value."""
     return asizeof(value)

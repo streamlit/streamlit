@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.memo unit tests."""
+"""st.cache_data unit tests."""
+
 import logging
 import pickle
 import re
@@ -26,17 +27,17 @@ import streamlit as st
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.runtime.caching import memo_decorator
+from streamlit.runtime.caching import cache_data_api
+from streamlit.runtime.caching.cache_data_api import (
+    get_cache_path,
+    get_data_cache_stats_provider,
+)
 from streamlit.runtime.caching.cache_errors import CacheError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     ElementMsgData,
     MultiCacheResults,
     _make_widget_key,
-)
-from streamlit.runtime.caching.memo_decorator import (
-    get_cache_path,
-    get_memo_stats_provider,
 )
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
@@ -48,14 +49,14 @@ from tests.testutil import create_mock_script_run_ctx
 
 
 def as_cached_result(value: Any) -> MultiCacheResults:
-    return _as_cached_result(value, CacheType.MEMO)
+    return _as_cached_result(value, CacheType.DATA)
 
 
 def as_replay_test_data() -> MultiCacheResults:
     """Creates cached results for a function that returned 1
     and executed `st.text(1)`.
     """
-    widget_key = _make_widget_key([], CacheType.MEMO)
+    widget_key = _make_widget_key([], CacheType.DATA)
     d = {}
     d[widget_key] = CachedResult(
         1,
@@ -66,7 +67,7 @@ def as_replay_test_data() -> MultiCacheResults:
     return MultiCacheResults(set(), d)
 
 
-class MemoTest(unittest.TestCase):
+class CacheDataTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
@@ -74,8 +75,8 @@ class MemoTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        memo_decorator.MEMO_CALL_STACK._cached_func_stack = []
-        memo_decorator.MEMO_CALL_STACK._suppress_st_function_warning = 0
+        cache_data_api.CACHE_DATA_CALL_STACK._cached_func_stack = []
+        cache_data_api.CACHE_DATA_CALL_STACK._suppress_st_function_warning = 0
         st.experimental_memo.clear()
 
     @patch.object(st, "exception")
@@ -98,8 +99,8 @@ class MemoTest(unittest.TestCase):
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [0, 1])
 
-    @patch("streamlit.runtime.caching.memo_decorator._TTLCACHE_TIMER")
-    def test_ttl(self, timer_patch):
+    @patch("streamlit.runtime.caching.cache_data_api._TTLCACHE_TIMER")
+    def test_ttl(self, timer_patch: MagicMock):
         """Entries should expire after the given ttl."""
         one_day = 60 * 60 * 24
 
@@ -155,8 +156,8 @@ class MemoTest(unittest.TestCase):
         self.assertEqual([0, 0, 0], foo_vals)
         self.assertEqual([0, 0], bar_vals)
 
-    @patch("streamlit.runtime.caching.memo_decorator._TTLCACHE_TIMER")
-    def test_ttl_timedelta(self, timer_patch):
+    @patch("streamlit.runtime.caching.cache_data_api._TTLCACHE_TIMER")
+    def test_ttl_timedelta(self, timer_patch: MagicMock):
         """Entries should expire after the given ttl."""
         one_day_seconds = 60 * 60 * 24
         one_day_timedelta = timedelta(days=1)
@@ -215,14 +216,14 @@ class MemoTest(unittest.TestCase):
         self.assertEqual([0, 0], bar_vals)
 
 
-class MemoPersistTest(DeltaGeneratorTestCase):
-    """st.memo disk persistence tests"""
+class CacheDataPersistTest(DeltaGeneratorTestCase):
+    """st.cache_data disk persistence tests"""
 
     def tearDown(self) -> None:
         st.experimental_memo.clear()
         super().tearDown()
 
-    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
+    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
     def test_dont_persist_by_default(self, mock_write):
         @st.experimental_memo
         def foo():
@@ -231,7 +232,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         foo()
         mock_write.assert_not_called()
 
-    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
+    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
     def test_persist_path(self, mock_write):
         """Ensure we're writing to ~/.streamlit/cache/*.memo"""
 
@@ -254,7 +255,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
     @patch(
-        "streamlit.runtime.caching.memo_decorator.streamlit_read",
+        "streamlit.runtime.caching.cache_data_api.streamlit_read",
         wraps=file_util.streamlit_read,
     )
     def test_read_persisted_data(self, mock_read):
@@ -271,7 +272,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
     @patch(
-        "streamlit.runtime.caching.memo_decorator.streamlit_read",
+        "streamlit.runtime.caching.cache_data_api.streamlit_read",
         wraps=file_util.streamlit_read,
     )
     def test_read_bad_persisted_data(self, mock_read):
@@ -320,7 +321,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         "streamlit.file_util.open",
         wraps=mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
-    @patch("streamlit.runtime.caching.memo_decorator.os.remove")
+    @patch("streamlit.runtime.caching.cache_data_api.os.remove")
     def test_clear_one_disk_cache(self, mock_os_remove: Mock, mock_open: Mock):
         """A memoized function's clear_cache() property should just clear
         that function's cache."""
@@ -380,7 +381,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         assert text == ["1"]
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write", MagicMock())
+    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write", MagicMock())
     @patch(
         "streamlit.file_util.open",
         wraps=mock_open(read_data=pickle.dumps(1)),
@@ -394,11 +395,11 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         # Executes normally, without raising any errors
         foo(1)
 
-    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
+    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
     def test_warning_memo_ttl_persist(self, _):
         """Using @st.experimental_memo with ttl and persist produces a warning."""
         with self.assertLogs(
-            "streamlit.runtime.caching.memo_decorator", level=logging.WARNING
+            "streamlit.runtime.caching.cache_data_api", level=logging.WARNING
         ) as logs:
 
             @st.experimental_memo(ttl=60, persist="disk")
@@ -409,12 +410,12 @@ class MemoPersistTest(DeltaGeneratorTestCase):
 
             output = "".join(logs.output)
             self.assertIn(
-                "The memoized function 'user_function' has a TTL that will be ignored.",
+                "The cached function 'user_function' has a TTL that will be ignored.",
                 output,
             )
 
 
-class MemoStatsProviderTest(unittest.TestCase):
+class CacheDataStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
@@ -427,7 +428,7 @@ class MemoStatsProviderTest(unittest.TestCase):
         st.experimental_memo.clear()
 
     def test_no_stats(self):
-        self.assertEqual([], get_memo_stats_provider().get_stats())
+        self.assertEqual([], get_data_cache_stats_provider().get_stats())
 
     def test_multiple_stats(self):
         @st.experimental_memo
@@ -448,17 +449,17 @@ class MemoStatsProviderTest(unittest.TestCase):
 
         expected = [
             CacheStat(
-                category_name="st_memo",
+                category_name="st_cache_data",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14])),
             ),
             CacheStat(
-                category_name="st_memo",
+                category_name="st_cache_data",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14] * 53)),
             ),
             CacheStat(
-                category_name="st_memo",
+                category_name="st_cache_data",
                 cache_name=bar_cache_name,
                 byte_length=get_byte_length(as_cached_result("shivermetimbers")),
             ),
@@ -466,7 +467,9 @@ class MemoStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        self.assertEqual(set(expected), set(get_memo_stats_provider().get_stats()))
+        self.assertEqual(
+            set(expected), set(get_data_cache_stats_provider().get_stats())
+        )
 
 
 def get_byte_length(value):
