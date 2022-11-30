@@ -16,20 +16,29 @@
 
 import styled from "@emotion/styled"
 import { StyledWidgetLabel } from "src/components/widgets/BaseWidget/styled-components"
+import { LabelVisibilityOptions } from "src/lib/utils"
 
-export const StyledTruncateText = styled.div(({ theme }) => ({
-  overflowWrap: "normal",
-  textOverflow: "ellipsis",
-  width: "100%",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  fontFamily: theme.genericFonts.bodyFont,
-  lineHeight: theme.lineHeights.normal,
-  verticalAlign: "middle",
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-}))
+export interface StyledTruncateTextProps {
+  visibility?: LabelVisibilityOptions
+}
+
+export const StyledTruncateText = styled.div<StyledTruncateTextProps>(
+  ({ theme, visibility }) => ({
+    overflowWrap: "normal",
+    textOverflow: "ellipsis",
+    width: "100%",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    fontFamily: theme.genericFonts.bodyFont,
+    lineHeight: theme.lineHeights.normal,
+    verticalAlign: "middle",
+    display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
+    visibility:
+      visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
+    flexDirection: "row",
+    alignItems: "center",
+  })
+)
 
 export const StyledMetricLabelText = styled(StyledWidgetLabel)(() => ({
   marginBottom: 0,
