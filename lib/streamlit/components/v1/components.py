@@ -16,7 +16,7 @@ import inspect
 import json
 import os
 import threading
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Optional, Type, Union
 
 import streamlit
 from streamlit import type_util, util

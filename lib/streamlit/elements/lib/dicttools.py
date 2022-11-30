@@ -14,8 +14,6 @@
 
 """Tools for working with dicts."""
 
-from typing import Any, Dict, Optional
-
 
 def _unflatten_single_dict(flat_dict):
     """Convert a flat dict of key-value pairs to dict tree.
