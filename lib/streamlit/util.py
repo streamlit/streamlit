@@ -31,7 +31,7 @@ FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
-    result = []  # type: List[Any]
+    result: List[Any] = []
 
     @functools.wraps(func)
     def wrapped_func():

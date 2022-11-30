@@ -90,7 +90,7 @@ def _get_machine_id_v3() -> str:
 
 class Installation:
     _instance_lock = threading.Lock()
-    _instance = None  # type: Optional[Installation]
+    _instance: Optional["Installation"] = None
 
     @classmethod
     def instance(cls) -> "Installation":
