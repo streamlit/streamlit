@@ -75,12 +75,13 @@ export default function Metric({ element }: MetricProps): ReactElement {
 
   return (
     <div data-testid="metric-container">
-      <StyledMetricLabelText data-testid="stMetricLabel">
-        <StyledTruncateText
-          visibility={labelVisibilityProtoValueToEnum(
-            element.labelVisibility?.value
-          )}
-        >
+      <StyledMetricLabelText
+        data-testid="stMetricLabel"
+        visibility={labelVisibilityProtoValueToEnum(
+          element.labelVisibility?.value
+        )}
+      >
+        <StyledTruncateText>
           <StreamlitMarkdown
             source={element.label}
             allowHTML={false}

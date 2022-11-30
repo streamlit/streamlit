@@ -50,28 +50,28 @@ describe("Metric element", () => {
     expect(wrappedMetricLabel.props().isLabel).toBe(true)
   })
 
-  it("pass labelVisibility prop to StyledTruncateText correctly when hidden", () => {
+  it("pass labelVisibility prop to StyledMetricLabelText correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     const wrapper = mount(<Metric {...props} />)
-    expect(
-      wrapper.find("StyledTruncateText").first().prop("visibility")
-    ).toEqual(LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN)
+    expect(wrapper.find("StyledMetricLabelText").prop("visibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    )
   })
 
-  it("pass labelVisibility prop to StyledTruncateText correctly when collapsed", () => {
+  it("pass labelVisibility prop to StyledMetricLabelText correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     const wrapper = mount(<Metric {...props} />)
-    expect(
-      wrapper.find("StyledTruncateText").first().prop("visibility")
-    ).toEqual(LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED)
+    expect(wrapper.find("StyledMetricLabelText").prop("visibility")).toEqual(
+      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    )
   })
 
   it("renders direction icon based on props", () => {
