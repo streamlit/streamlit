@@ -17,7 +17,7 @@ import os
 import pathlib
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union, overload
+from typing import Any, overload
 
 from typing_extensions import Literal
 
@@ -54,14 +54,14 @@ class LocalScriptRunner(ScriptRunner):
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions: List[BaseException] = []
+        self.script_thread_exceptions: list[BaseException] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
-        self.events: List[ScriptRunnerEvent] = []
-        self.event_data: List[Any] = []
+        self.events: list[ScriptRunnerEvent] = []
+        self.event_data: list[Any] = []
 
         def record_event(
-            sender: Optional[ScriptRunner], event: ScriptRunnerEvent, **kwargs
+            sender: ScriptRunner | None, event: ScriptRunnerEvent, **kwargs
         ) -> None:
             # Assert that we're not getting unexpected `sender` params
             # from ScriptRunner.on_event
@@ -84,11 +84,11 @@ class LocalScriptRunner(ScriptRunner):
         if self._script_thread is not None:
             self._script_thread.join()
 
-    def forward_msgs(self) -> List[ForwardMsg]:
+    def forward_msgs(self) -> list[ForwardMsg]:
         """Return all messages in our ForwardMsgQueue."""
         return self.forward_msg_queue._queue
 
-    def run(self, widget_state: Optional[WidgetStates] = None) -> Root:
+    def run(self, widget_state: WidgetStates | None = None) -> Root:
         rerun_data = RerunData(widget_states=widget_state)
         self.request_rerun(rerun_data)
         if not self._script_thread:
@@ -170,7 +170,7 @@ class Element:
         p = getattr(self.proto, self.type)
         return p.value
 
-    def widget_state(self) -> Optional[WidgetState]:
+    def widget_state(self) -> WidgetState | None:
         return None
 
     def run(self) -> Root:
@@ -198,7 +198,7 @@ class Text(Element):
 @dataclass(init=False)
 class Radio(Element):
     proto: RadioProto
-    _index: Optional[int]
+    _index: int | None
     root: Root = field(repr=False)
 
     def __init__(self, proto: RadioProto, root: Root):
@@ -219,7 +219,7 @@ class Radio(Element):
         return self.proto.label
 
     @property
-    def options(self) -> List[str]:
+    def options(self) -> list[str]:
         return list(self.proto.options)
 
     @property
@@ -275,15 +275,15 @@ class Radio(Element):
 @dataclass(init=False)
 class Block:
     type: str
-    children: Dict[int, Union[Element, Block]]
-    proto: Optional[BlockProto] = field(repr=False)
+    children: dict[int, Element | Block]
+    proto: BlockProto | None = field(repr=False)
     root: Root = field(repr=False)
 
     def __init__(
         self,
         root: Root,
-        proto: Optional[BlockProto] = None,
-        type: Optional[str] = None,
+        proto: BlockProto | None = None,
+        type: str | None = None,
     ):
         self.children = {}
         self.proto = proto
@@ -307,17 +307,17 @@ class Block:
                 yield c
 
     @overload
-    def get(self, elt: Literal["text"]) -> List[Text]:
+    def get(self, elt: Literal["text"]) -> list[Text]:
         ...
 
     @overload
-    def get(self, elt: Literal["radio"]) -> List[Radio]:
+    def get(self, elt: Literal["radio"]) -> list[Radio]:
         ...
 
-    def get(self, elt: str) -> List[Union[Element, Block]]:
+    def get(self, elt: str) -> list[Element | Block]:
         return [e for e in self if e.type == elt]
 
-    def widget_state(self) -> Optional[WidgetState]:
+    def widget_state(self) -> WidgetState | None:
         return None
 
     def run(self) -> Root:
@@ -326,7 +326,7 @@ class Block:
 
 @dataclass(init=False)
 class Root(Block):
-    script_path: Optional[str] = field(repr=False)
+    script_path: str | None = field(repr=False)
 
     def __init__(self):
         self.children = {}
@@ -354,7 +354,7 @@ class Root(Block):
         return runner.run(widget_states)
 
 
-def parse_tree_from_messages(messages: List[ForwardMsg]) -> Root:
+def parse_tree_from_messages(messages: list[ForwardMsg]) -> Root:
     root = Root()
     root.children = {
         0: Block(type="main", root=root),
