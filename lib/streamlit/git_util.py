@@ -32,7 +32,7 @@ class GitRepo:
     def __init__(self, path):
         # If we have a valid repo, git_version will be a tuple of 3+ ints:
         # (major, minor, patch, possible_additional_patch_number)
-        self.git_version = None  # type: Optional[Tuple[int, ...]]
+        self.git_version: Optional[Tuple[int, ...]] = None
 
         try:
             import git

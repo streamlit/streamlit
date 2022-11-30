@@ -43,6 +43,8 @@ repos:
           - "--ignore-init-module-imports"
           - "--ignore-pass-after-docstring"
           - "--remove-unused-variables"
+        additional_dependencies:
+          - pyflakes==3.0.1
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
