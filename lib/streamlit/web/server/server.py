@@ -286,9 +286,10 @@ class Server:
             routes.extend(
                 [
                     (
-                        make_url_path_regex(base, "app-static/(.*)"),
+                        make_url_path_regex(base, "app/static/(.*)"),
                         AppStaticFileHandler,
-                        {"path": "%s/%s/" % (os.path.join(os.getcwd()), "app-static")},
+                        # TODO [KAREN] Move static into const
+                        {"path": os.path.join(os.getcwd(), "static")},
                     ),
                 ]
             )

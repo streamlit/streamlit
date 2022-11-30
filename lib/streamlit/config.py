@@ -1228,26 +1228,32 @@ def _check_static_files_config():
 
     # TODO [KAREN] Rephrase warning messages
     if get_option("server.enableStaticServing"):
-        try:
-            static_folder_path = os.path.abspath("app-static")
-            real_path = os.path.realpath(static_folder_path)
-            if not os.path.isdir(real_path):
-                LOGGER.warning(
-                    "STATIC FILE SERVING ENABLED, but folder assets/"
-                    "doesn't exist :( :( :("
+
+        static_folder_path = os.path.abspath("static")
+
+        if not os.path.isdir(static_folder_path):
+            LOGGER.warning(
+                "STATIC FILE SERVING ENABLED, but folder static/ "
+                "doesn't exist :( :( :("
+            )
+        else:
+            try:
+                real_static_folder_path = file_util.sanitize_user_static_path(
+                    static_folder_path
+                )
+            except RuntimeError as e:
+                LOGGER.error(str(e))
+                set_option(
+                    "server.enableStaticServing",
+                    False,
+                    ConfigOption.STREAMLIT_DEFINITION,
                 )
 
-            static_file_config_dir = file_util.sanitize_user_static_path()
-        except RuntimeError as e:
-            LOGGER.error(str(e))
-            set_option(
-                "server.enableStaticServing", False, ConfigOption.STREAMLIT_DEFINITION
-            )
-
-        else:
-            LOGGER.info(
-                "STATIC FILE SERVING ENABLED FROM FOLDER %s" % static_file_config_dir
-            )
+            else:
+                LOGGER.info(
+                    "STATIC FILE SERVING ENABLED FROM"
+                    " FOLDER %s" % real_static_folder_path
+                )
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid

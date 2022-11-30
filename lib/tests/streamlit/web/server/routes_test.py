@@ -185,7 +185,7 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         return tornado.web.Application(
             [
                 (
-                    r"/app-static/(.*)",
+                    r"/app/static/(.*)",
                     AppStaticFileHandler,
                     {"path": "%s/" % self._tmpdir.name},
                 )
@@ -195,18 +195,18 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_parse_url_path_200(self):
 
         responses = [
-            self.fetch(f"/app-static/{self._filename}"),
-            self.fetch(f"/app-static/{self._symlink_inside_directory}"),
+            self.fetch(f"/app/static/{self._filename}"),
+            self.fetch(f"/app/static/{self._symlink_inside_directory}"),
         ]
         for r in responses:
             assert r.code == 200
 
     def test_parse_url_path_404(self):
         responses = [
-            self.fetch("/app-static"),
-            self.fetch("/app-static/"),
-            self.fetch(f"/app-static/{self._symlink_outside_directory}"),
-            self.fetch("/app-static/nonexistent.jpg"),
+            self.fetch("/app/static"),
+            self.fetch("/app/static/"),
+            self.fetch(f"/app/static/{self._symlink_outside_directory}"),
+            self.fetch("/app/static/nonexistent.jpg"),
         ]
 
         for r in responses:

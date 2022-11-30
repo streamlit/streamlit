@@ -125,9 +125,8 @@ def get_assets_dir():
 
 
 # TODO Rename function to more meaningful name
-def sanitize_user_static_path():
+def sanitize_user_static_path(static_folder_path):
     main_script_directory = os.getcwd()
-    static_folder_path = os.path.abspath("app-static")
     real_path = os.path.realpath(static_folder_path)
 
     pages_directory = os.path.abspath("pages")
