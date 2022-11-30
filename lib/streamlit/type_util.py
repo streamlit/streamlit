@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 import types
 from typing import (
@@ -32,8 +33,9 @@ from typing import (
     overload,
 )
 
+import numpy as np
+import pandas as pd
 import pyarrow as pa
-from pandas import Index, MultiIndex
 from pandas.api.types import infer_dtype, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
@@ -45,7 +47,6 @@ from streamlit import string_util
 if TYPE_CHECKING:
     import graphviz
     import sympy
-    from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure
@@ -216,15 +217,17 @@ _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _NUMPY_ARRAY_TYPE_STR,
 )
 
-DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
+DataFrameLike: TypeAlias = "Union[pd.DataFrame, pd.Index, pd.Series, Styler]"
 
 _DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
     dict,
     list,
+    set,
+    tuple,
     type(None),
 )
 
-_DataFrameCompatible: TypeAlias = Union[dict, list, None]
+_DataFrameCompatible: TypeAlias = Union[dict, list, set, tuple, None]
 DataFrameCompatible: TypeAlias = Union[_DataFrameCompatible, DataFrameLike]
 
 _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
@@ -235,7 +238,7 @@ _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
 BytesLike: TypeAlias = Union[bytes, bytearray]
 
 
-def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
+def is_dataframe(obj: object) -> TypeGuard[pd.DataFrame]:
     return is_type(obj, _PANDAS_DF_TYPE_STR)
 
 
@@ -439,7 +442,7 @@ def is_sequence(seq: Any) -> bool:
 
 def convert_anything_to_df(
     df: Any, max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS
-) -> DataFrame:
+) -> pd.DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
@@ -467,8 +470,6 @@ def convert_anything_to_df(
     if is_pandas_styler(df):
         return df.data
 
-    import pandas as pd
-
     if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
         return pd.DataFrame([])
 
@@ -491,22 +492,133 @@ def convert_anything_to_df(
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
+
         return pd.DataFrame(df)
 
-    except ValueError:
+    except ValueError as ex:
+        if isinstance(df, dict):
+            with contextlib.suppress(ValueError):
+                # Try to use index orient as back-up to support key-value dicts
+                return pd.DataFrame.from_dict(df, orient="index")
         raise errors.StreamlitAPIException(
-            """
-Unable to convert object of type `%(type)s` to `pandas.DataFrame`.
+            f"""
+Unable to convert object of type `{type(df)}` to `pandas.DataFrame`.
 
 Offending object:
 ```py
-%(object)s
+{df}
 ```"""
-            % {
-                "type": type(df),
-                "object": df,
-            }
-        )
+        ) from ex
+
+
+DataEditorCompatible: TypeAlias = Union[
+    pd.DataFrame, pd.Series, pa.Table, np.ndarray, list, tuple, set
+]
+
+InputDataType = TypeVar("InputDataType", bound=DataEditorCompatible)
+
+
+def convert_df_to_reference(
+    df: pd.DataFrame, reference_data: InputDataType
+) -> InputDataType:
+    """Try to convert a dataframe to the type and structure of the reference data.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to convert.
+
+    reference_data : pd.DataFrame, pd.Series, pa.Table, np.ndarry, dict, list, set, or tuple.
+        A data reference with type and structure that the dataframe should be converted to.
+
+    Returns
+    -------
+    pd.DataFrame, pd.Series, pa.Table, np.ndarry, dict, list, set, or tuple.
+
+    """
+
+    if isinstance(reference_data, pd.DataFrame):
+        return df
+    elif isinstance(reference_data, np.ndarray):
+        if len(reference_data.shape) == 1:
+            # It's a 1-dimensional array, so we only return
+            # the first column as numpy array
+            # Calling to_numpy() on the full DataFrame would result in:
+            # [[1], [2]] instead of [1, 2]
+            return df.iloc[:, 0].to_numpy()
+        return df.to_numpy()
+    elif isinstance(reference_data, pa.Table):
+        return pa.Table.from_pandas(df)
+    elif isinstance(reference_data, pd.Series):
+        # Select first column in dataframe and create a new series based on the values
+        if len(df.columns) != 1:
+            raise ValueError(
+                f"DataFrame is expected to have a single column but has {len(df.columns)}."
+            )
+        #
+        return df[df.columns[0]]
+    elif isinstance(reference_data, (list, tuple, set, np.ndarray)):
+        if infer_dtype(reference_data) in ["mixed", "unknown-array"]:
+            # -> Multi-dimensional data structure
+            # This should always contain at least one element,
+            # otherwise the values_type would have been empty
+            first_element = next(iter(reference_data))
+            if isinstance(first_element, dict):
+                # List of records: List[Dict[str, Any]]
+                # Convert to a list of records
+                return df.to_dict(orient="records")
+            if isinstance(first_element, (list, tuple, set)):
+                # List of rows: List[List[...]]
+                # to_numpy converts the dataframe to a list of rows
+                # TODO(lukasmasuch): We could potentially also convert to list/tuple/set here?
+                return df.to_numpy().tolist()
+        else:
+            # -> 1-dimensional data structure
+            return_list = []
+            if len(df.columns) == 1:
+                # Convert the first column to a list
+                return_list = df[df.columns[0]].tolist()
+            elif len(df.columns) >= 1:
+                raise ValueError(
+                    f"DataFrame is expected to have a single column but has {len(df.columns)}."
+                )
+
+            if isinstance(reference_data, tuple):
+                # Return as tuple
+                return_list = tuple(return_list)
+            elif isinstance(reference_data, set):
+                # Return as set
+                return_list = set(return_list)
+            return return_list
+    elif isinstance(reference_data, dict):
+        if df.empty:
+            # Return empty dict
+            return {}
+
+        if len(reference_data) > 0:
+            first_value = next(iter(reference_data.values()))
+            if isinstance(first_value, dict):
+                # -> Column index mapping: {column -> {index -> value}}
+                return df.to_dict(orient="dict")
+            if isinstance(first_value, list):
+                # -> Column value mapping: {column -> [values]}
+                return df.to_dict(orient="list")
+            if isinstance(first_value, pd.Series):
+                # -> Column series mapping: {column -> Series(values)}
+                return df.to_dict(orient="series")
+
+        if len(df.columns) == 1 and infer_dtype(reference_data.values()) not in [
+            "mixed",
+            "unknown-array",
+        ]:
+            # -> Key-value dict (key == index & value == first column)
+            # The key is expected to be the index -> this will return the first column
+            # as a dict with index as key.
+            return df.iloc[:, 0].to_dict()
+
+    raise ValueError(
+        f"Unable to convert dataframe to the input type {type(reference_data)}."
+    )
 
 
 @overload
@@ -515,11 +627,11 @@ def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
 
 
 @overload
-def ensure_iterable(obj: DataFrame) -> Iterable[Any]:
+def ensure_iterable(obj: pd.DataFrame) -> Iterable[Any]:
     ...
 
 
-def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
+def ensure_iterable(obj: Union[pd.DataFrame, Iterable[V_co]]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -578,7 +690,6 @@ def is_pandas_version_less_than(v: str) -> bool:
     bool
 
     """
-    import pandas as pd
     from packaging import version
 
     return version.parse(pd.__version__) < version.parse(v)
@@ -600,7 +711,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
+def _is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     # Check all columns for mixed types and complex128 type
     # The dtype of mixed type columns is always object, the actual type of the column
@@ -641,8 +752,8 @@ def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
 
 
 def fix_arrow_incompatible_column_types(
-    df: DataFrame, selected_columns: Optional[List[str]] = None
-) -> DataFrame:
+    df: pd.DataFrame, selected_columns: Optional[List[str]] = None
+) -> pd.DataFrame:
     """Fix column types that are not supported by Arrow table.
 
     This includes mixed types (e.g. mix of integers and strings)
@@ -681,7 +792,7 @@ def fix_arrow_incompatible_column_types(
     if not selected_columns and (
         not isinstance(
             df.index,
-            MultiIndex,
+            pd.MultiIndex,
         )
         and _is_colum_type_arrow_incompatible(df.index)
     ):
@@ -689,7 +800,7 @@ def fix_arrow_incompatible_column_types(
     return df
 
 
-def data_frame_to_bytes(df: DataFrame) -> bytes:
+def data_frame_to_bytes(df: pd.DataFrame) -> bytes:
     """Serialize pandas.DataFrame to bytes using Apache Arrow.
 
     Parameters
@@ -710,7 +821,7 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
     return pyarrow_table_to_bytes(table)
 
 
-def bytes_to_data_frame(source: bytes) -> DataFrame:
+def bytes_to_data_frame(source: bytes) -> pd.DataFrame:
     """Convert bytes to pandas.DataFrame.
 
     Parameters
