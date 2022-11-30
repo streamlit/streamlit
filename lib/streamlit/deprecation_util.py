@@ -133,9 +133,7 @@ def _create_deprecated_object_wrapper(
             show_warning()
 
     class Wrapper:
-        def __init__(self, obj: object):
-            self._obj = obj
-
+        def __init__(self):
             # Override all the Wrapped object's magic functions
             for name in Wrapper._get_magic_functions(obj.__class__):
                 setattr(
@@ -153,7 +151,7 @@ def _create_deprecated_object_wrapper(
                 return getattr(self, attr)
 
             maybe_show_warning()
-            return getattr(self._obj, attr)
+            return getattr(obj, attr)
 
         @staticmethod
         def _get_magic_functions(cls) -> List[str]:
@@ -170,8 +168,8 @@ def _create_deprecated_object_wrapper(
         def _make_magic_function_proxy(name):
             def proxy(self, *args):
                 maybe_show_warning()
-                return getattr(self._obj, name)
+                return getattr(obj, name)
 
             return proxy
 
-    return cast(TObj, Wrapper(obj))
+    return cast(TObj, Wrapper())
