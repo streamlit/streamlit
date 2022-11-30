@@ -99,6 +99,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
             command_line="",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             session_manager_class=MockSessionManager,
+            session_storage=mock.MagicMock(),
         )
         self.runtime = Runtime(config)
 
