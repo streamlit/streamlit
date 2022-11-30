@@ -320,7 +320,7 @@ class ComponentRegistry:
         return cls._instance
 
     def __init__(self):
-        self._components = {}  # type: Dict[str, CustomComponent]
+        self._components: Dict[str, CustomComponent] = {}
         self._lock = threading.Lock()
 
     def __repr__(self) -> str:
