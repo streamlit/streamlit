@@ -123,6 +123,12 @@ export function applyStreamlitThemeTemplateLayout(
       },
       zeroline: false,
       automargin: true,
+      rangeselector: {
+        bgcolor: colors.bgColor,
+        bordercolor: getGray30(theme),
+        borderwidth: 1,
+        x: 0,
+      },
     },
     margin: {
       pad: theme.spacing.lgPx,
@@ -426,6 +432,13 @@ export function layoutWithThemeDefaults(layout: any, theme: Theme): any {
     },
     paper_bgcolor: colors.bgColor,
     plot_bgcolor: colors.secondaryBg,
+    xaxis: {
+      rangeselector: {
+        bgcolor: colors.bgColor,
+        bordercolor: getGray30(theme),
+        borderwidth: 1,
+      },
+    },
   }
 
   // Fill in theme defaults where the user didn't specify layout options.
