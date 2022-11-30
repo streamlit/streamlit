@@ -306,6 +306,9 @@ class Block:
             for c in self.children[child_idx]:
                 yield c
 
+    def __getitem__(self, k: int) -> Element | Block:
+        return self.children[k]
+
     @overload
     def get(self, elt: Literal["text"]) -> list[Text]:
         ...

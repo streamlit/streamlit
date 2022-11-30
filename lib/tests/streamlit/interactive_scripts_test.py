@@ -59,10 +59,10 @@ class InteractiveScriptTest(unittest.TestCase):
         assert len(main) == 3
 
         # 2 columns
-        assert len(main.children[0]) == 2
+        assert len(main[0]) == 2
 
         # first column has 4 elements
-        assert len(main.children[0].children[0]) == 4
+        assert len(main[0][0]) == 4
 
         radios = sr.get("radio")
         assert radios[0].value == "1"
