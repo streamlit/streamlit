@@ -19,6 +19,7 @@ from parameterized import parameterized
 
 from streamlit.deprecation_util import (
     PrereleaseAPIType,
+    deprecate_object_with_console_warning,
     function_prerelease_graduation_warning,
     object_prerelease_graduation_warning,
 )
@@ -119,3 +120,23 @@ class DeprecationUtilTest(unittest.TestCase):
 
         # We only show the warning a single time for a given object.
         mock_warning.assert_called_once_with(warning_msg)
+
+    @patch("builtins.print")
+    def test_deprecate_object_with_console_warning(self, mock_print: Mock):
+        """`deprecate_object_with_console_warning` should print the given
+        warning text to the console.
+        """
+
+        class Multiplier:
+            def multiply(self, a, b):
+                return a * b
+
+        warning_text = "Here be dragons!"
+        deprecated_multiplier = deprecate_object_with_console_warning(
+            Multiplier(), warning_text
+        )
+        self.assertEqual(deprecated_multiplier.multiply(3, 2), 6)
+        self.assertEqual(deprecated_multiplier.multiply(5, 4), 20)
+
+        # We only show the warning a single time for a given object.
+        mock_print.assert_called_once_with(warning_text)
