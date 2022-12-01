@@ -174,3 +174,4 @@ st.radio("has key", options=["a", "b", "c"], key="r")
         sr = script.run()
         assert sr.get_widget("r")
         assert sr.get_widget("r") == sr.get("radio")[1]
+        assert sr.get_widget("s") is None
