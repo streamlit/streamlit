@@ -217,22 +217,6 @@ df = px.data.tips()
 fig = px.density_heatmap(df, x="total_bill", y="tip")
 st.plotly_chart(fig, theme="streamlit")
 
-data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])
-
-fig = px.line(data, height=100, width=300)
-fig.update_xaxes(visible=False, fixedrange=True)
-fig.update_yaxes(visible=False, fixedrange=True)
-fig.update_layout(annotations=[], overwrite=True)
-fig.update_layout(showlegend=False, margin=dict(t=10, l=10, b=10, r=10))
-
-# uses figure height and width when use_container_width is False
-st.plotly_chart(
-    fig, config=dict(displayModeBar=False), use_container_width=False, theme=None
-)
-
-# uses container width when use_container_width flag is True
-st.plotly_chart(fig, use_container_width=True, theme=None)
-
 df = pd.read_csv(
     "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
 )
@@ -257,3 +241,19 @@ fig.update_xaxes(
 )
 fig.update_layout(height=300, width=600)
 st.plotly_chart(fig, theme="streamlit")
+
+data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])
+
+fig = px.line(data, height=100, width=300)
+fig.update_xaxes(visible=False, fixedrange=True)
+fig.update_yaxes(visible=False, fixedrange=True)
+fig.update_layout(annotations=[], overwrite=True)
+fig.update_layout(showlegend=False, margin=dict(t=10, l=10, b=10, r=10))
+
+# uses figure height and width when use_container_width is False
+st.plotly_chart(
+    fig, config=dict(displayModeBar=False), use_container_width=False, theme=None
+)
+
+# uses container width when use_container_width flag is True
+st.plotly_chart(fig, use_container_width=True, theme=None)
