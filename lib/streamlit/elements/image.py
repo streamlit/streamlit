@@ -346,7 +346,7 @@ def image_to_url(
                 mimetype = "application/octet-stream"
 
             url = runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
-            caching.save_image_data(image, mimetype, image_id)
+            caching.save_media_data(image, mimetype, image_id)
             return url
 
     # PIL Images
@@ -396,7 +396,7 @@ def image_to_url(
 
     if runtime.exists():
         url = runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
-        caching.save_image_data(image_data, mimetype, image_id)
+        caching.save_media_data(image_data, mimetype, image_id)
         return url
     else:
         # When running in "raw mode", we can't access the MediaFileManager.

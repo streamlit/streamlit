@@ -85,11 +85,9 @@ class WidgetManagerTests(unittest.TestCase):
         session_state = SessionState()
         session_state._set_widget_metadata(create_metadata("fake_widget_id", ""))
 
-        self.assertTrue(
-            isinstance(
-                session_state._new_widget_state.widget_metadata["fake_widget_id"],
-                WidgetMetadata,
-            )
+        self.assertIsInstance(
+            session_state._new_widget_state.widget_metadata["fake_widget_id"],
+            WidgetMetadata,
         )
 
     def test_call_callbacks(self):
