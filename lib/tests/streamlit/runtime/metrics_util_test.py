@@ -256,36 +256,39 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "get_option",
         }
 
-        public_commands = {
-            k
-            for k, v in st.__dict__.items()
-            if not k.startswith("_") and not isinstance(v, type(st))
-        }
+        public_api_names = sorted(
+            [
+                k
+                for k, v in st.__dict__.items()
+                if not k.startswith("_")
+                and not isinstance(v, type(st))
+                and k not in ignored_commands
+            ]
+        )
 
-        for command_name in public_commands.difference(ignored_commands):
-            if command_name in ignored_commands:
-                continue
-            command = getattr(st, command_name)
-            if callable(command):
-                # This will always throw an exception because of missing arguments
-                # This is fine since the command still get tracked
+        for api_name in public_api_names:
+            st_func = getattr(st, api_name)
+            if callable(st_func):
+                # Call the API. This will often throw an exception due to missing
+                # arguments. But that's fine: the command will still be tracked.
                 with contextlib.suppress(Exception):
-                    command()
+                    st_func()
 
                 self.assertGreater(
                     len(ctx.tracked_commands),
                     0,
-                    f"No command tracked for {command_name}",
+                    f"No command tracked for {api_name}",
                 )
 
                 # Sometimes also multiple commands are executed
                 # so we check the full list.
                 self.assertIn(
-                    command_name,
-                    [
-                        tracked_commands.name
-                        for tracked_commands in ctx.tracked_commands
-                    ],
+                    api_name,
+                    [cmd.name for cmd in ctx.tracked_commands],
+                    (
+                        f"When executing `st.{api_name}()`, we expect the string "
+                        f'"{api_name}" to be in the list of tracked commands.',
+                    ),
                 )
 
                 ctx.reset()
