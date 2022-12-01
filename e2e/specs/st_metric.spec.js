@@ -114,4 +114,46 @@ describe("st.metric", () => {
       ).matchThemedSnapshots("metric-container-gray");
     });
   });
+
+  describe("Shows label correctly when label_visibility set to visible", () => {
+    it("Check Metric Snapshot", () => {
+      cy.getIndexed("[data-testid='stMetricLabel']", 4).should(
+        "have.text",
+        "Test 3"
+      );
+
+      cy.getIndexed(
+        '[data-testid="metric-container"]',
+        4
+      ).matchThemedSnapshots("metric-label-visible");
+    });
+  });
+
+  describe("Hides label correctly when label_visibility set to hidden", () => {
+    it("Check Metric Snapshot", () => {
+      cy.getIndexed("[data-testid='stMetricLabel']", 5).should(
+        "have.text",
+        "Test 4"
+      );
+
+      cy.getIndexed(
+        '[data-testid="metric-container"]',
+        5
+      ).matchThemedSnapshots("metric-label-hidden");
+    });
+  });
+
+  describe("Collapses label correctly when label_visibility set to collapse", () => {
+    it("Check Metric Snapshot", () => {
+      cy.getIndexed("[data-testid='stMetricLabel']", 6).should(
+        "have.text",
+        "Test 5"
+      );
+
+      cy.getIndexed(
+        '[data-testid="metric-container"]',
+        6
+      ).matchThemedSnapshots("metric-label-collapse");
+    });
+  });
 });
