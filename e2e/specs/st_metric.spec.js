@@ -117,14 +117,14 @@ describe("st.metric", () => {
 
   describe("Shows label correctly when label_visibility set to visible", () => {
     it("Check Metric Snapshot", () => {
-      cy.getIndexed("[data-testid='stMetricLabel']", 4).should(
+      cy.getIndexed("[data-testid='stMetricLabel']", 3).should(
         "have.text",
         "Test 3"
       );
 
       cy.getIndexed(
         '[data-testid="metric-container"]',
-        4
+        3
       ).matchThemedSnapshots("metric-label-visible");
     });
   });
