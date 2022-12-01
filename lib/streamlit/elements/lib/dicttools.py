@@ -54,11 +54,11 @@ def _unflatten_single_dict(flat_dict):
         A tree made of dicts inside of dicts.
 
     """
-    out = dict()  # type: Dict[str, Any]
+    out: Dict[str, Any] = dict()
     for pathstr, v in flat_dict.items():
         path = pathstr.split("_")
 
-        prev_dict = None  # type: Optional[Dict[str, Any]]
+        prev_dict: Optional[Dict[str, Any]] = None
         curr_dict = out
 
         for k in path:
