@@ -97,14 +97,6 @@ def deprecate_obj_name(
     )
 
 
-def deprecate_obj_with_console_warning(obj: TObj, warning: str) -> TObj:
-    """Create a wrapper for an object that has been deprecated. The first
-    time any of the object's properties or functions is accessed, the
-    given warning text will be written to the console.
-    """
-    return _create_deprecated_obj_wrapper(obj, lambda: print(warning))
-
-
 def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -> TObj:
     """Create a wrapper for an object that has been deprecated. The first
     time one of the object's properties or functions is accessed, the
