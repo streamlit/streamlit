@@ -102,8 +102,7 @@ class InteractiveScriptTest(unittest.TestCase):
                 return r
 
 
-            r = foo(1)
-            st.text(r)
+            foo(1)
         """,
         )
         sr = script.run()
@@ -125,17 +124,16 @@ class InteractiveScriptTest(unittest.TestCase):
                 return r
 
 
-            r = foo(1)
-            st.text(r)
+            foo(1)
         """,
         )
         sr = script.run()
 
         assert len(sr.get("radio")) == 1
-        assert sr.get("text")[0].value == "bar"
+        assert sr.get("radio")[0].value == "bar"
 
         sr2 = sr.get("radio")[0].set_value("qux").run()
-        assert sr2.get("text")[0].value == "qux"
+        assert sr2.get("radio")[0].value == "qux"
 
     def test_radio_interaction(self):
         script = script_from_string(
@@ -143,23 +141,20 @@ class InteractiveScriptTest(unittest.TestCase):
             """
             import streamlit as st
 
-            r1 = st.radio("radio", options=["a", "b", "c"])
-            st.text(r1)
-            r2 = st.radio("default index", options=["a", "b", "c"], index=2)
-            st.text(r2)
+            st.radio("radio", options=["a", "b", "c"])
+            st.radio("default index", options=["a", "b", "c"], index=2)
             """,
         )
         sr = script.run()
         assert sr.get("radio")
         assert sr.get("radio")[0].value == "a"
         assert sr.get("radio")[1].value == "c"
-        assert [t.value for t in sr.get("text")] == ["a", "c"]
 
         r = sr.get("radio")[0].set_value("b")
         assert r._index == 1
         sr2 = r.run()
         assert sr2.get("radio")[0].value == "b"
-        assert [t.value for t in sr2.get("text")] == ["b", "c"]
+        assert [s.value for s in sr2.get("radio")] == ["b", "c"]
 
     def test_widget_key_lookup(self):
         script = script_from_string(
