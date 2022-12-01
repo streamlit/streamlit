@@ -93,17 +93,17 @@ class InteractiveScriptTest(unittest.TestCase):
         script = script_from_string(
             self.script_dir / "cached_widget_replay.py",
             """
-import streamlit as st
+            import streamlit as st
 
-@st.experimental_memo(experimental_allow_widgets=True)
-def foo(i):
-    options = ["foo", "bar", "baz", "qux"]
-    r = st.radio("radio", options, index=i)
-    return r
+            @st.experimental_memo(experimental_allow_widgets=True)
+            def foo(i):
+                options = ["foo", "bar", "baz", "qux"]
+                r = st.radio("radio", options, index=i)
+                return r
 
 
-r = foo(1)
-st.text(r)
+            r = foo(1)
+            st.text(r)
         """,
         )
         sr = script.run()
@@ -116,17 +116,17 @@ st.text(r)
         script = script_from_string(
             self.script_dir / "cached_widget_replay.py",
             """
-import streamlit as st
+            import streamlit as st
 
-@st.experimental_memo(experimental_allow_widgets=True)
-def foo(i):
-    options = ["foo", "bar", "baz", "qux"]
-    r = st.radio("radio", options, index=i)
-    return r
+            @st.experimental_memo(experimental_allow_widgets=True)
+            def foo(i):
+                options = ["foo", "bar", "baz", "qux"]
+                r = st.radio("radio", options, index=i)
+                return r
 
 
-r = foo(1)
-st.text(r)
+            r = foo(1)
+            st.text(r)
         """,
         )
         sr = script.run()
@@ -141,12 +141,12 @@ st.text(r)
         script = script_from_string(
             self.script_dir / "radio_interaction.py",
             """
-import streamlit as st
+            import streamlit as st
 
-r1 = st.radio("radio", options=["a", "b", "c"])
-st.text(r1)
-r2 = st.radio("default index", options=["a", "b", "c"], index=2)
-st.text(r2)
+            r1 = st.radio("radio", options=["a", "b", "c"])
+            st.text(r1)
+            r2 = st.radio("default index", options=["a", "b", "c"], index=2)
+            st.text(r2)
             """,
         )
         sr = script.run()
@@ -165,10 +165,10 @@ st.text(r2)
         script = script_from_string(
             self.script_dir / "widget_keys.py",
             """
-import streamlit as st
+            import streamlit as st
 
-st.radio("keyless", options=["a", "b", "c"])
-st.radio("has key", options=["a", "b", "c"], key="r")
+            st.radio("keyless", options=["a", "b", "c"])
+            st.radio("has key", options=["a", "b", "c"], key="r")
             """,
         )
         sr = script.run()

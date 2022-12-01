@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import textwrap
 import time
 from dataclasses import dataclass, field
 from typing import Any, overload
@@ -111,8 +112,8 @@ class LocalScriptRunner(ScriptRunner):
 
 
 def script_from_string(path: pathlib.Path, script: str) -> LocalScriptRunner:
-    # TODO strip indentation so scripts can be aligned with the string start
-    path.write_text(script)
+    aligned_script = textwrap.dedent(script)
+    path.write_text(aligned_script)
     return LocalScriptRunner(str(path))
 
 
