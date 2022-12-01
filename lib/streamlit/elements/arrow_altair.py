@@ -49,6 +49,12 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+# Create and enable streamlit theme
+STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
+
+# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
+alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
+
 # no theme applied to charts
 alt.themes.enable("none")
 
