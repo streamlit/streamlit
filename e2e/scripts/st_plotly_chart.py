@@ -255,4 +255,5 @@ fig.update_xaxes(
         )
     ),
 )
+fig.update_layout(height=500, width=500)
 st.plotly_chart(fig, theme="streamlit")
