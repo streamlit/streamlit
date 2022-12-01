@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import enum
 import functools
 from typing import Any, Callable, List, TypeVar, cast
 
@@ -22,103 +21,91 @@ TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
 
 
-class PrereleaseAPIType(enum.Enum):
-    BETA = "BETA"
-    EXPERIMENTAL = "EXPERIMENTAL"
-
-
-def _get_function_name_prefix(api_type: PrereleaseAPIType) -> str:
-    """Return the function name prefix (e.g. 'beta_') for the given PrereleaseAPIType."""
-    if api_type is PrereleaseAPIType.BETA:
-        return "beta_"
-    if api_type is PrereleaseAPIType.EXPERIMENTAL:
-        return "experimental_"
-    raise RuntimeError(f"Unrecognized PrereleaseAPIType: {api_type}")
-
-
-def _show_api_graduation_warning(
-    api_type: PrereleaseAPIType, name: str, removal_date: str
+def _show_deprecated_name_warning_in_browser(
+    old_name: str, new_name: str, removal_date: str
 ) -> None:
-    prefix = _get_function_name_prefix(api_type)
     streamlit.warning(
-        f"Please replace `st.{prefix}{name}` with `st.{name}`.\n\n"
-        f"`st.{prefix}{name}` will be removed after {removal_date}."
+        f"Please replace `st.{old_name}` with `st.{new_name}`.\n\n"
+        f"`st.{old_name}` will be removed after {removal_date}."
     )
 
 
-def function_prerelease_graduation_warning(
-    api_type: PrereleaseAPIType, func: TFunc, removal_date: str
-) -> TFunc:
-    """Wrapper for functions that have "graduated" from pre-release.
+def deprecate_func_name(func: TFunc, old_name: str, removal_date: str) -> TFunc:
+    """Wrap an `st` function whose name has changed.
 
-    Wrapped functions will run as normal, but then proceed to show an st.warning
-    saying that the beta_/experimental_ version will be removed in ~3 months.
+    Wrapped functions will run as normal, but will also show an st.warning
+    saying that the old name will be removed after removal_date.
+
+    (We generally set `removal_date` to 3 months from the deprecation date.)
 
     Parameters
     ----------
-    api_type : PrereleaseAPIType
-        The type of prerelease API that's graduating to release.
+    func
+        The `st.` function whose name has changed.
 
-    func: callable
-        The `st.` function that has graduated from beta/experimental.
+    old_name
+        The function's deprecated name within __init__.py.
 
-    removal_date: str
+    removal_date
         A date like "2020-01-01", indicating the last day we'll guarantee
-        support for the beta_/experimental_ prefix.
+        support for the deprecated name.
     """
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         result = func(*args, **kwargs)
-        _show_api_graduation_warning(api_type, func.__name__, removal_date)
+        _show_deprecated_name_warning_in_browser(old_name, func.__name__, removal_date)
         return result
 
     # Update the wrapped func's name & docstring so st.help does the right thing
-    wrapped_func.__name__ = f"{_get_function_name_prefix(api_type)}{func.__name__}"
+    wrapped_func.__name__ = old_name
     wrapped_func.__doc__ = func.__doc__
     return cast(TFunc, wrapped_func)
 
 
-def object_prerelease_graduation_warning(
-    api_type: PrereleaseAPIType, obj: TObj, obj_name: str, removal_date: str
+def deprecate_obj_name(
+    obj: TObj, old_name: str, new_name: str, removal_date: str
 ) -> TObj:
-    """Wrapper for objects that have "graduated" from pre-release.
+    """Wrap an `st` object whose name has changed.
 
-    Wrapped objects will run as normal, but then proceed to show an st.warning
-    saying that the beta_/experimental_ version will be removed in ~3 months.
+    Wrapped objects will behave as normal, but will also show an st.warning
+    saying that the old name will be removed after `removal_date`.
+
+    (We generally set `removal_date` to 3 months from the deprecation date.)
 
     Parameters
     ----------
-    obj: Any
-        The `st.` object that used to be in beta.
+    obj
+        The `st.` object whose name has changed.
 
-    api_type : PrereleaseAPIType
-        The type of prerelease API that's graduating to release.
+    old_name
+        The object's deprecated name within __init__.py.
 
-    obj_name: str
-        The name of the object within __init__.py
+    new_name
+        The object's new name within __init__.py.
 
-    removal_date: str
+    removal_date
         A date like "2020-01-01", indicating the last day we'll guarantee
-        support for the beta_ prefix.
+        support for the deprecated name.
     """
 
-    return _create_deprecated_object_wrapper(
-        obj, lambda: _show_api_graduation_warning(api_type, obj_name, removal_date)
+    return _create_deprecated_obj_wrapper(
+        obj,
+        lambda: _show_deprecated_name_warning_in_browser(
+            old_name, new_name, removal_date
+        ),
     )
 
 
-def deprecate_object_with_console_warning(obj: TObj, warning: str) -> TObj:
+def deprecate_obj_with_console_warning(obj: TObj, warning: str) -> TObj:
     """Create a wrapper for an object that has been deprecated. The first
     time any of the object's properties or functions is accessed, the
     given warning text will be written to the console.
     """
-    return _create_deprecated_object_wrapper(obj, lambda: print(warning))
+    return _create_deprecated_obj_wrapper(obj, lambda: print(warning))
 
 
-def _create_deprecated_object_wrapper(
-    obj: TObj, show_warning: Callable[[], Any]
-) -> TObj:
+def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -> TObj:
     """Create a wrapper for an object that has been deprecated. The first
     time one of the object's properties or functions is accessed, the
     given `show_warning` callback will be called.
