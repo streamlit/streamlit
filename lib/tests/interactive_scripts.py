@@ -44,12 +44,13 @@ class LocalScriptRunner(ScriptRunner):
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
+        self.session_state = SessionState()
 
         super().__init__(
             session_id="test session id",
             main_script_path=script_path,
             client_state=ClientState(),
-            session_state=SessionState(),
+            session_state=self.session_state,
             uploaded_file_mgr=UploadedFileManager(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
@@ -98,6 +99,7 @@ class LocalScriptRunner(ScriptRunner):
         require_widgets_deltas(self)
         tree = parse_tree_from_messages(self.forward_msgs())
         tree.script_path = self.script_path
+        tree.session_state = self.session_state
         return tree
 
     def script_stopped(self) -> bool:
@@ -261,8 +263,9 @@ class Radio(Element):
     @property
     def value(self) -> str:
         """The currently selected value from the options."""
-        v = self.index
-        return self.options[v]
+        state = self.root.session_state
+        assert state
+        return state[self.id]
 
     def set_value(self, v: str) -> Radio:
         self._index = self.options.index(v)
@@ -351,11 +354,15 @@ class Block:
 @dataclass(init=False)
 class Root(Block):
     script_path: str | None = field(repr=False)
+    session_state: SessionState | None = field(repr=False)
 
-    def __init__(self):
+    def __init__(
+        self, session_state: SessionState | None = None, script_path: str | None = None
+    ):
         self.children = {}
         self.root = self
-        self.script_path = None
+        self.script_path = script_path
+        self.session_state = session_state
 
     @property
     def type(self) -> str:

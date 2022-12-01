@@ -158,7 +158,7 @@ class InteractiveScriptTest(unittest.TestCase):
         r = sr.get("radio")[0].set_value("b")
         assert r._index == 1
         sr2 = r.run()
-        # assert sr2.get("radio")[0].value == "b"
+        assert sr2.get("radio")[0].value == "b"
         assert [t.value for t in sr2.get("text")] == ["b", "c"]
 
     def test_widget_key_lookup(self):
