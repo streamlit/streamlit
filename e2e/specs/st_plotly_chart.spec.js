@@ -33,7 +33,6 @@ describe("st.plotly_chart", () => {
   it("has consistent visuals", () => {
     cy.get(".element-container .stPlotlyChart")
       .each((el, idx) => {
-        cy.get(el).scrollIntoView()
         return cy.wrap(el).matchThemedSnapshots("plotly_chart" + idx);
       })
   });
