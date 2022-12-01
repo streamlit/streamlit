@@ -160,3 +160,17 @@ st.text(r2)
         sr2 = r.run()
         # assert sr2.get("radio")[0].value == "b"
         assert [t.value for t in sr2.get("text")] == ["b", "c"]
+
+    def test_widget_key_lookup(self):
+        script = script_from_string(
+            self.script_dir / "widget_keys.py",
+            """
+import streamlit as st
+
+st.radio("keyless", options=["a", "b", "c"])
+st.radio("has key", options=["a", "b", "c"], key="r")
+            """,
+        )
+        sr = script.run()
+        assert sr.get_widget("r")
+        assert sr.get_widget("r") == sr.get("radio")[1]

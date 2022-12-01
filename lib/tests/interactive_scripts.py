@@ -31,6 +31,7 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.state.session_state import SessionState
+from streamlit.runtime.state.widgets import user_key_from_widget_id
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
@@ -170,6 +171,10 @@ class Element:
         p = getattr(self.proto, self.type)
         return p.value
 
+    @property
+    def key(self) -> str | None:
+        return None
+
     def widget_state(self) -> WidgetState | None:
         return None
 
@@ -213,6 +218,10 @@ class Radio(Element):
     @property
     def id(self) -> str:
         return self.proto.id
+
+    @property
+    def key(self) -> str | None:
+        return user_key_from_widget_id(self.id)
 
     @property
     def label(self) -> str:
@@ -309,6 +318,10 @@ class Block:
     def __getitem__(self, k: int) -> Element | Block:
         return self.children[k]
 
+    @property
+    def key(self) -> str | None:
+        return None
+
     @overload
     def get(self, elt: Literal["text"]) -> list[Text]:
         ...
@@ -319,6 +332,13 @@ class Block:
 
     def get(self, elt: str) -> list[Element | Block]:
         return [e for e in self if e.type == elt]
+
+    def get_widget(self, key: str) -> Element | None:
+        for e in self:
+            if e.key == key:
+                assert isinstance(e, Element)
+                return e
+        return None
 
     def widget_state(self) -> WidgetState | None:
         return None
