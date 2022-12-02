@@ -66,6 +66,7 @@ export const StyledCameraInput = styled.div<StyledCameraInputProps>(
     // This is used to position the "Switch facing mode" button
     // with respect to the webcam block.
     position: "relative",
+    overflow: "hidden",
     width: "100%",
     objectFit: "contain",
   })
@@ -78,7 +79,7 @@ export interface StyledBoxProps {
 export const StyledBox = styled.div<StyledBoxProps>(({ theme, width }) => ({
   backgroundColor: theme.colors.secondaryBg,
   borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
-  width,
+  width: "100%",
   height: (width * 9) / 16,
   display: "flex",
   flexDirection: "column",
