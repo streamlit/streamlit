@@ -98,7 +98,7 @@ const WebcamComponent = ({
   const [debouncedWidth, setDebouncedWidth] = useState(width)
   const memoizedSetDebouncedCallback = useCallback(
     debounce(1000, setDebouncedWidth),
-    [debouncedWidth]
+    []
   )
 
   useEffect(() => {
