@@ -98,7 +98,7 @@
     "react-syntax-highlighter": "^15.4.5",
     "react-transition-group": "^4.4.1",
     "react-virtualized": "^9.21.2",
-    "react-webcam": "^6.0.0",
+    "react-webcam": "^7.0.1",
     "react-window": "^1.8.5",
     "rehype-katex": "^5.0.0",
     "rehype-raw": "^5.1.0",
