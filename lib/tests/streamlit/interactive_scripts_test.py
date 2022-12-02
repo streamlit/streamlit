@@ -13,13 +13,13 @@
 # limitations under the License.
 from unittest.mock import patch
 
-from tests.interactive_scripts import InteractiveScriptTests, script_from_filename
+from tests.interactive_scripts import InteractiveScriptTests
 
 
 @patch("streamlit.source_util._cached_pages", new=None)
 class InteractiveScriptTest(InteractiveScriptTests):
     def test_widgets_script(self):
-        script = script_from_filename("widgets_script.py")
+        script = self.script_from_filename("widgets_script.py")
         sr = script.run()
 
         # main and sidebar

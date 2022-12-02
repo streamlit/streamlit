@@ -141,12 +141,11 @@ class InteractiveScriptTests(unittest.TestCase):
         path.write_text(aligned_script)
         return LocalScriptRunner(str(path))
 
-
-def script_from_filename(script_name: str) -> LocalScriptRunner:
-    script_path = os.path.join(
-        os.path.dirname(__file__), "streamlit", "test_data", script_name
-    )
-    return LocalScriptRunner(script_path)
+    def script_from_filename(self, script_name: str) -> LocalScriptRunner:
+        script_path = os.path.join(
+            os.path.dirname(__file__), "streamlit", "test_data", script_name
+        )
+        return LocalScriptRunner(script_path)
 
 
 def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> None:
