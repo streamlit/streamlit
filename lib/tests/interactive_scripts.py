@@ -226,7 +226,7 @@ class Text(Element):
 @dataclass(init=False)
 class Radio(Element):
     root: Root = field(repr=False)
-    _index: int | None
+    _value: str | None
 
     proto: RadioProto
     type: str
@@ -242,7 +242,7 @@ class Radio(Element):
     def __init__(self, proto: RadioProto, root: Root):
         self.proto = proto
         self.root = root
-        self._index = None
+        self._value = None
 
         self.type = "radio"
         self.id = proto.id
@@ -261,12 +261,15 @@ class Radio(Element):
     @property
     def value(self) -> str:
         """The currently selected value from the options."""
-        state = self.root.session_state
-        assert state
-        return state[self.id]
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return state[self.id]
 
     def set_value(self, v: str) -> Radio:
-        self._index = self.options.index(v)
+        self._value = v
         return self
 
     def widget_state(self) -> WidgetState:
@@ -276,10 +279,7 @@ class Radio(Element):
         """
         ws = WidgetState()
         ws.id = self.id
-        if self._index is not None:
-            ws.int_value = self._index
-        else:
-            ws.int_value = self.index
+        ws.int_value = self.index
         return ws
 
 

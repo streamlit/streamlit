@@ -122,7 +122,8 @@ class InteractiveScriptTest(InteractiveScriptTests):
         assert sr.get("radio")[1].value == "c"
 
         r = sr.get("radio")[0].set_value("b")
-        assert r._index == 1
+        assert r.index == 1
+        assert r.value == "b"
         sr2 = r.run()
         assert sr2.get("radio")[0].value == "b"
         assert [s.value for s in sr2.get("radio")] == ["b", "c"]
