@@ -256,12 +256,7 @@ class Radio(Element):
 
     @property
     def index(self) -> int:
-        # TODO tests to make sure this is the right behavior
-        if self.proto.set_value:
-            v = self.proto.value
-        else:
-            v = self.proto.default
-        return v
+        return self.options.index(self.value)
 
     @property
     def value(self) -> str:

@@ -141,3 +141,38 @@ class InteractiveScriptTest(InteractiveScriptTests):
         assert sr.get_widget("r")
         assert sr.get_widget("r") == sr.get("radio")[1]
         assert sr.get_widget("s") is None
+
+    def test_widget_added_removed(self):
+        """
+        Test that the value of a widget persists, disappears, and resets
+        appropriately, as the widget is added and removed from the script execution.
+        """
+        script = self.script_from_string(
+            "widget_added_and_removed.py",
+            """
+            import streamlit as st
+
+            cb = st.radio("radio emulating a checkbox", options=["off", "on"], key="cb")
+            if cb == "on":
+                st.radio("radio", options=["a", "b", "c"], key="conditional")
+            """,
+        )
+        sr = script.run()
+        assert len(sr.get("radio")) == 1
+        assert sr.get_widget("conditional") == None
+
+        sr2 = sr.get_widget("cb").set_value("on").run()
+        assert len(sr2.get("radio")) == 2
+        assert sr2.get_widget("conditional").value == "a"
+
+        sr3 = sr2.get_widget("conditional").set_value("c").run()
+        assert len(sr3.get("radio")) == 2
+        assert sr3.get_widget("conditional").value == "c"
+
+        sr4 = sr3.get_widget("cb").set_value("off").run()
+        assert len(sr4.get("radio")) == 1
+        assert sr4.get_widget("conditional") == None
+
+        sr5 = sr4.get_widget("cb").set_value("on").run()
+        assert len(sr5.get("radio")) == 2
+        assert sr5.get_widget("conditional").value == "a"
