@@ -21,7 +21,7 @@ import time
 import unittest
 from dataclasses import dataclass, field
 from typing import Any, overload
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from typing_extensions import Literal
 
@@ -119,7 +119,6 @@ class LocalScriptRunner(ScriptRunner):
         return False
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class InteractiveScriptTests(unittest.TestCase):
     script_dir: tempfile.TemporaryDirectory
 
