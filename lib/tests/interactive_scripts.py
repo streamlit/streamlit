@@ -15,10 +15,13 @@ from __future__ import annotations
 
 import os
 import pathlib
+import tempfile
 import textwrap
 import time
+import unittest
 from dataclasses import dataclass, field
 from typing import Any, overload
+from unittest.mock import MagicMock, patch
 
 from typing_extensions import Literal
 
@@ -29,7 +32,10 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.media_file_manager import MediaFileManager
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.runtime.state.widgets import user_key_from_widget_id
@@ -113,10 +119,28 @@ class LocalScriptRunner(ScriptRunner):
         return False
 
 
-def script_from_string(path: pathlib.Path, script: str) -> LocalScriptRunner:
-    aligned_script = textwrap.dedent(script)
-    path.write_text(aligned_script)
-    return LocalScriptRunner(str(path))
+@patch("streamlit.source_util._cached_pages", new=None)
+class InteractiveScriptTests(unittest.TestCase):
+    script_dir: tempfile.TemporaryDirectory
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.script_dir = tempfile.TemporaryDirectory()
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.media_file_mgr = MediaFileManager(
+            MemoryMediaFileStorage("/mock/media")
+        )
+        Runtime._instance = mock_runtime
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        Runtime._instance = None
+
+    def script_from_string(self, script_name: str, script: str) -> LocalScriptRunner:
+        path = pathlib.Path(self.script_dir.name, script_name)
+        aligned_script = textwrap.dedent(script)
+        path.write_text(aligned_script)
+        return LocalScriptRunner(str(path))
 
 
 def script_from_filename(script_name: str) -> LocalScriptRunner:

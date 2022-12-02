@@ -11,42 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pathlib
-import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
-
-from streamlit.runtime import Runtime
-from streamlit.runtime.media_file_manager import MediaFileManager
-from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from tests.interactive_scripts import script_from_filename, script_from_string
-
-
-@pytest.fixture(scope="class")
-def tmp_script_path(request, tmp_path_factory):
-    tmp_path: pathlib.Path = tmp_path_factory.mktemp("test_data")
-    tmp_path.mkdir(exist_ok=True, parents=True)
-    request.cls.script_dir = tmp_path
+from tests.interactive_scripts import InteractiveScriptTests, script_from_filename
 
 
 @patch("streamlit.source_util._cached_pages", new=None)
-@pytest.mark.usefixtures("tmp_script_path")
-class InteractiveScriptTest(unittest.TestCase):
-    script_dir: pathlib.Path
-
-    def setUp(self) -> None:
-        super().setUp()
-        mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.media_file_mgr = MediaFileManager(
-            MemoryMediaFileStorage("/mock/media")
-        )
-        Runtime._instance = mock_runtime
-
-    def tearDown(self) -> None:
-        super().tearDown()
-        Runtime._instance = None
-
+class InteractiveScriptTest(InteractiveScriptTests):
     def test_widgets_script(self):
         script = script_from_filename("widgets_script.py")
         sr = script.run()
@@ -90,8 +61,8 @@ class InteractiveScriptTest(unittest.TestCase):
         ]
 
     def test_cached_widget_replay_rerun(self):
-        script = script_from_string(
-            self.script_dir / "cached_widget_replay.py",
+        script = self.script_from_string(
+            "cached_widget_replay.py",
             """
             import streamlit as st
 
@@ -112,8 +83,8 @@ class InteractiveScriptTest(unittest.TestCase):
         assert len(sr2.get("radio")) == 1
 
     def test_cached_widget_replay_interaction(self):
-        script = script_from_string(
-            self.script_dir / "cached_widget_replay.py",
+        script = self.script_from_string(
+            "cached_widget_replay.py",
             """
             import streamlit as st
 
@@ -136,8 +107,8 @@ class InteractiveScriptTest(unittest.TestCase):
         assert sr2.get("radio")[0].value == "qux"
 
     def test_radio_interaction(self):
-        script = script_from_string(
-            self.script_dir / "radio_interaction.py",
+        script = self.script_from_string(
+            "radio_interaction.py",
             """
             import streamlit as st
 
@@ -157,8 +128,8 @@ class InteractiveScriptTest(unittest.TestCase):
         assert [s.value for s in sr2.get("radio")] == ["b", "c"]
 
     def test_widget_key_lookup(self):
-        script = script_from_string(
-            self.script_dir / "widget_keys.py",
+        script = self.script_from_string(
+            "widget_keys.py",
             """
             import streamlit as st
 
