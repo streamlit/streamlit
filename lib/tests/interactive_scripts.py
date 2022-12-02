@@ -176,10 +176,12 @@ class Element:
     type: str
     proto: ElementProto = field(repr=False)
     root: Root = field(repr=False)
+    key: str | None
 
     def __init__(self, proto: ElementProto, root: Root):
         self.proto = proto
         self.root = root
+        self.key = None
         ty = proto.WhichOneof("type")
         assert ty is not None
         self.type = ty
@@ -195,10 +197,6 @@ class Element:
         """
         p = getattr(self.proto, self.type)
         return p.value
-
-    @property
-    def key(self) -> str | None:
-        return None
 
     def widget_state(self) -> WidgetState | None:
         return None
@@ -227,51 +225,34 @@ class Text(Element):
 
 @dataclass(init=False)
 class Radio(Element):
-    proto: RadioProto
-    _index: int | None
     root: Root = field(repr=False)
+    _index: int | None
+
+    proto: RadioProto
+    type: str
+    id: str
+    label: str
+    options: list[str]
+    help: str
+    form_id: str
+    disabled: bool
+    horizontal: bool
+    key: str | None
 
     def __init__(self, proto: RadioProto, root: Root):
         self.proto = proto
         self.root = root
         self._index = None
 
-    @property
-    def type(self) -> str:
-        return "radio"
-
-    @property
-    def id(self) -> str:
-        return self.proto.id
-
-    @property
-    def key(self) -> str | None:
-        return user_key_from_widget_id(self.id)
-
-    @property
-    def label(self) -> str:
-        return self.proto.label
-
-    @property
-    def options(self) -> list[str]:
-        return list(self.proto.options)
-
-    @property
-    def help(self) -> str:
-        return self.proto.help
-
-    @property
-    def form_id(self) -> str:
-        # TODO what if not in a form?
-        return self.proto.form_id
-
-    @property
-    def disabled(self) -> bool:
-        return self.proto.disabled
-
-    @property
-    def horizontal(self) -> bool:
-        return self.proto.horizontal
+        self.type = "radio"
+        self.id = proto.id
+        self.label = proto.label
+        self.options = list(proto.options)
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.horizontal = proto.horizontal
+        self.key = user_key_from_widget_id(self.id)
 
     @property
     def index(self) -> int:
