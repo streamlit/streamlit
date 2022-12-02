@@ -204,14 +204,14 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (magic_funcs.transparent_write, "magic"),
-            (st.experimental_memo.clear, "clear_memo"),
-            (st.experimental_singleton.clear, "clear_singleton"),
+            (st.cache_data.clear, "clear_data_caches"),
+            (st.cache_resource.clear, "clear_resource_caches"),
             (st.session_state.__setattr__, "session_state.set_attr"),
             (st.session_state.__setitem__, "session_state.set_item"),
-            (cache_data_api.DataCache.write_result, "_cache_memo_object"),
+            (cache_data_api.DataCache.write_result, "_cache_data_object"),
             (
                 cache_resource_api.ResourceCache.write_result,
-                "_cache_singleton_object",
+                "_cache_resource_object",
             ),
             (caching._write_to_cache, "_cache_object"),
             (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
@@ -252,6 +252,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "empty",
             "progress",
             "get_option",
+            "experimental_singleton",
+            "experimental_memo",
         }
 
         # Create a list of all public API names in the `st` module (minus
