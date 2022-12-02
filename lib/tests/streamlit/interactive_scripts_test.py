@@ -24,7 +24,7 @@ class InteractiveScriptTest(InteractiveScriptTests):
 
         # main and sidebar
         assert len(sr) == 2
-        main = sr.children[0]
+        main = sr[0]
 
         # columns live within a horizontal block, + 2 more elements
         assert len(main) == 3
