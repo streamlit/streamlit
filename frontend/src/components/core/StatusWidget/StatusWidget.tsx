@@ -38,6 +38,8 @@ import { Theme } from "src/theme"
  * from a subpath.
  */
 import iconRunning from "src/assets/img/icon_running.gif"
+import newYearsRunning from "src/assets/img/fireworks.gif"
+
 import {
   StyledConnectionStatus,
   StyledConnectionStatusLabel,
@@ -299,6 +301,22 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
   }
 
+  private static isNewYears(): boolean {
+    // Start 12/31 of current year, end 01/03 of following year
+    const currentDate = new Date()
+    // const currentYear = currentDate.getFullYear()
+    // const startNewYear = new Date(currentYear, 11, 31)
+    // const endNewYear = new Date(currentYear + 1, 0, 3)
+
+    // TESTING:
+    const currentYear = currentDate.getFullYear()
+    const startNewYear = new Date(currentYear, 11, 2)
+    const endNewYear = new Date(currentYear, 11, 6)
+
+    if (currentDate > startNewYear && currentDate < endNewYear) return true
+    return false
+  }
+
   /** "Running... [Stop]" */
   private renderScriptIsRunning(): ReactNode {
     const minimized = this.state.statusMinimized
@@ -311,8 +329,12 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       minimized
     )
 
+    // check if current date between Dec 31st and Jan 3rd
+    const runningSrc = StatusWidget.isNewYears()
+      ? newYearsRunning
+      : iconRunning
     const runningIcon = (
-      <StyledAppRunningIcon src={iconRunning} alt="Running..." />
+      <StyledAppRunningIcon src={runningSrc} alt="Running..." />
     )
 
     return (
