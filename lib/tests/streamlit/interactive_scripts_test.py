@@ -177,3 +177,21 @@ class InteractiveScriptTest(InteractiveScriptTests):
         sr5 = sr4.get_widget("cb").set_value("on").run()
         assert len(sr5.get("radio")) == 2
         assert sr5.get_widget("conditional").value == "a"
+
+    def test_query_narrowing(self):
+        script = self.script_from_string(
+            "narrowing.py",
+            """
+            import streamlit as st
+
+            st.text("1")
+            with st.expander("open"):
+                st.text("2")
+                st.text("3")
+            st.text("4")
+            """,
+        )
+        sr = script.run()
+        assert len(sr.get("text")) == 4
+        # querying elements via a block only returns the elements in that block
+        assert len(sr.get("expandable")[0].get("text")) == 2

@@ -213,6 +213,7 @@ class Text(Element):
     def __init__(self, proto: TextProto, root: Root):
         self.proto = proto
         self.root = root
+        self.key = None
 
     @property
     def value(self) -> str:
