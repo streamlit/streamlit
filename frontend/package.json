@@ -62,6 +62,7 @@
     "gl-matrix": "^3.2.1",
     "hoist-non-react-statics": "^3.3.2",
     "humanize-string": "^2.1.0",
+    "iframe-resizer": "^4.3.2",
     "immer": "^9.0.16",
     "immutable": "^4.0.0-rc.12",
     "json5": "^2.2.2",
