@@ -56,8 +56,9 @@ interface Props {
   claimHostAuthToken: () => Promise<string | undefined>
 
   /**
-   * Function to tell the withHostCommunication hoc that we've received
-   * the auth token set by the host of this app.
+   * Function to clear the withHostCommunication hoc's auth token. This should
+   * be called after the promise returned by claimHostAuthToken successfully
+   * resolves.
    */
   resetHostAuthToken: () => void
 

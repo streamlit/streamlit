@@ -17,6 +17,7 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
+import Resolver from "src/lib/Resolver"
 import { isValidOrigin } from "src/lib/UriUtil"
 
 import {
@@ -31,10 +32,41 @@ import {
 
 export interface HostCommunicationHOC {
   currentState: HostCommunicationState
+
+  /**
+   * Callback to be called when the Streamlit app closes a dialog.
+   */
   onModalReset: () => void
+
+  /**
+   * Callback to be called when the Streamlit app's page is changed.
+   */
   onPageChanged: () => void
+
+  /**
+   * Function to reset authTokenPromise once the resource waiting on the token
+   * (that is, the WebsocketConnection singleton) has successfully received it.
+   *
+   * This should be called in a .then() handler attached to authTokenPromise.
+   */
   resetAuthToken: () => void
+
+  /**
+   * Function to send a message to the app's parent frame via the browser's
+   * window.postMessage API.
+   */
   sendMessage: (message: IGuestToHostMessage) => void
+
+  /**
+   * Function to set the response body received from hitting the Streamlit
+   * server's /st-allowed-message-origins endpoint. The response contains
+   *   - allowedOrigins: A list of origins that we're allowed to receive
+   *     cross-iframe messages from via the browser's window.postMessage API.
+   *   - useExternalAuthToken: Whether to wait until we've received a
+   *     SET_AUTH_TOKEN message before resolving authTokenPromise. The
+   *     WebsocketConnection class waits for this promise to resolve before
+   *     attempting to establish a connection with the Streamlit server.
+   */
   setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
 }
 
@@ -48,27 +80,6 @@ export function sendMessageToHost(message: IGuestToHostMessage): void {
     } as VersionedMessage<IGuestToHostMessage>,
     "*"
   )
-}
-
-// The DeferredValue type is just an object containing both a Promise along
-// with its resolver function. We introduce it as it makes asynchronously
-// receiving an external auth token from the parent frame much cleaner than
-// trying to do so with more idiomatic Promise patterns. These situations are
-// rare, though, so we should try to avoid further usage of it unless we have a
-// very good reason to do so.
-type DeferredValue = {
-  promise: Promise<string | undefined>
-  resolve: (value?: string) => void
-}
-
-const createDeferredValue = (): DeferredValue => {
-  let resolve: (value?: string) => void
-  const promise = new Promise<string | undefined>(r => {
-    resolve = r
-  })
-
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  return { promise, resolve: resolve! }
 }
 
 function withHostCommunication(
@@ -94,8 +105,9 @@ function withHostCommunication(
 
     const [allowedOriginsResp, setAllowedOriginsResp] =
       useState<IAllowedMessageOriginsResponse | null>(null)
-    const [deferredAuthToken, setDeferredAuthToken] =
-      useState<DeferredValue>(createDeferredValue)
+    const [deferredAuthToken, setDeferredAuthToken] = useState<
+      Resolver<string | undefined>
+    >(() => new Resolver())
 
     useEffect(() => {
       if (!allowedOriginsResp) {
@@ -104,7 +116,7 @@ function withHostCommunication(
 
       const { allowedOrigins, useExternalAuthToken } = allowedOriginsResp
       if (!useExternalAuthToken) {
-        deferredAuthToken.resolve()
+        deferredAuthToken.resolve(undefined)
       }
 
       function receiveMessage(event: MessageEvent): void {
@@ -202,7 +214,7 @@ function withHostCommunication(
               toolbarItems,
             },
             resetAuthToken: () => {
-              setDeferredAuthToken(createDeferredValue())
+              setDeferredAuthToken(new Resolver())
             },
             onModalReset: () => {
               setForcedModalClose(false)

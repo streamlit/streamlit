@@ -373,6 +373,12 @@ describe("withHostCommunication HOC external auth token handling", () => {
       .find(TestComponentNaked)
       .prop("hostCommunication")
 
+    // Simulate receiving a response from the Streamlit server's
+    // `/st-allowed-message-origins` endpoint. Notably, the
+    // useExternalAuthToken field in the response body is set to true, which
+    // signals that the withHostCommunication hoc should wait to receive a
+    // SET_AUTH_TOKEN message before resolving authTokenPromise to the token
+    // in the message payload.
     act(() => {
       hostCommunication.setAllowedOriginsResp({
         allowedOrigins: ["http://devel.streamlit.test"],
@@ -380,6 +386,9 @@ describe("withHostCommunication HOC external auth token handling", () => {
       })
     })
 
+    // Asynchronously send a SET_AUTH_TOKEN message to the
+    // withHostCommunication hoc, which won't proceed past the `await`
+    // statement below until the message is received and handled.
     setTimeout(() => {
       act(() => {
         dispatchEvent(
@@ -400,6 +409,8 @@ describe("withHostCommunication HOC external auth token handling", () => {
       hostCommunication.currentState.authTokenPromise
     ).resolves.toBe("i am an auth token")
 
+    // Reset the auth token and do everything again to confirm that we don't
+    // incorrectly resolve to an old value after resetAuthToken is called.
     act(() => {
       hostCommunication.resetAuthToken()
     })

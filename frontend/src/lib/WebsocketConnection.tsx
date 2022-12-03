@@ -110,8 +110,9 @@ interface Args {
   claimHostAuthToken: () => Promise<string | undefined>
 
   /**
-   * Function to tell the withHostCommunication hoc that we've received
-   * the auth token set by the host of this app.
+   * Function to clear the withHostCommunication hoc's auth token. This should
+   * be called after the promise returned by claimHostAuthToken successfully
+   * resolves.
    */
   resetHostAuthToken: () => void
 
@@ -356,7 +357,7 @@ export class WebsocketConnection {
     this.stepFsm("SERVER_PING_SUCCEEDED")
   }
 
-  private connectToWebSocket(): Promise<void> {
+  private async connectToWebSocket(): Promise<void> {
     const uri = buildWsUri(
       this.args.baseUriPartsList[this.uriIndex],
       WEBSOCKET_STREAM_PATH
@@ -371,7 +372,7 @@ export class WebsocketConnection {
     // claimHostAuthToken resolves to undefined immediately in deployment
     // scenarios where we don't expect an external auth token to be passed down
     // to the frame containing the Streamlit app.
-    return this.args.claimHostAuthToken().then(hostAuthToken => {
+    await this.args.claimHostAuthToken().then(hostAuthToken => {
       this.args.resetHostAuthToken()
       logMessage(LOG, "creating WebSocket")
 
