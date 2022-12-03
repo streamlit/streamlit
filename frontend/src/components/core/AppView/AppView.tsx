@@ -114,6 +114,7 @@ function AppView(props: AppViewProps): ReactElement {
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
         formsData={formsData}
+        main={node === elements.main}
       />
     </StyledAppViewBlockContainer>
   )
