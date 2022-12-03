@@ -24,6 +24,9 @@ from streamlit.string_util import is_binary_string
 # Configuration and credentials are stored inside the ~/.streamlit folder
 CONFIG_FOLDER_NAME = ".streamlit"
 
+# If enableStaticServing is enabled, static file served from the ./static folder
+APP_STATIC_FOLDER_NAME = "static"
+
 
 def get_encoded_file_data(data, encoding="auto"):
     """Coerce bytes to a BytesIO or a StringIO.
@@ -118,48 +121,15 @@ def get_static_dir():
     return os.path.normpath(os.path.join(dirname, "static"))
 
 
+def get_app_static_dir():
+    """Get the folder where app static files live"""
+    return os.path.abspath(APP_STATIC_FOLDER_NAME)
+
+
 def get_assets_dir():
     """Get the folder where static assets live."""
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, "static/assets"))
-
-
-# TODO Rename function to more meaningful name
-def sanitize_user_static_path(static_folder_path):
-    main_script_directory = os.getcwd()
-    real_path = os.path.realpath(static_folder_path)
-
-    pages_directory = os.path.abspath("pages")
-    config_directory = os.path.abspath(CONFIG_FOLDER_NAME)
-
-    if (
-        os.path.commonprefix([real_path, main_script_directory])
-        != main_script_directory
-    ):
-        raise RuntimeError(
-            f"Static file directory {real_path} is served outside of "
-            f"Streamlit project root."
-        )
-
-    # TODO [KAREN] Add comment about symlink
-    if real_path == main_script_directory:
-        raise RuntimeError(
-            "For security reasons we dont allow expose whole project directory"
-        )
-
-    if os.path.commonpath([pages_directory, real_path]) == pages_directory:
-        raise RuntimeError(
-            f"Static file dir couldn't be 'pages' or inside 'pages' "
-            f"directory. Current  specified directory {real_path}"
-        )
-
-    if os.path.commonpath([config_directory, real_path]) == config_directory:
-        raise RuntimeError(
-            "STATIC FOLDER COULD NOT BE .streamlit or inside .streamlit because of "
-            "security, this could lead to secrets and configs exposure."
-        )
-
-    return real_path
 
 
 def get_streamlit_file_path(*filepath) -> str:

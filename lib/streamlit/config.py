@@ -51,7 +51,6 @@ _config_options_template: Dict[str, ConfigOption] = OrderedDict()
 # Stores the current state of config options.
 _config_options: Optional[Dict[str, ConfigOption]] = None
 
-
 # Indicates that a config option was defined by the user.
 _USER_DEFINED = "<user defined>"
 
@@ -280,7 +279,6 @@ _create_option(
     type_=bool,
 )
 
-
 _create_option(
     "global.showWarningOnDirectExecution",
     description="""
@@ -366,7 +364,6 @@ _create_option(
     default_val="arrow",
     type_=str,
 )
-
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")
@@ -655,7 +652,6 @@ _create_option(
     type_=bool,
 )
 
-
 _create_option(
     "server.enableXsrfProtection",
     description="""
@@ -673,7 +669,8 @@ _create_option(
     description="""
         Max size, in megabytes, for files uploaded with the file_uploader.
         """,
-    default_val=200,  # If this default is changed, please also update the docstring for `DeltaGenerator.file_uploader`.
+    default_val=200,
+    # If this default is changed, please also update the docstring for `DeltaGenerator.file_uploader`.
     type_=int,
 )
 
@@ -709,7 +706,6 @@ _create_option(
 
 _create_section("browser", "Configuration of non-UI browser options.")
 
-
 _create_option(
     "browser.serverAddress",
     description="""
@@ -724,7 +720,6 @@ _create_option(
     default_val="localhost",
     type_=str,
 )
-
 
 _create_option(
     "browser.gatherUsageStats",
@@ -779,7 +774,6 @@ _create_option(
     visibility="hidden",
 )
 
-
 # Config Section: Mapbox #
 
 _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
@@ -792,7 +786,6 @@ _create_option(
                 https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
 )
-
 
 # Config Section: deprecations
 
@@ -825,7 +818,6 @@ _create_option(
     scriptable=True,
     type_=bool,
 )
-
 
 # Config Section: Custom Theme #
 
@@ -1221,39 +1213,20 @@ def on_config_parsed(
 
 
 def _check_static_files_config():
-    # Import logger locally to prevent circular references
-    from streamlit.logger import get_logger
-
-    LOGGER = get_logger(__name__)
-
-    # TODO [KAREN] Rephrase warning messages
     if get_option("server.enableStaticServing"):
-
-        static_folder_path = os.path.abspath("static")
+        static_folder_path = file_util.get_app_static_dir()
 
         if not os.path.isdir(static_folder_path):
-            LOGGER.warning(
-                "STATIC FILE SERVING ENABLED, but folder static/ "
-                "doesn't exist :( :( :("
-            )
-        else:
-            try:
-                real_static_folder_path = file_util.sanitize_user_static_path(
-                    static_folder_path
-                )
-            except RuntimeError as e:
-                LOGGER.error(str(e))
-                set_option(
-                    "server.enableStaticServing",
-                    False,
-                    ConfigOption.STREAMLIT_DEFINITION,
-                )
+            # Import logger locally to prevent circular references
+            from streamlit.logger import get_logger
 
-            else:
-                LOGGER.info(
-                    "STATIC FILE SERVING ENABLED FROM"
-                    " FOLDER %s" % real_static_folder_path
-                )
+            LOGGER = get_logger(__name__)
+            LOGGER.warning(
+                "The config option 'server.enableStaticServing' is set to 'true', but "
+                f"the serving folder './{file_util.APP_STATIC_FOLDER_NAME}/' doesn't "
+                "exist. To serve static files, create this folder "
+                "and put the files in it."
+            )
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid

@@ -288,8 +288,7 @@ class Server:
                     (
                         make_url_path_regex(base, "app/static/(.*)"),
                         AppStaticFileHandler,
-                        # TODO [KAREN] Move static into const
-                        {"path": os.path.join(os.getcwd(), "static")},
+                        {"path": file_util.get_app_static_dir()},
                     ),
                 ]
             )

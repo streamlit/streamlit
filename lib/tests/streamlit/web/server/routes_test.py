@@ -158,7 +158,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self) -> None:
-        self._tmpdir = tempfile.TemporaryDirectory()
+        self._tmpdir = tempfile.TemporaryDirectory(dir=os.getcwd())
         self._tmpfile = tempfile.NamedTemporaryFile(dir=self._tmpdir.name, delete=False)
 
         self._symlink_outside_directory = "symlink_outside"
@@ -193,7 +193,6 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     def test_parse_url_path_200(self):
-
         responses = [
             self.fetch(f"/app/static/{self._filename}"),
             self.fetch(f"/app/static/{self._symlink_inside_directory}"),
