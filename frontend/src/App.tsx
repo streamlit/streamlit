@@ -46,6 +46,7 @@ import {
   setCookie,
   hashString,
   isEmbeddedInIFrame,
+  isInChildFrame,
   notUndefined,
   getElementWidgetID,
 } from "src/lib/utils"
@@ -286,6 +287,11 @@ export class App extends PureComponent<Props, State> {
 
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
+    }
+
+    if (isInChildFrame()) {
+      // @ts-ignore
+      import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
     this.props.hostCommunication.sendMessage({
