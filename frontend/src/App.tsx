@@ -290,6 +290,9 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (isInChildFrame()) {
+      Object.assign(window, {
+        iFrameResizer: { heightCalculationMethod: "taggedElement" },
+      })
       // @ts-ignore
       import("iframe-resizer/js/iframeResizer.contentWindow")
     }
