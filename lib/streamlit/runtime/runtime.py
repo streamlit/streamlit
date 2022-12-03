@@ -367,7 +367,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        self._session_mgr.close_session(session_id)
+        self._session_mgr.disconnect_session(session_id)
 
         if (
             self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED

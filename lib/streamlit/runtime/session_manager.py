@@ -73,6 +73,10 @@ class SessionInfo:
 
     def to_active(self) -> ActiveSessionInfo:
         assert self.is_active(), "A SessionInfo with no client cannot be active!"
+
+        # NOTE: The cast here (rather than copying this SessionInfo's fields into a new
+        # ActiveSessionInfo) is important as the Runtime expects to be able to mutate
+        # what's returned from get_active_session_info to increment script_run_count.
         return cast(ActiveSessionInfo, self)
 
 

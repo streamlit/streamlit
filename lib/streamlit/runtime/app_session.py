@@ -126,7 +126,7 @@ class AppSession:
         self._stop_config_listener: Optional[Callable[[], bool]] = None
         self._stop_pages_listener: Optional[Callable[[], bool]] = None
 
-        self._register_file_watchers()
+        self.register_file_watchers()
 
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -146,7 +146,20 @@ class AppSession:
         """Ensure that we call shutdown() when an AppSession is garbage collected."""
         self.shutdown()
 
-    def _register_file_watchers(self) -> None:
+    def register_file_watchers(self) -> None:
+        """Register handlers to be called when various files are changed.
+
+        Files that we watch include:
+          * source files that already exist (for edits)
+          * `.py` files in the the main script's `pages/` directory (for file additions
+            and deletions)
+          * project and user-level config.toml files
+          * the project-level secrets.toml files
+
+        This method is called automatically on AppSession construction, but it may be
+        called again in the case when a session is disconnected and is being reconnect
+        to.
+        """
         if self._local_sources_watcher is None:
             self._local_sources_watcher = LocalSourcesWatcher(
                 self._session_data.main_script_path
@@ -163,7 +176,8 @@ class AppSession:
         )
         secrets_singleton._file_change_listener.connect(self._on_secrets_file_changed)
 
-    def _disconnect_file_watchers(self) -> None:
+    def disconnect_file_watchers(self) -> None:
+        """Disconnect the file watcher handlers registered by register_file_watchers."""
         if self._local_sources_watcher is not None:
             self._local_sources_watcher.close()
         if self._stop_config_listener is not None:
@@ -220,7 +234,7 @@ class AppSession:
 
             # Disconnect all file watchers if we haven't already, although we will have
             # generally already done so by the time we get here.
-            self._disconnect_file_watchers()
+            self.disconnect_file_watchers()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
