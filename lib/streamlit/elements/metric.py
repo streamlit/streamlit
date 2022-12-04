@@ -18,10 +18,12 @@ from typing import TYPE_CHECKING, Optional, Union, cast
 
 from typing_extensions import Literal, TypeAlias
 
+from streamlit.elements.utils import get_label_visibility_proto_value
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
+from streamlit.type_util import LabelVisibility, maybe_raise_label_warnings
 
 if TYPE_CHECKING:
     import numpy as np
@@ -49,6 +51,7 @@ class MetricMixin:
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
         help: Optional[str] = None,
+        label_visibility: LabelVisibility = "visible",
     ) -> "DeltaGenerator":
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -79,6 +82,11 @@ class MetricMixin:
              regardless of its value.
         help : str
             An optional tooltip that gets displayed next to the metric label.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
+            is still empty space for it (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Example
         -------
@@ -112,6 +120,8 @@ class MetricMixin:
             height: 320px
 
         """
+        maybe_raise_label_warnings(label, label_visibility)
+
         metric_proto = MetricProto()
         metric_proto.body = self.parse_value(value)
         metric_proto.label = self.parse_label(label)
@@ -124,6 +134,9 @@ class MetricMixin:
         )
         metric_proto.color = color_and_direction.color
         metric_proto.direction = color_and_direction.direction
+        metric_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         return self.dg._enqueue("metric", metric_proto)
 

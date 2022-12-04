@@ -17,6 +17,7 @@
 import React, { ReactElement } from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
 import { Theme } from "src/theme"
+import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import Icon from "src/components/shared/Icon"
 import { useTheme } from "@emotion/react"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
@@ -74,7 +75,12 @@ export default function Metric({ element }: MetricProps): ReactElement {
 
   return (
     <div data-testid="metric-container">
-      <StyledMetricLabelText data-testid="stMetricLabel">
+      <StyledMetricLabelText
+        data-testid="stMetricLabel"
+        visibility={labelVisibilityProtoValueToEnum(
+          element.labelVisibility?.value
+        )}
+      >
         <StyledTruncateText>
           <StreamlitMarkdown
             source={element.label}

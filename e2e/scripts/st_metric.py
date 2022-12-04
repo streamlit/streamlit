@@ -33,3 +33,11 @@ with col2:
     st.metric("Test 2", -4.56, 1.23, "inverse")
 with col3:
     st.slider("Pick another")
+
+
+with col1:
+    st.metric("Test 3", -4.56, 1.23, label_visibility="visible")
+with col2:
+    st.metric("Test 4", -4.56, 1.23, label_visibility="hidden")
+with col3:
+    st.metric("Test 5", -4.56, 1.23, label_visibility="collapsed")
