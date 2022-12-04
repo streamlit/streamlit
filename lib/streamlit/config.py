@@ -669,8 +669,7 @@ _create_option(
     description="""
         Max size, in megabytes, for files uploaded with the file_uploader.
         """,
-    default_val=200,
-    # If this default is changed, please also update the docstring for `DeltaGenerator.file_uploader`.
+    default_val=200,  # If this default is changed, please also update the docstring for `DeltaGenerator.file_uploader`.
     type_=int,
 )
 
