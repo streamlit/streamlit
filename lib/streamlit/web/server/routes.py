@@ -109,6 +109,14 @@ class AppStaticFileHandler(AssetsFileHandler):
             )
             raise tornado.web.HTTPError(404)
 
+        if (
+            os.path.exists(full_path)
+            and os.path.getsize(full_path) > file_util.MAX_APP_STATIC_FILE_SIZE
+        ):
+            raise tornado.web.HTTPError(
+                404, "TOO LARGE FILE!!!", reason="TOO LARGE FILE"
+            )
+
         return super().validate_absolute_path(root, absolute_path)
 
 

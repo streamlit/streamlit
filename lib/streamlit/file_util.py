@@ -27,6 +27,9 @@ CONFIG_FOLDER_NAME = ".streamlit"
 # If enableStaticServing is enabled, static file served from the ./static folder
 APP_STATIC_FOLDER_NAME = "static"
 
+# TODO [KAREN] Move to config or remove if not needed
+MAX_APP_STATIC_FILE_SIZE = 200 * 1024 * 1024
+
 
 def get_encoded_file_data(data, encoding="auto"):
     """Coerce bytes to a BytesIO or a StringIO.
