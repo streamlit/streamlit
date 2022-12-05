@@ -84,7 +84,7 @@ class CacheDataTest(unittest.TestCase):
         """Mutating a memoized return value is legal, and *won't* affect
         future accessors of the data."""
 
-        @st.experimental_memo
+        @st.cache_data
         def f():
             return [0, 1]
 
@@ -108,14 +108,14 @@ class CacheDataTest(unittest.TestCase):
         # with each other.
         foo_vals = []
 
-        @st.experimental_memo(ttl=one_day)
+        @st.cache_data(ttl=one_day)
         def foo(x):
             foo_vals.append(x)
             return x
 
         bar_vals = []
 
-        @st.experimental_memo(ttl=one_day * 2)
+        @st.cache_data(ttl=one_day * 2)
         def bar(x):
             bar_vals.append(x)
             return x
@@ -167,14 +167,14 @@ class CacheDataTest(unittest.TestCase):
         # with each other.
         foo_vals = []
 
-        @st.experimental_memo(ttl=one_day_timedelta)
+        @st.cache_data(ttl=one_day_timedelta)
         def foo(x):
             foo_vals.append(x)
             return x
 
         bar_vals = []
 
-        @st.experimental_memo(ttl=two_days_timedelta)
+        @st.cache_data(ttl=two_days_timedelta)
         def bar(x):
             bar_vals.append(x)
             return x
@@ -225,7 +225,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
     def test_dont_persist_by_default(self, mock_write):
-        @st.experimental_memo
+        @st.cache_data
         def foo():
             return "data"
 
@@ -236,7 +236,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
     def test_persist_path(self, mock_write):
         """Ensure we're writing to ~/.streamlit/cache/*.memo"""
 
-        @st.experimental_memo(persist="disk")
+        @st.cache_data(persist="disk")
         def foo():
             return "data"
 
@@ -261,7 +261,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
     def test_read_persisted_data(self, mock_read):
         """We should read persisted data from disk on cache miss."""
 
-        @st.experimental_memo(persist="disk")
+        @st.cache_data(persist="disk")
         def foo():
             return "actual_value"
 
@@ -278,7 +278,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
     def test_read_bad_persisted_data(self, mock_read):
         """If our persisted data is bad, we raise an exception."""
 
-        @st.experimental_memo(persist="disk")
+        @st.cache_data(persist="disk")
         def foo():
             return "actual_value"
 
@@ -291,7 +291,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         """Throw an error if an invalid value is passed to 'persist'."""
         with self.assertRaises(StreamlitAPIException) as e:
 
-            @st.experimental_memo(persist="yesplz")
+            @st.cache_data(persist="yesplz")
             def foo():
                 pass
 
@@ -326,7 +326,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         """A memoized function's clear_cache() property should just clear
         that function's cache."""
 
-        @st.experimental_memo(persist="disk")
+        @st.cache_data(persist="disk")
         def foo(val):
             return "actual_value"
 
@@ -365,7 +365,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         wraps=mock_open(read_data=pickle.dumps(as_replay_test_data())),
     )
     def test_cached_st_function_replay(self, _):
-        @st.experimental_memo(persist="disk")
+        @st.cache_data(persist="disk")
         def foo(i):
             st.text(i)
             return i
@@ -387,7 +387,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         wraps=mock_open(read_data=pickle.dumps(1)),
     )
     def test_cached_format_migration(self, _):
-        @st.experimental_memo(persist="disk")
+        @st.cache_data(persist="disk")
         def foo(i):
             st.text(i)
             return i
@@ -397,12 +397,12 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
     def test_warning_memo_ttl_persist(self, _):
-        """Using @st.experimental_memo with ttl and persist produces a warning."""
+        """Using @st.cache_data with ttl and persist produces a warning."""
         with self.assertLogs(
             "streamlit.runtime.caching.cache_data_api", level=logging.WARNING
         ) as logs:
 
-            @st.experimental_memo(ttl=60, persist="disk")
+            @st.cache_data(ttl=60, persist="disk")
             def user_function():
                 return 42
 
@@ -431,11 +431,11 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         self.assertEqual([], get_data_cache_stats_provider().get_stats())
 
     def test_multiple_stats(self):
-        @st.experimental_memo
+        @st.cache_data
         def foo(count):
             return [3.14] * count
 
-        @st.experimental_memo
+        @st.cache_data
         def bar():
             return "shivermetimbers"
 

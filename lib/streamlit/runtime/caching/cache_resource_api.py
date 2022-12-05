@@ -160,7 +160,7 @@ class CacheResourceAPI:
     # __call__ should be a static method, but there's a mypy bug that
     # breaks type checking for overloaded static functions:
     # https://github.com/python/mypy/issues/7781
-    @gather_metrics("experimental_singleton")
+    @gather_metrics("cache_resource")
     def __call__(
         self,
         func: F | None = None,
@@ -275,7 +275,7 @@ class CacheResourceAPI:
         )
 
     @staticmethod
-    @gather_metrics("clear_singleton")
+    @gather_metrics("clear_resource_caches")
     def clear() -> None:
         """Clear all cache_resource caches."""
         _resource_caches.clear_all()
@@ -313,7 +313,7 @@ class ResourceCache(Cache):
             else:
                 raise CacheKeyNotFoundError()
 
-    @gather_metrics("_cache_singleton_object")
+    @gather_metrics("_cache_resource_object")
     def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         ctx = get_script_run_ctx()

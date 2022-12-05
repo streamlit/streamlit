@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests that are common to both st.memo and st.singleton"""
+"""Tests that are common to both st.cache_data and st.cache_resource"""
 
 import threading
 import unittest
@@ -22,7 +22,12 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.runtime.caching import CACHE_DATA_CALL_STACK, CACHE_RESOURCE_CALL_STACK
+from streamlit.runtime.caching import (
+    CACHE_DATA_CALL_STACK,
+    CACHE_RESOURCE_CALL_STACK,
+    cache_data,
+    cache_resource,
+)
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
@@ -41,9 +46,6 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
 from tests.streamlit.elements.image_test import create_image
-
-memo = st.experimental_memo
-singleton = st.experimental_singleton
 
 
 def get_text_or_block(delta):
@@ -69,8 +71,8 @@ def as_cached_result(value: Any, cache_type: CacheType) -> MultiCacheResults:
 class CommonCacheTest(DeltaGeneratorTestCase):
     def tearDown(self):
         # Clear caches
-        st.experimental_memo.clear()
-        st.experimental_singleton.clear()
+        st.cache_data.clear()
+        st.cache_resource.clear()
 
         # And some tests create widgets, and can result in DuplicateWidgetID
         # errors on subsequent runs.
@@ -90,7 +92,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
         return text
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_simple(self, _, cache_decorator):
         @cache_decorator
         def foo():
@@ -99,7 +103,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         self.assertEqual(foo(), 42)
         self.assertEqual(foo(), 42)
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_multiple_int_like_floats(self, _, cache_decorator):
         @cache_decorator
         def foo(x):
@@ -108,7 +114,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         self.assertEqual(foo(1.0), 1.0)
         self.assertEqual(foo(3.0), 3.0)
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_return_cached_object(self, _, cache_decorator):
         """If data has been cached, the cache function shouldn't be called."""
         with patch.object(st, "exception") as mock_exception:
@@ -134,9 +142,11 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             mock_exception.assert_not_called()
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_mutate_args(self, _, cache_decorator):
-        """Mutating an argument inside a memoized function doesn't throw
+        """Mutating an argument inside a cached function doesn't throw
         an error (but it's probably not a great idea)."""
         with patch.object(st, "exception") as mock_exception:
 
@@ -152,7 +162,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             mock_exception.assert_not_called()
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_ignored_args(self, _, cache_decorator):
         """Args prefixed with _ are not used as part of the cache key."""
         call_count = [0]
@@ -191,8 +203,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("memo", memo, CACHE_DATA_CALL_STACK),
-            ("singleton", singleton, CACHE_RESOURCE_CALL_STACK),
+            ("cache_data", cache_data, CACHE_DATA_CALL_STACK),
+            ("cache_resource", cache_resource, CACHE_RESOURCE_CALL_STACK),
         ]
     )
     def test_cached_st_function_warning(self, _, cache_decorator, call_stack):
@@ -300,7 +312,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_function_replay(self, _, cache_decorator):
         @cache_decorator
         def foo_replay(i):
@@ -315,7 +329,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         assert text == ["1", "---", "1"]
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_function_replay_nested(self, _, cache_decorator):
         @cache_decorator
         def inner(i):
@@ -351,7 +367,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             "3",
         ]
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_function_replay_outer_blocks(self, _, cache_decorator):
         @cache_decorator
         def foo(i):
@@ -366,7 +384,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         text = self.get_text_delta_contents()
         assert text == ["1", "---", "1"]
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_function_replay_sidebar(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -391,7 +411,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
         assert paths == [[1, 0], [0, 0], [1, 1]]
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_function_replay_inner_blocks(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -427,7 +449,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             [0, 5, 0],
         ]
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_function_replay_inner_direct(self, _, cache_decorator):
         @cache_decorator(show_spinner=False)
         def foo(i):
@@ -449,7 +473,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         ]
         assert paths == [[0, 0], [0, 0, 0], [0, 1], [0, 2], [0, 2, 0]]
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_function_replay_outer_direct(self, _, cache_decorator):
         cont = st.container()
 
@@ -463,7 +489,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             st.text("---")
             foo(1)
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_cached_st_image_replay(self, _, cache_decorator):
         """Basic sanity check that nothing blows up. This test assumes that
         actual caching/replay functionality are covered by e2e tests that
@@ -484,7 +512,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         img_fn_multi()
         img_fn_multi()
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_nested_widget_replay(self, _, cache_decorator):
         """Regression test for GH#5677"""
 
@@ -501,8 +531,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("memo", memo, memo.clear),
-            ("singleton", singleton, singleton.clear),
+            ("cache_data", cache_data, cache_data.clear),
+            ("cache_resource", cache_resource, cache_resource.clear),
         ]
     )
     def test_clear_all_caches(self, _, cache_decorator, clear_cache_func):
@@ -537,7 +567,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         self.assertEqual([0, 1, 2, 0, 1, 2], foo_vals)
         self.assertEqual([0, 1, 2, 0, 1, 2], bar_vals)
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_clear_single_cache(self, _, cache_decorator):
         foo_call_count = [0]
 
@@ -567,7 +599,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         self.assertEqual(2, foo_call_count[0])
         self.assertEqual(1, bar_call_count[0])
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_without_spinner(self, _, cache_decorator):
         """If the show_spinner flag is not set, the report queue should be
         empty.
@@ -580,7 +614,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_without_spinner(3)
         self.assertTrue(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_with_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, there should be one element in the
         report queue.
@@ -593,7 +629,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_with_spinner(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_with_custom_text_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, there should be one element in the
         report queue.
@@ -606,7 +644,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         function_with_spinner_custom_text(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_with_empty_text_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, even if it is empty text,
         there should be one element in the report queue.
@@ -633,8 +673,8 @@ class CommonCacheThreadingTest(unittest.TestCase):
         CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
 
         # Clear caches
-        st.experimental_memo.clear()
-        st.experimental_singleton.clear()
+        st.cache_data.clear()
+        st.cache_resource.clear()
 
         # And some tests create widgets, and can result in DuplicateWidgetID
         # errors on subsequent runs.
@@ -645,7 +685,9 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
         super().tearDown()
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_get_cache(self, _, cache_decorator):
         """Accessing a cached value is safe from multiple threads."""
 
@@ -669,7 +711,10 @@ class CommonCacheThreadingTest(unittest.TestCase):
         # self.assertEqual(1, cached_func_call_count[0])
 
     @parameterized.expand(
-        [("memo", memo, memo.clear), ("singleton", singleton, singleton.clear)]
+        [
+            ("cache_data", cache_data, cache_data.clear),
+            ("cache_resource", cache_resource, cache_resource.clear),
+        ]
     )
     def test_clear_all_caches(self, _, cache_decorator, clear_cache_func):
         """Clearing all caches is safe to call from multiple threads."""
@@ -690,7 +735,9 @@ class CommonCacheThreadingTest(unittest.TestCase):
         # Sanity check: ensure we can still call our cached function.
         self.assertEqual(42, foo())
 
-    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_clear_single_cache(self, _, cache_decorator):
         """It's safe to clear a single function cache from multiple threads."""
 
@@ -711,7 +758,10 @@ class CommonCacheThreadingTest(unittest.TestCase):
         self.assertEqual(42, foo())
 
     @parameterized.expand(
-        [("memo", CACHE_DATA_CALL_STACK), ("singleton", CACHE_RESOURCE_CALL_STACK)]
+        [
+            ("cache_data", CACHE_DATA_CALL_STACK),
+            ("cache_resource", CACHE_RESOURCE_CALL_STACK),
+        ]
     )
     def test_multithreaded_call_stack(self, _, call_stack):
         """CachedFunctionCallStack works across multiple threads."""

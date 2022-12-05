@@ -40,7 +40,7 @@ class CacheErrorsTest(DeltaGeneratorTestCase):
     maxDiff = None
 
     def test_unhashable_type(self):
-        @st.experimental_memo
+        @st.cache_data
         def unhashable_type_func(lock: threading.Lock):
             return str(lock)
 
@@ -59,7 +59,7 @@ To address this, you can tell Streamlit not to hash this argument by adding a
 leading underscore to the argument's name in the function signature:
 
 ```
-@st.experimental_memo
+@st.cache_data
 def unhashable_type_func(_lock, ...):
     ...
 ```
@@ -74,7 +74,7 @@ def unhashable_type_func(_lock, ...):
         self.assertEqual(ep.is_warning, False)
 
     def test_unserializable_return_value_error(self):
-        @st.experimental_memo
+        @st.cache_data
         def unserializable_return_value_func():
             return threading.Lock()
 

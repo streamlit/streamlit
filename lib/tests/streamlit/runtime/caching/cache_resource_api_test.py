@@ -46,7 +46,7 @@ class CacheResourceTest(unittest.TestCase):
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self):
-        st.experimental_singleton.clear()
+        st.cache_resource.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
         cache_resource_api.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
@@ -57,7 +57,7 @@ class CacheResourceTest(unittest.TestCase):
         """Mutating a cache_resource return value is legal, and *will* affect
         future accessors of the data."""
 
-        @st.experimental_singleton
+        @st.cache_resource
         def f():
             return [0, 1]
 
@@ -77,23 +77,23 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
-        st.experimental_singleton.clear()
+        st.cache_resource.clear()
 
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self):
-        st.experimental_singleton.clear()
+        st.cache_resource.clear()
 
     def test_no_stats(self):
         self.assertEqual([], get_resource_cache_stats_provider().get_stats())
 
     def test_multiple_stats(self):
-        @st.experimental_singleton
+        @st.cache_resource
         def foo(count):
             return [3.14] * count
 
-        @st.experimental_singleton
+        @st.cache_resource
         def bar():
             return threading.Lock()
 
