@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message Metric {
   string label = 1;
   string body = 2;
@@ -23,6 +25,7 @@ message Metric {
   MetricDirection direction = 4;
   MetricColor color = 5;
   string help = 6;
+  LabelVisibilityMessage label_visibility = 7;
 
   enum MetricColor{
     RED = 0;
