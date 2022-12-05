@@ -57,6 +57,7 @@ jobs:
         name: Nightly Tag Failure Slack Message
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          RUN_ID: ${{ github.run_id }}
         run: python scripts/slack_notifications.py nightly tag
 
   run-python-tests:
@@ -95,6 +96,7 @@ jobs:
 
     env:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      RUN_ID: ${{ github.run_id }}
 
     steps:
       - name: Checkout Streamlit code
@@ -158,4 +160,5 @@ jobs:
         name: Nightly Build Failure Slack Message
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          RUN_ID: ${{ github.run_id }}
         run: python scripts/slack_notifications.py nightly build
