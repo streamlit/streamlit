@@ -74,7 +74,6 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
-
     error_logged = False
 
     if config.get_option("logger.enableRich"):
