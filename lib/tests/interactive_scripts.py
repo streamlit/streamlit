@@ -47,7 +47,7 @@ class LocalScriptRunner(ScriptRunner):
 
     def __init__(self, script_path: str):
         """Initializes the ScriptRunner for the given script_name"""
-        # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
+
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
         self.session_state = SessionState()
@@ -89,7 +89,7 @@ class LocalScriptRunner(ScriptRunner):
         self.on_event.connect(record_event, weak=False)
 
     def join(self) -> None:
-        """Join the script_thread if it's running."""
+        """Wait for the script thread to finish, if it is running."""
         if self._script_thread is not None:
             self._script_thread.join()
 
@@ -98,6 +98,8 @@ class LocalScriptRunner(ScriptRunner):
         return self.forward_msg_queue._queue
 
     def run(self, widget_state: WidgetStates | None = None) -> Root:
+        """Run the script, and parse the output messages for querying
+        and interaction."""
         rerun_data = RerunData(widget_states=widget_state)
         self.request_rerun(rerun_data)
         if not self._script_thread:
@@ -136,12 +138,19 @@ class InteractiveScriptTests(unittest.TestCase):
         Runtime._instance = None
 
     def script_from_string(self, script_name: str, script: str) -> LocalScriptRunner:
+        """Create a runner for a script with the contents from a string.
+
+        Useful for testing short scripts that fit comfortably as an inline
+        string in the test itself, without having to create a separate file
+        for it.
+        """
         path = pathlib.Path(self.script_dir.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
         return LocalScriptRunner(str(path))
 
     def script_from_filename(self, script_name: str) -> LocalScriptRunner:
+        """Create a runner for the script with the given name, for testing."""
         script_path = os.path.join(
             os.path.dirname(__file__), "streamlit", "test_data", script_name
         )
@@ -301,6 +310,7 @@ class Block:
         self.proto = proto
         if proto:
             ty = proto.WhichOneof("type")
+            # TODO does not work for `st.container` which has no block proto
             assert ty is not None
             self.type = ty
         elif type is not None:
