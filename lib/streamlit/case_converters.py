@@ -17,8 +17,11 @@ import re
 
 def to_upper_camel_case(snake_case_str):
     """Converts snake_case to UpperCamelCase.
-    Example:
+
+    Example
+    -------
         foo_bar -> FooBar
+
     """
     return "".join(map(str.title, snake_case_str.split("_")))
 
@@ -26,9 +29,11 @@ def to_upper_camel_case(snake_case_str):
 def to_lower_camel_case(snake_case_str):
     """Converts snake_case to lowerCamelCase.
 
-    Example:
+    Example
+    -------
         foo_bar -> fooBar
         fooBar -> foobar
+
     """
     words = snake_case_str.split("_")
     if len(words) > 1:
@@ -42,9 +47,11 @@ def to_lower_camel_case(snake_case_str):
 def to_snake_case(camel_case_str):
     """Converts UpperCamelCase and lowerCamelCase to snake_case.
 
-    Examples:
+    Examples
+    --------
         fooBar -> foo_bar
         BazBang -> baz_bang
+
     """
     s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", camel_case_str)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()

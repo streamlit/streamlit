@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This is a script which is run when the Streamlit package is executed."""
+"""A script which is run when the Streamlit package is executed."""
 
 import os
 import sys

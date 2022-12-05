@@ -54,7 +54,6 @@ def open_browser(url):
         The URL. Must include the protocol.
 
     """
-
     # Treat Windows separately because:
     # 1. /dev/null doesn't exist.
     # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
@@ -129,7 +128,6 @@ def index_(iterable: Iterable[_Value], x: _Value) -> int:
     -------
     int
     """
-
     for i, value in enumerate(iterable):
         if x == value:
             return i

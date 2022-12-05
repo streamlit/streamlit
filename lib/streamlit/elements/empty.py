@@ -34,7 +34,6 @@ class EmptyMixin:
 
         Examples
         --------
-
         Overwriting elements in-place using "with" notation:
 
         >>> import time

@@ -187,7 +187,7 @@ hash_stacks = _HashStacks()
 
 class _Cells:
     """
-    This is basically a dict that allows us to push/pop frames of data.
+    Class which is basically a dict that allows us to push/pop frames of data.
 
     Python code objects are nested. In the following function:
 

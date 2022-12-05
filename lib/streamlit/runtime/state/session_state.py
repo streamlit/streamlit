@@ -443,7 +443,8 @@ class SessionState:
         user-provided key or a widget id as appropriate for the internal dict
         being accessed.
 
-        At least one of the arguments must have a value."""
+        At least one of the arguments must have a value.
+        """
         assert user_key is not None or widget_id is not None
 
         if user_key is not None:
