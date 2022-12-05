@@ -180,6 +180,10 @@ def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> Non
     raise RuntimeError(err_string)
 
 
+# TODO This class serves as a fallback option for elements that have not
+# been implemented yet, as well as providing implementations of some
+# trivial methods. It may have significantly reduced scope, or be removed
+# entirely, once all elements have been implemented.
 @dataclass(init=False)
 class Element:
     type: str
@@ -199,13 +203,15 @@ class Element:
         yield self
 
     @property
-    def value(self):
-        """FIXME: this does not reflect state changes from interactions
-        after a script run. We can work around this for now by writing to
-        `st.text` and checking that instead.
-        """
+    def value(self) -> Any:
         p = getattr(self.proto, self.type)
-        return p.value
+        try:
+            state = self.root.session_state
+            assert state
+            return state[p.id]
+        except ValueError:
+            # No id field, not a widget
+            return p.value
 
     def widget_state(self) -> WidgetState | None:
         return None
