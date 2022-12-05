@@ -13,12 +13,13 @@
 # limitations under the License.
 
 """Unit tests for st.map()."""
-
+import itertools
 import json
 
 import numpy as np
 import pandas as pd
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
@@ -57,6 +58,20 @@ class StMapTest(DeltaGeneratorTestCase):
         self.assertEqual(c.get("initialViewState").get("pitch"), 0)
         self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
 
+    @parameterized.expand(
+        itertools.product(
+            {"lat", "latitude", "LAT", "LATITUDE"},
+            {"lon", "longitude", "LON", "LONGITUDE"},
+        )
+    )
+    def test_alternative_names_columns(self, lat_column_name, lon_column_name):
+        """Test that it can be called with alternative names of lat/lon columns."""
+        df = df1.rename(columns={"lat": lat_column_name, "lon": lon_column_name})
+        st.map(df1)
+
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(len(c.get("layers")[0].get("data")), 4)
+
     def test_default_map_copy(self):
         """Test that _DEFAULT_MAP is not modified as other work occurs."""
         self.assertEqual(_DEFAULT_MAP["initialViewState"]["latitude"], 0)
@@ -83,15 +98,28 @@ class StMapTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.deck_gl_json_chart
         self.assertEqual(json.loads(c.json), _DEFAULT_MAP)
 
-    def test_missing_column(self):
-        """Test st.map with wrong column label."""
-        df = pd.DataFrame({"notlat": [1, 2, 3], "lon": [11, 12, 13]})
+    @parameterized.expand(
+        [
+            [
+                "lat",
+                "Map data must contain a latitude column named: 'LAT', 'LATITUDE', 'lat', 'latitude'. "
+                "Existing columns: 'lon'",
+            ],
+            [
+                "lon",
+                "Map data must contain a longitude column named: 'LON', 'LONGITUDE', 'lon', 'longitude'. "
+                "Existing columns: 'lat'",
+            ],
+        ]
+    )
+    def test_missing_column(self, column_name, exception_message):
+        """Test st.map with wrong lat column label."""
+        df = df1.drop(columns=[column_name])
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
         self.assertEqual(
-            "Map data must contain a latitude column named: 'LAT', 'LATITUDE', 'lat', 'latitude'. "
-            "Existing columns: 'notlat', 'lon'",
+            exception_message,
             str(ctx.exception),
         )
 
