@@ -98,7 +98,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get our BrowserWebSocketHandler
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
             websocket_handler: BrowserWebSocketHandler = session_info.client
 
             websocket_handler.on_message(
@@ -115,7 +115,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get our BrowserWebSocketHandler
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
             websocket_handler: BrowserWebSocketHandler = session_info.client
 
             websocket_handler.on_message(
@@ -132,7 +132,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get our BrowserWebSocketHandler
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
             websocket_handler: BrowserWebSocketHandler = session_info.client
 
             with patch.object(
@@ -152,7 +152,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get our BrowserWebSocketHandler
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
             websocket_handler: BrowserWebSocketHandler = session_info.client
 
             with patch.object(
