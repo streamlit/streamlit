@@ -29,6 +29,7 @@ describe("widget replay", () => {
     cy.get(".stRadio").should("have.length", 1);
     cy.get(".stMarkdown").contains("bar");
     cy.get(".stRadio").first().find("input").last().click({ force: true });
+    cy.waitForRerun();
     cy.get(".stMarkdown").contains("qux");
   })
 })
