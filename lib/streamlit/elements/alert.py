@@ -47,12 +47,12 @@ class AlertMixin:
 
         Parameters
         ----------
+        body : str
+            The error text to display.
         icon : None
             An optional parameter, that adds an emoji to the alert.
             The default is None.
             This argument can only be supplied by keyword.
-        body : str
-            The error text to display.
 
         Example
         -------
