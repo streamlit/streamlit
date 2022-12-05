@@ -13,20 +13,27 @@
 # limitations under the License.
 
 from unittest import mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import tornado.httpserver
 import tornado.testing
 import tornado.web
 import tornado.websocket
 
+from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, SessionClientDisconnectedError
 from streamlit.web.server.server import BrowserWebSocketHandler
+from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 from tests.streamlit.web.server.server_test_case import ServerTestCase
+from tests.testutil import patch_config_options
 
 
 class BrowserWebSocketHandlerTest(ServerTestCase):
+    # NOTE: These tests are quite boilerplate-y and repetitive as
+    # tornado.testing.AsyncHTTPTestCase doesn't have great support for being able to
+    # define async setUp and tearDown functions :(
+
     @tornado.testing.gen_test
     async def test_write_forward_msg_reraises_websocket_closed_error(self):
         """`write_forward_msg` should re-raise WebSocketClosedError as
@@ -82,3 +89,77 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
 
             mock_runtime.handle_backmsg_deserialization_exception.assert_called_once()
             mock_runtime.handle_backmsg.assert_not_called()
+
+    @patch_config_options({"global.developmentMode": False})
+    @tornado.testing.gen_test
+    async def test_ignores_debug_disconnect_websocket_when_not_dev_mode(self):
+        with self._patch_app_session():
+            await self.server.start()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            websocket_handler.on_message(
+                BackMsg(debug_disconnect_websocket=True).SerializeToString()
+            )
+
+            self.assertIsNotNone(websocket_handler.ws_connection)
+
+    @patch_config_options({"global.developmentMode": True})
+    @tornado.testing.gen_test
+    async def test_follows_debug_disconnect_websocket_when_in_dev_mode(self):
+        with self._patch_app_session():
+            await self.server.start()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            websocket_handler.on_message(
+                BackMsg(debug_disconnect_websocket=True).SerializeToString()
+            )
+
+            self.assertIsNone(websocket_handler.ws_connection)
+
+    @patch_config_options({"global.developmentMode": False})
+    @tornado.testing.gen_test
+    async def test_ignores_debug_shutdown_runtime_when_not_dev_mode(self):
+        with self._patch_app_session():
+            await self.server.start()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            with patch.object(
+                websocket_handler._runtime, "stop"
+            ) as patched_stop_runtime:
+                websocket_handler.on_message(
+                    BackMsg(debug_shutdown_runtime=True).SerializeToString()
+                )
+
+                patched_stop_runtime.assert_not_called()
+
+    @patch_config_options({"global.developmentMode": True})
+    @tornado.testing.gen_test
+    async def test_follows_debug_shutdown_runtime_when_in_dev_mode(self):
+        with self._patch_app_session():
+            await self.server.start()
+            await self.ws_connect()
+
+            # Get our BrowserWebSocketHandler
+            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            websocket_handler: BrowserWebSocketHandler = session_info.client
+
+            with patch.object(
+                websocket_handler._runtime, "stop"
+            ) as patched_stop_runtime:
+                websocket_handler.on_message(
+                    BackMsg(debug_shutdown_runtime=True).SerializeToString()
+                )
+
+                patched_stop_runtime.assert_called_once()
