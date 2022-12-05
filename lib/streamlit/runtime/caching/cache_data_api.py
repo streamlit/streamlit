@@ -217,7 +217,7 @@ class CacheDataAPI:
         Parameters
         ----------
         decorator_metric_name
-            The metric name to record for decorator usage. `@st.experimental_singleton` is
+            The metric name to record for decorator usage. `@st.experimental_memo` is
             deprecated, but we're still supporting it and tracking its usage separately
             from `@st.cache_data`.
         """
