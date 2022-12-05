@@ -523,9 +523,9 @@ def cache(
 
     @functools.wraps(non_optional_func)
     def wrapped_func(*args, **kwargs):
-        """Function wrapper will only call the underlying function in
-        the case of a cache miss. Cached objects are stored in the cache/
-        directory.
+        """Wrapper function that only calls the underlying function on a cache miss.
+
+        Cached objects are stored in the cache/ directory.
         """
 
         if not config.get_option("client.caching"):
@@ -728,10 +728,8 @@ class CacheKeyNotFoundError(Exception):
 
 
 class CachedObjectMutationError(ValueError):
-    """Class used internally, but never shown to the user.
-
-    Users see CachedObjectMutationWarning instead.
-    """
+    # This is used internally, but never shown to the user.
+    # Users see CachedObjectMutationWarning instead.
 
     def __init__(self, cached_value, func_or_code):
         self.cached_value = cached_value

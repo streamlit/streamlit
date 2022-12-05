@@ -266,10 +266,7 @@ def valid_menu_item_key(key: str) -> "TypeGuard[MenuKey]":
 
 
 def valid_url(url: str) -> bool:
-    """
-    Function code is copied and pasted from:
-    https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
-    """
+    # Function taken from https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
     try:
         result = urlparse(url)
         if result.scheme == "mailto":
