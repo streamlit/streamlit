@@ -106,12 +106,12 @@ from streamlit.runtime.caching.cache_resource_api import (
 )
 
 # Create and export public API singletons.
-cache_data = CacheDataAPI()
+cache_data = CacheDataAPI(decorator_metric_name="cache_data")
 cache_resource = CacheResourceAPI()
 
 # Deprecated singletons
 experimental_memo = deprecate_obj_name(
-    cache_data,
+    CacheDataAPI(decorator_metric_name="experimental_memo"),
     old_name="experimental_memo",
     new_name="cache_data",
     removal_date="2023.04.01",
