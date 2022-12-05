@@ -31,7 +31,7 @@ PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 # should_show_new_version_notice() is called.
 CHECK_PYPI_PROBABILITY = 0.10
 
-STREAMLIT_VERSION_STRING: Final[str] = _version("streamlit")
+STREAMLIT_VERSION_STRING: Final[str] = _version("streamlit-nightly")
 
 
 def _version_str_to_obj(version_str) -> packaging.version.Version:
