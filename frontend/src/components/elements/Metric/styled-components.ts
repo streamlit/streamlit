@@ -16,6 +16,11 @@
 
 import styled from "@emotion/styled"
 import { StyledWidgetLabel } from "src/components/widgets/BaseWidget/styled-components"
+import { LabelVisibilityOptions } from "src/lib/utils"
+
+export interface StyledMetricLabelTextProps {
+  visibility?: LabelVisibilityOptions
+}
 
 export const StyledTruncateText = styled.div(({ theme }) => ({
   overflowWrap: "normal",
@@ -31,8 +36,13 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   alignItems: "center",
 }))
 
-export const StyledMetricLabelText = styled(StyledWidgetLabel)(() => ({
+export const StyledMetricLabelText = styled(
+  StyledWidgetLabel
+)<StyledMetricLabelTextProps>(({ visibility }) => ({
   marginBottom: 0,
+  display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
+  visibility:
+    visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
 }))
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
