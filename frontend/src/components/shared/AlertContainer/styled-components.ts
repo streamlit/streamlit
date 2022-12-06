@@ -17,6 +17,16 @@
 import styled from "@emotion/styled"
 
 export const StyledAlertContent = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: theme.spacing.sm,
+
+  // If an icon is present, nudge the <EmojiIcon /> component
+  // a bit so it's aligned with the start of the text.
+  "& > span": {
+    position: "relative",
+    top: "2px",
+  },
+
   pre: {
     backgroundColor: theme.colors.transparent,
     paddingTop: theme.spacing.lg,

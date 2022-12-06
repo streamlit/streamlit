@@ -23,6 +23,7 @@ import {
   StyledStackTrace,
   StyledStackTraceRow,
   StyledStackTraceTitle,
+  StyledExceptionContainer,
 } from "./styled-components"
 
 export interface ExceptionElementProps {
@@ -101,16 +102,18 @@ export default function ExceptionElement({
         kind={element.isWarning ? Kind.WARNING : Kind.ERROR}
         width={width}
       >
-        <div className="message">
-          <ExceptionMessage
-            type={element.type}
-            message={element.message}
-            messageIsMarkdown={element.messageIsMarkdown}
-          />
-        </div>
-        {element.stackTrace && element.stackTrace.length > 0 ? (
-          <StackTrace stackTrace={element.stackTrace} />
-        ) : null}
+        <StyledExceptionContainer>
+          <div className="message">
+            <ExceptionMessage
+              type={element.type}
+              message={element.message}
+              messageIsMarkdown={element.messageIsMarkdown}
+            />
+          </div>
+          {element.stackTrace && element.stackTrace.length > 0 ? (
+            <StackTrace stackTrace={element.stackTrace} />
+          ) : null}
+        </StyledExceptionContainer>
       </AlertContainer>
     </div>
   )

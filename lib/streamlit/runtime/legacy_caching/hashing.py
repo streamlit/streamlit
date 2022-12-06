@@ -823,7 +823,8 @@ then pass that to `hash_funcs` instead:
 %(hash_stack)s
 ```
 
-Please see the `hash_funcs` [documentation](https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
+Please see the `hash_funcs` [documentation]
+(https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
 for more details.
             """
             % args
@@ -947,7 +948,8 @@ then pass that to `hash_funcs` instead:
 %(hash_stack)s
 ```
 
-Please see the `hash_funcs` [documentation](https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
+Please see the `hash_funcs` [documentation]
+(https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
 for more details.
             """
             % args

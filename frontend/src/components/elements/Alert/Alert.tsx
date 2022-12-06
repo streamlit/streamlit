@@ -20,7 +20,6 @@ import { Alert as AlertProto } from "src/autogen/proto"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { EmojiIcon } from "src/components/shared/Icon"
 import AlertContainer, { Kind } from "src/components/shared/AlertContainer"
-import { StyledIconAlertContent } from "./styled-components"
 
 export function getAlertKind(format: AlertProto.Format): Kind {
   switch (format) {
@@ -56,10 +55,8 @@ export default function Alert({
   return (
     <div className="stAlert">
       <AlertContainer width={width} kind={kind}>
-        <StyledIconAlertContent>
-          {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
-          <StreamlitMarkdown source={body} allowHTML={false} />
-        </StyledIconAlertContent>
+        {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
+        <StreamlitMarkdown source={body} allowHTML={false} />
       </AlertContainer>
     </div>
   )

@@ -16,6 +16,10 @@
 
 import styled from "@emotion/styled"
 
+export const StyledExceptionContainer = styled.div(({ theme }) => ({
+  display: "grid",
+}))
+
 export const StyledStackTraceRow = styled.div(({ theme }) => ({
   marginTop: theme.spacing.sm,
   "&:first-of-type": {
