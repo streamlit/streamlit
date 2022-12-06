@@ -19,6 +19,7 @@ import tempfile
 import textwrap
 import time
 import unittest
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, overload
 from unittest.mock import MagicMock
@@ -45,12 +46,19 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 class LocalScriptRunner(ScriptRunner):
     """Subclasses ScriptRunner to provide some testing features."""
 
-    def __init__(self, script_path: str):
+    def __init__(
+        self,
+        script_path: str,
+        prev_session_state: SessionState | None = None,
+    ):
         """Initializes the ScriptRunner for the given script_name"""
 
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
-        self.session_state = SessionState()
+        if prev_session_state is not None:
+            self.session_state = deepcopy(prev_session_state)
+        else:
+            self.session_state = SessionState()
 
         super().__init__(
             session_id="test session id",
@@ -389,7 +397,7 @@ class ElementTree(Block):
         assert self.script_path is not None
 
         widget_states = self.get_widget_states()
-        runner = LocalScriptRunner(self.script_path)
+        runner = LocalScriptRunner(self.script_path, self.session_state)
         return runner.run(widget_states)
 
 

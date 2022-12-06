@@ -195,3 +195,35 @@ class InteractiveScriptTest(InteractiveScriptTests):
         assert len(sr.get("text")) == 4
         # querying elements via a block only returns the elements in that block
         assert len(sr.get("expandable")[0].get("text")) == 2
+
+    def test_session_state_immutable(self):
+        script = self.script_from_string(
+            "session_state_copy.py",
+            """
+            import streamlit as st
+
+            if "other" not in st.session_state:
+                st.session_state["other"] = 5
+
+            st.radio("r", options=["a", "b", "c"], key="radio")
+            if st.session_state.radio == "b":
+                st.session_state.other = 10
+            """,
+        )
+        sr = script.run()
+        state1 = sr.session_state
+        assert state1 is not None
+        assert state1["radio"] == "a"
+        assert state1["other"] == 5
+
+        sr2 = sr.get("radio")[0].set_value("b").run()
+        assert sr2.session_state["radio"] == "b"
+        assert sr2.session_state["other"] == 10
+        # unaffected by second script run
+        assert state1["radio"] == "a"
+        assert state1["other"] == 5
+
+        sr3 = sr2.get("radio")[0].set_value("c").run()
+        assert sr3.session_state["radio"] == "c"
+        # has value from second script run despite being a different instance
+        assert sr3.session_state["other"] == 10
