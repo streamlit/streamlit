@@ -102,7 +102,25 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         else:
             user_info["email"] = email
 
-        self._session_id = self._runtime.create_session(self, user_info)
+        existing_session_id = None
+        try:
+            ws_protocols = [
+                p.strip()
+                for p in self.request.headers["Sec-Websocket-Protocol"].split(",")
+            ]
+
+            if len(ws_protocols) > 1:
+                existing_session_id = ws_protocols[1]
+        except Exception:
+            # Just let existing_session_id=None if we run into any error while trying to
+            # extract it from the Sec-Websocket-Protocol header.
+            pass
+
+        self._session_id = self._runtime.create_session(
+            client=self,
+            user_info=user_info,
+            existing_session_id=existing_session_id,
+        )
         return None
 
     def on_close(self) -> None:

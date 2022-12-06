@@ -314,6 +314,7 @@ class Runtime:
         self,
         client: SessionClient,
         user_info: Dict[str, Optional[str]],
+        existing_session_id: Optional[str] = None,
     ) -> str:
         """Create a new session and return its unique ID.
 
@@ -346,6 +347,7 @@ class Runtime:
             client=client,
             session_data=SessionData(self._main_script_path, self._command_line),
             user_info=user_info,
+            existing_session_id=existing_session_id,
         )
         self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
         self._get_async_objs().has_connection.set()

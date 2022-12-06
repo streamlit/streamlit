@@ -144,7 +144,7 @@ interface MessageQueue {
  *   CONNECTED<───────────────────────────┘
  *
  *
- *                    on fatal error
+ *                    on fatal error or call to .disconnect()
  *                    :
  *   <ANY_STATE> ──────────────> DISCONNECTED_FOREVER
  */
@@ -225,6 +225,10 @@ export class WebsocketConnection {
       return this.args.baseUriPartsList[this.uriIndex]
     }
     return undefined
+  }
+
+  public disconnect(): void {
+    this.setFsmState(ConnectionState.DISCONNECTED_FOREVER)
   }
 
   // This should only be called inside stepFsm().
@@ -387,9 +391,11 @@ export class WebsocketConnection {
     // Sec-WebSocket-Protocol is set, many clients expect the server to respond
     // with a selected subprotocol to use. We don't want that reply to be the
     // auth token, so we just hard-code it to "streamlit".
+
+    const sessionToken = hostAuthToken || SessionInfo.lastSessionId
     this.websocket = new WebSocket(uri, [
       "streamlit",
-      ...(hostAuthToken ? [hostAuthToken] : []),
+      ...(sessionToken ? [sessionToken] : []),
     ])
     this.websocket.binaryType = "arraybuffer"
 

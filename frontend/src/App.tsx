@@ -320,6 +320,10 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  componentWillUnmount(): void {
+    this.connectionManager?.disconnect()
+  }
+
   showError(title: string, errorNode: ReactNode): void {
     logError(errorNode)
     const newDialog: DialogProps = {

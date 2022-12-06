@@ -34,10 +34,14 @@ test("Clears session info", () => {
     commandLine: "command line",
     userMapboxToken: "mpt",
   })
+
   expect(SessionInfo.isSet()).toBe(true)
+  expect(SessionInfo.lastSessionId).toBe(undefined)
 
   SessionInfo.clearSession()
+
   expect(SessionInfo.isSet()).toBe(false)
+  expect(SessionInfo.lastSessionId).toBe("sessionId")
 })
 
 test("Can be initialized from a protobuf", () => {

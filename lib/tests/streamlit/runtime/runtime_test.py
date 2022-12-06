@@ -18,7 +18,7 @@ import shutil
 import tempfile
 import unittest
 from typing import List
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
@@ -115,8 +115,31 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session(session_id)
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
-    @patch("streamlit.runtime.app_session.AppSession.shutdown", new=MagicMock())
-    async def test_close_session_shuts_down_appsession(self):
+    async def test_create_session_existing_session_id_plumbing(self):
+        """The existing_session_id parameter is plumbed to _session_mgr.connect_session."""
+        await self.runtime.start()
+
+        with patch.object(
+            self.runtime._session_mgr, "connect_session", new=MagicMock()
+        ) as patched_connect_session:
+            client = MockSessionClient()
+            user_info = MagicMock()
+            existing_session_id = "some_session_id"
+
+            session_id = self.runtime.create_session(
+                client=client,
+                user_info=user_info,
+                existing_session_id=existing_session_id,
+            )
+
+            patched_connect_session.assert_called_with(
+                client=client,
+                session_data=ANY,
+                user_info=user_info,
+                existing_session_id=existing_session_id,
+            )
+
+    async def test_close_session_disconnects_appsession(self):
         """Closing a session should shutdown its associated AppSession."""
         await self.runtime.start()
 
@@ -124,13 +147,12 @@ class RuntimeTest(RuntimeTestCase):
         session_id = self.runtime.create_session(
             client=MockSessionClient(), user_info=MagicMock()
         )
-        app_session = self.runtime._session_mgr.get_active_session_info(
-            session_id
-        ).session
 
-        # Close the session. AppSession.shutdown should be called.
-        self.runtime.close_session(session_id)
-        app_session.shutdown.assert_called_once()
+        with patch.object(
+            self.runtime._session_mgr, "disconnect_session", new=MagicMock()
+        ) as patched_disconnect_session:
+            self.runtime.close_session(session_id)
+            patched_disconnect_session.assert_called_with(session_id)
 
     async def test_multiple_sessions(self):
         """Multiple sessions can be connected."""
@@ -185,10 +207,8 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session(session_id)
         self.assertFalse(self.runtime.is_active_session(session_id))
 
-    # TODO(vdonato): Change this test to verify that *all* AppSessions (both active and
-    # inactive) are shut down when the Runtime stops.
-    async def test_shutdown_appsessions_on_stop(self):
-        """When the Runtime stops, it should shut down open AppSessions."""
+    async def test_closes_app_sessions_on_stop(self):
+        """When the Runtime stops, it should close all AppSessions."""
         await self.runtime.start()
 
         # Create a few sessions
@@ -198,21 +218,19 @@ class RuntimeTest(RuntimeTestCase):
             app_session = self.runtime._session_mgr.get_active_session_info(
                 session_id
             ).session
-            app_session.shutdown = MagicMock()
             app_sessions.append(app_session)
 
-        # Sanity check
-        for app_session in app_sessions:
-            app_session.shutdown.assert_not_called()
+        with patch.object(
+            self.runtime._session_mgr, "close_session"
+        ) as patched_close_session:
+            # Stop the Runtime
+            self.runtime.stop()
+            await self.runtime.stopped
 
-        # Stop the Runtime
-        self.runtime.stop()
-        await self.runtime.stopped
+            self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
 
-        # All sessions should be shut down
-        self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
-        for app_session in app_sessions:
-            app_session.shutdown.assert_called_once()
+            # All sessions should be shut down via self._session_mgr.close_session
+            patched_close_session.assert_has_calls(call(s.id) for s in app_sessions)
 
     @patch("streamlit.runtime.app_session.AppSession.handle_backmsg", new=MagicMock())
     async def test_handle_backmsg(self):

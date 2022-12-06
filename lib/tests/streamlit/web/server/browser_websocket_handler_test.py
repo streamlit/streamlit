@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import tornado.httpserver
 import tornado.testing
@@ -35,6 +34,34 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
     # define async setUp and tearDown functions :(
 
     @tornado.testing.gen_test
+    async def test_connect_with_no_session_id(self):
+        with self._patch_app_session(), patch.object(
+            self.server._runtime, "create_session"
+        ) as patched_create_session:
+            await self.server.start()
+            await self.ws_connect()
+
+            patched_create_session.assert_called_with(
+                client=ANY,
+                user_info=ANY,
+                existing_session_id=None,
+            )
+
+    @tornado.testing.gen_test
+    async def test_connect_with_session_id(self):
+        with self._patch_app_session(), patch.object(
+            self.server._runtime, "create_session"
+        ) as patched_create_session:
+            await self.server.start()
+            await self.ws_connect(existing_session_id="session_id")
+
+            patched_create_session.assert_called_with(
+                client=ANY,
+                user_info=ANY,
+                existing_session_id="session_id",
+            )
+
+    @tornado.testing.gen_test
     async def test_write_forward_msg_reraises_websocket_closed_error(self):
         """`write_forward_msg` should re-raise WebSocketClosedError as
         as SessionClientDisconnectedError.
@@ -50,9 +77,7 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
             self.assertIsInstance(websocket_handler, BrowserWebSocketHandler)
 
             # Patch _BrowserWebSocketHandler.write_message to raise an error
-            with mock.patch.object(
-                websocket_handler, "write_message"
-            ) as write_message_mock:
+            with patch.object(websocket_handler, "write_message") as write_message_mock:
                 write_message_mock.side_effect = tornado.websocket.WebSocketClosedError
 
                 msg = ForwardMsg()

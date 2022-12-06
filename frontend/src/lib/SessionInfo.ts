@@ -41,8 +41,6 @@ export class SessionInfo {
   // Fields that don't change during the lifetime of a session (i.e. a browser tab).
   public readonly appId: string
 
-  public readonly sessionId: string
-
   public readonly streamlitVersion: string
 
   public readonly pythonVersion: string
@@ -73,6 +71,29 @@ export class SessionInfo {
    *   initialized.
    */
   private static singleton?: SessionInfo
+
+  private static sessionId?: string
+
+  /**
+   * Return the sessionId of the last connected session, or undefined if a
+   * session is currently connected.
+   */
+  public static get lastSessionId(): string | undefined {
+    return SessionInfo.isSet() ? undefined : SessionInfo.sessionId
+  }
+
+  /**
+   * Return the sessionId of the currently connected session.
+   */
+  // eslint-disable-next-line class-methods-use-this
+  public get sessionId(): string {
+    // We're guaranteed that SessionInfo._sessionId is set to the current
+    // session's ID here since there can be at most one SessionInfo object that
+    // exists at one time.
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return SessionInfo.sessionId!
+  }
 
   public static get current(): SessionInfo {
     if (!SessionInfo.singleton) {
@@ -145,8 +166,9 @@ export class SessionInfo {
       throw new Error("SessionInfo arguments must be non-null")
     }
 
+    SessionInfo.sessionId = sessionId
+
     this.appId = appId
-    this.sessionId = sessionId
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion
     this.installationId = installationId
