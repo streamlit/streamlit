@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st.map", () => {
+describe("multipage apps", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
   });
