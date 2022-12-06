@@ -372,65 +372,64 @@ export class WebsocketConnection {
     // claimHostAuthToken resolves to undefined immediately in deployment
     // scenarios where we don't expect an external auth token to be passed down
     // to the frame containing the Streamlit app.
-    await this.args.claimHostAuthToken().then(hostAuthToken => {
-      this.args.resetHostAuthToken()
-      logMessage(LOG, "creating WebSocket")
+    const hostAuthToken = await this.args.claimHostAuthToken()
+    this.args.resetHostAuthToken()
+    logMessage(LOG, "creating WebSocket")
 
-      // NOTE: We repurpose the Sec-WebSocket-Protocol header (set via the second
-      // parameter to the WebSocket constructor) here in a slightly unfortunate
-      // but necessary way. The browser WebSocket API doesn't allow us to set
-      // arbitrary HTTP headers, and this header is the only one where we have
-      // the ability to set it to arbitrary values. Thus, we use it to pass an
-      // auth token from client to server as the *second* value in the list.
-      //
-      // The reason why the auth token is set as the second value is that, when
-      // Sec-WebSocket-Protocol is set, many clients expect the server to respond
-      // with a selected subprotocol to use. We don't want that reply to be the
-      // auth token, so we just hard-code it to "streamlit".
-      this.websocket = new WebSocket(uri, [
-        "streamlit",
-        ...(hostAuthToken ? [hostAuthToken] : []),
-      ])
-      this.websocket.binaryType = "arraybuffer"
+    // NOTE: We repurpose the Sec-WebSocket-Protocol header (set via the second
+    // parameter to the WebSocket constructor) here in a slightly unfortunate
+    // but necessary way. The browser WebSocket API doesn't allow us to set
+    // arbitrary HTTP headers, and this header is the only one where we have
+    // the ability to set it to arbitrary values. Thus, we use it to pass an
+    // auth token from client to server as the *second* value in the list.
+    //
+    // The reason why the auth token is set as the second value is that, when
+    // Sec-WebSocket-Protocol is set, many clients expect the server to respond
+    // with a selected subprotocol to use. We don't want that reply to be the
+    // auth token, so we just hard-code it to "streamlit".
+    this.websocket = new WebSocket(uri, [
+      "streamlit",
+      ...(hostAuthToken ? [hostAuthToken] : []),
+    ])
+    this.websocket.binaryType = "arraybuffer"
 
-      this.setConnectionTimeout(uri)
+    this.setConnectionTimeout(uri)
 
-      const localWebsocket = this.websocket
-      const checkWebsocket = (): boolean => localWebsocket === this.websocket
+    const localWebsocket = this.websocket
+    const checkWebsocket = (): boolean => localWebsocket === this.websocket
 
-      this.websocket.onmessage = (event: MessageEvent) => {
-        if (checkWebsocket()) {
-          this.handleMessage(event.data).catch(reason => {
-            const err = `Failed to process a Websocket message (${reason})`
-            logError(LOG, err)
-            this.stepFsm("FATAL_ERROR", err)
-          })
-        }
+    this.websocket.onmessage = (event: MessageEvent) => {
+      if (checkWebsocket()) {
+        this.handleMessage(event.data).catch(reason => {
+          const err = `Failed to process a Websocket message (${reason})`
+          logError(LOG, err)
+          this.stepFsm("FATAL_ERROR", err)
+        })
       }
+    }
 
-      this.websocket.onopen = () => {
-        if (checkWebsocket()) {
-          logMessage(LOG, "WebSocket onopen")
-          this.stepFsm("CONNECTION_SUCCEEDED")
-        }
+    this.websocket.onopen = () => {
+      if (checkWebsocket()) {
+        logMessage(LOG, "WebSocket onopen")
+        this.stepFsm("CONNECTION_SUCCEEDED")
       }
+    }
 
-      this.websocket.onclose = () => {
-        if (checkWebsocket()) {
-          logWarning(LOG, "WebSocket onclose")
-          this.cancelConnectionAttempt()
-          this.stepFsm("CONNECTION_CLOSED")
-        }
+    this.websocket.onclose = () => {
+      if (checkWebsocket()) {
+        logWarning(LOG, "WebSocket onclose")
+        this.cancelConnectionAttempt()
+        this.stepFsm("CONNECTION_CLOSED")
       }
+    }
 
-      this.websocket.onerror = () => {
-        if (checkWebsocket()) {
-          logError(LOG, "WebSocket onerror")
-          this.cancelConnectionAttempt()
-          this.stepFsm("CONNECTION_ERROR")
-        }
+    this.websocket.onerror = () => {
+      if (checkWebsocket()) {
+        logError(LOG, "WebSocket onerror")
+        this.cancelConnectionAttempt()
+        this.stepFsm("CONNECTION_ERROR")
       }
-    })
+    }
   }
 
   private setConnectionTimeout(uri: string): void {

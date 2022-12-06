@@ -144,6 +144,11 @@ function withHostCommunication(
         }
 
         if (message.type === "SET_AUTH_TOKEN") {
+          // NOTE: The edge case (that should technically never happen) where
+          // useExternalAuthToken is false but we still receive this message
+          // type isn't an issue here because resolving a promise a second time
+          // is a no-op, and we already resolved the promise to undefined
+          // above.
           deferredAuthToken.resolve(message.authToken)
         }
 
