@@ -222,21 +222,19 @@ class Element:
 
 @dataclass(init=False)
 class Text(Element):
-    proto: TextProto
     root: Root = field(repr=False)
+
+    proto: TextProto
+    type: str = "text"
+    key: None = None
 
     def __init__(self, proto: TextProto, root: Root):
         self.proto = proto
         self.root = root
-        self.key = None
 
     @property
     def value(self) -> str:
         return self.proto.body
-
-    @property
-    def type(self) -> str:
-        return "text"
 
 
 @dataclass(init=False)
