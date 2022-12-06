@@ -302,18 +302,23 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 
   private static isNewYears(): boolean {
-    // Start 12/31 of current year, end 01/03 of following year
+    // Test if current date between 12/31 & 1/06
+    // const currentDate = new Date()
+    // const month = currentDate.getMonth()
+    // const date = currentDate.getDate()
+
+    // // Check if Dec 31st
+    // if (month === 11 && date === 31) return true
+    // // Check if Jan 1st through 6th
+    // if (month === 0 && date <= 6) return true
+
+    // MANUAL TESTING:
     const currentDate = new Date()
-    // const currentYear = currentDate.getFullYear()
-    // const startNewYear = new Date(currentYear, 11, 31)
-    // const endNewYear = new Date(currentYear + 1, 0, 3)
+    const month = currentDate.getMonth()
+    const date = currentDate.getDate()
 
-    // TESTING:
-    const currentYear = currentDate.getFullYear()
-    const startNewYear = new Date(currentYear, 11, 2)
-    const endNewYear = new Date(currentYear, 11, 6)
+    if (month === 11 && date <= 6) return true
 
-    if (currentDate > startNewYear && currentDate < endNewYear) return true
     return false
   }
 
@@ -329,7 +334,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       minimized
     )
 
-    // check if current date between Dec 31st and Jan 3rd
+    // check if current date between Dec 31st and Jan 6th
     const runningSrc = StatusWidget.isNewYears()
       ? newYearsRunning
       : iconRunning
