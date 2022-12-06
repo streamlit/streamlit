@@ -182,3 +182,9 @@ class UnserializableReturnValueError(MarkdownFormattedException):
             If you want to cache unserializable objects such as database connections or Tensorflow
             sessions, use `st.experimental_singleton` instead (see [our docs](https://docs.streamlit.io/library/advanced-features/experimental-cache-primitives) for differences).""",
         )
+
+
+class UnevaluatedDataFrameError(StreamlitAPIException):
+    """Used to display a message about uncollected dataframe being used"""
+
+    pass

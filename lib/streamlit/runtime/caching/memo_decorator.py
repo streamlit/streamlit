@@ -526,7 +526,7 @@ class MemoCache(Cache):
 
         try:
             pickled_entry = pickle.dumps(multi_cache_results)
-        except pickle.PicklingError as exc:
+        except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
         self._write_to_mem_cache(key, pickled_entry)
