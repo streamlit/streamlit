@@ -14,7 +14,8 @@
 
 """A Python wrapper around Altair.
 Altair is a Python visualization library based on Vega-Lite,
-a nice JSON schema for expressing graphs and charts."""
+a nice JSON schema for expressing graphs and charts.
+"""
 
 from datetime import date
 from enum import Enum
@@ -480,7 +481,7 @@ def _generate_chart(
     width: int = 0,
     height: int = 0,
 ) -> Chart:
-    """This function uses the chart's type, data columns and indices to figure out the chart's spec."""
+    """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
 
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
@@ -582,7 +583,8 @@ def marshall(
 
     def id_transform(data) -> Dict[str, str]:
         """Altair data transformer that returns a fake named dataset with the
-        object id."""
+        object id.
+        """
         datasets[id(data)] = data
         return {"name": str(id(data))}
 

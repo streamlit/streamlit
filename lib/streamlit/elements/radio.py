@@ -89,7 +89,7 @@ class RadioMixin:
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Optional[T]:
-        """Display a radio button widget.
+        r"""Display a radio button widget.
 
         Parameters
         ----------
