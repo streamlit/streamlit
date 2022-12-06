@@ -13,6 +13,8 @@
 # limitations under the License.
 from unittest.mock import patch
 
+import pytest
+
 from tests.interactive_scripts import InteractiveScriptTests
 
 
@@ -244,3 +246,7 @@ class InteractiveScriptTest(InteractiveScriptTests):
 
         sr2 = sr.get("radio")[1].set_value(3).run()
         assert sr2.get("radio")[1].value == 3
+
+    def test_script_not_found(self):
+        with pytest.raises(AssertionError):
+            self.script_from_filename("doesntexist.py")

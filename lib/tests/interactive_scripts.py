@@ -53,6 +53,8 @@ class LocalScriptRunner(ScriptRunner):
     ):
         """Initializes the ScriptRunner for the given script_name"""
 
+        assert os.path.isfile(script_path), f"File not found at {script_path}"
+
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
         if prev_session_state is not None:
