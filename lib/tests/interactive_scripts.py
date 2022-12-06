@@ -366,8 +366,8 @@ class Block:
 
 @dataclass(init=False)
 class ElementTree(Block):
-    script_path: str = field(repr=False)
-    session_state: SessionState = field(repr=False)
+    script_path: str | None = field(repr=False, default=None)
+    session_state: SessionState | None = field(repr=False, default=None)
 
     type: str = "root"
 
