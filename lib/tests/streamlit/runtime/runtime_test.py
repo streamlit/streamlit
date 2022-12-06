@@ -526,6 +526,7 @@ class ScriptCheckTest(RuntimeTestCase):
             command_line="mock command line",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             session_manager_class=MagicMock,
+            session_storage=MagicMock(),
         )
         self.runtime = Runtime(config)
         await self.runtime.start()
