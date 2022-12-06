@@ -121,12 +121,12 @@ export const StyledAppRunningIcon = styled.img<StyledAppRunningIconProps>(
     // Testing if current background color is light or dark to modify img:
     const filter = hasLightBackgroundColor(theme) ? "" : "invert(1)"
 
+    // New years gif has unique styling - regular running man unchanged
     return {
-      opacity: 0.4,
-      width: "1.6rem",
-      height: "1.6rem",
+      opacity: isNewYears ? 1 : 0.4,
+      width: isNewYears ? "2.2rem" : "1.6rem",
+      height: isNewYears ? "2.2rem" : "1.6rem",
       marginRight: `-${theme.spacing.sm}`,
-      // Don't want to invert coloration for firework gif
       filter: isNewYears ? "" : filter,
     }
   }
