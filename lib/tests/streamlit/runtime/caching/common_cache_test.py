@@ -633,11 +633,11 @@ class CommonCacheTTLTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("memo", memo, "streamlit.runtime.caching.memo_decorator._TTLCACHE_TIMER"),
+            ("memo", memo, "streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER"),
             (
                 "singleton",
                 singleton,
-                "streamlit.runtime.caching.singleton_decorator._TTLCACHE_TIMER",
+                "streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER",
             ),
         ]
     )
@@ -703,12 +703,12 @@ class CommonCacheTTLTest(unittest.TestCase):
             (
                 "memo",
                 st.experimental_memo,
-                "streamlit.runtime.caching.memo_decorator._TTLCACHE_TIMER",
+                "streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER",
             ),
             (
                 "singleton",
                 st.experimental_singleton,
-                "streamlit.runtime.caching.singleton_decorator._TTLCACHE_TIMER",
+                "streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER",
             ),
         ]
     )

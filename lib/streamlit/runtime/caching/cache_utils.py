@@ -21,6 +21,7 @@ import hashlib
 import inspect
 import math
 import threading
+import time
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -55,6 +56,10 @@ from streamlit.runtime.scriptrunner.script_run_context import (
 from streamlit.runtime.state.session_state import WidgetMetadata
 
 _LOGGER = get_logger(__name__)
+
+# The timer function we use with TTLCache. This is the default timer func, but
+# is exposed here as a constant so that it can be patched in unit tests.
+TTLCACHE_TIMER = time.monotonic
 
 
 def ttl_to_seconds(ttl: float | timedelta | None) -> float:

@@ -20,7 +20,6 @@ import os
 import pickle
 import shutil
 import threading
-import time
 import types
 from datetime import timedelta
 from typing import Any, Callable, TypeVar, cast, overload
@@ -32,6 +31,7 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
+from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
@@ -54,10 +54,6 @@ from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
-
-# The timer function we use with TTLCache. This is the default timer func, but
-# is exposed here as a constant so that it can be patched in unit tests.
-_TTLCACHE_TIMER = time.monotonic
 
 # Streamlit directory where persisted memoized items live.
 # (This is the same directory that @st.cache persisted items live. But memoized
@@ -416,7 +412,7 @@ class MemoCache(Cache):
         self.display_name = display_name
         self.persist = persist
         self._mem_cache: TTLCache[str, bytes] = TTLCache(
-            maxsize=max_entries, ttl=ttl_seconds, timer=_TTLCACHE_TIMER
+            maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets

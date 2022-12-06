@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import math
 import threading
-import time
 import types
 from datetime import timedelta
 from typing import Any, Callable, TypeVar, cast, overload
@@ -27,6 +26,7 @@ from pympler import asizeof
 
 import streamlit as st
 from streamlit.logger import get_logger
+from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
@@ -45,10 +45,6 @@ from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
-
-# The timer function we use with TTLCache. This is the default timer func, but
-# is exposed here as a constant so that it can be patched in unit tests.
-_TTLCACHE_TIMER = time.monotonic
 
 
 SINGLETON_CALL_STACK = CacheWarningCallStack(CacheType.SINGLETON)
@@ -353,7 +349,7 @@ class SingletonCache(Cache):
         self.key = key
         self.display_name = display_name
         self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
-            maxsize=max_entries, ttl=ttl_seconds, timer=_TTLCACHE_TIMER
+            maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
