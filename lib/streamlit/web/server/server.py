@@ -34,6 +34,7 @@ from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
@@ -179,6 +180,7 @@ class Server:
                 command_line=command_line,
                 media_file_storage=media_file_storage,
                 session_manager_class=WebsocketSessionManager,
+                session_storage=MemorySessionStorage(),
             ),
         )
 
