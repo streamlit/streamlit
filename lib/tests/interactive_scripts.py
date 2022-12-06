@@ -369,6 +369,8 @@ class Root(Block):
     script_path: str | None = field(repr=False)
     session_state: SessionState | None = field(repr=False)
 
+    type: str = "root"
+
     def __init__(
         self, session_state: SessionState | None = None, script_path: str | None = None
     ):
@@ -376,10 +378,6 @@ class Root(Block):
         self.root = self
         self.script_path = script_path
         self.session_state = session_state
-
-    @property
-    def type(self) -> str:
-        return "root"
 
     def get_widget_states(self) -> WidgetStates:
         ws = WidgetStates()
