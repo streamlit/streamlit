@@ -45,6 +45,7 @@ from streamlit.runtime.session_manager import (
     SessionClient,
     SessionClientDisconnectedError,
     SessionManager,
+    SessionStorage,
 )
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
@@ -79,6 +80,9 @@ class RuntimeConfig(NamedTuple):
 
     # The SessionManager class to be used.
     session_manager_class: Type[SessionManager]
+
+    # The SessionStorage instance for the SessionManager to use.
+    session_storage: SessionStorage
 
 
 class RuntimeState(Enum):
@@ -170,12 +174,8 @@ class Runtime:
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
 
-        # Ignore the obviously incorrect type below where we pass None where a
-        # SessionStorage should be in the first argument. This is fine because we're
-        # not yet using the argument in the one class that currently implements
-        # SessionManager.
         self._session_mgr = config.session_manager_class(
-            session_storage=None,  # type: ignore
+            session_storage=config.session_storage,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
         )
@@ -367,7 +367,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        self._session_mgr.close_session(session_id)
+        self._session_mgr.disconnect_session(session_id)
 
         if (
             self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED

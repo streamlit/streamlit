@@ -111,10 +111,11 @@ class ServerTest(ServerTestCase):
             await asyncio.sleep(0.1)
             self.assertFalse(self.server.browser_is_connected)
 
-            # Ensure AppSession.shutdown() was called, and that our
-            # SessionInfo was cleared.
-            session_info.session.shutdown.assert_called_once()
+            # Ensure AppSession.disconnect_file_watchers() was called, and that our
+            # session exists but is no longer active.
+            session_info.session.disconnect_file_watchers.assert_called_once()
             self.assertEqual(0, self.server._runtime._session_mgr.num_active_sessions())
+            self.assertEqual(1, self.server._runtime._session_mgr.num_sessions())
 
     @tornado.testing.gen_test
     async def test_multiple_connections(self):
