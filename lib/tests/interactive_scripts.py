@@ -97,7 +97,7 @@ class LocalScriptRunner(ScriptRunner):
         """Return all messages in our ForwardMsgQueue."""
         return self.forward_msg_queue._queue
 
-    def run(self, widget_state: WidgetStates | None = None) -> Root:
+    def run(self, widget_state: WidgetStates | None = None) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction."""
         rerun_data = RerunData(widget_states=widget_state)
@@ -188,10 +188,10 @@ def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> Non
 class Element:
     type: str
     proto: ElementProto = field(repr=False)
-    root: Root = field(repr=False)
+    root: ElementTree = field(repr=False)
     key: str | None
 
-    def __init__(self, proto: ElementProto, root: Root):
+    def __init__(self, proto: ElementProto, root: ElementTree):
         self.proto = proto
         self.root = root
         self.key = None
@@ -216,19 +216,19 @@ class Element:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self) -> Root:
+    def run(self) -> ElementTree:
         return self.root.run()
 
 
 @dataclass(init=False)
 class Text(Element):
-    root: Root = field(repr=False)
+    root: ElementTree = field(repr=False)
 
     proto: TextProto
     type: str = "text"
     key: None = None
 
-    def __init__(self, proto: TextProto, root: Root):
+    def __init__(self, proto: TextProto, root: ElementTree):
         self.proto = proto
         self.root = root
 
@@ -239,7 +239,7 @@ class Text(Element):
 
 @dataclass(init=False)
 class Radio(Element):
-    root: Root = field(repr=False)
+    root: ElementTree = field(repr=False)
     _value: str | None
 
     proto: RadioProto
@@ -253,7 +253,7 @@ class Radio(Element):
     horizontal: bool
     key: str | None
 
-    def __init__(self, proto: RadioProto, root: Root):
+    def __init__(self, proto: RadioProto, root: ElementTree):
         self.proto = proto
         self.root = root
         self._value = None
@@ -302,11 +302,11 @@ class Block:
     type: str
     children: dict[int, Element | Block]
     proto: BlockProto | None = field(repr=False)
-    root: Root = field(repr=False)
+    root: ElementTree = field(repr=False)
 
     def __init__(
         self,
-        root: Root,
+        root: ElementTree,
         proto: BlockProto | None = None,
         type: str | None = None,
     ):
@@ -360,24 +360,21 @@ class Block:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self) -> Root:
+    def run(self) -> ElementTree:
         return self.root.run()
 
 
 @dataclass(init=False)
-class Root(Block):
-    script_path: str | None = field(repr=False)
-    session_state: SessionState | None = field(repr=False)
+class ElementTree(Block):
+    script_path: str = field(repr=False)
+    session_state: SessionState = field(repr=False)
 
     type: str = "root"
 
-    def __init__(
-        self, session_state: SessionState | None = None, script_path: str | None = None
-    ):
+    def __init__(self):
+        # Expect script_path and session_state to be filled in afterwards
         self.children = {}
         self.root = self
-        self.script_path = script_path
-        self.session_state = session_state
 
     def get_widget_states(self) -> WidgetStates:
         ws = WidgetStates()
@@ -388,7 +385,7 @@ class Root(Block):
 
         return ws
 
-    def run(self) -> Root:
+    def run(self) -> ElementTree:
         assert self.script_path is not None
 
         widget_states = self.get_widget_states()
@@ -396,8 +393,8 @@ class Root(Block):
         return runner.run(widget_states)
 
 
-def parse_tree_from_messages(messages: list[ForwardMsg]) -> Root:
-    root = Root()
+def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
+    root = ElementTree()
     root.children = {
         0: Block(type="main", root=root),
         1: Block(type="sidebar", root=root),
