@@ -21,7 +21,7 @@ import time
 import unittest
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, overload
+from typing import Any, Generic, TypeVar, overload
 from unittest.mock import MagicMock
 
 from typing_extensions import Literal
@@ -245,10 +245,13 @@ class Text(Element):
         return self.proto.body
 
 
+T = TypeVar("T")
+
+
 @dataclass(init=False)
-class Radio(Element):
+class Radio(Element, Generic[T]):
     root: ElementTree = field(repr=False)
-    _value: str | None
+    _value: T | None
 
     proto: RadioProto
     type: str
@@ -278,10 +281,10 @@ class Radio(Element):
 
     @property
     def index(self) -> int:
-        return self.options.index(self.value)
+        return self.options.index(str(self.value))
 
     @property
-    def value(self) -> str:
+    def value(self) -> T:
         """The currently selected value from the options."""
         if self._value is not None:
             return self._value
@@ -290,7 +293,7 @@ class Radio(Element):
             assert state
             return state[self.id]
 
-    def set_value(self, v: str) -> Radio:
+    def set_value(self, v: T) -> Radio:
         self._value = v
         return self
 

@@ -227,3 +227,20 @@ class InteractiveScriptTest(InteractiveScriptTests):
         assert sr3.session_state["radio"] == "c"
         # has value from second script run despite being a different instance
         assert sr3.session_state["other"] == 10
+
+    def test_radio_option_types(self):
+        script = self.script_from_string(
+            "radio_options.py",
+            """
+            import streamlit as st
+
+            st.radio("string", options=["a", "b", "c"])
+            st.radio("int", options=(1, 2, 3))
+            """,
+        )
+        sr = script.run()
+        assert sr.get("radio")[0].value == "a"
+        assert sr.get("radio")[1].value == 1
+
+        sr2 = sr.get("radio")[1].set_value(3).run()
+        assert sr2.get("radio")[1].value == 3
