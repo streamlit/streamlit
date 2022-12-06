@@ -63,7 +63,7 @@ TTLCACHE_TIMER = time.monotonic
 
 
 def ttl_to_seconds(ttl: float | timedelta | None) -> float:
-    """Convert a ttl value to a "seconds" float.
+    """Convert a ttl value to a float representing "number of seconds".
     If ttl is None, return Infinity.
     """
     if ttl is None:

@@ -73,7 +73,6 @@ class SingletonCaches(CacheStatsProvider):
         if max_entries is None:
             max_entries = math.inf
 
-        # Convert ttl to seconds
         ttl_seconds = ttl_to_seconds(ttl)
 
         # Get the existing cache, if it exists, and validate that its params
