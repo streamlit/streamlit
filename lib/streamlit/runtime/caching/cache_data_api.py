@@ -211,6 +211,21 @@ class CacheDataAPI:
     st.cache_data.clear().
     """
 
+    def __init__(self, decorator_metric_name: str):
+        """Create a CacheDataAPI instance.
+
+        Parameters
+        ----------
+        decorator_metric_name
+            The metric name to record for decorator usage. `@st.experimental_memo` is
+            deprecated, but we're still supporting it and tracking its usage separately
+            from `@st.cache_data`.
+        """
+
+        # Parameterize the decorator metric name.
+        # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
+        self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
+
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
     F = TypeVar("F", bound=Callable[..., Any])
@@ -234,12 +249,29 @@ class CacheDataAPI:
     ) -> Callable[[F], F]:
         ...
 
-    # __call__ should be a static method, but there's a mypy bug that
-    # breaks type checking for overloaded static functions:
-    # https://github.com/python/mypy/issues/7781
-    @gather_metrics("cache_data")
     def __call__(
         self,
+        func: F | None = None,
+        *,
+        persist: str | None = None,
+        show_spinner: bool | str = True,
+        suppress_st_warning: bool = False,
+        max_entries: int | None = None,
+        ttl: float | timedelta | None = None,
+        experimental_allow_widgets: bool = False,
+    ):
+        return self._decorator(
+            func,
+            persist=persist,
+            show_spinner=show_spinner,
+            suppress_st_warning=suppress_st_warning,
+            max_entries=max_entries,
+            ttl=ttl,
+            experimental_allow_widgets=experimental_allow_widgets,
+        )
+
+    @staticmethod
+    def _decorator(
         func: F | None = None,
         *,
         persist: str | None = None,

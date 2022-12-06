@@ -72,6 +72,28 @@ class CacheResourceTest(unittest.TestCase):
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [1, 1])
 
+    def test_multiple_api_names(self):
+        """`st.experimental_singleton` is effectively an alias for `st.cache_resource`, and we
+        support both APIs while experimental_singleton is being deprecated.
+        """
+        num_calls = [0]
+
+        def foo():
+            num_calls[0] += 1
+            return 42
+
+        # Annotate a function with both `cache_resource` and `experimental_singleton`.
+        cache_resource_func = st.cache_resource(foo)
+        memo_func = st.experimental_singleton(foo)
+
+        # Call both versions of the function and assert the results.
+        self.assertEqual(42, cache_resource_func())
+        self.assertEqual(42, memo_func())
+
+        # Because these decorators share the same cache, calling both functions
+        # results in just a single call to the decorated function.
+        self.assertEqual(1, num_calls[0])
+
 
 class CacheResourceStatsProviderTest(unittest.TestCase):
     def setUp(self):

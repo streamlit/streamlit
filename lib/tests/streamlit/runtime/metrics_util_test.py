@@ -252,8 +252,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "empty",
             "progress",
             "get_option",
-            "experimental_singleton",
-            "experimental_memo",
         }
 
         # Create a list of all public API names in the `st` module (minus

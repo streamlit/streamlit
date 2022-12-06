@@ -215,6 +215,28 @@ class CacheDataTest(unittest.TestCase):
         self.assertEqual([0, 0, 0], foo_vals)
         self.assertEqual([0, 0], bar_vals)
 
+    def test_multiple_api_names(self):
+        """`st.experimental_memo` is effectively an alias for `st.cache_data`, and we
+        support both APIs while experimental_memo is being deprecated.
+        """
+        num_calls = [0]
+
+        def foo():
+            num_calls[0] += 1
+            return 42
+
+        # Annotate a function with both `cache_data` and `experimental_memo`.
+        cache_data_func = st.cache_data(foo)
+        memo_func = st.experimental_memo(foo)
+
+        # Call both versions of the function and assert the results.
+        self.assertEqual(42, cache_data_func())
+        self.assertEqual(42, memo_func())
+
+        # Because these decorators share the same cache, calling both functions
+        # results in just a single call to the decorated function.
+        self.assertEqual(1, num_calls[0])
+
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
