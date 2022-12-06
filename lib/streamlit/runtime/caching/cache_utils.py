@@ -387,7 +387,10 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                 messages = cached_func.message_call_stack._most_recent_messages
                 try:
                     cache.write_result(value_key, return_value, messages)
-                except (TypeError, RuntimeError, CacheError):
+                except (
+                    CacheError,
+                    RuntimeError,
+                ):  # RuntimeError will be raised by Apache Spark, if we do not collect dataframe before using st.experimental_memo
                     if True in [
                         type_util.is_type(return_value, type_name)
                         for type_name in UNEVALUATED_DATAFRAME_TYPES
