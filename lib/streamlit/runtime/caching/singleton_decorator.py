@@ -15,10 +15,14 @@
 """@st.singleton implementation"""
 from __future__ import annotations
 
+import math
 import threading
+import time
 import types
+from datetime import timedelta
 from typing import Any, Callable, TypeVar, cast, overload
 
+from cachetools import TTLCache
 from pympler import asizeof
 
 import streamlit as st
@@ -33,14 +37,18 @@ from streamlit.runtime.caching.cache_utils import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
-    _make_widget_key,
     create_cache_wrapper,
+    ttl_to_seconds,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
+
+# The timer function we use with TTLCache. This is the default timer func, but
+# is exposed here as a constant so that it can be patched in unit tests.
+_TTLCACHE_TIMER = time.monotonic
 
 
 SINGLETON_CALL_STACK = CacheWarningCallStack(CacheType.SINGLETON)
@@ -55,24 +63,42 @@ class SingletonCaches(CacheStatsProvider):
         self._function_caches: dict[str, SingletonCache] = {}
 
     def get_cache(
-        self, key: str, display_name: str, allow_widgets: bool
+        self,
+        key: str,
+        display_name: str,
+        max_entries: int | float | None,
+        ttl: float | timedelta | None,
+        allow_widgets: bool,
     ) -> SingletonCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
         """
+        if max_entries is None:
+            max_entries = math.inf
+
+        # Convert ttl to seconds
+        ttl_seconds = ttl_to_seconds(ttl)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
         with self._caches_lock:
             cache = self._function_caches.get(key)
-            if cache is not None:
+            if (
+                cache is not None
+                and cache.ttl_seconds == ttl_seconds
+                and cache.max_entries == max_entries
+            ):
                 return cache
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug("Creating new SingletonCache (key=%s)", key)
             cache = SingletonCache(
-                key=key, display_name=display_name, allow_widgets=allow_widgets
+                key=key,
+                display_name=display_name,
+                max_entries=max_entries,
+                ttl_seconds=ttl_seconds,
+                allow_widgets=allow_widgets,
             )
             self._function_caches[key] = cache
             return cache
@@ -106,6 +132,19 @@ def get_singleton_stats_provider() -> CacheStatsProvider:
 class SingletonFunction(CachedFunction):
     """Implements the CachedFunction protocol for @st.singleton"""
 
+    def __init__(
+        self,
+        func: types.FunctionType,
+        show_spinner: bool | str,
+        suppress_st_warning: bool,
+        max_entries: int | None,
+        ttl: float | timedelta | None,
+        allow_widgets: bool,
+    ):
+        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
+        self.max_entries = max_entries
+        self.ttl = ttl
+
     @property
     def cache_type(self) -> CacheType:
         return CacheType.SINGLETON
@@ -127,6 +166,8 @@ class SingletonFunction(CachedFunction):
         return _singleton_caches.get_cache(
             key=function_key,
             display_name=self.display_name,
+            max_entries=self.max_entries,
+            ttl=self.ttl,
             allow_widgets=self.allow_widgets,
         )
 
@@ -153,6 +194,8 @@ class SingletonAPI:
         *,
         show_spinner: bool | str = True,
         suppress_st_warning=False,
+        max_entries: int | None = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
@@ -167,6 +210,8 @@ class SingletonAPI:
         *,
         show_spinner: bool | str = True,
         suppress_st_warning=False,
+        max_entries: int | None = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ):
         """Function decorator to store singleton objects.
@@ -194,6 +239,15 @@ class SingletonAPI:
         suppress_st_warning : boolean
             Suppress warnings about calling Streamlit commands from within
             the singleton function.
+
+        max_entries : int or None
+            The maximum number of entries to keep in the cache, or None
+            for an unbounded cache. (When a new entry is added to a full cache,
+            the oldest cached entry will be removed.) The default is None.
+
+        ttl : float or timedelta or None
+            The maximum number of seconds to keep an entry in the cache, or
+            None if cache entries should not expire. The default is None.
 
         experimental_allow_widgets : boolean
             Allow widgets to be used in the singleton function. Defaults to False.
@@ -261,6 +315,8 @@ class SingletonAPI:
                     func=f,
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
+                    max_entries=max_entries,
+                    ttl=ttl,
                     allow_widgets=experimental_allow_widgets,
                 )
             )
@@ -270,6 +326,8 @@ class SingletonAPI:
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
+                max_entries=max_entries,
+                ttl=ttl,
                 allow_widgets=experimental_allow_widgets,
             )
         )
@@ -284,12 +342,29 @@ class SingletonAPI:
 class SingletonCache(Cache):
     """Manages cached values for a single st.singleton function."""
 
-    def __init__(self, key: str, display_name: str, allow_widgets: bool = False):
+    def __init__(
+        self,
+        key: str,
+        max_entries: float,
+        ttl_seconds: float,
+        display_name: str,
+        allow_widgets: bool = False,
+    ):
         self.key = key
         self.display_name = display_name
-        self._mem_cache: dict[str, MultiCacheResults] = {}
+        self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
+            maxsize=max_entries, ttl=ttl_seconds, timer=_TTLCACHE_TIMER
+        )
         self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
+
+    @property
+    def max_entries(self) -> float:
+        return cast(float, self._mem_cache.maxsize)
+
+    @property
+    def ttl_seconds(self) -> float:
+        return cast(float, self._mem_cache.ttl)
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -297,7 +372,7 @@ class SingletonCache(Cache):
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
-                multi_results = self._mem_cache[key]
+                multi_results: MultiCacheResults = self._mem_cache[key]
 
                 ctx = get_script_run_ctx()
                 if not ctx:
@@ -353,15 +428,13 @@ class SingletonCache(Cache):
         # expensive, and we want to minimize the time we spend holding
         # the lock.
         with self._mem_cache_lock:
-            mem_cache = self._mem_cache.copy()
+            cache_entries = list(self._mem_cache.values())
 
-        stats: list[CacheStat] = []
-        for item_key, item_value in mem_cache.items():
-            stats.append(
-                CacheStat(
-                    category_name="st_singleton",
-                    cache_name=self.display_name,
-                    byte_length=asizeof.asizeof(item_value),
-                )
+        return [
+            CacheStat(
+                category_name="st_singleton",
+                cache_name=self.display_name,
+                byte_length=asizeof.asizeof(entry),
             )
-        return stats
+            for entry in cache_entries
+        ]

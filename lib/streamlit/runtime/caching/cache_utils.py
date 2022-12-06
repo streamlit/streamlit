@@ -19,10 +19,12 @@ import contextlib
 import functools
 import hashlib
 import inspect
+import math
 import threading
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, Callable, Iterator, Union
 
 from google.protobuf.message import Message
@@ -53,6 +55,17 @@ from streamlit.runtime.scriptrunner.script_run_context import (
 from streamlit.runtime.state.session_state import WidgetMetadata
 
 _LOGGER = get_logger(__name__)
+
+
+def ttl_to_seconds(ttl: float | timedelta | None) -> float:
+    """Convert a ttl value to a "seconds" float.
+    If ttl is None, return Infinity.
+    """
+    if ttl is None:
+        return math.inf
+    if isinstance(ttl, timedelta):
+        return ttl.total_seconds()
+    return ttl
 
 
 @runtime_checkable
