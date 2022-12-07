@@ -16,14 +16,18 @@
 
 from __future__ import annotations
 
+import math
 import threading
 import types
+from datetime import timedelta
 from typing import Any, Callable, TypeVar, cast, overload
 
+from cachetools import TTLCache
 from pympler import asizeof
 
 import streamlit as st
 from streamlit.logger import get_logger
+from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError, CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
@@ -35,6 +39,7 @@ from streamlit.runtime.caching.cache_utils import (
     MsgData,
     MultiCacheResults,
     create_cache_wrapper,
+    ttl_to_seconds,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -55,24 +60,41 @@ class ResourceCaches(CacheStatsProvider):
         self._function_caches: dict[str, ResourceCache] = {}
 
     def get_cache(
-        self, key: str, display_name: str, allow_widgets: bool
+        self,
+        key: str,
+        display_name: str,
+        max_entries: int | float | None,
+        ttl: float | timedelta | None,
+        allow_widgets: bool,
     ) -> ResourceCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
         """
+        if max_entries is None:
+            max_entries = math.inf
+
+        ttl_seconds = ttl_to_seconds(ttl)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
         with self._caches_lock:
             cache = self._function_caches.get(key)
-            if cache is not None:
+            if (
+                cache is not None
+                and cache.ttl_seconds == ttl_seconds
+                and cache.max_entries == max_entries
+            ):
                 return cache
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug("Creating new ResourceCache (key=%s)", key)
             cache = ResourceCache(
-                key=key, display_name=display_name, allow_widgets=allow_widgets
+                key=key,
+                display_name=display_name,
+                max_entries=max_entries,
+                ttl_seconds=ttl_seconds,
+                allow_widgets=allow_widgets,
             )
             self._function_caches[key] = cache
             return cache
@@ -106,6 +128,19 @@ def get_resource_cache_stats_provider() -> CacheStatsProvider:
 class CacheResourceFunction(CachedFunction):
     """Implements the CachedFunction protocol for @st.cache_resource"""
 
+    def __init__(
+        self,
+        func: types.FunctionType,
+        show_spinner: bool | str,
+        suppress_st_warning: bool,
+        max_entries: int | None,
+        ttl: float | timedelta | None,
+        allow_widgets: bool,
+    ):
+        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
+        self.max_entries = max_entries
+        self.ttl = ttl
+
     @property
     def cache_type(self) -> CacheType:
         return CacheType.RESOURCE
@@ -127,6 +162,8 @@ class CacheResourceFunction(CachedFunction):
         return _resource_caches.get_cache(
             key=function_key,
             display_name=self.display_name,
+            max_entries=self.max_entries,
+            ttl=self.ttl,
             allow_widgets=self.allow_widgets,
         )
 
@@ -168,6 +205,8 @@ class CacheResourceAPI:
         *,
         show_spinner: bool | str = True,
         suppress_st_warning=False,
+        max_entries: int | None = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
@@ -178,12 +217,16 @@ class CacheResourceAPI:
         *,
         show_spinner: bool | str = True,
         suppress_st_warning=False,
+        max_entries: int | None = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ):
         return self._decorator(
             func,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
+            max_entries=max_entries,
+            ttl=ttl,
             experimental_allow_widgets=experimental_allow_widgets,
         )
 
@@ -193,6 +236,8 @@ class CacheResourceAPI:
         *,
         show_spinner: bool | str = True,
         suppress_st_warning=False,
+        max_entries: int | None = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ):
         """Function decorator to store cached resources.
@@ -220,6 +265,15 @@ class CacheResourceAPI:
         suppress_st_warning : boolean
             Suppress warnings about calling Streamlit commands from within
             the cache_resource function.
+
+        max_entries : int or None
+            The maximum number of entries to keep in the cache, or None
+            for an unbounded cache. (When a new entry is added to a full cache,
+            the oldest cached entry will be removed.) The default is None.
+
+        ttl : float or timedelta or None
+            The maximum number of seconds to keep an entry in the cache, or
+            None if cache entries should not expire. The default is None.
 
         experimental_allow_widgets : boolean
             Allow widgets to be used in the cache_resource function. Defaults to False.
@@ -287,6 +341,8 @@ class CacheResourceAPI:
                     func=f,
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
+                    max_entries=max_entries,
+                    ttl=ttl,
                     allow_widgets=experimental_allow_widgets,
                 )
             )
@@ -296,6 +352,8 @@ class CacheResourceAPI:
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
+                max_entries=max_entries,
+                ttl=ttl,
                 allow_widgets=experimental_allow_widgets,
             )
         )
@@ -310,12 +368,29 @@ class CacheResourceAPI:
 class ResourceCache(Cache):
     """Manages cached values for a single st.cache_resource function."""
 
-    def __init__(self, key: str, display_name: str, allow_widgets: bool = False):
+    def __init__(
+        self,
+        key: str,
+        max_entries: float,
+        ttl_seconds: float,
+        display_name: str,
+        allow_widgets: bool = False,
+    ):
         self.key = key
         self.display_name = display_name
-        self._mem_cache: dict[str, MultiCacheResults] = {}
+        self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
+            maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
+        )
         self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
+
+    @property
+    def max_entries(self) -> float:
+        return cast(float, self._mem_cache.maxsize)
+
+    @property
+    def ttl_seconds(self) -> float:
+        return cast(float, self._mem_cache.ttl)
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -323,7 +398,7 @@ class ResourceCache(Cache):
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
-                multi_results = self._mem_cache[key]
+                multi_results: MultiCacheResults = self._mem_cache[key]
 
                 ctx = get_script_run_ctx()
                 if not ctx:
@@ -379,15 +454,13 @@ class ResourceCache(Cache):
         # expensive, and we want to minimize the time we spend holding
         # the lock.
         with self._mem_cache_lock:
-            mem_cache = self._mem_cache.copy()
+            cache_entries = list(self._mem_cache.values())
 
-        stats: list[CacheStat] = []
-        for item_key, item_value in mem_cache.items():
-            stats.append(
-                CacheStat(
-                    category_name="st_cache_resource",
-                    cache_name=self.display_name,
-                    byte_length=asizeof.asizeof(item_value),
-                )
+        return [
+            CacheStat(
+                category_name="st_cache_resource",
+                cache_name=self.display_name,
+                byte_length=asizeof.asizeof(entry),
             )
-        return stats
+            for entry in cache_entries
+        ]

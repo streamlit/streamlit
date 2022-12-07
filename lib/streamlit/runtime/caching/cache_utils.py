@@ -19,10 +19,13 @@ import contextlib
 import functools
 import hashlib
 import inspect
+import math
 import threading
+import time
 import types
 from abc import abstractmethod
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, Callable, Iterator, Union
 
 from google.protobuf.message import Message
@@ -32,14 +35,15 @@ import streamlit as st
 from streamlit import runtime, type_util, util
 from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.elements.spinner import spinner
-from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_errors import (
     CachedStFunctionWarning,
+    CacheError,
     CacheKeyNotFoundError,
     CacheReplayClosureError,
     CacheType,
+    UnevaluatedDataFrameError,
     UnhashableParamError,
     UnhashableTypeError,
     UnserializableReturnValueError,
@@ -53,6 +57,30 @@ from streamlit.runtime.scriptrunner.script_run_context import (
 from streamlit.runtime.state.session_state import WidgetMetadata
 
 _LOGGER = get_logger(__name__)
+
+# The timer function we use with TTLCache. This is the default timer func, but
+# is exposed here as a constant so that it can be patched in unit tests.
+TTLCACHE_TIMER = time.monotonic
+
+
+def ttl_to_seconds(ttl: float | timedelta | None) -> float:
+    """Convert a ttl value to a float representing "number of seconds".
+    If ttl is None, return Infinity.
+    """
+    if ttl is None:
+        return math.inf
+    if isinstance(ttl, timedelta):
+        return ttl.total_seconds()
+    return ttl
+
+
+# We show a special "UnevaluatedDataFrame" warning for cached funcs
+# that attempt to return one of these unserializable types:
+UNEVALUATED_DATAFRAME_TYPES = (
+    "snowflake.snowpark.table.Table",
+    "snowflake.snowpark.dataframe.DataFrame",
+    "pyspark.sql.dataframe.DataFrame",
+)
 
 
 @runtime_checkable
@@ -375,18 +403,18 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                 messages = cached_func.message_call_stack._most_recent_messages
                 try:
                     cache.write_result(value_key, return_value, messages)
-                except TypeError:
-                    if type_util.is_type(
-                        return_value, "snowflake.snowpark.dataframe.DataFrame"
-                    ):
-
-                        class UnevaluatedDataFrameError(StreamlitAPIException):
-                            pass
-
+                except (
+                    CacheError,
+                    RuntimeError,
+                ):  # RuntimeError will be raised by Apache Spark, if we do not collect dataframe before using st.experimental_memo
+                    if True in [
+                        type_util.is_type(return_value, type_name)
+                        for type_name in UNEVALUATED_DATAFRAME_TYPES
+                    ]:
                         raise UnevaluatedDataFrameError(
                             f"""
                             The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated dataframe
-                            of type `snowflake.snowpark.DataFrame`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
+                            of type `{type_util.get_fqn_type(return_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
                             so `st.experimental_memo` can serialize and cache it."""
                         )
                     raise UnserializableReturnValueError(
