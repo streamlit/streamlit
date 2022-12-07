@@ -30,11 +30,12 @@ import { FormClearHelper } from "src/components/widgets/Form"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import useCustomTheme from "./useCustomTheme"
 import useAutoSizer from "./useAutoSizer"
-import useDataHandler from "./useDataHandler"
+import useDataLoader from "./useDataLoader"
+import useDataEditor from "./useDataEditor"
 import { CustomColumn } from "./DataFrameCells"
 import { StyledResizableContainer } from "./styled-components"
 
@@ -87,23 +88,66 @@ function DataFrame({
     })
   }, [])
 
+  // This callback can be used to refresh a selection of cells
+  const refreshCells = React.useCallback(
+    (
+      cells: {
+        cell: [number, number]
+      }[]
+    ) => {
+      dataEditorRef.current?.updateCells(cells)
+    },
+    [] // TODO: add as dependency? https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node
+  )
+
+  const commitWidgetValue = React.useCallback(
+    (currentEditingState: string) => {
+      let currentWidgetState = widgetMgr.getStringValue(element as WidgetInfo)
+
+      if (currentWidgetState === undefined) {
+        const emptyState = {
+          edited_cells: {} as Map<string, any>,
+          added_rows: [] as Map<number, any>[],
+          deleted_rows: [] as number[],
+        }
+        currentWidgetState = JSON.stringify(emptyState)
+      }
+
+      // Only update if there is actually a difference between editing and widget state
+      if (currentEditingState !== currentWidgetState) {
+        widgetMgr.setStringValue(element as WidgetInfo, currentEditingState, {
+          fromUi: true,
+        })
+      }
+    },
+    [widgetMgr, element]
+  )
+
+  const {
+    numRows: originalNumRows,
+    sortColumn,
+    getOriginalIndex,
+    columns,
+    getCellContent: getOriginalCellContent,
+    onColumnResize,
+  } = useDataLoader(element, data, disabled)
+
   const {
     numRows,
     resetEditingState,
-    sortColumn,
-    columns,
     getCellContent,
-    onColumnResize,
     onCellEdited,
     onPaste,
     onRowAppended,
     onDelete,
-  } = useDataHandler(
-    widgetMgr,
-    dataEditorRef,
-    element,
-    data,
-    disabled,
+  } = useDataEditor(
+    originalNumRows,
+    columns,
+    element.editingMode !== ArrowProto.EditingMode.DYNAMIC,
+    getOriginalCellContent,
+    getOriginalIndex,
+    refreshCells,
+    commitWidgetValue,
     clearSelection
   )
 
@@ -273,6 +317,8 @@ function DataFrame({
             rowSelect: disabled ? "none" : "multi",
             // Support adding rows
             onRowAppended: disabled ? undefined : onRowAppended,
+            // Deactivate sorting, since it is not supported with dynamic editing
+            onHeaderClicked: undefined,
           })}
         />
       </Resizable>

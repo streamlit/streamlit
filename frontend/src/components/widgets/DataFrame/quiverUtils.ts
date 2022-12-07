@@ -22,12 +22,7 @@ import {
   NumberCell,
 } from "@glideapps/glide-data-grid"
 
-import {
-  DataFrameCell,
-  Quiver,
-  DataType,
-  Type as QuiverType,
-} from "src/lib/Quiver"
+import { DataFrameCell, Quiver, Type as QuiverType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {

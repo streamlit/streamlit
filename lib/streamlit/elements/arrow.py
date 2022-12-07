@@ -246,6 +246,7 @@ class ArrowMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         columns: Optional[Dict[Union[int, str], ColumnConfig]] = None,
+        editing_mode: Literal["fixed", "dynamic"] = "fixed",
     ) -> DataFrame:
 
         data_df = type_util.convert_anything_to_df(data)
@@ -269,7 +270,10 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
-        proto.editing_mode = ArrowProto.EditingMode.FIXED
+        if editing_mode == "dynamic":
+            proto.editing_mode = ArrowProto.EditingMode.DYNAMIC
+        else:
+            proto.editing_mode = ArrowProto.EditingMode.FIXED
         proto.form_id = current_form_id(self.dg)
         marshall(proto, data_df, default_uuid)
         _marshall_column_config(proto, columns)
