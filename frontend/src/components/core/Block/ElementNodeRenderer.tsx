@@ -77,6 +77,7 @@ import { getAlertKind } from "src/components/elements/Alert/Alert"
 import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
 import { Heading } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import AppContext from "src/components/core/AppContext"
 
 import {
   BaseBlockProps,
@@ -618,6 +619,7 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
+  const { isFullScreen } = React.useContext(AppContext)
   const { node } = props
 
   const elementType = node.element.type || ""
@@ -642,7 +644,9 @@ const ElementNodeRenderer = (
     <Maybe enable={enable}>
       <StyledElementContainer
         data-stale={isStale}
-        isStale={isStale}
+        // Applying stale opacity in fullscreen mode
+        // causes the fullscreen overlay to be transparent.
+        isStale={isStale && !isFullScreen}
         width={width}
         className={"element-container"}
         elementType={elementType}
