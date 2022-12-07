@@ -712,7 +712,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def _is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool:
+def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     # Check all columns for mixed types and complex128 type
     # The dtype of mixed type columns is always object, the actual type of the column
@@ -721,8 +721,8 @@ def _is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> boo
 
     # mixed-integer-float is not a problem for arrow
     # Frozensets are incompatible
-    # TODO(lukasmasuch): timedelta64[ns] is supported by pyarrow but not in the javascript arrow implementation
     if column.dtype in [
+        # TODO(lukasmasuch): timedelta64[ns] is supported by pyarrow but not in the javascript arrow implementation
         "timedelta64[ns]",
         "complex128",
         "complex64",
@@ -782,7 +782,7 @@ def fix_arrow_incompatible_column_types(
         # if str(df[col].dtype).startswith("Sparse"):
         #     df[col] = np.array(df[col])
 
-        if _is_colum_type_arrow_incompatible(df[col]):
+        if is_colum_type_arrow_incompatible(df[col]):
             print("Fix column ", col)
             df[col] = df[col].astype(str)
 
@@ -795,7 +795,7 @@ def fix_arrow_incompatible_column_types(
             df.index,
             pd.MultiIndex,
         )
-        and _is_colum_type_arrow_incompatible(df.index)
+        and is_colum_type_arrow_incompatible(df.index)
     ):
         df.index = df.index.astype(str)
     return df
