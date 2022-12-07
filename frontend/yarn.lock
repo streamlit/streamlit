@@ -18677,10 +18677,10 @@ vega-time@^2.0.3, vega-time@^2.0.4, vega-time@~2.0.4:
     d3-time "^2.0.0"
     vega-util "^1.15.2"
 
-vega-tooltip@^0.28.0:
-  version "0.28.0"
-  resolved "https://registry.yarnpkg.com/vega-tooltip/-/vega-tooltip-0.28.0.tgz#8bae2601ffae5e67622de37108f53f284e9a978b"
-  integrity sha512-DbK0V5zzk+p9cphZZXV91ZGeKq0zr6JIS0VndUoGTisldzw4tRgmpGQcTfMjew53o7/voeTM2ELTnJAJRzX4tg==
+vega-tooltip@^0.28.0, vega-tooltip@^0.30.0:
+  version "0.30.0"
+  resolved "https://registry.yarnpkg.com/vega-tooltip/-/vega-tooltip-0.30.0.tgz#b8a48a0d1be717b7410cf75021aaaff75818b212"
+  integrity sha512-dBuqp1HgNvxrc3MU4KAE3gU7AiD0AvCiyu7IMwubI6TQa0l9A5c+B+ZLjDZP2Ool0J9eAaGgVhqjXWaUjUAfAQ==
   dependencies:
     vega-util "^1.17.0"
 
