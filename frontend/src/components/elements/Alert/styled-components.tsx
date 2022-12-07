@@ -14,25 +14,15 @@
  * limitations under the License.
  */
 
-describe("st.exception", () => {
-  before(() => {
-    cy.loadApp("http://localhost:3000/");
+import styled from "@emotion/styled"
+import { StyledEmojiIcon } from "src/components/shared/Icon/styled-components"
 
-    cy.prepForElementSnapshots();
+export const StyledIconAlertContent = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: theme.spacing.sm,
 
-    // Ensure both exceptions show up before running tests
-    cy.get(".element-container .stException").should("have.length", 2);
-  });
-
-  it("displays an exception message", () => {
-    cy.get(".element-container .stException")
-      .eq(0)
-      .should("contain", "This exception message is awesome!");
-  });
-
-  it("displays a long exception message properly", () => {
-    cy.get(".element-container .stException")
-      .eq(1)
-      .matchThemedSnapshots("long_exception");
-  });
-});
+  [StyledEmojiIcon as any]: {
+    position: "relative",
+    top: "2px",
+  },
+}))
