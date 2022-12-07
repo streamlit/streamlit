@@ -32,6 +32,7 @@
   },
   // Ignore our auto-generated code
   "ignorePatterns": ["src/autogen/*"],
+  "plugins": ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
   "rules": {
@@ -104,7 +105,11 @@
     "max-classes-per-file": "off",
     "no-shadow": "off",
     "no-param-reassign": "off",
-    "no-plusplus": "off"
+    "no-plusplus": "off",
+    "no-relative-import-paths/no-relative-import-paths": [
+      "warn",
+      { "allowSameFolder": true, "rootDir": "frontend", "prefix": "" }
+    ]
   },
   "settings": {
     "react": {
