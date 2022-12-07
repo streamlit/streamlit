@@ -31,8 +31,13 @@ message Arrow {
   bool use_container_width = 6;
   // Colum configuration as JSON
   string columns = 7;
-  // If True, the table will be editable.
-  bool editable = 8;
+  // Activate table editing
+  enum EditingMode {
+    READ_ONLY = 0; // Read-only table.
+    FIXED = 1; // Activates editing but only allow editing of existing cells.
+    DYNAMIC = 2; // Activates editing and allow adding & deleting rows.
+  }
+  EditingMode editing_mode = 8;
   // Deactivates editing
   bool disabled = 9;
   // The form ID of the widget, this is required if the dataframe is editable

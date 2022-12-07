@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import sys
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -71,6 +71,12 @@ class ColumnConfig(TypedDict, total=False):
     editable: Optional[bool]
     alignment: Optional[Literal["left", "center", "right"]]
     metadata: Optional[Dict]
+
+
+class DataEditorState(TypedDict, total=False):
+    edited_cells: Optional[Dict[str, Any]]
+    added_rows: Optional[List[Dict[int, Any]]]
+    deleted_rows: Optional[List[int]]
 
 
 def column_config(
@@ -140,6 +146,20 @@ def _marshall_column_config(
     )
 
 
+@dataclass
+class DataEditorSerde:
+    def deserialize(
+        self, ui_value: Optional[str], widget_id: str = ""
+    ) -> Dict[str, Any]:
+        if ui_value is None:
+            return {}
+
+        return json.loads(ui_value)
+
+    def serialize(self, editing_state: Dict[str, Any]) -> str:
+        return json.dumps(editing_state, default=str)
+
+
 class ArrowMixin:
     @gather_metrics("_arrow_dataframe")
     def _arrow_dataframe(
@@ -207,7 +227,8 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
-        proto.editable = False
+        proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
+
         marshall(proto, data, default_uuid)
         _marshall_column_config(proto, columns)
 
@@ -220,18 +241,24 @@ class ArrowMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
-        columns: Optional[Dict[Union[int, str], ColumnConfig]] = None,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        columns: Optional[Dict[Union[int, str], ColumnConfig]] = None,
     ) -> DataFrame:
 
-        data = type_util.convert_anything_to_df(data)
-        for col in data.columns:
-            if type_util._is_colum_type_arrow_incompatible(data[col]):
-                # TODO(lukasmasuch): Set column non-editbale through column config
-                print(f"Column {col} is not editable")
+        data_df = type_util.convert_anything_to_df(data)
+
+        if not columns:
+            columns = {}
+
+        for col in data_df.columns:
+            if type_util.is_colum_type_arrow_incompatible(data_df[col]):
+                if col not in columns:
+                    columns[col] = column_config(editable=False)
+                else:
+                    columns[col]["editable"] = False
 
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
@@ -242,21 +269,12 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
-        proto.editable = True
+        proto.editing_mode = ArrowProto.EditingMode.FIXED
         proto.form_id = current_form_id(self.dg)
-        marshall(proto, data, default_uuid)
+        marshall(proto, data_df, default_uuid)
         _marshall_column_config(proto, columns)
 
-        def deserialize_data_editor_event(ui_value, widget_id=""):
-            if ui_value is None:
-                return {}
-            if isinstance(ui_value, str):
-                return json.loads(ui_value)
-
-            return ui_value
-
-        def serialize_data_editor_event(v):
-            return json.dumps(v, default=str)
+        serde = DataEditorSerde()
 
         widget_state = register_widget(
             "data_editor",
@@ -265,8 +283,8 @@ class ArrowMixin:
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=deserialize_data_editor_event,
-            serializer=serialize_data_editor_event,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             ctx=get_script_run_ctx(),
         )
 
@@ -276,10 +294,9 @@ class ArrowMixin:
         # at: get scalar values. It's a very fast loc
         # iat: Get scalar values. It's a very fast iloc
 
-        new_df = data.copy()
+        new_df = data_df.copy()
         return_value = new_df
         widget_state_value = widget_state.value
-        print(widget_state_value)
         if widget_state_value and "edited_cells" in widget_state_value:
             for edit in widget_state_value["edited_cells"].keys():
                 col, row = edit.split(":")
@@ -298,9 +315,18 @@ class ArrowMixin:
         if widget_state_value and "deleted_rows" in widget_state_value:
             # https://stackoverflow.com/questions/55851802/remove-rows-of-a-dataframe-based-on-the-row-number
             new_df.drop(new_df.index[widget_state_value["deleted_rows"]], inplace=True)
-
         self.dg._enqueue("arrow_data_frame", proto)
-        return return_value
+        return type_util.convert_df_to_reference(return_value, data)
+
+    # def apply_dataframe_edits(self, data_editor_state: DataEditorState):
+    #     if data_editor_state.edited_cells:
+    #         for edit in widget_state_value["edited_cells"].keys():
+    #             col, row = edit.split(":")
+    #             col, row = int(
+    #                 col
+    #             ) - new_df.index.nlevels if new_df.index.nlevels else 0, int(row)
+    #             new_df.iat[row, col] = widget_state_value["edited_cells"][edit]
+    #         return_value = new_df
 
     @gather_metrics("_arrow_table")
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":

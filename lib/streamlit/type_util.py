@@ -732,8 +732,6 @@ def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool
     ]:
         return True
 
-    print(column.dtype)
-    print(type(column))
     if column.dtype == "object":
         inferred_type = infer_dtype(column, skipna=True)
         if inferred_type == "mixed-integer":
@@ -783,7 +781,6 @@ def fix_arrow_incompatible_column_types(
         #     df[col] = np.array(df[col])
 
         if is_colum_type_arrow_incompatible(df[col]):
-            print("Fix column ", col)
             df[col] = df[col].astype(str)
 
     # The index can also contain mixed types
