@@ -219,6 +219,7 @@
     "tar": "^6.1.9",
     "trim": "^0.0.3",
     "trim-newlines": "^3.0.1",
+    "vega-tooltip": "^0.30.0",
     "websocket-extensions": "^0.1.4",
     "ws": "^7.4.6",
     "y18n": "^4.0.1"
