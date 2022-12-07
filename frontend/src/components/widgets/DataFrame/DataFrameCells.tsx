@@ -19,7 +19,6 @@ import {
   GridCellKind,
   GridColumn,
   TextCell,
-  Theme as GlideTheme,
   BooleanCell,
   NumberCell,
   BubbleCell,
@@ -27,6 +26,7 @@ import {
   ImageCell,
   CustomCell,
   LoadingCell,
+  Theme as GlideTheme,
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
 import { sprintf } from "sprintf-js"
@@ -119,124 +119,6 @@ export function getColumnTypeFromConfig(typeName?: string): ColumnType {
   return ColumnType.Object
 }
 
-export function getIndexFromQuiver(
-  data: Quiver,
-  indexPosition: number
-): CustomColumn {
-  const quiverType = data.types.index[indexPosition]
-  const columnType = getColumnTypeFromQuiver(quiverType)
-
-  return {
-    id: `index-${indexPosition}`,
-    isEditable: false, // Indices are not editable at the moment.
-    title: "", // Indices have empty titles as default.
-    columnType,
-    quiverType,
-    isIndex: true,
-    isHidden: false,
-    hasMenu: false,
-  } as CustomColumn
-}
-
-export function getColumnFromQuiver(
-  data: Quiver,
-  columnPosition: number
-): CustomColumn {
-  const title = data.columns[0][columnPosition]
-  const quiverType = data.types.data[columnPosition]
-  const columnType = getColumnTypeFromQuiver(quiverType)
-
-  let columnTypeMetadata = undefined
-  if (columnType === ColumnType.Categorical) {
-    // Get the available categories and use it in column type metadata
-    let options = data.getCategoricalOptions(columnPosition)
-    if (notNullOrUndefined(options)) {
-      columnTypeMetadata = {
-        options: ["", ...options.filter(opt => opt !== "")],
-      }
-    }
-  }
-
-  if (columnType === ColumnType.Boolean) {
-    columnTypeMetadata = {
-      options: ["", "true", "false"],
-    }
-  }
-
-  return {
-    id: `column-${title}-${columnPosition}`,
-    isEditable: isEditableType(columnType),
-    title,
-    quiverType,
-    columnType,
-    columnTypeMetadata,
-    isIndex: false,
-    isHidden: false,
-    hasMenu: false,
-  } as CustomColumn
-}
-
-/**
- * Maps the data type from Quiver to a valid column type.
- */
-export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
-  if (!quiverType) {
-    return ColumnType.Object
-  }
-
-  let typeName = Quiver.getTypeName(quiverType)
-
-  let columnType = ColumnType.Object
-
-  if (!typeName) {
-    // Use text column as fallback
-    return ColumnType.Object
-  }
-
-  typeName = typeName.toLowerCase().trim()
-  // TODO(lukasmasuch): Add support for empty columns?
-
-  // Match based on quiver types
-  if (["unicode"].includes(typeName)) {
-    columnType = ColumnType.Text
-  } else if (typeName === "date") {
-    columnType = ColumnType.Date
-  } else if (typeName === "time") {
-    columnType = ColumnType.Time
-  } else if (["datetime", "datetimetz"].includes(typeName)) {
-    columnType = ColumnType.DateTime
-  } else if (["boolean", "bool"].includes(typeName)) {
-    columnType = ColumnType.Boolean
-  } else if (
-    [
-      "int8",
-      "int16",
-      "int32",
-      "int64",
-      "uint8",
-      "uint16",
-      "uint32",
-      "uint64",
-      "range",
-    ].includes(typeName)
-  ) {
-    // The default index in pandas uses a range type.
-    columnType = ColumnType.Integer
-  } else if (
-    ["float16", "float32", "float64", "float96", "float128"].includes(typeName)
-  ) {
-    columnType = ColumnType.Float
-  } else if (typeName === "categorical") {
-    columnType = ColumnType.Categorical
-  } else if (typeName.startsWith("list")) {
-    columnType = ColumnType.List
-  } else if (["decimal", "bytes", "empty"].includes(typeName)) {
-    columnType = ColumnType.Object
-  }
-
-  return columnType
-}
-
 /**
  * Checks of the given column type supports editing.
  */
@@ -253,79 +135,6 @@ export function isEditableType(type: ColumnType): boolean {
     ColumnType.Categorical,
     // ColumnType.Image,
   ].includes(type)
-}
-
-/**
- * Extracts a CSS property value from a given CSS style string by using a regex.
- *
- * @param htmlElementId: The ID of the HTML element to extract the property for.
- * @param property: The css property to extract the value for.
- * @param cssStyle: The css style string.
- *
- * @return the CSS property value or undefined if the property is not found.
- */
-export function extractCssProperty(
-  htmlElementId: string,
-  property: string,
-  cssStyle: string
-): string | undefined {
-  // This regex is supposed to extract the value of a CSS property
-  // for a specified HTML element ID from a CSS style string:
-  const regex = new RegExp(
-    `${htmlElementId}[,\\s].*{(?:[^}]*[\\s;]{1})?${property}:\\s*([^;}]+)[;]?.*}`,
-    "gm"
-  )
-  // Makes the regex simpler to match the element correctly:
-  cssStyle = cssStyle.replace(/{/g, " {")
-
-  const match = regex.exec(cssStyle)
-  if (match) {
-    return match[1].trim()
-  }
-
-  return undefined
-}
-
-/**
- * Applies pandas styler CSS to style the cell.
- *
- * @param cell: The cell to style.
- * @param cssId: The css ID of the cell.
- * @param cssStyles: All CSS styles from pandas styler.
- *
- * @return a styled grid cell.
- */
-export function applyPandasStylerCss(
-  cell: GridCell,
-  cssId: string,
-  cssStyles: string
-): GridCell {
-  const themeOverride = {} as Partial<GlideTheme>
-
-  // Extract and apply the font color
-  const fontColor = extractCssProperty(cssId, "color", cssStyles)
-  if (fontColor) {
-    themeOverride.textDark = fontColor
-  }
-
-  // Extract and apply the background color
-  const backgroundColor = extractCssProperty(
-    cssId,
-    "background-color",
-    cssStyles
-  )
-  if (backgroundColor) {
-    themeOverride.bgCell = backgroundColor
-  }
-
-  if (themeOverride) {
-    // Apply the background and font color in the theme override
-    return {
-      ...cell,
-      themeOverride,
-    }
-  }
-  return cell
 }
 
 /**
@@ -367,7 +176,7 @@ export function getTextCell(readonly: boolean, faded: boolean): TextCell {
 /**
  * Returns an empty cell.
  */
-function getEmptyCell(): LoadingCell {
+export function getEmptyCell(): LoadingCell {
   return {
     kind: GridCellKind.Loading,
     allowOverlay: false,
@@ -385,7 +194,9 @@ function getEmptyCell(): LoadingCell {
  */
 export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
   return {
-    ...getTextCell(true, false),
+    kind: GridCellKind.Text,
+    readonly: true,
+    allowOverlay: true,
     data: errorMsg + (errorDetails ? `\n${errorDetails}` : ""),
     displayData: errorMsg,
     themeOverride: {
@@ -405,11 +216,12 @@ export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
  */
 function fillTextCell(cell: TextCell, data: DataType): GridCell {
   try {
-    const cellData = notNullOrUndefined(data) ? data.toString() : ""
+    const cellData = notNullOrUndefined(data) ? data.toString() : null
+    const displayData = notNullOrUndefined(cellData) ? cellData : ""
     return {
       ...cell,
       data: cellData,
-      displayData: cellData, // TODO(lukasmasuch): Use <NA> placeholder?
+      displayData: displayData, // TODO(lukasmasuch): Use <NA> placeholder?
     } as TextCell
   } catch (error) {
     return getErrorCell(
@@ -999,89 +811,6 @@ export function processDisplayData(displayData: string): string {
 
 export function isErrorCell(cell: GridCell): cell is ErrorCell {
   return cell.hasOwnProperty("isError")
-}
-
-/**
- * Returns a glide-data-grid compatible cell object based on the
- * cell data from the quiver object. Different types of data will
- * result in different cell types.
- *
- * @param columnConfig: The configuration of the column.
- * @param quiverCell: a dataframe cell object from Quiver.
- * @param cssStyles: optional css styles to apply on the cell.
- *
- * @return a GridCell object that can be used by glide-data-grid.
- */
-export function getCellFromQuiver(
-  columnConfig: CustomColumn,
-  quiverCell: DataFrameCell,
-  cssStyles: string | undefined = undefined
-): GridCell {
-  let cellTemplate
-  if (columnConfig.columnType === ColumnType.Object) {
-    // Always use display value from quiver for object types
-    // these are special types that the dataframe only support in read-only mode.
-    cellTemplate = getCell(
-      columnConfig,
-      processDisplayData(
-        Quiver.format(
-          quiverCell.content,
-          quiverCell.contentType,
-          quiverCell.field
-        )
-      )
-    )
-  } else {
-    cellTemplate = getCell(columnConfig, quiverCell.content)
-  }
-
-  if (isErrorCell(cellTemplate)) {
-    // Directly return error cells without any additional modification
-    return cellTemplate
-  }
-
-  if (notNullOrUndefined(quiverCell.displayContent)) {
-    const displayData = processDisplayData(quiverCell.displayContent)
-    // If the display content is set, use that instead of the content.
-    // This is only supported for text, object, date, datetime, time and number cells.
-    if (
-      [ColumnType.Object, ColumnType.Text].includes(columnConfig.columnType)
-    ) {
-      cellTemplate = {
-        ...cellTemplate,
-        displayData,
-      } as TextCell
-    } else if (
-      [ColumnType.Integer, ColumnType.Float].includes(columnConfig.columnType)
-    ) {
-      cellTemplate = {
-        ...cellTemplate,
-        displayData,
-      } as NumberCell
-    } else if (
-      [ColumnType.Date, ColumnType.DateTime, ColumnType.Time].includes(
-        columnConfig.columnType
-      )
-    ) {
-      cellTemplate = {
-        ...cellTemplate,
-        copyData: displayData,
-        data: {
-          ...(cellTemplate as CustomCell)?.data,
-          displayDate: displayData,
-        },
-      } as CustomCell
-    }
-  }
-
-  if (cssStyles && quiverCell.cssId) {
-    cellTemplate = applyPandasStylerCss(
-      cellTemplate,
-      quiverCell.cssId,
-      cssStyles
-    )
-  }
-  return cellTemplate
 }
 
 export function getCellValue(columnConfig: CustomColumn, cell: GridCell): any {
