@@ -112,18 +112,25 @@ export const StyledAppButtonContainer =
     ...(isMinimized ? minimizedStyles(theme) : {}),
   }))
 
-export const StyledAppRunningIcon = styled.img(({ theme }) => {
-  // Testing if current background color is light or dark to modify img:
-  const filter = hasLightBackgroundColor(theme) ? "" : "invert(1)"
+export interface StyledAppRunningIconProps {
+  isNewYears: boolean
+}
 
-  return {
-    opacity: 0.4,
-    width: "1.6rem",
-    height: "1.6rem",
-    marginRight: `-${theme.spacing.sm}`,
-    filter,
+export const StyledAppRunningIcon = styled.img<StyledAppRunningIconProps>(
+  ({ isNewYears, theme }) => {
+    // Testing if current background color is light or dark to modify img:
+    const filter = hasLightBackgroundColor(theme) ? "" : "invert(1)"
+
+    // New years gif has unique styling - regular running man unchanged
+    return {
+      opacity: isNewYears ? 1 : 0.4,
+      width: isNewYears ? "2.2rem" : "1.6rem",
+      height: isNewYears ? "2.2rem" : "1.6rem",
+      marginRight: `-${theme.spacing.sm}`,
+      filter: isNewYears ? "" : filter,
+    }
   }
-})
+)
 
 export const StyledStatusWidget = styled.div(({ theme }) => ({
   "&.StatusWidget-appear": {
