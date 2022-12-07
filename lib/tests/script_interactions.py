@@ -117,7 +117,7 @@ class LocalScriptRunner(ScriptRunner):
         require_widgets_deltas(self)
         tree = parse_tree_from_messages(self.forward_msgs())
         tree.script_path = self.script_path
-        tree.session_state = self.session_state
+        tree._session_state = self.session_state
         return tree
 
     def script_stopped(self) -> bool:
@@ -380,7 +380,7 @@ class Block:
 @dataclass(init=False)
 class ElementTree(Block):
     script_path: str | None = field(repr=False, default=None)
-    session_state: SessionState | None = field(repr=False, default=None)
+    _session_state: SessionState | None = field(repr=False, default=None)
 
     type: str = "root"
 
@@ -388,6 +388,11 @@ class ElementTree(Block):
         # Expect script_path and session_state to be filled in afterwards
         self.children = {}
         self.root = self
+
+    @property
+    def session_state(self) -> SessionState:
+        assert self._session_state is not None
+        return self._session_state
 
     def get_widget_states(self) -> WidgetStates:
         ws = WidgetStates()
