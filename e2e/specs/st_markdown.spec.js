@@ -22,11 +22,11 @@ describe("st.markdown", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 13);
+    cy.get(".element-container .stMarkdown").should("have.length", 16);
   });
 
   it("displays markdown", () => {
-    cy.get(".element-container .stMarkdown").then(els => {
+    cy.get(".element-container .stMarkdown").then((els) => {
       expect(els[0].textContent).to.eq("This markdown is awesome! 😎");
       expect(els[1].textContent).to.eq("This <b>HTML tag</b> is escaped!");
       expect(els[2].textContent).to.eq("This HTML tag is not escaped!");
@@ -42,26 +42,16 @@ describe("st.markdown", () => {
       expect(els[10].textContent).to.eq("Some header 3");
       expect(els[11].textContent).to.eq("Col1Col2SomeData");
 
-      cy.wrap(els[3])
-        .find("a")
-        .should("not.exist");
-      cy.wrap(els[4])
-        .find("a")
-        .should("have.attr", "href");
+      cy.wrap(els[3]).find("a").should("not.exist");
+      cy.wrap(els[4]).find("a").should("have.attr", "href");
     });
   });
 
   it("displays headers with anchors", () => {
-    cy.get(".element-container .stMarkdown").then(els => {
-      cy.wrap(els[8])
-        .find("h1")
-        .should("have.attr", "id", "some-header-1");
-      cy.wrap(els[9])
-        .find("h2")
-        .should("have.attr", "id", "some-header-2");
-      cy.wrap(els[10])
-        .find("h3")
-        .should("have.attr", "id", "some-header-3");
+    cy.get(".element-container .stMarkdown").then((els) => {
+      cy.wrap(els[8]).find("h1").should("have.attr", "id", "some-header-1");
+      cy.wrap(els[9]).find("h2").should("have.attr", "id", "some-header-2");
+      cy.wrap(els[10]).find("h3").should("have.attr", "id", "some-header-3");
     });
   });
 
@@ -89,5 +79,11 @@ describe("st.markdown", () => {
     cy.get(
       "[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']"
     ).matchThemedSnapshots("long-markdown-header-above-table");
+  });
+
+  it("displays headings and markdown when called separately or together", () => {
+    cy.get(
+      "[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']"
+    ).matchThemedSnapshots("heading-and-markdown-combinations");
   });
 });
