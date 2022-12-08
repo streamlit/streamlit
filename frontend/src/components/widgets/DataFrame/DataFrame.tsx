@@ -17,7 +17,6 @@
 import React, { ReactElement } from "react"
 import {
   DataEditor as GlideDataEditor,
-  GridColumn,
   DataEditorRef,
   GridSelection,
   CompactSelection,
@@ -31,12 +30,18 @@ import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
+import { debounce } from "src/lib/utils"
 
-import useCustomTheme from "./useCustomTheme"
-import useAutoSizer from "./useAutoSizer"
-import useDataLoader from "./useDataLoader"
-import useDataEditor from "./useDataEditor"
-import { CustomColumn } from "./DataFrameCells"
+import EditingState from "./EditingState"
+import {
+  useCustomTheme,
+  useTableSizer,
+  useDataLoader,
+  useDataEditor,
+  useColumnSizer,
+  useColumnSort,
+} from "./hooks"
+import { BaseColumn, toGlideColumn } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
@@ -47,6 +52,9 @@ const MIN_COLUMN_WIDTH = 35
 const MAX_COLUMN_WIDTH = 1000
 // Max column width used for automatic column sizing
 const MAX_COLUMN_AUTO_WIDTH = 500
+// Debounce time for triggering a widget state update
+// This prevents to rapid updates to the widget state.
+const DEBOUNCE_TIME_MS = 100
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -99,18 +107,36 @@ function DataFrame({
     },
     [] // TODO: add as dependency? https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node
   )
+  // Number of rows of the table minus 1 for the header row:
+  const originalNumRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
+  const editingState = React.useRef<EditingState>(
+    new EditingState(originalNumRows)
+  )
+
+  const [numRows, setNumRows] = React.useState(
+    editingState.current.getNumRows()
+  )
+
+  React.useEffect(() => {
+    editingState.current = new EditingState(numRows)
+    setNumRows(editingState.current.getNumRows())
+  }, [originalNumRows])
+
+  const resetEditingState = React.useCallback(() => {
+    editingState.current = new EditingState(numRows)
+    setNumRows(editingState.current.getNumRows())
+  }, [originalNumRows])
 
   const commitWidgetValue = React.useCallback(
-    (currentEditingState: string) => {
+    // Use debounce to prevent rapid updates to the widget state.
+    debounce(DEBOUNCE_TIME_MS, () => {
+      const currentEditingState = editingState.current.toJson(columns)
       let currentWidgetState = widgetMgr.getStringValue(element as WidgetInfo)
 
       if (currentWidgetState === undefined) {
-        const emptyState = {
-          edited_cells: {} as Map<string, any>,
-          added_rows: [] as Map<number, any>[],
-          deleted_rows: [] as number[],
-        }
-        currentWidgetState = JSON.stringify(emptyState)
+        // TODO(lukasmasuch): Check if this is correct:
+        // Crate an empty widget state
+        currentWidgetState = new EditingState(0).toJson([])
       }
 
       // Only update if there is actually a difference between editing and widget state
@@ -119,36 +145,35 @@ function DataFrame({
           fromUi: true,
         })
       }
-    },
+    }),
     [widgetMgr, element]
   )
 
-  const {
-    numRows: originalNumRows,
-    sortColumn,
-    getOriginalIndex,
-    columns,
-    getCellContent: getOriginalCellContent,
-    onColumnResize,
-  } = useDataLoader(element, data, disabled)
+  const { columns: originalColumns, getCellContent: getOriginalCellContent } =
+    useDataLoader(element, data, numRows, disabled, editingState)
 
-  const {
+  const { columns, sortColumn, getOriginalIndex, getCellContent } =
+    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+
+  // Column sort does not work currently, since it only has access to the underlying data
+  // and not the edited data
+  // extract editing state to top level -> and integrate into data loader
+
+  const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
     numRows,
-    resetEditingState,
-    getCellContent,
-    onCellEdited,
-    onPaste,
-    onRowAppended,
-    onDelete,
-  } = useDataEditor(
-    originalNumRows,
     columns,
     element.editingMode !== ArrowProto.EditingMode.DYNAMIC,
-    getOriginalCellContent,
+    getCellContent,
     getOriginalIndex,
     refreshCells,
     commitWidgetValue,
-    clearSelection
+    clearSelection,
+    setNumRows,
+    editingState
+  )
+
+  const { columns: glideColumns, onColumnResize } = useColumnSizer(
+    columns.map(column => toGlideColumn(column))
   )
 
   const resizableRef = React.useRef<Resizable>(null)
@@ -160,7 +185,7 @@ function DataFrame({
     maxWidth,
     resizableSize,
     setResizableSize,
-  } = useAutoSizer(
+  } = useTableSizer(
     element,
     resizableRef,
     numRows,
@@ -233,7 +258,7 @@ function DataFrame({
         <GlideDataEditor
           className="glideDataEditor"
           ref={dataEditorRef}
-          columns={columns}
+          columns={glideColumns}
           rows={numRows}
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
@@ -244,8 +269,7 @@ function DataFrame({
           onColumnResize={onColumnResize}
           // Freeze all index columns:
           freezeColumns={
-            columns.filter((col: GridColumn) => (col as CustomColumn).isIndex)
-              .length
+            columns.filter((col: BaseColumn) => col.isIndex).length
           }
           smoothScrollX={true}
           smoothScrollY={true}

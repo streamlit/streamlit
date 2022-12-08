@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-import React, { useState } from "react"
+import React from "react"
 
-import {
-  GridCell,
-  GridColumn,
-  DataEditorProps,
-} from "@glideapps/glide-data-grid"
-import { useColumnSort } from "@glideapps/glide-data-grid-source"
+import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
 import { transparentize } from "color2k"
 
@@ -30,16 +25,24 @@ import { logError } from "src/lib/log"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { notNullOrUndefined } from "src/lib/utils"
 import { Theme } from "src/theme"
+import { logWarning } from "src/lib/log"
 
 import {
-  getColumnTypeFromConfig,
-  CustomColumn,
-  getTextCell,
+  getColumnTypeFromQuiver,
+  getColumnsFromQuiver,
+  getCellFromQuiver,
+} from "../quiverUtils"
+import EditingState from "../EditingState"
+
+import {
+  BaseColumn,
+  BaseColumnProps,
   getErrorCell,
-  isEditableType,
-  getColumnSortMode,
-} from "./DataFrameCells"
-import { getCellFromQuiver, getColumnsFromQuiver } from "./quiverUtils"
+  getTextCell,
+  ColumnTypes,
+  ObjectColumn,
+  ColumnCreator,
+} from "../columns"
 
 /**
  * Options to configure columns.
@@ -55,40 +58,31 @@ interface ColumnConfigProps {
 }
 
 /**
- * Configuration type for column sorting hook.
- */
-type ColumnSortConfig = {
-  column: GridColumn
-  mode?: "default" | "raw" | "smart"
-  direction?: "asc" | "desc"
-}
-
-/**
  * Apply the column configuration if supplied.
  */
 function applyColumnConfig(
-  column: CustomColumn,
+  columnProps: BaseColumnProps,
   columnsConfig: Map<string | number, ColumnConfigProps>
-): CustomColumn {
+): BaseColumnProps {
   if (!columnsConfig) {
     // No column config configured
-    return column
+    return columnProps
   }
 
   let columnConfig
-  if (columnsConfig.has(column.title)) {
-    columnConfig = columnsConfig.get(column.title)
-  } else if (columnsConfig.has(`index:${column.indexNumber}`)) {
-    columnConfig = columnsConfig.get(`index:${column.indexNumber}`)
+  if (columnsConfig.has(columnProps.title)) {
+    columnConfig = columnsConfig.get(columnProps.title)
+  } else if (columnsConfig.has(`index:${columnProps.indexNumber}`)) {
+    columnConfig = columnsConfig.get(`index:${columnProps.indexNumber}`)
   }
 
   if (!columnConfig) {
     // No column config found for this column
-    return column
+    return columnProps
   }
 
   return {
-    ...column,
+    ...columnProps,
     // Update title:
     ...(notNullOrUndefined(columnConfig.title)
       ? {
@@ -102,10 +96,9 @@ function applyColumnConfig(
           width: columnConfig.width,
         }
       : {}),
-    // Update data type:
     ...(notNullOrUndefined(columnConfig.type)
       ? {
-          columnType: getColumnTypeFromConfig(columnConfig.type),
+          customType: columnConfig.type.toLowerCase().trim(),
         }
       : {}),
     // Update editable state:
@@ -134,29 +127,7 @@ function applyColumnConfig(
           contentAlignment: columnConfig.alignment,
         }
       : {}),
-  } as CustomColumn
-}
-
-/**
- * Updates the column headers based on the sorting configuration.
- */
-function updateSortingHeader(
-  columns: CustomColumn[],
-  sort: ColumnSortConfig | undefined
-): CustomColumn[] {
-  if (sort === undefined) {
-    return columns
-  }
-  return columns.map(column => {
-    if (column.id === sort.column.id) {
-      return {
-        ...column,
-        title:
-          sort.direction === "asc" ? `↑ ${column.title}` : `↓ ${column.title}`,
-      }
-    }
-    return column
-  })
+  } as BaseColumnProps
 }
 
 function getColumnConfig(element: ArrowProto): Map<string, any> {
@@ -177,11 +148,8 @@ function getColumnConfig(element: ArrowProto): Map<string, any> {
  * Create return type for useDataLoader hook based on the DataEditorProps.
  */
 type DataLoaderReturn = {
-  numRows: number
-  sortColumn: (index: number) => void
-  getOriginalIndex: (index: number) => number
-  columns: CustomColumn[]
-} & Pick<DataEditorProps, "getCellContent" | "onColumnResize">
+  columns: BaseColumn[]
+} & Pick<DataEditorProps, "getCellContent">
 
 /**
  * A custom hook that handles all data loading capabilities for the interactive data table.
@@ -192,74 +160,55 @@ type DataLoaderReturn = {
 function useDataLoader(
   element: ArrowProto,
   data: Quiver,
-  disabled: boolean
+  numRows: number,
+  disabled: boolean,
+  editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
   const theme: Theme = useTheme()
-
-  // Number of rows of the table minus 1 for the header row:
-  const numRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
-
-  const [sort, setSort] = React.useState<ColumnSortConfig>()
 
   // TODO(lukasmasuch): This should be also dependent on element or data
   // But this currently triggers updates on every rerender.
 
-  // The columns with the corresponding empty template for every type:
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [columnSizes, setColumnSizes] = useState<Map<string, number>>(
-    () => new Map()
-  )
-
   // TODO(lukasmasuch): Use state here for optimization?
   const columnsConfig = getColumnConfig(element)
+
+  const stretchColumns: boolean =
+    element.useContainerWidth ||
+    (notNullOrUndefined(element.width) && element.width > 0)
 
   /**
    * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
    */
   // TODO(lukasmasuch): Does this need to be a callback?
-  const getColumns = React.useCallback((): CustomColumn[] => {
-    const columns: CustomColumn[] = getColumnsFromQuiver(data)
-    const stretchColumns: boolean =
-      element.useContainerWidth ||
-      (notNullOrUndefined(element.width) && element.width > 0)
-
-    // Apply configurations:
-    return columns.map(column => {
+  const columns = getColumnsFromQuiver(data)
+    .map(column => {
+      // Apply column configurations
       if (column.isIndex) {
-        let updatedColumn = applyColumnConfig(column, columnsConfig)
-        // TODO(lukasmasuch): Editing for index columns is currently not supported.
-        // Deactivate even if it gets activated in the column config.
-        updatedColumn.isEditable = false
-
-        // Apply column stretch
-        if (stretchColumns) {
-          updatedColumn = {
-            ...updatedColumn,
-            grow: 1,
-          }
-        }
-
-        return updatedColumn
+        return {
+          ...column,
+          ...applyColumnConfig(column, columnsConfig),
+          isEditable: false, // TODO(lukasmasuch): Editing for index columns is currently not supported.
+          isStretched: stretchColumns,
+        } as BaseColumnProps
       } else {
-        let updatedColumn = applyColumnConfig(column, columnsConfig)
+        let updatedColumn = {
+          ...column,
+          ...applyColumnConfig(column, columnsConfig),
+          isStretched: stretchColumns,
+        } as BaseColumnProps
 
-        // Check if we need to deactivate editing:
+        // Make sure editing is deactivated if the column is read-only or disabled:
         if (
           element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
-          disabled ||
-          !isEditableType(updatedColumn.columnType)
+          disabled
         ) {
-          updatedColumn.isEditable = false
-        }
-
-        // Apply column stretch
-        if (stretchColumns) {
           updatedColumn = {
             ...updatedColumn,
-            grow: 3,
+            isEditable: false,
           }
         }
 
+        // Add a background for non-editable cells, if the overall table is editable:
         if (
           element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
           !updatedColumn.isEditable
@@ -279,43 +228,31 @@ function useDataLoader(
         return updatedColumn
       }
     })
-  }, [element, disabled, data, columnsConfig])
-
-  // Filter out all columns that are hidden:
-  const visibleColumns = getColumns().filter(column => {
-    return !column.isHidden
-  })
-
-  // Apply column widths from state:
-  const sizedColumns = visibleColumns.map(column => {
-    if (
-      column.id &&
-      columnSizes.has(column.id) &&
-      columnSizes.get(column.id) !== undefined
-    ) {
-      return {
-        ...column,
-        width: columnSizes.get(column.id),
-        // Deactivate grow whenever a column gets manually resized
-        grow: 0,
-      } as CustomColumn
-    }
-    return column
-  })
-
-  const onColumnResize = React.useCallback(
-    (
-      column: GridColumn,
-      _newSize: number,
-      _colIndex: number,
-      newSizeWithGrow: number
-    ) => {
-      if (column.id) {
-        setColumnSizes(new Map(columnSizes).set(column.id, newSizeWithGrow))
+    .filter(column => {
+      // Filter out all columns that are hidden
+      return !column.isHidden
+    })
+    .map(column => {
+      // Create a column instance based on the column properties
+      let ColumnType: ColumnCreator | undefined
+      if (notNullOrUndefined(column.customType)) {
+        if (ColumnTypes.has(column.customType)) {
+          ColumnType = ColumnTypes.get(column.customType)
+        } else {
+          logWarning(
+            "Unknown column type configured in column configuration: " +
+              column.customType
+          )
+        }
       }
-    },
-    [sizedColumns]
-  )
+      if (!notNullOrUndefined(ColumnType)) {
+        // Load based on quiver type
+        ColumnType = getColumnTypeFromQuiver(column.quiverType)
+      }
+
+      // Load column instance
+      return ColumnType(column)
+    })
 
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
@@ -327,7 +264,7 @@ function useDataLoader(
         } as GridCell
       }
 
-      if (col > sizedColumns.length - 1) {
+      if (col > columns.length - 1) {
         return getErrorCell(
           "Column index out of bounds.",
           "This should never happen. Please report this bug."
@@ -340,10 +277,24 @@ function useDataLoader(
           "This should never happen. Please report this bug."
         )
       }
-      const column = sizedColumns[col]
+      const column = columns[col]
 
       const originalCol = column.indexNumber
-      const originalRow = row
+      const originalRow = editingState.current.getOriginalRowIndex(row)
+
+      // Use editing state if editable or if it is an appended row
+      if (column.isEditable || editingState.current.isAddedRow(originalRow)) {
+        const editedCell = editingState.current.getCell(
+          originalCol,
+          originalRow
+        )
+        if (editedCell !== undefined) {
+          return editedCell
+        }
+      }
+
+      // const originalCol = column.indexNumber
+      // const originalRow = row
       //getOriginalIndex(row)
 
       try {
@@ -358,52 +309,12 @@ function useDataLoader(
         )
       }
     },
-    [sizedColumns, numRows, data]
-  )
-
-  const { getCellContent: getCellContentSorted, getOriginalIndex } =
-    useColumnSort({
-      columns: sizedColumns,
-      getCellContent,
-      rows: numRows,
-      sort,
-    })
-
-  const updatedColumns = updateSortingHeader(sizedColumns, sort)
-
-  const sortColumn = React.useCallback(
-    (index: number) => {
-      let sortDirection = "asc"
-      const clickedColumn = updatedColumns[index]
-
-      if (sort && sort.column.id === clickedColumn.id) {
-        // The clicked column is already sorted
-        if (sort.direction === "asc") {
-          // Sort column descending
-          sortDirection = "desc"
-        } else {
-          // Remove sorting of column
-          setSort(undefined)
-          return
-        }
-      }
-
-      setSort({
-        column: clickedColumn,
-        direction: sortDirection,
-        mode: getColumnSortMode((clickedColumn as CustomColumn).columnType),
-      } as ColumnSortConfig)
-    },
-    [sort, updatedColumns]
+    [columns, numRows, data, editingState]
   )
 
   return {
-    numRows,
-    sortColumn,
-    getOriginalIndex,
-    columns: updatedColumns,
-    getCellContent: getCellContentSorted,
-    onColumnResize,
+    columns,
+    getCellContent,
   }
 }
 

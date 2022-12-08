@@ -51,7 +51,7 @@ export type AutoSizerReturn = {
   setResizableSize: React.Dispatch<React.SetStateAction<ResizableSize>>
 }
 
-function useAutoSizer(
+function useTableSizer(
   element: ArrowProto,
   resizableRef: React.RefObject<Resizable>,
   numRows: number,
@@ -165,4 +165,4 @@ function useAutoSizer(
   }
 }
 
-export default useAutoSizer
+export default useTableSizer

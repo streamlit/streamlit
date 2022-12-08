@@ -17,22 +17,26 @@
 import {
   GridCell,
   Theme as GlideTheme,
-  CustomCell,
   TextCell,
   NumberCell,
+  GridCellKind,
 } from "@glideapps/glide-data-grid"
 
 import { DataFrameCell, Quiver, Type as QuiverType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
-  ColumnType,
-  CustomColumn,
-  isEditableType,
-  getCell,
-  processDisplayData,
+  BaseColumn,
+  BaseColumnProps,
+  ColumnCreator,
+  ObjectColumn,
+  BooleanColumn,
+  NumberColumn,
+  TextColumn,
+  CategoricalColumn,
+  ListColumn,
   isErrorCell,
-} from "./DataFrameCells"
+} from "./columns"
 
 /**
  * Extracts a CSS property value from a given CSS style string by using a regex.
@@ -65,6 +69,11 @@ function extractCssProperty(
   return undefined
 }
 
+export function processDisplayData(displayData: string): string {
+  // Remove all line breaks
+  return displayData.replace(/(\r\n|\n|\r)/gm, " ")
+}
+
 /**
  * Applies pandas styler CSS to style the cell.
  *
@@ -74,7 +83,7 @@ function extractCssProperty(
  *
  * @return a styled grid cell.
  */
-function applyPandasStylerCss(
+export function applyPandasStylerCss(
   cell: GridCell,
   cssId: string,
   cssStyles: string
@@ -107,94 +116,27 @@ function applyPandasStylerCss(
   return cell
 }
 
-export function getIndexFromQuiver(
-  data: Quiver,
-  indexPosition: number
-): CustomColumn {
-  const quiverType = data.types.index[indexPosition]
-  const columnType = getColumnTypeFromQuiver(quiverType)
-
-  return {
-    id: `index-${indexPosition}`,
-    isEditable: false, // Indices are not editable at the moment.
-    title: "", // Indices have empty titles as default.
-    columnType,
-    quiverType,
-    isIndex: true,
-    isHidden: false,
-    hasMenu: false,
-  } as CustomColumn
-}
-
-export function getColumnFromQuiver(
-  data: Quiver,
-  columnPosition: number
-): CustomColumn {
-  const title = data.columns[0][columnPosition]
-  const quiverType = data.types.data[columnPosition]
-  const columnType = getColumnTypeFromQuiver(quiverType)
-
-  let columnTypeMetadata = undefined
-  if (columnType === ColumnType.Categorical) {
-    // Get the available categories and use it in column type metadata
-    let options = data.getCategoricalOptions(columnPosition)
-    if (notNullOrUndefined(options)) {
-      columnTypeMetadata = {
-        options: ["", ...options.filter(opt => opt !== "")],
-      }
-    }
-  }
-
-  if (columnType === ColumnType.Boolean) {
-    columnTypeMetadata = {
-      options: ["", "true", "false"],
-    }
-  }
-
-  return {
-    id: `column-${title}-${columnPosition}`,
-    isEditable: isEditableType(columnType),
-    title,
-    quiverType,
-    columnType,
-    columnTypeMetadata,
-    isIndex: false,
-    isHidden: false,
-    hasMenu: false,
-  } as CustomColumn
-}
-
 /**
  * Maps the data type from Quiver to a valid column type.
  */
-export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
-  if (!quiverType) {
-    return ColumnType.Object
-  }
-
-  let typeName = Quiver.getTypeName(quiverType)
-
-  let columnType = ColumnType.Object
+export function getColumnTypeFromQuiver(
+  quiverType: QuiverType
+): ColumnCreator {
+  let typeName = quiverType ? Quiver.getTypeName(quiverType) : null
 
   if (!typeName) {
-    // Use text column as fallback
-    return ColumnType.Object
+    // Use object column as fallback
+    return ObjectColumn
   }
 
   typeName = typeName.toLowerCase().trim()
-  // TODO(lukasmasuch): Add support for empty columns?
-
   // Match based on quiver types
   if (["unicode"].includes(typeName)) {
-    columnType = ColumnType.Text
-  } else if (typeName === "date") {
-    columnType = ColumnType.Date
-  } else if (typeName === "time") {
-    columnType = ColumnType.Time
-  } else if (["datetime", "datetimetz"].includes(typeName)) {
-    columnType = ColumnType.DateTime
+    return TextColumn
+  } else if (["date", "time", "datetime", "datetimetz"].includes(typeName)) {
+    return ObjectColumn
   } else if (["boolean", "bool"].includes(typeName)) {
-    columnType = ColumnType.Boolean
+    return BooleanColumn
   } else if (
     [
       "int8",
@@ -205,28 +147,73 @@ export function getColumnTypeFromQuiver(quiverType: QuiverType): ColumnType {
       "uint16",
       "uint32",
       "uint64",
-      "range",
+      "float16",
+      "float32",
+      "float64",
+      "float96",
+      "float128",
+      "range", // The default index in pandas uses a range type.
     ].includes(typeName)
   ) {
-    // The default index in pandas uses a range type.
-    columnType = ColumnType.Integer
-  } else if (
-    ["float16", "float32", "float64", "float96", "float128"].includes(typeName)
-  ) {
-    columnType = ColumnType.Float
+    return NumberColumn
   } else if (typeName === "categorical") {
-    columnType = ColumnType.Categorical
+    return CategoricalColumn
   } else if (typeName.startsWith("list")) {
-    columnType = ColumnType.List
+    return ListColumn
   } else if (["decimal", "bytes", "empty"].includes(typeName)) {
-    columnType = ColumnType.Object
+    return ObjectColumn
   }
 
-  return columnType
+  return ObjectColumn
 }
 
-export function getColumnsFromQuiver(data: Quiver): CustomColumn[] {
-  const columns: CustomColumn[] = []
+export function getIndexFromQuiver(
+  data: Quiver,
+  indexPosition: number
+): BaseColumnProps {
+  const quiverType = data.types.index[indexPosition]
+
+  return {
+    id: `index-${indexPosition}`,
+    isEditable: false, // Indices are not editable at the moment.
+    title: "", // Indices have empty titles as default.
+    quiverType,
+    isIndex: true,
+    isHidden: false,
+  } as BaseColumnProps
+}
+
+export function getColumnFromQuiver(
+  data: Quiver,
+  columnPosition: number
+): BaseColumnProps {
+  const title = data.columns[0][columnPosition]
+  const quiverType = data.types.data[columnPosition]
+
+  let columnTypeMetadata = undefined
+  if (Quiver.getTypeName(quiverType) === "categorical") {
+    // Get the available categories and use it in column type metadata
+    let options = data.getCategoricalOptions(columnPosition)
+    if (notNullOrUndefined(options)) {
+      columnTypeMetadata = {
+        options: ["", ...options.filter(opt => opt !== "")],
+      }
+    }
+  }
+
+  return {
+    id: `column-${title}-${columnPosition}`,
+    isEditable: true,
+    title,
+    quiverType,
+    columnTypeMetadata,
+    isIndex: false,
+    isHidden: false,
+  } as BaseColumnProps
+}
+
+export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
+  const columns: BaseColumnProps[] = []
 
   if (data.isEmpty()) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
@@ -234,12 +221,10 @@ export function getColumnsFromQuiver(data: Quiver): CustomColumn[] {
     columns.push({
       id: `empty-index`,
       title: "",
-      hasMenu: false,
-      columnType: ColumnType.Object,
       indexNumber: 0,
       isEditable: false,
       isIndex: true,
-    } as CustomColumn)
+    } as BaseColumnProps)
     return columns
   }
 
@@ -250,7 +235,7 @@ export function getColumnsFromQuiver(data: Quiver): CustomColumn[] {
     const column = {
       ...getIndexFromQuiver(data, i),
       indexNumber: i,
-    } as CustomColumn
+    } as BaseColumnProps
 
     columns.push(column)
   }
@@ -259,7 +244,7 @@ export function getColumnsFromQuiver(data: Quiver): CustomColumn[] {
     const column = {
       ...getColumnFromQuiver(data, i),
       indexNumber: i + numIndices,
-    } as CustomColumn
+    } as BaseColumnProps
 
     columns.push(column)
   }
@@ -278,16 +263,15 @@ export function getColumnsFromQuiver(data: Quiver): CustomColumn[] {
  * @return a GridCell object that can be used by glide-data-grid.
  */
 export function getCellFromQuiver(
-  columnConfig: CustomColumn,
+  column: BaseColumn,
   quiverCell: DataFrameCell,
   cssStyles: string | undefined = undefined
 ): GridCell {
   let cellTemplate
-  if (columnConfig.columnType === ColumnType.Object) {
+  if (column.kind === "object") {
     // Always use display value from quiver for object types
     // these are special types that the dataframe only support in read-only mode.
-    cellTemplate = getCell(
-      columnConfig,
+    cellTemplate = column.getCell(
       processDisplayData(
         Quiver.format(
           quiverCell.content,
@@ -297,7 +281,7 @@ export function getCellFromQuiver(
       )
     )
   } else {
-    cellTemplate = getCell(columnConfig, quiverCell.content)
+    cellTemplate = column.getCell(quiverCell.content)
   }
 
   if (isErrorCell(cellTemplate)) {
@@ -309,34 +293,18 @@ export function getCellFromQuiver(
     const displayData = processDisplayData(quiverCell.displayContent)
     // If the display content is set, use that instead of the content.
     // This is only supported for text, object, date, datetime, time and number cells.
-    if (
-      [ColumnType.Object, ColumnType.Text].includes(columnConfig.columnType)
-    ) {
+    if (cellTemplate.kind === GridCellKind.Text) {
       cellTemplate = {
         ...cellTemplate,
         displayData,
       } as TextCell
-    } else if (
-      [ColumnType.Integer, ColumnType.Float].includes(columnConfig.columnType)
-    ) {
+    } else if (cellTemplate.kind === GridCellKind.Number) {
       cellTemplate = {
         ...cellTemplate,
         displayData,
       } as NumberCell
-    } else if (
-      [ColumnType.Date, ColumnType.DateTime, ColumnType.Time].includes(
-        columnConfig.columnType
-      )
-    ) {
-      cellTemplate = {
-        ...cellTemplate,
-        copyData: displayData,
-        data: {
-          ...(cellTemplate as CustomCell)?.data,
-          displayDate: displayData,
-        },
-      } as CustomCell
     }
+    // TODO (lukasmasuch): Also support datetime formatting here
   }
 
   if (cssStyles && quiverCell.cssId) {
