@@ -35,14 +35,13 @@ from streamlit.runtime.state.widgets import user_key_from_widget_id
 @dataclass(init=False)
 class Element:
     type: str
-    proto: ElementProto = field(repr=False)
+    proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
-    key: str | None
+    key: str | None = None
 
     def __init__(self, proto: ElementProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self.key = None
         ty = proto.WhichOneof("type")
         assert ty is not None
         self.type = ty
@@ -70,15 +69,16 @@ class Element:
 
 @dataclass(init=False)
 class Text(Element):
-    root: ElementTree = field(repr=False)
-
     proto: TextProto
-    type: str = "text"
+
+    type: str
+    root: ElementTree = field(repr=False)
     key: None = None
 
     def __init__(self, proto: TextProto, root: ElementTree):
         self.proto = proto
         self.root = root
+        self.type = "text"
 
     @property
     def value(self) -> str:
@@ -90,7 +90,6 @@ T = TypeVar("T")
 
 @dataclass(init=False)
 class Radio(Element, Generic[T]):
-    root: ElementTree = field(repr=False)
     _value: T | None
 
     proto: RadioProto
@@ -103,6 +102,8 @@ class Radio(Element, Generic[T]):
     disabled: bool
     horizontal: bool
     key: str | None
+
+    root: ElementTree = field(repr=False)
 
     def __init__(self, proto: RadioProto, root: ElementTree):
         self.proto = proto
@@ -220,12 +221,13 @@ class ElementTree(Block):
     script_path: str | None = field(repr=False, default=None)
     _session_state: SessionState | None = field(repr=False, default=None)
 
-    type: str = "root"
+    type: str
 
     def __init__(self):
         # Expect script_path and session_state to be filled in afterwards
         self.children = {}
         self.root = self
+        self.type = "root"
 
     @property
     def session_state(self) -> SessionState:
