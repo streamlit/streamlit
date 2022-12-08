@@ -15,6 +15,7 @@
 """DeltaGenerator Unittest."""
 
 import functools
+import inspect
 import json
 import logging
 import re
@@ -71,6 +72,86 @@ class RunWarningTest(unittest.TestCase):
             # that some log output was captured, so we have to let it capture something
             get_logger("root").warning("irrelevant warning so assertLogs passes")
             self.assertNotRegex("".join(logs.output), r"streamlit run")
+
+    def test_public_api(self):
+        """Test that we don't accidentally remove (or add) symbols
+        to the public `DeltaGenerator` API.
+        """
+        api = {
+            name
+            for name, _ in inspect.getmembers(DeltaGenerator)
+            if not name.startswith("_")
+        }
+        self.assertEqual(
+            api,
+            {
+                "add_rows",
+                "altair_chart",
+                "area_chart",
+                "audio",
+                "balloons",
+                "bar_chart",
+                "beta_columns",
+                "beta_container",
+                "beta_expander",
+                "bokeh_chart",
+                "button",
+                "camera_input",
+                "caption",
+                "checkbox",
+                "code",
+                "color_picker",
+                "columns",
+                "container",
+                "dataframe",
+                "date_input",
+                "dg",
+                "download_button",
+                "empty",
+                "error",
+                "exception",
+                "expander",
+                "file_uploader",
+                "form",
+                "form_submit_button",
+                "graphviz_chart",
+                "header",
+                "help",
+                "id",
+                "image",
+                "info",
+                "json",
+                "latex",
+                "line_chart",
+                "map",
+                "markdown",
+                "metric",
+                "multiselect",
+                "number_input",
+                "plotly_chart",
+                "progress",
+                "pydeck_chart",
+                "pyplot",
+                "radio",
+                "select_slider",
+                "selectbox",
+                "slider",
+                "snow",
+                "subheader",
+                "success",
+                "table",
+                "tabs",
+                "text",
+                "text_area",
+                "text_input",
+                "time_input",
+                "title",
+                "vega_lite_chart",
+                "video",
+                "warning",
+                "write",
+            },
+        )
 
 
 class DeltaGeneratorTest(DeltaGeneratorTestCase):
