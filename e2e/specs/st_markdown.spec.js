@@ -22,7 +22,7 @@ describe("st.markdown", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 16);
+    cy.get(".element-container .stMarkdown").should("have.length", 19);
   });
 
   it("displays markdown", () => {
@@ -76,14 +76,14 @@ describe("st.markdown", () => {
   });
 
   it("displays long headers above other elements correctly", () => {
-    cy.get(
-      "[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']"
-    ).matchThemedSnapshots("long-markdown-header-above-table");
+    cy.get("[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']")
+      .eq(0)
+      .matchThemedSnapshots("long-markdown-header-above-table");
   });
 
   it("displays headings and markdown when called separately or together", () => {
-    cy.get(
-      "[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']"
-    ).matchThemedSnapshots("heading-and-markdown-combinations");
+    cy.get("[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']")
+      .eq(1)
+      .matchThemedSnapshots("heading-and-markdown-combinations");
   });
 });
