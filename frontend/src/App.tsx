@@ -246,8 +246,10 @@ export class App extends PureComponent<Props, State> {
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
 
-    window.streamlitDebug = {}
-    window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
+    window.streamlitDebug = {
+      disconnectWebsocket: this.debugDisconnectWebsocket,
+      shutdownRuntime: this.debugShutdownRuntime,
+    }
   }
 
   /**
@@ -964,12 +966,23 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test disabling widgets
+   * Used by e2e tests to test disabling widgets.
    */
-  closeConnection(): void {
+  debugShutdownRuntime = (): void => {
     if (this.isServerConnected()) {
-      const backMsg = new BackMsg({ closeConnection: true })
-      backMsg.type = "closeConnection"
+      const backMsg = new BackMsg({ debugShutdownRuntime: true })
+      backMsg.type = "debugShutdownRuntime"
+      this.sendBackMsg(backMsg)
+    }
+  }
+
+  /**
+   * Used by e2e tests to test reconnect behavior.
+   */
+  debugDisconnectWebsocket = (): void => {
+    if (this.isServerConnected()) {
+      const backMsg = new BackMsg({ debugDisconnectWebsocket: true })
+      backMsg.type = "debugDisconnectWebsocket"
       this.sendBackMsg(backMsg)
     }
   }

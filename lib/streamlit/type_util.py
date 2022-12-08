@@ -246,14 +246,16 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
 def is_snowpark_or_pyspark_data_object(obj: object) -> bool:
     """True if if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row or True when obj is of type pyspark.sql.dataframe.DataFrame
-    False otherwise"""
+    False otherwise.
+    """
     return is_snowpark_data_object(obj) or is_pyspark_data_object(obj)
 
 
 def is_snowpark_data_object(obj: object) -> bool:
     """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row,
-    False otherwise"""
+    False otherwise.
+    """
     if is_type(obj, _SNOWPARK_TABLE_TYPE_STR):
         return True
     if is_type(obj, _SNOWPARK_DF_TYPE_STR):
@@ -283,7 +285,8 @@ def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
 
 def is_bytes_like(obj: object) -> TypeGuard[BytesLike]:
     """True if the type is considered bytes-like for the purposes of
-    protobuf data marshalling."""
+    protobuf data marshalling.
+    """
     return isinstance(obj, _BYTES_LIKE_TYPES)
 
 
@@ -602,7 +605,6 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 
 def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
-
     # Check all columns for mixed types and complex128 type
     # The dtype of mixed type columns is always object, the actual type of the column
     # values can be determined via the infer_dtype function:
@@ -636,7 +638,6 @@ def fix_arrow_incompatible_column_types(
     -------
     The fixed dataframe.
     """
-
     for col in selected_columns or df.columns:
         if _is_colum_type_arrow_incompatible(df[col]):
             df[col] = df[col].astype(str)
@@ -685,7 +686,6 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
         A bytes object to convert.
 
     """
-
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
 

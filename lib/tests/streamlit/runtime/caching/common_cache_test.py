@@ -16,8 +16,9 @@
 
 import threading
 import unittest
+from datetime import timedelta
 from typing import Any, List
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from parameterized import parameterized
 
@@ -41,6 +42,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
 from tests.streamlit.elements.image_test import create_image
+from tests.testutil import create_mock_script_run_ctx
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
@@ -618,6 +620,134 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         function_with_spinner_empty_text(3)
         self.assertFalse(self.forward_msg_queue.is_empty())
+
+
+class CommonCacheTTLTest(unittest.TestCase):
+    def setUp(self) -> None:
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+    def tearDown(self):
+        memo.clear()
+        singleton.clear()
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_ttl(self, _, cache_decorator, timer_patch: Mock):
+        """Entries should expire after the given ttl."""
+        one_day = 60 * 60 * 24
+
+        # Create 2 cached functions to test that they don't interfere
+        # with each other.
+        foo_vals = []
+
+        @cache_decorator(ttl=one_day)
+        def foo(x):
+            foo_vals.append(x)
+            return x
+
+        bar_vals = []
+
+        @cache_decorator(ttl=one_day * 2)
+        def bar(x):
+            bar_vals.append(x)
+            return x
+
+        # Store a value at time 0
+        timer_patch.return_value = 0
+        foo(0)
+        bar(0)
+        self.assertEqual([0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Advance our timer, but not enough to expire our value.
+        timer_patch.return_value = one_day * 0.5
+        foo(0)
+        bar(0)
+        self.assertEqual([0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Advance our timer enough to expire foo, but not bar.
+        timer_patch.return_value = one_day * 1.5
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Expire bar. Foo's second value was inserted at time=1.5 days,
+        # so it won't expire until time=2.5 days
+        timer_patch.return_value = (one_day * 2) + 1
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0], foo_vals)
+        self.assertEqual([0, 0], bar_vals)
+
+        # Expire foo for a second time.
+        timer_patch.return_value = (one_day * 2.5) + 1
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0, 0], foo_vals)
+        self.assertEqual([0, 0], bar_vals)
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_ttl_timedelta(self, _, cache_decorator, timer_patch: Mock):
+        """Entries should expire after the given ttl."""
+        one_day_seconds = 60 * 60 * 24
+        one_day_timedelta = timedelta(days=1)
+        two_days_timedelta = timedelta(days=2)
+
+        # Create 2 cached functions to test that they don't interfere
+        # with each other.
+        foo_vals = []
+
+        @cache_decorator(ttl=one_day_timedelta)
+        def foo(x):
+            foo_vals.append(x)
+            return x
+
+        bar_vals = []
+
+        @cache_decorator(ttl=two_days_timedelta)
+        def bar(x):
+            bar_vals.append(x)
+            return x
+
+        # Store a value at time 0
+        timer_patch.return_value = 0
+        foo(0)
+        bar(0)
+        self.assertEqual([0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Advance our timer, but not enough to expire our value.
+        timer_patch.return_value = one_day_seconds * 0.5
+        foo(0)
+        bar(0)
+        self.assertEqual([0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Advance our timer enough to expire foo, but not bar.
+        timer_patch.return_value = one_day_seconds * 1.5
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Expire bar. Foo's second value was inserted at time=1.5 days,
+        # so it won't expire until time=2.5 days
+        timer_patch.return_value = (one_day_seconds * 2) + 1
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0], foo_vals)
+        self.assertEqual([0, 0], bar_vals)
+
+        # Expire foo for a second time.
+        timer_patch.return_value = (one_day_seconds * 2.5) + 1
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0, 0], foo_vals)
+        self.assertEqual([0, 0], bar_vals)
 
 
 class CommonCacheThreadingTest(unittest.TestCase):
