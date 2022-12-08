@@ -23,7 +23,7 @@ from unittest.mock import MagicMock
 from streamlit.runtime import Runtime
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.testing.element_tree import LocalScriptRunner
+from streamlit.testing.local_script_runner import LocalScriptRunner
 
 
 class InteractiveScriptTests(unittest.TestCase):
