@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar, overload
+from typing import Any, Generic, TypeVar, cast, overload
 
 from typing_extensions import Literal
 
@@ -135,9 +135,9 @@ class Radio(Element, Generic[T]):
         else:
             state = self.root.session_state
             assert state
-            return state[self.id]
+            return cast(T, state[self.id])
 
-    def set_value(self, v: T) -> Radio:
+    def set_value(self, v: T) -> Radio[T]:
         self._value = v
         return self
 
@@ -199,7 +199,7 @@ class Block:
         ...
 
     @overload
-    def get(self, elt: Literal["radio"]) -> list[Radio]:
+    def get(self, elt: Literal["radio"]) -> list[Radio[Any]]:
         ...
 
     def get(self, elt: str) -> list[Element | Block]:
