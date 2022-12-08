@@ -139,6 +139,7 @@ class MetricMixin:
         )
 
         return self.dg._enqueue("metric", metric_proto)
+
     @property
     def dg(self) -> "DeltaGenerator":
         return cast("DeltaGenerator", self)
@@ -233,4 +234,3 @@ def _determine_delta_color_and_direction(
 @staticmethod
 def _is_negative_delta(delta: Delta) -> bool:
     return dedent(str(delta)).startswith("-")
-
