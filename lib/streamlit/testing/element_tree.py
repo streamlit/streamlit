@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar, cast, overload
+from typing import Any, Generic, Sequence, TypeVar, cast, overload
 
 from typing_extensions import Literal
 
@@ -191,14 +191,14 @@ class Block:
         return None
 
     @overload
-    def get(self, elt: Literal["text"]) -> list[Text]:
+    def get(self, elt: Literal["text"]) -> Sequence[Text]:
         ...
 
     @overload
-    def get(self, elt: Literal["radio"]) -> list[Radio[Any]]:
+    def get(self, elt: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 
-    def get(self, elt: str) -> list[Element | Block]:
+    def get(self, elt: str) -> Sequence[Element | Block]:
         return [e for e in self if e.type == elt]
 
     def get_widget(self, key: str) -> Element | None:
@@ -264,6 +264,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
         delta = msg.delta
         if delta.WhichOneof("type") == "new_element":
             elt = delta.new_element
+            new_node: Element | Block
             if elt.WhichOneof("type") == "text":
                 new_node = Text(elt.text, root=root)
             elif elt.WhichOneof("type") == "radio":
@@ -276,7 +277,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             # add_rows
             continue
 
-        current_node = root
+        current_node: Block = root
         # Every node up to the end is a Block
         for idx in delta_path[:-1]:
             children = current_node.children
@@ -284,8 +285,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             if child is None:
                 child = Block(root=root)
                 children[idx] = child
+            assert isinstance(child, Block)
             current_node = child
-            assert isinstance(current_node, Block)
         current_node.children[delta_path[-1]] = new_node
 
     return root
