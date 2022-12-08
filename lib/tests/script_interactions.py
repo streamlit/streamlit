@@ -20,23 +20,9 @@ import textwrap
 import unittest
 from unittest.mock import MagicMock
 
-from typing_extensions import Literal
-
-from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.Element_pb2 import Element as ElementProto
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.Radio_pb2 import Radio as RadioProto
-from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
-from streamlit.runtime.state.session_state import SessionState
-from streamlit.runtime.state.widgets import user_key_from_widget_id
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.testing.element_tree import LocalScriptRunner
 
 
