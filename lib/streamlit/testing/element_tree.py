@@ -19,17 +19,13 @@ from typing import Any, Generic, TypeVar, cast, overload
 from typing_extensions import Literal
 
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.runtime.state.widgets import user_key_from_widget_id
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 # TODO This class serves as a fallback option for elements that have not
