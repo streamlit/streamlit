@@ -14,9 +14,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, Sequence, TypeVar, cast, overload
+from typing import Any, Generic, Sequence, TypeVar, Union, cast, overload
 
-from typing_extensions import Literal
+from typing_extensions import Literal, TypeAlias
 
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
@@ -152,7 +152,7 @@ class Radio(Element, Generic[T]):
 @dataclass(init=False)
 class Block:
     type: str
-    children: dict[int, Element | Block]
+    children: dict[int, Node]
     proto: BlockProto | None = field(repr=False)
     root: ElementTree = field(repr=False)
 
@@ -184,7 +184,7 @@ class Block:
             for c in self.children[child_idx]:
                 yield c
 
-    def __getitem__(self, k: int) -> Element | Block:
+    def __getitem__(self, k: int) -> Node:
         return self.children[k]
 
     @property
@@ -199,7 +199,7 @@ class Block:
     def get(self, elt: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 
-    def get(self, elt: str) -> Sequence[Element | Block]:
+    def get(self, elt: str) -> Sequence[Node]:
         return [e for e in self if e.type == elt]
 
     def get_widget(self, key: str) -> Element | None:
@@ -214,6 +214,9 @@ class Block:
 
     def run(self) -> ElementTree:
         return self.root.run()
+
+
+Node: TypeAlias = Union[Element, Block]
 
 
 @dataclass(init=False)
@@ -266,7 +269,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
         delta = msg.delta
         if delta.WhichOneof("type") == "new_element":
             elt = delta.new_element
-            new_node: Element | Block
+            new_node: Node
             if elt.WhichOneof("type") == "text":
                 new_node = Text(elt.text, root=root)
             elif elt.WhichOneof("type") == "radio":
