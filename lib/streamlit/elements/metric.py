@@ -192,7 +192,6 @@ def _parse_delta(delta: Delta) -> str:
 
 
 def _determine_delta_color_and_direction(
-    self,
     delta_color: DeltaColor,
     delta: Delta,
 ) -> MetricColorAndDirection:
