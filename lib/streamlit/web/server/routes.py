@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+from pathlib import Path
 from typing import Optional
 
 import tornado.web
@@ -118,6 +119,11 @@ class AppStaticFileHandler(AssetsFileHandler):
             )
 
         return super().validate_absolute_path(root, absolute_path)
+
+    def set_extra_headers(self, path: str) -> None:
+        if Path(path).suffix not in file_util.WHITELISTED_APP_STATIC_FILE_EXTENSIONS:
+            self.set_header("Content-Type", "text/plain")
+        self.set_header("X-Content-Type-Options", "nosniff")
 
 
 class AddSlashHandler(tornado.web.RequestHandler):

@@ -29,6 +29,7 @@ APP_STATIC_FOLDER_NAME = "static"
 
 # TODO [KAREN] Move to config or remove if not needed
 MAX_APP_STATIC_FILE_SIZE = 200 * 1024 * 1024
+WHITELISTED_APP_STATIC_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf", ".gif"]
 
 
 def get_encoded_file_data(data, encoding="auto"):
