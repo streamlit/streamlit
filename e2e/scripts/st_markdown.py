@@ -54,3 +54,24 @@ with st.container():
     st.markdown("# some really long header " + " ".join(["lol"] * 10))
     np.random.seed(0)
     st.table(np.random.randn(10, 20))
+
+with st.container():
+    st.title("Some title")
+    st.markdown("Some text")
+
+    st.markdown(
+        """
+    # Some title
+    Some text
+    """
+    )
+
+    st.title(
+        """
+    Some title
+    Some text
+    """
+    )
+
+    st.markdown("# Some title")
+    st.markdown("Some text")
