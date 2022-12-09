@@ -198,6 +198,8 @@ class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             self.fetch(f"/app/static/{self._symlink_inside_directory}"),
         ]
         for r in responses:
+            assert r.headers["Content-Type"] == "text/plain"
+            assert r.headers["X-Content-Type-Options"] == "nosniff"
             assert r.code == 200
 
     def test_parse_url_path_404(self):
