@@ -13,7 +13,8 @@
 # limitations under the License.
 
 """Selects between our two DataFrame serialization methods ("legacy" and
-"arrow") based on a config option"""
+"arrow") based on a config option.
+"""
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
 from typing_extensions import Literal

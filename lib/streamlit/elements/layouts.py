@@ -40,7 +40,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         Inserting elements using "with" notation:
 
         >>> with st.container():
@@ -114,7 +113,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into a column:
 
         >>> col1, col2, col3 = st.columns(3)
@@ -228,7 +226,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into a tab:
 
         >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
@@ -289,7 +286,7 @@ class LayoutsMixin:
 
     @gather_metrics("expander")
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
-        """Insert a multi-element container that can be expanded/collapsed.
+        r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
         and can be expanded or collapsed by the user. When collapsed, all that is
@@ -314,7 +311,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into an expander
 
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})

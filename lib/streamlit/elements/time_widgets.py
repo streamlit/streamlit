@@ -372,7 +372,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> DateWidgetReturn:
-        """Display a date input widget.
+        r"""Display a date input widget.
 
         Parameters
         ----------

@@ -31,7 +31,6 @@ def stop() -> NoReturn:
 
     Example
     -------
-
     >>> name = st.text_input('Name')
     >>> if not name:
     >>>   st.warning('Please input a name.')
