@@ -108,7 +108,7 @@
     "no-plusplus": "off",
     "no-relative-import-paths/no-relative-import-paths": [
       "warn",
-      { "allowSameFolder": true, "rootDir": "frontend", "prefix": "" }
+      { "allowSameFolder": true, "rootDir": "", "prefix": "" }
     ]
   },
   "settings": {
