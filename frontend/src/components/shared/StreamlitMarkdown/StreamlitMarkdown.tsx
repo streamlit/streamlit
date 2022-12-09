@@ -387,35 +387,35 @@ export function Heading(props: HeadingProtoProps): ReactElement {
 
   return (
     <div className="stMarkdown" style={{ width }}>
-      <StyledHeaderContainer>
-        <HeadingWithAnchor tag={tag} anchor={anchor}>
-          <RenderedMarkdown
-            source={makeMarkdownHeading(tag, heading)}
-            allowHTML={false}
-            // this is purely an inline string
-            overrideComponents={{
-              p: Fragment,
-              h1: Fragment,
-              h2: Fragment,
-              h3: Fragment,
-              h4: Fragment,
-              h5: Fragment,
-              h6: Fragment,
-            }}
-          />
-        </HeadingWithAnchor>
-      </StyledHeaderContainer>
-      {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
-      {rest.length > 0 && (
-        <StyledStreamlitMarkdown
-          isCaption={Boolean(false)}
-          isInSidebar={isSidebar}
-          style={{ width }}
-          data-testid="stMarkdownContainer"
-        >
+      <StyledStreamlitMarkdown
+        isCaption={Boolean(false)}
+        isInSidebar={isSidebar}
+        style={{ width }}
+        data-testid="stMarkdownContainer"
+      >
+        <StyledHeaderContainer>
+          <HeadingWithAnchor tag={tag} anchor={anchor}>
+            <RenderedMarkdown
+              source={makeMarkdownHeading(tag, heading)}
+              allowHTML={false}
+              // this is purely an inline string
+              overrideComponents={{
+                p: Fragment,
+                h1: Fragment,
+                h2: Fragment,
+                h3: Fragment,
+                h4: Fragment,
+                h5: Fragment,
+                h6: Fragment,
+              }}
+            />
+          </HeadingWithAnchor>
+        </StyledHeaderContainer>
+        {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
+        {rest.length > 0 && (
           <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
-        </StyledStreamlitMarkdown>
-      )}
+        )}
+      </StyledStreamlitMarkdown>
     </div>
   )
 }

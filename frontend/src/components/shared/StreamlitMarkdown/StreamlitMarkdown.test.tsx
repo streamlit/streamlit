@@ -233,7 +233,7 @@ describe("Heading", () => {
     const props = getHeadingProps()
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello world")
-    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+    expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
       "this is a new line"
     )
   })
@@ -242,7 +242,7 @@ describe("Heading", () => {
     const props = getHeadingProps({ body: "hello" })
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello")
-    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(0)
+    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
   })
 
   it("does not render ol block", () => {
@@ -275,7 +275,7 @@ describe("Heading", () => {
     })
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual(`| Syntax | Description |`)
-    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+    expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
       `| ----------- | ----------- |
 | Header      | Title       |
 | Paragraph   | Text        |
