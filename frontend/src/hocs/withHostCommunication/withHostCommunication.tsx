@@ -17,9 +17,11 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
+import Resolver from "src/lib/Resolver"
 import { isValidOrigin } from "src/lib/UriUtil"
 
 import {
+  IAllowedMessageOriginsResponse,
   IGuestToHostMessage,
   IHostToGuestMessage,
   IMenuItem,
@@ -30,10 +32,42 @@ import {
 
 export interface HostCommunicationHOC {
   currentState: HostCommunicationState
-  sendMessage: (message: IGuestToHostMessage) => void
+
+  /**
+   * Callback to be called when the Streamlit app closes a dialog.
+   */
   onModalReset: () => void
+
+  /**
+   * Callback to be called when the Streamlit app's page is changed.
+   */
   onPageChanged: () => void
-  setAllowedOrigins: (allowedOrigins: string[]) => void
+
+  /**
+   * Function to reset authTokenPromise once the resource waiting on the token
+   * (that is, the WebsocketConnection singleton) has successfully received it.
+   *
+   * This should be called in a .then() handler attached to authTokenPromise.
+   */
+  resetAuthToken: () => void
+
+  /**
+   * Function to send a message to the app's parent frame via the browser's
+   * window.postMessage API.
+   */
+  sendMessage: (message: IGuestToHostMessage) => void
+
+  /**
+   * Function to set the response body received from hitting the Streamlit
+   * server's /st-allowed-message-origins endpoint. The response contains
+   *   - allowedOrigins: A list of origins that we're allowed to receive
+   *     cross-iframe messages from via the browser's window.postMessage API.
+   *   - useExternalAuthToken: Whether to wait until we've received a
+   *     SET_AUTH_TOKEN message before resolving authTokenPromise. The
+   *     WebsocketConnection class waits for this promise to resolve before
+   *     attempting to establish a connection with the Streamlit server.
+   */
+  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
 }
 
 export const HOST_COMM_VERSION = 1
@@ -56,8 +90,6 @@ function withHostCommunication(
     // unwieldy. We may want to consider installing the redux-toolkit package
     // even if we're not using redux just because it's so useful for reducing
     // this type of boilerplate.
-    const [allowedOrigins, setAllowedOrigins] = useState<string[]>([])
-    const [authToken, setAuthToken] = useState<string | undefined>(undefined)
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [hideSidebarNav, setHideSidebarNav] = useState(false)
     const [isOwner, setIsOwner] = useState(false)
@@ -71,7 +103,22 @@ function withHostCommunication(
     const [deployedAppMetadata, setDeployedAppMetadata] = useState({})
     const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
 
+    const [allowedOriginsResp, setAllowedOriginsResp] =
+      useState<IAllowedMessageOriginsResponse | null>(null)
+    const [deferredAuthToken, setDeferredAuthToken] = useState<
+      Resolver<string | undefined>
+    >(() => new Resolver())
+
     useEffect(() => {
+      if (!allowedOriginsResp) {
+        return () => {}
+      }
+
+      const { allowedOrigins, useExternalAuthToken } = allowedOriginsResp
+      if (!useExternalAuthToken) {
+        deferredAuthToken.resolve(undefined)
+      }
+
       function receiveMessage(event: MessageEvent): void {
         const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
@@ -97,7 +144,12 @@ function withHostCommunication(
         }
 
         if (message.type === "SET_AUTH_TOKEN") {
-          setAuthToken(message.authToken)
+          // NOTE: The edge case (that should technically never happen) where
+          // useExternalAuthToken is false but we still receive this message
+          // type isn't an issue here because resolving a promise a second time
+          // is a no-op, and we already resolved the promise to undefined
+          // above.
+          deferredAuthToken.resolve(message.authToken)
         }
 
         if (message.type === "SET_IS_OWNER") {
@@ -147,14 +199,14 @@ function withHostCommunication(
       return () => {
         window.removeEventListener("message", receiveMessage)
       }
-    }, [allowedOrigins])
+    }, [allowedOriginsResp])
 
     return (
       <WrappedComponent
         hostCommunication={
           {
             currentState: {
-              authToken,
+              authTokenPromise: deferredAuthToken.promise,
               forcedModalClose,
               hideSidebarNav,
               isOwner,
@@ -166,6 +218,9 @@ function withHostCommunication(
               deployedAppMetadata,
               toolbarItems,
             },
+            resetAuthToken: () => {
+              setDeferredAuthToken(new Resolver())
+            },
             onModalReset: () => {
               setForcedModalClose(false)
             },
@@ -173,7 +228,7 @@ function withHostCommunication(
               setRequestedPageScriptHash(null)
             },
             sendMessage: sendMessageToHost,
-            setAllowedOrigins,
+            setAllowedOriginsResp,
           } as HostCommunicationHOC
         }
         {...props}

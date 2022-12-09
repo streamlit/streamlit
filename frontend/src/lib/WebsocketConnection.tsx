@@ -15,9 +15,10 @@
  */
 
 import styled from "@emotion/styled"
-import { BackMsg, ForwardMsg, IBackMsg } from "src/autogen/proto"
-
 import axios from "axios"
+
+import { BackMsg, ForwardMsg, IBackMsg } from "src/autogen/proto"
+import { IAllowedMessageOriginsResponse } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "src/lib/log"
@@ -106,13 +107,20 @@ interface Args {
    * Function to get the auth token set by the host of this app (if in a
    * relevant deployment scenario).
    */
-  getHostAuthToken: () => string | undefined
+  claimHostAuthToken: () => Promise<string | undefined>
+
+  /**
+   * Function to clear the withHostCommunication hoc's auth token. This should
+   * be called after the promise returned by claimHostAuthToken successfully
+   * resolves.
+   */
+  resetHostAuthToken: () => void
 
   /**
    * Function to set the list of origins that this app should accept
    * cross-origin messages from (if in a relevant deployment scenario).
    */
-  setHostAllowedOrigins: (allowedOrigins: string[]) => void
+  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
 }
 
 interface MessageQueue {
@@ -342,14 +350,14 @@ export class WebsocketConnection {
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
-      this.args.setHostAllowedOrigins,
+      this.args.setAllowedOriginsResp,
       userCommandLine
     )
 
     this.stepFsm("SERVER_PING_SUCCEEDED")
   }
 
-  private connectToWebSocket(): void {
+  private async connectToWebSocket(): Promise<void> {
     const uri = buildWsUri(
       this.args.baseUriPartsList[this.uriIndex],
       WEBSOCKET_STREAM_PATH
@@ -361,6 +369,11 @@ export class WebsocketConnection {
       throw new Error("Websocket already exists")
     }
 
+    // claimHostAuthToken resolves to undefined immediately in deployment
+    // scenarios where we don't expect an external auth token to be passed down
+    // to the frame containing the Streamlit app.
+    const hostAuthToken = await this.args.claimHostAuthToken()
+    this.args.resetHostAuthToken()
     logMessage(LOG, "creating WebSocket")
 
     // NOTE: We repurpose the Sec-WebSocket-Protocol header (set via the second
@@ -374,7 +387,6 @@ export class WebsocketConnection {
     // Sec-WebSocket-Protocol is set, many clients expect the server to respond
     // with a selected subprotocol to use. We don't want that reply to be the
     // auth token, so we just hard-code it to "streamlit".
-    const hostAuthToken = this.args.getHostAuthToken()
     this.websocket = new WebSocket(uri, [
       "streamlit",
       ...(hostAuthToken ? [hostAuthToken] : []),
@@ -558,7 +570,7 @@ export function doInitPings(
   minimumTimeoutMs: number,
   maximumTimeoutMs: number,
   retryCallback: OnRetry,
-  setHostAllowedOrigins: (allowedOrigins: string[]) => void,
+  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void,
   userCommandLine?: string
 ): Promise<number> {
   const resolver = new Resolver<number>()
@@ -665,7 +677,7 @@ export function doInitPings(
       axios.get(allowedOriginsUri, { timeout: minimumTimeoutMs }),
     ])
       .then(([_, originsResp]) => {
-        setHostAllowedOrigins(originsResp.data.allowedOrigins)
+        setAllowedOriginsResp(originsResp.data)
         resolver.resolve(uriNumber)
       })
       .catch(error => {

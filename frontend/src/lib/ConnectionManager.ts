@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { ReactNode } from "react"
 
 import { BackMsg, ForwardMsg } from "src/autogen/proto"
+import { IAllowedMessageOriginsResponse } from "src/hocs/withHostCommunication/types"
 import { BaseUriParts, getPossibleBaseUris } from "src/lib/UriUtil"
-import { ReactNode } from "react"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
@@ -52,13 +53,20 @@ interface Props {
    * Function to get the auth token set by the host of this app (if in a
    * relevant deployment scenario).
    */
-  getHostAuthToken: () => string | undefined
+  claimHostAuthToken: () => Promise<string | undefined>
+
+  /**
+   * Function to clear the withHostCommunication hoc's auth token. This should
+   * be called after the promise returned by claimHostAuthToken successfully
+   * resolves.
+   */
+  resetHostAuthToken: () => void
 
   /**
    * Function to set the list of origins that this app should accept
    * cross-origin messages from (if in a relevant deployment scenario).
    */
-  setHostAllowedOrigins: (allowedOrigins: string[]) => void
+  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
 }
 
 /**
@@ -164,8 +172,9 @@ export class ConnectionManager {
       onMessage: this.props.onMessage,
       onConnectionStateChange: this.setConnectionState,
       onRetry: this.showRetryError,
-      getHostAuthToken: this.props.getHostAuthToken,
-      setHostAllowedOrigins: this.props.setHostAllowedOrigins,
+      claimHostAuthToken: this.props.claimHostAuthToken,
+      resetHostAuthToken: this.props.resetHostAuthToken,
+      setAllowedOriginsResp: this.props.setAllowedOriginsResp,
     })
   }
 }
