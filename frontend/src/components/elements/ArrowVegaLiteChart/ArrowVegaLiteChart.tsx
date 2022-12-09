@@ -214,6 +214,10 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const { useContainerWidth } = el
     if (el.vegaLiteTheme === "streamlit") {
       spec.config = applyStreamlitTheme(spec.config, theme)
+    } else if (spec.usermeta?.embedOptions?.theme === "streamlit") {
+      spec.config = applyStreamlitTheme(spec.config, theme)
+      // Remove the theme from the usermeta so it doesn't get picked up by vega embed.
+      spec.usermeta.embedOptions.theme = undefined
     } else {
       // Apply minor theming improvements to work better with Streamlit
       spec.config = applyThemeDefaults(spec.config, theme)

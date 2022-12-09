@@ -415,7 +415,7 @@ class DataFrameSelectorMixin:
         self,
         altair_chart: "Chart",
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = None,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -468,7 +468,7 @@ class DataFrameSelectorMixin:
         data: "Data" = None,
         spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = None,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
