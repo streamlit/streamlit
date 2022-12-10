@@ -25,5 +25,6 @@ if runtime.exists():
 
     st.write(f"count: {st.session_state.counter}")
 
-    # TODO(vdonato): Add st.file_uploader tests once we're able to teach the file uploader
-    # widget how to retrieve previously uploaded files after a session disconnect/reconnect.
+    # TODO(vdonato): Add st.file_uploader and st.camera_input tests once we're able to
+    # teach those widgets how to retrieve previously uploaded files after a session
+    # disconnect/reconnect.
