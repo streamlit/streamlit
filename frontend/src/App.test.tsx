@@ -146,6 +146,16 @@ describe("App", () => {
     expect(wrapper.html()).not.toBeNull()
   })
 
+  it("calls connectionManager.disconnect() when unmounting", () => {
+    const wrapper = getWrapper()
+    const instance = wrapper.instance() as App
+
+    wrapper.unmount()
+
+    // @ts-ignore
+    expect(instance.connectionManager.disconnect).toHaveBeenCalled()
+  })
+
   it("reloads when streamlit server version changes", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
