@@ -25,8 +25,15 @@ describe("websocket reconnects", () => {
     }
 
     cy.window().then((win) => {
-      win.streamlitDebug.disconnectWebsocket();
+      setTimeout(() => {
+        win.streamlitDebug.disconnectWebsocket();
+      }, 100);
 
+      // Wait until we've disconnected.
+      cy.get("[data-testid='stStatusWidget']").should(
+        "have.text",
+        "Connecting"
+      );
       // Wait until we've reconnected and rerun the script.
       cy.get("[data-testid='stStatusWidget']").should("not.exist");
 
