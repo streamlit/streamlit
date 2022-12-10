@@ -649,8 +649,7 @@ describe("WebsocketConnection auth token handling", () => {
   afterEach(() => {
     axios.get = originalAxiosGet
 
-    // @ts-ignore
-    SessionInfo.sessionId = undefined
+    SessionInfo.lastSessionInfo = undefined
   })
 
   it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", async () => {
@@ -687,7 +686,7 @@ describe("WebsocketConnection auth token handling", () => {
 
   it("sets second Sec-WebSocket-Protocol option to lastSessionId", async () => {
     // @ts-ignore
-    SessionInfo.sessionId = "sessionId"
+    SessionInfo.lastSessionInfo = { sessionId: "sessionId" }
 
     const ws = new WebsocketConnection(MOCK_SOCKET_DATA)
 
@@ -702,7 +701,7 @@ describe("WebsocketConnection auth token handling", () => {
 
   it("prioritizes host provided auth token over lastSessionId if both set", async () => {
     // @ts-ignore
-    SessionInfo.sessionId = "sessionId"
+    SessionInfo.lastSessionInfo = { sessionId: "sessionId" }
 
     const resetHostAuthToken = jest.fn()
     const ws = new WebsocketConnection({

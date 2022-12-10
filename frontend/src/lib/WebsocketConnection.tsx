@@ -361,6 +361,28 @@ export class WebsocketConnection {
     this.stepFsm("SERVER_PING_SUCCEEDED")
   }
 
+  /**
+   * Get the session token to use to initialize a WebSocket connection.
+   *
+   * There are two scenarios that are considered here:
+   *   1. If this Streamlit is embedded in a page that will be passing an
+   *      external, opaque auth token to it, we get it using claimHostAuthToken
+   *      and return it. This only occurs in deployment environments where
+   *      we're not connecting to the usual Tornado server, so we don't have to
+   *      worry about what this token actually is/does.
+   *   2. Otherwise, claimHostAuthToken will resolve immediately to undefined,
+   *      in which case we return the sessionId of the last session this
+   *      browser tab connected to (or undefined if this is the first time this
+   *      tab has connected to the Streamlit server). This sessionId is used to
+   *      attempt to reconnect to an existing session to handle transient
+   *      disconnects.
+   */
+  private async getSessionToken(): Promise<string | undefined> {
+    const hostAuthToken = await this.args.claimHostAuthToken()
+    this.args.resetHostAuthToken()
+    return hostAuthToken || SessionInfo.lastSessionInfo?.sessionId
+  }
+
   private async connectToWebSocket(): Promise<void> {
     const uri = buildWsUri(
       this.args.baseUriPartsList[this.uriIndex],
@@ -373,11 +395,6 @@ export class WebsocketConnection {
       throw new Error("Websocket already exists")
     }
 
-    // claimHostAuthToken resolves to undefined immediately in deployment
-    // scenarios where we don't expect an external auth token to be passed down
-    // to the frame containing the Streamlit app.
-    const hostAuthToken = await this.args.claimHostAuthToken()
-    this.args.resetHostAuthToken()
     logMessage(LOG, "creating WebSocket")
 
     // NOTE: We repurpose the Sec-WebSocket-Protocol header (set via the second
@@ -391,8 +408,7 @@ export class WebsocketConnection {
     // Sec-WebSocket-Protocol is set, many clients expect the server to respond
     // with a selected subprotocol to use. We don't want that reply to be the
     // auth token, so we just hard-code it to "streamlit".
-
-    const sessionToken = hostAuthToken || SessionInfo.lastSessionId
+    const sessionToken = await this.getSessionToken()
     this.websocket = new WebSocket(uri, [
       "streamlit",
       ...(sessionToken ? [sessionToken] : []),

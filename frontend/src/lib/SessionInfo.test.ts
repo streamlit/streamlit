@@ -21,8 +21,8 @@ test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()
 })
 
-test("Clears session info", () => {
-  SessionInfo.current = new SessionInfo({
+test("Saves SessionInfo.current to lastSessionInfo on clear", () => {
+  const sessionInfo = new SessionInfo({
     appId: "aid",
     sessionId: "sessionId",
     streamlitVersion: "sv",
@@ -35,13 +35,18 @@ test("Clears session info", () => {
     userMapboxToken: "mpt",
   })
 
+  // @ts-ignore
+  SessionInfo.lastSessionInfo = "some older value"
+
+  SessionInfo.current = sessionInfo
   expect(SessionInfo.isSet()).toBe(true)
-  expect(SessionInfo.lastSessionId).toBe(undefined)
+  // Also verify that lastSessionInfo is cleared when SessionInfo.current is
+  // set.
+  expect(SessionInfo.lastSessionInfo).toBe(undefined)
 
   SessionInfo.clearSession()
-
   expect(SessionInfo.isSet()).toBe(false)
-  expect(SessionInfo.lastSessionId).toBe("sessionId")
+  expect(SessionInfo.lastSessionInfo).toBe(sessionInfo)
 })
 
 test("Can be initialized from a protobuf", () => {
