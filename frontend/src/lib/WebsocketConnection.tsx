@@ -257,7 +257,7 @@ export class WebsocketConnection {
         break
 
       case ConnectionState.DISCONNECTED_FOREVER:
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         break
 
       default:
@@ -424,7 +424,7 @@ export class WebsocketConnection {
     this.websocket.onclose = () => {
       if (checkWebsocket()) {
         logWarning(LOG, "WebSocket onclose")
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         this.stepFsm("CONNECTION_CLOSED")
       }
     }
@@ -432,7 +432,7 @@ export class WebsocketConnection {
     this.websocket.onerror = () => {
       if (checkWebsocket()) {
         logError(LOG, "WebSocket onerror")
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         this.stepFsm("CONNECTION_ERROR")
       }
     }
@@ -462,21 +462,21 @@ export class WebsocketConnection {
         // This should never happen! The only place we call
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         this.stepFsm("FATAL_ERROR", "Null Websocket in setConnectionTimeout")
         return
       }
 
       if (this.websocket.readyState === 0 /* CONNECTING */) {
         logMessage(LOG, `${uri} timed out`)
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         this.stepFsm("CONNECTION_TIMED_OUT")
       }
     }, WEBSOCKET_TIMEOUT_MS)
     logMessage(LOG, `Set WS timeout ${this.wsConnectionTimeoutId}`)
   }
 
-  private cancelConnectionAttempt(): void {
+  private closeConnection(): void {
     // Need to make sure the websocket is closed in the same function that
     // cancels the connection timer. Otherwise, due to javascript's concurrency
     // model, when the onclose event fires it can get handled in between the
