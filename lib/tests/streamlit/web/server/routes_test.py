@@ -156,7 +156,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             assert r.code == 404
 
 
-class UserStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
+class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory(dir=os.getcwd())
         self._tmpfile = tempfile.NamedTemporaryFile(dir=self._tmpdir.name, delete=False)
