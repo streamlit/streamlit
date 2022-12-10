@@ -117,6 +117,48 @@ class ServerTest(ServerTestCase):
             self.assertEqual(1, self.server._runtime._session_mgr.num_sessions())
 
     @tornado.testing.gen_test
+    async def test_websocket_connect_to_nonexistent_session(self):
+        with _patch_local_sources_watcher(), self._patch_app_session():
+            await self.server.start()
+
+            ws_client = await self.ws_connect(existing_session_id="nonexistent_session")
+
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
+
+            self.assertNotEqual(session_info.session.id, "nonexistent_session")
+
+            ws_client.close()
+            await asyncio.sleep(0.1)
+
+    @tornado.testing.gen_test
+    async def test_websocket_disconnect_and_reconnect(self):
+        with _patch_local_sources_watcher(), self._patch_app_session():
+            await self.server.start()
+
+            ws_client = await self.ws_connect()
+            original_session_info = (
+                self.server._runtime._session_mgr.list_active_sessions()[0]
+            )
+
+            # Disconnect, reconnect with the same session_id, and confirm that the
+            # session was reused.
+            ws_client.close()
+            await asyncio.sleep(0.1)
+
+            ws_client = await self.ws_connect(
+                existing_session_id=original_session_info.session.id
+            )
+
+            self.assertEqual(self.server._runtime._session_mgr.num_active_sessions(), 1)
+            new_session_info = self.server._runtime._session_mgr.list_active_sessions()[
+                0
+            ]
+            self.assertEqual(new_session_info.session, original_session_info.session)
+
+            ws_client.close()
+            await asyncio.sleep(0.1)
+
+    @tornado.testing.gen_test
     async def test_multiple_connections(self):
         """Test multiple websockets can connect simultaneously."""
         with _patch_local_sources_watcher(), self._patch_app_session():

@@ -137,6 +137,10 @@ export class ConnectionManager {
     }
   }
 
+  disconnect(): void {
+    this.connection?.disconnect()
+  }
+
   private setConnectionState = (
     connectionState: ConnectionState,
     errMsg?: string
@@ -146,7 +150,7 @@ export class ConnectionManager {
       this.props.connectionStateChanged(connectionState)
     }
 
-    if (errMsg || connectionState === ConnectionState.DISCONNECTED_FOREVER) {
+    if (errMsg) {
       this.props.onConnectionError(errMsg || "unknown")
     }
   }
