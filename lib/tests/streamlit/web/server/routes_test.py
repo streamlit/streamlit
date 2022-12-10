@@ -160,6 +160,12 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory(dir=os.getcwd())
         self._tmpfile = tempfile.NamedTemporaryFile(dir=self._tmpdir.name, delete=False)
+        self._tmp_js_file = tempfile.NamedTemporaryFile(
+            dir=self._tmpdir.name, suffix="script.js", delete=False
+        )
+        self._tmp_image_file = tempfile.NamedTemporaryFile(
+            dir=self._tmpdir.name, suffix="image.png", delete=False
+        )
 
         self._symlink_outside_directory = "symlink_outside"
         self._symlink_inside_directory = "symlink_inside"
@@ -173,12 +179,13 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
         self._filename = os.path.basename(self._tmpfile.name)
+        self._js_filename = os.path.basename(self._tmp_js_file.name)
+        self._image_filename = os.path.basename(self._tmp_image_file.name)
 
         super().setUp()
 
     def tearDown(self) -> None:
         super().tearDown()
-
         self._tmpdir.cleanup()
 
     def get_app(self):
@@ -192,9 +199,10 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ]
         )
 
-    def test_parse_url_path_200(self):
+    def test_static_files_200(self):
         responses = [
             self.fetch(f"/app/static/{self._filename}"),
+            self.fetch(f"/app/static/{self._js_filename}"),
             self.fetch(f"/app/static/{self._symlink_inside_directory}"),
         ]
         for r in responses:
@@ -202,14 +210,20 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             assert r.headers["X-Content-Type-Options"] == "nosniff"
             assert r.code == 200
 
-    def test_parse_url_path_404(self):
+    def test_static_image_200(self):
+        response = self.fetch(f"/app/static/{self._image_filename}")
+
+        assert response.code == 200
+        assert response.headers["Content-Type"] == "image/png"
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+
+    def test_staticfiles_404(self):
         responses = [
             self.fetch("/app/static"),
             self.fetch("/app/static/"),
             self.fetch(f"/app/static/{self._symlink_outside_directory}"),
             self.fetch("/app/static/nonexistent.jpg"),
         ]
-
         for r in responses:
             assert r.code == 404
 
