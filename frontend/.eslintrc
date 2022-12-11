@@ -107,8 +107,8 @@
     "no-param-reassign": "off",
     "no-plusplus": "off",
     "no-relative-import-paths/no-relative-import-paths": [
-      "warn",
-      { "allowSameFolder": true, "rootDir": "", "prefix": "" }
+      "error",
+      { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
     ]
   },
   "settings": {
