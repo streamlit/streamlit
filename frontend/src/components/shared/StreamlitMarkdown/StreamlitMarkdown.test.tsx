@@ -19,7 +19,7 @@ import ReactMarkdown from "react-markdown"
 import { mount } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
-
+import { colors } from "src/theme/primitives/colors"
 import StreamlitMarkdown, {
   LinkWithTargetBlank,
   createAnchorFromText,
@@ -212,6 +212,27 @@ describe("StreamlitMarkdown", () => {
       "Italics Strikethrough Bold 🚥"
     )
     expect(wrapper3.props().isButton).toEqual(true)
+  })
+
+  it("colours text properly", () => {
+    const colorMapping = new Map(
+      Object.entries({
+        red: colors.red90,
+        blue: colors.blue80,
+        green: colors.green90,
+        violet: colors.purple80,
+        orange: colors.orange100,
+      })
+    )
+    for (const color of Object.keys(colorMapping)) {
+      const source = `:${color}[text]`
+      const wrapper = mount(
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      )
+      expect(wrapper.find("span").prop("style")?.color).toEqual(
+        colorMapping.get(color)
+      )
+    }
   })
 })
 
