@@ -22,6 +22,7 @@ import UIButton, {
   Size,
 } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import StreamlitMarkdown from "../../shared/StreamlitMarkdown/index"
 
 export interface Props {
   disabled: boolean
@@ -58,7 +59,12 @@ export function FormSubmitButton(props: Props): ReactElement {
           disabled={disabled || hasInProgressUpload}
           onClick={() => widgetMgr.submitForm(element)}
         >
-          {element.label}
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isLabel
+            isButton
+          />
         </UIButton>
       </ButtonTooltip>
     </div>

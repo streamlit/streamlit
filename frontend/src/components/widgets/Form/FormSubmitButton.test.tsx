@@ -21,6 +21,7 @@ import React from "react"
 
 import { Button as ButtonProto } from "src/autogen/proto"
 
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import UIButton from "src/components/shared/Button"
 import { render, shallow } from "src/lib/test_util"
 import {
@@ -88,7 +89,11 @@ describe("FormSubmitButton", () => {
     const wrappedUIButton = wrapper.find(UIButton)
 
     expect(wrappedUIButton.length).toBe(1)
-    expect(wrappedUIButton.props().children).toBe(getProps().element.label)
+    const markdownInsideWrappedUIButton =
+      wrappedUIButton.find(StreamlitMarkdown)
+    expect(markdownInsideWrappedUIButton.props().source).toBe(
+      getProps().element.label
+    )
   })
 
   it("calls submitForm when clicked", () => {

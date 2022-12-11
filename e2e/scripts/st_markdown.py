@@ -75,3 +75,13 @@ with st.container():
 
     st.markdown("# Some title")
     st.markdown("Some text")
+
+st.markdown(
+    """
+- :blue[blue]
+- :green[green]
+- :red[red]
+- :violet[violet]
+- :orange[orange]
+"""
+)
