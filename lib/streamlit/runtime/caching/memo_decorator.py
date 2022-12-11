@@ -13,15 +13,16 @@
 # limitations under the License.
 
 """@st.memo: pickle-based caching"""
+from __future__ import annotations
+
 import math
 import os
 import pickle
 import shutil
 import threading
-import time
 import types
 from datetime import timedelta
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, cast, overload
+from typing import Any, Callable, TypeVar, cast, overload
 
 from cachetools import TTLCache
 
@@ -30,6 +31,7 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
+from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
@@ -45,16 +47,13 @@ from streamlit.runtime.caching.cache_utils import (
     MsgData,
     MultiCacheResults,
     create_cache_wrapper,
+    ttl_to_seconds,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
-
-# The timer function we use with TTLCache. This is the default timer func, but
-# is exposed here as a constant so that it can be patched in unit tests.
-_TTLCACHE_TIMER = time.monotonic
 
 # Streamlit directory where persisted memoized items live.
 # (This is the same directory that @st.cache persisted items live. But memoized
@@ -71,11 +70,11 @@ class MemoizedFunction(CachedFunction):
     def __init__(
         self,
         func: types.FunctionType,
-        show_spinner: Union[bool, str],
+        show_spinner: bool | str,
         suppress_st_warning: bool,
-        persist: Optional[str],
-        max_entries: Optional[int],
-        ttl: Optional[float],
+        persist: str | None,
+        max_entries: int | None,
+        ttl: float | timedelta | None,
         allow_widgets: bool,
     ):
         super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
@@ -116,25 +115,25 @@ class MemoCaches(CacheStatsProvider):
 
     def __init__(self):
         self._caches_lock = threading.Lock()
-        self._function_caches: Dict[str, "MemoCache"] = {}
+        self._function_caches: dict[str, MemoCache] = {}
 
     def get_cache(
         self,
         key: str,
-        persist: Optional[str],
-        max_entries: Optional[Union[int, float]],
-        ttl: Optional[Union[int, float]],
+        persist: str | None,
+        max_entries: int | float | None,
+        ttl: int | float | timedelta | None,
         display_name: str,
         allow_widgets: bool,
-    ) -> "MemoCache":
+    ) -> MemoCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
         """
         if max_entries is None:
             max_entries = math.inf
-        if ttl is None:
-            ttl = math.inf
+
+        ttl_seconds = ttl_to_seconds(ttl)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
@@ -142,7 +141,7 @@ class MemoCaches(CacheStatsProvider):
             cache = self._function_caches.get(key)
             if (
                 cache is not None
-                and cache.ttl == ttl
+                and cache.ttl_seconds == ttl_seconds
                 and cache.max_entries == max_entries
                 and cache.persist == persist
             ):
@@ -160,7 +159,7 @@ class MemoCaches(CacheStatsProvider):
                 key=key,
                 persist=persist,
                 max_entries=max_entries,
-                ttl=ttl,
+                ttl_seconds=ttl_seconds,
                 display_name=display_name,
                 allow_widgets=allow_widgets,
             )
@@ -178,13 +177,13 @@ class MemoCaches(CacheStatsProvider):
             if os.path.isdir(cache_path):
                 shutil.rmtree(cache_path)
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
             function_caches = self._function_caches.copy()
 
-        stats: List[CacheStat] = []
+        stats: list[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
         return stats
@@ -218,11 +217,11 @@ class MemoAPI:
     def __call__(
         self,
         *,
-        persist: Optional[str] = None,
-        show_spinner: Union[bool, str] = True,
+        persist: str | None = None,
+        show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
-        max_entries: Optional[int] = None,
-        ttl: Optional[Union[float, timedelta]] = None,
+        max_entries: int | None = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
@@ -233,13 +232,13 @@ class MemoAPI:
     @gather_metrics("experimental_memo")
     def __call__(
         self,
-        func: Optional[F] = None,
+        func: F | None = None,
         *,
-        persist: Optional[str] = None,
-        show_spinner: Union[bool, str] = True,
+        persist: str | None = None,
+        show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
-        max_entries: Optional[int] = None,
-        ttl: Optional[Union[float, timedelta]] = None,
+        max_entries: int | None = None,
+        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ):
         """Function decorator to memoize function executions.
@@ -265,7 +264,7 @@ class MemoAPI:
             a cache miss.
 
         suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit functions from within
+            Suppress warnings about calling Streamlit commands from within
             the cached function.
 
         max_entries : int or None
@@ -278,6 +277,16 @@ class MemoAPI:
             None if cache entries should not expire. The default is None.
             Note that ttl is incompatible with `persist="disk"` - `ttl` will be
             ignored if `persist` is specified.
+
+        experimental_allow_widgets : boolean
+            Allow widgets to be used in the memoized function. Defaults to False.
+
+        .. note::
+            Support for widgets in cached functions is currently experimental.
+            To enable it, set the parameter ``experimental_allow_widgets=True``
+            in ``@st.experimental_memo``. Note that this may lead to excessive memory
+            use since the widget value is treated as an additional input parameter
+            to the cache. We may remove support for this option at any time without notice.
 
         Example
         -------
@@ -342,13 +351,6 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        ttl_seconds: Optional[float]
-
-        if isinstance(ttl, timedelta):
-            ttl_seconds = ttl.total_seconds()
-        else:
-            ttl_seconds = ttl
-
         def wrapper(f):
             # We use wrapper function here instead of lambda function to be able to log
             # warning in case both persist="disk" and ttl parameters specified
@@ -364,7 +366,7 @@ class MemoAPI:
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
-                    ttl=ttl_seconds,
+                    ttl=ttl,
                     allow_widgets=experimental_allow_widgets,
                 )
             )
@@ -381,7 +383,7 @@ class MemoAPI:
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
-                ttl=ttl_seconds,
+                ttl=ttl,
                 allow_widgets=experimental_allow_widgets,
             )
         )
@@ -399,9 +401,9 @@ class MemoCache(Cache):
     def __init__(
         self,
         key: str,
-        persist: Optional[str],
+        persist: str | None,
         max_entries: float,
-        ttl: float,
+        ttl_seconds: float,
         display_name: str,
         allow_widgets: bool = False,
     ):
@@ -409,7 +411,7 @@ class MemoCache(Cache):
         self.display_name = display_name
         self.persist = persist
         self._mem_cache: TTLCache[str, bytes] = TTLCache(
-            maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER
+            maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
@@ -419,11 +421,11 @@ class MemoCache(Cache):
         return cast(float, self._mem_cache.maxsize)
 
     @property
-    def ttl(self) -> float:
+    def ttl_seconds(self) -> float:
         return cast(float, self._mem_cache.ttl)
 
-    def get_stats(self) -> List[CacheStat]:
-        stats: List[CacheStat] = []
+    def get_stats(self) -> list[CacheStat]:
+        stats: list[CacheStat] = []
         with self._mem_cache_lock:
             for item_key, item_value in self._mem_cache.items():
                 stats.append(
@@ -471,7 +473,7 @@ class MemoCache(Cache):
             raise CacheError(f"Failed to unpickle {key}") from exc
 
     @gather_metrics("_cache_memo_object")
-    def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
+    def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.
         """
@@ -491,7 +493,7 @@ class MemoCache(Cache):
         else:
             widgets = set()
 
-        multi_cache_results: Optional[MultiCacheResults] = None
+        multi_cache_results: MultiCacheResults | None = None
 
         # Try to find in mem cache, falling back to disk, then falling back
         # to a new result instance
@@ -514,7 +516,7 @@ class MemoCache(Cache):
 
         try:
             pickled_entry = pickle.dumps(multi_cache_results)
-        except pickle.PicklingError as exc:
+        except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
         self._write_to_mem_cache(key, pickled_entry)

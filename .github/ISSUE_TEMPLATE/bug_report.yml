@@ -1,6 +1,6 @@
 name: Bug report
 description: Submit a bug report to help us improve Streamlit
-labels: [bug, needs triage]
+labels: ["type:bug", "status:needs-triage"]
 body:
   - type: markdown
     attributes:

@@ -92,10 +92,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(True)
 
         out = sys.stdout.getvalue()
-        self.assertTrue(
-            "Welcome to Streamlit. Check out our demo in your browser." in out
-        )
-        self.assertTrue("URL: http://the-address" in out)
+        self.assertIn("Welcome to Streamlit. Check out our demo in your browser.", out)
+        self.assertIn("URL: http://the-address", out)
 
     def test_print_new_version_message(self):
         with patch(
@@ -118,8 +116,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("You can now view your Streamlit app in your browser." in out)
-        self.assertTrue("URL: http://the-address" in out)
+        self.assertIn("You can now view your Streamlit app in your browser.", out)
+        self.assertIn("URL: http://the-address", out)
 
     @patch("streamlit.net_util.get_external_ip")
     @patch("streamlit.net_util.get_internal_ip")
@@ -140,8 +138,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Network URL: http://internal-ip" in out)
-        self.assertTrue("External URL: http://external-ip" in out)
+        self.assertIn("Network URL: http://internal-ip", out)
+        self.assertIn("External URL: http://external-ip", out)
 
     @patch("streamlit.net_util.get_external_ip")
     @patch("streamlit.net_util.get_internal_ip")
@@ -164,8 +162,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Network URL: http://internal-ip" in out)
-        self.assertTrue("External URL: http://external-ip" not in out)
+        self.assertIn("Network URL: http://internal-ip", out)
+        self.assertNotIn("External URL: http://external-ip", out)
 
     @patch("streamlit.net_util.get_external_ip")
     @patch("streamlit.net_util.get_internal_ip")
@@ -188,8 +186,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Network URL: http://internal-ip" not in out)
-        self.assertTrue("External URL: http://external-ip" in out)
+        self.assertNotIn("Network URL: http://internal-ip", out)
+        self.assertIn("External URL: http://external-ip", out)
 
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_local(self, mock_get_internal_ip):
@@ -208,8 +206,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Local URL: http://localhost" in out)
-        self.assertTrue("Network URL: http://internal-ip" in out)
+        self.assertIn("Local URL: http://localhost", out)
+        self.assertIn("Network URL: http://internal-ip", out)
 
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_port(self, mock_get_internal_ip):
@@ -232,8 +230,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Local URL: http://localhost:9988" in out)
-        self.assertTrue("Network URL: http://internal-ip:9988" in out)
+        self.assertIn("Local URL: http://localhost:9988", out)
+        self.assertIn("Network URL: http://internal-ip:9988", out)
 
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_base(self, mock_get_internal_ip):
@@ -257,8 +255,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Local URL: http://localhost:8501/foo" in out)
-        self.assertTrue("Network URL: http://internal-ip:8501/foo" in out)
+        self.assertIn("Local URL: http://localhost:8501/foo", out)
+        self.assertIn("Network URL: http://internal-ip:8501/foo", out)
 
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_base_no_internal(self, mock_get_internal_ip):
@@ -282,8 +280,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Local URL: http://localhost:8501/foo" in out)
-        self.assertTrue("Network URL: http://internal-ip:8501/foo" not in out)
+        self.assertIn("Local URL: http://localhost:8501/foo", out)
+        self.assertNotIn("Network URL: http://internal-ip:8501/foo", out)
 
     def test_print_socket(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
@@ -312,9 +310,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
         bootstrap._maybe_print_old_git_warning("main_script_path")
         out = sys.stdout.getvalue()
-        self.assertTrue(
-            "Streamlit requires Git 2.7.0 or later, but you have 1.2.3." in out
-        )
+        self.assertIn("Streamlit requires Git 2.7.0 or later, but you have 1.2.3.", out)
 
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):

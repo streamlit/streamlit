@@ -14,7 +14,8 @@
 
 """A Python wrapper around Altair.
 Altair is a Python visualization library based on Vega-Lite,
-a nice JSON schema for expressing graphs and charts."""
+a nice JSON schema for expressing graphs and charts.
+"""
 
 from datetime import date
 from typing import TYPE_CHECKING, Hashable, cast
@@ -360,7 +361,8 @@ def marshall(
 
     def id_transform(data):
         """Altair data transformer that returns a fake named dataset with the
-        object id."""
+        object id.
+        """
         datasets[id(data)] = data
         return {"name": str(id(data))}
 

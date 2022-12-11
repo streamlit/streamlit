@@ -306,11 +306,10 @@ def _build_duplicate_widget_message(
     if user_key is not None:
         message = textwrap.dedent(
             """
-            There are multiple identical `st.{widget_type}` widgets with
-            `key='{user_key}'`.
+            There are multiple widgets with the same `key='{user_key}'`.
 
-            To fix this, please make sure that the `key` argument is unique for
-            each `st.{widget_type}` you create.
+            To fix this, please make sure that the `key` argument is unique for each
+            widget you create.
             """
         )
     else:

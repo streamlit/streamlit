@@ -96,10 +96,12 @@ class MapMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict,
-            or None
-            The data to be plotted. Must have columns called 'lat', 'lon',
-            'latitude', or 'longitude'.
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
+            The data to be plotted. Must have two columns:
+
+            - latitude called 'lat', 'latitude', 'LAT', 'LATITUDE'
+            - longitude called 'lon', 'longitude', 'LON', 'LONGITUDE'.
+
         zoom : int
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels
@@ -161,30 +163,37 @@ def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
     if data is None:
         return json.dumps(_DEFAULT_MAP)
 
-    # TODO(harahu): The ignore statement here is because iterables don't have
-    #  the empty attribute. This is either a bug, or the documented data type
-    #  is too broad. One or the other should be addressed, and the ignore
+    # TODO(harahu): iterables don't have the empty attribute. This is either
+    # a bug, or the documented data type is too broad. One or the other
+    # should be addressed
     if hasattr(data, "empty") and data.empty:
         return json.dumps(_DEFAULT_MAP)
 
     data = type_util.convert_anything_to_df(data)
+    formmated_column_names = ", ".join(map(repr, list(data.columns)))
 
-    if "lat" in data:
-        lat = "lat"
-    elif "latitude" in data:
-        lat = "latitude"
-    else:
+    allowed_lat_columns = {"lat", "latitude", "LAT", "LATITUDE"}
+    lat = next((d for d in allowed_lat_columns if d in data), None)
+
+    if not lat:
+        formatted_allowed_column_name = ", ".join(
+            map(repr, sorted(allowed_lat_columns))
+        )
         raise StreamlitAPIException(
-            'Map data must contain a column named "latitude" or "lat".'
+            f"Map data must contain a latitude column named: {formatted_allowed_column_name}. "
+            f"Existing columns: {formmated_column_names}"
         )
 
-    if "lon" in data:
-        lon = "lon"
-    elif "longitude" in data:
-        lon = "longitude"
-    else:
+    allowed_lon_columns = {"lon", "longitude", "LON", "LONGITUDE"}
+    lon = next((d for d in allowed_lon_columns if d in data), None)
+
+    if not lon:
+        formatted_allowed_column_name = ", ".join(
+            map(repr, sorted(allowed_lon_columns))
+        )
         raise StreamlitAPIException(
-            'Map data must contain a column called "longitude" or "lon".'
+            f"Map data must contain a longitude column named: {formatted_allowed_column_name}. "
+            f"Existing columns: {formmated_column_names}"
         )
 
     if data[lon].isnull().values.any() or data[lat].isnull().values.any():

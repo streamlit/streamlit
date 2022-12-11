@@ -429,7 +429,7 @@ def cache(
         a cache miss.
 
     suppress_st_warning : boolean
-        Suppress warnings about calling Streamlit functions from within
+        Suppress warnings about calling Streamlit commands from within
         the cached function.
 
     hash_funcs : dict or None
@@ -523,9 +523,10 @@ def cache(
 
     @functools.wraps(non_optional_func)
     def wrapped_func(*args, **kwargs):
-        """This function wrapper will only call the underlying function in
-        the case of a cache miss. Cached objects are stored in the cache/
-        directory."""
+        """Wrapper function that only calls the underlying function on a cache miss.
+
+        Cached objects are stored in the cache/ directory.
+        """
 
         if not config.get_option("client.caching"):
             _LOGGER.debug("Purposefully skipping cache")
@@ -727,10 +728,8 @@ class CacheKeyNotFoundError(Exception):
 
 
 class CachedObjectMutationError(ValueError):
-    """This is used internally, but never shown to the user.
-
-    Users see CachedObjectMutationWarning instead.
-    """
+    # This is used internally, but never shown to the user.
+    # Users see CachedObjectMutationWarning instead.
 
     def __init__(self, cached_value, func_or_code):
         self.cached_value = cached_value

@@ -1,7 +1,11 @@
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence, that is.
-frontend/package.json @jroes @anoctopus @tconkling @kmcgrady
-lib/Pipfile @jroes @anoctopus @tconkling @kmcgrady
-lib/setup.py @jroes @anoctopus @tconkling @kmcgrady
+frontend/package.json @vdonato @anoctopus @tconkling @kmcgrady
+lib/Pipfile @vdonato @anoctopus @tconkling @kmcgrady
+lib/setup.py @vdonato @anoctopus @tconkling @kmcgrady
 proto/ @vdonato @tconkling @LukasMasuch
 .github/ @vdonato @mayagbarnes @kmcgrady
+
+# `audit_frontend_dependencies` ensures that the libraries we ship
+# with our frontend code don't violate Snowflake open source policy.
+scripts/audit_frontend_licenses.py @vdonato @kmcgrady @tconkling
