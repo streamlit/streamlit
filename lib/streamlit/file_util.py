@@ -17,6 +17,7 @@ import errno
 import fnmatch
 import io
 import os
+from pathlib import Path
 
 from streamlit import env_util, util
 from streamlit.string_util import is_binary_string
@@ -128,6 +129,13 @@ def get_static_dir():
 def get_app_static_dir():
     """Get the folder where app static files live"""
     return os.path.abspath(APP_STATIC_FOLDER_NAME)
+
+
+def get_app_static_dir_for_server(main_script_path: str):
+    """Get the folder where app static files live"""
+    main_script_path = Path(main_script_path)
+    static_dir = main_script_path.parent / "static"
+    return os.path.abspath(static_dir)
 
 
 def get_assets_dir():

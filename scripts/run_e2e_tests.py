@@ -486,6 +486,24 @@ def run_e2e_tests(
                         ["streamlit", "run", "--ui.hideSidebarNav=false", test_path],
                         show_output=verbose,
                     )
+            elif basename(spec_path) == "staticfiles_app.spec.js":
+                test_name, _ = splitext(basename(spec_path))
+                test_name, _ = splitext(test_name)
+                test_path = join(
+                    ctx.tests_dir, "scripts", "staticfiles_app", "streamlit_app.py"
+                )
+                if os.path.exists(test_path):
+                    run_test(
+                        ctx,
+                        str(spec_path),
+                        [
+                            "streamlit",
+                            "run",
+                            "--server.enableStaticServing=true",
+                            test_path,
+                        ],
+                        show_output=verbose,
+                    )
 
             else:
                 test_name, _ = splitext(basename(spec_path))

@@ -281,14 +281,19 @@ class Server:
                     )
                 ]
             )
-
+        LOGGER.warning("MMMMMM" * 100)
+        LOGGER.warning(file_util.get_app_static_dir_for_server(self.main_script_path))
         if config.get_option("server.enableStaticServing"):
             routes.extend(
                 [
                     (
                         make_url_path_regex(base, "app/static/(.*)"),
                         AppStaticFileHandler,
-                        {"path": file_util.get_app_static_dir()},
+                        {
+                            "path": file_util.get_app_static_dir_for_server(
+                                self.main_script_path
+                            )
+                        },
                     ),
                 ]
             )
