@@ -39,10 +39,4 @@ pkgs.mkShell {
     pkgs.pre-commit
   ];
 
-  shellHook = ''
-    virtualenv --no-setuptools .venv
-    export PATH=$PWD/.venv/bin:$PATH
-    export PIPENV_VENV_IN_PROJECT=1
-    export TMPDIR=/var/tmp
-  '';
 }
