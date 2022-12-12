@@ -60,7 +60,12 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     getCell(data?: DataType): GridCell {
       let cellData
       let displayData
-
+      if (Number.isNaN(data)) {
+        console.log("nan", data)
+      }
+      if (!notNullOrUndefined(data)) {
+        console.log("not null or undefined", data)
+      }
       if (notNullOrUndefined(data)) {
         if (data instanceof Int32Array) {
           // int values need to be extracted this way:
@@ -71,7 +76,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
 
         if (Number.isNaN(cellData)) {
-          return getErrorCell(`Incompatible number value: ${data}`)
+          return getErrorCell(String(data), "Incompatible number value.")
         }
 
         // Apply precision parameter
@@ -101,8 +106,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
             displayData = sprintf(parameters.format, cellData)
           } catch (error) {
             return getErrorCell(
-              `Format value (${parameters.format}) not sprintf compatible.`,
-              `Error: ${error}`
+              String(cellData),
+              `Format value (${parameters.format}) not sprintf compatible. Error: ${error}`
             )
           }
         }
@@ -116,6 +121,13 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         ...cellTemplate,
         data: cellData,
         displayData,
+        // ...(!notNullOrUndefined(cellData) && {
+        //   displayData: "None",
+        //   style: "faded",
+        //   themeOverride: {
+        //     textLight: "#f8f9fb",
+        //   },
+        // }),
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {

@@ -77,14 +77,15 @@ interface ErrorCell extends TextCell {
  * @return a GridCell object that can be used by glide-data-grid.
  */
 export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
+  errorMsg = "⚠️ " + errorMsg
   return {
     kind: GridCellKind.Text,
     readonly: true,
     allowOverlay: true,
-    data: errorMsg + (errorDetails ? `\n${errorDetails}` : ""),
+    data: errorMsg + (errorDetails ? `\n\n${errorDetails}\n` : ""),
     displayData: errorMsg,
     themeOverride: {
-      textDark: "#ff4b4b", // TODO(lukasmasuch): use color from theme?
+      bgCell: "#f8f9fb", // TODO(lukasmasuch): use color from theme?
     },
     isError: true,
   } as ErrorCell

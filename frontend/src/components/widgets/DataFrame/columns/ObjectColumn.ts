@@ -48,8 +48,8 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
         } as TextCell
       } catch (error) {
         return getErrorCell(
-          `Incompatible text value: ${typeof data}`,
-          `Error: ${error}`
+          String(data),
+          `Incompatible text value. Error: ${error}`
         )
       }
     },

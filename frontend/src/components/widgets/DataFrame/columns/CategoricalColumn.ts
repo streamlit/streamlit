@@ -71,7 +71,8 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
 
       if (!cellTemplate.data.allowedValues.includes(cellData)) {
         return getErrorCell(
-          `The value is not part of allowed options: ${cellData}`
+          String(cellData),
+          `The value is not part of allowed options.`
         )
       }
       return {

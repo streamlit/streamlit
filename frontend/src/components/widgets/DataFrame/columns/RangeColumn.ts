@@ -27,7 +27,20 @@ import {
   getEmptyCell,
 } from "./BaseColumn"
 
+interface RangeColumnParams {
+  readonly min: number
+  readonly max: number
+  readonly step: number
+}
+
 function RangeColumn(props: BaseColumnProps): BaseColumn {
+  const parameters = {
+    min: 0,
+    max: 1,
+    step: 0.1,
+    ...(props.columnTypeMetadata || {}),
+  } as RangeColumnParams
+
   const cellTemplate = {
     kind: GridCellKind.Custom,
     allowOverlay: false,
@@ -35,12 +48,12 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
     contentAlign: props.contentAlignment,
     data: {
       kind: "range-cell",
-      min: 0,
-      max: 1,
+      min: parameters.min,
+      max: parameters.max,
       value: 0,
-      step: 0.1,
-      label: `0%`,
-      measureLabel: "100%",
+      step: parameters.step,
+      label: "0",
+      measureLabel: "0.00",
       readonly: true,
     },
   } as RangeCellType
@@ -57,11 +70,8 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
 
       const cellData = Number(data)
 
-      if (Number.isNaN(cellData) || cellData < 0 || cellData > 1) {
-        return getErrorCell(
-          `Incompatible progress value: ${data}`,
-          "The value has to be between 0 and 1."
-        )
+      if (Number.isNaN(cellData)) {
+        return getErrorCell(String(data), "The value is not a number.")
       }
 
       return {
@@ -70,7 +80,8 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
         data: {
           ...cellTemplate.data,
           value: cellData,
-          label: `${Math.round(cellData * 100).toString()}%`,
+          label: String(cellData), //`${Math.round(cellData * 100).toString()}%`,
+          measureLabel: String(cellData),
         },
       } as RangeCellType
     },

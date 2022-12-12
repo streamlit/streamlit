@@ -70,8 +70,8 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
         chartData = data.toArray()
       } else {
         return getErrorCell(
-          `Incompatible chart value: ${data}`,
-          "The provided value is not a number array."
+          String(data),
+          "Incompatible chart value. The provided value is not a number array."
         )
       }
 
@@ -93,8 +93,8 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
 
           if (Number.isNaN(convertedValue)) {
             return getErrorCell(
-              `Incompatible chart value: ${data}`,
-              "All values in the array should be numbers."
+              String(data),
+              "Incompatible chart value. All values in the array should be numbers."
             )
           }
           convertedChartData.push(convertedValue)

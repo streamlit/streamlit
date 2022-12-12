@@ -216,11 +216,8 @@ function useDataLoader(
           updatedColumn = {
             ...updatedColumn,
             themeOverride: {
-              bgCell: transparentize(theme.colors.darkenedBgMix100, 0.95),
-              bgCellMedium: transparentize(
-                theme.colors.darkenedBgMix100,
-                0.95
-              ),
+              bgCell: theme.colors.bgMix,
+              bgCellMedium: theme.colors.bgMix,
             },
           }
         }

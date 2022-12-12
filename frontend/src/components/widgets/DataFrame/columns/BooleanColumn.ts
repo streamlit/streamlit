@@ -58,7 +58,7 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
           } else if (BOOLEAN_FALSE_VALUES.includes(cleanedValue)) {
             cellData = false
           } else {
-            return getErrorCell(`Incompatible boolean value: ${data}`)
+            return getErrorCell(String(data), `Incompatible boolean value.`)
           }
         }
       }
