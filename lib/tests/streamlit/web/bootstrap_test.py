@@ -312,6 +312,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         self.assertIn("Streamlit requires Git 2.7.0 or later, but you have 1.2.3.", out)
 
+    # TODO [Karen] Write test for _maybe_print_static_folder_warning
+
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):
         """Test that bootstrap.load_config_options parses the keys properly and
@@ -340,6 +342,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -347,6 +350,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         mock_load_secrets.assert_called_once()
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap.LOGGER.error")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):

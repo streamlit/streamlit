@@ -157,10 +157,10 @@ def _fix_sys_argv(main_script_path: str, args: List[str]) -> None:
 
 def _on_server_start(server: Server) -> None:
     _maybe_print_old_git_warning(server.main_script_path)
+    _maybe_print_static_folder_warning(server.main_script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
     _print_new_version_message()
-    _print_misconfigured_static_folder_message(server.main_script_path)
 
     # Load secrets.toml if it exists. If the file doesn't exist, this
     # function will return without raising an exception. We catch any parse
@@ -209,7 +209,7 @@ def _print_new_version_message() -> None:
         click.secho(NEW_VERSION_TEXT)
 
 
-def _print_misconfigured_static_folder_message(main_script_path: str) -> None:
+def _maybe_print_static_folder_warning(main_script_path: str) -> None:
     """Prints a warning if the static folder is misconfigured."""
 
     static_folder_path = file_util.get_app_static_dir(main_script_path)
