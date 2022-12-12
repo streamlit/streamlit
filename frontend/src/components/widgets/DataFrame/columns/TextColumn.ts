@@ -19,7 +19,12 @@ import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  ColumnCreator,
+} from "./BaseColumn"
 
 function TextColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -58,4 +63,6 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default TextColumn
+TextColumn.isEditableType = true
+
+export default TextColumn as ColumnCreator

@@ -61,7 +61,10 @@ export interface BaseColumn extends BaseColumnProps {
   getCellValue(cell: GridCell): any | null
 }
 
-export type ColumnCreator = (props: BaseColumnProps) => BaseColumn
+export type ColumnCreator = {
+  (props: BaseColumnProps): BaseColumn
+  readonly isEditableType: boolean
+}
 
 interface ErrorCell extends TextCell {
   readonly isError: true
@@ -84,9 +87,6 @@ export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
     allowOverlay: true,
     data: errorMsg + (errorDetails ? `\n\n${errorDetails}\n` : ""),
     displayData: errorMsg,
-    themeOverride: {
-      bgCell: "#f8f9fb", // TODO(lukasmasuch): use color from theme?
-    },
     isError: true,
   } as ErrorCell
 }

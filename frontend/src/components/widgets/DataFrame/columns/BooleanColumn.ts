@@ -23,7 +23,12 @@ import {
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  ColumnCreator,
+} from "./BaseColumn"
 
 // See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
 const BOOLEAN_TRUE_VALUES = ["true", "t", "yes", "y", "on", "1"]
@@ -74,4 +79,6 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default BooleanColumn
+BooleanColumn.isEditableType = true
+
+export default BooleanColumn as ColumnCreator

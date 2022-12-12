@@ -20,7 +20,12 @@ import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 import { DataType, Quiver } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  ColumnCreator,
+  getErrorCell,
+} from "./BaseColumn"
 
 interface CategoricalColumnParams {
   readonly options: string[]
@@ -93,4 +98,6 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default CategoricalColumn
+CategoricalColumn.isEditableType = true
+
+export default CategoricalColumn as ColumnCreator

@@ -19,7 +19,7 @@ import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps } from "./BaseColumn"
+import { BaseColumn, BaseColumnProps, ColumnCreator } from "./BaseColumn"
 
 function ListColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -76,4 +76,6 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default ListColumn
+ListColumn.isEditableType = false
+
+export default ListColumn as ColumnCreator

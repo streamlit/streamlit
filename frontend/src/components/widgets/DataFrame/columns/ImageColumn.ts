@@ -58,4 +58,6 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
+ImageColumn.isEditableType = false
+
 export default ImageColumn

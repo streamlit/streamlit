@@ -40,8 +40,8 @@ import {
   getErrorCell,
   getTextCell,
   ColumnTypes,
-  ObjectColumn,
   ColumnCreator,
+  isErrorCell,
 } from "../columns"
 
 /**
@@ -151,6 +151,26 @@ type DataLoaderReturn = {
   columns: BaseColumn[]
 } & Pick<DataEditorProps, "getCellContent">
 
+function getColumnType(column: BaseColumnProps): ColumnCreator {
+  // Create a column instance based on the column properties
+  let ColumnType: ColumnCreator | undefined
+  if (notNullOrUndefined(column.customType)) {
+    if (ColumnTypes.has(column.customType)) {
+      ColumnType = ColumnTypes.get(column.customType)
+    } else {
+      logWarning(
+        "Unknown column type configured in column configuration: " +
+          column.customType
+      )
+    }
+  }
+  if (!notNullOrUndefined(ColumnType)) {
+    // Load based on quiver type
+    ColumnType = getColumnTypeFromQuiver(column.quiverType)
+  }
+  return ColumnType
+}
+
 /**
  * A custom hook that handles all data loading capabilities for the interactive data table.
  * This also includes the logic to load and configure columns.
@@ -180,16 +200,18 @@ function useDataLoader(
    * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
    */
   // TODO(lukasmasuch): Does this need to be a callback?
-  const columns = getColumnsFromQuiver(data)
+  const columns: BaseColumn[] = getColumnsFromQuiver(data)
     .map(column => {
       // Apply column configurations
       if (column.isIndex) {
-        return {
+        const updatedColumn = {
           ...column,
           ...applyColumnConfig(column, columnsConfig),
           isEditable: false, // TODO(lukasmasuch): Editing for index columns is currently not supported.
           isStretched: stretchColumns,
         } as BaseColumnProps
+        const ColumnType = getColumnType(updatedColumn)
+        return ColumnType(updatedColumn)
       } else {
         let updatedColumn = {
           ...column,
@@ -197,10 +219,14 @@ function useDataLoader(
           isStretched: stretchColumns,
         } as BaseColumnProps
 
-        // Make sure editing is deactivated if the column is read-only or disabled:
+        const ColumnType = getColumnType(updatedColumn)
+
+        // Make sure editing is deactivated if the column is read-only, disabled,
+        // or a not editable type.
         if (
           element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
-          disabled
+          disabled ||
+          ColumnType.isEditableType === false
         ) {
           updatedColumn = {
             ...updatedColumn,
@@ -208,47 +234,12 @@ function useDataLoader(
           }
         }
 
-        // Add a background for non-editable cells, if the overall table is editable:
-        if (
-          element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
-          !updatedColumn.isEditable
-        ) {
-          updatedColumn = {
-            ...updatedColumn,
-            themeOverride: {
-              bgCell: theme.colors.bgMix,
-              bgCellMedium: theme.colors.bgMix,
-            },
-          }
-        }
-
-        return updatedColumn
+        return ColumnType(updatedColumn)
       }
     })
     .filter(column => {
       // Filter out all columns that are hidden
       return !column.isHidden
-    })
-    .map(column => {
-      // Create a column instance based on the column properties
-      let ColumnType: ColumnCreator | undefined
-      if (notNullOrUndefined(column.customType)) {
-        if (ColumnTypes.has(column.customType)) {
-          ColumnType = ColumnTypes.get(column.customType)
-        } else {
-          logWarning(
-            "Unknown column type configured in column configuration: " +
-              column.customType
-          )
-        }
-      }
-      if (!notNullOrUndefined(ColumnType)) {
-        // Load based on quiver type
-        ColumnType = getColumnTypeFromQuiver(column.quiverType)
-      }
-
-      // Load column instance
-      return ColumnType(column)
     })
 
   const getCellContent = React.useCallback(
@@ -276,35 +267,54 @@ function useDataLoader(
       }
       const column = columns[col]
 
-      const originalCol = column.indexNumber
-      const originalRow = editingState.current.getOriginalRowIndex(row)
+      function getCell(): GridCell {
+        const originalCol = column.indexNumber
+        const originalRow = editingState.current.getOriginalRowIndex(row)
 
-      // Use editing state if editable or if it is an appended row
-      if (column.isEditable || editingState.current.isAddedRow(originalRow)) {
-        const editedCell = editingState.current.getCell(
-          originalCol,
-          originalRow
-        )
-        if (editedCell !== undefined) {
-          return editedCell
+        // Use editing state if editable or if it is an appended row
+        if (
+          column.isEditable ||
+          editingState.current.isAddedRow(originalRow)
+        ) {
+          const editedCell = editingState.current.getCell(
+            originalCol,
+            originalRow
+          )
+          if (editedCell !== undefined) {
+            return editedCell
+          }
+        }
+
+        try {
+          // Quiver has the header in first row
+          const quiverCell = data.getCell(originalRow + 1, originalCol)
+          return getCellFromQuiver(column, quiverCell, data.cssStyles)
+        } catch (error) {
+          logError(error)
+          return getErrorCell(
+            "Error during cell creation.",
+            `This should never happen. Please report this bug. \nError: ${error}`
+          )
         }
       }
 
-      // const originalCol = column.indexNumber
-      // const originalRow = row
-      //getOriginalIndex(row)
+      const cell = getCell()
 
-      try {
-        // Quiver has the header in first row
-        const quiverCell = data.getCell(originalRow + 1, originalCol)
-        return getCellFromQuiver(column, quiverCell, data.cssStyles)
-      } catch (error) {
-        logError(error)
-        return getErrorCell(
-          "Error during cell creation.",
-          `This should never happen. Please report this bug. \nError: ${error}`
-        )
+      // Add a background for non-editable or error cells:
+      if (
+        isErrorCell(cell) ||
+        (element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+          !column.isEditable)
+      ) {
+        return {
+          ...cell,
+          themeOverride: {
+            bgCell: theme.colors.bgMix,
+            bgCellMedium: theme.colors.bgMix,
+          },
+        }
       }
+      return cell
     },
     [columns, numRows, data, editingState]
   )

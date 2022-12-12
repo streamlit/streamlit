@@ -20,7 +20,12 @@ import { sprintf } from "sprintf-js"
 import { DataType, Quiver } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  ColumnCreator,
+} from "./BaseColumn"
 
 interface NumberColumnParams {
   readonly precision?: number
@@ -58,15 +63,16 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     kind: "number",
     sortMode: "smart",
     getCell(data?: DataType): GridCell {
-      let cellData
-      let displayData
-      if (Number.isNaN(data)) {
-        console.log("nan", data)
-      }
-      if (!notNullOrUndefined(data)) {
-        console.log("not null or undefined", data)
-      }
-      if (notNullOrUndefined(data)) {
+      let cellData: number | null = null
+      let displayData: string = ""
+
+      if (
+        !notNullOrUndefined(data) ||
+        (typeof data === "string" && data.trim().length === 0)
+      ) {
+        // Set to value to null if empty string or null/undefined
+        cellData = null
+      } else {
         if (data instanceof Int32Array) {
           // int values need to be extracted this way:
           // eslint-disable-next-line prefer-destructuring
@@ -113,21 +119,10 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
       }
 
-      if (!notNullOrUndefined(displayData)) {
-        displayData = notNullOrUndefined(cellData) ? cellData.toString() : ""
-      }
-
       return {
         ...cellTemplate,
         data: cellData,
-        displayData,
-        // ...(!notNullOrUndefined(cellData) && {
-        //   displayData: "None",
-        //   style: "faded",
-        //   themeOverride: {
-        //     textLight: "#f8f9fb",
-        //   },
-        // }),
+        displayData: notNullOrUndefined(cellData) ? cellData.toString() : "",
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {
@@ -136,4 +131,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default NumberColumn
+NumberColumn.isEditableType = true
+
+export default NumberColumn as ColumnCreator

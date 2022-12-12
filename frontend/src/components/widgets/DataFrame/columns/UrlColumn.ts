@@ -19,7 +19,7 @@ import { GridCell, UriCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps } from "./BaseColumn"
+import { BaseColumn, BaseColumnProps, ColumnCreator } from "./BaseColumn"
 
 function UrlColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -38,7 +38,7 @@ function UrlColumn(props: BaseColumnProps): BaseColumn {
     getCell(data?: DataType): GridCell {
       return {
         ...cellTemplate,
-        data: notNullOrUndefined(data) ? String(data) : "",
+        data: notNullOrUndefined(data) ? String(data) : null,
       } as UriCell
     },
     getCellValue(cell: UriCell): string | null {
@@ -47,4 +47,6 @@ function UrlColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default UrlColumn
+UrlColumn.isEditableType = true
+
+export default UrlColumn as ColumnCreator

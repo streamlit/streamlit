@@ -131,7 +131,7 @@ export function getColumnTypeFromQuiver(
 
   typeName = typeName.toLowerCase().trim()
   // Match based on quiver types
-  if (["unicode"].includes(typeName)) {
+  if (["unicode", "empty"].includes(typeName)) {
     return TextColumn
   } else if (["date", "time", "datetime", "datetimetz"].includes(typeName)) {
     return ObjectColumn
@@ -160,7 +160,7 @@ export function getColumnTypeFromQuiver(
     return CategoricalColumn
   } else if (typeName.startsWith("list")) {
     return ListColumn
-  } else if (["decimal", "bytes", "empty"].includes(typeName)) {
+  } else if (["decimal", "bytes"].includes(typeName)) {
     return ObjectColumn
   }
 

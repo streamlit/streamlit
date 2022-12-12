@@ -25,6 +25,7 @@ import {
   BaseColumnProps,
   getErrorCell,
   getEmptyCell,
+  ColumnCreator,
 } from "./BaseColumn"
 
 interface RangeColumnParams {
@@ -91,4 +92,6 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default RangeColumn
+RangeColumn.isEditableType = false
+
+export default RangeColumn as ColumnCreator

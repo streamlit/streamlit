@@ -26,6 +26,7 @@ import {
   BaseColumnProps,
   getErrorCell,
   getEmptyCell,
+  ColumnCreator,
 } from "./BaseColumn"
 
 interface ChartColumnParams {
@@ -128,4 +129,6 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default ChartColumn
+ChartColumn.isEditableType = false
+
+export default ChartColumn as ColumnCreator
