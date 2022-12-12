@@ -106,7 +106,7 @@ class AppStaticFileHandler(AssetsFileHandler):
         if os.path.commonprefix([full_path, root]) != root:
             # Don't allow misbehaving clients to break out of the static files directory
             _LOGGER.warning(
-                "Serving files outside of the static " "directory is not supported"
+                "Serving files outside of the static directory is not supported"
             )
             raise tornado.web.HTTPError(404)
 

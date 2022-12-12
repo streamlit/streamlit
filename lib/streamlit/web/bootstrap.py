@@ -224,7 +224,7 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
             fg="yellow",
         )
 
-        # TODO[KAREN] Raise warning when static folder size is larger than 100MB
+        # TODO [KAREN] Raise warning when static folder size is larger than 100MB
 
 
 def _print_url(is_running_hello: bool) -> None:
