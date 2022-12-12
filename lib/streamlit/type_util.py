@@ -99,6 +99,13 @@ ValueFieldName: TypeAlias = Literal[
     "trigger_value",
 ]
 
+TextAlignOption: TypeAlias = Literal[
+    "left",
+    "center",
+    "right",
+    "justify"
+]
+
 V_co = TypeVar(
     "V_co",
     covariant=True,  # https://peps.python.org/pep-0484/#covariance-and-contravariance
