@@ -21,7 +21,16 @@ from typing import Any, Dict, List, Optional
 
 import click
 
-from streamlit import config, env_util, net_util, secrets, url_util, util, version
+from streamlit import (
+    config,
+    env_util,
+    file_util,
+    net_util,
+    secrets,
+    url_util,
+    util,
+    version,
+)
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
@@ -151,6 +160,7 @@ def _on_server_start(server: Server) -> None:
     _print_url(server.is_running_hello)
     report_watchdog_availability()
     _print_new_version_message()
+    _print_misconfigured_static_folder_message(server.main_script_path)
 
     # Load secrets.toml if it exists. If the file doesn't exist, this
     # function will return without raising an exception. We catch any parse
@@ -197,6 +207,24 @@ def _fix_pydeck_mapbox_api_warning() -> None:
 def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
         click.secho(NEW_VERSION_TEXT)
+
+
+def _print_misconfigured_static_folder_message(main_script_path: str) -> None:
+    """Prints a warning if the static folder is misconfigured."""
+
+    static_folder_path = file_util.get_app_static_dir(main_script_path)
+
+    if config.get_option("server.enableStaticServing") and not os.path.isdir(
+        static_folder_path
+    ):
+        click.secho(
+            f"WARNING: Static file serving enabled, but no static folder found "
+            f"at {static_folder_path}. To disable static file serving, "
+            f"set server.enableStaticServing to false.",
+            fg="yellow",
+        )
+
+        # TODO[KAREN] Raise warning when static folder size is larger than 100MB
 
 
 def _print_url(is_running_hello: bool) -> None:

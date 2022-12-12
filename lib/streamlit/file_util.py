@@ -126,12 +126,7 @@ def get_static_dir():
     return os.path.normpath(os.path.join(dirname, "static"))
 
 
-def get_app_static_dir():
-    """Get the folder where app static files live"""
-    return os.path.abspath(APP_STATIC_FOLDER_NAME)
-
-
-def get_app_static_dir_for_server(main_script_path: str):
+def get_app_static_dir(main_script_path: str):
     """Get the folder where app static files live"""
     main_script_path = Path(main_script_path)
     static_dir = main_script_path.parent / "static"
