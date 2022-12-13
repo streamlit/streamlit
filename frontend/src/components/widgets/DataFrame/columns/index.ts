@@ -17,9 +17,9 @@ import RangeColumn from '../columns/RangeColumn';
  * limitations under the License.
  */
 
-export * from "./BaseColumn"
+export * from "./utils"
 
-import { ColumnCreator } from "./BaseColumn"
+import { ColumnCreator } from "./utils"
 import ObjectColumn from "./ObjectColumn"
 import TextColumn from "./TextColumn"
 import BooleanColumn from "./BooleanColumn"

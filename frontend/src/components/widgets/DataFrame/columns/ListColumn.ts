@@ -19,7 +19,13 @@ import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, ColumnCreator } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  ColumnCreator,
+  isMissingValueCell,
+  toSafeArray,
+} from "./utils"
 
 function ListColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -36,41 +42,17 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     isEditable: false, // List column is always readonly
     getCell(data?: DataType): GridCell {
-      let cellData = []
-      //TODO(lukasmasuch): Only support arrays since we don't offer editing right now?
-      // TODO(lukasmasuch): Use Array.from()
-      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
-
-      if (notNullOrUndefined(data)) {
-        if (typeof data === "string") {
-          // TODO: Should we really do this?
-          //TODO(lukasmasuch): Catch error?
-          cellData = JSON.parse(data)
-        } else {
-          cellData = JSON.parse(
-            JSON.stringify(data, (_key, value) =>
-              typeof value === "bigint" ? Number(value) : value
-            )
-          )
-        }
-
-        if (!Array.isArray(cellData)) {
-          // Transform into list
-          cellData = [String(cellData)]
-          // TODO: Or return error?
-          // return getErrorCell(
-          //   `Incompatible list value: ${quiverCell.content}`,
-          //   "The provided value is not an array."
-          // )
-        }
-      }
-
       return {
         ...cellTemplate,
-        data: cellData,
+        data: toSafeArray(data),
+        isMissingValue: !notNullOrUndefined(data),
       } as BubbleCell
     },
     getCellValue(cell: BubbleCell): string[] | null {
+      if (isMissingValueCell(cell)) {
+        return null
+      }
+
       return cell.data === undefined ? null : cell.data
     },
   }

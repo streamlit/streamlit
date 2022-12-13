@@ -24,7 +24,9 @@ import {
   BaseColumnProps,
   getErrorCell,
   ColumnCreator,
-} from "./BaseColumn"
+  isMissingValueCell,
+  toSafeString,
+} from "./utils"
 
 function ObjectColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -43,21 +45,25 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
     isEditable: false, // Object columns are read-only.
     getCell(data?: DataType): GridCell {
       try {
-        const cellData = notNullOrUndefined(data) ? data.toString() : null
+        const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
         const displayData = notNullOrUndefined(cellData) ? cellData : ""
         return {
           ...cellTemplate,
           data: cellData,
           displayData: displayData,
+          isMissingValue: !notNullOrUndefined(data),
         } as TextCell
       } catch (error) {
         return getErrorCell(
-          String(data),
+          toSafeString(data),
           `Incompatible text value. Error: ${error}`
         )
       }
     },
     getCellValue(cell: TextCell): string | null {
+      if (isMissingValueCell(cell)) {
+        return null
+      }
       return cell.data === undefined ? null : cell.data
     },
   }

@@ -25,27 +25,27 @@ import {
   BaseColumnProps,
   ColumnCreator,
   getErrorCell,
-} from "./BaseColumn"
+  toSafeString,
+  isMissingValueCell,
+  mergeColumnParameters,
+} from "./utils"
 
 interface CategoricalColumnParams {
   readonly options: string[]
 }
 
 function CategoricalColumn(props: BaseColumnProps): BaseColumn {
-  // TODO: this needs to happen somewhere else (e.g. when selecting the column type):
-  // if (this.isIndex) {
-  //   // Categorical column type is currently not supported for index columns:
-  //   return getCell(columnConfig, data, ColumnType.Object)
-  // }
-
-  // TODO(lukasmasuch): use merge? use validation?
-  const parameters = {
-    options:
-      Quiver.getTypeName(props.quiverType) === "boolean"
-        ? ["true", "false"]
-        : [],
-    ...(props.columnTypeMetadata || {}),
-  } as CategoricalColumnParams
+  const parameters = mergeColumnParameters(
+    // Default parameters:
+    {
+      options:
+        Quiver.getTypeName(props.quiverType) === "boolean"
+          ? ["true", "false"]
+          : [],
+    },
+    // User parameters:
+    props.columnTypeMetadata
+  ) as CategoricalColumnParams
 
   const cellTemplate = {
     kind: GridCellKind.Custom,
@@ -68,20 +68,21 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
     kind: "categorical",
     sortMode: "default",
     getCell(data?: DataType): GridCell {
-      // Empty string refers to an empty cell
+      // Empty string refers to a missing value
       let cellData = ""
       if (notNullOrUndefined(data)) {
-        cellData = data.toString()
+        cellData = toSafeString(data)
       }
 
       if (!cellTemplate.data.allowedValues.includes(cellData)) {
         return getErrorCell(
-          String(cellData),
+          toSafeString(cellData),
           `The value is not part of allowed options.`
         )
       }
       return {
         ...cellTemplate,
+        isMissingValue: cellData === "",
         copyData: cellData,
         data: {
           ...cellTemplate.data,
@@ -90,6 +91,10 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
       } as DropdownCellType
     },
     getCellValue(cell: DropdownCellType): string | null {
+      if (isMissingValueCell(cell)) {
+        return null
+      }
+
       if (cell.data?.value === undefined || cell.data?.value === "") {
         return null
       }

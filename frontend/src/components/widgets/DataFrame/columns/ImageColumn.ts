@@ -19,7 +19,12 @@ import { GridCell, GridCellKind, ImageCell } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  isMissingValueCell,
+  toSafeString,
+} from "./utils"
 
 function ImageColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -28,7 +33,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     displayData: [],
     allowAdd: false,
     allowOverlay: true,
-    contentAlign: props.contentAlignment,
+    contentAlign: props.contentAlignment || "center",
     style: props.isIndex ? "faded" : "normal",
   } as ImageCell
 
@@ -38,16 +43,21 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     isEditable: false, // Image columns are read-only
     getCell(data?: DataType): GridCell {
-      const imageUrls = notNullOrUndefined(data) ? [String(data)] : []
+      const imageUrls = notNullOrUndefined(data) ? [toSafeString(data)] : []
 
       return {
         ...cellTemplate,
         data: imageUrls,
+        isMissingValue: !notNullOrUndefined(data),
         displayData: imageUrls,
       } as ImageCell
     },
     getCellValue(cell: ImageCell): string | null {
-      if (cell.data === undefined || cell.data.length === 0) {
+      if (
+        isMissingValueCell(cell) ||
+        cell.data === undefined ||
+        cell.data.length === 0
+      ) {
         return null
       }
 

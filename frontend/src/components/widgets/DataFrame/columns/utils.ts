@@ -22,8 +22,11 @@ import {
   LoadingCell,
   GridColumn,
 } from "@glideapps/glide-data-grid"
+import { toString, merge, isArray } from "lodash"
+import numbro from "numbro"
 
 import { DataType, Type as QuiverType } from "src/lib/Quiver"
+import { notNullOrUndefined } from "src/lib/utils"
 
 export interface BaseColumnProps {
   // The id of the column.
@@ -91,6 +94,21 @@ export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
   } as ErrorCell
 }
 
+export function isErrorCell(cell: GridCell): cell is ErrorCell {
+  return cell.hasOwnProperty("isError") && (cell as ErrorCell).isError
+}
+
+interface MissingValueCell extends TextCell {
+  readonly isMissingValue: true
+}
+
+export function isMissingValueCell(cell: GridCell): cell is MissingValueCell {
+  return (
+    cell.hasOwnProperty("isMissingValue") &&
+    (cell as MissingValueCell).isMissingValue
+  )
+}
+
 /**
  * Returns an empty cell.
  */
@@ -121,10 +139,6 @@ export function getTextCell(readonly: boolean, faded: boolean): TextCell {
   } as TextCell
 }
 
-export function isErrorCell(cell: GridCell): cell is ErrorCell {
-  return cell.hasOwnProperty("isError")
-}
-
 export function toGlideColumn(column: BaseColumn): GridColumn {
   return {
     id: column.id,
@@ -138,4 +152,111 @@ export function toGlideColumn(column: BaseColumn): GridColumn {
       width: column.width,
     }),
   } as GridColumn
+}
+
+export function toSafeString(data: any): string {
+  try {
+    try {
+      return toString(data)
+    } catch (error) {
+      return JSON.stringify(data, (_key, value) =>
+        typeof value === "bigint" ? Number(value) : value
+      )
+    }
+  } catch (error) {
+    return `[${typeof data}]`
+  }
+}
+
+export function toSafeArray(data: any): any[] {
+  if (!notNullOrUndefined(data)) {
+    return []
+  }
+
+  if (typeof data === "string") {
+    // Try to parse string to an array
+    if (data.trim().startsWith("[") && data.trim().endsWith("]")) {
+      // Support for JSON arrays: ["foo", 1, null, "test"]
+      try {
+        return JSON.parse(data)
+      } catch (error) {
+        return [data]
+      }
+    } else {
+      // Support for comma-separated values: "foo,1,,test"
+      return data.split(",")
+    }
+  }
+
+  try {
+    const parsedData = JSON.parse(
+      JSON.stringify(data, (_key, value) =>
+        typeof value === "bigint" ? Number(value) : value
+      )
+    )
+    if (!isArray(parsedData)) {
+      return [toSafeString(parsedData)]
+    }
+
+    return parsedData.map((value: any) =>
+      ["string", "number", "boolean", "null"].includes(typeof value)
+        ? value
+        : toSafeString(value)
+    )
+  } catch (error) {
+    return [toSafeString(data)]
+  }
+}
+
+export function mergeColumnParameters(
+  defaultParams: Record<string, any> | undefined | null,
+  userParams: Record<string, any> | undefined | null
+): Record<string, any> {
+  if (!notNullOrUndefined(defaultParams)) {
+    return userParams || {}
+  }
+
+  if (!notNullOrUndefined(userParams)) {
+    return defaultParams || {}
+  }
+
+  return merge(defaultParams, userParams)
+}
+
+export function toSafeNumber(data: any): number | null {
+  if (!notNullOrUndefined(data)) {
+    return null
+  }
+
+  if (typeof data === "string") {
+    if (data.trim().length === 0) {
+      // Empty string should return null
+      return null
+    }
+
+    try {
+      // Try to convert string to number via numbro:
+      // https://numbrojs.com/old-format.html#unformat
+      return numbro.unformat(data.trim())
+    } catch (error) {
+      return Number(data)
+    }
+  } else if (data instanceof Int32Array) {
+    // int values need to be extracted this way:
+    // eslint-disable-next-line prefer-destructuring
+    return Number(data[0])
+  }
+
+  return Number(data)
+}
+
+export function formatNumber(value: number, maxPrecision: number = 4): string {
+  if (Number.isFinite(value)) {
+    if (maxPrecision === 0) {
+      // Numbro is unable to format the numb with 0 decimals.
+      value = Math.round(value)
+    }
+    return numbro(value).format(`0,0.[${"0".repeat(maxPrecision)}]`)
+  }
+  return ""
 }

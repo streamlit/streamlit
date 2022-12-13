@@ -28,7 +28,9 @@ import {
   BaseColumnProps,
   getErrorCell,
   ColumnCreator,
-} from "./BaseColumn"
+  toSafeString,
+  isMissingValueCell,
+} from "./utils"
 
 // See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
 const BOOLEAN_TRUE_VALUES = ["true", "t", "yes", "y", "on", "1"]
@@ -63,17 +65,26 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
           } else if (BOOLEAN_FALSE_VALUES.includes(cleanedValue)) {
             cellData = false
           } else {
-            return getErrorCell(String(data), `Incompatible boolean value.`)
+            return getErrorCell(
+              toSafeString(data),
+              `Incompatible boolean value.`
+            )
           }
         }
       }
 
+      // We are not setting isMissingValue here because the checkbox column
+      // does not work with the missing cell rendering.
       return {
         ...cellTemplate,
         data: cellData,
       } as BooleanCell
     },
     getCellValue(cell: BooleanCell): boolean | null {
+      if (isMissingValueCell(cell)) {
+        return null
+      }
+
       return cell.data === undefined ? null : cell.data
     },
   }

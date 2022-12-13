@@ -26,7 +26,12 @@ import {
   getErrorCell,
   getEmptyCell,
   ColumnCreator,
-} from "./BaseColumn"
+  toSafeString,
+  isMissingValueCell,
+  mergeColumnParameters,
+  formatNumber,
+  toSafeNumber,
+} from "./utils"
 
 interface RangeColumnParams {
   readonly min: number
@@ -35,12 +40,16 @@ interface RangeColumnParams {
 }
 
 function RangeColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = {
-    min: 0,
-    max: 1,
-    step: 0.1,
-    ...(props.columnTypeMetadata || {}),
-  } as RangeColumnParams
+  const parameters = mergeColumnParameters(
+    // Default parameters:
+    {
+      min: 0,
+      max: 1,
+      step: 0.01,
+    },
+    // User parameters:
+    props.columnTypeMetadata
+  ) as RangeColumnParams
 
   const cellTemplate = {
     kind: GridCellKind.Custom,
@@ -51,8 +60,8 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
       kind: "range-cell",
       min: parameters.min,
       max: parameters.max,
-      value: 0,
       step: parameters.step,
+      value: 0,
       label: "0",
       measureLabel: "0.00",
       readonly: true,
@@ -69,24 +78,34 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
         return getEmptyCell()
       }
 
-      const cellData = Number(data)
+      const cellData = toSafeNumber(data)
 
-      if (Number.isNaN(cellData)) {
-        return getErrorCell(String(data), "The value is not a number.")
+      if (Number.isNaN(cellData) || !notNullOrUndefined(cellData)) {
+        return getErrorCell(toSafeString(data), "The value is not a number.")
       }
+
+      // TODO(lukasmasuch): count decimals of step and use it for formatting
+      // so that all labels have the same length
+      const displayValue = formatNumber(
+        Math.ceil(cellData / parameters.step) * parameters.step
+      )
 
       return {
         ...cellTemplate,
+        isMissingValue: !notNullOrUndefined(data),
         copyData: String(data),
         data: {
           ...cellTemplate.data,
           value: cellData,
-          label: String(cellData), //`${Math.round(cellData * 100).toString()}%`,
-          measureLabel: String(cellData),
+          label: displayValue,
+          measureLabel: displayValue,
         },
       } as RangeCellType
     },
     getCellValue(cell: RangeCellType): number | null {
+      if (isMissingValueCell(cell)) {
+        return null
+      }
       return cell.data?.value === undefined ? null : cell.data?.value
     },
   }
