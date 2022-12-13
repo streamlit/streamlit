@@ -269,16 +269,19 @@ export function getCellFromQuiver(
 ): GridCell {
   let cellTemplate
   if (column.kind === "object") {
+    // TODO(lukasmasuch): Migrate all formatting logic into this component.
     // Always use display value from quiver for object types
     // these are special types that the dataframe only support in read-only mode.
     cellTemplate = column.getCell(
-      processDisplayData(
-        Quiver.format(
-          quiverCell.content,
-          quiverCell.contentType,
-          quiverCell.field
-        )
-      )
+      notNullOrUndefined(quiverCell.content)
+        ? processDisplayData(
+            Quiver.format(
+              quiverCell.content,
+              quiverCell.contentType,
+              quiverCell.field
+            )
+          )
+        : null
     )
   } else {
     cellTemplate = column.getCell(quiverCell.content)
