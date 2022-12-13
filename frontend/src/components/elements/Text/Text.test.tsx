@@ -34,6 +34,6 @@ describe("Text element", () => {
     const wrap = shallow(<Text {...props} />)
     expect(wrap).toBeDefined()
     expect(wrap.text()).toBe("some plain text")
-    expect(wrap.prop("style")).toEqual({"textAlign": "left", "width": 100});
+    expect(wrap.prop("style")).toEqual({ textAlign: "left", width: 100 })
   })
 })
