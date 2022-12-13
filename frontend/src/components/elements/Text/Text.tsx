@@ -27,7 +27,7 @@ export interface TextProps {
  * Functional element representing preformatted (plain) text.
  */
 export default function Text({ width, element }: TextProps): ReactElement {
-  const styleProp = { width }
+  const styleProp = { width, textAlign: element.align } as React.CSSProperties
 
   return (
     <StyledText data-testid="stText" style={styleProp}>

@@ -154,3 +154,6 @@ def calc_md5(s: str) -> str:
     h = hashlib.new("md5")
     h.update(s.encode("utf-8"))
     return h.hexdigest()
+
+def validate_align_option(option: str) -> str:
+    return option if option in ["left", "center", "right", "justify"] else "left"

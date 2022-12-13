@@ -22,6 +22,7 @@ import Text, { TextProps } from "./Text"
 const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
   element: TextProto.create({
     body: "some plain text",
+    align: "left",
     ...elementProps,
   }),
   width: 100,
@@ -33,5 +34,6 @@ describe("Text element", () => {
     const wrap = shallow(<Text {...props} />)
     expect(wrap).toBeDefined()
     expect(wrap.text()).toBe("some plain text")
+    expect(wrap.prop("style")).toEqual({"textAlign": "left", "width": 100});
   })
 })
