@@ -22,7 +22,6 @@ import {
   CompactSelection,
   GridMouseEventArgs,
   drawTextCell,
-  GridCellKind,
   DrawCustomCellCallback,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
@@ -44,14 +43,13 @@ import {
   useColumnSizer,
   useColumnSort,
 } from "./hooks"
-import { BaseColumn, isErrorCell, toGlideColumn } from "./columns"
+import { BaseColumn, toGlideColumn, isMissingValueCell } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
-import { notNullOrUndefined } from "src/lib/utils"
 
 // Min column width used for manual and automatic resizing
-const MIN_COLUMN_WIDTH = 45
+const MIN_COLUMN_WIDTH = 50
 // Max column width used for manual resizing
 const MAX_COLUMN_WIDTH = 1000
 // Max column width used for automatic column sizing
@@ -74,29 +72,23 @@ export interface DataFrameProps {
 
 const drawMissingCells: DrawCustomCellCallback = args => {
   const { cell, theme } = args
-  if (
-    cell.kind === GridCellKind.Text ||
-    cell.kind === GridCellKind.Number ||
-    cell.kind === GridCellKind.Uri
-  ) {
-    if (!notNullOrUndefined(cell.data)) {
-      drawTextCell(
-        {
-          ...args,
-          theme: {
-            ...theme,
-            textDark: theme.textLight,
-            textMedium: theme.textLight,
-          },
-          // @ts-ignore
-          spriteManager: {},
-          hyperWrapping: false,
+  if (isMissingValueCell(cell)) {
+    drawTextCell(
+      {
+        ...args,
+        theme: {
+          ...theme,
+          textDark: theme.textLight,
+          textMedium: theme.textLight,
         },
-        NULL_VALUE_TOKEN,
-        cell.contentAlign
-      )
-      return true
-    }
+        // @ts-ignore
+        spriteManager: {},
+        hyperWrapping: false,
+      },
+      NULL_VALUE_TOKEN,
+      cell.contentAlign
+    )
+    return true
   }
 
   return false
