@@ -31,9 +31,19 @@ export default function Markdown({
   element,
 }: MarkdownProps): ReactElement {
   const styleProp = { width }
+  const textStypeProp = element.isCaption
+    ? ({
+        textAlign: element.align,
+      } as React.CSSProperties)
+    : ({
+        textAlign: element.align,
+        listStylePosition: "inside",
+      } as React.CSSProperties)
+
   return (
     <div className="stMarkdown" style={styleProp}>
       <StreamlitMarkdown
+        style={textStypeProp}
         isCaption={element.isCaption}
         source={element.body}
         allowHTML={element.allowHtml}

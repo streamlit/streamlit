@@ -23,4 +23,6 @@ message Markdown {
 
   bool allow_html = 2;
   bool is_caption = 3;
+
+  string align = 4;
 }

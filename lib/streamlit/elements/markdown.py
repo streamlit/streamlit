@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING, Optional, Union, cast
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
-from streamlit.type_util import SupportsStr, is_sympy_expession
+from streamlit.type_util import SupportsStr, TextAlignOption, is_sympy_expession
+from streamlit.util import validate_align_option
 
 if TYPE_CHECKING:
     import sympy
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 class MarkdownMixin:
     @gather_metrics("markdown")
     def markdown(
-        self, body: SupportsStr, unsafe_allow_html: bool = False
+        self, body: SupportsStr, align: "TextAlignOption" = "left", unsafe_allow_html: bool = False
     ) -> "DeltaGenerator":
         """Display string formatted as Markdown.
 
@@ -47,6 +48,9 @@ class MarkdownMixin:
             * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
+
+        align : {'left', 'center', 'right', 'justify'}, optional, default="left"
+            The horizontal alignment option inside a block element. The default option is selected if the provided one is not on a list.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -68,6 +72,8 @@ class MarkdownMixin:
 
         markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
+
+        markdown_proto.align = validate_align_option(align)
 
         return self.dg._enqueue("markdown", markdown_proto)
 
@@ -106,7 +112,7 @@ class MarkdownMixin:
 
     @gather_metrics("caption")
     def caption(
-        self, body: SupportsStr, unsafe_allow_html: bool = False
+        self, body: SupportsStr, align: "TextAlignOption" = "left", unsafe_allow_html: bool = False
     ) -> "DeltaGenerator":
         """Display text in small font.
 
@@ -117,6 +123,9 @@ class MarkdownMixin:
         ----------
         body : str
             The text to display.
+
+        align : {'left', 'center', 'right', 'justify'}, optional, default="left"
+            The horizontal alignment option inside a block element. The default option is selected if the provided one is not on a list.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in strings will be escaped and
@@ -138,6 +147,7 @@ class MarkdownMixin:
         caption_proto.body = clean_text(body)
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.is_caption = True
+        caption_proto.align = validate_align_option(align)
         return self.dg._enqueue("markdown", caption_proto)
 
     @gather_metrics("latex")
