@@ -22,4 +22,5 @@ message Heading {
 
     string anchor = 2;
     string body = 3;
+    string align = 4;
 }

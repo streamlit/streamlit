@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING, Optional, cast
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
-from streamlit.type_util import SupportsStr
+from streamlit.type_util import SupportsStr, TextAlignOption
+from streamlit.util import validate_align_option
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 class HeadingMixin:
     @gather_metrics("header")
     def header(
-        self, body: SupportsStr, anchor: Optional[str] = None
+        self, body: SupportsStr, align: "TextAlignOption" = "left", anchor: Optional[str] = None
     ) -> "DeltaGenerator":
         """Display text in header formatting.
 
@@ -34,6 +35,9 @@ class HeadingMixin:
         ----------
         body : str
             The text to display.
+
+        align : {'left', 'center', 'right', 'justify'}, optional, default="left"
+            The horizontal alignment option inside a block element. The default option is selected if the provided one is not on a list.
 
         anchor : str
             The anchor name of the header that can be accessed with #anchor
@@ -48,12 +52,13 @@ class HeadingMixin:
         if anchor is not None:
             header_proto.anchor = anchor
         header_proto.body = clean_text(body)
+        header_proto.align = validate_align_option(align)
         header_proto.tag = "h2"
         return self.dg._enqueue("heading", header_proto)
 
     @gather_metrics("subheader")
     def subheader(
-        self, body: SupportsStr, anchor: Optional[str] = None
+        self, body: SupportsStr, align: "TextAlignOption" = "left", anchor: Optional[str] = None
     ) -> "DeltaGenerator":
         """Display text in subheader formatting.
 
@@ -61,6 +66,9 @@ class HeadingMixin:
         ----------
         body : str
             The text to display.
+
+        align : {'left', 'center', 'right', 'justify'}, optional, default="left"
+            The horizontal alignment option inside a block element. The default option is selected if the provided one is not on a list.
 
         anchor : str
             The anchor name of the header that can be accessed with #anchor
@@ -75,13 +83,14 @@ class HeadingMixin:
         if anchor is not None:
             subheader_proto.anchor = anchor
         subheader_proto.body = clean_text(body)
+        subheader_proto.align = validate_align_option(align)
         subheader_proto.tag = "h3"
 
         return self.dg._enqueue("heading", subheader_proto)
 
     @gather_metrics("title")
     def title(
-        self, body: SupportsStr, anchor: Optional[str] = None
+        self, body: SupportsStr, align: "TextAlignOption" = "left", anchor: Optional[str] = None
     ) -> "DeltaGenerator":
         """Display text in title formatting.
 
@@ -92,6 +101,9 @@ class HeadingMixin:
         ----------
         body : str
             The text to display.
+
+        align : {'left', 'center', 'right', 'justify'}, optional, default="left"
+            The horizontal alignment option inside a block element. The default option is selected if the provided one is not on a list.
 
         anchor : str
             The anchor name of the header that can be accessed with #anchor
@@ -106,6 +118,7 @@ class HeadingMixin:
         if anchor is not None:
             title_proto.anchor = anchor
         title_proto.body = clean_text(body)
+        title_proto.align = validate_align_option(align)
         title_proto.tag = "h1"
 
         return self.dg._enqueue("heading", title_proto)
