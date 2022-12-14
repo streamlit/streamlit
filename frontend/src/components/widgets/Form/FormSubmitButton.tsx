@@ -22,7 +22,7 @@ import UIButton, {
   Size,
 } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import StreamlitMarkdown from "../../shared/StreamlitMarkdown/index"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown/index"
 
 export interface Props {
   disabled: boolean

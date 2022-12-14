@@ -24,11 +24,11 @@ import {
   CameraInput as CameraInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "src/autogen/proto"
+import { WidgetLabel } from "src/components/widgets/BaseWidget"
 import CameraInput, { Props, State } from "./CameraInput"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent from "./WebcamComponent"
 import { StyledBox } from "./styled-components"
-import { WidgetLabel } from "../BaseWidget"
 
 jest.mock("react-webcam")
 

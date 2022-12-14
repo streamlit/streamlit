@@ -8237,6 +8237,11 @@ eslint-plugin-jsx-a11y@^6.3.1:
     jsx-ast-utils "^3.1.0"
     language-tags "^1.0.5"
 
+eslint-plugin-no-relative-import-paths@^1.5.0:
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-no-relative-import-paths/-/eslint-plugin-no-relative-import-paths-1.5.0.tgz#d277fd4d9644e2405cea32541af3bfbde00f02e9"
+  integrity sha512-4if/PGGzpSP+DfOscGZ2nYd8XObc5rN9Ux5lhDzAVqLEaz8XD3ikzApSogXBdf+lnpTsTE5LJSqXFmFpNkZ3LQ==
+
 eslint-plugin-prettier@^3.1.4:
   version "3.3.1"
   resolved "https://registry.yarnpkg.com/eslint-plugin-prettier/-/eslint-plugin-prettier-3.3.1.tgz#7079cfa2497078905011e6f82e8dd8453d1371b7"

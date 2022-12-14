@@ -40,7 +40,7 @@ import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
-} from "../FileUploader/UploadFileInfo"
+} from "src/components/widgets/FileUploader/UploadFileInfo"
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
 import {

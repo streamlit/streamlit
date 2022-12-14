@@ -24,8 +24,8 @@ import Flake0 from "src/assets/img/snow/flake-0.png"
 import Flake1 from "src/assets/img/snow/flake-1.png"
 import Flake2 from "src/assets/img/snow/flake-2.png"
 
-import Particles from "../Particles"
-import { ParticleProps } from "../Particles/Particles"
+import Particles from "src/components/elements/Particles"
+import { ParticleProps } from "src/components/elements/Particles/Particles"
 
 import { StyledFlake } from "./styled-components"
 
