@@ -22,7 +22,7 @@ describe("st.markdown", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 19);
+    cy.get(".element-container .stMarkdown").should("have.length", 20);
   });
 
   it("displays markdown", () => {

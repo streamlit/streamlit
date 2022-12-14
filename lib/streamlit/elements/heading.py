@@ -34,7 +34,22 @@ class HeadingMixin:
         Parameters
         ----------
         body : str
-            The text to display.
+            The text to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
 
         align : {'left', 'center', 'right', 'justify'}, optional, default="left"
             The horizontal alignment option inside a block element. The default option is selected if the provided one is not on a list.
@@ -43,9 +58,10 @@ class HeadingMixin:
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
 
-        Example
-        -------
+        Examples
+        --------
         >>> st.header('This is a header')
+        >>> st.header('A header with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
         header_proto = HeadingProto()
@@ -65,7 +81,22 @@ class HeadingMixin:
         Parameters
         ----------
         body : str
-            The text to display.
+            The text to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
 
         align : {'left', 'center', 'right', 'justify'}, optional, default="left"
             The horizontal alignment option inside a block element. The default option is selected if the provided one is not on a list.
@@ -74,9 +105,10 @@ class HeadingMixin:
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
 
-        Example
-        -------
+        Examples
+        --------
         >>> st.subheader('This is a subheader')
+        >>> st.subheader('A subheader with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
         subheader_proto = HeadingProto()
@@ -100,7 +132,22 @@ class HeadingMixin:
         Parameters
         ----------
         body : str
-            The text to display.
+            The text to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
 
         align : {'left', 'center', 'right', 'justify'}, optional, default="left"
             The horizontal alignment option inside a block element. The default option is selected if the provided one is not on a list.
@@ -109,9 +156,10 @@ class HeadingMixin:
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
 
-        Example
-        -------
+        Examples
+        --------
         >>> st.title('This is a title')
+        >>> st.title('A title with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
         title_proto = HeadingProto()

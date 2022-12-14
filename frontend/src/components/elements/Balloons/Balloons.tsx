@@ -27,8 +27,8 @@ import Balloon3 from "src/assets/img/balloons/balloon-3.png"
 import Balloon4 from "src/assets/img/balloons/balloon-4.png"
 import Balloon5 from "src/assets/img/balloons/balloon-5.png"
 
-import Particles from "../Particles"
-import { ParticleProps } from "../Particles/Particles"
+import Particles from "src/components/elements/Particles"
+import { ParticleProps } from "src/components/elements/Particles/Particles"
 
 import { StyledBalloon } from "./styled-components"
 

@@ -246,14 +246,10 @@ class SingletonAPI:
 
         experimental_allow_widgets : boolean
             Allow widgets to be used in the singleton function. Defaults to False.
-
-        .. note::
             Support for widgets in cached functions is currently experimental.
-            To enable it, set the parameter ``experimental_allow_widgets=True``
-            in ``@st.experimental_singleton``. Note that this may lead to excessive
-            memory use since the widget value is treated as an additional input
-            parameter to the cache. We may remove support for this option at any
-            time without notice.
+            Setting this parameter to True may lead to excessive memory use since the
+            widget value is treated as an additional input parameter to the cache.
+            We may remove support for this option at any time without notice.
 
         Example
         -------
