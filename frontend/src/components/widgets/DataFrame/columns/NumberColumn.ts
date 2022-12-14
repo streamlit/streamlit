@@ -82,8 +82,9 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
         // Apply precision parameter
         if (notNullOrUndefined(parameters.precision)) {
-          // TODO(lukasmasuch): Update the number input to support precision
-          // TODO(lukasmasuch): Round instead?
+          // TODO(lukasmasuch): Instead of applying precision here,
+          // it would be better to update the cell implementation to support precision
+          // directly in the input field.
           cellData =
             parameters.precision === 0
               ? Math.trunc(cellData)
@@ -127,10 +128,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {
-      if (isMissingValueCell(cell)) {
-        return null
-      }
-
       return cell.data === undefined ? null : cell.data
     },
   }

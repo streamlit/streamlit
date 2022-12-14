@@ -103,9 +103,6 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
       } as RangeCellType
     },
     getCellValue(cell: RangeCellType): number | null {
-      if (isMissingValueCell(cell)) {
-        return null
-      }
       return cell.data?.value === undefined ? null : cell.data?.value
     },
   }

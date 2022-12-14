@@ -49,10 +49,6 @@ function UrlColumn(props: BaseColumnProps): BaseColumn {
       } as UriCell
     },
     getCellValue(cell: UriCell): string | null {
-      if (isMissingValueCell(cell)) {
-        return null
-      }
-
       return cell.data === undefined ? null : cell.data
     },
   }

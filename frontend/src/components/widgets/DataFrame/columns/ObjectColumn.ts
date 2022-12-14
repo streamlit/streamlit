@@ -61,9 +61,6 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: TextCell): string | null {
-      if (isMissingValueCell(cell)) {
-        return null
-      }
       return cell.data === undefined ? null : cell.data
     },
   }

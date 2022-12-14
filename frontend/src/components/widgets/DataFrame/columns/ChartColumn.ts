@@ -31,6 +31,7 @@ import {
   toSafeArray,
   mergeColumnParameters,
   toSafeNumber,
+  formatNumber,
 } from "./utils"
 
 interface ChartColumnParams {
@@ -54,7 +55,7 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Custom,
     allowOverlay: false,
-    copyData: "[]",
+    copyData: "",
     contentAlign: props.contentAlignment,
     data: {
       kind: "sparkline-cell",
@@ -128,19 +129,15 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
 
       return {
         ...cellTemplate,
-        copyData: JSON.stringify(convertedChartData),
+        copyData: convertedChartData.join(","),
         data: {
           ...cellTemplate.data,
           values: normalizedChartData,
-          displayValues: convertedChartData.map(v => toSafeString(v)),
+          displayValues: convertedChartData.map(v => formatNumber(v, 3)),
         },
       } as SparklineCellType
     },
     getCellValue(cell: SparklineCellType): readonly number[] | null {
-      if (isMissingValueCell(cell)) {
-        return null
-      }
-
       return cell.data?.values === undefined ? null : cell.data?.values
     },
   }

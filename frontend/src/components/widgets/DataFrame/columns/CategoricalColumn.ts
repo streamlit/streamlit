@@ -91,10 +91,6 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
       } as DropdownCellType
     },
     getCellValue(cell: DropdownCellType): string | null {
-      if (isMissingValueCell(cell)) {
-        return null
-      }
-
       if (cell.data?.value === undefined || cell.data?.value === "") {
         return null
       }

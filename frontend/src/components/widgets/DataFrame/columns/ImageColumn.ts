@@ -53,11 +53,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
       } as ImageCell
     },
     getCellValue(cell: ImageCell): string | null {
-      if (
-        isMissingValueCell(cell) ||
-        cell.data === undefined ||
-        cell.data.length === 0
-      ) {
+      if (cell.data === undefined || cell.data.length === 0) {
         return null
       }
 

@@ -81,10 +81,6 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
       } as BooleanCell
     },
     getCellValue(cell: BooleanCell): boolean | null {
-      if (isMissingValueCell(cell)) {
-        return null
-      }
-
       return cell.data === undefined ? null : cell.data
     },
   }

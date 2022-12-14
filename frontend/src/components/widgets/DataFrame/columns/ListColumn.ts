@@ -49,10 +49,6 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
       } as BubbleCell
     },
     getCellValue(cell: BubbleCell): string[] | null {
-      if (isMissingValueCell(cell)) {
-        return null
-      }
-
       return cell.data === undefined ? null : cell.data
     },
   }
