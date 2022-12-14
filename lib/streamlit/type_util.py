@@ -773,15 +773,17 @@ def fix_arrow_incompatible_column_types(
     -------
     The fixed dataframe.
     """
-
-    # TODO(lukasmasuch): Make a copy
+    # Make a copy, but only initialize if necessary to preserve memory.
+    df_copy = None
     for col in selected_columns or df.columns:
         # TODO(lukasmasuch): Sparse arrays are also not supported
         # if str(df[col].dtype).startswith("Sparse"):
         #     df[col] = np.array(df[col])
 
         if is_colum_type_arrow_incompatible(df[col]):
-            df[col] = df[col].astype(str)
+            if df_copy is None:
+                df_copy = df.copy()
+            df_copy[col] = df[col].astype(str)
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -794,8 +796,10 @@ def fix_arrow_incompatible_column_types(
         )
         and is_colum_type_arrow_incompatible(df.index)
     ):
-        df.index = df.index.astype(str)
-    return df
+        if df_copy is None:
+            df_copy = df.copy()
+        df_copy.index = df.index.astype(str)
+    return df_copy
 
 
 def data_frame_to_bytes(df: pd.DataFrame) -> bytes:
