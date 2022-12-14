@@ -34,7 +34,7 @@ import click
 # Where we expect to find the example files.
 E2E_DIR = "e2e/scripts"
 
-EXCLUDED_FILENAMES = set()  # type: Set[str]
+EXCLUDED_FILENAMES: Set[str] = set()
 
 # st_experimental_rerun.py calls st.experimental_rerun which raises a
 # RerunException when called within plain Python.

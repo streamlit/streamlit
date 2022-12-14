@@ -123,6 +123,12 @@ export function applyStreamlitThemeTemplateLayout(
       },
       zeroline: false,
       automargin: true,
+      rangeselector: {
+        bgcolor: colors.bgColor,
+        bordercolor: getGray30(theme),
+        borderwidth: 1,
+        x: 0,
+      },
     },
     margin: {
       pad: theme.spacing.lgPx,

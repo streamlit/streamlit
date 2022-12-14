@@ -64,7 +64,7 @@ class WriteMixin:
             Arguments are handled as follows:
 
             - write(string)     : Prints the formatted Markdown string, with
-                support for LaTeX expression and emoji shortcodes.
+                support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.

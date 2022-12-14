@@ -46,12 +46,22 @@ message BackMsg {
     // DEPRECATED. This is now inside ClientState.
     // WidgetStates update_widgets = 9;
 
-    // Set to true to ask the server to close the connection
-    bool close_connection = 10;
+    // DEPRECATED. Set to true to ask the server to close the connection
+    // bool close_connection = 10;
 
     ClientState rerun_script = 11;
 
     bool load_git_info = 12;
+
+    // Test and dev-mode only field used to ask the server to disconnect the
+    // client's websocket connection. This message is IGNORED unless the
+    // runtime is configured with global.developmentMode = True.
+    bool debug_disconnect_websocket = 14;
+
+    // Test and dev-mode only field used to ask the server to shut down the
+    // runtime. This message is IGNORED unless the runtime is configured with
+    // global.developmentMode = True.
+    bool debug_shutdown_runtime = 15;
   }
 
   // An ID used to associate this BackMsg with the corresponding ForwardMsgs
@@ -59,5 +69,7 @@ message BackMsg {
   // should only be used for testing.
   string debug_last_backmsg_id = 13;
 
-  reserved 1, 2, 3, 4, 8, 9;
+  reserved 1, 2, 3, 4, 8, 9, 10;
+
+  // Next: 16
 }
