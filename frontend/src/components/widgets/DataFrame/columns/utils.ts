@@ -237,9 +237,12 @@ export function toSafeNumber(data: any): number | null {
     try {
       // Try to convert string to number via numbro:
       // https://numbrojs.com/old-format.html#unformat
-      return numbro.unformat(data.trim())
+      const unformattedValue = numbro.unformat(data.trim())
+      if (notNullOrUndefined(unformattedValue)) {
+        return unformattedValue
+      }
     } catch (error) {
-      return Number(data)
+      // Do nothing here
     }
   } else if (data instanceof Int32Array) {
     // int values need to be extracted this way:
@@ -251,7 +254,7 @@ export function toSafeNumber(data: any): number | null {
 }
 
 export function formatNumber(value: number, maxPrecision: number = 4): string {
-  if (Number.isFinite(value)) {
+  if (!Number.isNaN(value) && Number.isFinite(value)) {
     if (maxPrecision === 0) {
       // Numbro is unable to format the numb with 0 decimals.
       value = Math.round(value)
