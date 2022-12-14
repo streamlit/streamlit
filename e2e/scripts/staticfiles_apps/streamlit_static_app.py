@@ -15,4 +15,4 @@
 import streamlit as st
 
 st.header("Main Page with static files")
-st.markdown("![Drag Racing](http://localhost:8501/app/static/dogdog.jpeg)")
+st.markdown("![Streamlit](http://localhost:8501/app/static/streamlit-mark-color.png)")

@@ -14,28 +14,31 @@
  * limitations under the License.
  */
 
-describe("st.map", () => {
+
+const STATICFILE_URL = 'http://localhost:8501/app/static/streamlit-mark-color.png';
+
+describe("static files", () => {
   beforeEach(() => {
+    cy.intercept(
+      'GET',
+      STATICFILE_URL
+    ).as('staticFileLoad');
+
     cy.loadApp("http://localhost:3000/");
-
-    Cypress.Cookies.defaults({
-      preserve: ["_xsrf"]
-    });
   });
 
-  it("loads the main streamlit_app script on with static image", () => {
-    cy.get("img").should("exist");
+  it("loads streamlit_app with static image", () => {
+    cy.wait("@staticFileLoad").get("img").matchThemedSnapshots(
+      "static_streamlit_logo"
+    );
   });
 
 
-  it("serves existing static file", () => {
-    cy.request('http://localhost:8501/app/static/dogdog.jpeg').then((response) => {
-      expect(response.status).to.eq(200)
-      expect(response).to.have.property('headers')
-    })
+  it("serves existing static file correctly", () => {
+    cy.request(STATICFILE_URL).its('status').should('eq', 200);
   });
 
-  it("serves non-existing static file", () => {
+  it("does not serve non-existing static file, return 404", () => {
     cy.request(
       {
         url: 'http://localhost:8501/app/static/notexisting.jpeg',
