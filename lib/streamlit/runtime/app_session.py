@@ -34,6 +34,7 @@ from streamlit.proto.NewSession_pb2 import (
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.credentials import Credentials
+from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
@@ -112,6 +113,11 @@ class AppSession:
         self._event_loop = asyncio.get_running_loop()
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
+
+        # The browser queue contains messages that haven't yet been
+        # delivered to the browser. Periodically, the server flushes
+        # this queue and delivers its contents to the browser.
+        self._browser_queue = ForwardMsgQueue()
         self._message_enqueued_callback = message_enqueued_callback
 
         self._state = AppSessionState.APP_NOT_RUNNING
@@ -192,7 +198,7 @@ class AppSession:
             be delivered to the browser.
 
         """
-        return self._script_data.flush_browser_queue()
+        return self._browser_queue.flush()
 
     def shutdown(self) -> None:
         """Shut down the AppSession.
@@ -240,7 +246,7 @@ class AppSession:
         if self._debug_last_backmsg_id:
             msg.debug_last_backmsg_id = self._debug_last_backmsg_id
 
-        self._script_data.enqueue(msg)
+        self._browser_queue.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
 
@@ -404,7 +410,7 @@ class AppSession:
         self._enqueue_forward_msg(msg)
 
     def _clear_queue(self) -> None:
-        self._script_data.clear_browser_queue()
+        self._browser_queue.clear()
 
     def _on_scriptrunner_event(
         self,

@@ -502,7 +502,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
             session_id="TestSessionID",
-            _enqueue=session._script_data.enqueue,
+            _enqueue=session._enqueue_forward_msg,
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
@@ -524,7 +524,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         # Yield to let the AppSession's callbacks run.
         await asyncio.sleep(0)
 
-        sent_messages = session._script_data._browser_queue._queue
+        sent_messages = session._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
 
         # Note that we're purposefully not very thoroughly testing new_session
@@ -628,7 +628,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             side_effect=lambda: forward_msg_queue_events.append(CLEAR_QUEUE)
         )
 
-        session._script_data._browser_queue = mock_queue
+        session._browser_queue = mock_queue
 
         # Create an exception and have the session handle it.
         FAKE_EXCEPTION = RuntimeError("I am error")
