@@ -35,9 +35,9 @@ from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.credentials import Credentials
 from streamlit.runtime.metrics_util import Installation
+from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
-from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
@@ -63,7 +63,7 @@ class AppSession:
     Contains session data for a single "user" of an active app
     (that is, a connected browser tab).
 
-    Each AppSession has its own SessionData, root DeltaGenerator, ScriptRunner,
+    Each AppSession has its own ScriptData, root DeltaGenerator, ScriptRunner,
     and widget state.
 
     An AppSession is attached to each thread involved in running its script.
@@ -72,7 +72,7 @@ class AppSession:
 
     def __init__(
         self,
-        session_data: SessionData,
+        script_data: ScriptData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
@@ -82,7 +82,7 @@ class AppSession:
 
         Parameters
         ----------
-        session_data : SessionData
+        script_data : ScriptData
             Object storing parameters related to running a script
 
         uploaded_file_manager : UploadedFileManager
@@ -110,7 +110,7 @@ class AppSession:
         self.id = str(uuid.uuid4())
 
         self._event_loop = asyncio.get_running_loop()
-        self._session_data = session_data
+        self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
 
@@ -149,7 +149,7 @@ class AppSession:
     def _register_file_watchers(self) -> None:
         if self._local_sources_watcher is None:
             self._local_sources_watcher = LocalSourcesWatcher(
-                self._session_data.main_script_path
+                self._script_data.main_script_path
             )
 
         self._local_sources_watcher.register_file_change_callback(
@@ -192,7 +192,7 @@ class AppSession:
             be delivered to the browser.
 
         """
-        return self._session_data.flush_browser_queue()
+        return self._script_data.flush_browser_queue()
 
     def shutdown(self) -> None:
         """Shut down the AppSession.
@@ -240,7 +240,7 @@ class AppSession:
         if self._debug_last_backmsg_id:
             msg.debug_last_backmsg_id = self._debug_last_backmsg_id
 
-        self._session_data.enqueue(msg)
+        self._script_data.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
 
@@ -349,7 +349,7 @@ class AppSession:
         """Create and run a new ScriptRunner with the given RerunData."""
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
-            main_script_path=self._session_data.main_script_path,
+            main_script_path=self._script_data.main_script_path,
             client_state=self._client_state,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
@@ -364,7 +364,7 @@ class AppSession:
         return self._session_state
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
-        main_script_path = self._session_data.main_script_path
+        main_script_path = self._script_data.main_script_path
         pages = source_util.get_pages(main_script_path)
 
         changed_page_script_hash = next(
@@ -400,11 +400,11 @@ class AppSession:
 
     def _on_pages_changed(self, _) -> None:
         msg = ForwardMsg()
-        _populate_app_pages(msg.pages_changed, self._session_data.main_script_path)
+        _populate_app_pages(msg.pages_changed, self._script_data.main_script_path)
         self._enqueue_forward_msg(msg)
 
     def _clear_queue(self) -> None:
-        self._session_data.clear_browser_queue()
+        self._script_data.clear_browser_queue()
 
     def _on_scriptrunner_event(
         self,
@@ -585,11 +585,11 @@ class AppSession:
         msg = ForwardMsg()
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
-        msg.new_session.name = self._session_data.name
-        msg.new_session.main_script_path = self._session_data.main_script_path
+        msg.new_session.name = self._script_data.name
+        msg.new_session.main_script_path = self._script_data.main_script_path
         msg.new_session.page_script_hash = page_script_hash
 
-        _populate_app_pages(msg.new_session, self._session_data.main_script_path)
+        _populate_app_pages(msg.new_session, self._script_data.main_script_path)
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
@@ -609,7 +609,7 @@ class AppSession:
             self._state == AppSessionState.APP_IS_RUNNING
         )
 
-        imsg.command_line = self._session_data.command_line
+        imsg.command_line = self._script_data.command_line
         imsg.session_id = self.id
 
         return msg
@@ -634,7 +634,7 @@ class AppSession:
         try:
             from streamlit.git_util import GitRepo
 
-            repo = GitRepo(self._session_data.main_script_path)
+            repo = GitRepo(self._script_data.main_script_path)
 
             repo_info = repo.get_repo_info()
             if repo_info is None:
