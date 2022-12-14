@@ -57,9 +57,8 @@ ColumnType = Literal[
     "list",
     "url",
     "image",
-    "bar-chart",
-    "line-chart",
-    "progress-chart",
+    "chart",
+    "range",
 ]
 
 
@@ -136,14 +135,24 @@ def _marshall_column_config(
 ) -> None:
     if columns is None:
         columns = {}
+
     # Ignore all None values and prefix columns specified by index
+    def remove_none_values(input_dict: dict) -> dict:
+        new_dict = {}
+        for k, v in input_dict.items():
+            if isinstance(v, dict):
+                v = remove_none_values(v)
+            if v is not None:
+                new_dict[k] = v
+        return new_dict
+
     proto.columns = json.dumps(
         {
             (f"index:{str(k)}" if isinstance(k, int) else k): v
-            for (k, v) in columns.items()
-            if v is not None
+            for (k, v) in remove_none_values(columns).items()
         }
     )
+    print(proto.columns)
 
 
 @dataclass
@@ -256,11 +265,11 @@ class ArrowMixin:
 
         for col in data_df.columns:
             if type_util.is_colum_type_arrow_incompatible(data_df[col]):
+
                 if col not in columns:
                     columns[col] = column_config(editable=False)
                 else:
                     columns[col]["editable"] = False
-
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
 
