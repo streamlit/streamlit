@@ -182,10 +182,6 @@ function useDataLoader(
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
   const theme: Theme = useTheme()
-
-  // TODO(lukasmasuch): This should be also dependent on element or data
-  // But this currently triggers updates on every rerender.
-
   // TODO(lukasmasuch): Use state here for optimization?
   const columnsConfig = getColumnConfig(element)
 
