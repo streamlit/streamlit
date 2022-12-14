@@ -55,7 +55,6 @@ function useDataEditor(
       [col, row]: readonly [number, number],
       updatedCell: EditableGridCell
     ): void => {
-      console.log("onCellEdited", col, row, updatedCell)
       const column = columns[col]
 
       const originalCol = column.indexNumber
@@ -168,12 +167,8 @@ function useDataEditor(
             // Only add new rows if editing mode is dynamic, otherwise break here
             break
           }
-          // TODO(lukasmasuch): Remove this since we are already disallowing sorting in dynamic mode
-          // if (sort) {
-          //   // Sorting and adding appending new rows via paste is currently
-          //   // not compatible because the sort index isn't updated.
-          //   break
-          // }
+          // Adding rows during paste would not work currently. However, we already disallow
+          // sorting in dynamic mode, so we don't have to do anything here.
           onRowAppended()
         }
         for (let col = 0; col < rowData.length; col++) {
