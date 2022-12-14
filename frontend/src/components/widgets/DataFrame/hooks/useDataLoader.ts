@@ -18,7 +18,6 @@ import React from "react"
 
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
-import { transparentize } from "color2k"
 
 import { Quiver } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
@@ -33,7 +32,6 @@ import {
   getCellFromQuiver,
 } from "../quiverUtils"
 import EditingState from "../EditingState"
-
 import {
   BaseColumn,
   BaseColumnProps,
@@ -116,7 +114,6 @@ function applyColumnConfig(
     // Add column type metadata:
     ...(notNullOrUndefined(columnConfig.metadata)
       ? {
-          //TODO(lukasmasuch): Merge in metadata?
           columnTypeMetadata: columnConfig.metadata,
         }
       : {}),
