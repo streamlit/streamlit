@@ -812,7 +812,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName === "float64" && Number.isFinite(x)) {
-      return numbro(x).format("0,0.0000")
+      return numbro(x).format("0,0.[0000]")
     }
 
     return String(x)
