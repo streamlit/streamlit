@@ -13,6 +13,12 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 st.header("Main Page with static files")
-st.markdown("![Streamlit](http://localhost:8501/app/static/streamlit-mark-color.png)")
+
+if runtime.exists():
+    """Static files serving works only when runtime exists"""
+    st.markdown(
+        "![Streamlit](http://localhost:8501/app/static/streamlit-mark-color.png)"
+    )
