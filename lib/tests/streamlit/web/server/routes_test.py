@@ -15,13 +15,14 @@
 import json
 import os
 import tempfile
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import tornado.httpserver
 import tornado.testing
 import tornado.web
 import tornado.websocket
 
+from streamlit.file_util import MAX_APP_STATIC_FILE_SIZE
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
@@ -216,6 +217,11 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert response.code == 200
         assert response.headers["Content-Type"] == "image/png"
         assert response.headers["X-Content-Type-Options"] == "nosniff"
+
+    @patch("os.path.getsize", MagicMock(return_value=MAX_APP_STATIC_FILE_SIZE + 1))
+    def test_big_file_404(self):
+        response = self.fetch(f"/app/static/{self._image_filename}")
+        assert response.code == 404
 
     def test_staticfiles_404(self):
         responses = [
