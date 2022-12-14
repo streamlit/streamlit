@@ -152,7 +152,6 @@ def _marshall_column_config(
             for (k, v) in remove_none_values(columns).items()
         }
     )
-    print(proto.columns)
 
 
 @dataclass
