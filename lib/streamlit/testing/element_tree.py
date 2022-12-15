@@ -14,18 +14,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import (
-    Any,
-    Generic,
-    Sequence,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-    runtime_checkable,
-)
+from typing import Any, Generic, Sequence, TypeVar, Union, cast, overload
 
-from typing_extensions import Literal, Protocol, TypeAlias
+from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
