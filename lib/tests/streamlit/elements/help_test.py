@@ -185,7 +185,28 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("ndarray", ds.type)
         self.assertTrue("ndarray" in ds.doc_string)
 
-    def test_doc_type_is_type(self):
+    def test_passing_a_class(self):
+        """When the object is a class and no docs are defined,
+        we expect docs to be None."""
+
+        class MyClass(object):
+            pass
+
+        with patch_varname_getter():
+            st.help(MyClass)
+
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual(type(MyClass), type)
+        self.assertEqual("MyClass", ds.name)
+        self.assertEqual(
+            "tests.streamlit.elements.help_test.StHelpTest."
+            "test_doc_type_is_type.<locals>.MyClass()",
+            ds.value,
+        )
+        self.assertEqual("class", ds.type)
+        self.assertEqual("", ds.doc_string)
+
+    def test_padding_an_instance(self):
         """When the type of the object is type and no docs are defined,
         we expect docs to be None."""
 

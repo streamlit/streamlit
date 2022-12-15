@@ -97,22 +97,7 @@ def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
     if obj_docs is not None:
         doc_string_proto.doc_string = obj_docs
 
-    obj_value = _get_human_readable_value(obj)
-
-    if obj_value is None:
-        name = _get_name(obj)
-        module = _get_module(obj)
-        sig = _get_signature(obj) or ""
-
-        if module:
-            obj_value = f"{module}.{name}{sig}"
-        else:
-            obj_value = f"{name}{sig}"
-
-        if obj_value == var_name:
-            # No need to repeat the same info.
-            # For example: st.help(re) shouldn't show "re module re", just "re module".
-            obj_value = None
+    obj_value = _get_value(obj, var_name)
 
     if obj_value is not None:
         doc_string_proto.value = obj_value
@@ -266,7 +251,14 @@ def _get_variable_name():
 
     if arg_node is None:
         # Return argument whole line, since it's probably a magic call.
-        return first_line_of_code
+        code = first_line_of_code
+
+        # A common pattern is to add "," at the end of a magic command to make it print.
+        # This removes that final ",", so it looks nicer.
+        if code.endswith(","):
+            code = code[:-1]
+
+        return code
 
     # If walrus, get name. E.g. st.help(foo := 123)
     if type(arg_node) is ast.NamedExpr:
@@ -324,9 +316,45 @@ def _get_weight(value):
     return 0
 
 
+def _get_value(obj, var_name):
+    obj_value = _get_human_readable_value(obj)
+
+    if obj_value is not None:
+        return obj_value
+
+    # If there's no human-readable value, it's some complex object.
+    # So let's provide other info about it.
+    name = _get_name(obj)
+
+    if name:
+        name_obj = obj
+    else:
+        # If the object itself doesn't have a name, then it's probably an instance
+        # of some class Foo. So let's show info about Foo in the value slot.
+        name_obj = type(obj)
+        name = _get_name(name_obj)
+
+    module = _get_module(name_obj)
+    sig = _get_signature(name_obj) or ""
+
+    if name:
+        if module:
+            obj_value = f"{module}.{name}{sig}"
+        else:
+            obj_value = f"{name}{sig}"
+
+    if obj_value == var_name:
+        # No need to repeat the same info.
+        # For example: st.help(re) shouldn't show "re module re", just "re module".
+        obj_value = None
+
+    return obj_value
+
+
 def _get_human_readable_value(value):
     if isinstance(value, Secrets):
-        # Don't want to read secrets.toml and potentially show a warning.
+        # Don't want to read secrets.toml because that will show a warning if there's no
+        # secrets.toml file.
         return None
 
     if inspect.isclass(value) or inspect.ismodule(value) or callable(value):
@@ -335,7 +363,8 @@ def _get_human_readable_value(value):
     value_str = repr(value)
 
     if isinstance(value, str):
-        # Special-case strings as human-readable because they're allowed to look like "<foo blarg at 0x15ee6f9a0>".
+        # Special-case strings as human-readable because they're allowed to look like
+        # "<foo blarg at 0x15ee6f9a0>".
         return _shorten(value_str)
 
     if is_mem_address_str(value_str):
