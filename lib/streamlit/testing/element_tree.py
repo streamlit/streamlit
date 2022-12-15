@@ -42,6 +42,11 @@ from streamlit.runtime.state.widgets import user_key_from_widget_id
 # been implemented yet, as well as providing implementations of some
 # trivial methods. It may have significantly reduced scope, or be removed
 # entirely, once all elements have been implemented.
+# This class will not be sufficient implementation for most elements.
+# Widgets need their own classes to translate interactions into the appropriate
+# WidgetState and provide higher level interaction interfaces, and other elements
+# have enough variation in how to get their values that most will need their
+# own classes too.
 @dataclass(init=False)
 class Element:
     type: str
