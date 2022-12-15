@@ -492,7 +492,7 @@ def run_e2e_tests(
                 test_path = join(
                     ctx.tests_dir,
                     "scripts",
-                    "staticfiles_app",
+                    "staticfiles_apps",
                     "streamlit_static_app.py",
                 )
                 if os.path.exists(test_path):
