@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 from typing import (
     Any,
     Generic,
-    Protocol,
     Sequence,
     TypeVar,
     Union,
@@ -26,7 +25,7 @@ from typing import (
     runtime_checkable,
 )
 
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import Literal, Protocol, TypeAlias
 
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
