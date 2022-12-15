@@ -486,7 +486,7 @@ def run_e2e_tests(
                         ["streamlit", "run", "--ui.hideSidebarNav=false", test_path],
                         show_output=verbose,
                     )
-            elif basename(spec_path) == "st_staticfiles_app.spec.js":
+            elif basename(spec_path) == "staticfiles_app.spec.js":
                 test_name, _ = splitext(basename(spec_path))
                 test_name, _ = splitext(test_name)
                 test_path = join(
