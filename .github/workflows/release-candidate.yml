@@ -91,9 +91,11 @@ jobs:
         if: ${{ success() }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          RUN_ID: ${{ github.run_id }}
         run: python scripts/slack_notifications.py candidate success
       - name: Failed Release Candidate Slack Message
         if: ${{ failure() }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          RUN_ID: ${{ github.run_id }}
         run: python scripts/slack_notifications.py candidate failure

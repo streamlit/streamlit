@@ -195,7 +195,6 @@ def file_in_pythonpath(filepath) -> bool:
         True if contained in PYTHONPATH, False otherwise. False if PYTHONPATH is not defined or empty.
 
     """
-
     pythonpath = os.environ.get("PYTHONPATH", "")
     if len(pythonpath) == 0:
         return False

@@ -246,7 +246,12 @@ class AllowedMessageOriginsHandler(_SpecialRequestHandler):
             # disallows writing lists directly into responses due to potential XSS
             # vulnerabilities.
             # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
-            self.write({"allowedOrigins": ALLOWED_MESSAGE_ORIGINS})
+            self.write(
+                {
+                    "allowedOrigins": ALLOWED_MESSAGE_ORIGINS,
+                    "useExternalAuthToken": False,
+                }
+            )
             self.set_status(200)
 
             if config.get_option("server.enableXsrfProtection"):

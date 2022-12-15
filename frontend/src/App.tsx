@@ -246,8 +246,10 @@ export class App extends PureComponent<Props, State> {
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
 
-    window.streamlitDebug = {}
-    window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
+    window.streamlitDebug = {
+      disconnectWebsocket: this.debugDisconnectWebsocket,
+      shutdownRuntime: this.debugShutdownRuntime,
+    }
   }
 
   /**
@@ -280,8 +282,11 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
-      getHostAuthToken: this.getHostAuthToken,
-      setHostAllowedOrigins: this.props.hostCommunication.setAllowedOrigins,
+      claimHostAuthToken: () =>
+        this.props.hostCommunication.currentState.authTokenPromise,
+      resetHostAuthToken: this.props.hostCommunication.resetAuthToken,
+      setAllowedOriginsResp:
+        this.props.hostCommunication.setAllowedOriginsResp,
     })
 
     if (isEmbeddedInIFrame()) {
@@ -964,12 +969,23 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test disabling widgets
+   * Used by e2e tests to test disabling widgets.
    */
-  closeConnection(): void {
+  debugShutdownRuntime = (): void => {
     if (this.isServerConnected()) {
-      const backMsg = new BackMsg({ closeConnection: true })
-      backMsg.type = "closeConnection"
+      const backMsg = new BackMsg({ debugShutdownRuntime: true })
+      backMsg.type = "debugShutdownRuntime"
+      this.sendBackMsg(backMsg)
+    }
+  }
+
+  /**
+   * Used by e2e tests to test reconnect behavior.
+   */
+  debugDisconnectWebsocket = (): void => {
+    if (this.isServerConnected()) {
+      const backMsg = new BackMsg({ debugDisconnectWebsocket: true })
+      backMsg.type = "debugDisconnectWebsocket"
       this.sendBackMsg(backMsg)
     }
   }
@@ -1171,12 +1187,6 @@ export class App extends PureComponent<Props, State> {
       logError(`Not connected. Cannot send back message: ${msg}`)
     }
   }
-
-  /**
-   * Returns the authToken set by the withHostCommunication hoc.
-   */
-  private getHostAuthToken = (): string | undefined =>
-    this.props.hostCommunication.currentState.authToken
 
   /**
    * Updates the app body when there's a connection error.

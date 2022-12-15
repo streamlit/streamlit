@@ -251,7 +251,8 @@ class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/st-allowed-message-origins")
         self.assertEqual(200, response.code)
         self.assertEqual(
-            {"allowedOrigins": ALLOWED_MESSAGE_ORIGINS}, json.loads(response.body)
+            {"allowedOrigins": ALLOWED_MESSAGE_ORIGINS, "useExternalAuthToken": False},
+            json.loads(response.body),
         )
 
     # NOTE: Temporary tests to verify this endpoint can also act as a healthcheck

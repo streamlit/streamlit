@@ -14,10 +14,7 @@
 
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 
-from streamlit.deprecation_util import (
-    PrereleaseAPIType,
-    function_prerelease_graduation_warning,
-)
+from streamlit.deprecation_util import deprecate_func_name
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -43,7 +40,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         Inserting elements using "with" notation:
 
         >>> with st.container():
@@ -117,7 +113,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into a column:
 
         >>> col1, col2, col3 = st.columns(3)
@@ -231,7 +226,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into a tab:
 
         >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
@@ -292,7 +286,7 @@ class LayoutsMixin:
 
     @gather_metrics("expander")
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
-        """Insert a multi-element container that can be expanded/collapsed.
+        r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
         and can be expanded or collapsed by the user. When collapsed, all that is
@@ -317,7 +311,6 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into an expander
 
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
@@ -370,12 +363,6 @@ class LayoutsMixin:
         return cast("DeltaGenerator", self)
 
     # Deprecated beta_ functions
-    beta_container = function_prerelease_graduation_warning(
-        PrereleaseAPIType.BETA, container, "2021-11-02"
-    )
-    beta_expander = function_prerelease_graduation_warning(
-        PrereleaseAPIType.BETA, expander, "2021-11-02"
-    )
-    beta_columns = function_prerelease_graduation_warning(
-        PrereleaseAPIType.BETA, columns, "2021-11-02"
-    )
+    beta_container = deprecate_func_name(container, "beta_container", "2021-11-02")
+    beta_expander = deprecate_func_name(expander, "beta_expander", "2021-11-02")
+    beta_columns = deprecate_func_name(columns, "beta_columns", "2021-11-02")
