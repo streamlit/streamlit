@@ -16,7 +16,6 @@
 
 import ast
 import contextlib
-import importlib
 import inspect
 import types
 from typing import TYPE_CHECKING, Any, cast
@@ -27,6 +26,9 @@ from streamlit.logger import get_logger
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.proto.DocString_pb2 import Member as MemberProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner.script_runner import (
+    __file__ as SCRIPTRUNNER_FILENAME,
+)
 from streamlit.runtime.secrets import Secrets
 from streamlit.string_util import is_mem_address_str
 
@@ -38,11 +40,6 @@ LOGGER: Final = get_logger(__name__)
 
 
 CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
-
-# Need to know the filename for ScriptRunner so we can tell how far back to look back in the call
-# stack, in order to get the current variable name.
-spec = importlib.util.find_spec("streamlit.runtime.scriptrunner.script_runner")
-SCRIPTRUNNER_FILENAME = spec.origin
 
 
 class HelpMixin:
