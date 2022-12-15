@@ -25,6 +25,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import SessionStateProxy
+from streamlit.string_util import is_mem_address_str
 from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
@@ -231,14 +232,21 @@ class WriteMixin:
                 self.dg.pydeck_chart(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
-                self.dg.text(arg)
+                self.dg.help(arg)
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),
                     unsafe_allow_html=True,
                 )
             else:
-                string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
+                stringified_arg = str(arg)
+
+                if is_mem_address_str(stringified_arg):
+                    flush_buffer()
+                    self.dg.help(arg)
+
+                else:
+                    string_buffer.append("`%s`" % stringified_arg.replace("`", "\\`"))
 
         flush_buffer()
 

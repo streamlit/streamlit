@@ -24,12 +24,11 @@ const getProps = (
   elementProps: Partial<DocStringProto> = {}
 ): DocStringProps => ({
   element: DocStringProto.create({
-    name: "balloons",
-    module: "streamlit",
+    name: "st.balloons",
+    value: "streamlit.balloons()",
     docString:
       "Draw celebratory balloons.\n\nExample\n-------\n>>> st.balloons()\n\n...then watch your app and get ready for a celebration!",
-    type: "<class 'method'>",
-    signature: "(element)",
+    type: "method",
     ...elementProps,
   }),
   width: 0,
@@ -49,44 +48,75 @@ describe("DocString Element", () => {
     )
   })
 
+  it("should render 'no docs' text when empty", () => {
+    const props = getProps({
+      docString: undefined,
+    })
+    const wrapper = shallow(<DocString {...props} />)
+
+    expect(wrapper.find("StyledDocString").text()).toBe("No docs available")
+  })
+
   describe("doc-header", () => {
-    it("should render module", () => {
-      expect(wrapper.find("StyledDocModule").text()).toBe("streamlit.")
-    })
-
     it("should render a name", () => {
-      expect(wrapper.find("StyledDocName").text()).toBe("balloons")
+      expect(wrapper.find("StyledDocName").text()).toBe("st.balloons")
     })
 
-    it("should render a signature", () => {
-      expect(wrapper.find(".doc-signature").text()).toBe("(element)")
+    it("should render value", () => {
+      expect(wrapper.find("StyledDocValue").text()).toBe(
+        "streamlit.balloons()"
+      )
+    })
+
+    it("should render a type", () => {
+      expect(wrapper.find("StyledDocType").text()).toBe("method")
     })
 
     describe("should render empty when", () => {
       const props = getProps({
-        module: undefined,
-        signature: undefined,
+        name: undefined,
+        value: undefined,
+        type: undefined,
       })
       const wrapper = shallow(<DocString {...props} />)
 
-      it("there's no module", () => {
-        expect(wrapper.find(".doc-header .doc-module").length).toBeFalsy()
+      it("there's no name", () => {
+        expect(wrapper.find("StyledDocName").length).toBeFalsy()
       })
 
-      it("there's no signature", () => {
-        expect(wrapper.find(".doc-header .doc-signature").length).toBeFalsy()
+      it("there's no value", () => {
+        expect(wrapper.find("StyledDocValue").length).toBeFalsy()
+      })
+
+      it("there's no type", () => {
+        expect(wrapper.find("StyledDocType").length).toBeFalsy()
       })
     })
 
-    it("should render a type when there's no name", () => {
+    // Testing cases that we expect to happen (won't test every combination)
+    it("should render a type and value when there's no name", () => {
       const props = getProps({
         name: undefined,
-        module: undefined,
-        signature: undefined,
       })
       const wrapper = shallow(<DocString {...props} />)
 
-      expect(wrapper.find("StyledDocHeader").text()).toBe("<class 'method'>")
+      expect(wrapper.find("StyledDocName").length).toBeFalsy()
+      expect(wrapper.find("StyledDocValue").text()).toBe(
+        "streamlit.balloons()"
+      )
+      expect(wrapper.find("StyledDocType").text()).toBe("method")
+    })
+
+    // Testing cases that we expect to happen (won't test every combination)
+    it("should render a name and type when there's no value", () => {
+      const props = getProps({
+        value: undefined,
+      })
+      const wrapper = shallow(<DocString {...props} />)
+
+      expect(wrapper.find("StyledDocName").text()).toBe("st.balloons")
+      expect(wrapper.find("StyledDocValue").length).toBeFalsy()
+      expect(wrapper.find("StyledDocType").text()).toBe("method")
     })
   })
 })

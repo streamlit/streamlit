@@ -15,13 +15,19 @@
  */
 
 import React, { ReactElement } from "react"
-import { DocString as DocStringProto } from "src/autogen/proto"
+import { DocString as DocStringProto, IMember } from "src/autogen/proto"
 import {
   StyledDocContainer,
   StyledDocHeader,
-  StyledDocModule,
   StyledDocName,
   StyledDocString,
+  StyledDocSummary,
+  StyledDocType,
+  StyledDocValue,
+  StyledMembersSummaryCell,
+  StyledMembersDetailsCell,
+  StyledMembersRow,
+  StyledMembersTable,
 } from "./styled-components"
 
 export interface DocStringProps {
@@ -36,34 +42,51 @@ export default function DocString({
   width,
   element,
 }: DocStringProps): ReactElement {
-  const { name, module, docString, type, signature } = element
-
-  const moduleHtml = <StyledDocModule key="module">{module}.</StyledDocModule>
-  const nameHtml = <StyledDocName key="name">{name}</StyledDocName>
-  const signatureHtml = (
-    <span className="doc-signature" key="signature">
-      {signature}
-    </span>
-  )
-  const typeHtml = (
-    <span key="type" className="doc-type">
-      {type}
-    </span>
-  )
+  const { name, type, value, docString, members } = element
 
   // Put it all together into a nice little html view.
   return (
     <StyledDocContainer width={width} data-testid="stDocstring">
       <StyledDocHeader>
-        {name
-          ? [
-              module ? moduleHtml : "",
-              nameHtml,
-              signature ? signatureHtml : "",
-            ]
-          : [typeHtml]}
+        <StyledDocSummary>
+          {name ? <StyledDocName>{name}</StyledDocName> : null}
+          {type ? <StyledDocType>{type}</StyledDocType> : null}
+          {value ? <StyledDocValue>{value}</StyledDocValue> : null}
+        </StyledDocSummary>
       </StyledDocHeader>
-      <StyledDocString>{docString}</StyledDocString>
+      <StyledDocString>{docString || "No docs available"}</StyledDocString>
+      {members.length > 0 ? (
+        <StyledMembersTable>
+          {members.map(member => (
+            <Member member={member} key={member.name} />
+          ))}
+        </StyledMembersTable>
+      ) : null}
     </StyledDocContainer>
+  )
+}
+
+interface MemberProps {
+  member: IMember
+}
+
+function Member({ member }: MemberProps): ReactElement {
+  const { name, type, value, docString } = member
+
+  return (
+    <StyledMembersRow>
+      <StyledMembersSummaryCell>
+        {name ? <StyledDocName>{name}</StyledDocName> : null}
+        {type ? <StyledDocType>{type}</StyledDocType> : null}
+      </StyledMembersSummaryCell>
+
+      <StyledMembersDetailsCell>
+        {value ? (
+          <StyledDocValue>{value}</StyledDocValue>
+        ) : (
+          <StyledDocValue>{docString || "No docs available"}</StyledDocValue>
+        )}
+      </StyledMembersDetailsCell>
+    </StyledMembersRow>
   )
 }

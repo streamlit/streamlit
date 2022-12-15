@@ -239,19 +239,32 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_class(self):
         """Test st.write with a class."""
 
-        class SomeClass(object):
+        class SomeClass:
             pass
 
-        with patch("streamlit.delta_generator.DeltaGenerator.text") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
             st.write(SomeClass)
 
             p.assert_called_once_with(SomeClass)
 
-        with patch("streamlit.delta_generator.DeltaGenerator.text") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
             empty_df = pd.DataFrame()
             st.write(type(empty_df))
 
             p.assert_called_once_with(type(empty_df))
+
+    def test_obj_instance(self):
+        """Test st.write with an object instance that doesn't know how to str()."""
+
+        class SomeClass:
+            pass
+
+        my_instance = SomeClass()
+
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
+            st.write(my_instance)
+
+            p.assert_called_once_with(my_instance)
 
     def test_exception(self):
         """Test st.write that raises an exception."""

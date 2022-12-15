@@ -12,6 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
+import pandas as pd
+
 import streamlit as st
 
-st.help(st.help)
+# Testing case where there are no docs.
+st.help(st.net_util)
+
+# Testing case where there are no members.
+st.help(globals)
+
+# Test case where there the docs need to scroll,
+# and test case where some member doesn't have docs.
+st.help(re)
+
+
+class Foo:
+    """My docstring"""
+
+    def __init__(self):
+        self.mymember = 123
+
+
+f = Foo()
+
+f
