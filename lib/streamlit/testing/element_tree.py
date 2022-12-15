@@ -14,7 +14,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, Sequence, TypeVar, Union, cast, overload
+from typing import (
+    Any,
+    Generic,
+    Protocol,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+    runtime_checkable,
+)
 
 from typing_extensions import Literal, TypeAlias
 
@@ -85,11 +95,20 @@ class Text(Element):
         return self.proto.body
 
 
+@runtime_checkable
+class Widget(Protocol):
+    id: str
+    key: str | None
+
+    def set_value(self, v: Any):
+        ...
+
+
 T = TypeVar("T")
 
 
 @dataclass(init=False)
-class Radio(Element, Generic[T]):
+class Radio(Element, Widget, Generic[T]):
     _value: T | None
 
     proto: RadioProto
@@ -202,10 +221,10 @@ class Block:
     def get(self, elt: str) -> Sequence[Node]:
         return [e for e in self if e.type == elt]
 
-    def get_widget(self, key: str) -> Element | None:
+    def get_widget(self, key: str) -> Widget | None:
         for e in self:
             if e.key == key:
-                assert isinstance(e, Element)
+                assert isinstance(e, Widget)
                 return e
         return None
 
