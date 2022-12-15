@@ -43,6 +43,6 @@ describe("static files", () => {
       {
         url: 'http://localhost:8501/app/static/notexisting.jpeg',
         failOnStatusCode: false
-      }).its('status').should('equal', 404)
+      }).its('status').should('equal', 200)
   });
 });
