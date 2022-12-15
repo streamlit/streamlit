@@ -70,7 +70,8 @@ interface MemberProps {
   member: IMember
 }
 
-function Member({ member }: MemberProps): ReactElement {
+// Exported for tests.
+export function Member({ member }: MemberProps): ReactElement {
   const { name, type, value, docString } = member
 
   return (

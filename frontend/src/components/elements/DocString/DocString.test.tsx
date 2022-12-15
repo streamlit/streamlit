@@ -18,7 +18,7 @@ import React from "react"
 import { shallow } from "enzyme"
 
 import { DocString as DocStringProto } from "src/autogen/proto"
-import DocString, { DocStringProps } from "./DocString"
+import DocString, { DocStringProps, Member } from "./DocString"
 
 const getProps = (
   elementProps: Partial<DocStringProto> = {}
@@ -118,5 +118,110 @@ describe("DocString Element", () => {
       expect(wrapper.find("StyledDocValue").length).toBeFalsy()
       expect(wrapper.find("StyledDocType").text()).toBe("method")
     })
+  })
+
+  describe("members table", () => {
+    it("should render no members when there are none", () => {
+      expect(wrapper.find("StyledMembersRow").length).toBe(0)
+    })
+
+    it("should render members", () => {
+      const props = getProps({
+        members: [
+          {
+            name: "member1",
+            value: "value1",
+            type: "type1",
+          },
+          {
+            name: "member2",
+            value: "value2",
+            type: "type2",
+          },
+        ],
+      })
+      const wrapper = shallow(<DocString {...props} />)
+
+      expect(wrapper.find("Member").length).toBe(2)
+    })
+  })
+})
+
+describe("Member Element", () => {
+  it("should render value-oriented members", () => {
+    const props = {
+      member: {
+        name: "member1",
+        type: "type1",
+        value: "value1",
+      },
+    }
+
+    const wrapper = shallow(<Member {...props} />)
+
+    expect(wrapper.find("StyledDocName").text()).toBe("member1")
+    expect(wrapper.find("StyledDocType").text()).toBe("type1")
+    expect(wrapper.find("StyledDocValue").text()).toBe("value1")
+  })
+
+  it("should render doc-oriented members", () => {
+    const props = {
+      member: {
+        name: "member1",
+        type: "type1",
+        docString: "docstring1",
+      },
+    }
+
+    const wrapper = shallow(<Member {...props} />)
+
+    expect(wrapper.find("StyledDocName").text()).toBe("member1")
+    expect(wrapper.find("StyledDocType").text()).toBe("type1")
+    expect(wrapper.find("StyledDocValue").text()).toBe("docstring1")
+  })
+
+  it("should prefer value over doc", () => {
+    const props = {
+      member: {
+        name: "member1",
+        type: "type1",
+        value: "value1",
+        docString: "docstring1",
+      },
+    }
+
+    const wrapper = shallow(<Member {...props} />)
+
+    expect(wrapper.find("StyledDocName").text()).toBe("member1")
+    expect(wrapper.find("StyledDocType").text()).toBe("type1")
+    expect(wrapper.find("StyledDocValue").text()).toBe("value1")
+  })
+
+  it("should tell you when there are no docs", () => {
+    const props = {
+      member: {
+        name: "member1",
+        type: "type1",
+      },
+    }
+
+    const wrapper = shallow(<Member {...props} />)
+
+    expect(wrapper.find("StyledDocName").text()).toBe("member1")
+    expect(wrapper.find("StyledDocType").text()).toBe("type1")
+    expect(wrapper.find("StyledDocValue").text()).toBe("No docs available")
+  })
+
+  it("should only show type if present", () => {
+    const props = {
+      member: {
+        name: "member1",
+      },
+    }
+
+    const wrapper = shallow(<Member {...props} />)
+
+    expect(wrapper.find("StyledDocName").text()).toBe("member1")
+    expect(wrapper.find("StyledDocType").length).toBe(0)
   })
 })
