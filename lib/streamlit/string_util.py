@@ -62,7 +62,7 @@ def extract_leading_emoji(text: str) -> Tuple[str, str]:
 
 
 def escape_markdown(raw_string: str) -> str:
-    """Returns a new string which escapes all markdown metacharacters.
+    r"""Returns a new string which escapes all markdown metacharacters.
 
     Args
     ----
@@ -139,7 +139,6 @@ def append_date_time_to_string(input_string: str) -> str:
 
 def generate_download_filename_from_title(title_string: str) -> str:
     """Generated download filename from page title string."""
-
     title_string = title_string.replace(" · Streamlit", "")
     file_name_string = clean_filename(title_string)
     title_string = snake_case_to_camel_case(file_name_string)

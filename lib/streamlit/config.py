@@ -79,7 +79,6 @@ def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None
     where_defined : str
         Tells the config system where this was set.
     """
-
     with _config_lock:
         # Ensure that our config files have been parsed.
         get_config_options()
@@ -155,7 +154,7 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
         The name of the config section to fetch options for.
 
     Returns
-    ----------
+    -------
     Dict[str, Any]
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
@@ -375,7 +374,6 @@ def _logger_log_level() -> str:
 
     Default: 'info'
     """
-
     if get_option("global.logLevel"):
         return str(get_option("global.logLevel"))
     elif get_option("global.developmentMode"):
@@ -994,7 +992,6 @@ def _maybe_read_env_variable(value: Any) -> Any:
         variable.
 
     """
-
     if isinstance(value, str) and value.startswith("env:"):
         var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
@@ -1060,7 +1057,7 @@ def get_config_options(
         Config options that we received via CLI flag.
 
     Returns
-    ----------
+    -------
     Dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
@@ -1182,7 +1179,6 @@ def on_config_parsed(
     Callable[[], bool]
         A function that the caller can use to deregister func.
     """
-
     # We need to use the same receiver when we connect or disconnect on the
     # Signal. If we don't do this, then the registered receiver won't be released
     # leading to a memory leak because the Signal will keep a reference of the

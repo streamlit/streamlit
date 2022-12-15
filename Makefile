@@ -40,8 +40,15 @@ all-devel: init develop pre-commit-install
 	@echo ""
 
 .PHONY: mini-devel
-# Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
+# Get minimal dependencies for development and install Streamlit into Python
+# environment -- but do not build the frontend.
 mini-devel: mini-init develop pre-commit-install
+
+.PHONY: build-deps
+# An even smaller installation than mini-devel. Installs the bare minimum
+# necessary to build Streamlit (by leaving out some dependencies necessary for
+# the development process). Does not build the frontend.
+build-deps: mini-init develop
 
 .PHONY: init
 # Install all Python and JS dependencies.
@@ -57,7 +64,7 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv ;
+	pip install pipenv
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install py-test-install
@@ -166,7 +173,7 @@ distribution:
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
-package: mini-devel frontend distribution
+package: build-deps frontend distribution
 
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
@@ -180,7 +187,7 @@ conda-distribution:
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: mini-devel frontend conda-distribution
+conda-package: build-deps frontend conda-distribution
 
 .PHONY: clean
 # Remove all generated files.

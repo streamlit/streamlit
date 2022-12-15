@@ -57,6 +57,7 @@ jest.mock("src/lib/ConnectionManager")
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>
 ): HostCommunicationState => ({
+  authTokenPromise: Promise.resolve(undefined),
   forcedModalClose: false,
   hideSidebarNav: false,
   isOwner: true,
@@ -76,8 +77,9 @@ const getHostCommunicationProp = (
   currentState: getHostCommunicationState({}),
   onModalReset: jest.fn(),
   onPageChanged: jest.fn(),
+  resetAuthToken: jest.fn(),
   sendMessage: jest.fn(),
-  setAllowedOrigins: jest.fn(),
+  setAllowedOriginsResp: jest.fn(),
   ...extend,
 })
 
@@ -406,30 +408,6 @@ describe("App", () => {
     expect(
       props.hostCommunication.currentState.requestedPageScriptHash
     ).toBeNull()
-  })
-
-  it("should return the auth token set in hostCommunication from getHostAuthToken", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-
-    // Use setProps (vs setting the auth token on component rendered) to
-    // simulate the auth token changing after the withHostCommunication hoc
-    // initially loads.
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            authToken: "verySecureAuthToken",
-          }),
-        }),
-      })
-    )
-    wrapper.update()
-
-    const instance = wrapper.instance() as App
-
-    // @ts-ignore
-    expect(instance.getHostAuthToken()).toBe("verySecureAuthToken")
   })
 })
 

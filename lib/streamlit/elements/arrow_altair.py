@@ -14,7 +14,8 @@
 
 """A Python wrapper around Altair.
 Altair is a Python visualization library based on Vega-Lite,
-a nice JSON schema for expressing graphs and charts."""
+a nice JSON schema for expressing graphs and charts.
+"""
 
 from datetime import date
 from enum import Enum
@@ -48,6 +49,12 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+# Create and enable streamlit theme
+STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
+
+# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
+alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
 
 # no theme applied to charts
 alt.themes.enable("none")
@@ -273,7 +280,7 @@ class ArrowAltairMixin:
         self,
         altair_chart: Chart,
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = None,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -480,7 +487,7 @@ def _generate_chart(
     width: int = 0,
     height: int = 0,
 ) -> Chart:
-    """This function uses the chart's type, data columns and indices to figure out the chart's spec."""
+    """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
 
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
@@ -567,7 +574,7 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: Chart,
     use_container_width: bool = False,
-    theme: Union[None, Literal["streamlit"]] = None,
+    theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs: Any,
 ) -> None:
     """Marshall chart's data into proto."""
@@ -582,7 +589,8 @@ def marshall(
 
     def id_transform(data) -> Dict[str, str]:
         """Altair data transformer that returns a fake named dataset with the
-        object id."""
+        object id.
+        """
         datasets[id(data)] = data
         return {"name": str(id(data))}
 
