@@ -23,12 +23,15 @@ import React, {
   FunctionComponent,
   Fragment,
 } from "react"
+import { visit } from "unist-util-visit"
+import { useTheme } from "@emotion/react"
 import ReactMarkdown, { PluggableList } from "react-markdown"
 import {
   Components,
   ReactMarkdownProps,
 } from "react-markdown/src/ast-to-react"
 import { once } from "lodash"
+import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
 import rehypeKatex from "rehype-katex"
@@ -40,6 +43,13 @@ import CodeBlock, { CodeTag } from "src/components/elements/CodeBlock/"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
+import {
+  getMdBlue,
+  getMdGreen,
+  getMdOrange,
+  getMdRed,
+  getMdViolet,
+} from "src/theme/index"
 
 import {
   StyledStreamlitMarkdown,
@@ -72,7 +82,8 @@ export interface Props {
   isCaption?: boolean
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button/download button labels
+   * Only allows italics, bold, strikethrough, and emojis in button/download button labels,
+   * does not allow colored text
    */
   isButton?: boolean
 
@@ -82,9 +93,16 @@ export interface Props {
   isLabel?: boolean
 
   /**
-   * Checkbox has larger label font sizing - same allowed elements as other widgets ^
+   * Checkbox has larger label font sizing - same allowed elements as other widgets ^,
+   * does not allow colored text
    */
   isCheckbox?: boolean
+
+  /**
+   * Does not allow colored text
+   */
+  isExpander?: boolean
+  isTabs?: boolean
 }
 
 /**
@@ -218,7 +236,8 @@ export interface RenderedMarkdownProps {
   overrideComponents?: Components
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button/download button labels
+   * Only allows italics, bold, strikethrough, and emojis in button/download button labels,
+   * does not allow colored text
    */
   isButton?: boolean
 
@@ -226,6 +245,13 @@ export interface RenderedMarkdownProps {
    * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
    */
   isLabel?: boolean
+
+  /**
+   * Does not allow colored text
+   */
+  isCheckbox?: boolean
+  isExpander?: boolean
+  isTabs?: boolean
 }
 
 export function RenderedMarkdown({
@@ -234,6 +260,9 @@ export function RenderedMarkdown({
   overrideComponents,
   isLabel,
   isButton,
+  isCheckbox,
+  isExpander,
+  isTabs,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -247,8 +276,40 @@ export function RenderedMarkdown({
     h6: CustomHeading,
     ...(overrideComponents || {}),
   }
-
-  const plugins = [remarkMathPlugin, remarkEmoji, remarkGfm]
+  const theme = useTheme()
+  const colorMapping = new Map(
+    Object.entries({
+      red: getMdRed(theme),
+      blue: getMdBlue(theme),
+      green: getMdGreen(theme),
+      violet: getMdViolet(theme),
+      orange: getMdOrange(theme),
+    })
+  )
+  function remarkColoring() {
+    return (tree: any) => {
+      // @ts-ignore
+      visit(tree, node => {
+        if (node.type === "textDirective") {
+          const nodeName = String(node.name)
+          if (colorMapping.has(nodeName)) {
+            const data = node.data || (node.data = {})
+            data.hName = "span"
+            data.hProperties = {
+              style: `color: ${colorMapping.get(nodeName)}`,
+            }
+          }
+        }
+      })
+    }
+  }
+  const plugins = [
+    remarkMathPlugin,
+    remarkEmoji,
+    remarkGfm,
+    remarkDirective,
+    remarkColoring,
+  ]
   const rehypePlugins: PluggableList = [rehypeKatex]
 
   if (allowHTML) {
@@ -258,14 +319,15 @@ export function RenderedMarkdown({
   // limits allowed markdown, default is allow all
   let allowed
   if (isLabel) {
-    allowed = ["p", "em", "strong", "del", "code", "a"]
-  } else if (isButton) {
+    allowed = ["p", "em", "strong", "del", "code", "a", "span"]
+  }
+  if (isButton || isCheckbox || isExpander || isTabs) {
     allowed = ["p", "em", "strong", "del"]
   }
 
   return (
     <ErrorBoundary>
-      <ReactMarkdown
+      <ReactMarkdown // @ts-ignore
         remarkPlugins={plugins}
         rehypePlugins={rehypePlugins}
         components={renderers}
@@ -304,6 +366,8 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isLabel,
       isButton,
       isCheckbox,
+      isExpander,
+      isTabs,
     } = this.props
     const isInSidebar = this.context
 
@@ -320,7 +384,10 @@ class StreamlitMarkdown extends PureComponent<Props> {
           source={source}
           allowHTML={allowHTML}
           isLabel={isLabel}
+          isCheckbox={isCheckbox}
           isButton={isButton}
+          isExpander={isExpander}
+          isTabs={isTabs}
         />
       </StyledStreamlitMarkdown>
     )
@@ -387,35 +454,35 @@ export function Heading(props: HeadingProtoProps): ReactElement {
 
   return (
     <div className="stMarkdown" style={{ width }}>
-      <StyledHeaderContainer>
-        <HeadingWithAnchor tag={tag} anchor={anchor}>
-          <RenderedMarkdown
-            source={makeMarkdownHeading(tag, heading)}
-            allowHTML={false}
-            // this is purely an inline string
-            overrideComponents={{
-              p: Fragment,
-              h1: Fragment,
-              h2: Fragment,
-              h3: Fragment,
-              h4: Fragment,
-              h5: Fragment,
-              h6: Fragment,
-            }}
-          />
-        </HeadingWithAnchor>
-      </StyledHeaderContainer>
-      {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
-      {rest.length > 0 && (
-        <StyledStreamlitMarkdown
-          isCaption={Boolean(false)}
-          isInSidebar={isSidebar}
-          style={{ width }}
-          data-testid="stMarkdownContainer"
-        >
+      <StyledStreamlitMarkdown
+        isCaption={Boolean(false)}
+        isInSidebar={isSidebar}
+        style={{ width }}
+        data-testid="stMarkdownContainer"
+      >
+        <StyledHeaderContainer>
+          <HeadingWithAnchor tag={tag} anchor={anchor}>
+            <RenderedMarkdown
+              source={makeMarkdownHeading(tag, heading)}
+              allowHTML={false}
+              // this is purely an inline string
+              overrideComponents={{
+                p: Fragment,
+                h1: Fragment,
+                h2: Fragment,
+                h3: Fragment,
+                h4: Fragment,
+                h5: Fragment,
+                h6: Fragment,
+              }}
+            />
+          </HeadingWithAnchor>
+        </StyledHeaderContainer>
+        {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
+        {rest.length > 0 && (
           <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
-        </StyledStreamlitMarkdown>
-      )}
+        )}
+      </StyledStreamlitMarkdown>
     </div>
   )
 }
