@@ -74,7 +74,10 @@ jobs:
           (( interval = total / TOTAL_WORKERS ))
           (( remainder = total % TOTAL_WORKERS ))
 
-          if [ $CURRENT_RUN -le $remainder ]; then
+          if [ "$CURRENT_RUN" -eq 1 ]; then
+            startIndex=0
+            (( currentIntervalLength = interval + 1 ))
+          elif [ $CURRENT_RUN -le $remainder ]; then
             (( startIndex = (CURRENT_RUN - 1) * (interval + 1) ))
             (( currentIntervalLength = interval + 1 ))
           else
