@@ -64,37 +64,22 @@ jobs:
       - name: Cypress Tests
         env:
           CURRENT_RUN: ${{matrix.specs}}
-          TOTAL_WORKERS: 22
         run: |
           js_specs=(e2e/specs/*)
-          echo "$js_specs"
-
-          # get how many specs to be split up into $TOTAL_WORKERS runs
-          (( total = ${#js_specs[@]} ))
-          (( interval = total / TOTAL_WORKERS ))
-          (( remainder = total % TOTAL_WORKERS ))
-
-          if [ "$CURRENT_RUN" -eq 1 ]; then
+          # get how many specs to be split up into 21 runs
+          (( interval=(${#js_specs[@]})/21 ))
+          if [ "$CURRENT_RUN" -eq 1 ]
+          then
             startIndex=0
-            (( currentIntervalLength = interval + 1 ))
-          elif [ $CURRENT_RUN -le $remainder ]; then
-            (( startIndex = (CURRENT_RUN - 1) * (interval + 1) ))
-            (( currentIntervalLength = interval + 1 ))
           else
-            (( startIndex = remainder * (interval + 1) + (CURRENT_RUN - remainder - 1) * interval ))
-            (( currentIntervalLength = interval ))
+            (( startIndex = (${CURRENT_RUN} - 1) * ${interval} ))
           fi
-
-          echo "startIndex: $startIndex, currentIntervalLength: $currentIntervalLength"
-
-          echo "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
-          echo "PRIOR SECOND IF"
-
           # ensure no blank specs list (which causes every spec to run)
-          if [[ "${js_specs[@]:${startIndex}:${currentIntervalLength}}" != "" ]]; then
+          if [[ "${js_specs[@]:${startIndex}:${interval}}" != "" ]]
+          then
             echo "Specs tested in this job:"
-            echo "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
-            scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
+            echo "${js_specs[@]:${startIndex}:${interval}}"
+            scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
           fi
       - name: Check that all screenshot have been committed
         run: |
