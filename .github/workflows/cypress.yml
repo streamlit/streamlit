@@ -64,22 +64,29 @@ jobs:
       - name: Cypress Tests
         env:
           CURRENT_RUN: ${{matrix.specs}}
+          TOTAL_WORKERS: 22
         run: |
           js_specs=(e2e/specs/*)
-          # get how many specs to be split up into 21 runs
-          (( interval=(${#js_specs[@]})/21 ))
-          if [ "$CURRENT_RUN" -eq 1 ]
-          then
-            startIndex=0
+
+          # get how many specs to be split up into $TOTAL_WORKERS runs
+          (( total = ${#js_specs[@]} ))
+          (( interval = total / TOTAL_WORKERS ))
+          (( remainder = total % TOTAL_WORKERS ))
+
+          if [ $CURRENT_RUN -le $remainder ]; then
+            (( startIndex = (CURRENT_RUN - 1) * (interval + 1) ))
+            (( currentIntervalLength = interval + 1 ))
           else
-            (( startIndex = (${CURRENT_RUN} - 1) * ${interval} ))
+            (( startIndex = remainder * (interval + 1) + (CURRENT_RUN - remainder - 1) * interval ))
+            (( currentIntervalLength = interval ))
           fi
+
           # ensure no blank specs list (which causes every spec to run)
-          if [[ "${js_specs[@]:${startIndex}:${interval}}" != "" ]]
+          if [[ "${js_specs[@]:$startIndex:$currentIntervalLength}" != "" ]]
           then
             echo "Specs tested in this job:"
-            echo "${js_specs[@]:${startIndex}:${interval}}"
-            scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
+            echo "${js_specs[@]:$startIndex:$currentIntervalLength}"
+            scripts/run_e2e_tests.py -a "${js_specs[@]:$startIndex:$currentIntervalLength}"
           fi
       - name: Check that all screenshot have been committed
         run: |
