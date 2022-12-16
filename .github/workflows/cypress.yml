@@ -72,11 +72,14 @@ jobs:
           (( total = ${#js_specs[@]} ))
           (( interval = total / TOTAL_WORKERS ))
           (( remainder = total % TOTAL_WORKERS ))
-
+          echo "Total specs: $total"
+          echo "BEFFFFFFFORE IFFFF"
           if [ $CURRENT_RUN -le $remainder ]; then
+            echo "INSIDE IFFFFFFF"
             (( startIndex = (CURRENT_RUN - 1) * (interval + 1) ))
             (( currentIntervalLength = interval + 1 ))
           else
+            echo "INSIDE ELSEEEE"
             (( startIndex = remainder * (interval + 1) + (CURRENT_RUN - remainder - 1) * interval ))
             (( currentIntervalLength = interval ))
           fi
