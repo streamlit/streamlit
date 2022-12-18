@@ -30,6 +30,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # In case of number of workers would change, update TOTAL_WORKERS env variable in "Cypress Tests" step.
+        # Be aware that specs should be sequential integers starting from 1 without gaps
+        # based on logic in "Cypress Tests" step.
         specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
 
     steps:
@@ -64,22 +67,33 @@ jobs:
       - name: Cypress Tests
         env:
           CURRENT_RUN: ${{matrix.specs}}
+          TOTAL_WORKERS: 22
         run: |
           js_specs=(e2e/specs/*)
-          # get how many specs to be split up into 21 runs
-          (( interval=(${#js_specs[@]})/21 ))
-          if [ "$CURRENT_RUN" -eq 1 ]
-          then
+
+          # get how many specs to be split up into $TOTAL_WORKERS runs
+          (( totalTests = ${#js_specs[@]} ))
+          (( testsPerWorker = totalTests / TOTAL_WORKERS ))
+          # get the remainder of tests to be split up into the first $remainder workers
+          (( remainder = totalTests % TOTAL_WORKERS ))
+
+          # We handle $CURRENT_RUN = 1 separately because bash interprets 0 as empty string in this case
+          if [ "$CURRENT_RUN" -eq 1 ]; then
             startIndex=0
+            (( currentIntervalLength = testsPerWorker + (remainder > 0 ? 1 : 0) ))
+          elif [ $CURRENT_RUN -le $remainder ]; then
+            (( startIndex = (CURRENT_RUN - 1) * (testsPerWorker + 1) ))
+            (( currentIntervalLength = testsPerWorker + 1 ))
           else
-            (( startIndex = (${CURRENT_RUN} - 1) * ${interval} ))
+            (( startIndex = remainder * (testsPerWorker + 1) + (CURRENT_RUN - remainder - 1) * testsPerWorker ))
+            (( currentIntervalLength = testsPerWorker ))
           fi
+
           # ensure no blank specs list (which causes every spec to run)
-          if [[ "${js_specs[@]:${startIndex}:${interval}}" != "" ]]
-          then
+          if [[ "${js_specs[@]:${startIndex}:${currentIntervalLength}}" != "" ]]; then
             echo "Specs tested in this job:"
-            echo "${js_specs[@]:${startIndex}:${interval}}"
-            scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${interval}}"
+            echo "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
+            scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
           fi
       - name: Check that all screenshot have been committed
         run: |
