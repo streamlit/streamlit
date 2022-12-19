@@ -225,7 +225,7 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
             # Raise warning when static folder size is larger than 1 GB
             static_folder_size = file_util.get_directory_size(static_folder_path)
 
-            if static_folder_size > 1 * 1024 * 1024 * 1024:
+            if static_folder_size > file_util.MAX_APP_STATIC_FOLDER_SIZE:
                 config.set_option("server.enableStaticServing", False)
                 click.secho(
                     "WARNING: Static folder size is larger than 1GB. "
