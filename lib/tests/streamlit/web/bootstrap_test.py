@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os.path
 import sys
 import unittest
 from io import StringIO
@@ -312,7 +312,60 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         self.assertIn("Streamlit requires Git 2.7.0 or later, but you have 1.2.3.", out)
 
-    # TODO [Karen] Write test for _maybe_print_static_folder_warning
+    @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
+    def test_maybe_print_static_folder_warning_called_once_on_server_start(
+        self, mock_maybe_print_static_folder_warning
+    ):
+        """We should load secrets.toml on startup."""
+        bootstrap._on_server_start(Mock())
+        mock_maybe_print_static_folder_warning.assert_called_once()
+
+    @patch("os.path.isdir", Mock(return_value=False))
+    @patch("click.secho")
+    def test_maybe_print_static_folder_warning_if_folder_doesnt_exist(self, mock_echo):
+        """We should print a warning when static folder does not exist."""
+
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"server.enableStaticServing": True}
+        )
+
+        with patch.object(config, "get_option", new=mock_get_option):
+            bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
+            mock_echo.assert_called_once_with(
+                "WARNING: Static file serving enabled, but no static folder found at "
+                f"{os.path.abspath('app_root/static')}. To disable static file "
+                f"serving, set server.enableStaticServing to false.",
+                fg="yellow",
+            )
+
+    @patch("os.path.isdir", Mock(return_value=True))
+    @patch(
+        "streamlit.file_util.get_directory_size",
+        Mock(return_value=2 * 1024 * 1024 * 1024),
+    )
+    @patch("click.secho")
+    def test_maybe_print_static_folder_warning_if_folder_is_too_large(self, mock_echo):
+        """
+        We should print a warning and disable static files serving when static
+        folder total size is too large.
+        """
+
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"server.enableStaticServing": True}
+        )
+
+        with patch.object(config, "get_option", new=mock_get_option), patch.object(
+            config, "set_option"
+        ) as mock_set_option:
+            bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
+            mock_echo.assert_called_once_with(
+                "WARNING: Static folder size is larger than 1GB. "
+                "Static file serving has been disabled.",
+                fg="yellow",
+            )
+            mock_set_option.assert_called_once_with("server.enableStaticServing", False)
 
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):

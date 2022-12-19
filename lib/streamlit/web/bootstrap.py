@@ -212,19 +212,26 @@ def _print_new_version_message() -> None:
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
     """Prints a warning if the static folder is misconfigured."""
 
-    static_folder_path = file_util.get_app_static_dir(main_script_path)
+    if config.get_option("server.enableStaticServing"):
+        static_folder_path = file_util.get_app_static_dir(main_script_path)
+        if not os.path.isdir(static_folder_path):
+            click.secho(
+                f"WARNING: Static file serving enabled, but no static folder found "
+                f"at {static_folder_path}. To disable static file serving, "
+                f"set server.enableStaticServing to false.",
+                fg="yellow",
+            )
+        else:
+            # Raise warning when static folder size is larger than 1 GB
+            static_folder_size = file_util.get_directory_size(static_folder_path)
 
-    if config.get_option("server.enableStaticServing") and not os.path.isdir(
-        static_folder_path
-    ):
-        click.secho(
-            f"WARNING: Static file serving enabled, but no static folder found "
-            f"at {static_folder_path}. To disable static file serving, "
-            f"set server.enableStaticServing to false.",
-            fg="yellow",
-        )
-
-        # TODO [KAREN] Raise warning when static folder size is larger than 100MB
+            if static_folder_size > 1 * 1024 * 1024 * 1024:
+                config.set_option("server.enableStaticServing", False)
+                click.secho(
+                    "WARNING: Static folder size is larger than 1GB. "
+                    "Static file serving has been disabled.",
+                    fg="yellow",
+                )
 
 
 def _print_url(is_running_hello: bool) -> None:

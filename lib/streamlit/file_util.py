@@ -18,6 +18,7 @@ import fnmatch
 import io
 import os
 from pathlib import Path
+from typing import Union
 
 from streamlit import env_util, util
 from streamlit.string_util import is_binary_string
@@ -28,9 +29,8 @@ CONFIG_FOLDER_NAME = ".streamlit"
 # If enableStaticServing is enabled, static file served from the ./static folder
 APP_STATIC_FOLDER_NAME = "static"
 
-# TODO [KAREN] Move to config or remove if not needed
 MAX_APP_STATIC_FILE_SIZE = 200 * 1024 * 1024
-WHITELISTED_APP_STATIC_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf", ".gif"]
+WHITELISTED_APP_STATIC_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif"]
 
 
 def get_encoded_file_data(data, encoding="auto"):
@@ -181,6 +181,16 @@ def file_is_in_folder_glob(filepath, folderpath_glob) -> bool:
 
     file_dir = os.path.dirname(filepath) + "/"
     return fnmatch.fnmatch(file_dir, folderpath_glob)
+
+
+def get_directory_size(directory: Union[str, os.PathLike]) -> int:
+    """Return the size of a directory in bytes."""
+    total_size = 0
+    for dirpath, _, filenames in os.walk(directory):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
 
 
 def file_in_pythonpath(filepath) -> bool:
