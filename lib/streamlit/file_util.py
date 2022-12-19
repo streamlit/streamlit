@@ -18,7 +18,7 @@ import fnmatch
 import io
 import os
 from pathlib import Path
-from typing import Union
+from typing import AnyStr, Union
 
 from streamlit import env_util, util
 from streamlit.string_util import is_binary_string
@@ -183,7 +183,7 @@ def file_is_in_folder_glob(filepath, folderpath_glob) -> bool:
     return fnmatch.fnmatch(file_dir, folderpath_glob)
 
 
-def get_directory_size(directory: Union[str, os.PathLike]) -> int:
+def get_directory_size(directory: Union[AnyStr, os.PathLike[AnyStr]]) -> int:
     """Return the size of a directory in bytes."""
     total_size = 0
     for dirpath, _, filenames in os.walk(directory):
