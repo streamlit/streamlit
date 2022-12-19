@@ -220,14 +220,14 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
         self.assertEqual(int_proto.int64s.data, int_data.tolist())
 
         # bool
-        bool_data = np.array([True, False], dtype="?")
+        bool_data = np.array([True, False], dtype=np.bool_)
         bool_proto = AnyArray()
 
         data_frame._marshall_any_array(bool_data, bool_proto)
         self.assertEqual(bool_proto.int64s.data, bool_data.tolist())
 
         # object
-        obj_data = np.array([json.dumps, json.dumps], dtype="O")
+        obj_data = np.array([json.dumps, json.dumps], dtype=np.object_)
         obj_proto = AnyArray()
         truth = [str(json.dumps), str(json.dumps)]
 
