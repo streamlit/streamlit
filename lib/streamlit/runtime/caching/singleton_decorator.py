@@ -266,7 +266,7 @@ class SingletonAPI:
 
         validate : callable or None
             An optional validation function for cached data. `validate` is
-            called each time the cached value is accessed; it receives
+            called each time the cached value is accessed. It receives
             the cached value as its only param; and it returns a bool result.
             If `validate` returns False, the current cached value is discarded,
             and the decorated function is called to compute a new value.
