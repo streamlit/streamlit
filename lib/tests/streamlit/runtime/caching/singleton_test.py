@@ -120,7 +120,7 @@ class SingletonValidateTest(unittest.TestCase):
         validate.assert_not_called()
 
         # Subsequent calls: call_count increases; validate called with previous value
-        for ii in range(3):
+        for _ in range(3):
             expected_call_count += 1
             self.assertEqual(expected_call_count, f())
             validate.assert_called_once_with(expected_call_count - 1)
