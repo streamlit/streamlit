@@ -50,6 +50,12 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+# Create and enable streamlit theme
+STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
+
+# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
+alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
+
 # no theme applied to charts
 alt.themes.enable("none")
 
@@ -274,7 +280,7 @@ class ArrowAltairMixin:
         self,
         altair_chart: Chart,
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = None,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
         """Display a chart using the Altair library.
 
@@ -568,7 +574,7 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: Chart,
     use_container_width: bool = False,
-    theme: Union[None, Literal["streamlit"]] = None,
+    theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs: Any,
 ) -> None:
     """Marshall chart's data into proto."""

@@ -276,15 +276,11 @@ class CacheResourceAPI:
             None if cache entries should not expire. The default is None.
 
         experimental_allow_widgets : boolean
-            Allow widgets to be used in the cache_resource function. Defaults to False.
-
-        .. note::
+            Allow widgets to be used in the cached function. Defaults to False.
             Support for widgets in cached functions is currently experimental.
-            To enable it, set the parameter ``experimental_allow_widgets=True``
-            in ``@st.cache_resource``. Note that this may lead to excessive
-            memory use since the widget value is treated as an additional input
-            parameter to the cache. We may remove support for this option at any
-            time without notice.
+            Setting this parameter to True may lead to excessive memory use since the
+            widget value is treated as an additional input parameter to the cache.
+            We may remove support for this option at any time without notice.
 
         Example
         -------

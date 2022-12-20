@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "1.15.2",
+  "version": "1.16.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -102,6 +102,7 @@
     "react-window": "^1.8.5",
     "rehype-katex": "^5.0.0",
     "rehype-raw": "^5.1.0",
+    "remark-directive": "^2.0.1",
     "remark-emoji": "^2.2.0",
     "remark-gfm": "^1.0.0",
     "remark-math": "^4.0.0",
@@ -110,6 +111,7 @@
     "styletron-engine-atomic": "^1.4.6",
     "styletron-react": "^5.2.6",
     "typed-signals": "^2.2.0",
+    "unist-util-visit": "^4.1.1",
     "vega": "^5.17.3",
     "vega-embed": "^6.21.0",
     "vega-interpreter": "^1.0.4",
@@ -174,6 +176,7 @@
     "eslint-plugin-prettier": "^3.1.4",
     "eslint-plugin-react": "^7.29.4",
     "eslint-plugin-react-hooks": "^4.2.0",
+    "eslint-plugin-no-relative-import-paths": "^1.5.0",
     "fetch-mock": "^9.11.0",
     "hard-source-webpack-plugin": "^0.13.1",
     "jest": "26.6.0",
@@ -219,6 +222,7 @@
     "tar": "^6.1.9",
     "trim": "^0.0.3",
     "trim-newlines": "^3.0.1",
+    "vega-tooltip": "^0.30.0",
     "websocket-extensions": "^0.1.4",
     "ws": "^7.4.6",
     "y18n": "^4.0.1"

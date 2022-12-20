@@ -27,9 +27,9 @@ import {
   sizes,
   spacing,
   zIndices,
-} from "../primitives"
+} from "src/theme/primitives"
+import { createEmotionColors } from "src/theme/utils"
 import genericColors from "./themeColors"
-import { createEmotionColors } from "../utils"
 
 export default {
   inSidebar: false,
