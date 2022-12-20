@@ -20,9 +20,9 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.session_manager import (
     SessionClient,
-    SessionData,
     SessionInfo,
     SessionManager,
     SessionStorage,
@@ -53,7 +53,7 @@ class MockSessionManager(SessionManager):
     def connect_session(
         self,
         client: SessionClient,
-        session_data: SessionData,
+        script_data: ScriptData,
         user_info: Dict[str, Optional[str]],
         existing_session_id: Optional[str] = None,
     ) -> str:
@@ -61,7 +61,7 @@ class MockSessionManager(SessionManager):
             "streamlit.runtime.scriptrunner.ScriptRunner", new=mock.MagicMock()
         ):
             session = AppSession(
-                session_data=session_data,
+                script_data=script_data,
                 uploaded_file_manager=self._uploaded_file_mgr,
                 message_enqueued_callback=self._message_enqueued_callback,
                 local_sources_watcher=mock.MagicMock(),
