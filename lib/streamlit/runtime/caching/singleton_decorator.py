@@ -410,7 +410,7 @@ class SingletonCache(Cache):
 
             result = multi_results.results[widget_key]
 
-            if self.validate is not None and not self.validate(result):
+            if self.validate is not None and not self.validate(result.value):
                 # Result failed validation check.
                 raise CacheKeyNotFoundError()
 
