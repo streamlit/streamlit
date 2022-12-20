@@ -32,6 +32,7 @@ from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunContext,
@@ -40,7 +41,6 @@ from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
-from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
@@ -63,7 +63,7 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
         return_value=event_loop,
     ):
         return AppSession(
-            session_data=SessionData("/fake/script_path.py", "fake_command_line"),
+            script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
             uploaded_file_manager=MagicMock(),
             message_enqueued_callback=None,
             local_sources_watcher=MagicMock(),
@@ -236,7 +236,7 @@ class AppSessionTest(unittest.TestCase):
         # Assert that the ScriptRunner constructor was called.
         mock_scriptrunner.assert_called_once_with(
             session_id=session.id,
-            main_script_path=session._session_data.main_script_path,
+            main_script_path=session._script_data.main_script_path,
             client_state=session._client_state,
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
@@ -502,7 +502,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
             session_id="TestSessionID",
-            _enqueue=session._session_data.enqueue,
+            _enqueue=session._enqueue_forward_msg,
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
@@ -524,7 +524,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         # Yield to let the AppSession's callbacks run.
         await asyncio.sleep(0)
 
-        sent_messages = session._session_data._browser_queue._queue
+        sent_messages = session._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
 
         # Note that we're purposefully not very thoroughly testing new_session
@@ -628,7 +628,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             side_effect=lambda: forward_msg_queue_events.append(CLEAR_QUEUE)
         )
 
-        session._session_data._browser_queue = mock_queue
+        session._browser_queue = mock_queue
 
         # Create an exception and have the session handle it.
         FAKE_EXCEPTION = RuntimeError("I am error")
