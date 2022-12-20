@@ -22,7 +22,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.session_manager import SessionStorage
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
@@ -68,7 +68,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
     def connect_session(self, existing_session_id=None):
         return self.session_mgr.connect_session(
             client=MagicMock(),
-            session_data=SessionData("/fake/script_path.py", "fake_command_line"),
+            script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
             user_info={},
             existing_session_id=existing_session_id,
         )
