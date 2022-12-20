@@ -134,7 +134,7 @@ class RuntimeTest(RuntimeTestCase):
 
             patched_connect_session.assert_called_with(
                 client=client,
-                session_data=ANY,
+                script_data=ANY,
                 user_info=user_info,
                 existing_session_id=existing_session_id,
             )
