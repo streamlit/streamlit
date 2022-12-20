@@ -54,10 +54,12 @@ SINGLETON_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.SINGLETON)
 ValidateFunc: TypeAlias = Callable[[Any], bool]
 
 
-def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None):
+def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> bool:
     """True if the two validate functions are equal for the purposes of
     determining whether a given function cache needs to be recreated.
     """
+    # To "properly" test for function equality here, we'd need to compare function bytecode.
+    # For performance reasons, We've decided not to do that for now.
     return (a is None and b is None) or (a is not None and b is not None)
 
 
