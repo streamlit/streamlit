@@ -206,15 +206,15 @@ class Block:
         return None
 
     @overload
-    def get(self, elt: Literal["text"]) -> Sequence[Text]:
+    def get(self, element_type: Literal["text"]) -> Sequence[Text]:
         ...
 
     @overload
-    def get(self, elt: Literal["radio"]) -> Sequence[Radio[Any]]:
+    def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 
-    def get(self, elt: str) -> Sequence[Node]:
-        return [e for e in self if e.type == elt]
+    def get(self, element_type: str) -> Sequence[Node]:
+        return [e for e in self if e.type == element_type]
 
     def get_widget(self, key: str) -> Widget | None:
         for e in self:
