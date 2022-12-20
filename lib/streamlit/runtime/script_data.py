@@ -15,10 +15,6 @@
 import os
 from dataclasses import dataclass, field
 
-from streamlit.logger import get_logger
-
-LOGGER = get_logger(__name__)
-
 
 @dataclass(frozen=True)
 class ScriptData:
@@ -33,8 +29,11 @@ class ScriptData:
         """Set some computed values derived from main_script_path.
 
         The usage of object.__setattr__ is necessary because trying to set
-        self.script_folder or self.name normally will explode since we declared this
-        dataclass to be frozen.
+        self.script_folder or self.name normally, even within the __init__ method, will
+        explode since we declared this dataclass to be frozen.
+
+        We do this in __post_init__ so that we can use the auto-generated __init__
+        method that most dataclasses use.
         """
         main_script_path = os.path.abspath(self.main_script_path)
         script_folder = os.path.dirname(main_script_path)
