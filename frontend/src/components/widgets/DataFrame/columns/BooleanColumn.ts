@@ -29,7 +29,6 @@ import {
   getErrorCell,
   ColumnCreator,
   toSafeString,
-  isMissingValueCell,
 } from "./utils"
 
 // See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
