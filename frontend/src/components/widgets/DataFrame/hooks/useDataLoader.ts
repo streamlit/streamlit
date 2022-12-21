@@ -155,8 +155,7 @@ function getColumnType(column: BaseColumnProps): ColumnCreator {
       ColumnType = ColumnTypes.get(column.customType)
     } else {
       logWarning(
-        "Unknown column type configured in column configuration: " +
-          column.customType
+        `Unknown column type configured in column configuration: ${column.customType}`
       )
     }
   }
@@ -204,29 +203,6 @@ function useDataLoader(
         } as BaseColumnProps
         const ColumnType = getColumnType(updatedColumn)
         return ColumnType(updatedColumn)
-      } else {
-        let updatedColumn = {
-          ...column,
-          ...applyColumnConfig(column, columnsConfig),
-          isStretched: stretchColumns,
-        } as BaseColumnProps
-
-        const ColumnType = getColumnType(updatedColumn)
-
-        // Make sure editing is deactivated if the column is read-only, disabled,
-        // or a not editable type.
-        if (
-          element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
-          disabled ||
-          ColumnType.isEditableType === false
-        ) {
-          updatedColumn = {
-            ...updatedColumn,
-            isEditable: false,
-          }
-        }
-
-        return ColumnType(updatedColumn)
       }
       let updatedColumn = {
         ...column,
@@ -234,10 +210,14 @@ function useDataLoader(
         isStretched: stretchColumns,
       } as BaseColumnProps
 
-      // Make sure editing is deactivated if the column is read-only or disabled:
+      const ColumnType = getColumnType(updatedColumn)
+
+      // Make sure editing is deactivated if the column is read-only, disabled,
+      // or a not editable type.
       if (
         element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
-        disabled
+        disabled ||
+        ColumnType.isEditableType === false
       ) {
         updatedColumn = {
           ...updatedColumn,
@@ -245,21 +225,7 @@ function useDataLoader(
         }
       }
 
-      // Add a background for non-editable cells, if the overall table is editable:
-      if (
-        element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
-        !updatedColumn.isEditable
-      ) {
-        updatedColumn = {
-          ...updatedColumn,
-          themeOverride: {
-            bgCell: transparentize(theme.colors.darkenedBgMix100, 0.95),
-            bgCellMedium: transparentize(theme.colors.darkenedBgMix100, 0.95),
-          },
-        }
-      }
-
-      return updatedColumn
+      return ColumnType(updatedColumn)
     })
     .filter(column => {
       // Filter out all columns that are hidden

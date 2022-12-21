@@ -43,7 +43,8 @@ import {
   useColumnSizer,
   useColumnSort,
 } from "./hooks"
-import { BaseColumn, toGlideColumn, isMissingValueCell } from "./columns"
+import { toGlideColumn, isMissingValueCell, BaseColumn } from "./columns"
+
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"

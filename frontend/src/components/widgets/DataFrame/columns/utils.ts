@@ -83,7 +83,7 @@ interface ErrorCell extends TextCell {
  * @return a GridCell object that can be used by glide-data-grid.
  */
 export function getErrorCell(errorMsg: string, errorDetails = ""): ErrorCell {
-  errorMsg = "⚠️ " + errorMsg
+  errorMsg = `⚠️ ${errorMsg}`
   return {
     kind: GridCellKind.Text,
     readonly: true,
@@ -253,7 +253,7 @@ export function toSafeNumber(data: any): number | null {
   return Number(data)
 }
 
-export function formatNumber(value: number, maxPrecision: number = 4): string {
+export function formatNumber(value: number, maxPrecision = 4): string {
   if (!Number.isNaN(value) && Number.isFinite(value)) {
     if (maxPrecision === 0) {
       // Numbro is unable to format the numb with 0 decimals.

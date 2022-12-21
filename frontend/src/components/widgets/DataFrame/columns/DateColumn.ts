@@ -16,12 +16,11 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { DataType, Quiver } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { DataType } from "src/lib/Quiver"
 import strftime from "strftime"
 import { DatePickerCell } from "../customCells/DatePickerCell"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import { BaseColumn, BaseColumnProps, getErrorCell } from "./utils"
 
 interface DateColumnParams {
   readonly format?: string
@@ -80,5 +79,6 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
     },
   }
 }
+DateColumn.isEditableType = true
 
 export default DateColumn

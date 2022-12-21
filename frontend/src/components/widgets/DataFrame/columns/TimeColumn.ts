@@ -20,7 +20,7 @@ import { DataType } from "src/lib/Quiver"
 import strftime from "strftime"
 import { TimePickerCell } from "../customCells/TimePickerCell"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import { BaseColumn, BaseColumnProps, getErrorCell } from "./utils"
 
 interface TimeColumnParams {
   readonly format?: string
@@ -92,5 +92,7 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
     },
   }
 }
+
+TimeColumn.isEditableType = true
 
 export default TimeColumn

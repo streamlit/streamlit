@@ -76,7 +76,7 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
         return getEmptyCell()
       }
 
-      let chartData = toSafeArray(data)
+      const chartData = toSafeArray(data)
 
       const convertedChartData: number[] = []
       let normalizedChartData: number[] = []
@@ -86,8 +86,8 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
         let maxValue = Number.MIN_SAFE_INTEGER
         let minValue = Number.MAX_SAFE_INTEGER
 
-        //Try to convert all values to numbers and find min/max
-        for (var i = 0; i < chartData.length; i++) {
+        // Try to convert all values to numbers and find min/max
+        for (let i = 0; i < chartData.length; i++) {
           const convertedValue = toSafeNumber(chartData[i])
           if (
             Number.isNaN(convertedValue) ||

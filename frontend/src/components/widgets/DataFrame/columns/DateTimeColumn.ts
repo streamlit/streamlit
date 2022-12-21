@@ -20,7 +20,7 @@ import { DataType } from "src/lib/Quiver"
 import strftime from "strftime"
 import { DatetimeLocalPickerCell } from "../customCells/DatetimeLocalPickerCell"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import { BaseColumn, BaseColumnProps, getErrorCell } from "./utils"
 
 interface DateTimeColumnParams {
   readonly format?: string
@@ -79,5 +79,7 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
     },
   }
 }
+
+DateTimeColumn.isEditableType = true
 
 export default DateTimeColumn

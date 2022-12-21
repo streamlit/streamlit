@@ -19,12 +19,7 @@ import { GridCell, GridCellKind, ImageCell } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import {
-  BaseColumn,
-  BaseColumnProps,
-  isMissingValueCell,
-  toSafeString,
-} from "./utils"
+import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
 
 function ImageColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {

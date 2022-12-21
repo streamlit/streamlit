@@ -175,7 +175,8 @@ export function getColumnTypeFromQuiver(
   }
   if (typeName.startsWith("list")) {
     return ListColumn
-  } else if (["decimal", "bytes"].includes(typeName)) {
+  }
+  if (["decimal", "bytes"].includes(typeName)) {
     return ObjectColumn
   }
 

@@ -57,11 +57,7 @@ ColumnType = Literal[
     "list",
     "url",
     "image",
-    "date",
-    "time",
-    "datetime-local",
     "chart",
-    # TODO: Figure out range and how it relates to time, datetime-local, date
     "range",
 ]
 
