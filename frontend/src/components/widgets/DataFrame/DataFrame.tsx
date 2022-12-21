@@ -58,7 +58,7 @@ const MAX_COLUMN_AUTO_WIDTH = 500
 // This prevents to rapid updates to the widget state.
 const DEBOUNCE_TIME_MS = 100
 // Token used for missing values (null, NaN, etc.)
-const NULL_VALUE_TOKEN = "None"
+const NULL_VALUE_TOKEN = "NA"
 
 export interface DataFrameProps {
   element: ArrowProto
