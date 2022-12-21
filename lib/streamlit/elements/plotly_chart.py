@@ -122,7 +122,6 @@ class PlotlyMixin:
 
         Example
         -------
-
         The example below comes straight from the examples at
         https://plot.ly/python:
 
