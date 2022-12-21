@@ -36,6 +36,8 @@ def get_query_params() -> Dict[str, List[str]]:
     `http://localhost:8501/?show_map=True&selected=asia&selected=america`.
     Then, you can get the query parameters using the following:
 
+    >>> import streamlit as st
+    >>>
     >>> st.experimental_get_query_params()
     {"show_map": ["True"], "selected": ["asia", "america"]}
 
@@ -67,6 +69,8 @@ def set_query_params(**query_params: Any) -> None:
     "http://localhost:8501/?show_map=True&selected=asia&selected=america",
     you would do the following:
 
+    >>> import streamlit as st
+    >>>
     >>> st.experimental_set_query_params(
     ...     show_map=True,
     ...     selected=["asia", "america"],

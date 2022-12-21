@@ -31,6 +31,8 @@ def stop() -> NoReturn:
 
     Example
     -------
+    >>> import streamlit as st
+    >>>
     >>> name = st.text_input('Name')
     >>> if not name:
     >>>   st.warning('Please input a name.')
