@@ -213,6 +213,12 @@ class Runtime:
         """A Future that completes when the Runtime's run loop has exited."""
         return self._get_async_objs().stopped
 
+    # NOTE: A few Runtime methods listed as threadsafe (get_client, _on_files_updated,
+    # and is_active_session) currently rely on the implementation detail that
+    # WebsocketSessionManager's get_active_session_info and is_active_session methods
+    # happen to be threadsafe. This may change with future SessionManager implementations,
+    # at which point we'll need to formalize our thread safety rules for each
+    # SessionManager method.
     def get_client(self, session_id: str) -> Optional[SessionClient]:
         """Get the SessionClient for the given session_id, or None
         if no such session exists.
@@ -234,8 +240,7 @@ class Runtime:
         -----
         Threading: SAFE. May be called on any thread.
         """
-        session_info = self._session_mgr.get_active_session_info(session_id)
-        if session_info is None:
+        if not self._session_mgr.is_active_session(session_id):
             # If an uploaded file doesn't belong to an active session,
             # remove it so it doesn't stick around forever.
             self._uploaded_file_mgr.remove_session_files(session_id)
@@ -302,12 +307,6 @@ class Runtime:
         -----
         Threading: SAFE. May be called on any thread.
         """
-        # TODO(vdonato): Work out any thread safety issues caused by this function now
-        # being delegated to self._session_mgr. We'll have to reconsider the assumption
-        # that's stated in the SessionManager docstring that SessionManager methods
-        # should only be called from the eventloop thread. This shouldn't be an issue
-        # in practice while sessions still live in memory but will likely end up
-        # becoming problematic in the far future once that's no longer true.
         return self._session_mgr.is_active_session(session_id)
 
     def create_session(
