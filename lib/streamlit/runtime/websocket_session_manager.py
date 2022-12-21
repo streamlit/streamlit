@@ -40,12 +40,6 @@ class WebsocketSessionManager(SessionManager):
     Active sessions are those with a currently active websocket connection. Inactive
     sessions are sessions without. Eventual cleanup of inactive sessions is a detail left
     to the specific SessionStorage that a WebsocketSessionManager is instantiated with.
-
-    NOTE: The name of this class isn't finalized since there technically isn't any
-    mention of websockets in its implementation, but a more generic name like
-    DefaultSessionManager also feels weird with the concept of an active session being
-    so closely tied to websocket lifecycle. We'll figure out a final name for this
-    before the feature branch goes into `develop`.
     """
 
     def __init__(
