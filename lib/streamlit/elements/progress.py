@@ -43,6 +43,7 @@ class ProgressMixin:
         -------
         Here is an example of a progress bar increasing over time:
 
+        >>> import streamlit as st
         >>> import time
         >>>
         >>> my_bar = st.progress(0)

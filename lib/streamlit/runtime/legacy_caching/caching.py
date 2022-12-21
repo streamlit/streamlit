@@ -450,6 +450,8 @@ def cache(
 
     Example
     -------
+    >>> import streamlit as st
+    >>>
     >>> @st.cache
     ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.

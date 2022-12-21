@@ -69,6 +69,7 @@ class PydeckMixin:
         Here's a chart using a HexagonLayer and a ScatterplotLayer. It uses either the
         light or dark map style, based on which Streamlit theme is currently active:
 
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>> import pydeck as pdk

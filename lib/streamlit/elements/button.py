@@ -109,6 +109,8 @@ class ButtonMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> if st.button('Say hello'):
         ...     st.write('Why hello there')
         ... else:
@@ -213,6 +215,8 @@ class ButtonMixin:
         --------
         Download a large DataFrame as a CSV:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.cache
         ... def convert_df(df):
         ...     # IMPORTANT: Cache the conversion to prevent computation on every rerun
@@ -229,17 +233,23 @@ class ButtonMixin:
 
         Download a string as a file:
 
+        >>> import streamlit as st
+        >>>
         >>> text_contents = '''This is some text'''
         >>> st.download_button('Download some text', text_contents)
 
         Download a binary file:
 
+        >>> import streamlit as st
+        >>>
         >>> binary_contents = b'example content'
         >>> # Defaults to 'application/octet-stream'
         >>> st.download_button('Download binary file', binary_contents)
 
         Download an image:
 
+        >>> import streamlit as st
+        >>>
         >>> with open("flower.png", "rb") as file:
         ...     btn = st.download_button(
         ...             label="Download image",

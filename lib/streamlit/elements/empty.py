@@ -36,6 +36,7 @@ class EmptyMixin:
         --------
         Overwriting elements in-place using "with" notation:
 
+        >>> import streamlit as st
         >>> import time
         >>>
         >>> with st.empty():
@@ -46,6 +47,8 @@ class EmptyMixin:
 
         Replacing several elements, then clearing them:
 
+        >>> import streamlit as st
+        >>>
         >>> placeholder = st.empty()
         >>>
         >>> # Replace the placeholder with some text:

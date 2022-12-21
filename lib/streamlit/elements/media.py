@@ -75,6 +75,7 @@ class MediaMixin:
         -------
         >>> import streamlit as st
         >>> import numpy as np
+        >>>
         >>> audio_file = open('myaudio.ogg', 'rb')
         >>> audio_bytes = audio_file.read()
         >>>
@@ -138,6 +139,8 @@ class MediaMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> video_file = open('myvideo.mp4', 'rb')
         >>> video_bytes = video_file.read()
         >>>

@@ -55,6 +55,8 @@ class JsonMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.json({
         ...     'foo': 'bar',
         ...     'baz': 'boz',

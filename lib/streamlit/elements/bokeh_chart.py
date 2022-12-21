@@ -59,6 +59,7 @@ class BokehMixin:
 
         Example
         -------
+        >>> import streamlit as st
         >>> from bokeh.plotting import figure
         >>>
         >>> x = [1, 2, 3, 4, 5]

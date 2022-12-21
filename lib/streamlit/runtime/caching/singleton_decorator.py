@@ -253,6 +253,8 @@ class SingletonAPI:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> @st.experimental_singleton
         ... def get_database_session(url):
         ...     # Create a database session object that points to the URL.
@@ -273,6 +275,8 @@ class SingletonAPI:
         Any parameter whose name begins with ``_`` will not be hashed. You can use
         this as an "escape hatch" for parameters that are not hashable:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.experimental_singleton
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
@@ -289,6 +293,8 @@ class SingletonAPI:
 
         A singleton function's cache can be procedurally cleared:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.experimental_singleton
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.

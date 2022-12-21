@@ -125,6 +125,8 @@ class PlotlyMixin:
 
         The example below comes straight from the examples at
         https://plot.ly/python:
+
+        >>> import streamlit as st
         >>> import numpy as np
         >>> import plotly.figure_factory as ff
         >>>
