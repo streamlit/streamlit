@@ -22,7 +22,6 @@ import {
   GridCellKind,
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
-import strftime from "strftime"
 
 interface DatePickerCellProps {
   readonly kind: "DatePickerCell"

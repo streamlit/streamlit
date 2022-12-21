@@ -48,8 +48,8 @@ import { toGlideColumn, isMissingValueCell, BaseColumn } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
-import TimePickerCell from "./customCells/TimePickerCell"
 import DatePickerCell from "./customCells/DatePickerCell"
+import TimePickerCell from "./customCells/TimePickerCell"
 import DatetimeLocalPickerCell from "./customCells/DatetimeLocalPickerCell"
 
 // Min column width used for manual and automatic resizing

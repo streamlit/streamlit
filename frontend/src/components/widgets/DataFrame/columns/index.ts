@@ -19,6 +19,8 @@ import RangeColumn from '../columns/RangeColumn';
  * limitations under the License.
  */
 
+export * from "./utils"
+
 import { ColumnCreator } from "./utils"
 import ObjectColumn from "./ObjectColumn"
 import TextColumn from "./TextColumn"
@@ -35,14 +37,15 @@ import DateColumn from "./DateColumn"
 import TimeColumn from "./TimeColumn"
 import DateTimeColumn from "./DateTimeColumn"
 
-export * from "./utils"
-
 export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
     object: ObjectColumn,
     text: TextColumn,
     boolean: BooleanColumn,
     categorical: CategoricalColumn,
+    date: DateColumn,
+    datetime: DateTimeColumn,
+    time: TimeColumn,
     list: ListColumn,
     number: NumberColumn,
     range: RangeColumn,
