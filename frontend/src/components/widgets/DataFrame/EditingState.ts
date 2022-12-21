@@ -41,10 +41,11 @@ class EditingState {
 
     const currentState = {
       edited_cells: {} as Record<string, any>,
-      added_rows: [] as Map<number, any>[],
+      added_rows: [] as Record<number, any>[],
       deleted_rows: [] as number[],
     }
 
+    // Prepare edited cells
     this.editedCells.forEach(
       (row: Map<number, GridCell>, rowIndex: number, _map) => {
         row.forEach((cell: GridCell, colIndex: number, _map) => {
@@ -57,15 +58,30 @@ class EditingState {
       }
     )
 
-    // TODO(lukasmasuch): Support adding rows
-    // this.addedRows.forEach((row: Map<number, GridCell>) => {
-    //   currentState.edited_cells.push(row[0])
-    // })
+    // Prepare added rows
+    this.addedRows.forEach((row: Map<number, GridCell>) => {
+      const addedRow: Record<number, any> = {}
+      row.forEach((cell: GridCell, colIndex: number, _map) => {
+        const column = columnsByIndex.get(colIndex)
+        if (column) {
+          const cellValue = column.getCellValue(cell)
+          if (notNullOrUndefined(cellValue)) {
+            addedRow[colIndex] = cellValue
+          }
+        }
+      })
+      console.log("addedRow", addedRow)
+      currentState.added_rows.push(addedRow)
+    })
 
     currentState.deleted_rows = this.deletedRows
     // Convert undefined values to null, otherwise this is removed here since
     // undefined does not exist in JSON.
-    return JSON.stringify(currentState, (k, v) => (v === undefined ? null : v))
+    let json = JSON.stringify(currentState, (k, v) =>
+      v === undefined ? null : v
+    )
+    console.log("test", JSON.stringify(currentState.added_rows), json)
+    return json
   }
 
   isAddedRow(row: number): boolean {
