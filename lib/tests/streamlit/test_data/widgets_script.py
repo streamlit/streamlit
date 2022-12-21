@@ -12,17 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import streamlit as st
 
-st.button("click to rerun")
+c1, c2 = st.columns(2)
 
+with c1:
+    checkbox = st.checkbox("checkbox", False)
+    st.text("%s" % checkbox)
 
-@st.experimental_memo(experimental_allow_widgets=True)
-def foo(i):
-    options = ["foo", "bar", "baz", "qux"]
-    r = st.radio("radio", options, index=i)
-    return r
+    text_area = st.text_area("text_area", "ahoy!")
+    st.text("%s" % text_area)
 
+with c2:
+    radio = st.radio("radio", ("0", "1", "2"), 1)
+    st.text("%s" % radio)
 
-r = foo(1)
-st.write(r)
+button = st.button("button")
+st.text("%s" % button)
+
+st.sidebar.radio("sidebar radio", ["a", "b"])
