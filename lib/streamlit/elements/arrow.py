@@ -28,7 +28,7 @@ from typing import (
 
 import pyarrow as pa
 from numpy import ndarray
-from pandas import DataFrame
+from pandas import DataFrame, RangeIndex
 from pandas.io.formats.style import Styler
 from typing_extensions import Literal, TypedDict
 
@@ -128,6 +128,54 @@ def column_config(
         alignment=alignment,
         metadata=metadata,
     )
+
+
+def _apply_dataframe_edits(df: DataFrame, data_editor_state: DataEditorState):
+    print("Editor state", data_editor_state)
+    # TODO(lukasmasuch): Clean this app
+    # loc: only work on index
+    # iloc: work on position
+    # at: get scalar values. It's a very fast loc
+    # iat: Get scalar values. It's a very fast iloc
+
+    if data_editor_state.get("edited_cells"):
+        for cell in data_editor_state.get("edited_cells").keys():
+            col, row = cell.split(":")
+            col, row = int(col), int(row)
+            # TODO: add descriptive comment
+            col = col - df.index.nlevels if df.index.nlevels else 0
+
+            import dateutil.parser
+            changed_datetime = False
+            try:
+                date_converted = dateutil.parser.isoparse(
+                    data_editor_state.get("edited_cells")[cell]
+                )
+                df.iat[row, col] = date_converted
+                changed_datetime = True
+            except Exception:
+                # TODO: Do better exception handling
+                pass
+            # TODO: what to do with datetime columns? Do we need to do some data conversion
+            if not changed_datetime:
+                df.iat[row, col] = data_editor_state.get("edited_cells")[cell]
+
+    if data_editor_state.get("added_rows"):
+        for row in data_editor_state.get("added_rows"):
+            new_row = [None for _ in range(df.shape[1])]
+            for col in row.keys():
+                mapped_column = int(col) - df.index.nlevels if df.index.nlevels else 0
+                new_row[mapped_column] = row[col]
+            # Append the new row to the dataframe
+            if isinstance(df.index, RangeIndex):
+                print("Add row:", new_row)
+                df.loc[df.index.stop, :] = new_row
+            # df.loc[0 if df.isnull(df.index.max()) else df.index.max() + 1] = new_row
+
+    if data_editor_state.get("deleted_rows"):
+        # Drop rows based in numeric row numbers
+        # https://stackoverflow.com/questions/55851802/remove-rows-of-a-dataframe-based-on-the-row-number
+        df.drop(df.index[data_editor_state.get("deleted_rows")], inplace=True)
 
 
 def _marshall_column_config(
@@ -300,60 +348,11 @@ class ArrowMixin:
             ctx=get_script_run_ctx(),
         )
 
-        # TODO(lukasmasuch): Clean this app
-        # loc: only work on index
-        # iloc: work on position
-        # at: get scalar values. It's a very fast loc
-        # iat: Get scalar values. It's a very fast iloc
-
         new_df = data_df.copy()
-        return_value = new_df
         widget_state_value = widget_state.value
-        if widget_state_value and "edited_cells" in widget_state_value:
-            for edit in widget_state_value["edited_cells"].keys():
-                pass
-
-                import dateutil.parser
-
-                col, row = edit.split(":")
-                col, row = int(
-                    col
-                ) - new_df.index.nlevels if new_df.index.nlevels else 0, int(row)
-                changed_datetime = False
-                try:
-                    x = dateutil.parser.isoparse(
-                        widget_state_value["edited_cells"][edit]
-                    )
-                    new_df.iat[row, col] = x
-                    changed_datetime = True
-                except Exception as e:
-                    # TODO: Do better exception handling
-                    print(f"""GOT AN EXCEPTION: {e}""")
-                if not changed_datetime:
-                    new_df.iat[row, col] = widget_state_value["edited_cells"][edit]
-            return_value = new_df
-
-        if widget_state_value and "added_rows" in widget_state_value:
-            # TODO: implement appending rows:
-            # via append, concat, or loc??
-            # new_df.loc[row_idx] = [None for _ in range(new_df.shape[1])]
-            pass
-
-        if widget_state_value and "deleted_rows" in widget_state_value:
-            # https://stackoverflow.com/questions/55851802/remove-rows-of-a-dataframe-based-on-the-row-number
-            new_df.drop(new_df.index[widget_state_value["deleted_rows"]], inplace=True)
+        _apply_dataframe_edits(new_df, widget_state_value)
         self.dg._enqueue("arrow_data_frame", proto)
-        return type_util.convert_df_to_reference(return_value, data)
-
-    # def apply_dataframe_edits(self, data_editor_state: DataEditorState):
-    #     if data_editor_state.edited_cells:
-    #         for edit in widget_state_value["edited_cells"].keys():
-    #             col, row = edit.split(":")
-    #             col, row = int(
-    #                 col
-    #             ) - new_df.index.nlevels if new_df.index.nlevels else 0, int(row)
-    #             new_df.iat[row, col] = widget_state_value["edited_cells"][edit]
-    #         return_value = new_df
+        return type_util.convert_df_to_reference(new_df, data)
 
     @gather_metrics("_arrow_table")
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":

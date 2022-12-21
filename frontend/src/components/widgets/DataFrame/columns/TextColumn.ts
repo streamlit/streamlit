@@ -25,7 +25,6 @@ import {
   getErrorCell,
   ColumnCreator,
   toSafeString,
-  isMissingValueCell,
 } from "./utils"
 
 function TextColumn(props: BaseColumnProps): BaseColumn {

@@ -62,7 +62,7 @@ const MAX_COLUMN_AUTO_WIDTH = 500
 // This prevents to rapid updates to the widget state.
 const DEBOUNCE_TIME_MS = 100
 // Token used for missing values (null, NaN, etc.)
-const NULL_VALUE_TOKEN = "None"
+const NULL_VALUE_TOKEN = "NA"
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -150,12 +150,12 @@ function DataFrame({
   )
 
   React.useEffect(() => {
-    editingState.current = new EditingState(numRows)
+    editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
   const resetEditingState = React.useCallback(() => {
-    editingState.current = new EditingState(numRows)
+    editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
@@ -171,6 +171,7 @@ function DataFrame({
         currentWidgetState = new EditingState(0).toJson([])
       }
 
+      console.log("currentEditingState", currentEditingState)
       // Only update if there is actually a difference between editing and widget state
       if (currentEditingState !== currentWidgetState) {
         widgetMgr.setStringValue(element as WidgetInfo, currentEditingState, {
