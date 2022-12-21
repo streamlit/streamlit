@@ -336,11 +336,10 @@ class ArrowMixin:
         )
 
         new_df = data_df.copy()
-        return_value = new_df
         widget_state_value = widget_state.value
         _apply_dataframe_edits(new_df, widget_state_value)
         self.dg._enqueue("arrow_data_frame", proto)
-        return type_util.convert_df_to_reference(return_value, data)
+        return type_util.convert_df_to_reference(new_df, data)
 
     @gather_metrics("_arrow_table")
     def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
