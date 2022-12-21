@@ -19,7 +19,14 @@ import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  ColumnCreator,
+  isMissingValueCell,
+  toSafeString,
+} from "./utils"
 
 function ObjectColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -31,7 +38,6 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
     readonly: true,
     style: props.isIndex ? "faded" : "normal",
   } as TextCell
-
   return {
     ...props,
     kind: "object",
@@ -39,17 +45,18 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
     isEditable: false, // Object columns are read-only.
     getCell(data?: DataType): GridCell {
       try {
-        const cellData = notNullOrUndefined(data) ? data.toString() : null
+        const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
         const displayData = notNullOrUndefined(cellData) ? cellData : ""
         return {
           ...cellTemplate,
           data: cellData,
-          displayData,
+          displayData: displayData,
+          isMissingValue: !notNullOrUndefined(data),
         } as TextCell
       } catch (error) {
         return getErrorCell(
-          `Incompatible text value: ${typeof data}`,
-          `Error: ${error}`
+          toSafeString(data),
+          `Incompatible text value. Error: ${error}`
         )
       }
     },
@@ -59,4 +66,6 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default ObjectColumn
+ObjectColumn.isEditableType = false
+
+export default ObjectColumn as ColumnCreator

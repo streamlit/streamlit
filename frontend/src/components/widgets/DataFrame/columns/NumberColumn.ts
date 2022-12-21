@@ -20,7 +20,17 @@ import { sprintf } from "sprintf-js"
 import { DataType, Quiver } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  ColumnCreator,
+  toSafeString,
+  isMissingValueCell,
+  mergeColumnParameters,
+  toSafeNumber,
+  formatNumber,
+} from "./utils"
 
 interface NumberColumnParams {
   readonly precision?: number
@@ -32,16 +42,20 @@ interface NumberColumnParams {
 function NumberColumn(props: BaseColumnProps): BaseColumn {
   const quiverTypeName = Quiver.getTypeName(props.quiverType)
 
-  const parameters = {
-    precision:
-      quiverTypeName.startsWith("int") ||
-      quiverTypeName === "range" ||
-      quiverTypeName.startsWith("uint")
-        ? 0
-        : undefined,
-    min: quiverTypeName.startsWith("uint") ? 0 : undefined,
-    ...(props.columnTypeMetadata || {}),
-  } as NumberColumnParams
+  const parameters = mergeColumnParameters(
+    // Default parameters:
+    {
+      precision:
+        quiverTypeName.startsWith("int") ||
+        quiverTypeName === "range" ||
+        quiverTypeName.startsWith("uint")
+          ? 0
+          : undefined,
+      min: quiverTypeName.startsWith("uint") ? 0 : undefined,
+    },
+    // User parameters:
+    props.columnTypeMetadata
+  ) as NumberColumnParams
 
   const cellTemplate = {
     kind: GridCellKind.Number,
@@ -58,26 +72,19 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     kind: "number",
     sortMode: "smart",
     getCell(data?: DataType): GridCell {
-      let cellData
-      let displayData
+      let cellData: number | null = toSafeNumber(data)
+      let displayData: string | undefined = undefined
 
-      if (notNullOrUndefined(data)) {
-        if (data instanceof Int32Array) {
-          // int values need to be extracted this way:
-          // eslint-disable-next-line prefer-destructuring
-          cellData = Number(data[0])
-        } else {
-          cellData = Number(data)
-        }
-
+      if (notNullOrUndefined(cellData)) {
         if (Number.isNaN(cellData)) {
-          return getErrorCell(`Incompatible number value: ${data}`)
+          return getErrorCell(toSafeString(data), "Incompatible number value.")
         }
 
         // Apply precision parameter
         if (notNullOrUndefined(parameters.precision)) {
-          // TODO(lukasmasuch): Update the number input to support precision
-          // TODO(lukasmasuch): Round instead?
+          // TODO(lukasmasuch): Instead of applying precision here,
+          // it would be better to update the cell implementation to support precision
+          // directly in the input field.
           cellData =
             parameters.precision === 0
               ? Math.trunc(cellData)
@@ -87,12 +94,12 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
         // Apply min parameter
         if (notNullOrUndefined(parameters.min)) {
-          cellData = Math.min(cellData, parameters.min)
+          cellData = Math.max(cellData, parameters.min)
         }
 
         // Apply max parameter
         if (notNullOrUndefined(parameters.max)) {
-          cellData = Math.max(cellData, parameters.max)
+          cellData = Math.min(cellData, parameters.max)
         }
 
         // If user has specified a format pattern in type metadata
@@ -101,21 +108,23 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
             displayData = sprintf(parameters.format, cellData)
           } catch (error) {
             return getErrorCell(
-              `Format value (${parameters.format}) not sprintf compatible.`,
-              `Error: ${error}`
+              toSafeString(cellData),
+              `Format value (${parameters.format}) not sprintf compatible. Error: ${error}`
             )
           }
         }
       }
-
-      if (!notNullOrUndefined(displayData)) {
-        displayData = notNullOrUndefined(cellData) ? cellData.toString() : ""
+      if (displayData === undefined) {
+        displayData = notNullOrUndefined(cellData)
+          ? formatNumber(cellData)
+          : ""
       }
 
       return {
         ...cellTemplate,
         data: cellData,
-        displayData,
+        displayData: displayData,
+        isMissingValue: !notNullOrUndefined(cellData),
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {
@@ -124,4 +133,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default NumberColumn
+NumberColumn.isEditableType = true
+
+export default NumberColumn as ColumnCreator

@@ -30,8 +30,11 @@ describe("disable widgets", () => {
 
     cy.get(".stMarkdown").should("have.text", "Value 1: 25");
 
-    cy.window().then(win => {
-      win.streamlitDebug.closeConnection();
+    cy.window().then((win) => {
+      // We shut down the runtime entirely rather than just close the websocket
+      // connection as the client will immediately reconnect if we just do the
+      // latter.
+      win.streamlitDebug.shutdownRuntime();
 
       cy.get(".stButton button").should("be.disabled");
 
@@ -50,10 +53,7 @@ describe("disable widgets", () => {
       cy.get(".stTimeInput input").should("be.disabled");
 
       // slider doesn't have a `disabled` attribute
-      cy.get('.stSlider [role="slider"]')
-        .first()
-        .parent()
-        .click();
+      cy.get('.stSlider [role="slider"]').first().parent().click();
 
       cy.get(".stMarkdown").should("have.text", "Value 1: 25");
 

@@ -21,6 +21,8 @@ import {
   GridSelection,
   CompactSelection,
   GridMouseEventArgs,
+  drawTextCell,
+  DrawCustomCellCallback,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { Resizable } from "re-resizable"
@@ -41,7 +43,7 @@ import {
   useColumnSizer,
   useColumnSort,
 } from "./hooks"
-import { BaseColumn, toGlideColumn } from "./columns"
+import { BaseColumn, toGlideColumn, isMissingValueCell } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
@@ -50,7 +52,7 @@ import DatePickerCell from "./customCells/DatePickerCell"
 import DatetimeLocalPickerCell from "./customCells/DatetimeLocalPickerCell"
 
 // Min column width used for manual and automatic resizing
-const MIN_COLUMN_WIDTH = 35
+const MIN_COLUMN_WIDTH = 50
 // Max column width used for manual resizing
 const MAX_COLUMN_WIDTH = 1000
 // Max column width used for automatic column sizing
@@ -58,6 +60,8 @@ const MAX_COLUMN_AUTO_WIDTH = 500
 // Debounce time for triggering a widget state update
 // This prevents to rapid updates to the widget state.
 const DEBOUNCE_TIME_MS = 100
+// Token used for missing values (null, NaN, etc.)
+const NULL_VALUE_TOKEN = "None"
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -67,6 +71,30 @@ export interface DataFrameProps {
   disabled: boolean
   widgetMgr: WidgetStateManager
   isFullScreen?: boolean
+}
+
+const drawMissingCells: DrawCustomCellCallback = args => {
+  const { cell, theme } = args
+  if (isMissingValueCell(cell)) {
+    drawTextCell(
+      {
+        ...args,
+        theme: {
+          ...theme,
+          textDark: theme.textLight,
+          textMedium: theme.textLight,
+        },
+        // @ts-ignore
+        spriteManager: {},
+        hyperWrapping: false,
+      },
+      NULL_VALUE_TOKEN,
+      cell.contentAlign
+    )
+    return true
+  }
+
+  return false
 }
 
 function DataFrame({
@@ -298,6 +326,8 @@ function DataFrame({
           // Header click is used for column sorting:
           onHeaderClicked={sortColumn}
           gridSelection={gridSelection}
+          // Apply different styling to missing cells:
+          drawCell={drawMissingCells}
           onGridSelectionChange={(newSelection: GridSelection) => {
             setGridSelection(newSelection)
           }}

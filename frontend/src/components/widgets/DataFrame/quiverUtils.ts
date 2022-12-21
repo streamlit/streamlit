@@ -135,7 +135,7 @@ export function getColumnTypeFromQuiver(
 
   typeName = typeName.toLowerCase().trim()
   // Match based on quiver types
-  if (["unicode"].includes(typeName)) {
+  if (["unicode", "empty"].includes(typeName)) {
     return TextColumn
   }
   if (["datetime", "datetimetz"].includes(typeName)) {
@@ -175,8 +175,7 @@ export function getColumnTypeFromQuiver(
   }
   if (typeName.startsWith("list")) {
     return ListColumn
-  }
-  if (["decimal", "bytes", "empty"].includes(typeName)) {
+  } else if (["decimal", "bytes"].includes(typeName)) {
     return ObjectColumn
   }
 
@@ -285,16 +284,19 @@ export function getCellFromQuiver(
 ): GridCell {
   let cellTemplate
   if (column.kind === "object") {
+    // TODO(lukasmasuch): Migrate all formatting logic into this component.
     // Always use display value from quiver for object types
     // these are special types that the dataframe only support in read-only mode.
     cellTemplate = column.getCell(
-      processDisplayData(
-        Quiver.format(
-          quiverCell.content,
-          quiverCell.contentType,
-          quiverCell.field
-        )
-      )
+      notNullOrUndefined(quiverCell.content)
+        ? processDisplayData(
+            Quiver.format(
+              quiverCell.content,
+              quiverCell.contentType,
+              quiverCell.field
+            )
+          )
+        : null
     )
   } else {
     cellTemplate = column.getCell(quiverCell.content)

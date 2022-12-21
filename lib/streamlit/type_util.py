@@ -249,14 +249,16 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
 def is_snowpark_or_pyspark_data_object(obj: object) -> bool:
     """True if if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row or True when obj is of type pyspark.sql.dataframe.DataFrame
-    False otherwise"""
+    False otherwise.
+    """
     return is_snowpark_data_object(obj) or is_pyspark_data_object(obj)
 
 
 def is_snowpark_data_object(obj: object) -> bool:
     """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row,
-    False otherwise"""
+    False otherwise.
+    """
     if is_type(obj, _SNOWPARK_TABLE_TYPE_STR):
         return True
     if is_type(obj, _SNOWPARK_DF_TYPE_STR):
@@ -286,7 +288,8 @@ def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
 
 def is_bytes_like(obj: object) -> TypeGuard[BytesLike]:
     """True if the type is considered bytes-like for the purposes of
-    protobuf data marshalling."""
+    protobuf data marshalling.
+    """
     return isinstance(obj, _BYTES_LIKE_TYPES)
 
 
@@ -773,15 +776,17 @@ def fix_arrow_incompatible_column_types(
     -------
     The fixed dataframe.
     """
-
-    # TODO(lukasmasuch): Make a copy
+    # Make a copy, but only initialize if necessary to preserve memory.
+    df_copy = None
     for col in selected_columns or df.columns:
         # TODO(lukasmasuch): Sparse arrays are also not supported
         # if str(df[col].dtype).startswith("Sparse"):
         #     df[col] = np.array(df[col])
 
         if is_colum_type_arrow_incompatible(df[col]):
-            df[col] = df[col].astype(str)
+            if df_copy is None:
+                df_copy = df.copy()
+            df_copy[col] = df[col].astype(str)
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -794,8 +799,10 @@ def fix_arrow_incompatible_column_types(
         )
         and is_colum_type_arrow_incompatible(df.index)
     ):
-        df.index = df.index.astype(str)
-    return df
+        if df_copy is None:
+            df_copy = df.copy()
+        df_copy.index = df.index.astype(str)
+    return df_copy
 
 
 def data_frame_to_bytes(df: pd.DataFrame) -> bytes:
@@ -828,7 +835,6 @@ def bytes_to_data_frame(source: bytes) -> pd.DataFrame:
         A bytes object to convert.
 
     """
-
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
 

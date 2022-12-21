@@ -23,7 +23,14 @@ import {
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  ColumnCreator,
+  toSafeString,
+  isMissingValueCell,
+} from "./utils"
 
 // See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
 const BOOLEAN_TRUE_VALUES = ["true", "t", "yes", "y", "on", "1"]
@@ -58,11 +65,16 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
           } else if (BOOLEAN_FALSE_VALUES.includes(cleanedValue)) {
             cellData = false
           } else {
-            return getErrorCell(`Incompatible boolean value: ${data}`)
+            return getErrorCell(
+              toSafeString(data),
+              `Incompatible boolean value.`
+            )
           }
         }
       }
 
+      // We are not setting isMissingValue here because the checkbox column
+      // does not work with the missing cell rendering.
       return {
         ...cellTemplate,
         data: cellData,
@@ -74,4 +86,6 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default BooleanColumn
+BooleanColumn.isEditableType = true
+
+export default BooleanColumn as ColumnCreator

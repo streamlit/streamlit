@@ -19,7 +19,14 @@ import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./BaseColumn"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  ColumnCreator,
+  toSafeString,
+  isMissingValueCell,
+} from "./utils"
 
 function TextColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
@@ -38,17 +45,18 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     getCell(data?: DataType): GridCell {
       try {
-        const cellData = notNullOrUndefined(data) ? data.toString() : null
+        const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
         const displayData = notNullOrUndefined(cellData) ? cellData : ""
         return {
           ...cellTemplate,
+          isMissingValue: !notNullOrUndefined(cellData),
           data: cellData,
           displayData,
         } as TextCell
       } catch (error) {
         return getErrorCell(
-          `Incompatible text value: ${typeof data}`,
-          `Error: ${error}`
+          toSafeString(data),
+          `Incompatible text value. Error: ${error}`
         )
       }
     },
@@ -58,4 +66,6 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default TextColumn
+TextColumn.isEditableType = true
+
+export default TextColumn as ColumnCreator

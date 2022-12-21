@@ -52,7 +52,7 @@ function useCustomTheme(): Partial<GlideTheme> {
     editorFontSize: theme.fontSizes.sm,
     textDark: theme.colors.bodyText,
     textMedium: transparentize(theme.colors.bodyText, 0.2),
-    textLight: theme.colors.fadedText60,
+    textLight: theme.colors.fadedText40,
     textBubble: theme.colors.fadedText60,
     bgCell: theme.colors.bgColor,
     bgCellMedium: theme.colors.bgColor, // uses same as bgCell to always have the same background color

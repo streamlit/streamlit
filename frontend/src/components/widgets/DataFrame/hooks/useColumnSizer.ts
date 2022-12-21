@@ -39,6 +39,20 @@ function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
     () => new Map()
   )
 
+  const onColumnResize = React.useCallback(
+    (
+      column: GridColumn,
+      _newSize: number,
+      _colIndex: number,
+      newSizeWithGrow: number
+    ) => {
+      if (column.id) {
+        setColumnSizes(new Map(columnSizes).set(column.id, newSizeWithGrow))
+      }
+    },
+    [columnSizes]
+  )
+
   // Apply column widths from state:
   const sizedColumns = columns.map(column => {
     if (
@@ -55,20 +69,6 @@ function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
     }
     return column
   })
-
-  const onColumnResize = React.useCallback(
-    (
-      column: GridColumn,
-      _newSize: number,
-      _colIndex: number,
-      newSizeWithGrow: number
-    ) => {
-      if (column.id) {
-        setColumnSizes(new Map(columnSizes).set(column.id, newSizeWithGrow))
-      }
-    },
-    [sizedColumns, columnSizes] // TODO(lukasmasuch): Is sizedColumns needed here?
-  )
 
   return {
     columns: sizedColumns,

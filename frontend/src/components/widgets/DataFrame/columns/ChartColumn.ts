@@ -16,7 +16,6 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
-import { Vector } from "apache-arrow"
 
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
@@ -26,30 +25,44 @@ import {
   BaseColumnProps,
   getErrorCell,
   getEmptyCell,
-} from "./BaseColumn"
+  ColumnCreator,
+  toSafeString,
+  isMissingValueCell,
+  toSafeArray,
+  mergeColumnParameters,
+  toSafeNumber,
+  formatNumber,
+} from "./utils"
 
 interface ChartColumnParams {
-  readonly type: string
+  readonly type: "line" | "bar"
+  readonly min: number
+  readonly max: number
 }
 
 function ChartColumn(props: BaseColumnProps): BaseColumn {
-  // TODO(lukasmasuch): use merge?
-  const parameters = {
-    type: "line",
-    ...(props.columnTypeMetadata || {}),
-  } as ChartColumnParams
+  const parameters = mergeColumnParameters(
+    // Default parameters:
+    {
+      type: "line",
+      min: 0,
+      max: 1,
+    },
+    // User parameters:
+    props.columnTypeMetadata
+  ) as ChartColumnParams
 
   const cellTemplate = {
     kind: GridCellKind.Custom,
     allowOverlay: false,
-    copyData: "[]",
+    copyData: "",
     contentAlign: props.contentAlignment,
     data: {
       kind: "sparkline-cell",
       values: [],
       displayValues: [],
       graphKind: parameters.type,
-      yAxis: [0, 1],
+      yAxis: [parameters.min, parameters.max],
     },
   } as SparklineCellType
 
@@ -63,26 +76,29 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
         return getEmptyCell()
       }
 
-      let chartData
-      if (Array.isArray(data)) {
-        chartData = data
-      } else if (data instanceof Vector) {
-        chartData = data.toArray()
-      } else {
-        return getErrorCell(
-          `Incompatible chart value: ${data}`,
-          "The provided value is not a number array."
-        )
-      }
+      let chartData = toSafeArray(data)
 
       const convertedChartData: number[] = []
       let normalizedChartData: number[] = []
 
       if (chartData.length >= 1) {
-        let maxValue = Number(chartData[0])
-        let minValue = Number(chartData[0])
-        chartData.forEach((value: any) => {
-          const convertedValue = Number(value)
+        // Initialize with smallest and biggest number
+        let maxValue = Number.MIN_SAFE_INTEGER
+        let minValue = Number.MAX_SAFE_INTEGER
+
+        //Try to convert all values to numbers and find min/max
+        for (var i = 0; i < chartData.length; i++) {
+          const convertedValue = toSafeNumber(chartData[i])
+          if (
+            Number.isNaN(convertedValue) ||
+            !notNullOrUndefined(convertedValue)
+          ) {
+            return getErrorCell(
+              toSafeString(chartData),
+              `Incompatible chart value. The value ${convertedValue} is not a number.`
+            )
+          }
+
           if (convertedValue > maxValue) {
             maxValue = convertedValue
           }
@@ -91,34 +107,33 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
             minValue = convertedValue
           }
 
-          if (Number.isNaN(convertedValue)) {
-            return getErrorCell(
-              `Incompatible chart value: ${data}`,
-              "All values in the array should be numbers."
-            )
-          }
           convertedChartData.push(convertedValue)
-          return null // TODO: why is this needed?
-        })
+        }
 
-        if (maxValue > 1 || minValue < 0) {
-          // Normalize values
+        if (
+          convertedChartData.length > 0 &&
+          (maxValue > parameters.max || minValue < parameters.min)
+        ) {
+          // Normalize values between the configured range
           normalizedChartData = convertedChartData.map(
-            v => (v - minValue) / (maxValue - minValue)
+            v =>
+              (parameters.max - parameters.min) *
+                ((v - minValue) / (maxValue - minValue)) +
+              parameters.min
           )
         } else {
-          // Values are already in range 0-1
+          // Values are already in the configured range
           normalizedChartData = convertedChartData
         }
       }
 
       return {
         ...cellTemplate,
-        copyData: JSON.stringify(convertedChartData),
+        copyData: convertedChartData.join(","),
         data: {
           ...cellTemplate.data,
           values: normalizedChartData,
-          displayValues: convertedChartData.map(v => v.toString()),
+          displayValues: convertedChartData.map(v => formatNumber(v, 3)),
         },
       } as SparklineCellType
     },
@@ -128,4 +143,6 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default ChartColumn
+ChartColumn.isEditableType = false
+
+export default ChartColumn as ColumnCreator

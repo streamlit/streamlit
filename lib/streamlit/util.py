@@ -31,7 +31,7 @@ FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 
 def memoize(func):
     """Decorator to memoize the result of a no-args func."""
-    result = []  # type: List[Any]
+    result: List[Any] = []
 
     @functools.wraps(func)
     def wrapped_func():
@@ -54,7 +54,6 @@ def open_browser(url):
         The URL. Must include the protocol.
 
     """
-
     # Treat Windows separately because:
     # 1. /dev/null doesn't exist.
     # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
@@ -129,7 +128,6 @@ def index_(iterable: Iterable[_Value], x: _Value) -> int:
     -------
     int
     """
-
     for i, value in enumerate(iterable):
         if x == value:
             return i

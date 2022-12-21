@@ -25,9 +25,32 @@ import {
   BaseColumnProps,
   getErrorCell,
   getEmptyCell,
-} from "./BaseColumn"
+  ColumnCreator,
+  toSafeString,
+  isMissingValueCell,
+  mergeColumnParameters,
+  formatNumber,
+  toSafeNumber,
+} from "./utils"
+
+interface RangeColumnParams {
+  readonly min: number
+  readonly max: number
+  readonly step: number
+}
 
 function RangeColumn(props: BaseColumnProps): BaseColumn {
+  const parameters = mergeColumnParameters(
+    // Default parameters:
+    {
+      min: 0,
+      max: 1,
+      step: 0.01,
+    },
+    // User parameters:
+    props.columnTypeMetadata
+  ) as RangeColumnParams
+
   const cellTemplate = {
     kind: GridCellKind.Custom,
     allowOverlay: false,
@@ -35,12 +58,12 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
     contentAlign: props.contentAlignment,
     data: {
       kind: "range-cell",
-      min: 0,
-      max: 1,
+      min: parameters.min,
+      max: parameters.max,
+      step: parameters.step,
       value: 0,
-      step: 0.1,
-      label: `0%`,
-      measureLabel: "100%",
+      label: "0",
+      measureLabel: "0.00",
       readonly: true,
     },
   } as RangeCellType
@@ -55,22 +78,27 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
         return getEmptyCell()
       }
 
-      const cellData = Number(data)
+      const cellData = toSafeNumber(data)
 
-      if (Number.isNaN(cellData) || cellData < 0 || cellData > 1) {
-        return getErrorCell(
-          `Incompatible progress value: ${data}`,
-          "The value has to be between 0 and 1."
-        )
+      if (Number.isNaN(cellData) || !notNullOrUndefined(cellData)) {
+        return getErrorCell(toSafeString(data), "The value is not a number.")
       }
+
+      // TODO(lukasmasuch): count decimals of step and use it for formatting
+      // so that all labels have the same length
+      const displayValue = formatNumber(
+        Math.ceil(cellData / parameters.step) * parameters.step
+      )
 
       return {
         ...cellTemplate,
+        isMissingValue: !notNullOrUndefined(data),
         copyData: String(data),
         data: {
           ...cellTemplate.data,
           value: cellData,
-          label: `${Math.round(cellData * 100).toString()}%`,
+          label: displayValue,
+          measureLabel: displayValue,
         },
       } as RangeCellType
     },
@@ -80,4 +108,6 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-export default RangeColumn
+RangeColumn.isEditableType = false
+
+export default RangeColumn as ColumnCreator

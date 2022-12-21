@@ -149,7 +149,6 @@ class FormMixin:
 
         Examples
         --------
-
         Inserting elements using "with" notation:
 
         >>> with st.form("my_form"):
