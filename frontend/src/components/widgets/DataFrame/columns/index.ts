@@ -1,4 +1,6 @@
 /**
+ * TODO: This license is not consistent with license used in the project.
+ *       Delete the inconsistent license and above line and rerun pre-commit to insert a good license.
 import NumberColumn from '../columns/NumberColumn';
 import ObjectColumn from '../columns/ObjectColumn';
 import RangeColumn from '../columns/RangeColumn';
@@ -17,8 +19,6 @@ import RangeColumn from '../columns/RangeColumn';
  * limitations under the License.
  */
 
-export * from "./BaseColumn"
-
 import { ColumnCreator } from "./BaseColumn"
 import ObjectColumn from "./ObjectColumn"
 import TextColumn from "./TextColumn"
@@ -30,6 +30,11 @@ import RangeColumn from "./RangeColumn"
 import ImageColumn from "./ImageColumn"
 import ChartColumn from "./ChartColumn"
 import UrlColumn from "./UrlColumn"
+import DateColumn from "./DateColumn"
+import TimeColumn from "./TimeColumn"
+import DateTimeColumn from "./DateTimeColumn"
+
+export * from "./BaseColumn"
 
 export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
@@ -38,6 +43,9 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     boolean: BooleanColumn,
     categorical: CategoricalColumn,
     list: ListColumn,
+    date: DateColumn,
+    time: TimeColumn,
+    datetime: DateTimeColumn,
     number: NumberColumn,
     range: RangeColumn,
     image: ImageColumn,
@@ -51,6 +59,9 @@ export {
   TextColumn,
   BooleanColumn,
   CategoricalColumn,
+  DateColumn,
+  DateTimeColumn,
+  TimeColumn,
   ListColumn,
   NumberColumn,
   RangeColumn,

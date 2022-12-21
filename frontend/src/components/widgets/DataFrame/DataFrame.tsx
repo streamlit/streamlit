@@ -45,6 +45,9 @@ import { BaseColumn, toGlideColumn } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
+import TimePickerCell from "./customCells/TimePickerCell"
+import DatePickerCell from "./customCells/DatePickerCell"
+import DatetimeLocalPickerCell from "./customCells/DatetimeLocalPickerCell"
 
 // Min column width used for manual and automatic resizing
 const MIN_COLUMN_WIDTH = 35
@@ -277,10 +280,10 @@ function DataFrame({
           verticalBorder={(col: number) =>
             // Show no border for last column in certain situations
             // This is required to prevent the cell selection border to not be cut off
-            col >= columns.length &&
-            (element.useContainerWidth || resizableSize.width === "100%")
-              ? false
-              : true
+            !(
+              col >= columns.length &&
+              (element.useContainerWidth || resizableSize.width === "100%")
+            )
           }
           // Activate copy to clipboard functionality:
           getCellsForSelection={true}
@@ -317,18 +320,23 @@ function DataFrame({
             scrollbarWidthOverride: 1,
           }}
           // Add support for additional cells:
-          customRenderers={extraCellArgs.customRenderers}
+          customRenderers={[
+            ...extraCellArgs.customRenderers,
+            DatePickerCell,
+            TimePickerCell,
+            DatetimeLocalPickerCell,
+          ]}
           // If element is editable, add additional properties:
           {...(element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing
               fillHandle: true,
               // Support editing:
-              onCellEdited: onCellEdited,
+              onCellEdited,
               // Support pasting data for bulk editing:
-              onPaste: onPaste,
+              onPaste,
               // Support deleting cells & rows
-              onDelete: onDelete,
+              onDelete,
             })}
           {...(element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
             // Support adding rows

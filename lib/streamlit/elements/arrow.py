@@ -60,6 +60,9 @@ ColumnType = Literal[
     "bar-chart",
     "line-chart",
     "progress-chart",
+    "date",
+    "time",
+    "datetime-local",
 ]
 
 
@@ -303,11 +306,26 @@ class ArrowMixin:
         widget_state_value = widget_state.value
         if widget_state_value and "edited_cells" in widget_state_value:
             for edit in widget_state_value["edited_cells"].keys():
+                pass
+
+                import dateutil.parser
+
                 col, row = edit.split(":")
                 col, row = int(
                     col
                 ) - new_df.index.nlevels if new_df.index.nlevels else 0, int(row)
-                new_df.iat[row, col] = widget_state_value["edited_cells"][edit]
+                changed_datetime = False
+                try:
+                    x = dateutil.parser.isoparse(
+                        widget_state_value["edited_cells"][edit]
+                    )
+                    new_df.iat[row, col] = x
+                    changed_datetime = True
+                except Exception as e:
+                    # TODO: Do better exception handling
+                    print(f"""GOT AN EXCEPTION: {e}""")
+                if not changed_datetime:
+                    new_df.iat[row, col] = widget_state_value["edited_cells"][edit]
             return_value = new_df
 
         if widget_state_value and "added_rows" in widget_state_value:

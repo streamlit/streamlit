@@ -24,10 +24,13 @@ class EditingState {
   // row -> column -> GridCell
   // Using [number, number] as a key for a Map would not work.
   private editedCells: Map<number, Map<number, GridCell>> = new Map()
+
   // List of rows represented by of column -> GridCell mappings
-  private addedRows: Array<Map<number, GridCell>> = new Array()
-  private deletedRows: number[] = new Array()
-  private numRows: number = 0
+  private addedRows: Array<Map<number, GridCell>> = []
+
+  private deletedRows: number[] = []
+
+  private numRows = 0
 
   constructor(numRows: number) {
     this.numRows = numRows

@@ -20,6 +20,7 @@ import {
   TextCell,
   NumberCell,
   GridCellKind,
+  CustomCell,
 } from "@glideapps/glide-data-grid"
 
 import { DataFrameCell, Quiver, Type as QuiverType } from "src/lib/Quiver"
@@ -29,6 +30,9 @@ import {
   BaseColumn,
   BaseColumnProps,
   ColumnCreator,
+  DateColumn,
+  DateTimeColumn,
+  TimeColumn,
   ObjectColumn,
   BooleanColumn,
   NumberColumn,
@@ -133,11 +137,20 @@ export function getColumnTypeFromQuiver(
   // Match based on quiver types
   if (["unicode"].includes(typeName)) {
     return TextColumn
-  } else if (["date", "time", "datetime", "datetimetz"].includes(typeName)) {
-    return ObjectColumn
-  } else if (["boolean", "bool"].includes(typeName)) {
+  }
+  if (["datetime", "datetimetz"].includes(typeName)) {
+    return DateTimeColumn
+  }
+  if (["time"].includes(typeName)) {
+    return TimeColumn
+  }
+  if (["date"].includes(typeName)) {
+    return DateColumn
+  }
+  if (["boolean", "bool"].includes(typeName)) {
     return BooleanColumn
-  } else if (
+  }
+  if (
     [
       "int8",
       "int16",
@@ -156,11 +169,14 @@ export function getColumnTypeFromQuiver(
     ].includes(typeName)
   ) {
     return NumberColumn
-  } else if (typeName === "categorical") {
+  }
+  if (typeName === "categorical") {
     return CategoricalColumn
-  } else if (typeName.startsWith("list")) {
+  }
+  if (typeName.startsWith("list")) {
     return ListColumn
-  } else if (["decimal", "bytes", "empty"].includes(typeName)) {
+  }
+  if (["decimal", "bytes", "empty"].includes(typeName)) {
     return ObjectColumn
   }
 
@@ -190,10 +206,10 @@ export function getColumnFromQuiver(
   const title = data.columns[0][columnPosition]
   const quiverType = data.types.data[columnPosition]
 
-  let columnTypeMetadata = undefined
+  let columnTypeMetadata
   if (Quiver.getTypeName(quiverType) === "categorical") {
     // Get the available categories and use it in column type metadata
-    let options = data.getCategoricalOptions(columnPosition)
+    const options = data.getCategoricalOptions(columnPosition)
     if (notNullOrUndefined(options)) {
       columnTypeMetadata = {
         options: ["", ...options.filter(opt => opt !== "")],
@@ -304,6 +320,11 @@ export function getCellFromQuiver(
         displayData,
       } as NumberCell
     }
+    // } else if(cellTemplate.kind === GridCellKind.Custom) {
+    //   cellTemplate = {
+    //     ...cellTemplate,
+    //     data,
+    //   } as CustomCell
     // TODO (lukasmasuch): Also support datetime formatting here
   }
 

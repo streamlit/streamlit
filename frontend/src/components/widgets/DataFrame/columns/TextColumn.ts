@@ -43,7 +43,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
         return {
           ...cellTemplate,
           data: cellData,
-          displayData: displayData,
+          displayData,
         } as TextCell
       } catch (error) {
         return getErrorCell(

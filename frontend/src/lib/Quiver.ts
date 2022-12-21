@@ -327,7 +327,6 @@ export class Quiver {
     const styler = element.styler
       ? Quiver.parseStyler(element.styler as StylerProto)
       : undefined
-    console.log(types)
     // The assignment is done below to avoid partially populating the instance
     // if an error is thrown.
     this._index = index
@@ -459,7 +458,7 @@ export class Quiver {
   }
 
   public getCategoricalOptions(columnIndex: number): string[] | undefined {
-    //TODO(lukasmasuch): Do something with headcolumns?
+    // TODO(lukasmasuch): Do something with headcolumns?
     const { columns: numColumns } = this.dimensions
 
     if (columnIndex < 0 || columnIndex >= numColumns) {

@@ -21,11 +21,10 @@ import { useTheme } from "@emotion/react"
 import { transparentize } from "color2k"
 
 import { Quiver } from "src/lib/Quiver"
-import { logError } from "src/lib/log"
+import { logError, logWarning } from "src/lib/log"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { notNullOrUndefined } from "src/lib/utils"
 import { Theme } from "src/theme"
-import { logWarning } from "src/lib/log"
 
 import {
   getColumnTypeFromQuiver,
@@ -116,7 +115,7 @@ function applyColumnConfig(
     // Add column type metadata:
     ...(notNullOrUndefined(columnConfig.metadata)
       ? {
-          //TODO(lukasmasuch): Merge in metadata?
+          // TODO(lukasmasuch): Merge in metadata?
           columnTypeMetadata: columnConfig.metadata,
         }
       : {}),
@@ -190,43 +189,39 @@ function useDataLoader(
           isEditable: false, // TODO(lukasmasuch): Editing for index columns is currently not supported.
           isStretched: stretchColumns,
         } as BaseColumnProps
-      } else {
-        let updatedColumn = {
-          ...column,
-          ...applyColumnConfig(column, columnsConfig),
-          isStretched: stretchColumns,
-        } as BaseColumnProps
-
-        // Make sure editing is deactivated if the column is read-only or disabled:
-        if (
-          element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
-          disabled
-        ) {
-          updatedColumn = {
-            ...updatedColumn,
-            isEditable: false,
-          }
-        }
-
-        // Add a background for non-editable cells, if the overall table is editable:
-        if (
-          element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
-          !updatedColumn.isEditable
-        ) {
-          updatedColumn = {
-            ...updatedColumn,
-            themeOverride: {
-              bgCell: transparentize(theme.colors.darkenedBgMix100, 0.95),
-              bgCellMedium: transparentize(
-                theme.colors.darkenedBgMix100,
-                0.95
-              ),
-            },
-          }
-        }
-
-        return updatedColumn
       }
+      let updatedColumn = {
+        ...column,
+        ...applyColumnConfig(column, columnsConfig),
+        isStretched: stretchColumns,
+      } as BaseColumnProps
+
+      // Make sure editing is deactivated if the column is read-only or disabled:
+      if (
+        element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
+        disabled
+      ) {
+        updatedColumn = {
+          ...updatedColumn,
+          isEditable: false,
+        }
+      }
+
+      // Add a background for non-editable cells, if the overall table is editable:
+      if (
+        element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+        !updatedColumn.isEditable
+      ) {
+        updatedColumn = {
+          ...updatedColumn,
+          themeOverride: {
+            bgCell: transparentize(theme.colors.darkenedBgMix100, 0.95),
+            bgCellMedium: transparentize(theme.colors.darkenedBgMix100, 0.95),
+          },
+        }
+      }
+
+      return updatedColumn
     })
     .filter(column => {
       // Filter out all columns that are hidden
@@ -240,8 +235,7 @@ function useDataLoader(
           ColumnType = ColumnTypes.get(column.customType)
         } else {
           logWarning(
-            "Unknown column type configured in column configuration: " +
-              column.customType
+            `Unknown column type configured in column configuration: ${column.customType}`
           )
         }
       }
@@ -295,7 +289,7 @@ function useDataLoader(
 
       // const originalCol = column.indexNumber
       // const originalRow = row
-      //getOriginalIndex(row)
+      // getOriginalIndex(row)
 
       try {
         // Quiver has the header in first row

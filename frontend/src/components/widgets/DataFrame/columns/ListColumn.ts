@@ -37,14 +37,14 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     isEditable: false, // List column is always readonly
     getCell(data?: DataType): GridCell {
       let cellData = []
-      //TODO(lukasmasuch): Only support arrays since we don't offer editing right now?
+      // TODO(lukasmasuch): Only support arrays since we don't offer editing right now?
       // TODO(lukasmasuch): Use Array.from()
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
 
       if (notNullOrUndefined(data)) {
         if (typeof data === "string") {
           // TODO: Should we really do this?
-          //TODO(lukasmasuch): Catch error?
+          // TODO(lukasmasuch): Catch error?
           cellData = JSON.parse(data)
         } else {
           cellData = JSON.parse(
