@@ -3583,6 +3583,11 @@
   resolved "https://registry.yarnpkg.com/@types/stack-utils/-/stack-utils-2.0.0.tgz#7036640b4e21cc2f259ae826ce843d277dad8cff"
   integrity sha512-RJJrrySY7A8havqpGObOB4W92QXKJo63/jFLLgpvOtsGUqbQZ9Sbgl35KMm1DjC6j7AvmmU2bIno+3IyEaemaw==
 
+"@types/strftime@^0.9.4":
+  version "0.9.4"
+  resolved "https://registry.yarnpkg.com/@types/strftime/-/strftime-0.9.4.tgz#a9fa386a2e8c4f344fa6e41e388081a9797ce08b"
+  integrity sha512-MlicGsqGq8pVXa0umCVrYvno0bNUH/JYGPtlAvV/oU0/0lGtAVs/EtbDi6rz3241K3MF7+l6fuXxb9Ae3nLhJQ==
+
 "@types/styletron-engine-atomic@^1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@types/styletron-engine-atomic/-/styletron-engine-atomic-1.1.0.tgz#aea5f44e946aa4641e576b13048a78e0efebdfc3"
@@ -17019,6 +17024,11 @@ stream-shift@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/stream-shift/-/stream-shift-1.0.1.tgz#d7088281559ab2778424279b0877da3c392d5a3d"
   integrity sha512-AiisoFqQ0vbGcZgQPY1cdP2I76glaVA/RauYR4G4thNFgkTqr90yXTo4LYX60Jl+sIlPNHHdGSwo01AvbKUSVQ==
+
+strftime@^0.10.1:
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/strftime/-/strftime-0.10.1.tgz#108af1176a7d5252cfbddbdb2af044dfae538389"
+  integrity sha512-nVvH6JG8KlXFPC0f8lojLgEsPA18lRpLZ+RrJh/NkQV2tqOgZfbas8gcU8SFgnnqR3rWzZPYu6N2A3xzs/8rQg==
 
 strict-uri-encode@^1.0.0:
   version "1.1.0"
