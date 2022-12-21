@@ -115,6 +115,9 @@ export type IGuestToHostMessage =
       type: "GUEST_READY"
     }
   | {
+      type: "APP_READY"
+    }
+  | {
       type: "MENU_ITEM_CALLBACK"
       key: string
     }
