@@ -42,6 +42,8 @@ class LayoutsMixin:
         --------
         Inserting elements using "with" notation:
 
+        >>> import streamlit as st
+        >>>
         >>> with st.container():
         ...    st.write("This is inside the container")
         ...
@@ -56,6 +58,8 @@ class LayoutsMixin:
 
         Inserting elements out of order:
 
+        >>> import streamlit as st
+        >>>
         >>> container = st.container()
         >>> container.write("This is inside the container")
         >>> st.write("This is outside the container")
@@ -115,6 +119,8 @@ class LayoutsMixin:
         --------
         You can use `with` notation to insert any element into a column:
 
+        >>> import streamlit as st
+        >>>
         >>> col1, col2, col3 = st.columns(3)
         >>>
         >>> with col1:
@@ -135,6 +141,9 @@ class LayoutsMixin:
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
         >>> col1, col2 = st.columns([3, 1])
         >>> data = np.random.randn(10, 1)
         >>>
@@ -228,6 +237,8 @@ class LayoutsMixin:
         --------
         You can use `with` notation to insert any element into a tab:
 
+        >>> import streamlit as st
+        >>>
         >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
         >>>
         >>> with tab1:
@@ -248,6 +259,9 @@ class LayoutsMixin:
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
         >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
         >>> data = np.random.randn(10, 1)
         >>>
@@ -313,6 +327,8 @@ class LayoutsMixin:
         --------
         You can use `with` notation to insert any element into an expander
 
+        >>> import streamlit as st
+        >>>
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> with st.expander("See explanation"):
@@ -329,6 +345,8 @@ class LayoutsMixin:
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>>
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> expander = st.expander("See explanation")
