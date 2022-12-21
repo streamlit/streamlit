@@ -146,12 +146,12 @@ function DataFrame({
   )
 
   React.useEffect(() => {
-    editingState.current = new EditingState(numRows)
+    editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
   const resetEditingState = React.useCallback(() => {
-    editingState.current = new EditingState(numRows)
+    editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
@@ -167,6 +167,7 @@ function DataFrame({
         currentWidgetState = new EditingState(0).toJson([])
       }
 
+      console.log("currentEditingState", currentEditingState)
       // Only update if there is actually a difference between editing and widget state
       if (currentEditingState !== currentWidgetState) {
         widgetMgr.setStringValue(element as WidgetInfo, currentEditingState, {
