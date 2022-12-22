@@ -303,6 +303,10 @@ class FileUploaderMixin:
         --------
         Insert a file uploader that accepts a single file at a time:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> from io import StringIO
+        >>>
         >>> uploaded_file = st.file_uploader("Choose a file")
         >>> if uploaded_file is not None:
         ...     # To read file as bytes:
@@ -323,6 +327,8 @@ class FileUploaderMixin:
 
         Insert a file uploader that accepts multiple files at a time:
 
+        >>> import streamlit as st
+        >>>
         >>> uploaded_files = st.file_uploader("Choose a CSV file", accept_multiple_files=True)
         >>> for uploaded_file in uploaded_files:
         ...     bytes_data = uploaded_file.read()

@@ -56,6 +56,8 @@ class HeadingMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> st.header('This is a header')
         >>> st.header('A header with _italics_ :blue[colors] and emojis :sunglasses:')
 
@@ -99,6 +101,8 @@ class HeadingMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> st.subheader('This is a subheader')
         >>> st.subheader('A subheader with _italics_ :blue[colors] and emojis :sunglasses:')
 
@@ -146,6 +150,8 @@ class HeadingMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> st.title('This is a title')
         >>> st.title('A title with _italics_ :blue[colors] and emojis :sunglasses:')
 
