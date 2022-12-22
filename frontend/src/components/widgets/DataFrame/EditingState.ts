@@ -24,9 +24,12 @@ class EditingState {
   // row -> column -> GridCell
   // Using [number, number] as a key for a Map would not work.
   private editedCells: Map<number, Map<number, GridCell>> = new Map()
+
   // List of rows represented by of column -> GridCell mappings
-  private addedRows: Array<Map<number, GridCell>> = new Array()
-  private deletedRows: number[] = new Array()
+  private addedRows: Array<Map<number, GridCell>> = []
+
+  private deletedRows: number[] = []
+
   private numRows: number = 0
 
   constructor(numRows: number) {
@@ -77,7 +80,7 @@ class EditingState {
     currentState.deleted_rows = this.deletedRows
     // Convert undefined values to null, otherwise this is removed here since
     // undefined does not exist in JSON.
-    let json = JSON.stringify(currentState, (k, v) =>
+    const json = JSON.stringify(currentState, (k, v) =>
       v === undefined ? null : v
     )
     console.log("test", JSON.stringify(currentState.added_rows), json)

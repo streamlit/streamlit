@@ -49,7 +49,7 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
         return {
           ...cellTemplate,
           data: cellData,
-          displayData: displayData,
+          displayData,
           isMissingValue: !notNullOrUndefined(data),
         } as TextCell
       } catch (error) {

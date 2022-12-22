@@ -20,11 +20,10 @@ import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
 
 import { Quiver } from "src/lib/Quiver"
-import { logError } from "src/lib/log"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { notNullOrUndefined } from "src/lib/utils"
 import { Theme } from "src/theme"
-import { logWarning } from "src/lib/log"
+import { logWarning, logError } from "src/lib/log"
 
 import {
   getColumnTypeFromQuiver,
@@ -156,8 +155,7 @@ function getColumnType(column: BaseColumnProps): ColumnCreator {
       ColumnType = ColumnTypes.get(column.customType)
     } else {
       logWarning(
-        "Unknown column type configured in column configuration: " +
-          column.customType
+        `Unknown column type configured in column configuration: ${column.customType}`
       )
     }
   }
@@ -205,30 +203,30 @@ function useDataLoader(
         } as BaseColumnProps
         const ColumnType = getColumnType(updatedColumn)
         return ColumnType(updatedColumn)
-      } else {
-        let updatedColumn = {
-          ...column,
-          ...applyColumnConfig(column, columnsConfig),
-          isStretched: stretchColumns,
-        } as BaseColumnProps
-
-        const ColumnType = getColumnType(updatedColumn)
-
-        // Make sure editing is deactivated if the column is read-only, disabled,
-        // or a not editable type.
-        if (
-          element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
-          disabled ||
-          ColumnType.isEditableType === false
-        ) {
-          updatedColumn = {
-            ...updatedColumn,
-            isEditable: false,
-          }
-        }
-
-        return ColumnType(updatedColumn)
       }
+      // Apply column configurations to non-index columns:
+      let updatedColumn = {
+        ...column,
+        ...applyColumnConfig(column, columnsConfig),
+        isStretched: stretchColumns,
+      } as BaseColumnProps
+
+      const ColumnType = getColumnType(updatedColumn)
+
+      // Make sure editing is deactivated if the column is read-only, disabled,
+      // or a not editable type.
+      if (
+        element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
+        disabled ||
+        ColumnType.isEditableType === false
+      ) {
+        updatedColumn = {
+          ...updatedColumn,
+          isEditable: false,
+        }
+      }
+
+      return ColumnType(updatedColumn)
     })
     .filter(column => {
       // Filter out all columns that are hidden

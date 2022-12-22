@@ -72,7 +72,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "smart",
     getCell(data?: DataType): GridCell {
       let cellData: number | null = toSafeNumber(data)
-      let displayData: string | undefined = undefined
+      let displayData: string | undefined
 
       if (notNullOrUndefined(cellData)) {
         if (Number.isNaN(cellData)) {
@@ -87,8 +87,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
           cellData =
             parameters.precision === 0
               ? Math.trunc(cellData)
-              : Math.trunc(cellData * Math.pow(10, parameters.precision)) /
-                Math.pow(10, parameters.precision)
+              : Math.trunc(cellData * 10 ** parameters.precision) /
+                10 ** parameters.precision
         }
 
         // Apply min parameter
@@ -122,7 +122,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         data: cellData,
-        displayData: displayData,
+        displayData,
         isMissingValue: !notNullOrUndefined(cellData),
       } as NumberCell
     },

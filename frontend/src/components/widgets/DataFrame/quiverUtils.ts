@@ -133,11 +133,14 @@ export function getColumnTypeFromQuiver(
   // Match based on quiver types
   if (["unicode", "empty"].includes(typeName)) {
     return TextColumn
-  } else if (["date", "time", "datetime", "datetimetz"].includes(typeName)) {
+  }
+  if (["date", "time", "datetime", "datetimetz"].includes(typeName)) {
     return ObjectColumn
-  } else if (["boolean", "bool"].includes(typeName)) {
+  }
+  if (["boolean", "bool"].includes(typeName)) {
     return BooleanColumn
-  } else if (
+  }
+  if (
     [
       "int8",
       "int16",
@@ -156,11 +159,14 @@ export function getColumnTypeFromQuiver(
     ].includes(typeName)
   ) {
     return NumberColumn
-  } else if (typeName === "categorical") {
+  }
+  if (typeName === "categorical") {
     return CategoricalColumn
-  } else if (typeName.startsWith("list")) {
+  }
+  if (typeName.startsWith("list")) {
     return ListColumn
-  } else if (["decimal", "bytes"].includes(typeName)) {
+  }
+  if (["decimal", "bytes"].includes(typeName)) {
     return ObjectColumn
   }
 
@@ -190,10 +196,10 @@ export function getColumnFromQuiver(
   const title = data.columns[0][columnPosition]
   const quiverType = data.types.data[columnPosition]
 
-  let columnTypeMetadata = undefined
+  let columnTypeMetadata
   if (Quiver.getTypeName(quiverType) === "categorical") {
     // Get the available categories and use it in column type metadata
-    let options = data.getCategoricalOptions(columnPosition)
+    const options = data.getCategoricalOptions(columnPosition)
     if (notNullOrUndefined(options)) {
       columnTypeMetadata = {
         options: ["", ...options.filter(opt => opt !== "")],

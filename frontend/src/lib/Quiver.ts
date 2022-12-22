@@ -459,7 +459,7 @@ export class Quiver {
   }
 
   public getCategoricalOptions(columnIndex: number): string[] | undefined {
-    //TODO(lukasmasuch): Do something with headcolumns?
+    // TODO(lukasmasuch): Do something with headcolumns?
     const { columns: numColumns } = this.dimensions
 
     if (columnIndex < 0 || columnIndex >= numColumns) {

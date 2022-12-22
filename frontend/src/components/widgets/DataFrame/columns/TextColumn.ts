@@ -50,7 +50,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
           ...cellTemplate,
           isMissingValue: !notNullOrUndefined(cellData),
           data: cellData,
-          displayData: displayData,
+          displayData,
         } as TextCell
       } catch (error) {
         return getErrorCell(

@@ -355,11 +355,11 @@ function DataFrame({
               // Support fill handle for bulk editing
               fillHandle: true,
               // Support editing:
-              onCellEdited: onCellEdited,
+              onCellEdited,
               // Support pasting data for bulk editing:
-              onPaste: onPaste,
+              onPaste,
               // Support deleting cells & rows
-              onDelete: onDelete,
+              onDelete,
             })}
           {...(element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
             // Support adding rows

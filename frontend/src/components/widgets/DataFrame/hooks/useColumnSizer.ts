@@ -21,10 +21,7 @@ import { GridColumn, DataEditorProps } from "@glideapps/glide-data-grid"
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.
  */
-type ColumnSizerReturn = {} & Pick<
-  DataEditorProps,
-  "columns" | "onColumnResize"
->
+type ColumnSizerReturn = Pick<DataEditorProps, "columns" | "onColumnResize">
 
 /**
  * A custom hook that handles all data loading capabilities for the interactive data table.
