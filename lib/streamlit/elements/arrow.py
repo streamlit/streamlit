@@ -41,7 +41,6 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
-    get_session_state,
     register_widget,
 )
 from streamlit.type_util import Key, to_key
@@ -70,6 +69,291 @@ class ColumnConfig(TypedDict, total=False):
     editable: Optional[bool]
     alignment: Optional[Literal["left", "center", "right"]]
     metadata: Optional[Dict]
+    column: Optional[Union[str, int]]
+
+
+class ColumnConfigBuilder:
+    def __init__(self):
+        pass
+
+    def __call__(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        type: Optional[ColumnType] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+        metadata: Optional[Dict] = None,
+    ) -> ColumnConfig:
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type=type,
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=metadata,
+            column=column,
+        )
+
+    def text(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+    ) -> ColumnConfig:
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="text",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=None,
+            column=column,
+        )
+
+    def number(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+        precision: Optional[int] = None,
+        format: Optional[str] = None,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
+    ) -> ColumnConfig:
+        type_metadata = {}
+        if precision is not None:
+            type_metadata["precision"] = precision
+        if format is not None:
+            type_metadata["format"] = format
+        if min is not None:
+            type_metadata["min"] = min
+        if max is not None:
+            type_metadata["max"] = max
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="number",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=type_metadata if type_metadata else None,
+            column=column,
+        )
+
+    def boolean(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+    ) -> ColumnConfig:
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="boolean",
+            hidden=hidden,
+            editable=editable,
+            alignment=None,
+            metadata=None,
+            column=column,
+        )
+
+    def object(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+    ) -> ColumnConfig:
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="object",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=None,
+            column=column,
+        )
+
+    def categorical(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+        options: Optional[List[str]] = None,
+    ) -> ColumnConfig:
+        type_metadata = {}
+        if options:
+            type_metadata["options"] = options
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="categorical",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=type_metadata if type_metadata else None,
+            column=column,
+        )
+
+    def list(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+    ) -> ColumnConfig:
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="list",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=None,
+            column=column,
+        )
+
+    def url(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+    ) -> ColumnConfig:
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="url",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=None,
+            column=column,
+        )
+
+    def image(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+    ) -> ColumnConfig:
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="image",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=None,
+            column=column,
+        )
+
+    def chart(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+        type: Optional[Literal["line", "bar"]] = None,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
+    ) -> ColumnConfig:
+        type_metadata = {}
+        if type is not None:
+            type_metadata["type"] = type
+        if min is not None:
+            type_metadata["min"] = min
+        if max is not None:
+            type_metadata["max"] = max
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="chart",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=type_metadata if type_metadata else None,
+            column=column,
+        )
+
+    def range(
+        self,
+        column: Optional[Union[str, int]] = None,
+        *,
+        width: Optional[int] = None,
+        title: Optional[str] = None,
+        hidden: Optional[bool] = None,
+        editable: Optional[bool] = None,
+        alignment: Optional[Literal["right", "left", "center"]] = None,
+        min: Optional[float] = None,
+        max: Optional[float] = None,
+        step: Optional[float] = None,
+    ) -> ColumnConfig:
+        type_metadata = {}
+        if step is not None:
+            type_metadata["step"] = step
+        if min is not None:
+            type_metadata["min"] = min
+        if max is not None:
+            type_metadata["max"] = max
+
+        return ColumnConfig(
+            width=width,
+            title=title,
+            type="range",
+            hidden=hidden,
+            editable=editable,
+            alignment=alignment,
+            metadata=type_metadata if type_metadata else None,
+            column=column,
+        )
 
 
 class DataEditorState(TypedDict, total=False):
@@ -78,56 +362,7 @@ class DataEditorState(TypedDict, total=False):
     deleted_rows: Optional[List[int]]
 
 
-def column_config(
-    *,
-    width: Optional[int] = None,
-    title: Optional[str] = None,
-    type: Optional[ColumnType] = None,
-    hidden: Optional[bool] = None,
-    editable: Optional[bool] = None,
-    alignment: Optional[Literal["right", "left", "center"]] = None,
-    metadata: Optional[Dict] = None,
-) -> ColumnConfig:
-    """Configures a dataframe column.
-    Parameters
-    ----------
-    width: int or None
-        The initial width of the column expressed in pixels.
-    title: str or None
-        The column title displayed on the frontend.
-        This only changes the display value and does not have any impact on the actual data.
-    type: str or None
-        The type of the column.
-        Available column types: text, number, boolean, list, url, image, bar-chart, line-chart, progress-chart,
-    hidden: bool or None
-        If `True`, the column will not be shown on the frontend.
-        This can be used to hide index columns as well.
-    editable: bool or None
-        If `True`, the column will be editable.
-    alignment: str or None
-        The content alignment of the column. Available options: right, left, center.
-    metadata: dict or None
-        Column type specific metadata.
-
-    Examples
-    --------
-    >>> df = pd.DataFrame(
-    ...    np.random.randn(50, 20),
-    ...    columns=('col %d' % i for i in range(20)))
-    ...
-    >>> st._arrow_dataframe(df, columns={
-        "col 1": st.column_config(title="Column 1", width=100)
-    })
-    """
-    return ColumnConfig(
-        width=width,
-        title=title,
-        type=type,
-        hidden=hidden,
-        editable=editable,
-        alignment=alignment,
-        metadata=metadata,
-    )
+column_config = ColumnConfigBuilder()
 
 
 def _apply_dataframe_edits(df: DataFrame, data_editor_state: DataEditorState):
@@ -288,8 +523,10 @@ class ArrowMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        columns: Optional[Dict[Union[int, str], ColumnConfig]] = None,
-        editing_mode: Literal["fixed", "dynamic"] = "fixed",
+        columns: Optional[
+            Union[Dict[Union[int, str], ColumnConfig], List[ColumnConfig]]
+        ] = None,
+        num_rows: Literal["fixed", "dynamic"] = "fixed",
     ) -> DataFrame:
 
         data_df = type_util.convert_anything_to_df(data)
@@ -297,9 +534,17 @@ class ArrowMixin:
         if not columns:
             columns = {}
 
+        # TODO(lukasmasuch): TEMP WORKAROUND TO TEST DIFFERENT SOLUTIONS
+        if isinstance(columns, list):
+            columns = {col["column"]: col for col in columns}
+
+        for col in columns.keys():
+            if "column" in columns[col]:
+                del columns[col]["column"]
+
+        # TODO(lukasmasuch): END TEMP WORKAROUND
         for col in data_df.columns:
             if type_util.is_colum_type_arrow_incompatible(data_df[col]):
-
                 if col not in columns:
                     columns[col] = column_config(editable=False)
                 else:
@@ -313,7 +558,7 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
-        if editing_mode == "dynamic":
+        if num_rows == "dynamic":
             proto.editing_mode = ArrowProto.EditingMode.DYNAMIC
         else:
             proto.editing_mode = ArrowProto.EditingMode.FIXED
