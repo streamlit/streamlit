@@ -26,7 +26,9 @@ if TYPE_CHECKING:
 
 class TextMixin:
     @gather_metrics("text")
-    def text(self, body: "SupportsStr", align: "TextAlignOption" = "left") -> "DeltaGenerator":
+    def text(
+        self, body: "SupportsStr", align: "TextAlignOption" = "left"
+    ) -> "DeltaGenerator":
         """Write fixed-width and preformatted text.
 
         Parameters

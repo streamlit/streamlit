@@ -27,7 +27,10 @@ if TYPE_CHECKING:
 class HeadingMixin:
     @gather_metrics("header")
     def header(
-        self, body: SupportsStr, align: "TextAlignOption" = "left", anchor: Optional[str] = None
+        self,
+        body: SupportsStr,
+        align: "TextAlignOption" = "left",
+        anchor: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display text in header formatting.
 
@@ -74,7 +77,10 @@ class HeadingMixin:
 
     @gather_metrics("subheader")
     def subheader(
-        self, body: SupportsStr, align: "TextAlignOption" = "left", anchor: Optional[str] = None
+        self,
+        body: SupportsStr,
+        align: "TextAlignOption" = "left",
+        anchor: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display text in subheader formatting.
 
@@ -122,7 +128,10 @@ class HeadingMixin:
 
     @gather_metrics("title")
     def title(
-        self, body: SupportsStr, align: "TextAlignOption" = "left", anchor: Optional[str] = None
+        self,
+        body: SupportsStr,
+        align: "TextAlignOption" = "left",
+        anchor: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display text in title formatting.
 

@@ -29,7 +29,10 @@ if TYPE_CHECKING:
 class MarkdownMixin:
     @gather_metrics("markdown")
     def markdown(
-        self, body: SupportsStr, align: "TextAlignOption" = "left", unsafe_allow_html: bool = False
+        self,
+        body: SupportsStr,
+        align: "TextAlignOption" = "left",
+        unsafe_allow_html: bool = False,
     ) -> "DeltaGenerator":
         """Display string formatted as Markdown.
 
@@ -118,7 +121,10 @@ class MarkdownMixin:
 
     @gather_metrics("caption")
     def caption(
-        self, body: SupportsStr, align: "TextAlignOption" = "left", unsafe_allow_html: bool = False
+        self,
+        body: SupportsStr,
+        align: "TextAlignOption" = "left",
+        unsafe_allow_html: bool = False,
     ) -> "DeltaGenerator":
         """Display text in small font.
 

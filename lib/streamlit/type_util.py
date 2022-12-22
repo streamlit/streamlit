@@ -99,12 +99,7 @@ ValueFieldName: TypeAlias = Literal[
     "trigger_value",
 ]
 
-TextAlignOption: TypeAlias = Literal[
-    "left",
-    "center",
-    "right",
-    "justify"
-]
+TextAlignOption: TypeAlias = Literal["left", "center", "right", "justify"]
 
 V_co = TypeVar(
     "V_co",
