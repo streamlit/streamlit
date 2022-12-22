@@ -323,7 +323,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (this.isAppInReadyState(prevState)) {
-      this.props.hostCommunication.sendMessage({ type: "APP_READY" })
+      this.props.hostCommunication.sendMessage({ type: "SCRIPT_RUN_FINISHED" })
     }
   }
 
