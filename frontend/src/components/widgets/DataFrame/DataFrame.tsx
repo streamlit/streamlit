@@ -155,6 +155,12 @@ function DataFrame({
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
+  const { columns: originalColumns, getCellContent: getOriginalCellContent } =
+    useDataLoader(element, data, numRows, disabled, editingState)
+
+  const { columns, sortColumn, getOriginalIndex, getCellContent } =
+    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+
   const commitWidgetValue = React.useCallback(
     // Use debounce to prevent rapid updates to the widget state.
     debounce(DEBOUNCE_TIME_MS, () => {
@@ -167,7 +173,6 @@ function DataFrame({
         currentWidgetState = new EditingState(0).toJson([])
       }
 
-      console.log("currentEditingState", currentEditingState)
       // Only update if there is actually a difference between editing and widget state
       if (currentEditingState !== currentWidgetState) {
         widgetMgr.setStringValue(element as WidgetInfo, currentEditingState, {
@@ -177,12 +182,6 @@ function DataFrame({
     }),
     [widgetMgr, element]
   )
-
-  const { columns: originalColumns, getCellContent: getOriginalCellContent } =
-    useDataLoader(element, data, numRows, disabled, editingState)
-
-  const { columns, sortColumn, getOriginalIndex, getCellContent } =
-    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
   // Column sort does not work currently, since it only has access to the underlying data
   // and not the edited data
@@ -306,10 +305,10 @@ function DataFrame({
           verticalBorder={(col: number) =>
             // Show no border for last column in certain situations
             // This is required to prevent the cell selection border to not be cut off
-            col >= columns.length &&
-            (element.useContainerWidth || resizableSize.width === "100%")
-              ? false
-              : true
+            !(
+              col >= columns.length &&
+              (element.useContainerWidth || resizableSize.width === "100%")
+            )
           }
           // Activate copy to clipboard functionality:
           getCellsForSelection={true}
