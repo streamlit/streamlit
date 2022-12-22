@@ -367,6 +367,10 @@ function DataFrame({
               sticky: false,
               tint: true,
             },
+            rowMarkerTheme: {
+              bgCell: theme.bgHeader,
+              bgCellMedium: theme.bgHeader,
+            },
             rowMarkers: "checkbox",
             rowSelectionMode: "auto",
             rowSelect: disabled ? "none" : "multi",
