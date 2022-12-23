@@ -301,7 +301,10 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.enqueue("viewReport")
   }
 
-  componentDidUpdate(prevProps: Readonly<Props>): void {
+  componentDidUpdate(
+    prevProps: Readonly<Props>,
+    prevState: Readonly<State>
+  ): void {
     if (
       prevProps.hostCommunication.currentState.queryParams !==
       this.props.hostCommunication.currentState.queryParams
@@ -317,6 +320,10 @@ export class App extends PureComponent<Props, State> {
     if (requestedPageScriptHash !== null) {
       this.onPageChange(requestedPageScriptHash)
       this.props.hostCommunication.onPageChanged()
+    }
+
+    if (this.isAppInReadyState(prevState)) {
+      this.props.hostCommunication.sendMessage({ type: "SCRIPT_RUN_FINISHED" })
     }
   }
 
@@ -1044,6 +1051,15 @@ export class App extends PureComponent<Props, State> {
 
   onPageChange = (pageScriptHash: string): void => {
     this.sendRerunBackMsg(undefined, pageScriptHash)
+  }
+
+  isAppInReadyState = (prevState: Readonly<State>): boolean => {
+    return (
+      this.state.connectionState === ConnectionState.CONNECTED &&
+      this.state.scriptRunState === ScriptRunState.NOT_RUNNING &&
+      prevState.scriptRunState === ScriptRunState.RUNNING &&
+      prevState.connectionState === ConnectionState.CONNECTED
+    )
   }
 
   sendRerunBackMsg = (
