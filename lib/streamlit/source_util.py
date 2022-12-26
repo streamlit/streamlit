@@ -135,7 +135,7 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
 
         pages_dir = main_script_path.parent / "pages"
         page_scripts = sorted(
-            [f for f in pages_dir.glob("*.py") if not f.name.startswith(".")],
+            [f for f in pages_dir.glob("*.py") if not f.name.startswith(".") and not f.name == "__init__.py"],
             key=page_sort_key,
         )
 
