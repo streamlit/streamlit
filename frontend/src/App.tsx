@@ -321,9 +321,10 @@ export class App extends PureComponent<Props, State> {
       this.onPageChange(requestedPageScriptHash)
       this.props.hostCommunication.onPageChanged()
     }
-
-    if (this.isAppInReadyState(prevState)) {
-      this.props.hostCommunication.sendMessage({ type: "SCRIPT_RUN_FINISHED" })
+    // @ts-ignore
+    if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
+      // @ts-ignore
+      window.prerenderReady = true
     }
   }
 

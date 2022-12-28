@@ -133,6 +133,8 @@ describe("App", () => {
       userMapboxToken: "mpt",
     } as SessionInfoArgs)
     MetricsManager.current = getMetricsManagerForTest()
+    // @ts-ignore
+    window.prerenderReady = false
   })
 
   afterEach(() => {
@@ -709,7 +711,7 @@ describe("App.handleNewSession", () => {
     expect(SessionInfo.isSet()).toBe(true)
   })
 
-  it("should send SCRIPT_RUN_FINISHED message on connection is established and running finished", () => {
+  it("should set window.prerenderReady to true after app script is run successfully first time", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
@@ -718,39 +720,33 @@ describe("App.handleNewSession", () => {
       connectionState: ConnectionState.CONNECTING,
     })
     wrapper.update()
-    expect(props.hostCommunication.sendMessage).not.toHaveBeenCalledWith({
-      type: "SCRIPT_RUN_FINISHED",
-    })
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(false)
 
     wrapper.setState({
       scriptRunState: ScriptRunState.RUNNING,
       connectionState: ConnectionState.CONNECTED,
     })
     wrapper.update()
-    expect(props.hostCommunication.sendMessage).not.toHaveBeenCalledWith({
-      type: "SCRIPT_RUN_FINISHED",
-    })
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(false)
 
     wrapper.setState({
       scriptRunState: ScriptRunState.NOT_RUNNING,
       connectionState: ConnectionState.CONNECTED,
     })
     wrapper.update()
-    expect(props.hostCommunication.sendMessage).toHaveBeenLastCalledWith({
-      type: "SCRIPT_RUN_FINISHED",
-    })
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(true)
 
-    jest.clearAllMocks()
-
-    // message should not be called when App component simply re-rendered with same state
+    // window.prerenderReady is set to true after first
     wrapper.setState({
       scriptRunState: ScriptRunState.NOT_RUNNING,
       connectionState: ConnectionState.CONNECTED,
     })
     wrapper.update()
-    expect(props.hostCommunication.sendMessage).not.toHaveBeenLastCalledWith({
-      type: "SCRIPT_RUN_FINISHED",
-    })
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(true)
   })
 
   it("plumbs appPages and currentPageScriptHash to the AppView component", () => {
