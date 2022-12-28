@@ -24,7 +24,6 @@ import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
 import Tabs from "src/components/elements/Tabs"
 
-import AppContext from "src/components/core/AppContext"
 import {
   BaseBlockProps,
   isComponentStale,
@@ -35,7 +34,6 @@ import ElementNodeRenderer from "./ElementNodeRenderer"
 import {
   StyledColumn,
   StyledHorizontalBlock,
-  StyledIFrameResizerAnchor,
   StyledVerticalBlock,
   styledVerticalBlockWrapperStyles,
 } from "./styled-components"
@@ -44,7 +42,6 @@ const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
-  main?: boolean
 }
 
 interface BlockPropsWithWidth extends BaseBlockProps {
@@ -164,9 +161,6 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
-  const { main } = props
-  const { embedded } = React.useContext(AppContext)
-
   return (
     <AutoSizer disableHeight={true} style={styledVerticalBlockWrapperStyles}>
       {({ width }) => {
@@ -175,12 +169,6 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         return (
           <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
             <ChildRenderer {...propsWithNewWidth} />
-            {main && (
-              <StyledIFrameResizerAnchor
-                isEmbedded={embedded}
-                data-iframe-height
-              />
-            )}
           </StyledVerticalBlock>
         )
       }}

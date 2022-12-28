@@ -154,6 +154,7 @@ const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 declare global {
   interface Window {
     streamlitDebug: any
+    iFrameResizer: any
   }
 }
 
@@ -295,9 +296,19 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (isInChildFrame()) {
-      Object.assign(window, {
-        iFrameResizer: { heightCalculationMethod: "taggedElement" },
-      })
+      window.iFrameResizer = {
+        heightCalculationMethod: () => {
+          const taggedEls = document.querySelectorAll("[data-iframe-height]")
+          if (taggedEls.length === 0) {
+            return 0
+          }
+
+          const bottomVals = Array.from(taggedEls).map(el =>
+            Math.ceil(el.getBoundingClientRect().bottom)
+          )
+          return Math.max(...bottomVals)
+        },
+      }
       // @ts-ignore
       import("iframe-resizer/js/iframeResizer.contentWindow")
     }

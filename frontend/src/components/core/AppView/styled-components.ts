@@ -82,7 +82,6 @@ export const StyledAppViewBlockContainer =
       const bottomEmbedPadding = isEmbedded ? "1rem" : "10rem"
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
-        flex: 1,
         width: theme.sizes.full,
         paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
         paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
@@ -101,6 +100,13 @@ export const StyledAppViewBlockContainer =
     }
   )
 
+export const StyledAppViewBlockSpacer = styled.div(({ theme }) => {
+  return {
+    width: theme.sizes.full,
+    flexGrow: 1,
+  }
+})
+
 export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   color: theme.colors.fadedText60,
   // We do not want to change the font for this based on theme.
@@ -114,18 +120,16 @@ export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
 }))
 
 export interface StyledAppViewFooterProps {
-  isEmbedded: boolean
   isWideMode: boolean
 }
-
+const footerHeight = "2.5rem"
 export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
-  ({ isEmbedded, isWideMode, theme }) => {
+  ({ isWideMode, theme }) => {
     const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
     return {
-      display: isEmbedded ? "none" : "block",
       color: theme.colors.fadedText40,
-      flex: 0,
       fontSize: theme.fontSizes.sm,
+      height: footerHeight,
       minWidth: isWideMode ? "auto" : undefined,
       maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
       padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
@@ -141,3 +145,12 @@ export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
     }
   }
 )
+
+export interface StyledIFrameResizerAnchorProps {
+  isEmbedded: boolean
+}
+export const StyledIFrameResizerAnchor =
+  styled.div<StyledIFrameResizerAnchorProps>(({ theme, isEmbedded }) => ({
+    position: "relative",
+    bottom: isEmbedded ? "0" : `-${footerHeight}`,
+  }))

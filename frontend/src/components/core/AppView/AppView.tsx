@@ -34,6 +34,8 @@ import {
   StyledAppViewFooter,
   StyledAppViewFooterLink,
   StyledAppViewMain,
+  StyledIFrameResizerAnchor,
+  StyledAppViewBlockSpacer,
 } from "./styled-components"
 
 export interface AppViewProps {
@@ -114,7 +116,6 @@ function AppView(props: AppViewProps): ReactElement {
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
         formsData={formsData}
-        main={node === elements.main}
       />
     </StyledAppViewBlockContainer>
   )
@@ -146,12 +147,16 @@ function AppView(props: AppViewProps): ReactElement {
       )}
       <StyledAppViewMain tabIndex={0} isEmbedded={embedded} className="main">
         {renderBlock(elements.main)}
-        <StyledAppViewFooter isEmbedded={embedded} isWideMode={wideMode}>
-          Made with{" "}
-          <StyledAppViewFooterLink href="//streamlit.io" target="_blank">
-            Streamlit
-          </StyledAppViewFooterLink>
-        </StyledAppViewFooter>
+        <StyledIFrameResizerAnchor isEmbedded={embedded} data-iframe-height />
+        {!embedded && <StyledAppViewBlockSpacer />}
+        {!embedded && (
+          <StyledAppViewFooter isWideMode={wideMode}>
+            Made with{" "}
+            <StyledAppViewFooterLink href="//streamlit.io" target="_blank">
+              Streamlit
+            </StyledAppViewFooterLink>
+          </StyledAppViewFooter>
+        )}
       </StyledAppViewMain>
     </StyledAppViewContainer>
   )
