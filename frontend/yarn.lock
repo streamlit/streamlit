@@ -5073,10 +5073,10 @@ base@^0.11.1:
     mixin-deep "^1.2.0"
     pascalcase "^0.1.1"
 
-baseui@12.1.2:
-  version "12.1.2"
-  resolved "https://registry.yarnpkg.com/baseui/-/baseui-12.1.2.tgz#ec0f350be29fcca6d85b0281dc81d764c04adeeb"
-  integrity sha512-IPQJ/YEWfR/Lmm5zF3S7BEJQVwMCfIvIimO6+ZwnM/4pfokhfq3UU77cR53zrbFeRvScmSXArTOujG9AO+M2vQ==
+baseui@12.2.0:
+  version "12.2.0"
+  resolved "https://registry.yarnpkg.com/baseui/-/baseui-12.2.0.tgz#70cfc1c906442ba1b295d2801e58d96c39e3bb54"
+  integrity sha512-GDooNcxztwg71dkf69bw4Of/nM56adWFvo4VXkU5iVVhLHB0X60ngT+9J2LLOG7F9+s5LQzSXhRO62OiPhLsHA==
   dependencies:
     "@date-io/date-fns" "^2.6.2"
     "@types/react-virtualized-auto-sizer" "^1.0.0"
