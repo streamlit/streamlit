@@ -185,7 +185,7 @@
     "jest-fetch-mock": "^3.0.3",
     "jest-github-actions-reporter": "^1.0.3",
     "jest-websocket-mock": "^2.2.0",
-    "marked": "^4.0.12",
+    "marked": "^4.2.4",
     "mock-socket": "^9.1.5",
     "prettier": "^2.7.1",
     "prop-types": "^15.7.2",
