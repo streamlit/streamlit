@@ -147,18 +147,3 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
     gap: theme.spacing.lg,
   })
 )
-
-/*
-Used by @npm/iframe-resizer to determine the page height
-*/
-export interface StyledIFrameResizerAnchorProps {
-  isEmbedded: boolean
-}
-
-export const StyledIFrameResizerAnchor =
-  styled.div<StyledIFrameResizerAnchorProps>(({ isEmbedded }) => ({
-    position: "absolute",
-    // 10rem: StyledAppViewBlockContainer padding-bottom
-    // 39px:  StyledAppViewFooter computed height
-    bottom: isEmbedded ? "-1rem" : "calc( -1 * (10rem + 39px))",
-  }))
