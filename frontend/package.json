@@ -188,7 +188,7 @@
     "marked": "^4.2.4",
     "mock-socket": "^9.1.5",
     "prettier": "^2.7.1",
-    "prop-types": "^15.7.2",
+    "prop-types": "^15.8.1",
     "react-responsive-carousel": "^3.2.23",
     "react-scripts": "4.0.3",
     "source-map-explorer": "^2.4.2",
