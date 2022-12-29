@@ -70,7 +70,7 @@
     "mapbox-gl": "^1.11.1",
     "moment": "^2.29.4",
     "moment-duration-format": "^2.3.2",
-    "moment-timezone": "^0.5.33",
+    "moment-timezone": "^0.5.40",
     "node-emoji": "^1.11.0",
     "numbro": "^2.3.1",
     "plotly.js": "^2.16.0",
