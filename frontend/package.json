@@ -209,6 +209,7 @@
     "https-proxy-agent": "^2.2.4",
     "immer": "^9.0.16",
     "ini": "^1.3.6",
+    "is-svg": "^4.3.2",
     "kind-of": "^6.0.3",
     "node-notifier": "^8.0.1",
     "nth-check": "^2.0.1",
