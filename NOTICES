@@ -9150,7 +9150,7 @@ terms above.
 
 -----
 
-The following software may be included in this product: lodash.camelcase, lodash.curry, lodash.debounce, lodash.flow, lodash.toarray. A copy of the source code may be downloaded from https://github.com/lodash/lodash.git (lodash.camelcase), https://github.com/lodash/lodash.git (lodash.curry), https://github.com/lodash/lodash.git (lodash.debounce), https://github.com/lodash/lodash.git (lodash.flow), https://github.com/lodash/lodash.git (lodash.toarray). This software contains the following license and notice below:
+The following software may be included in this product: lodash.camelcase, lodash.curry, lodash.debounce, lodash.flow. A copy of the source code may be downloaded from https://github.com/lodash/lodash.git (lodash.camelcase), https://github.com/lodash/lodash.git (lodash.curry), https://github.com/lodash/lodash.git (lodash.debounce), https://github.com/lodash/lodash.git (lodash.flow). This software contains the following license and notice below:
 
 Copyright jQuery Foundation and other contributors <https://jquery.org/>
 
