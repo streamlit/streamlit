@@ -160,7 +160,7 @@
     "@typescript-eslint/eslint-plugin": "^5.20.0",
     "@typescript-eslint/parser": "^5.20.0",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.4.1",
-    "axios-mock-adapter": "^1.18.2",
+    "axios-mock-adapter": "^1.21.2",
     "babel-jest": "^26.6.3",
     "babel-plugin-emotion": "^11.0.0",
     "cypress": "^6.3.0",
