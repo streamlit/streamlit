@@ -92,7 +92,7 @@
     "react-map-gl": "^5.3.19",
     "react-markdown": "^6.0.3",
     "react-plotly.js": "^2.6.0",
-    "react-syntax-highlighter": "^15.4.5",
+    "react-syntax-highlighter": "^15.5.0",
     "react-transition-group": "^4.4.1",
     "react-virtualized": "^9.21.2",
     "react-webcam": "^7.0.1",
