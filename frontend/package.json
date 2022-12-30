@@ -76,7 +76,7 @@
     "moment-timezone": "^0.5.33",
     "node-emoji": "^1.10.0",
     "numbro": "^2.3.1",
-    "plotly.js": "^2.16.0",
+    "plotly.js": "^2.17.0",
     "prismjs": "^1.27.0",
     "protobufjs": "^6.11.2",
     "query-string": "^6.13.1",
