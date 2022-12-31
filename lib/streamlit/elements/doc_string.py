@@ -17,6 +17,7 @@
 import ast
 import contextlib
 import inspect
+import re
 import types
 from typing import TYPE_CHECKING, Any, cast
 
@@ -186,6 +187,9 @@ def _get_docstring(obj):
     return None
 
 
+_NEWLINES = re.compile(r"[\n\r]+")
+
+
 def _get_variable_name():
     """Try to get the name of the variable in the current line, as set by the user.
 
@@ -195,32 +199,20 @@ def _get_variable_name():
 
     The name is "foo"
     """
-    active_frame = inspect.currentframe()
-    prev_frame = None
-    desired_frame = None
+    scriptrunner_frame = _get_scriptrunner_frame()
 
-    # Look back in call stack to get the variable name passed into st.help().
-    # The frame *before* the ScriptRunner frame is the correct one.
-    # IMPORTANT: This will change if we refactor the code. But hopefully our tests will catch the
-    # issue and we'll fix it before it lands upstream!
-    for frame in inspect.getouterframes(active_frame):
-        if frame.filename == SCRIPTRUNNER_FILENAME:
-            desired_frame = prev_frame
-            break
-
-        prev_frame = frame
-
-    if desired_frame is None:
+    if scriptrunner_frame is None:
         return None
 
-    code_context = desired_frame.code_context
+    code_context = scriptrunner_frame.code_context
 
     if not code_context:
         return None
 
-    first_line_of_code = code_context[0].strip()
+    code_as_string = "".join(code_context)
+    cleaned_code = re.sub(_NEWLINES, "", code_as_string.strip())
 
-    tree = ast.parse(first_line_of_code)
+    tree = ast.parse(cleaned_code)
 
     # Example:
     #
@@ -248,7 +240,7 @@ def _get_variable_name():
 
     if arg_node is None:
         # Return argument whole line, since it's probably a magic call.
-        code = first_line_of_code
+        code = cleaned_code
 
         # A common pattern is to add "," at the end of a magic command to make it print.
         # This removes that final ",", so it looks nicer.
@@ -266,7 +258,31 @@ def _get_variable_name():
         return None
 
     # Otherwise, return whatever is inside st.help(<-- here -->)
-    return first_line_of_code[arg_node.col_offset : arg_node.end_col_offset]
+    return cleaned_code[arg_node.col_offset : arg_node.end_col_offset]
+
+
+def _get_scriptrunner_frame():
+    active_frame = inspect.currentframe()
+    prev_frame = None
+    scriptrunner_frame = None
+
+    # Look back in call stack to get the variable name passed into st.help().
+    # The frame *before* the ScriptRunner frame is the correct one.
+    # IMPORTANT: This will change if we refactor the code. But hopefully our tests will catch the
+    # issue and we'll fix it before it lands upstream!
+    for frame in inspect.getouterframes(active_frame):
+        # Check if this is running inside a funny "exec()" block that won't provide the info we
+        # need. If so, just quit.
+        if frame.code_context is None and frame.filename == "<string>":
+            return None
+
+        if frame.filename == SCRIPTRUNNER_FILENAME:
+            scriptrunner_frame = prev_frame
+            break
+
+        prev_frame = frame
+
+    return scriptrunner_frame
 
 
 def _get_stcall_arg(tree, command_name):
