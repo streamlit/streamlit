@@ -17,6 +17,15 @@ import re
 import pandas as pd
 
 import streamlit as st
+from streamlit.elements.doc_string import _get_scriptrunner_frame
+
+if _get_scriptrunner_frame() is None:
+    st.warning(
+        """
+        You're running this script in an `exec` context, so the `foo` part
+        of `st.help(foo)` will not appear inside the displayed `st.help` element.
+        """
+    )
 
 # Testing case where there are no docs.
 st.help(st.net_util)
