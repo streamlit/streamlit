@@ -328,11 +328,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
 
     // check if current date between 12/31 and 1/06 to render correct gif
-    const runningSrc = StatusWidget.isNewYears()
-      ? newYearsRunning
-      : iconRunning
+    const isNewYears = StatusWidget.isNewYears()
+    const runningSrc = isNewYears ? newYearsRunning : iconRunning
     const runningIcon = (
-      <StyledAppRunningIcon src={runningSrc} alt="Running..." />
+      <StyledAppRunningIcon
+        isNewYears={isNewYears}
+        src={runningSrc}
+        alt="Running..."
+      />
     )
 
     return (
