@@ -309,7 +309,7 @@ class MemoPersistTest(DeltaGeneratorTestCase):
         ]
     )
     @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
-    def test_persist_param_values(
+    def test_persist_param_value(
         self,
         _,
         persist_value: str | bool | None,
