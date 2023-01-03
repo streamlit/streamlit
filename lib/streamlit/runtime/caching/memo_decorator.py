@@ -217,7 +217,7 @@ class MemoAPI:
     def __call__(
         self,
         *,
-        persist: str | None = None,
+        persist: str | bool | None = None,
         show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
         max_entries: int | None = None,
@@ -234,7 +234,7 @@ class MemoAPI:
         self,
         func: F | None = None,
         *,
-        persist: str | None = None,
+        persist: str | bool | None = None,
         show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
         max_entries: int | None = None,
@@ -255,9 +255,10 @@ class MemoAPI:
         func : callable
             The function to memoize. Streamlit hashes the function's source code.
 
-        persist : str or None
-            Optional location to persist cached data to. Currently, the only
-            valid value is "disk", which will persist to the local disk.
+        persist : str or boolean or None
+            Optional location to persist cached data to. Passing "disk" (or True)
+            will persist the cached data to the local disk. None (or False) will disable
+            persistence. The default is None.
 
         show_spinner : boolean
             Enable the spinner. Default is True to show a spinner when there is
@@ -350,7 +351,16 @@ class MemoAPI:
 
         """
 
-        if persist not in (None, "disk"):
+        # Parse our persist value into a string
+        persist_string: str | None
+        if persist is True:
+            persist_string = "disk"
+        elif persist is False:
+            persist_string = None
+        else:
+            persist_string = persist
+
+        if persist_string not in (None, "disk"):
             # We'll eventually have more persist options.
             raise StreamlitAPIException(
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
@@ -367,7 +377,7 @@ class MemoAPI:
             return create_cache_wrapper(
                 MemoizedFunction(
                     func=f,
-                    persist=persist,
+                    persist=persist_string,
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
@@ -384,7 +394,7 @@ class MemoAPI:
         return create_cache_wrapper(
             MemoizedFunction(
                 func=cast(types.FunctionType, func),
-                persist=persist,
+                persist=persist_string,
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,

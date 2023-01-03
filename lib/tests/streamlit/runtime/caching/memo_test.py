@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """st.memo unit tests."""
+from __future__ import annotations
+
 import logging
 import pickle
 import re
@@ -297,6 +299,35 @@ class MemoPersistTest(DeltaGeneratorTestCase):
                 "The memoized function 'user_function' has a TTL that will be ignored.",
                 output,
             )
+
+    @parameterized.expand(
+        [
+            ("disk", "disk", True),
+            ("True", True, True),
+            ("None", None, False),
+            ("False", False, False),
+        ]
+    )
+    @patch("streamlit.runtime.caching.memo_decorator.streamlit_write")
+    def test_persist_param_values(
+        self,
+        _,
+        persist_value: str | bool | None,
+        should_persist: bool,
+        mock_write: Mock,
+    ):
+        """Passing "disk" or `True` enables persistence; `None` or `False` disables it."""
+
+        @st.experimental_memo(persist=persist_value)
+        def foo():
+            return "data"
+
+        foo()
+
+        if should_persist:
+            mock_write.assert_called_once()
+        else:
+            mock_write.assert_not_called()
 
 
 class MemoStatsProviderTest(unittest.TestCase):
