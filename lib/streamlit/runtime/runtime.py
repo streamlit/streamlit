@@ -313,13 +313,13 @@ class Runtime:
         """
         return self._session_mgr.is_active_session(session_id)
 
-    def create_session(
+    def connect_session(
         self,
         client: SessionClient,
         user_info: Dict[str, Optional[str]],
         existing_session_id: Optional[str] = None,
     ) -> str:
-        """Create a new session and return its unique ID.
+        """Create a new session (or connect to an existing one) and return its unique ID.
 
         Parameters
         ----------
@@ -344,7 +344,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
-            raise RuntimeStoppedError(f"Can't create_session (state={self._state})")
+            raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
 
         session_id = self._session_mgr.connect_session(
             client=client,
@@ -357,8 +357,52 @@ class Runtime:
 
         return session_id
 
+    def create_session(
+        self,
+        client: SessionClient,
+        user_info: Dict[str, Optional[str]],
+        existing_session_id: Optional[str] = None,
+    ) -> str:
+        """Create a new session (or connect to an existing one) and return its unique ID.
+
+        Notes
+        -----
+        This method is simply an alias for connect_session added for backwards
+        compatibility.
+        """
+        LOGGER.warning("create_session is deprecated! Use connect_session instead.")
+        return self.connect_session(
+            client=client, user_info=user_info, existing_session_id=existing_session_id
+        )
+
     def close_session(self, session_id: str) -> None:
-        """Close a session. It will stop producing ForwardMsgs.
+        """Close and completely shut down a session.
+
+        This differs from disconnect_session in that it always completely shuts down a
+        session, permanently losing any associated state (session state, uploaded files,
+        etc.).
+
+        This function may be called multiple times for the same session,
+        which is not an error. (Subsequent calls just no-op.)
+
+        Parameters
+        ----------
+        session_id
+            The session's unique ID.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
+        """
+        self._session_mgr.close_session(session_id)
+        self._on_session_disconnected()
+
+    def disconnect_session(self, session_id: str) -> None:
+        """Disconnect a session. It will stop producing ForwardMsgs.
+
+        Differs from close_session because disconnected sessions can be reconnected to
+        for a brief window (depending on the SessionManager/SessionStorage
+        implementations used by the runtime).
 
         This function may be called multiple times for the same session,
         which is not an error. (Subsequent calls just no-op.)
@@ -373,13 +417,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         self._session_mgr.disconnect_session(session_id)
-
-        if (
-            self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
-            and self._session_mgr.num_active_sessions() == 0
-        ):
-            self._get_async_objs().has_connection.clear()
-            self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
+        self._on_session_disconnected()
 
     def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
         """Send a BackMsg to an active session.
@@ -658,3 +696,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         if self._async_objs is None:
             raise RuntimeError("Runtime hasn't started yet!")
         return self._async_objs
+
+    def _on_session_disconnected(self) -> None:
+        """Set the runtime state to NO_SESSIONS_CONNECTED if the last active
+        session was disconnected.
+        """
+        if (
+            self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+            and self._session_mgr.num_active_sessions() == 0
+        ):
+            self._get_async_objs().has_connection.clear()
+            self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
