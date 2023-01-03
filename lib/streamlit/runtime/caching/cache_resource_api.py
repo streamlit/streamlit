@@ -247,19 +247,20 @@ class CacheResourceAPI:
             suppress_st_warning=suppress_st_warning,
             max_entries=max_entries,
             ttl=ttl,
+            validate=validate,
             experimental_allow_widgets=experimental_allow_widgets,
         )
 
     @staticmethod
     def _decorator(
-        func: F | None = None,
+        func: F | None,
         *,
-        show_spinner: bool | str = True,
-        suppress_st_warning=False,
-        max_entries: int | None = None,
-        ttl: float | timedelta | None = None,
-        validate: ValidateFunc | None = None,
-        experimental_allow_widgets: bool = False,
+        show_spinner: bool | str,
+        suppress_st_warning: bool,
+        max_entries: int | None,
+        ttl: float | timedelta | None,
+        validate: ValidateFunc | None,
+        experimental_allow_widgets: bool,
     ):
         """Function decorator to store cached resources.
 
