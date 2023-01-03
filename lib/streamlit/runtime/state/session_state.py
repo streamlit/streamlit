@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import json
 from copy import deepcopy
@@ -25,8 +26,6 @@ from typing import (
     KeysView,
     List,
     MutableMapping,
-    Optional,
-    Set,
     Tuple,
     TypeVar,
     Union,
@@ -99,9 +98,9 @@ class WidgetMetadata(Generic[T]):
     # An optional user-code callback invoked when the widget's value changes.
     # Widget callbacks are called at the start of a script run, before the
     # body of the script is executed.
-    callback: Optional[WidgetCallback] = None
-    callback_args: Optional[WidgetArgs] = None
-    callback_kwargs: Optional[WidgetKwargs] = None
+    callback: WidgetCallback | None = None
+    callback_args: WidgetArgs | None = None
+    callback_kwargs: WidgetKwargs | None = None
 
 
 @dataclass
@@ -111,8 +110,8 @@ class WStates(MutableMapping[str, Any]):
     mapping, they'll always be deserialized.
     """
 
-    states: Dict[str, WState] = field(default_factory=dict)
-    widget_metadata: Dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
+    states: dict[str, WState] = field(default_factory=dict)
+    widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
 
     def __getitem__(self, k: str) -> Any:
         """Return the value of the widget with the given key.
@@ -180,10 +179,10 @@ class WStates(MutableMapping[str, Any]):
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
 
-    def items(self) -> Set[Tuple[str, Any]]:  # type: ignore[override]
+    def items(self) -> set[tuple[str, Any]]:  # type: ignore[override]
         return {(k, self[k]) for k in self}
 
-    def values(self) -> Set[Any]:  # type: ignore[override]
+    def values(self) -> set[Any]:  # type: ignore[override]
         return {self[wid] for wid in self}
 
     def update(self, other: "WStates") -> None:  # type: ignore[override]
@@ -205,13 +204,13 @@ class WStates(MutableMapping[str, Any]):
         """Set a widget's metadata, overwriting any existing metadata it has."""
         self.widget_metadata[widget_meta.id] = widget_meta
 
-    def cull_nonexistent(self, widget_ids: Set[str]) -> None:
+    def cull_nonexistent(self, widget_ids: set[str]) -> None:
         """Remove any widgets whose ids aren't present in a set of provided
         widget_ids.
         """
         self.states = {k: v for k, v in self.states.items() if k in widget_ids}
 
-    def get_serialized(self, k: str) -> Optional[WidgetStateProto]:
+    def get_serialized(self, k: str) -> WidgetStateProto | None:
         """Get the serialized value of the widget with the given id.
 
         If the widget doesn't exist, return None. If the widget exists but
@@ -250,7 +249,7 @@ class WStates(MutableMapping[str, Any]):
 
         return widget
 
-    def as_widget_states(self) -> List[WidgetStateProto]:
+    def as_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
         states = [
             self.get_serialized(widget_id)
@@ -337,17 +336,17 @@ class SessionState:
     """
 
     # All the values from previous script runs, squished together to save memory
-    _old_state: Dict[str, Any] = field(default_factory=dict)
+    _old_state: dict[str, Any] = field(default_factory=dict)
 
     # Values set in session state during the current script run, possibly for
     # setting a widget's value. Keyed by a user provided string.
-    _new_session_state: Dict[str, Any] = field(default_factory=dict)
+    _new_session_state: dict[str, Any] = field(default_factory=dict)
 
     # Widget values from the frontend, usually one changing prompted the script rerun
     _new_widget_state: WStates = field(default_factory=WStates)
 
     # Keys used for widgets will be eagerly converted to the matching widget id
-    _key_id_mapping: Dict[str, str] = field(default_factory=dict)
+    _key_id_mapping: dict[str, str] = field(default_factory=dict)
 
     # is it possible for a value to get through this without being deserialized?
     def _compact_state(self) -> None:
@@ -368,12 +367,12 @@ class SessionState:
         self._key_id_mapping.clear()
 
     @property
-    def filtered_state(self) -> Dict[str, Any]:
+    def filtered_state(self) -> dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
 
         wid_key_map = self._reverse_key_wid_map
 
-        state: Dict[str, Any] = {}
+        state: dict[str, Any] = {}
 
         # We can't write `for k, v in self.items()` here because doing so will
         # run into a `KeyError` if widget metadata has been cleared (which
@@ -394,12 +393,12 @@ class SessionState:
         return state
 
     @property
-    def _reverse_key_wid_map(self) -> Dict[str, str]:
+    def _reverse_key_wid_map(self) -> dict[str, str]:
         """Return a mapping of widget_id : widget_key."""
         wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         return wid_key_map
 
-    def _keys(self) -> Set[str]:
+    def _keys(self) -> set[str]:
         """All keys active in Session State, with widget keys converted
         to widget ids when one is known. (This includes autogenerated keys
         for widgets that don't have user_keys defined, and which aren't
@@ -438,7 +437,7 @@ class SessionState:
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
-    def _getitem(self, widget_id: Optional[str], user_key: Optional[str]) -> Any:
+    def _getitem(self, widget_id: str | None, user_key: str | None) -> Any:
         """Get the value of an entry in Session State, using either the
         user-provided key or a widget id as appropriate for the internal dict
         being accessed.
@@ -568,13 +567,13 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
-    def on_script_finished(self, widget_ids_this_run: Set[str]) -> None:
+    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
         """Called by ScriptRunner after its script finishes running.
          Updates widgets to prepare for the next script run.
 
         Parameters
         ----------
-        widget_ids_this_run: Set[str]
+        widget_ids_this_run: set[str]
             The IDs of the widgets that were accessed during the script
             run. Any widget whose ID does *not* appear in this set will
             be culled.
@@ -596,7 +595,7 @@ class SessionState:
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
 
-    def _cull_nonexistent(self, widget_ids: Set[str]) -> None:
+    def _cull_nonexistent(self, widget_ids: set[str]) -> None:
         self._new_widget_state.cull_nonexistent(widget_ids)
 
         # Remove entries from _old_state corresponding to
@@ -612,7 +611,7 @@ class SessionState:
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def get_widget_states(self) -> List[WidgetStateProto]:
+    def get_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
         return self._new_widget_state.as_widget_states()
 
@@ -626,7 +625,7 @@ class SessionState:
         self._key_id_mapping[user_key] = widget_id
 
     def register_widget(
-        self, metadata: WidgetMetadata[T], user_key: Optional[str]
+        self, metadata: WidgetMetadata[T], user_key: str | None
     ) -> RegisterWidgetResult[T]:
         """Register a widget with the SessionState.
 
@@ -672,7 +671,7 @@ class SessionState:
         else:
             return True
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
 
@@ -700,10 +699,10 @@ def require_valid_user_key(key: str) -> None:
 
 @dataclass
 class SessionStateStatProvider(CacheStatsProvider):
-    _session_info_by_id: Dict[str, "SessionInfo"]
+    _session_info_by_id: dict[str, "SessionInfo"]
 
-    def get_stats(self) -> List[CacheStat]:
-        stats: List[CacheStat] = []
+    def get_stats(self) -> list[CacheStat]:
+        stats: list[CacheStat] = []
         for session_info in self._session_info_by_id.values():
             session_state = session_info.session.session_state
             stats.extend(session_state.get_stats())
