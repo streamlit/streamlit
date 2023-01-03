@@ -24,6 +24,7 @@ from typing import (
     Generic,
     Iterator,
     KeysView,
+    List,
     MutableMapping,
     Tuple,
     TypeVar,
@@ -255,7 +256,7 @@ class WStates(MutableMapping[str, Any]):
             for widget_id in self.states.keys()
             if self.get_serialized(widget_id)
         ]
-        states = cast(list[WidgetStateProto], states)
+        states = cast(List[WidgetStateProto], states)
         return states
 
     def call_callback(self, widget_id: str) -> None:
