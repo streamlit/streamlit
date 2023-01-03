@@ -16,8 +16,8 @@
 
 import threading
 import unittest
-from typing import Any
-from unittest.mock import patch
+from typing import Any, List
+from unittest.mock import Mock, patch
 
 from pympler.asizeof import asizeof
 
@@ -93,6 +93,63 @@ class CacheResourceTest(unittest.TestCase):
         # Because these decorators share the same cache, calling both functions
         # results in just a single call to the decorated function.
         self.assertEqual(1, num_calls[0])
+
+
+class CacheResourceValidateTest(unittest.TestCase):
+    def setUp(self) -> None:
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+    def tearDown(self):
+        st.cache_resource.clear()
+        # Some of these tests reach directly into _cache_info and twiddle it.
+        # Reset default values on teardown.
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
+
+    def test_validate_success(self):
+        """If we have a validate function and it returns True, we don't recompute our cached value."""
+        validate = Mock(return_value=True)
+
+        call_count: List[int] = [0]
+
+        @st.cache_resource(validate=validate)
+        def f() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        # First call: call_count == 1; validate not called (because we computed a new value)
+        self.assertEqual(1, f())
+        validate.assert_not_called()
+
+        # Subsequent calls: call_count == 1; validate called each time
+        for _ in range(3):
+            self.assertEqual(1, f())
+            validate.assert_called_once_with(1)
+            validate.reset_mock()
+
+    def test_validate_fail(self):
+        """If we have a validate function and it returns False, we recompute our cached value."""
+        validate = Mock(return_value=False)
+
+        call_count: List[int] = [0]
+
+        @st.cache_resource(validate=validate)
+        def f() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        # First call: call_count == 1; validate not called (because we computed a new value)
+        expected_call_count = 1
+        self.assertEqual(expected_call_count, f())
+        validate.assert_not_called()
+
+        # Subsequent calls: call_count increases; validate called with previous value
+        for _ in range(3):
+            expected_call_count += 1
+            self.assertEqual(expected_call_count, f())
+            validate.assert_called_once_with(expected_call_count - 1)
+            validate.reset_mock()
 
 
 class CacheResourceStatsProviderTest(unittest.TestCase):

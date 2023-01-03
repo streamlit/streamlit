@@ -324,6 +324,8 @@ class CacheDataAPI:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> @st.cache_data
         ... def fetch_and_clean_data(url):
         ...     # Fetch data from URL here, and then clean it up.
@@ -342,6 +344,8 @@ class CacheDataAPI:
 
         To set the ``persist`` parameter, use this command as follows:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.cache_data(persist="disk")
         ... def fetch_and_clean_data(url):
         ...     # Fetch data from URL here, and then clean it up.
@@ -351,6 +355,8 @@ class CacheDataAPI:
         Any parameter whose name begins with ``_`` will not be hashed. You can use
         this as an "escape hatch" for parameters that are not hashable:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.cache_data
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
@@ -369,6 +375,8 @@ class CacheDataAPI:
 
         A cached function's cache can be procedurally cleared:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.cache_data
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.

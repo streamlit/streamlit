@@ -24,6 +24,7 @@ from typing import Any, Callable, TypeVar, cast, overload
 
 from cachetools import TTLCache
 from pympler import asizeof
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit.logger import get_logger
@@ -51,6 +52,17 @@ _LOGGER = get_logger(__name__)
 CACHE_RESOURCE_CALL_STACK = CacheWarningCallStack(CacheType.RESOURCE)
 CACHE_RESOURCE_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.RESOURCE)
 
+ValidateFunc: TypeAlias = Callable[[Any], bool]
+
+
+def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> bool:
+    """True if the two validate functions are equal for the purposes of
+    determining whether a given function cache needs to be recreated.
+    """
+    # To "properly" test for function equality here, we'd need to compare function bytecode.
+    # For performance reasons, We've decided not to do that for now.
+    return (a is None and b is None) or (a is not None and b is not None)
+
 
 class ResourceCaches(CacheStatsProvider):
     """Manages all ResourceCache instances"""
@@ -65,6 +77,7 @@ class ResourceCaches(CacheStatsProvider):
         display_name: str,
         max_entries: int | float | None,
         ttl: float | timedelta | None,
+        validate: ValidateFunc | None,
         allow_widgets: bool,
     ) -> ResourceCache:
         """Return the mem cache for the given key.
@@ -84,6 +97,7 @@ class ResourceCaches(CacheStatsProvider):
                 cache is not None
                 and cache.ttl_seconds == ttl_seconds
                 and cache.max_entries == max_entries
+                and _equal_validate_funcs(cache.validate, validate)
             ):
                 return cache
 
@@ -94,6 +108,7 @@ class ResourceCaches(CacheStatsProvider):
                 display_name=display_name,
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
+                validate=validate,
                 allow_widgets=allow_widgets,
             )
             self._function_caches[key] = cache
@@ -135,11 +150,13 @@ class CacheResourceFunction(CachedFunction):
         suppress_st_warning: bool,
         max_entries: int | None,
         ttl: float | timedelta | None,
+        validate: ValidateFunc | None,
         allow_widgets: bool,
     ):
         super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
         self.max_entries = max_entries
         self.ttl = ttl
+        self.validate = validate
 
     @property
     def cache_type(self) -> CacheType:
@@ -164,6 +181,7 @@ class CacheResourceFunction(CachedFunction):
             display_name=self.display_name,
             max_entries=self.max_entries,
             ttl=self.ttl,
+            validate=self.validate,
             allow_widgets=self.allow_widgets,
         )
 
@@ -207,6 +225,7 @@ class CacheResourceAPI:
         suppress_st_warning=False,
         max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
@@ -219,6 +238,7 @@ class CacheResourceAPI:
         suppress_st_warning=False,
         max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
     ):
         return self._decorator(
@@ -238,6 +258,7 @@ class CacheResourceAPI:
         suppress_st_warning=False,
         max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
     ):
         """Function decorator to store cached resources.
@@ -275,6 +296,13 @@ class CacheResourceAPI:
             The maximum number of seconds to keep an entry in the cache, or
             None if cache entries should not expire. The default is None.
 
+        validate : callable or None
+            An optional validation function for cached data. `validate` is
+            called each time the cached value is accessed. It receives
+            the cached value as its only param; and it returns a bool result.
+            If `validate` returns False, the current cached value is discarded,
+            and the decorated function is called to compute a new value.
+
         experimental_allow_widgets : boolean
             Allow widgets to be used in the cached function. Defaults to False.
             Support for widgets in cached functions is currently experimental.
@@ -284,6 +312,8 @@ class CacheResourceAPI:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> @st.cache_resource
         ... def get_database_session(url):
         ...     # Create a database session object that points to the URL.
@@ -304,6 +334,8 @@ class CacheResourceAPI:
         Any parameter whose name begins with ``_`` will not be hashed. You can use
         this as an "escape hatch" for parameters that are not hashable:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.cache_resource
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
@@ -320,6 +352,8 @@ class CacheResourceAPI:
 
         A cache_resource function's cache can be procedurally cleared:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.cache_resource
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
@@ -339,6 +373,7 @@ class CacheResourceAPI:
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl,
+                    validate=validate,
                     allow_widgets=experimental_allow_widgets,
                 )
             )
@@ -350,6 +385,7 @@ class CacheResourceAPI:
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl,
+                validate=validate,
                 allow_widgets=experimental_allow_widgets,
             )
         )
@@ -369,8 +405,9 @@ class ResourceCache(Cache):
         key: str,
         max_entries: float,
         ttl_seconds: float,
+        validate: ValidateFunc | None,
         display_name: str,
-        allow_widgets: bool = False,
+        allow_widgets: bool,
     ):
         self.key = key
         self.display_name = display_name
@@ -378,6 +415,7 @@ class ResourceCache(Cache):
             maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
+        self.validate = validate
         self.allow_widgets = allow_widgets
 
     @property
@@ -393,22 +431,30 @@ class ResourceCache(Cache):
         Raise `CacheKeyNotFoundError` if the value doesn't exist.
         """
         with self._mem_cache_lock:
-            if key in self._mem_cache:
-                multi_results: MultiCacheResults = self._mem_cache[key]
-
-                ctx = get_script_run_ctx()
-                if not ctx:
-                    raise CacheKeyNotFoundError()
-
-                widget_key = multi_results.get_current_widget_key(
-                    ctx, CacheType.RESOURCE
-                )
-                if widget_key in multi_results.results:
-                    return multi_results.results[widget_key]
-                else:
-                    raise CacheKeyNotFoundError()
-            else:
+            if key not in self._mem_cache:
+                # key does not exist in cache.
                 raise CacheKeyNotFoundError()
+
+            multi_results: MultiCacheResults = self._mem_cache[key]
+
+            ctx = get_script_run_ctx()
+            if not ctx:
+                # ScriptRunCtx does not exist (we're probably running in "raw" mode).
+                raise CacheKeyNotFoundError()
+
+            widget_key = multi_results.get_current_widget_key(ctx, CacheType.RESOURCE)
+            if widget_key not in multi_results.results:
+                # widget_key does not exist in cache (this combination of widgets hasn't been
+                # seen for the value_key yet).
+                raise CacheKeyNotFoundError()
+
+            result = multi_results.results[widget_key]
+
+            if self.validate is not None and not self.validate(result.value):
+                # Result failed validation check.
+                raise CacheKeyNotFoundError()
+
+            return result
 
     @gather_metrics("_cache_resource_object")
     def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:

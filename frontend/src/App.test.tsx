@@ -36,6 +36,7 @@ import {
   HostCommunicationState,
 } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
@@ -706,6 +707,50 @@ describe("App.handleNewSession", () => {
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
+  })
+
+  it("should send SCRIPT_RUN_FINISHED message on connection is established and running finished", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTING,
+    })
+    wrapper.update()
+    expect(props.hostCommunication.sendMessage).not.toHaveBeenCalledWith({
+      type: "SCRIPT_RUN_FINISHED",
+    })
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    expect(props.hostCommunication.sendMessage).not.toHaveBeenCalledWith({
+      type: "SCRIPT_RUN_FINISHED",
+    })
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    expect(props.hostCommunication.sendMessage).toHaveBeenLastCalledWith({
+      type: "SCRIPT_RUN_FINISHED",
+    })
+
+    jest.clearAllMocks()
+
+    // message should not be called when App component simply re-rendered with same state
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    expect(props.hostCommunication.sendMessage).not.toHaveBeenLastCalledWith({
+      type: "SCRIPT_RUN_FINISHED",
+    })
   })
 
   it("plumbs appPages and currentPageScriptHash to the AppView component", () => {

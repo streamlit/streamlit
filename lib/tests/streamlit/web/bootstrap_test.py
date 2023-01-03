@@ -21,13 +21,10 @@ import matplotlib
 
 from streamlit import config
 from streamlit.runtime.secrets import SECRETS_FILE_LOC
-from streamlit.runtime.session_data import SessionData
 from streamlit.web import bootstrap
 from streamlit.web.bootstrap import NEW_VERSION_TEXT
 from tests import testutil
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
-
-report = SessionData("the/path", "test command line")
 
 
 class BootstrapTest(unittest.TestCase):
