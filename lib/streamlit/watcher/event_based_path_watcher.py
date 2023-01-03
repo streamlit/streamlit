@@ -41,6 +41,7 @@ from typing import Callable, Dict, Optional, cast
 from blinker import ANY, Signal
 from watchdog import events
 from watchdog.observers import Observer
+from watchdog.observers.api import ObservedWatch
 
 from streamlit.logger import get_logger
 from streamlit.util import repr_
@@ -195,11 +196,7 @@ class _MultiPathWatcher(object):
             folder_handler.remove_path_change_listener(path, callback)
 
             if not folder_handler.is_watching_paths():
-                # Sometimes watchdog's FileSystemEventHandler does not have
-                # a .watch property. It's unclear why -- may be due to a
-                # race condition.
-                if hasattr(folder_handler, "watch"):
-                    self._observer.unschedule(folder_handler.watch)
+                self._observer.unschedule(folder_handler.watch)
                 del self._folder_handlers[folder_path]
 
     def close(self) -> None:
@@ -257,6 +254,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         super(_FolderEventHandler, self).__init__()
         self._watched_paths: Dict[str, WatchedPath] = {}
         self._lock = threading.Lock()  # for watched_paths mutations
+        self.watch: Optional[ObservedWatch] = None
 
     def __repr__(self) -> str:
         return repr_(self)
@@ -318,6 +316,10 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         if event.event_type == events.EVENT_TYPE_MODIFIED:
             changed_path = event.src_path
         elif event.event_type == events.EVENT_TYPE_MOVED:
+            # Teach mypy that this event has a dest_path, because it can't infer
+            # the desired subtype from the event_type check
+            event = cast(events.FileSystemMovedEvent, event)
+
             LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
             changed_path = event.dest_path
         # On OSX with VI, on save, the file is deleted, the swap file is
