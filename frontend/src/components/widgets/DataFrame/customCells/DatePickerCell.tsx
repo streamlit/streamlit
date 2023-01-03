@@ -34,13 +34,11 @@ export type DatePickerCell = CustomCell<DatePickerCellProps>
 
 const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
   const cellData = cell.value.data
-  const { displayDate, format } = cellData
+  const { displayDate } = cellData
   let newCellData = new Date()
   if (cellData !== undefined) {
     newCellData = cellData.date ?? new Date()
   }
-  console.log()
-  console.log(displayDate)
   return (
     <input
       required
@@ -93,19 +91,6 @@ const renderer: CustomRenderer<DatePickerCell> = {
   provideEditor: () => ({
     editor: Editor,
   }),
-  onPaste: (v, d) => {
-    let newDate: Date | undefined
-    try {
-      newDate = new Date(v)
-    } catch {
-      /* do nothing */
-    }
-
-    return {
-      ...d,
-      date: Number.isNaN(newDate) ? undefined : newDate,
-    }
-  },
 }
 
 export default renderer

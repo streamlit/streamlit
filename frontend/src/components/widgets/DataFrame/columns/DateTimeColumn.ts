@@ -17,13 +17,14 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { DataType } from "src/lib/Quiver"
+import { notNullOrUndefined } from "src/lib/utils"
 import strftime from "strftime"
 import { DatetimeLocalPickerCell } from "../customCells/DatetimeLocalPickerCell"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./utils"
+import { BaseColumn, BaseColumnProps, getErrorCell, isValidDate } from "./utils"
 
 interface DateTimeColumnParams {
-  readonly format?: string
+  readonly format: string
 }
 
 function DateTimeColumn(props: BaseColumnProps): BaseColumn {
@@ -39,38 +40,46 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
     data: {
       kind: "DatetimeLocalPickerCell",
       date: undefined,
-      displayDate: "",
-      format: "%Y-%m-%dT%H:%M:%S.%L",
+      displayDate: "NA",
+      format: parameters.format ? parameters.format :"%Y-%m-%dT%H:%M:%S.%L",
     },
   } as DatetimeLocalPickerCell
 
   return {
     ...props,
     kind: "datetime",
-    sortMode: "default",
+    sortMode: "smart",
     isEditable: true,
     getCell(data?: DataType): GridCell {
       try {
+        if (notNullOrUndefined(data) && !isValidDate(Number(data))) {
+            return getErrorCell(
+                `Incompatible time value: ${data}`
+              )
+        }
+        // 0 refers to a missing value
+        let cellData = 0
+        if (notNullOrUndefined(data)) {
+          // convert the date to a number
+          cellData = Number(data)
+        }
         return {
           ...cellTemplate,
           allowOverlay: true,
+          copyData: cellData.toString(),
           data: {
             kind: "DatetimeLocalPickerCell",
-            // @ts-ignore
-            date: data !== undefined ? new Date(data) : undefined,
+            date: notNullOrUndefined(data) ? new Date(Number(data)) : undefined,
             displayDate:
-              data !== undefined
-                ? // @ts-ignore
-                  strftime(cellTemplate.data.format, new Date(data))
-                : "",
+              notNullOrUndefined(data)
+                ? strftime(cellTemplate.data.format, new Date(Number(data)))
+                : "NA",
             format: cellTemplate.data.format,
           },
         }
       } catch (error) {
         return getErrorCell(
-          // @ts-ignore
-          `Incompatible time value: ${data}`,
-          `Error: ${error}`
+          `Incompatible time value: ${data}`
         )
       }
     },

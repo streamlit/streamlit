@@ -17,10 +17,11 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { DataType } from "src/lib/Quiver"
+import { notNullOrUndefined } from "src/lib/utils"
 import strftime from "strftime"
 import { TimePickerCell } from "../customCells/TimePickerCell"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./utils"
+import { BaseColumn, BaseColumnProps, getErrorCell, isValidDate, toSafeString } from "./utils"
 
 interface TimeColumnParams {
   readonly format?: string
@@ -39,7 +40,7 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
     data: {
       kind: "TimePickerCell",
       time: undefined,
-      displayTime: "",
+      displayTime: "NA",
       format: parameters.format ? parameters.format : "%H:%M:%S.%L",
     },
   } as TimePickerCell
@@ -47,37 +48,32 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
   return {
     ...props,
     kind: "time",
-    sortMode: "default",
+    sortMode: "smart",
     isEditable: true,
     getCell(data?: DataType): GridCell {
       try {
+        if (notNullOrUndefined(data) && !isValidDate(Number(data))) {
+            return getErrorCell(
+                `Incompatible time value: ${data}`
+              )
+        }
         let newData = data
         if (typeof data === "bigint") {
           // divide by 1000 to turn into seconds since quiver returns ms
           newData = Number(data) / 1000
         }
-        try {
-          // TODO: Deal with error pasting properly
-          // @ts-ignore
-          new Date(newData)
-        } catch (error) {
-          return getErrorCell(
-            // @ts-ignore
-            `Incompatible time value: ${data}`,
-            `Error: ${error}`
-          )
-        }
         return {
           ...cellTemplate,
           allowOverlay: true,
+          copyData: toSafeString(newData),
           data: {
             kind: "TimePickerCell",
-            time: newData !== undefined ? newData : undefined,
+            time: notNullOrUndefined(newData) ? newData : undefined,
             displayTime:
-              data !== undefined
-                ? // @ts-expect-error
-                  strftime(cellTemplate.data.format, new Date(newData))
-                : "",
+              notNullOrUndefined(newData)
+                ? 
+                  strftime(cellTemplate.data.format, new Date(Number(newData)))
+                : "NA",
           },
         }
       } catch (error) {
@@ -88,7 +84,7 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: TimePickerCell): number | null {
-      return cell.data.time === undefined ? null : cell.data.time
+      return !notNullOrUndefined(cell.data.time) ? null : cell.data.time
     },
   }
 }

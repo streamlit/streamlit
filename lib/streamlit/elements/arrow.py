@@ -25,6 +25,7 @@ from typing import (
     Union,
     cast,
 )
+from streamlit.error_util import _LOGGER
 
 import pyarrow as pa
 from numpy import ndarray
@@ -146,6 +147,7 @@ def _apply_dataframe_edits(df: DataFrame, data_editor_state: DataEditorState):
             col = col - df.index.nlevels if df.index.nlevels else 0
 
             import dateutil.parser
+
             changed_datetime = False
             try:
                 date_converted = dateutil.parser.isoparse(
@@ -154,9 +156,9 @@ def _apply_dataframe_edits(df: DataFrame, data_editor_state: DataEditorState):
                 df.iat[row, col] = date_converted
                 changed_datetime = True
             except Exception:
-                # TODO: Do better exception handling
-                pass
-            # TODO: what to do with datetime columns? Do we need to do some data conversion
+                _LOGGER.info(
+                    "Failed to convert the edited cell to datetime. This should be ok if one is not editing a datetime cell."
+                )
             if not changed_datetime:
                 df.iat[row, col] = data_editor_state.get("edited_cells")[cell]
 

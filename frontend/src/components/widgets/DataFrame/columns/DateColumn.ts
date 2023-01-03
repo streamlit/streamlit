@@ -17,10 +17,11 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { DataType } from "src/lib/Quiver"
+import { notNullOrUndefined } from "src/lib/utils"
 import strftime from "strftime"
 import { DatePickerCell } from "../customCells/DatePickerCell"
 
-import { BaseColumn, BaseColumnProps, getErrorCell } from "./utils"
+import { BaseColumn, BaseColumnProps, getErrorCell, isValidDate } from "./utils"
 
 interface DateColumnParams {
   readonly format?: string
@@ -39,7 +40,7 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
     data: {
       kind: "DatePickerCell",
       date: undefined,
-      displayDate: "",
+      displayDate: "NA",
       format: parameters.format ? parameters.format : "%m / %d / %Y",
     },
   } as DatePickerCell
@@ -47,34 +48,45 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
   return {
     ...props,
     kind: "date",
-    sortMode: "default",
+    sortMode: "smart",
     isEditable: true,
     getCell(data?: DataType): GridCell {
       try {
+        if (notNullOrUndefined(data) && !isValidDate(Number(data))) {
+            return getErrorCell(
+                `Incompatible time value: ${data}`
+              )
+        }
+         // 0 refers to a missing value
+         let cellData = 0
+         if (notNullOrUndefined(data)) {
+           // convert the date to a number
+           cellData = Number(data)
+         }
         return {
           ...cellTemplate,
           allowOverlay: true,
+          copyData: cellData.toString(),
           data: {
             kind: "DatePickerCell",
-            // @ts-ignore
-            date: data !== undefined ? new Date(data) : undefined,
+            date: notNullOrUndefined(data) ? new Date(Number(data)) : undefined,
             displayDate:
-              data !== undefined
-                ? // @ts-ignore
-                  strftime(cellTemplate.data.format, new Date(data))
-                : "",
+              notNullOrUndefined(data)
+                ? strftime(cellTemplate.data.format, new Date((Number(data))))
+                : "NA",
             format: cellTemplate.data.format,
           },
         }
       } catch (error) {
         return getErrorCell(
-          // @ts-ignore
           `Incompatible time value: ${data}`,
-          `Error: ${error}`
         )
       }
     },
     getCellValue(cell: DatePickerCell): Date | null {
+        if (!notNullOrUndefined(cell.data)) {
+            return null
+          }
       return cell.data.date === undefined ? null : cell.data.date
     },
   }

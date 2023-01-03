@@ -263,3 +263,8 @@ export function formatNumber(value: number, maxPrecision = 4): string {
   }
   return ""
 }
+
+export function isValidDate(date: number) {
+  const actualDate = new Date(date)
+  return !isNaN(actualDate.getTime())
+}

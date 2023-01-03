@@ -27,7 +27,7 @@ interface DatetimeLocalPickerCellProps {
   readonly kind: "DatetimeLocalPickerCell"
   readonly date: Date | undefined
   readonly displayDate: string
-  readonly format?: string
+  readonly format: string
 }
 
 export type DatetimeLocalPickerCell = CustomCell<DatetimeLocalPickerCellProps>
@@ -36,7 +36,7 @@ const Editor: ReturnType<
   ProvideEditorCallback<DatetimeLocalPickerCell>
 > = cell => {
   const cellData = cell.value.data
-  const { displayDate, format } = cellData
+  const { displayDate } = cellData
   let newCellData = new Date()
   if (cellData !== undefined) {
     newCellData = cellData.date ?? new Date()
@@ -92,19 +92,6 @@ const renderer: CustomRenderer<DatetimeLocalPickerCell> = {
   provideEditor: () => ({
     editor: Editor,
   }),
-  onPaste: (v, d) => {
-    let newDate: Date | undefined
-    try {
-      newDate = new Date(v)
-    } catch {
-      /* do nothing */
-    }
-
-    return {
-      ...d,
-      date: Number.isNaN(newDate) ? undefined : newDate,
-    }
-  },
 }
 
 export default renderer

@@ -27,7 +27,7 @@ interface TimePickerCellProps {
   readonly kind: "TimePickerCell"
   readonly time: number | undefined
   readonly displayTime: string
-  readonly format?: string
+  readonly format: string
 }
 
 export type TimePickerCell = CustomCell<TimePickerCellProps>
@@ -76,22 +76,6 @@ const renderer: CustomRenderer<TimePickerCell> = {
   provideEditor: () => ({
     editor: Editor,
   }),
-  onPaste: (v, d) => {
-    let newTime: number | undefined
-    try {
-      newTime = new Date(v).getTime()
-    } catch {
-      console.log("Got an error")
-      /* do nothing */
-      // d.displayTime = `Got a bad value! ${v}`
-    }
-
-    return {
-      ...d,
-      time: Number.isNaN(newTime) ? d.time : newTime,
-      displayTime: Number.isNaN(newTime) ? `Got bad value: ${v}` : "",
-    }
-  },
 }
 
 export default renderer

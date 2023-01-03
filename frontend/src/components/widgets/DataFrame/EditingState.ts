@@ -80,7 +80,7 @@ class EditingState {
     currentState.deleted_rows = this.deletedRows
     // Convert undefined values to null, otherwise this is removed here since
     // undefined does not exist in JSON.
-    let json = JSON.stringify(currentState, (k, v) =>
+    const json = JSON.stringify(currentState, (k, v) =>
       v === undefined ? null : v
     )
     console.log("test", JSON.stringify(currentState.added_rows), json)
