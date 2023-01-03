@@ -35,6 +35,8 @@ class TextMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.text('This is some text.')
 
         """

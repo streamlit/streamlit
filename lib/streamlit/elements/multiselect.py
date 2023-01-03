@@ -229,6 +229,8 @@ class MultiSelectMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> options = st.multiselect(
         ...     'What are your favorite colors',
         ...     ['Green', 'Yellow', 'Red', 'Blue'],
