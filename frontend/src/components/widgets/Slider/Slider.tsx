@@ -16,7 +16,7 @@
 
 import React from "react"
 import { pick } from "lodash"
-import { SharedProps, Slider as UISlider } from "baseui/slider"
+import { StyleProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
 import { FormClearHelper } from "src/components/widgets/Form"
@@ -63,9 +63,9 @@ class Slider extends React.PureComponent<Props, State> {
 
   private sliderRef = React.createRef<HTMLDivElement>()
 
-  private thumbRef: React.MutableRefObject<HTMLDivElement> | undefined
+  private thumbRef: React.MutableRefObject<HTMLDivElement>[] = []
 
-  private thumbValueRef = React.createRef<HTMLDivElement>()
+  private thumbValueRef: React.RefObject<HTMLDivElement>[] = []
 
   private readonly commitWidgetValueDebounced: (source: Source) => void
 
@@ -87,7 +87,20 @@ class Slider extends React.PureComponent<Props, State> {
 
   public componentDidMount(): void {
     // Check default thumb value's alignment vs. slider container
-    this.thumbValueAlignment()
+    for (
+      let i = 0;
+      i < Math.min(this.thumbRef.length, this.thumbValueRef.length);
+      i++
+    ) {
+      this.thumbValueAlignment(
+        this.thumbRef[i].current,
+        this.thumbValueRef[i].current
+      )
+      this.thumbValueAlignment(
+        this.thumbRef[i].current,
+        this.thumbValueRef[i].current
+      )
+    }
 
     if (this.props.element.setValue) {
       this.updateFromProtobuf()
@@ -202,10 +215,11 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
-  private thumbValueAlignment(): void {
+  private thumbValueAlignment(
+    thumb: HTMLDivElement | null,
+    thumbValue: HTMLDivElement | null
+  ): void {
     const slider = this.sliderRef.current
-    const thumb = this.thumbRef?.current
-    const thumbValue = this.thumbValueRef.current
 
     if (slider && thumb && thumbValue) {
       const sliderPosition = slider.getBoundingClientRect()
@@ -224,10 +238,13 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   // eslint-disable-next-line react/display-name
-  private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
-    (props: SharedProps, ref): JSX.Element => {
-      this.thumbRef = ref as React.MutableRefObject<HTMLDivElement>
+  private renderThumb = React.forwardRef<HTMLDivElement, StyleProps>(
+    (props: StyleProps, ref): JSX.Element => {
       const { $value, $thumbIndex } = props
+      const thumbIndex = $thumbIndex || 0
+      this.thumbRef[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
+      this.thumbValueRef[thumbIndex] ||= React.createRef<HTMLDivElement>()
+
       const formattedValue = $value
         ? this.formatValue($value[$thumbIndex as number])
         : ""
@@ -251,13 +268,16 @@ class Slider extends React.PureComponent<Props, State> {
       }
 
       // Check the thumb value's alignment vs. slider container
-      this.thumbValueAlignment()
+      this.thumbValueAlignment(
+        this.thumbRef[thumbIndex].current,
+        this.thumbValueRef[thumbIndex].current
+      )
 
       return (
         <StyledThumb
           {...passThrough}
           disabled={props.$disabled === true}
-          ref={ref}
+          ref={this.thumbRef[thumbIndex]}
           aria-valuetext={formattedValue}
           aria-label={this.props.element.label}
         >
@@ -265,7 +285,7 @@ class Slider extends React.PureComponent<Props, State> {
             className="StyledThumbValue"
             data-testid="stThumbValue"
             disabled={props.$disabled === true}
-            ref={this.thumbValueRef}
+            ref={this.thumbValueRef[thumbIndex]}
           >
             {formattedValue}
           </StyledThumbValue>
@@ -350,7 +370,7 @@ class Slider extends React.PureComponent<Props, State> {
               },
             },
             InnerTrack: {
-              style: ({ $disabled }: SharedProps) => ({
+              style: ({ $disabled }: StyleProps) => ({
                 height: "4px",
                 ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
               }),
