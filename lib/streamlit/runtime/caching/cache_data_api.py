@@ -23,9 +23,10 @@ import shutil
 import threading
 import types
 from datetime import timedelta
-from typing import Any, Callable, TypeVar, cast, overload
+from typing import Any, Callable, TypeVar, Union, cast, overload
 
 from cachetools import TTLCache
+from typing_extensions import Literal, TypeAlias
 
 import streamlit as st
 from streamlit import util
@@ -68,6 +69,9 @@ _CACHED_FILE_EXTENSION = "memo"
 CACHE_DATA_CALL_STACK = CacheWarningCallStack(CacheType.DATA)
 CACHE_DATA_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.DATA)
 
+# The cache persistence options we support: "disk" or None
+CachePersistType: TypeAlias = Union[Literal["disk"], None]
+
 
 class CacheDataFunction(CachedFunction):
     """Implements the CachedFunction protocol for @st.cache_data"""
@@ -77,7 +81,7 @@ class CacheDataFunction(CachedFunction):
         func: types.FunctionType,
         show_spinner: bool | str,
         suppress_st_warning: bool,
-        persist: str | None,
+        persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | None,
         allow_widgets: bool,
@@ -125,7 +129,7 @@ class DataCaches(CacheStatsProvider):
     def get_cache(
         self,
         key: str,
-        persist: str | None,
+        persist: CachePersistType,
         max_entries: int | float | None,
         ttl: int | float | timedelta | None,
         display_name: str,
@@ -237,7 +241,7 @@ class CacheDataAPI:
     def __call__(
         self,
         *,
-        persist: str | None = None,
+        persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
         max_entries: int | None = None,
@@ -250,7 +254,7 @@ class CacheDataAPI:
         self,
         func: F | None = None,
         *,
-        persist: str | None = None,
+        persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
         max_entries: int | None = None,
@@ -292,9 +296,10 @@ class CacheDataAPI:
         func : callable
             The function to cache. Streamlit hashes the function's source code.
 
-        persist : str or None
-            Optional location to persist cached data to. Currently, the only
-            valid value is "disk", which will persist to the local disk.
+        persist : str or boolean or None
+            Optional location to persist cached data to. Passing "disk" (or True)
+            will persist the cached data to the local disk. None (or False) will disable
+            persistence. The default is None.
 
         show_spinner : boolean
             Enable the spinner. Default is True to show a spinner when there is
@@ -387,7 +392,16 @@ class CacheDataAPI:
 
         """
 
-        if persist not in (None, "disk"):
+        # Parse our persist value into a string
+        persist_string: CachePersistType
+        if persist is True:
+            persist_string = "disk"
+        elif persist is False:
+            persist_string = None
+        else:
+            persist_string = persist
+
+        if persist_string not in (None, "disk"):
             # We'll eventually have more persist options.
             raise StreamlitAPIException(
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
@@ -404,7 +418,7 @@ class CacheDataAPI:
             return create_cache_wrapper(
                 CacheDataFunction(
                     func=f,
-                    persist=persist,
+                    persist=persist_string,
                     show_spinner=show_spinner,
                     suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
@@ -421,7 +435,7 @@ class CacheDataAPI:
         return create_cache_wrapper(
             CacheDataFunction(
                 func=cast(types.FunctionType, func),
-                persist=persist,
+                persist=persist_string,
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
@@ -443,7 +457,7 @@ class DataCache(Cache):
     def __init__(
         self,
         key: str,
-        persist: str | None,
+        persist: CachePersistType,
         max_entries: float,
         ttl_seconds: float,
         display_name: str,

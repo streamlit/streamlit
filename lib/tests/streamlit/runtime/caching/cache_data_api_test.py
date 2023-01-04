@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.cache_data unit tests."""
+from __future__ import annotations
 
 import logging
 import pickle
@@ -78,7 +79,7 @@ class CacheDataTest(unittest.TestCase):
         # Reset default values on teardown.
         cache_data_api.CACHE_DATA_CALL_STACK._cached_func_stack = []
         cache_data_api.CACHE_DATA_CALL_STACK._suppress_st_function_warning = 0
-        st.experimental_memo.clear()
+        st.cache_data.clear()
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -101,8 +102,8 @@ class CacheDataTest(unittest.TestCase):
         self.assertEqual(r2, [0, 1])
 
     def test_multiple_api_names(self):
-        """`st.experimental_memo` is effectively an alias for `st.cache_data`, and we
-        support both APIs while experimental_memo is being deprecated.
+        """`st.cache_data` is effectively an alias for `st.cache_data`, and we
+        support both APIs while cache_data is being deprecated.
         """
         num_calls = [0]
 
@@ -110,9 +111,9 @@ class CacheDataTest(unittest.TestCase):
             num_calls[0] += 1
             return 42
 
-        # Annotate a function with both `cache_data` and `experimental_memo`.
+        # Annotate a function with both `cache_data` and `cache_data`.
         cache_data_func = st.cache_data(foo)
-        memo_func = st.experimental_memo(foo)
+        memo_func = st.cache_data(foo)
 
         # Call both versions of the function and assert the results.
         self.assertEqual(42, cache_data_func())
@@ -127,7 +128,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
 
     def tearDown(self) -> None:
-        st.experimental_memo.clear()
+        st.cache_data.clear()
         super().tearDown()
 
     @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
@@ -213,14 +214,14 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
         # If the cache dir exists, we should delete it.
         with patch("os.path.isdir", MagicMock(return_value=True)):
-            st.experimental_memo.clear()
+            st.cache_data.clear()
             mock_rmtree.assert_called_once_with(get_cache_path())
 
         mock_rmtree.reset_mock()
 
         # If the cache dir does not exist, we shouldn't try to delete it.
         with patch("os.path.isdir", MagicMock(return_value=False)):
-            st.experimental_memo.clear()
+            st.cache_data.clear()
             mock_rmtree.assert_not_called()
 
     @patch("streamlit.file_util.os.stat", MagicMock())
@@ -321,6 +322,35 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
                 output,
             )
 
+    @parameterized.expand(
+        [
+            ("disk", "disk", True),
+            ("True", True, True),
+            ("None", None, False),
+            ("False", False, False),
+        ]
+    )
+    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
+    def test_persist_param_value(
+        self,
+        _,
+        persist_value: str | bool | None,
+        should_persist: bool,
+        mock_write: Mock,
+    ):
+        """Passing "disk" or `True` enables persistence; `None` or `False` disables it."""
+
+        @st.cache_data(persist=persist_value)
+        def foo():
+            return "data"
+
+        foo()
+
+        if should_persist:
+            mock_write.assert_called_once()
+        else:
+            mock_write.assert_not_called()
+
 
 class CacheDataStatsProviderTest(unittest.TestCase):
     def setUp(self):
@@ -329,10 +359,10 @@ class CacheDataStatsProviderTest(unittest.TestCase):
 
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
-        st.experimental_memo.clear()
+        st.cache_data.clear()
 
     def tearDown(self):
-        st.experimental_memo.clear()
+        st.cache_data.clear()
 
     def test_no_stats(self):
         self.assertEqual([], get_data_cache_stats_provider().get_stats())
