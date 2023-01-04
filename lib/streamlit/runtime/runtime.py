@@ -16,6 +16,7 @@ import asyncio
 import sys
 import time
 import traceback
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Awaitable, Dict, NamedTuple, Optional, Tuple, Type
 
@@ -38,6 +39,7 @@ from streamlit.runtime.forward_msg_cache import (
 from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorage
+from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.session_manager import (
@@ -53,6 +55,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.stats import StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import LocalSourcesWatcher
 
 # Wait for the script run result for 60s and if no result is available give up
@@ -65,7 +68,8 @@ class RuntimeStoppedError(Exception):
     """Raised by operations on a Runtime instance that is stopped."""
 
 
-class RuntimeConfig(NamedTuple):
+@dataclass(frozen=True)
+class RuntimeConfig:
     """Config options for StreamlitRuntime."""
 
     # The filesystem path of the Streamlit script to run.
@@ -79,10 +83,10 @@ class RuntimeConfig(NamedTuple):
     media_file_storage: MediaFileStorage
 
     # The SessionManager class to be used.
-    session_manager_class: Type[SessionManager]
+    session_manager_class: Type[SessionManager] = WebsocketSessionManager
 
     # The SessionStorage instance for the SessionManager to use.
-    session_storage: SessionStorage
+    session_storage: SessionStorage = field(default_factory=MemorySessionStorage)
 
 
 class RuntimeState(Enum):
