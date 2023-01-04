@@ -147,13 +147,16 @@ class CacheResourceFunction(CachedFunction):
         self,
         func: types.FunctionType,
         show_spinner: bool | str,
-        suppress_st_warning: bool,
         max_entries: int | None,
         ttl: float | timedelta | None,
         validate: ValidateFunc | None,
         allow_widgets: bool,
     ):
-        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
+        super().__init__(
+            func,
+            show_spinner=show_spinner,
+            allow_widgets=allow_widgets,
+        )
         self.max_entries = max_entries
         self.ttl = ttl
         self.validate = validate
@@ -221,10 +224,9 @@ class CacheResourceAPI:
     def __call__(
         self,
         *,
-        show_spinner: bool | str = True,
-        suppress_st_warning=False,
-        max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
+        show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
@@ -234,19 +236,17 @@ class CacheResourceAPI:
         self,
         func: F | None = None,
         *,
-        show_spinner: bool | str = True,
-        suppress_st_warning=False,
-        max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
+        show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
     ):
         return self._decorator(
             func,
-            show_spinner=show_spinner,
-            suppress_st_warning=suppress_st_warning,
-            max_entries=max_entries,
             ttl=ttl,
+            max_entries=max_entries,
+            show_spinner=show_spinner,
             validate=validate,
             experimental_allow_widgets=experimental_allow_widgets,
         )
@@ -255,10 +255,9 @@ class CacheResourceAPI:
     def _decorator(
         func: F | None,
         *,
-        show_spinner: bool | str,
-        suppress_st_warning: bool,
-        max_entries: int | None,
         ttl: float | timedelta | None,
+        max_entries: int | None,
+        show_spinner: bool | str,
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
     ):
@@ -279,23 +278,19 @@ class CacheResourceAPI:
             The function that creates the cached resource. Streamlit hashes the
             function's source code.
 
-        show_spinner : boolean or string
-            Enable the spinner. Default is True to show a spinner when there is
-            a "cache miss" and the cached resource is being created. If string,
-            value of show_spinner param will be used for spinner text.
-
-        suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit commands from within
-            the cache_resource function.
+        ttl : float or timedelta or None
+            The maximum number of seconds to keep an entry in the cache, or
+            None if cache entries should not expire. The default is None.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
             for an unbounded cache. (When a new entry is added to a full cache,
             the oldest cached entry will be removed.) The default is None.
 
-        ttl : float or timedelta or None
-            The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. The default is None.
+        show_spinner : boolean or string
+            Enable the spinner. Default is True to show a spinner when there is
+            a "cache miss" and the cached resource is being created. If string,
+            value of show_spinner param will be used for spinner text.
 
         validate : callable or None
             An optional validation function for cached data. `validate` is
@@ -371,7 +366,6 @@ class CacheResourceAPI:
                 CacheResourceFunction(
                     func=f,
                     show_spinner=show_spinner,
-                    suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl,
                     validate=validate,
@@ -383,7 +377,6 @@ class CacheResourceAPI:
             CacheResourceFunction(
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
-                suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl,
                 validate=validate,

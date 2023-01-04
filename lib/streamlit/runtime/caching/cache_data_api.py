@@ -80,13 +80,16 @@ class CacheDataFunction(CachedFunction):
         self,
         func: types.FunctionType,
         show_spinner: bool | str,
-        suppress_st_warning: bool,
         persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | None,
         allow_widgets: bool,
     ):
-        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
+        super().__init__(
+            func,
+            show_spinner=show_spinner,
+            allow_widgets=allow_widgets,
+        )
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
@@ -241,11 +244,10 @@ class CacheDataAPI:
     def __call__(
         self,
         *,
+        ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
         persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
-        suppress_st_warning: bool = False,
-        max_entries: int | None = None,
-        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
@@ -254,20 +256,18 @@ class CacheDataAPI:
         self,
         func: F | None = None,
         *,
+        ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
         persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
-        suppress_st_warning: bool = False,
-        max_entries: int | None = None,
-        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
     ):
         return self._decorator(
             func,
+            ttl=ttl,
+            max_entries=max_entries,
             persist=persist,
             show_spinner=show_spinner,
-            suppress_st_warning=suppress_st_warning,
-            max_entries=max_entries,
-            ttl=ttl,
             experimental_allow_widgets=experimental_allow_widgets,
         )
 
@@ -275,12 +275,11 @@ class CacheDataAPI:
     def _decorator(
         func: F | None = None,
         *,
-        persist: str | None = None,
-        show_spinner: bool | str = True,
-        suppress_st_warning: bool = False,
-        max_entries: int | None = None,
-        ttl: float | timedelta | None = None,
-        experimental_allow_widgets: bool = False,
+        ttl: float | timedelta | None,
+        max_entries: int | None,
+        persist: CachePersistType | bool,
+        show_spinner: bool | str,
+        experimental_allow_widgets: bool,
     ):
         """Function decorator to cache function executions.
 
@@ -296,6 +295,17 @@ class CacheDataAPI:
         func : callable
             The function to cache. Streamlit hashes the function's source code.
 
+        ttl : float or timedelta or None
+            The maximum number of seconds to keep an entry in the cache, or
+            None if cache entries should not expire. The default is None.
+            Note that ttl is incompatible with `persist="disk"` - `ttl` will be
+            ignored if `persist` is specified.
+
+        max_entries : int or None
+            The maximum number of entries to keep in the cache, or None
+            for an unbounded cache. (When a new entry is added to a full cache,
+            the oldest cached entry will be removed.) The default is None.
+
         persist : str or boolean or None
             Optional location to persist cached data to. Passing "disk" (or True)
             will persist the cached data to the local disk. None (or False) will disable
@@ -304,21 +314,6 @@ class CacheDataAPI:
         show_spinner : boolean
             Enable the spinner. Default is True to show a spinner when there is
             a cache miss.
-
-        suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit commands from within
-            the cached function.
-
-        max_entries : int or None
-            The maximum number of entries to keep in the cache, or None
-            for an unbounded cache. (When a new entry is added to a full cache,
-            the oldest cached entry will be removed.) The default is None.
-
-        ttl : float or timedelta or None
-            The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. The default is None.
-            Note that ttl is incompatible with `persist="disk"` - `ttl` will be
-            ignored if `persist` is specified.
 
         experimental_allow_widgets : boolean
             Allow widgets to be used in the cached function. Defaults to False.
@@ -420,7 +415,6 @@ class CacheDataAPI:
                     func=f,
                     persist=persist_string,
                     show_spinner=show_spinner,
-                    suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl,
                     allow_widgets=experimental_allow_widgets,
@@ -437,7 +431,6 @@ class CacheDataAPI:
                 func=cast(types.FunctionType, func),
                 persist=persist_string,
                 show_spinner=show_spinner,
-                suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl,
                 allow_widgets=experimental_allow_widgets,

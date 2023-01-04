@@ -266,12 +266,10 @@ class CachedFunction:
         self,
         func: types.FunctionType,
         show_spinner: bool | str,
-        suppress_st_warning: bool,
         allow_widgets: bool,
     ):
         self.func = func
         self.show_spinner = show_spinner
-        self.suppress_st_warning = suppress_st_warning
         self.allow_widgets = allow_widgets
 
     @property
@@ -395,10 +393,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                             with cached_func.message_call_stack.maybe_allow_widgets(
                                 cached_func.allow_widgets
                             ):
-                                with cached_func.warning_call_stack.maybe_suppress_cached_st_function_warning(
-                                    cached_func.suppress_st_warning
-                                ):
-                                    return_value = func(*args, **kwargs)
+                                return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
                 try:
