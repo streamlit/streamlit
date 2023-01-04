@@ -57,7 +57,7 @@
     "d3-graphviz": "^2.6.1",
     "decamelize": "^4.0.0",
     "deck.gl": "^8.2.5",
-    "dompurify": "^2.2.8",
+    "dompurify": "^2.4.1",
     "fzy.js": "^0.4.1",
     "gl-matrix": "^3.2.1",
     "hoist-non-react-statics": "^3.3.2",
