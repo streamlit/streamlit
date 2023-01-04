@@ -241,12 +241,12 @@ class CacheDataAPI:
     def __call__(
         self,
         *,
+        ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
         persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
-        suppress_st_warning: bool = False,
-        max_entries: int | None = None,
-        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
+        suppress_st_warning: bool = False,
     ) -> Callable[[F], F]:
         ...
 
@@ -254,33 +254,33 @@ class CacheDataAPI:
         self,
         func: F | None = None,
         *,
+        ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
         persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
-        suppress_st_warning: bool = False,
-        max_entries: int | None = None,
-        ttl: float | timedelta | None = None,
         experimental_allow_widgets: bool = False,
+        suppress_st_warning: bool = False,
     ):
         return self._decorator(
             func,
+            ttl=ttl,
+            max_entries=max_entries,
             persist=persist,
             show_spinner=show_spinner,
-            suppress_st_warning=suppress_st_warning,
-            max_entries=max_entries,
-            ttl=ttl,
             experimental_allow_widgets=experimental_allow_widgets,
+            suppress_st_warning=suppress_st_warning,
         )
 
     @staticmethod
     def _decorator(
         func: F | None = None,
         *,
-        persist: str | None = None,
-        show_spinner: bool | str = True,
-        suppress_st_warning: bool = False,
-        max_entries: int | None = None,
-        ttl: float | timedelta | None = None,
-        experimental_allow_widgets: bool = False,
+        ttl: float | timedelta | None,
+        max_entries: int | None,
+        persist: CachePersistType | bool,
+        show_spinner: bool | str,
+        experimental_allow_widgets: bool,
+        suppress_st_warning: bool,
     ):
         """Function decorator to cache function executions.
 
@@ -296,6 +296,17 @@ class CacheDataAPI:
         func : callable
             The function to cache. Streamlit hashes the function's source code.
 
+        ttl : float or timedelta or None
+            The maximum number of seconds to keep an entry in the cache, or
+            None if cache entries should not expire. The default is None.
+            Note that ttl is incompatible with `persist="disk"` - `ttl` will be
+            ignored if `persist` is specified.
+
+        max_entries : int or None
+            The maximum number of entries to keep in the cache, or None
+            for an unbounded cache. (When a new entry is added to a full cache,
+            the oldest cached entry will be removed.) The default is None.
+
         persist : str or boolean or None
             Optional location to persist cached data to. Passing "disk" (or True)
             will persist the cached data to the local disk. None (or False) will disable
@@ -305,27 +316,16 @@ class CacheDataAPI:
             Enable the spinner. Default is True to show a spinner when there is
             a cache miss.
 
-        suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit commands from within
-            the cached function.
-
-        max_entries : int or None
-            The maximum number of entries to keep in the cache, or None
-            for an unbounded cache. (When a new entry is added to a full cache,
-            the oldest cached entry will be removed.) The default is None.
-
-        ttl : float or timedelta or None
-            The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. The default is None.
-            Note that ttl is incompatible with `persist="disk"` - `ttl` will be
-            ignored if `persist` is specified.
-
         experimental_allow_widgets : boolean
             Allow widgets to be used in the cached function. Defaults to False.
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
             We may remove support for this option at any time without notice.
+
+        suppress_st_warning : boolean
+            Suppress warnings about calling Streamlit commands from within
+            the cached function.
 
         Example
         -------
