@@ -147,13 +147,17 @@ class CacheResourceFunction(CachedFunction):
         self,
         func: types.FunctionType,
         show_spinner: bool | str,
-        suppress_st_warning: bool,
         max_entries: int | None,
         ttl: float | timedelta | None,
         validate: ValidateFunc | None,
         allow_widgets: bool,
     ):
-        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
+        super().__init__(
+            func,
+            show_spinner=show_spinner,
+            suppress_st_warning=False,
+            allow_widgets=allow_widgets,
+        )
         self.max_entries = max_entries
         self.ttl = ttl
         self.validate = validate
@@ -226,7 +230,6 @@ class CacheResourceAPI:
         show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
-        suppress_st_warning: bool = False,
     ) -> Callable[[F], F]:
         ...
 
@@ -239,7 +242,6 @@ class CacheResourceAPI:
         show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
-        suppress_st_warning: bool = False,
     ):
         return self._decorator(
             func,
@@ -248,7 +250,6 @@ class CacheResourceAPI:
             show_spinner=show_spinner,
             validate=validate,
             experimental_allow_widgets=experimental_allow_widgets,
-            suppress_st_warning=suppress_st_warning,
         )
 
     @staticmethod
@@ -260,7 +261,6 @@ class CacheResourceAPI:
         show_spinner: bool | str,
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
-        suppress_st_warning: bool,
     ):
         """Function decorator to store cached resources.
 
@@ -306,10 +306,6 @@ class CacheResourceAPI:
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
             We may remove support for this option at any time without notice.
-
-        suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit commands from within
-            the cache_resource function.
 
         Example
         -------
@@ -371,7 +367,6 @@ class CacheResourceAPI:
                 CacheResourceFunction(
                     func=f,
                     show_spinner=show_spinner,
-                    suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl,
                     validate=validate,
@@ -383,7 +378,6 @@ class CacheResourceAPI:
             CacheResourceFunction(
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
-                suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl,
                 validate=validate,

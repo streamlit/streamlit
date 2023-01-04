@@ -80,13 +80,17 @@ class CacheDataFunction(CachedFunction):
         self,
         func: types.FunctionType,
         show_spinner: bool | str,
-        suppress_st_warning: bool,
         persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | None,
         allow_widgets: bool,
     ):
-        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
+        super().__init__(
+            func,
+            show_spinner=show_spinner,
+            suppress_st_warning=False,
+            allow_widgets=allow_widgets,
+        )
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
@@ -246,7 +250,6 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
         experimental_allow_widgets: bool = False,
-        suppress_st_warning: bool = False,
     ) -> Callable[[F], F]:
         ...
 
@@ -259,7 +262,6 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
         experimental_allow_widgets: bool = False,
-        suppress_st_warning: bool = False,
     ):
         return self._decorator(
             func,
@@ -268,7 +270,6 @@ class CacheDataAPI:
             persist=persist,
             show_spinner=show_spinner,
             experimental_allow_widgets=experimental_allow_widgets,
-            suppress_st_warning=suppress_st_warning,
         )
 
     @staticmethod
@@ -280,7 +281,6 @@ class CacheDataAPI:
         persist: CachePersistType | bool,
         show_spinner: bool | str,
         experimental_allow_widgets: bool,
-        suppress_st_warning: bool,
     ):
         """Function decorator to cache function executions.
 
@@ -322,10 +322,6 @@ class CacheDataAPI:
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
             We may remove support for this option at any time without notice.
-
-        suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit commands from within
-            the cached function.
 
         Example
         -------
@@ -420,7 +416,6 @@ class CacheDataAPI:
                     func=f,
                     persist=persist_string,
                     show_spinner=show_spinner,
-                    suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl,
                     allow_widgets=experimental_allow_widgets,
@@ -437,7 +432,6 @@ class CacheDataAPI:
                 func=cast(types.FunctionType, func),
                 persist=persist_string,
                 show_spinner=show_spinner,
-                suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl,
                 allow_widgets=experimental_allow_widgets,
