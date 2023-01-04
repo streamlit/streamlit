@@ -21,10 +21,15 @@ TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
 
 
-def _show_deprecated_name_warning_in_browser(
+def show_deprecation_warning(message: str) -> None:
+    """Show a deprecation warning message in the browser."""
+    streamlit.warning(message)
+
+
+def make_deprecated_name_warning(
     old_name: str, new_name: str, removal_date: str
-) -> None:
-    streamlit.warning(
+) -> str:
+    return (
         f"Please replace `st.{old_name}` with `st.{new_name}`.\n\n"
         f"`st.{old_name}` will be removed after {removal_date}."
     )
@@ -54,7 +59,9 @@ def deprecate_func_name(func: TFunc, old_name: str, removal_date: str) -> TFunc:
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         result = func(*args, **kwargs)
-        _show_deprecated_name_warning_in_browser(old_name, func.__name__, removal_date)
+        show_deprecation_warning(
+            make_deprecated_name_warning(old_name, func.__name__, removal_date)
+        )
         return result
 
     # Update the wrapped func's name & docstring so st.help does the right thing
@@ -91,8 +98,8 @@ def deprecate_obj_name(
 
     return _create_deprecated_obj_wrapper(
         obj,
-        lambda: _show_deprecated_name_warning_in_browser(
-            old_name, new_name, removal_date
+        lambda: show_deprecation_warning(
+            make_deprecated_name_warning(old_name, new_name, removal_date)
         ),
     )
 
