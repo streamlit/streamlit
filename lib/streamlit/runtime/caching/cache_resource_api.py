@@ -155,7 +155,6 @@ class CacheResourceFunction(CachedFunction):
         super().__init__(
             func,
             show_spinner=show_spinner,
-            suppress_st_warning=False,
             allow_widgets=allow_widgets,
         )
         self.max_entries = max_entries

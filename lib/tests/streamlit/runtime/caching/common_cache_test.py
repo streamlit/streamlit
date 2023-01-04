@@ -244,15 +244,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             st.text("foo")
             warning.assert_not_called()
 
-            # Test warning suppression
-            @cache_decorator(suppress_st_warning=True)
-            def suppressed_cached_func():
-                st.text("No warnings here!")
-
-            suppressed_cached_func()
-
-            warning.assert_not_called()
-
             # Test nested st.cache functions
             @cache_decorator
             def outer():
