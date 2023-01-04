@@ -34,7 +34,7 @@
     "@emotion-icons/open-iconic": "^3.14.0",
     "@emotion/is-prop-valid": "^1.2.0",
     "@emotion/react": "^11.10.5",
-    "@emotion/serialize": "^1.0.2",
+    "@emotion/serialize": "^1.1.1",
     "@emotion/styled": "^11.10.5",
     "@glideapps/glide-data-grid": "5.2.1",
     "@glideapps/glide-data-grid-cells": "5.2.1",
