@@ -22,9 +22,10 @@ import shutil
 import threading
 import types
 from datetime import timedelta
-from typing import Any, Callable, TypeVar, cast, overload
+from typing import Any, Callable, TypeVar, Union, cast, overload
 
 from cachetools import TTLCache
+from typing_extensions import Literal, TypeAlias
 
 import streamlit as st
 from streamlit import util
@@ -63,6 +64,9 @@ _CACHE_DIR_NAME = "cache"
 MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
 MEMO_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
 
+# The cache persistence options we support: "disk" or None
+CachePersistType: TypeAlias = Union[Literal["disk"], None]
+
 
 class MemoizedFunction(CachedFunction):
     """Implements the CachedFunction protocol for @st.memo"""
@@ -72,7 +76,7 @@ class MemoizedFunction(CachedFunction):
         func: types.FunctionType,
         show_spinner: bool | str,
         suppress_st_warning: bool,
-        persist: str | None,
+        persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | None,
         allow_widgets: bool,
@@ -120,7 +124,7 @@ class MemoCaches(CacheStatsProvider):
     def get_cache(
         self,
         key: str,
-        persist: str | None,
+        persist: CachePersistType,
         max_entries: int | float | None,
         ttl: int | float | timedelta | None,
         display_name: str,
@@ -217,7 +221,7 @@ class MemoAPI:
     def __call__(
         self,
         *,
-        persist: str | bool | None = None,
+        persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
         max_entries: int | None = None,
@@ -234,7 +238,7 @@ class MemoAPI:
         self,
         func: F | None = None,
         *,
-        persist: str | bool | None = None,
+        persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
         suppress_st_warning: bool = False,
         max_entries: int | None = None,
@@ -352,7 +356,7 @@ class MemoAPI:
         """
 
         # Parse our persist value into a string
-        persist_string: str | None
+        persist_string: CachePersistType
         if persist is True:
             persist_string = "disk"
         elif persist is False:
@@ -416,7 +420,7 @@ class MemoCache(Cache):
     def __init__(
         self,
         key: str,
-        persist: str | None,
+        persist: CachePersistType,
         max_entries: float,
         ttl_seconds: float,
         display_name: str,
