@@ -103,7 +103,7 @@
     "remark-emoji": "^2.2.0",
     "remark-gfm": "^1.0.0",
     "remark-math": "^4.0.0",
-    "sass": "^1.43.4",
+    "sass": "^1.57.1",
     "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.4.6",
     "styletron-react": "^5.2.6",
