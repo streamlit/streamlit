@@ -21,7 +21,14 @@ TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
 
 
-def _show_deprecated_name_warning_in_browser(
+def _show_deprecation_warning(warning_text: str) -> None:
+    """Show a deprecation warning to the user. If the user is on localhost, they're probably the app's developer,
+    so we show the warning in the browser. Otherwise, we print the warning to the console (we don't
+    want to show loud deprecation warnings to users).
+    """
+
+
+def _show_deprecated_name_warning(
     old_name: str, new_name: str, removal_date: str
 ) -> None:
     streamlit.warning(
@@ -54,7 +61,7 @@ def deprecate_func_name(func: TFunc, old_name: str, removal_date: str) -> TFunc:
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         result = func(*args, **kwargs)
-        _show_deprecated_name_warning_in_browser(old_name, func.__name__, removal_date)
+        _show_deprecated_name_warning(old_name, func.__name__, removal_date)
         return result
 
     # Update the wrapped func's name & docstring so st.help does the right thing
@@ -91,9 +98,7 @@ def deprecate_obj_name(
 
     return _create_deprecated_obj_wrapper(
         obj,
-        lambda: _show_deprecated_name_warning_in_browser(
-            old_name, new_name, removal_date
-        ),
+        lambda: _show_deprecated_name_warning(old_name, new_name, removal_date),
     )
 
 
