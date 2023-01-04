@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# NOTE: We intentionally neglect to write tests for this class for now as we'll be
-# waiting to merge these changes into `develop` until after we finish implementing
-# improved websocket reconnects, after which we would have to rewrite all of these tests
-# if we were to add some now.
-
 import unittest
 from unittest.mock import MagicMock, patch
 
