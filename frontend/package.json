@@ -71,7 +71,7 @@
     "moment": "^2.29.4",
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.40",
-    "node-emoji": "^1.10.0",
+    "node-emoji": "^1.11.0",
     "numbro": "^2.3.6",
     "plotly.js": "^2.16.5",
     "prismjs": "^1.27.0",
