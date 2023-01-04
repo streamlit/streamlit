@@ -120,7 +120,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             # extract it from the Sec-Websocket-Protocol header.
             pass
 
-        self._session_id = self._runtime.create_session(
+        self._session_id = self._runtime.connect_session(
             client=self,
             user_info=user_info,
             existing_session_id=existing_session_id,
@@ -130,7 +130,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     def on_close(self) -> None:
         if not self._session_id:
             return
-        self._runtime.close_session(self._session_id)
+        self._runtime.disconnect_session(self._session_id)
         self._session_id = None
 
     def get_compression_options(self) -> Optional[Dict[Any, Any]]:
