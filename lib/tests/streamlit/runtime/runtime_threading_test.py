@@ -48,7 +48,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                     "mock/script/path.py",
                     "",
                     media_file_storage=MagicMock(),
-                    session_manager_class=MagicMock(),
+                    session_manager_class=MagicMock,
                     session_storage=MagicMock(),
                 )
                 queue.put(Runtime(config))
