@@ -26,7 +26,7 @@ from streamlit.runtime.caching import (
     cache_resource_api,
     get_resource_cache_stats_provider,
 )
-from streamlit.runtime.caching.cache_errors import CacheType
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import MultiCacheResults
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
