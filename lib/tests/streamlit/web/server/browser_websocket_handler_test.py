@@ -36,12 +36,12 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_connect_with_no_session_id(self):
         with self._patch_app_session(), patch.object(
-            self.server._runtime, "create_session"
-        ) as patched_create_session:
+            self.server._runtime, "connect_session"
+        ) as patched_connect_session:
             await self.server.start()
             await self.ws_connect()
 
-            patched_create_session.assert_called_with(
+            patched_connect_session.assert_called_with(
                 client=ANY,
                 user_info=ANY,
                 existing_session_id=None,
@@ -50,12 +50,12 @@ class BrowserWebSocketHandlerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_connect_with_session_id(self):
         with self._patch_app_session(), patch.object(
-            self.server._runtime, "create_session"
-        ) as patched_create_session:
+            self.server._runtime, "connect_session"
+        ) as patched_connect_session:
             await self.server.start()
             await self.ws_connect(existing_session_id="session_id")
 
-            patched_create_session.assert_called_with(
+            patched_connect_session.assert_called_with(
                 client=ANY,
                 user_info=ANY,
                 existing_session_id="session_id",
