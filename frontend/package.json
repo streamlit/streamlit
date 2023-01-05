@@ -200,7 +200,7 @@
     "@types/react": "17.0.7",
     "axios": "^0.21.1",
     "bl": "^2.2.1",
-    "browserslist": "^4.16.5",
+    "browserslist": "^4.21.4",
     "dot-prop": "^4.2.1",
     "elliptic": "^6.5.4",
     "esm": "^3.1.0",
