@@ -368,11 +368,13 @@ export const createEmotionTheme = (
   baseThemeConfig = baseTheme
 ): Theme => {
   const { genericColors, genericFonts } = baseThemeConfig.emotion
-  const { font, ...customColors } = themeInput
+  const { font, base, ...customColors } = themeInput
 
   const parsedFont = fontEnumToString(font)
 
-  const parsedColors = Object.entries(customColors).reduce(
+  // TODO: review options to cast customColors as a Record<string, string>
+  const customThemeColors = String(customColors)
+  const parsedColors = Object.entries(customThemeColors).reduce(
     (colors: Record<string, string>, [key, color]) => {
       if (isColor(color)) {
         colors[key] = color
