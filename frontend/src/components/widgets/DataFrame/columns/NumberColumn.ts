@@ -31,7 +31,7 @@ import {
   formatNumber,
 } from "./utils"
 
-interface NumberColumnParams {
+export interface NumberColumnParams {
   readonly precision?: number
   readonly min?: number
   readonly max?: number
@@ -50,6 +50,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         quiverTypeName.startsWith("uint")
           ? 0
           : undefined,
+      // if uint (unsigned int), only positive numbers are allowed
       min: quiverTypeName.startsWith("uint") ? 0 : undefined,
     },
     // User parameters:
