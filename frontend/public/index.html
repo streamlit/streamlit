@@ -26,6 +26,9 @@
 
     <title>Streamlit</title>
 
+    <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
+    <script> window.prerenderReady = false; </script>
+
     <!-- load via script to enable web workers -->
     <script
       src="%PUBLIC_URL%/vendor/viz/viz-1.8.0.min.js"
