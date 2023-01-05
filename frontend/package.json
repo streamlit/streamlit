@@ -128,7 +128,7 @@
     "@types/d3": "^5.7.2",
     "@types/d3-graphviz": "^2.6.7",
     "@types/dom-mediacapture-record": "^1.0.14",
-    "@types/dompurify": "^2.2.2",
+    "@types/dompurify": "^2.4.0",
     "@types/enzyme": "^3.10.12",
     "@types/fetch-mock": "^7.3.5",
     "@types/hoist-non-react-statics": "^3.3.1",
