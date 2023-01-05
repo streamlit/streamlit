@@ -39,7 +39,7 @@ from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorage
 from streamlit.runtime.runtime_util import is_cacheable_msg
-from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
@@ -375,7 +375,7 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         session = AppSession(
-            session_data=SessionData(self._main_script_path, self._command_line or ""),
+            script_data=ScriptData(self._main_script_path, self._command_line or ""),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
@@ -504,7 +504,7 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session = AppSession(
-            session_data=SessionData(self._main_script_path, self._command_line),
+            script_data=ScriptData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=LocalSourcesWatcher(self._main_script_path),

@@ -65,6 +65,8 @@ class MarkdownMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> st.markdown('Streamlit is **_really_ cool**.')
         >>> st.markdown(”This text is :red[colored red], and this is **:blue[colored]** and bold.”)
         >>> st.markdown(":green[$\sqrt{x^2+y^2}=1$] is a Pythagorean identity. :pencil:")
@@ -100,6 +102,8 @@ class MarkdownMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> code = '''def hello():
         ...     print("Hello, Streamlit!")'''
         >>> st.code(code, language='python')
@@ -152,6 +156,8 @@ class MarkdownMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> st.caption('This is a string that explains something above.')
         >>> st.caption('A caption with _italics_ :blue[colors] and emojis :sunglasses:')
 
@@ -181,6 +187,8 @@ class MarkdownMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.latex(r'''
         ...     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
         ...     \sum_{k=0}^{n-1} ar^k =

@@ -36,6 +36,7 @@ import {
   HostCommunicationState,
 } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
@@ -132,6 +133,8 @@ describe("App", () => {
       userMapboxToken: "mpt",
     } as SessionInfoArgs)
     MetricsManager.current = getMetricsManagerForTest()
+    // @ts-ignore
+    window.prerenderReady = false
   })
 
   afterEach(() => {
@@ -706,6 +709,44 @@ describe("App.handleNewSession", () => {
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
+  })
+
+  it("should set window.prerenderReady to true after app script is run successfully first time", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTING,
+    })
+    wrapper.update()
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(false)
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(false)
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(true)
+
+    // window.prerenderReady is set to true after first
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(true)
   })
 
   it("plumbs appPages and currentPageScriptHash to the AppView component", () => {

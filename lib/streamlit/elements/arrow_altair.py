@@ -118,6 +118,10 @@ class ArrowAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -186,6 +190,10 @@ class ArrowAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -256,6 +264,10 @@ class ArrowAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(50, 3),
         ...     columns=["a", "b", "c"])
@@ -295,7 +307,7 @@ class ArrowAltairMixin:
 
         Example
         -------
-
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>> import altair as alt
