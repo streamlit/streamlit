@@ -293,11 +293,12 @@ class CacheResourceAPI:
             value of show_spinner param will be used for spinner text.
 
         validate : callable or None
-            An optional validation function for cached data. `validate` is
-            called each time the cached value is accessed. It receives
-            the cached value as its only param; and it returns a bool result.
-            If `validate` returns False, the current cached value is discarded,
-            and the decorated function is called to compute a new value.
+            validate (callable): An optional validation function for cached data.
+            `validate` is called each time the cached value is accessed. It receives
+            the cached value as its only parameter and it must return a boolean.
+            If `validate` returns False, the current cached value is discarded, and
+            the decorated function is called to compute a new value.
+            This is useful e.g. to check the health of database connections.
 
         experimental_allow_widgets : boolean
             Allow widgets to be used in the cached function. Defaults to False.
