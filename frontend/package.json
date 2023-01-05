@@ -191,7 +191,7 @@
     "react-responsive-carousel": "^3.2.23",
     "react-scripts": "4.0.3",
     "source-map-explorer": "^2.5.3",
-    "start-server-and-test": "^1.11.2",
+    "start-server-and-test": "^1.15.2",
     "timezone-mock": "^1.1.1",
     "typescript": "^4.6.3",
     "webpack": "4.44.2"
