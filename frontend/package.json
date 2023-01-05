@@ -140,7 +140,7 @@
     "@types/node-emoji": "^1.8.2",
     "@types/numeral": "^0.0.26",
     "@types/plotly.js": "^2.12.11",
-    "@types/prismjs": "^1.16.1",
+    "@types/prismjs": "^1.26.0",
     "@types/react": "^17.0.7",
     "@types/react-color": "^3.0.6",
     "@types/react-copy-to-clipboard": "^4.3.0",
