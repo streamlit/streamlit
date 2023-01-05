@@ -110,6 +110,7 @@ NEW_CACHE_FUNC_RECOMMENDATIONS: Dict[str, CacheType] = {
     "transformers.FlaxPreTrainedModel": CacheType.RESOURCE,
 }
 
+# TODO: replace this with the proper URL once it's ready from the docs team
 CACHE_DOCS_URL = "https://NEED.CACHE.DOCS.URL"
 
 
