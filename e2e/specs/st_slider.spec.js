@@ -57,7 +57,7 @@ describe("st.slider", () => {
   });
 
   it("shows full label when the label is long", () => {
-    cy.getIndexed(".stSlider", 4).matchThemedSnapshots(
+    cy.getIndexed(".stSlider", 6).matchThemedSnapshots(
       "slider_with_long_label"
     );
   });
