@@ -192,7 +192,7 @@
     "react-scripts": "4.0.3",
     "source-map-explorer": "^2.5.3",
     "start-server-and-test": "^1.15.2",
-    "timezone-mock": "^1.1.1",
+    "timezone-mock": "^1.3.6",
     "typescript": "^4.6.3",
     "webpack": "4.44.2"
   },
