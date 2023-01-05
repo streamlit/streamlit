@@ -102,13 +102,13 @@ describe("st.slider", () => {
 
   it("handles value changes", () => {
     // trigger click in the center of the slider
-    cy.getIndexed('.stSlider [role="slider"]', 4).parent().click();
+    cy.getIndexed('.stSlider [role="slider"]', 6).parent().click();
 
     cy.getIndexed(".stMarkdown", 4).should("have.text", "Value 1: 50");
   });
 
   it("increments the value on right arrow key press", () => {
-    cy.getIndexed('.stSlider [role="slider"]', 4)
+    cy.getIndexed('.stSlider [role="slider"]', 6)
       .click()
       .type("{rightarrow}", { force: true });
 
@@ -116,7 +116,7 @@ describe("st.slider", () => {
   });
 
   it("decrements the value on left arrow key press", () => {
-    cy.getIndexed('.stSlider [role="slider"]', 4)
+    cy.getIndexed('.stSlider [role="slider"]', 6)
       .click()
       .type("{leftarrow}", { force: true });
 
@@ -124,7 +124,7 @@ describe("st.slider", () => {
   });
 
   it("maintains its state on rerun", () => {
-    cy.getIndexed('.stSlider [role="slider"]', 4)
+    cy.getIndexed('.stSlider [role="slider"]', 6)
       .click()
       .type("{leftarrow}", { force: true });
 
