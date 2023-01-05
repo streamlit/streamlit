@@ -116,7 +116,7 @@
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.12.3",
+    "@babel/core": "^7.20.7",
     "@craco/craco": "^6.1.2",
     "@emotion/babel-plugin": "^11.7.2",
     "@emotion/jest": "^11.7.1",
