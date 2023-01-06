@@ -304,7 +304,8 @@ export class App extends PureComponent<Props, State> {
             Math.ceil(el.getBoundingClientRect().bottom)
           )
 
-          // Use maximum lowest point of all tagged elements.
+          // The higher the value, the further down the page it is.
+          // Use maximum value to get the lowest of all tagged elements.
           return Math.max(0, ...lowestBounds)
         },
       }
