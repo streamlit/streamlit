@@ -21,6 +21,7 @@ from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -84,6 +85,28 @@ class Text(Element):
         self.proto = proto
         self.root = root
         self.type = "text"
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
+
+
+@dataclass(init=False)
+class Caption(Element):
+    proto: MarkdownProto
+
+    type: str
+    root: ElementTree = field(repr=False)
+    is_caption: bool
+    allow_html: bool
+    key: None = None
+
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        self.proto = proto
+        self.is_caption = proto.is_caption
+        self.allow_html = proto.allow_html
+        self.root = root
+        self.type = "caption"
 
     @property
     def value(self) -> str:
@@ -210,6 +233,10 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["caption"]) -> Sequence[Caption]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 
@@ -318,6 +345,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             new_node: Node
             if elt.WhichOneof("type") == "text":
                 new_node = Text(elt.text, root=root)
+            elif elt.WhichOneof("type") == "markdown" and elt.markdown.is_caption:
+                new_node = Caption(elt.markdown, root=root)
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
             else:
