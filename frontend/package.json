@@ -112,7 +112,7 @@
     "vega": "^5.22.1",
     "vega-embed": "^6.21.0",
     "vega-interpreter": "^1.0.4",
-    "vega-lite": "^5.2.0",
+    "vega-lite": "^5.6.0",
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
