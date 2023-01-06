@@ -295,6 +295,9 @@ export class App extends PureComponent<Props, State> {
       document.body.classList.add("embedded")
     }
 
+    // Iframe resizer allows parent pages to get the height of the iframe
+    // contents. The parent page can then reset the height to match and
+    // avoid unnecessary scrollbars or large embeddings
     if (isInChildFrame()) {
       window.iFrameResizer = {
         heightCalculationMethod: () => {

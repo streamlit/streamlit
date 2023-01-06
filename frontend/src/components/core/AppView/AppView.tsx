@@ -147,7 +147,11 @@ function AppView(props: AppViewProps): ReactElement {
       )}
       <StyledAppViewMain tabIndex={0} isEmbedded={embedded} className="main">
         {renderBlock(elements.main)}
+        {/* Anchor indicates to the iframe resizer that this is the lowest
+        possible point to determine height */}
         <StyledIFrameResizerAnchor isEmbedded={embedded} data-iframe-height />
+        {/* Spacer fills up dead space to ensure the footer remains at the
+        bottom of the page in larger views */}
         {!embedded && <StyledAppViewBlockSpacer />}
         {!embedded && (
           <StyledAppViewFooter isWideMode={wideMode}>

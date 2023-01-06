@@ -176,6 +176,8 @@ Cypress.Commands.add("prepForElementSnapshots", () => {
   cy.get(".stApp > header").invoke("css", "backdropFilter", "none")
 })
 
+// Allows the user to execute code within the iframe itself
+// This is useful for testing/changing examples of Streamlit embeddings
 Cypress.Commands.add(
   "iframe",
   { prevSubject: "element" },

@@ -149,6 +149,9 @@ export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
 export interface StyledIFrameResizerAnchorProps {
   isEmbedded: boolean
 }
+
+// The anchor appears above the footer, so we need to offset it by the footer
+// if the app is not embedded.
 export const StyledIFrameResizerAnchor =
   styled.div<StyledIFrameResizerAnchorProps>(({ theme, isEmbedded }) => ({
     position: "relative",
