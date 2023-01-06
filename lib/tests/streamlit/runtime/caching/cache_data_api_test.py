@@ -124,6 +124,41 @@ class CacheDataTest(unittest.TestCase):
         # results in just a single call to the decorated function.
         self.assertEqual(1, num_calls[0])
 
+    @parameterized.expand(
+        [
+            ("cache_data", st.cache_data, False),
+            ("experimental_memo", st.experimental_memo, True),
+        ]
+    )
+    @patch("streamlit.runtime.caching.cache_data_api.show_deprecation_warning")
+    def test_deprecation_warnings(
+        self, _, decorator: Any, should_show_warning: bool, show_warning_mock: Mock
+    ):
+        """We show deprecation warnings when using `@st.experimental_memo`, but not `@st.cache_data`."""
+        warning_str = (
+            "`st.experimental_memo` is deprecated. Please use the new command `st.cache_data` instead, "
+            "which has the same behavior. More information [in our docs](https://NEED.CACHE.DOCS.URL)."
+        )
+
+        # We show the deprecation warning at declaration time:
+        @decorator
+        def foo():
+            return 42
+
+        if should_show_warning:
+            show_warning_mock.assert_called_once_with(warning_str)
+        else:
+            show_warning_mock.assert_not_called()
+
+        # And also when clearing the cache:
+        show_warning_mock.reset_mock()
+        decorator.clear()
+
+        if should_show_warning:
+            show_warning_mock.assert_called_once_with(warning_str)
+        else:
+            show_warning_mock.assert_not_called()
+
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
