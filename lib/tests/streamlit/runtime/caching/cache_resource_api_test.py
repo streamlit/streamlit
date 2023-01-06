@@ -84,11 +84,11 @@ class CacheResourceTest(unittest.TestCase):
 
         # Annotate a function with both `cache_resource` and `experimental_singleton`.
         cache_resource_func = st.cache_resource(foo)
-        memo_func = st.experimental_singleton(foo)
+        singleton_func = st.experimental_singleton(foo)
 
         # Call both versions of the function and assert the results.
         self.assertEqual(42, cache_resource_func())
-        self.assertEqual(42, memo_func())
+        self.assertEqual(42, singleton_func())
 
         # Because these decorators share the same cache, calling both functions
         # results in just a single call to the decorated function.

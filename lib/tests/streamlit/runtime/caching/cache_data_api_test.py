@@ -103,8 +103,8 @@ class CacheDataTest(unittest.TestCase):
         self.assertEqual(r2, [0, 1])
 
     def test_multiple_api_names(self):
-        """`st.cache_data` is effectively an alias for `st.cache_data`, and we
-        support both APIs while cache_data is being deprecated.
+        """`st.experimental_memo` is effectively an alias for `st.cache_data`, and we
+        support both APIs while experimental_memo is being deprecated.
         """
         num_calls = [0]
 
@@ -112,9 +112,9 @@ class CacheDataTest(unittest.TestCase):
             num_calls[0] += 1
             return 42
 
-        # Annotate a function with both `cache_data` and `cache_data`.
+        # Annotate a function with both `cache_data` and `experimental_memo`.
         cache_data_func = st.cache_data(foo)
-        memo_func = st.cache_data(foo)
+        memo_func = st.experimental_memo(foo)
 
         # Call both versions of the function and assert the results.
         self.assertEqual(42, cache_data_func())
