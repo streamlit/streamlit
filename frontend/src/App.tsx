@@ -299,16 +299,16 @@ export class App extends PureComponent<Props, State> {
       window.iFrameResizer = {
         heightCalculationMethod: () => {
           const taggedEls = document.querySelectorAll("[data-iframe-height]")
-          if (taggedEls.length === 0) {
-            return 0
-          }
-
-          const bottomVals = Array.from(taggedEls).map(el =>
+          // Use ceil to avoid fractional pixels creating scrollbars.
+          const lowestBounds = Array.from(taggedEls).map(el =>
             Math.ceil(el.getBoundingClientRect().bottom)
           )
-          return Math.max(...bottomVals)
+
+          // Use maximum lowest point of all tagged elements.
+          return Math.max(0, ...lowestBounds)
         },
       }
+
       // @ts-ignore
       import("iframe-resizer/js/iframeResizer.contentWindow")
     }

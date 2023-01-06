@@ -122,14 +122,14 @@ export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
 export interface StyledAppViewFooterProps {
   isWideMode: boolean
 }
-const footerHeight = "2.5rem"
+
 export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
   ({ isWideMode, theme }) => {
     const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
     return {
       color: theme.colors.fadedText40,
       fontSize: theme.fontSizes.sm,
-      height: footerHeight,
+      height: theme.sizes.footerHeight,
       minWidth: isWideMode ? "auto" : undefined,
       maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
       padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
@@ -152,5 +152,5 @@ export interface StyledIFrameResizerAnchorProps {
 export const StyledIFrameResizerAnchor =
   styled.div<StyledIFrameResizerAnchorProps>(({ theme, isEmbedded }) => ({
     position: "relative",
-    bottom: isEmbedded ? "0" : `-${footerHeight}`,
+    bottom: isEmbedded ? "0" : `-${theme.sizes.footerHeight}`,
   }))
