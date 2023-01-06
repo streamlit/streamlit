@@ -345,5 +345,6 @@ def _get_widget_id(
     """
     h = hashlib.new("md5")
     h.update(element_type.encode("utf-8"))
-    h.update(element_proto.SerializeToString())
+    if hasattr(element_proto, "label"):
+        h.update(element_proto.label.encode("utf-8"))
     return f"{GENERATED_WIDGET_KEY_PREFIX}-{h.hexdigest()}-{user_key}"

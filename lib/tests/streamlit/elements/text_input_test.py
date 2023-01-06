@@ -56,7 +56,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         proto_values = ["some str", "123", "None", "{}", ".*SomeObj.*"]
 
         for arg_value, proto_value in zip(arg_values, proto_values):
-            st.text_input("the label", arg_value)
+            st.text_input("the label", arg_value, key=arg_value)
 
             c = self.get_delta_from_queue().new_element.text_input
             self.assertEqual(c.label, "the label")
@@ -67,7 +67,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         type_strings = ["default", "password"]
         type_values = [TextInput.DEFAULT, TextInput.PASSWORD]
         for type_string, type_value in zip(type_strings, type_values):
-            st.text_input("label", type=type_string)
+            st.text_input("label", type=type_string, key=type_string)
 
             c = self.get_delta_from_queue().new_element.text_input
             self.assertEqual(type_value, c.type)

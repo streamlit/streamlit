@@ -74,7 +74,10 @@ class FileUploaderTest(DeltaGeneratorTestCase):
 
         for accept_multiple in [True, False]:
             return_val = st.file_uploader(
-                "label", type="png", accept_multiple_files=accept_multiple
+                "label",
+                type="png",
+                accept_multiple_files=accept_multiple,
+                key=str(accept_multiple),
             )
             c = self.get_delta_from_queue().new_element.file_uploader
             self.assertEqual(accept_multiple, c.multiple_files)
@@ -156,7 +159,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         ]
         get_file_recs_patch.return_value = file_recs
 
-        st.file_uploader("foo", accept_multiple_files=True)
+        st.file_uploader("foo", accept_multiple_files=True, key="1")
 
         args, kwargs = remove_orphaned_files_patch.call_args
         self.assertEqual(len(args), 0)
@@ -169,7 +172,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         get_file_recs_patch.return_value = []
         remove_orphaned_files_patch.reset_mock()
 
-        st.file_uploader("foo")
+        st.file_uploader("foo", key="2")
         remove_orphaned_files_patch.assert_not_called()
 
     @parameterized.expand(

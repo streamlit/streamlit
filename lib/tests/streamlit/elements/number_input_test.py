@@ -34,11 +34,11 @@ class NumberInputTest(DeltaGeneratorTestCase):
         """Test that NumberInput.type is set to the proper
         NumberInput.DataType value
         """
-        st.number_input("Label", value=0)
+        st.number_input("Label", value=0, key="1")
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(NumberInput.INT, c.data_type)
 
-        st.number_input("Label", value=0.5)
+        st.number_input("Label", value=0.5, key="2")
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(NumberInput.FLOAT, c.data_type)
 
@@ -138,7 +138,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         #       See https://github.com/streamlit/streamlit/pull/943
         SUPPORTED = "adifFeEgGuXxo"
         for char in SUPPORTED:
-            st.number_input("any label", format="%" + char)
+            st.number_input("any label", format="%" + char, key=char)
             c = self.get_delta_from_queue().new_element.number_input
             self.assertEqual(c.format, "%" + char)
 
