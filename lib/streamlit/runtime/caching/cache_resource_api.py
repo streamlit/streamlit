@@ -402,7 +402,7 @@ class CacheResourceAPI:
         _resource_caches.clear_all()
 
     def _maybe_show_deprecation_warning(self):
-        """If the API is being accessed with the deprecated `st.experimental_memo` name,
+        """If the API is being accessed with the deprecated `st.experimental_singleton` name,
         show a deprecation warning.
         """
         if self._deprecation_warning is not None:
