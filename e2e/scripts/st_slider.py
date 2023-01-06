@@ -18,9 +18,15 @@ from streamlit import runtime
 s1 = st.sidebar.slider("Label A", 0, 12345678, 12345678)
 st.sidebar.write("Value A:", s1)
 
+r1 = st.sidebar.slider("Range A", 10000, 25000, [10000, 25000])
+st.sidebar.write("Range Value A:", r1)
+
 with st.sidebar.expander("Expander", expanded=True):
     s2 = st.slider("Label B", 10000, 25000, 10000)
     st.write("Value B:", s2)
+
+    r2 = st.slider("Range B", 10000, 25000, [10000, 25000])
+    st.write("Range Value B:", r2)
 
 w1 = st.slider("Label 1", 0, 100, 25, 1)
 st.write("Value 1:", w1)
