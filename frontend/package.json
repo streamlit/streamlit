@@ -152,7 +152,7 @@
     "@types/react-html-parser": "^2.0.2",
     "@types/react-map-gl": "^5.2.11",
     "@types/react-plotly.js": "^2.5.2",
-    "@types/react-syntax-highlighter": "^13.5.2",
+    "@types/react-syntax-highlighter": "^15.5.5",
     "@types/react-transition-group": "^4.4.5",
     "@types/react-virtualized": "^9.21.21",
     "@types/react-window": "^1.8.5",
