@@ -11981,7 +11981,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: regenerator-runtime. A copy of the source code may be downloaded from https://github.com/facebook/regenerator/tree/master/packages/runtime. This software contains the following license and notice below:
+The following software may be included in this product: regenerator-runtime. A copy of the source code may be downloaded from https://github.com/facebook/regenerator/tree/main/packages/runtime. This software contains the following license and notice below:
 
 MIT License
 
@@ -15376,7 +15376,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: vega-canvas, vega-dataflow, vega-format, vega-interpreter, vega-projection, vega-runtime, vega-scale, vega-scenegraph, vega-time, vega-view-transforms, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-format), https://github.com/vega/vega.git (vega-interpreter), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
+The following software may be included in this product: vega-canvas, vega-dataflow, vega-interpreter, vega-runtime, vega-view-transforms, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-interpreter), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
 
 Copyright (c) 2015-2018, University of Washington Interactive Data Lab
 All rights reserved.
