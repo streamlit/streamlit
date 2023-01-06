@@ -54,11 +54,10 @@ export function isEmbeddedInIFrame(): boolean {
 }
 
 /**
- * Returns true if the frameElement and parent parameters indicate that we're in an
- * iframe.
+ * Returns true if the parent parameter indicates that we're in an iframe.
  */
 export function isInChildFrame(): boolean {
-  return window.parent !== window && !!window.frameElement
+  return window.parent !== window
 }
 
 /** Return an info Element protobuf with the given text. */

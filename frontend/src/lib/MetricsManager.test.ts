@@ -19,10 +19,6 @@
 import { SessionInfo } from "src/lib/SessionInfo"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
-jest.mock("src/lib/utils", () => ({
-  isInChildFrame: jest.fn(x => true),
-}))
-
 const createSessionInfo = (): SessionInfo =>
   new SessionInfo({
     appId: "aid",

@@ -34,6 +34,8 @@ import {
   StyledAppViewFooter,
   StyledAppViewFooterLink,
   StyledAppViewMain,
+  StyledIFrameResizerAnchor,
+  StyledAppViewBlockSpacer,
 } from "./styled-components"
 
 export interface AppViewProps {
@@ -145,12 +147,20 @@ function AppView(props: AppViewProps): ReactElement {
       )}
       <StyledAppViewMain tabIndex={0} isEmbedded={embedded} className="main">
         {renderBlock(elements.main)}
-        <StyledAppViewFooter isEmbedded={embedded} isWideMode={wideMode}>
-          Made with{" "}
-          <StyledAppViewFooterLink href="//streamlit.io" target="_blank">
-            Streamlit
-          </StyledAppViewFooterLink>
-        </StyledAppViewFooter>
+        {/* Anchor indicates to the iframe resizer that this is the lowest
+        possible point to determine height */}
+        <StyledIFrameResizerAnchor isEmbedded={embedded} data-iframe-height />
+        {/* Spacer fills up dead space to ensure the footer remains at the
+        bottom of the page in larger views */}
+        {!embedded && <StyledAppViewBlockSpacer />}
+        {!embedded && (
+          <StyledAppViewFooter isWideMode={wideMode}>
+            Made with{" "}
+            <StyledAppViewFooterLink href="//streamlit.io" target="_blank">
+              Streamlit
+            </StyledAppViewFooterLink>
+          </StyledAppViewFooter>
+        )}
       </StyledAppViewMain>
     </StyledAppViewContainer>
   )
