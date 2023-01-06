@@ -42,13 +42,13 @@ from streamlit.runtime.caching.cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
     CacheReplayClosureError,
-    CacheType,
     UnevaluatedDataFrameError,
     UnhashableParamError,
     UnhashableTypeError,
     UnserializableReturnValueError,
     get_cached_func_name_md,
 )
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import update_hash
 from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext,
