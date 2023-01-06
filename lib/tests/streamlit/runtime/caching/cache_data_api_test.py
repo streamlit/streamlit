@@ -34,7 +34,8 @@ from streamlit.runtime.caching.cache_data_api import (
     get_cache_path,
     get_data_cache_stats_provider,
 )
-from streamlit.runtime.caching.cache_errors import CacheError, CacheType
+from streamlit.runtime.caching.cache_errors import CacheError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     ElementMsgData,

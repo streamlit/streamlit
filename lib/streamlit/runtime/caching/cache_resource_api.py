@@ -29,7 +29,8 @@ from typing_extensions import TypeAlias
 import streamlit as st
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
-from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError, CacheType
+from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunction,

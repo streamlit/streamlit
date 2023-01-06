@@ -29,7 +29,8 @@ from streamlit.runtime.caching import (
     cache_data,
     cache_resource,
 )
-from streamlit.runtime.caching.cache_errors import CacheReplayClosureError, CacheType
+from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     CachedResult,
     MultiCacheResults,

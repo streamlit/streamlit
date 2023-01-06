@@ -34,11 +34,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
-from streamlit.runtime.caching.cache_errors import (
-    CacheError,
-    CacheKeyNotFoundError,
-    CacheType,
-)
+from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunction,
