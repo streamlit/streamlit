@@ -57,7 +57,7 @@ SOFTWARE.
 
 The following software may be included in this product: @deck.gl/aggregation-layers, @deck.gl/carto, @deck.gl/core, @deck.gl/extensions, @deck.gl/geo-layers, @deck.gl/google-maps, @deck.gl/json, @deck.gl/layers, @deck.gl/mapbox, @deck.gl/mesh-layers, @deck.gl/react, deck.gl. A copy of the source code may be downloaded from https://github.com/visgl/deck.gl.git (@deck.gl/aggregation-layers), https://github.com/visgl/deck.gl.git (@deck.gl/carto), https://github.com/visgl/deck.gl.git (@deck.gl/core), https://github.com/visgl/deck.gl.git (@deck.gl/extensions), https://github.com/visgl/deck.gl.git (@deck.gl/geo-layers), https://github.com/visgl/deck.gl.git (@deck.gl/google-maps), https://github.com/visgl/deck.gl.git (@deck.gl/json), https://github.com/visgl/deck.gl.git (@deck.gl/layers), https://github.com/visgl/deck.gl.git (@deck.gl/mapbox), https://github.com/visgl/deck.gl.git (@deck.gl/mesh-layers), https://github.com/visgl/deck.gl.git (@deck.gl/react), https://github.com/visgl/deck.gl.git (deck.gl). This software contains the following license and notice below:
 
-Copyright (c) 2015 - 2017 Uber Technologies, Inc.
+Copyright (c) 2020 Urban Computing Foundation
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -131,7 +131,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: @loaders.gl/3d-tiles, @loaders.gl/core, @loaders.gl/csv, @loaders.gl/draco, @loaders.gl/gis, @loaders.gl/gltf, @loaders.gl/images, @loaders.gl/loader-utils, @loaders.gl/math, @loaders.gl/mvt, @loaders.gl/tables, @loaders.gl/terrain, @loaders.gl/tiles. A copy of the source code may be downloaded from https://github.com/visgl/loaders.gl (@loaders.gl/3d-tiles), https://github.com/visgl/loaders.gl (@loaders.gl/core), https://github.com/visgl/loaders.gl (@loaders.gl/csv), https://github.com/visgl/loaders.gl (@loaders.gl/draco), https://github.com/visgl/loaders.gl (@loaders.gl/gis), https://github.com/visgl/loaders.gl (@loaders.gl/gltf), https://github.com/visgl/loaders.gl (@loaders.gl/images), https://github.com/visgl/loaders.gl (@loaders.gl/loader-utils), https://github.com/visgl/loaders.gl (@loaders.gl/math), https://github.com/visgl/loaders.gl (@loaders.gl/mvt), https://github.com/visgl/loaders.gl (@loaders.gl/tables), https://github.com/visgl/loaders.gl (@loaders.gl/terrain), https://github.com/visgl/loaders.gl (@loaders.gl/tiles). This software contains the following license and notice below:
+The following software may be included in this product: @loaders.gl/3d-tiles, @loaders.gl/core, @loaders.gl/csv, @loaders.gl/draco, @loaders.gl/gis, @loaders.gl/gltf, @loaders.gl/images, @loaders.gl/loader-utils, @loaders.gl/math, @loaders.gl/mvt, @loaders.gl/schema, @loaders.gl/tables, @loaders.gl/terrain, @loaders.gl/textures, @loaders.gl/tiles, @loaders.gl/worker-utils. A copy of the source code may be downloaded from https://github.com/visgl/loaders.gl (@loaders.gl/3d-tiles), https://github.com/visgl/loaders.gl (@loaders.gl/core), https://github.com/visgl/loaders.gl (@loaders.gl/csv), https://github.com/visgl/loaders.gl (@loaders.gl/draco), https://github.com/visgl/loaders.gl (@loaders.gl/gis), https://github.com/visgl/loaders.gl (@loaders.gl/gltf), https://github.com/visgl/loaders.gl (@loaders.gl/images), https://github.com/visgl/loaders.gl (@loaders.gl/loader-utils), https://github.com/visgl/loaders.gl (@loaders.gl/math), https://github.com/visgl/loaders.gl (@loaders.gl/mvt), https://github.com/visgl/loaders.gl (@loaders.gl/schema), https://github.com/visgl/loaders.gl (@loaders.gl/tables), https://github.com/visgl/loaders.gl (@loaders.gl/terrain), https://github.com/visgl/loaders.gl (@loaders.gl/textures), https://github.com/visgl/loaders.gl (@loaders.gl/tiles), https://github.com/visgl/loaders.gl (@loaders.gl/worker-utils). This software contains the following license and notice below:
 
 Copyright (c) 2015 Uber Technologies, Inc.
 
@@ -322,6 +322,32 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 -----
 
+The following software may be included in this product: @mapbox/tile-cover, @mapbox/tilebelt. A copy of the source code may be downloaded from https://github.com/mapbox/tile-cover.git (@mapbox/tile-cover), https://github.com/mapbox/tilebelt.git (@mapbox/tilebelt). This software contains the following license and notice below:
+
+The MIT License (MIT)
+
+Copyright (c) 2014 Morgan Herlocker
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
 The following software may be included in this product: @mapbox/tiny-sdf. A copy of the source code may be downloaded from git+https://github.com/mapbox/tiny-sdf.git. This software contains the following license and notice below:
 
 Copyright © 2016-2021 Mapbox, Inc.
@@ -387,7 +413,7 @@ THIS SOFTWARE.
 
 -----
 
-The following software may be included in this product: @math.gl/core, @math.gl/culling, @math.gl/geospatial, @math.gl/polygon, @math.gl/web-mercator, math.gl. A copy of the source code may be downloaded from https://github.com/uber-web/math.gl.git (@math.gl/core), https://github.com/uber-web/math.gl.git (@math.gl/culling), https://github.com/uber-web/math.gl.git (@math.gl/geospatial), https://github.com/uber-web/math.gl.git (@math.gl/polygon), https://github.com/uber-web/math.gl.git (@math.gl/web-mercator), https://github.com/uber-web/math.gl.git (math.gl). This software contains the following license and notice below:
+The following software may be included in this product: @math.gl/core, @math.gl/culling, @math.gl/geospatial, @math.gl/polygon, @math.gl/sun, @math.gl/types, @math.gl/web-mercator, math.gl. A copy of the source code may be downloaded from https://github.com/uber-web/math.gl.git (@math.gl/core), https://github.com/uber-web/math.gl.git (@math.gl/culling), https://github.com/uber-web/math.gl.git (@math.gl/geospatial), https://github.com/uber-web/math.gl.git (@math.gl/polygon), https://github.com/uber-web/math.gl.git (@math.gl/sun), https://github.com/uber-web/math.gl.git (@math.gl/types), https://github.com/uber-web/math.gl.git (@math.gl/web-mercator), https://github.com/uber-web/math.gl.git (math.gl). This software contains the following license and notice below:
 
 MIT License
 
@@ -596,7 +622,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: @probe.gl/stats, probe.gl. A copy of the source code may be downloaded from https://github.com/uber-web/probe.gl.git (@probe.gl/stats), https://github.com/uber-web/probe.gl.git (probe.gl). This software contains the following license and notice below:
+The following software may be included in this product: @probe.gl/env, @probe.gl/log, @probe.gl/stats, probe.gl. A copy of the source code may be downloaded from https://github.com/uber-web/probe.gl.git (@probe.gl/env), https://github.com/uber-web/probe.gl.git (@probe.gl/log), https://github.com/uber-web/probe.gl.git (@probe.gl/stats), https://github.com/uber-web/probe.gl.git (probe.gl). This software contains the following license and notice below:
 
 Copyright (c) 2017 Uber Technologies, Inc.
 
@@ -703,7 +729,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: @types/clone, @types/command-line-args, @types/command-line-usage, @types/estree, @types/geojson, @types/hammerjs, @types/hast, @types/katex, @types/mapbox-gl, @types/mdast, @types/node, @types/pad-left, @types/parse5, @types/prop-types, @types/react, @types/react-transition-group, @types/react-virtualized-auto-sizer, @types/react-window, @types/scheduler, @types/unist. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/clone), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-args), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-usage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hammerjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/katex), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox-gl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pad-left), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse5), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-transition-group), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-virtualized-auto-sizer), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-window), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/scheduler), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/unist). This software contains the following license and notice below:
+The following software may be included in this product: @types/clone, @types/command-line-args, @types/command-line-usage, @types/estree, @types/geojson, @types/hammerjs, @types/hast, @types/katex, @types/mapbox-gl, @types/mdast, @types/node, @types/offscreencanvas, @types/pad-left, @types/parse5, @types/prop-types, @types/react, @types/react-transition-group, @types/react-virtualized-auto-sizer, @types/react-window, @types/scheduler, @types/unist. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/clone), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-args), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-usage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hammerjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/katex), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox-gl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/offscreencanvas), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pad-left), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse5), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-transition-group), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-virtualized-auto-sizer), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-window), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/scheduler), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/unist). This software contains the following license and notice below:
 
 MIT License
 
@@ -3191,6 +3217,32 @@ its NOTICE file:
 
 -----
 
+The following software may be included in this product: argparse. A copy of the source code may be downloaded from https://github.com/nodeca/argparse.git. This software contains the following license and notice below:
+
+(The MIT License)
+
+Copyright (C) 2012 by Vitaly Puzrin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-----
+
 The following software may be included in this product: arr-flatten, is-glob, is-plain-object, kind-of. A copy of the source code may be downloaded from https://github.com/jonschlinkert/arr-flatten.git (arr-flatten), https://github.com/micromatch/is-glob.git (is-glob), https://github.com/jonschlinkert/is-plain-object.git (is-plain-object), https://github.com/jonschlinkert/kind-of.git (kind-of). This software contains the following license and notice below:
 
 The MIT License (MIT)
@@ -4420,6 +4472,49 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org/>
+
+-----
+
+The following software may be included in this product: colorbrewer. A copy of the source code may be downloaded from https://github.com/saikocat/colorbrewer. This software contains the following license and notice below:
+
+Apache-Style Software License for ColorBrewer software and ColorBrewer Color
+Schemes
+
+Copyright (c) 2002 Cynthia Brewer, Mark Harrower, and The Pennsylvania State
+University.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this file except in compliance with the License. You may obtain a copy of
+the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations under
+the License.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions as source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. The end-user documentation included with the redistribution, if any, must
+include the following acknowledgment: "This product includes color
+specifications and designs developed by Cynthia Brewer
+(http://colorbrewer.org/)." Alternately, this acknowledgment may appear in the
+software itself, if and wherever such third-party acknowledgments normally
+appear.
+
+4. The name "ColorBrewer" must not be used to endorse or promote products
+derived from this software without prior written permission. For written
+permission, please contact Cynthia Brewer at cbrewer@psu.edu.
+
+5. Products derived from this software may not be called "ColorBrewer", nor
+may "ColorBrewer" appear in their name, without prior written permission of
+Cynthia Brewer.
 
 -----
 
@@ -8437,6 +8532,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 -----
 
+The following software may be included in this product: image-size. A copy of the source code may be downloaded from https://github.com/image-size/image-size.git. This software contains the following license and notice below:
+
+The MIT License (MIT)
+
+Copyright © 2017 Aditya Yadav, http://netroy.in
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----
+
 The following software may be included in this product: immer. A copy of the source code may be downloaded from https://github.com/immerjs/immer.git. This software contains the following license and notice below:
 
 MIT License
@@ -9052,6 +9161,32 @@ INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
 OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
+
+-----
+
+The following software may be included in this product: ktx-parse. A copy of the source code may be downloaded from https://github.com/donmccurdy/ktx-parse.git. This software contains the following license and notice below:
+
+The MIT License (MIT)
+
+Copyright (c) 2020 Don McCurdy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 -----
 
@@ -13909,6 +14044,35 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The following software may be included in this product: sprintf-js. A copy of the source code may be downloaded from https://github.com/alexei/sprintf.js.git. This software contains the following license and notice below:
 
+Copyright (c) 2007-2014, Alexandru Marasteanu <hello [at) alexei (dot] ro>
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+* Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+* Neither the name of this software nor the names of its contributors may be
+  used to endorse or promote products derived from this software without
+  specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+
+The following software may be included in this product: sprintf-js. A copy of the source code may be downloaded from https://github.com/alexei/sprintf.js.git. This software contains the following license and notice below:
+
 Copyright (c) 2007-present, Alexandru Mărășteanu <hello@alexei.ro>
 All rights reserved.
 
@@ -14315,6 +14479,32 @@ The following software may be included in this product: table-layout, wordwrapjs
 The MIT License (MIT)
 
 Copyright (c) 2015-21 Lloyd Brookes <75pound@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
+The following software may be included in this product: texture-compressor. This software contains the following license and notice below:
+
+MIT License
+
+Copyright (c) 2019 Tim van Scherpenzeel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
