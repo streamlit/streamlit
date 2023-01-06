@@ -290,16 +290,16 @@ describe("Heading", () => {
   it("does not render tables", () => {
     const props = getHeadingProps({
       body: `| Syntax | Description |
-    | ----------- | ----------- |
-    | Header      | Title       |
-    | Paragraph   | Text        |`,
+      | ----------- | ----------- |
+      | Header      | Title       |
+      | Paragraph   | Text        |`,
     })
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual(`| Syntax | Description |`)
     expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
       `| ----------- | ----------- |
-| Header      | Title       |
-| Paragraph   | Text        |
+  | Header      | Title       |
+  | Paragraph   | Text        |
 `
     )
     expect(wrapper.find("table")).toHaveLength(0)
