@@ -27,6 +27,7 @@ from pympler import asizeof
 from typing_extensions import TypeAlias
 
 import streamlit as st
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
@@ -195,7 +196,9 @@ class CacheResourceAPI:
     and st.cache_resource.clear().
     """
 
-    def __init__(self, decorator_metric_name: str):
+    def __init__(
+        self, decorator_metric_name: str, deprecation_warning: str | None = None
+    ):
         """Create a CacheResourceAPI instance.
 
         Parameters
@@ -204,11 +207,15 @@ class CacheResourceAPI:
             The metric name to record for decorator usage. `@st.experimental_singleton` is
             deprecated, but we're still supporting it and tracking its usage separately
             from `@st.cache_resource`.
+
+        deprecation_warning
+            An optional deprecation warning to show when the API is accessed.
         """
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
         self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
+        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -252,8 +259,8 @@ class CacheResourceAPI:
             experimental_allow_widgets=experimental_allow_widgets,
         )
 
-    @staticmethod
     def _decorator(
+        self,
         func: F | None,
         *,
         ttl: float | timedelta | None,
@@ -361,6 +368,8 @@ class CacheResourceAPI:
         >>> # Clear all cached entries for this function.
 
         """
+        self._maybe_show_deprecation_warning()
+
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
@@ -386,11 +395,18 @@ class CacheResourceAPI:
             )
         )
 
-    @staticmethod
     @gather_metrics("clear_resource_caches")
-    def clear() -> None:
+    def clear(self) -> None:
         """Clear all cache_resource caches."""
+        self._maybe_show_deprecation_warning()
         _resource_caches.clear_all()
+
+    def _maybe_show_deprecation_warning(self):
+        """If the API is being accessed with the deprecated `st.experimental_memo` name,
+        show a deprecation warning.
+        """
+        if self._deprecation_warning is not None:
+            show_deprecation_warning(self._deprecation_warning)
 
 
 class ResourceCache(Cache):

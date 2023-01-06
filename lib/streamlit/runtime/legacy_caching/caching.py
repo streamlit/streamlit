@@ -49,6 +49,7 @@ from streamlit.elements.spinner import spinner
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
+from streamlit.runtime.caching import CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
 from streamlit.runtime.legacy_caching.hashing import (
     HashFuncsDict,
@@ -126,9 +127,6 @@ NEW_CACHE_FUNC_RECOMMENDATIONS: Dict[str, CacheType] = {
     "transformers.TFPreTrainedModel": CacheType.RESOURCE,
     "transformers.FlaxPreTrainedModel": CacheType.RESOURCE,
 }
-
-# TODO: replace this with the proper URL once it's ready from the docs team
-CACHE_DOCS_URL = "https://NEED.CACHE.DOCS.URL"
 
 
 def _make_deprecation_warning(cached_value: Any) -> str:
