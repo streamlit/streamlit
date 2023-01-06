@@ -96,10 +96,6 @@ class Slider extends React.PureComponent<Props, State> {
         this.thumbRef[i].current,
         this.thumbValueRef[i].current
       )
-      this.thumbValueAlignment(
-        this.thumbRef[i].current,
-        this.thumbValueRef[i].current
-      )
     }
 
     if (this.props.element.setValue) {
