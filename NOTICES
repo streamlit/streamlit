@@ -5121,6 +5121,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
+The following software may be included in this product: d3-array, d3-color, d3-shape, d3-time. A copy of the source code may be downloaded from https://github.com/d3/d3-array.git (d3-array), https://github.com/d3/d3-color.git (d3-color), https://github.com/d3/d3-shape.git (d3-shape), https://github.com/d3/d3-time.git (d3-time). This software contains the following license and notice below:
+
+Copyright 2010-2022 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+-----
+
 The following software may be included in this product: d3-collection. A copy of the source code may be downloaded from https://github.com/d3/d3-collection.git. This software contains the following license and notice below:
 
 Copyright 2010-2016, Mike Bostock
@@ -5203,6 +5221,43 @@ THIS SOFTWARE.
 
 -----
 
+The following software may be included in this product: d3-delaunay. A copy of the source code may be downloaded from https://github.com/d3/d3-delaunay.git. This software contains the following license and notice below:
+
+Copyright 2018-2021 Observable, Inc.
+Copyright 2021 Mapbox
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+-----
+
+The following software may be included in this product: d3-dispatch, d3-force, d3-format, d3-hierarchy, d3-interpolate, d3-quadtree, d3-scale, d3-time-format, d3-timer. A copy of the source code may be downloaded from https://github.com/d3/d3-dispatch.git (d3-dispatch), https://github.com/d3/d3-force.git (d3-force), https://github.com/d3/d3-format.git (d3-format), https://github.com/d3/d3-hierarchy.git (d3-hierarchy), https://github.com/d3/d3-interpolate.git (d3-interpolate), https://github.com/d3/d3-quadtree.git (d3-quadtree), https://github.com/d3/d3-scale.git (d3-scale), https://github.com/d3/d3-time-format.git (d3-time-format), https://github.com/d3/d3-timer.git (d3-timer). This software contains the following license and notice below:
+
+Copyright 2010-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+-----
+
 The following software may be included in this product: d3-dsv. A copy of the source code may be downloaded from https://github.com/d3/d3-dsv.git. This software contains the following license and notice below:
 
 Copyright 2013-2016 Mike Bostock
@@ -5232,6 +5287,24 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+
+The following software may be included in this product: d3-dsv. A copy of the source code may be downloaded from https://github.com/d3/d3-dsv.git. This software contains the following license and notice below:
+
+Copyright 2013-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
 -----
 
@@ -5385,6 +5458,45 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
+The following software may be included in this product: d3-geo. A copy of the source code may be downloaded from https://github.com/d3/d3-geo.git. This software contains the following license and notice below:
+
+Copyright 2010-2022 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+This license applies to GeographicLib, versions 1.12 and later.
+
+Copyright 2008-2012 Charles Karney
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----
+
 The following software may be included in this product: d3-geo-projection. A copy of the source code may be downloaded from https://github.com/d3/d3-geo-projection.git. This software contains the following license and notice below:
 
 Copyright 2013-2016 Mike Bostock
@@ -5423,6 +5535,48 @@ MIT License for https://github.com/scijs/integrate-adaptive-simpson
 The MIT License (MIT)
 
 Copyright (c) 2015 Ricky Reusser
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: d3-geo-projection. A copy of the source code may be downloaded from https://github.com/d3/d3-geo-projection.git. This software contains the following license and notice below:
+
+Copyright 2013-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+MIT License for https://github.com/scijs/integrate-adaptive-simpson
+
+The MIT License (MIT)
+
+Copyright 2015 Ricky Reusser
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -5537,6 +5691,24 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+
+The following software may be included in this product: d3-path. A copy of the source code may be downloaded from https://github.com/d3/d3-path.git. This software contains the following license and notice below:
+
+Copyright 2015-2022 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
 
 -----
 
@@ -11991,6 +12163,35 @@ THE SOFTWARE.
 
 -----
 
+The following software may be included in this product: robust-predicates. A copy of the source code may be downloaded from https://github.com/mourner/robust-predicates.git. This software contains the following license and notice below:
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org>
+
+-----
+
 The following software may be included in this product: rope-sequence. A copy of the source code may be downloaded from git+https://github.com/marijnh/rope-sequence.git. This software contains the following license and notice below:
 
 Copyright (C) 2016 by Marijn Haverbeke <marijnh@gmail.com>
@@ -15143,7 +15344,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: vega, vega-event-selector, vega-expression, vega-functions, vega-label, vega-loader, vega-parser, vega-selections, vega-statistics, vega-util. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega), https://github.com/vega/vega.git (vega-event-selector), https://github.com/vega/vega.git (vega-expression), https://github.com/vega/vega.git (vega-functions), https://github.com/vega/vega.git (vega-label), https://github.com/vega/vega.git (vega-loader), https://github.com/vega/vega.git (vega-parser), https://github.com/vega/vega.git (vega-selections), https://github.com/vega/vega.git (vega-statistics), https://github.com/vega/vega.git (vega-util). This software contains the following license and notice below:
+The following software may be included in this product: vega, vega-crossfilter, vega-encode, vega-event-selector, vega-expression, vega-force, vega-format, vega-functions, vega-geo, vega-hierarchy, vega-label, vega-loader, vega-parser, vega-projection, vega-regression, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-util, vega-view, vega-voronoi. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega), https://github.com/vega/vega.git (vega-crossfilter), https://github.com/vega/vega.git (vega-encode), https://github.com/vega/vega.git (vega-event-selector), https://github.com/vega/vega.git (vega-expression), https://github.com/vega/vega.git (vega-force), https://github.com/vega/vega.git (vega-format), https://github.com/vega/vega.git (vega-functions), https://github.com/vega/vega.git (vega-geo), https://github.com/vega/vega.git (vega-hierarchy), https://github.com/vega/vega.git (vega-label), https://github.com/vega/vega.git (vega-loader), https://github.com/vega/vega.git (vega-parser), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-regression), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-selections), https://github.com/vega/vega.git (vega-statistics), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-transforms), https://github.com/vega/vega.git (vega-util), https://github.com/vega/vega.git (vega-view), https://github.com/vega/vega.git (vega-voronoi). This software contains the following license and notice below:
 
 Copyright (c) 2015-2021, University of Washington Interactive Data Lab
 All rights reserved.
@@ -15175,7 +15376,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: vega-canvas, vega-crossfilter, vega-dataflow, vega-encode, vega-force, vega-format, vega-geo, vega-hierarchy, vega-interpreter, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-time, vega-transforms, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-crossfilter), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-encode), https://github.com/vega/vega.git (vega-force), https://github.com/vega/vega.git (vega-format), https://github.com/vega/vega.git (vega-geo), https://github.com/vega/vega.git (vega-hierarchy), https://github.com/vega/vega.git (vega-interpreter), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-regression), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-transforms), https://github.com/vega/vega.git (vega-view), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-voronoi), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
+The following software may be included in this product: vega-canvas, vega-dataflow, vega-format, vega-interpreter, vega-projection, vega-runtime, vega-scale, vega-scenegraph, vega-time, vega-view-transforms, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-format), https://github.com/vega/vega.git (vega-interpreter), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
 
 Copyright (c) 2015-2018, University of Washington Interactive Data Lab
 All rights reserved.
