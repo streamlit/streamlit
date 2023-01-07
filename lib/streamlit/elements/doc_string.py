@@ -60,11 +60,16 @@ class HelpMixin:
 
         Don't remember how to initialize a dataframe? Try this:
 
+        >>> import streamlit as st
+        >>> import pandas
+        >>>
         >>> st.help(pandas.DataFrame)
 
         Want to quickly check what datatype is output by a certain function?
         Try:
 
+        >>> import streamlit as st
+        >>>
         >>> x = my_poorly_documented_function()
         >>> st.help(x)
 

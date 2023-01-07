@@ -46,6 +46,7 @@ import {
   setCookie,
   hashString,
   isEmbeddedInIFrame,
+  isInChildFrame,
   notUndefined,
   getElementWidgetID,
 } from "src/lib/utils"
@@ -153,6 +154,7 @@ const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 declare global {
   interface Window {
     streamlitDebug: any
+    iFrameResizer: any
   }
 }
 
@@ -293,6 +295,28 @@ export class App extends PureComponent<Props, State> {
       document.body.classList.add("embedded")
     }
 
+    // Iframe resizer allows parent pages to get the height of the iframe
+    // contents. The parent page can then reset the height to match and
+    // avoid unnecessary scrollbars or large embeddings
+    if (isInChildFrame()) {
+      window.iFrameResizer = {
+        heightCalculationMethod: () => {
+          const taggedEls = document.querySelectorAll("[data-iframe-height]")
+          // Use ceil to avoid fractional pixels creating scrollbars.
+          const lowestBounds = Array.from(taggedEls).map(el =>
+            Math.ceil(el.getBoundingClientRect().bottom)
+          )
+
+          // The higher the value, the further down the page it is.
+          // Use maximum value to get the lowest of all tagged elements.
+          return Math.max(0, ...lowestBounds)
+        },
+      }
+
+      // @ts-ignore
+      import("iframe-resizer/js/iframeResizer.contentWindow")
+    }
+
     this.props.hostCommunication.sendMessage({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
@@ -301,7 +325,10 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.enqueue("viewReport")
   }
 
-  componentDidUpdate(prevProps: Readonly<Props>): void {
+  componentDidUpdate(
+    prevProps: Readonly<Props>,
+    prevState: Readonly<State>
+  ): void {
     if (
       prevProps.hostCommunication.currentState.queryParams !==
       this.props.hostCommunication.currentState.queryParams
@@ -317,6 +344,11 @@ export class App extends PureComponent<Props, State> {
     if (requestedPageScriptHash !== null) {
       this.onPageChange(requestedPageScriptHash)
       this.props.hostCommunication.onPageChanged()
+    }
+    // @ts-ignore
+    if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
+      // @ts-ignore
+      window.prerenderReady = true
     }
   }
 
@@ -1044,6 +1076,15 @@ export class App extends PureComponent<Props, State> {
 
   onPageChange = (pageScriptHash: string): void => {
     this.sendRerunBackMsg(undefined, pageScriptHash)
+  }
+
+  isAppInReadyState = (prevState: Readonly<State>): boolean => {
+    return (
+      this.state.connectionState === ConnectionState.CONNECTED &&
+      this.state.scriptRunState === ScriptRunState.NOT_RUNNING &&
+      prevState.scriptRunState === ScriptRunState.RUNNING &&
+      prevState.connectionState === ConnectionState.CONNECTED
+    )
   }
 
   sendRerunBackMsg = (

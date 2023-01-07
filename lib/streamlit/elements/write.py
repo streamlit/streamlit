@@ -65,7 +65,7 @@ class WriteMixin:
             Arguments are handled as follows:
 
             - write(string)     : Prints the formatted Markdown string, with
-                support for LaTeX expression and emoji shortcodes.
+                support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
             - write(data_frame) : Displays the DataFrame as a table.
             - write(error)      : Prints an exception specially.
@@ -101,7 +101,9 @@ class WriteMixin:
         Its basic use case is to draw Markdown-formatted text, whenever the
         input is a string:
 
-        >>> write('Hello, *World!* :sunglasses:')
+        >>> import streamlit as st
+        >>>
+        >>> st.write('Hello, *World!* :sunglasses:')
 
         ..  output::
             https://doc-write1.streamlitapp.com/
@@ -110,6 +112,9 @@ class WriteMixin:
         As mentioned earlier, `st.write()` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>>
         >>> st.write(1234)
         >>> st.write(pd.DataFrame({
         ...     'first column': [1, 2, 3, 4],
@@ -122,6 +127,8 @@ class WriteMixin:
 
         Finally, you can pass in multiple arguments to do things like:
 
+        >>> import streamlit as st
+        >>>
         >>> st.write('1 + 1 = ', 2)
         >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
 
@@ -131,6 +138,7 @@ class WriteMixin:
 
         Oh, one more thing: `st.write` accepts chart objects too! For example:
 
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>> import altair as alt

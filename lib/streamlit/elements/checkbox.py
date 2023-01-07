@@ -104,6 +104,7 @@ class CheckboxMixin:
         Example
         -------
         >>> import streamlit as st
+        >>>
         >>> agree = st.checkbox('I agree')
         >>>
         >>> if agree:

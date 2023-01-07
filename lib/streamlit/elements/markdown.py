@@ -48,6 +48,10 @@ class MarkdownMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
             therefore treated as pure text. This behavior may be turned off by
@@ -59,9 +63,13 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
-        Example
-        -------
+        Examples
+        --------
+        >>> import streamlit as st
+        >>>
         >>> st.markdown('Streamlit is **_really_ cool**.')
+        >>> st.markdown(”This text is :red[colored red], and this is **:blue[colored]** and bold.”)
+        >>> st.markdown(":green[$\sqrt{x^2+y^2}=1$] is a Pythagorean identity. :pencil:")
 
         """
         markdown_proto = MarkdownProto()
@@ -94,6 +102,8 @@ class MarkdownMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> code = '''def hello():
         ...     print("Hello, Streamlit!")'''
         >>> st.code(code, language='python')
@@ -116,7 +126,22 @@ class MarkdownMixin:
         Parameters
         ----------
         body : str
-            The text to display.
+            The text to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in strings will be escaped and
@@ -129,9 +154,12 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
-        Example
-        -------
+        Examples
+        --------
+        >>> import streamlit as st
+        >>>
         >>> st.caption('This is a string that explains something above.')
+        >>> st.caption('A caption with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
         caption_proto = MarkdownProto()
@@ -159,6 +187,8 @@ class MarkdownMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.latex(r'''
         ...     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
         ...     \sum_{k=0}^{n-1} ar^k =

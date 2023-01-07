@@ -74,6 +74,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -130,6 +134,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -186,6 +194,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(50, 3),
         ...     columns=["a", "b", "c"])
@@ -225,6 +237,7 @@ class LegacyAltairMixin:
         Example
         -------
 
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>> import altair as alt

@@ -24,15 +24,15 @@ import { render } from "src/lib/test_util"
 import { ElementNode } from "src/lib/AppNode"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { waitFor } from "@testing-library/dom"
-import ElementNodeRenderer, {
-  ElementNodeRendererProps,
-} from "./ElementNodeRenderer"
 import {
   createFormsData,
   WidgetStateManager,
-} from "../../../lib/WidgetStateManager"
-import { FileUploadClient } from "../../../lib/FileUploadClient"
-import { ComponentRegistry } from "../../widgets/CustomComponent"
+} from "src/lib/WidgetStateManager"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import ElementNodeRenderer, {
+  ElementNodeRendererProps,
+} from "./ElementNodeRenderer"
 
 function createBalloonNode(scriptRunId: string): ElementNode {
   const node = new ElementNode(

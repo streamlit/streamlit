@@ -66,6 +66,21 @@ class MetricMixin:
             The header or title for the metric. The label can optionally contain
             Markdown and supports the following elements: Bold, Italics,
             Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
         value : int, float, str, or None
              Value of the metric. None is rendered as a long dash.
         delta : int, float, str, or None
@@ -90,6 +105,8 @@ class MetricMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
 
         .. output::
@@ -98,6 +115,8 @@ class MetricMixin:
 
         ``st.metric`` looks especially nice in combination with ``st.columns``:
 
+        >>> import streamlit as st
+        >>>
         >>> col1, col2, col3 = st.columns(3)
         >>> col1.metric("Temperature", "70 °F", "1.2 °F")
         >>> col2.metric("Wind", "9 mph", "-8%")
@@ -109,6 +128,8 @@ class MetricMixin:
 
         The delta indicator color can also be inverted or turned off:
 
+        >>> import streamlit as st
+        >>>
         >>> st.metric(label="Gas price", value=4, delta=-0.5,
         ...     delta_color="inverse")
         >>>

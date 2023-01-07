@@ -93,6 +93,20 @@ class TextWidgetsMixin:
             The label can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
 
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -142,6 +156,8 @@ class TextWidgetsMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> title = st.text_input('Movie title', 'Life of Brian')
         >>> st.write('The current movie title is', title)
 
@@ -275,6 +291,20 @@ class TextWidgetsMixin:
             The label can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
 
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -318,6 +348,8 @@ class TextWidgetsMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> txt = st.text_area('Text to analyze', '''
         ...     It was the best of times, it was the worst of times, it was
         ...     the age of wisdom, it was the age of foolishness, it was
