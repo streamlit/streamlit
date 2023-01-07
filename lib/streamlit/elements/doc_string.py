@@ -207,11 +207,17 @@ def _get_variable_name():
     scriptrunner_frame = _get_scriptrunner_frame()
 
     if scriptrunner_frame is None:
+        # If there's no ScriptRunner frame, something weird is going on. This should never happen
+        # but let's bail out nicely just in case there's some valid edge case where this is OK.
         return None
 
     code_context = scriptrunner_frame.code_context
 
     if not code_context:
+        # Sometimes a frame has no code_context. This can happen inside certain exec() calls, for
+        # example. If this happens, we can't determine the variable name. Just return.
+        # For the background on why exec() doesn't produce code_context, see
+        # https://stackoverflow.com/a/12072941
         return None
 
     code_as_string = "".join(code_context)
@@ -236,15 +242,15 @@ def _get_variable_name():
     #   ]
     # )
 
-    # Get argument from st.help call
+    # Try to get argument from st.help call.
     arg_node = _get_stcall_arg(tree, command_name="help")
 
     if arg_node is None:
-        # Get argument from st.write call
+        # If this wasn't an st.help cal, try to get argument from st.write call.
         arg_node = _get_stcall_arg(tree, command_name="write")
 
     if arg_node is None:
-        # Return argument whole line, since it's probably a magic call.
+        # If this wasn't an st.write, it's probably a magic call. Just clean it up and return it.
         code = cleaned_code
 
         # A common pattern is to add "," at the end of a magic command to make it print.
@@ -256,7 +262,10 @@ def _get_variable_name():
 
     # If walrus, get name. E.g. st.help(foo := 123)
     if type(arg_node) is ast.NamedExpr:
-        return arg_node.target.id
+        # This next "if" will always be true, but need to add this for the type-checking test to
+        # pass.
+        if type(arg_node.target) is ast.Name:
+            return arg_node.target.id
 
     # If constant, there's no variable name. E.g. st.help("foo") or st.help(123)
     if type(arg_node) is ast.Constant:
@@ -267,7 +276,6 @@ def _get_variable_name():
 
 
 def _get_scriptrunner_frame():
-    active_frame = inspect.currentframe()
     prev_frame = None
     scriptrunner_frame = None
 
@@ -275,10 +283,10 @@ def _get_scriptrunner_frame():
     # The frame *before* the ScriptRunner frame is the correct one.
     # IMPORTANT: This will change if we refactor the code. But hopefully our tests will catch the
     # issue and we'll fix it before it lands upstream!
-    for frame in inspect.getouterframes(active_frame):
+    for frame in inspect.stack():
         # Check if this is running inside a funny "exec()" block that won't provide the info we
         # need. If so, just quit.
-        if frame.code_context is None and frame.filename == "<string>":
+        if frame.code_context is None:
             return None
 
         if frame.filename == SCRIPTRUNNER_FILENAME:
