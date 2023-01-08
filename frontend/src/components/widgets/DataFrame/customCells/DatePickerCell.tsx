@@ -46,6 +46,7 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
       type={"date"}
       autoFocus={true}
       onChange={event => {
+        // handle when clear is clicked and value has been wiped
         if (event.target.value === "") {
           try {
             cell.onChange({

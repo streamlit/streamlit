@@ -48,6 +48,7 @@ const Editor: ReturnType<
       type={"datetime-local"}
       autoFocus={true}
       onChange={event => {
+        // handle when clear is clicked and value has been wiped
         if (event.target.value === "") {
           try {
             cell.onChange({
@@ -66,7 +67,6 @@ const Editor: ReturnType<
               },
             })
           }
-
           return
         }
         cell.onChange({

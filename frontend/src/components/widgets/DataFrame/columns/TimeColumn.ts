@@ -41,7 +41,7 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
       kind: "TimePickerCell",
       time: undefined,
       displayTime: "NA",
-      format: parameters.format ? parameters.format : "%H:%M:%S.%L",
+      format: parameters.format ?? "%H:%M:%S.%L",
     },
   } as TimePickerCell
 
@@ -52,29 +52,30 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
     isEditable: true,
     getCell(data?: DataType): GridCell {
       try {
-        if (notNullOrUndefined(data) && !isValidDate(Number(data))) {
-            return getErrorCell(
-                `Incompatible time value: ${data}`
-              )
+        if (notNullOrUndefined(data) && !isNaN(Number(data)) && !isValidDate(Number(data))) {
+          return getErrorCell(
+              `Incompatible time value: ${data}`
+            )
         }
-        let newData = data
+        let dataInSeconds = data
         if (typeof data === "bigint") {
           // divide by 1000 to turn into seconds since quiver returns ms
-          newData = Number(data) / 1000
+          dataInSeconds = Number(data) / 1000
         }
         return {
           ...cellTemplate,
           allowOverlay: true,
-          copyData: toSafeString(newData),
+          copyData: toSafeString(dataInSeconds),
           data: {
             kind: "TimePickerCell",
-            time: notNullOrUndefined(newData) ? newData : undefined,
+            time: notNullOrUndefined(dataInSeconds) && !isNaN(Number(dataInSeconds)) ? dataInSeconds : undefined,
             displayTime:
-              notNullOrUndefined(newData)
+              notNullOrUndefined(dataInSeconds) && !isNaN(Number(dataInSeconds))
                 ? 
-                  strftime(cellTemplate.data.format, new Date(Number(newData)))
+                  strftime(cellTemplate.data.format, new Date(Number(dataInSeconds)))
                 : "NA",
           },
+          style: notNullOrUndefined(dataInSeconds) && !isNaN(Number(dataInSeconds)) ? "normal" : "faded",
         }
       } catch (error) {
         return getErrorCell(

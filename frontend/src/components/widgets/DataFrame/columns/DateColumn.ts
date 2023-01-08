@@ -41,7 +41,7 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
       kind: "DatePickerCell",
       date: undefined,
       displayDate: "NA",
-      format: parameters.format ? parameters.format : "%m / %d / %Y",
+      format: parameters.format ?? "%m / %d / %Y",
     },
   } as DatePickerCell
 
@@ -53,14 +53,14 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
     getCell(data?: DataType): GridCell {
       try {
         if (notNullOrUndefined(data) && !isValidDate(Number(data))) {
-            return getErrorCell(
-                `Incompatible time value: ${data}`
-              )
+          return getErrorCell(
+              `Incompatible time value: ${data}`
+            )
         }
          // 0 refers to a missing value
          let cellData = 0
          if (notNullOrUndefined(data)) {
-           // convert the date to a number
+           // convert the date to a number to sort
            cellData = Number(data)
          }
         return {
@@ -76,6 +76,7 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
                 : "NA",
             format: cellTemplate.data.format,
           },
+          style: notNullOrUndefined(cellData) && !isNaN(Number(data)) ? "normal" : "faded",
         }
       } catch (error) {
         return getErrorCell(
@@ -87,7 +88,7 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
         if (!notNullOrUndefined(cell.data)) {
             return null
           }
-      return cell.data.date === undefined ? null : cell.data.date
+      return !notNullOrUndefined(cell.data.date) ? null : cell.data.date
     },
   }
 }

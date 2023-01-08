@@ -25,8 +25,6 @@ from typing import (
     Union,
     cast,
 )
-from streamlit.error_util import _LOGGER
-
 import pyarrow as pa
 from numpy import ndarray
 from pandas import DataFrame, RangeIndex
@@ -145,21 +143,10 @@ def _apply_dataframe_edits(df: DataFrame, data_editor_state: DataEditorState):
             col, row = int(col), int(row)
             # TODO: add descriptive comment
             col = col - df.index.nlevels if df.index.nlevels else 0
-
-            import dateutil.parser
-
-            changed_datetime = False
-            try:
-                date_converted = dateutil.parser.isoparse(
-                    data_editor_state.get("edited_cells")[cell]
-                )
-                df.iat[row, col] = date_converted
-                changed_datetime = True
-            except Exception:
-                _LOGGER.info(
-                    "Failed to convert the edited cell to datetime. This should be ok if one is not editing a datetime cell."
-                )
-            if not changed_datetime:
+            converted_datetime = type_util.maybe_convert_to_datetime_edit_df(df.iat[row, col], data_editor_state.get("edited_cells")[cell])
+            if converted_datetime != None:
+                df.iat[row, col] = converted_datetime
+            else:
                 df.iat[row, col] = data_editor_state.get("edited_cells")[cell]
 
     if data_editor_state.get("added_rows"):

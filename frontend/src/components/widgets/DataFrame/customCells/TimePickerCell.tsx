@@ -36,9 +36,7 @@ const Editor: ReturnType<ProvideEditorCallback<TimePickerCell>> = cell => {
   const { time: timeIn } = cell.value.data
 
   let newTimeIn = 0
-  if (timeIn === undefined) {
-    newTimeIn = 0
-  } else {
+  if (timeIn !== undefined) {
     newTimeIn = timeIn
   }
 
@@ -56,7 +54,7 @@ const Editor: ReturnType<ProvideEditorCallback<TimePickerCell>> = cell => {
             time:
               event.target.valueAsDate === null
                 ? timeIn
-                : new Date(event.target.valueAsDate).getTime(),
+                : new Date(event.target.valueAsDate).valueOf(),
           },
         })
       }}

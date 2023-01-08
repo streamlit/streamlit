@@ -38,6 +38,7 @@ import pandas as pd
 import pyarrow as pa
 from pandas.api.types import infer_dtype, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
+import datetime
 
 import streamlit as st
 from streamlit import errors
@@ -869,3 +870,63 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
             f"Unsupported label_visibility option '{label_visibility}'. "
             f"Valid values are 'visible', 'hidden' or 'collapsed'."
         )
+
+def maybe_convert_to_datetime_edit_df(col_type, obj) -> datetime | datetime.date | datetime.time | None:
+    """Based on the column type, convert a string to datetime or a number to datetime.time
+    """
+    if isinstance(col_type, datetime.time):
+        return maybe_convert_datetime_time_edit_df(obj)
+    elif isinstance(col_type, datetime.date):
+        return maybe_convert_datetime_date_edit_df(obj)
+    else:
+        return maybe_convert_datetime_datetime_edit_df
+
+def can_be_float_or_int(obj: str) -> str | int | float:
+    if isinstance(obj, (int, float)):
+        return True
+    if obj.isdigit():
+        return True
+    elif obj.replace('.','',1).isdigit() and obj.count('.') < 2:
+        return True
+    else:
+        return False
+
+def maybe_convert_datetime_date_edit_df(obj) -> datetime.date | None:
+    try:
+        converted_datetime = maybe_convert_datetime_datetime_edit_df(obj)
+        if converted_datetime == None:
+            return None
+        else:
+            return converted_datetime.date()
+    except Exception as e:
+        _LOGGER.info(
+            f"Failed to convert the edited cell to datetime.date. Exception: {e}"
+        )
+
+def maybe_convert_datetime_time_edit_df(obj) -> datetime.time | None:
+    try:
+        converted_datetime = maybe_convert_datetime_datetime_edit_df(obj)
+        if converted_datetime == None:
+            return None
+        else:
+            return converted_datetime.time()
+    except Exception as e:
+        _LOGGER.info(
+            f"Failed to convert the edited cell to datetime.time. Exception: {e}"
+        )
+
+def maybe_convert_datetime_datetime_edit_df(obj) -> datetime | None:
+    try:
+        import dateutil.parser
+        # handle pasting as number but string type is inputted
+        if isinstance(obj, str) and not can_be_float_or_int(obj):
+            print("got here as string and not float or int")
+            date_converted = dateutil.parser.isoparse(obj)
+        elif can_be_float_or_int(obj) or isinstance(obj, (int, float)):
+            date_converted = datetime.fromtimestamp(obj / 1000)
+        return date_converted
+    except Exception as e:
+        _LOGGER.info(
+            f"Failed to convert the edited cell to datetime. Exception: {e}"
+        )
+    return None

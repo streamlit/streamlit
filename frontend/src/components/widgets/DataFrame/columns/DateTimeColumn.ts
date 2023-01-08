@@ -41,7 +41,7 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
       kind: "DatetimeLocalPickerCell",
       date: undefined,
       displayDate: "NA",
-      format: parameters.format ? parameters.format :"%Y-%m-%dT%H:%M:%S.%L",
+      format: parameters.format ?? "%Y-%m-%dT%H:%M:%S.%L",
     },
   } as DatetimeLocalPickerCell
 
@@ -76,6 +76,7 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
                 : "NA",
             format: cellTemplate.data.format,
           },
+          style: notNullOrUndefined(data) && !isNaN(Number(data)) ? "normal" : "faded",
         }
       } catch (error) {
         return getErrorCell(
@@ -84,7 +85,7 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: DatetimeLocalPickerCell): Date | null {
-      return cell.data.date === undefined ? null : cell.data.date
+      return !notNullOrUndefined(cell.data.date) ? null : cell.data.date
     },
   }
 }
