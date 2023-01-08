@@ -57,6 +57,8 @@ class AlertMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.error('This is an error', icon="🚨")
 
         """
@@ -87,6 +89,8 @@ class AlertMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.warning('This is a warning', icon="⚠️")
 
         """
@@ -117,6 +121,8 @@ class AlertMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.info('This is a purely informational message', icon="ℹ️")
 
         """
@@ -148,6 +154,8 @@ class AlertMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.success('This is a success message!', icon="✅")
 
         """

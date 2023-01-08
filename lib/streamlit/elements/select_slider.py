@@ -198,6 +198,8 @@ class SelectSliderMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> color = st.select_slider(
         ...     'Select a color of the rainbow',
         ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'])
@@ -205,6 +207,8 @@ class SelectSliderMixin:
 
         And here's an example of a range select slider:
 
+        >>> import streamlit as st
+        >>>
         >>> start_color, end_color = st.select_slider(
         ...     'Select a range of color wavelength',
         ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'],

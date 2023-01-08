@@ -156,6 +156,8 @@ class TextWidgetsMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> title = st.text_input('Movie title', 'Life of Brian')
         >>> st.write('The current movie title is', title)
 
@@ -346,6 +348,8 @@ class TextWidgetsMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> txt = st.text_area('Text to analyze', '''
         ...     It was the best of times, it was the worst of times, it was
         ...     the age of wisdom, it was the age of foolishness, it was

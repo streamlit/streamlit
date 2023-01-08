@@ -28,6 +28,8 @@ class SnowMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.snow()
 
         ...then watch your app and get ready for a cool celebration!

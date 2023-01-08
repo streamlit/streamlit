@@ -151,6 +151,8 @@ class FormMixin:
         --------
         Inserting elements using "with" notation:
 
+        >>> import streamlit as st
+        >>>
         >>> with st.form("my_form"):
         ...    st.write("Inside the form")
         ...    slider_val = st.slider("Form slider")
@@ -165,6 +167,8 @@ class FormMixin:
 
         Inserting elements out of order:
 
+        >>> import streamlit as st
+        >>>
         >>> form = st.form("my_form")
         >>> form.slider("Inside the form")
         >>> st.slider("Outside the form")

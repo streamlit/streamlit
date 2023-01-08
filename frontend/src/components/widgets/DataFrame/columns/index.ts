@@ -19,7 +19,6 @@ import RangeColumn from '../columns/RangeColumn';
  * limitations under the License.
  */
 
-import { ColumnCreator } from "./utils"
 import ObjectColumn from "./ObjectColumn"
 import TextColumn from "./TextColumn"
 import BooleanColumn from "./BooleanColumn"
@@ -34,6 +33,7 @@ import UrlColumn from "./UrlColumn"
 import DateColumn from "./DateColumn"
 import TimeColumn from "./TimeColumn"
 import DateTimeColumn from "./DateTimeColumn"
+import { ColumnCreator } from "./utils"
 
 export * from "./utils"
 

@@ -29,7 +29,7 @@ import EditingState from "../EditingState"
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.
  */
-type DataEditorReturn = {} & Pick<
+type DataEditorReturn = Pick<
   DataEditorProps,
   "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete"
 >
@@ -119,15 +119,15 @@ function useDataEditor(
       if (selection.current?.range) {
         // User has selected one or more cells
         const updatedCells: { cell: [number, number] }[] = []
-        const selected_area = selection.current.range
+        const selectedArea = selection.current.range
         for (
-          let row = selected_area.y;
-          row < selected_area.y + selected_area.height;
+          let row = selectedArea.y;
+          row < selectedArea.y + selectedArea.height;
           row++
         ) {
           for (
-            let col = selected_area.x;
-            col < selected_area.x + selected_area.width;
+            let col = selectedArea.x;
+            col < selectedArea.x + selectedArea.width;
             col++
           ) {
             const column = columns[col]

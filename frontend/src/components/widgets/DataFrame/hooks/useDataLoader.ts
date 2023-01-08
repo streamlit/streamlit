@@ -20,10 +20,10 @@ import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
 
 import { Quiver } from "src/lib/Quiver"
-import { logError, logWarning } from "src/lib/log"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { notNullOrUndefined } from "src/lib/utils"
 import { Theme } from "src/theme"
+import { logWarning, logError } from "src/lib/log"
 
 import {
   getColumnTypeFromQuiver,
@@ -204,6 +204,7 @@ function useDataLoader(
         const ColumnType = getColumnType(updatedColumn)
         return ColumnType(updatedColumn)
       }
+      // Apply column configurations to non-index columns:
       let updatedColumn = {
         ...column,
         ...applyColumnConfig(column, columnsConfig),
