@@ -341,6 +341,13 @@ def is_keras_model(obj: object) -> bool:
     )
 
 
+def is_list_of_scalars(data: Iterable[Any]) -> bool:
+    """Check if the list only contains scalar values."""
+    # Overview on all value that are interpreted as scalar:
+    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
+    return infer_dtype(data) not in ["mixed", "unknown-array"]
+
+
 def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
     """True if input looks like a Plotly chart."""
     return (
@@ -444,7 +451,9 @@ def is_sequence(seq: Any) -> bool:
 
 
 def convert_anything_to_df(
-    df: Any, max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS
+    data: Any,
+    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    ensure_copy: bool = False,
 ) -> pd.DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
@@ -456,6 +465,10 @@ def convert_anything_to_df(
         If unevaluated data is detected this func will evaluate it,
         taking max_unevaluated_rows, defaults to 10k and 100 for st.table
 
+    ensure_copy: bool
+        If True, make sure to always return a copy of the data. If False, it depends on the
+        type of the data. For example, a pd.DataFrame will be returned as-is.
+
     Returns
     -------
     pandas.DataFrame
@@ -464,165 +477,56 @@ def convert_anything_to_df(
     # This is inefficient as the data will be converted back to Arrow
     # when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
-    if isinstance(df, pa.Table):
-        return df.to_pandas()
+    if isinstance(data, pa.Table):
+        return data.to_pandas()
 
-    if is_type(df, _PANDAS_DF_TYPE_STR):
-        return df
+    if is_type(data, _PANDAS_DF_TYPE_STR):
+        return data.copy() if ensure_copy else data
 
-    if is_pandas_styler(df):
-        return df.data
+    if is_pandas_styler(data):
+        return data.data.copy() if ensure_copy else data.data
 
-    if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
-        return pd.DataFrame([])
+    if is_type(data, "numpy.ndarray"):
+        if len(data.shape) == 0:
+            return pd.DataFrame([])
+        return pd.DataFrame(data)
 
     if (
-        is_type(df, _SNOWPARK_DF_TYPE_STR)
-        or is_type(df, _SNOWPARK_TABLE_TYPE_STR)
-        or is_type(df, _PYSPARK_DF_TYPE_STR)
+        is_type(data, _SNOWPARK_DF_TYPE_STR)
+        or is_type(data, _SNOWPARK_TABLE_TYPE_STR)
+        or is_type(data, _PYSPARK_DF_TYPE_STR)
     ):
-        if is_type(df, _PYSPARK_DF_TYPE_STR):
-            df = df.limit(max_unevaluated_rows).toPandas()
+        if is_type(data, _PYSPARK_DF_TYPE_STR):
+            data = data.limit(max_unevaluated_rows).toPandas()
         else:
-            df = pd.DataFrame(df.take(max_unevaluated_rows))
-        if df.shape[0] == max_unevaluated_rows:
+            data = pd.DataFrame(data.take(max_unevaluated_rows))
+        if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
             )
-        return df
+        return data
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
 
-        return pd.DataFrame(df)
+        return pd.DataFrame(data)
 
     except ValueError as ex:
-        if isinstance(df, dict):
+        if isinstance(data, dict):
             with contextlib.suppress(ValueError):
                 # Try to use index orient as back-up to support key-value dicts
-                return pd.DataFrame.from_dict(df, orient="index")
+                return pd.DataFrame.from_dict(data, orient="index")
         raise errors.StreamlitAPIException(
             f"""
-Unable to convert object of type `{type(df)}` to `pandas.DataFrame`.
+Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
 
 Offending object:
 ```py
-{df}
+{data}
 ```"""
         ) from ex
-
-
-DataEditorCompatible: TypeAlias = Union[
-    pd.DataFrame, pd.Series, pa.Table, np.ndarray, list, tuple, set
-]
-
-EditableDataInput = TypeVar("EditableDataInput", bound=DataEditorCompatible)
-
-
-def convert_df_to_reference(
-    df: pd.DataFrame, reference_data: EditableDataInput
-) -> EditableDataInput:
-    """Try to convert a dataframe to the type and structure of the reference data.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The dataframe to convert.
-
-    reference_data : pd.DataFrame, pd.Series, pa.Table, np.ndarry, dict, list, set, or tuple.
-        A data reference with type and structure that the dataframe should be converted to.
-
-    Returns
-    -------
-    pd.DataFrame, pd.Series, pa.Table, np.ndarry, dict, list, set, or tuple.
-
-    """
-
-    if isinstance(reference_data, pd.DataFrame):
-        return df
-    elif isinstance(reference_data, np.ndarray):
-        if len(reference_data.shape) == 1:
-            # It's a 1-dimensional array, so we only return
-            # the first column as numpy array
-            # Calling to_numpy() on the full DataFrame would result in:
-            # [[1], [2]] instead of [1, 2]
-            return df.iloc[:, 0].to_numpy()
-        return df.to_numpy()
-    elif isinstance(reference_data, pa.Table):
-        return pa.Table.from_pandas(df)
-    elif isinstance(reference_data, pd.Series):
-        # Select first column in dataframe and create a new series based on the values
-        if len(df.columns) != 1:
-            raise ValueError(
-                f"DataFrame is expected to have a single column but has {len(df.columns)}."
-            )
-        #
-        return df[df.columns[0]]
-    elif isinstance(reference_data, (list, tuple, set, np.ndarray)):
-        if infer_dtype(reference_data) in ["mixed", "unknown-array"]:
-            # -> Multi-dimensional data structure
-            # This should always contain at least one element,
-            # otherwise the values_type would have been empty
-            first_element = next(iter(reference_data))
-            if isinstance(first_element, dict):
-                # List of records: List[Dict[str, Any]]
-                # Convert to a list of records
-                return df.to_dict(orient="records")
-            if isinstance(first_element, (list, tuple, set)):
-                # List of rows: List[List[...]]
-                # to_numpy converts the dataframe to a list of rows
-                # TODO(lukasmasuch): We could potentially also convert to list/tuple/set here?
-                return df.to_numpy().tolist()
-        else:
-            # -> 1-dimensional data structure
-            return_list = []
-            if len(df.columns) == 1:
-                # Convert the first column to a list
-                return_list = df[df.columns[0]].tolist()
-            elif len(df.columns) >= 1:
-                raise ValueError(
-                    f"DataFrame is expected to have a single column but has {len(df.columns)}."
-                )
-
-            if isinstance(reference_data, tuple):
-                # Return as tuple
-                return_list = tuple(return_list)
-            elif isinstance(reference_data, set):
-                # Return as set
-                return_list = set(return_list)
-            return return_list
-    elif isinstance(reference_data, dict):
-        if df.empty:
-            # Return empty dict
-            return {}
-
-        if len(reference_data) > 0:
-            first_value = next(iter(reference_data.values()))
-            if isinstance(first_value, dict):
-                # -> Column index mapping: {column -> {index -> value}}
-                return df.to_dict(orient="dict")
-            if isinstance(first_value, list):
-                # -> Column value mapping: {column -> [values]}
-                return df.to_dict(orient="list")
-            if isinstance(first_value, pd.Series):
-                # -> Column series mapping: {column -> Series(values)}
-                return df.to_dict(orient="series")
-            # TODO(lukasmasuch): We could potentially also support the tight & split formats here?
-
-        if len(df.columns) == 1 and infer_dtype(reference_data.values()) not in [
-            "mixed",
-            "unknown-array",
-        ]:
-            # -> Key-value dict (key == index & value == first column)
-            # The key is expected to be the index -> this will return the first column
-            # as a dict with index as key.
-            return df.iloc[:, 0].to_dict()
-
-    raise ValueError(
-        f"Unable to convert dataframe to the input type {type(reference_data)}."
-    )
 
 
 @overload
@@ -779,10 +683,6 @@ def fix_arrow_incompatible_column_types(
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy = None
     for col in selected_columns or df.columns:
-        # TODO(lukasmasuch): Sparse arrays are also not supported
-        # if str(df[col].dtype).startswith("Sparse"):
-        #     df[col] = np.array(df[col])
-
         if is_colum_type_arrow_incompatible(df[col]):
             if df_copy is None:
                 df_copy = df.copy()
