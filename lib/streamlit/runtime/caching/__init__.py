@@ -17,7 +17,6 @@ from typing import Any, Iterator, Union
 
 from google.protobuf.message import Message
 
-from streamlit.deprecation_util import deprecate_obj_name
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_data_api import (
     CACHE_DATA_CALL_STACK,
@@ -32,6 +31,9 @@ from streamlit.runtime.caching.cache_resource_api import (
     _resource_caches,
 )
 from streamlit.runtime.state.session_state import WidgetMetadata
+
+# TODO: replace this with the proper URL once it's ready from the docs team
+CACHE_DOCS_URL = "https://NEED.CACHE.DOCS.URL"
 
 
 def save_element_message(
@@ -110,15 +112,21 @@ cache_data = CacheDataAPI(decorator_metric_name="cache_data")
 cache_resource = CacheResourceAPI(decorator_metric_name="cache_resource")
 
 # Deprecated singletons
-experimental_memo = deprecate_obj_name(
-    CacheDataAPI(decorator_metric_name="experimental_memo"),
-    old_name="experimental_memo",
-    new_name="cache_data",
-    removal_date="2023.04.01",
+_MEMO_WARNING = (
+    f"`st.experimental_memo` is deprecated. Please use the new command `st.cache_data` instead, "
+    f"which has the same behavior. More information [in our docs]({CACHE_DOCS_URL})."
 )
-experimental_singleton = deprecate_obj_name(
-    CacheResourceAPI(decorator_metric_name="experimental_singleton"),
-    old_name="experimental_singleton",
-    new_name="cache_resource",
-    removal_date="2023.04.01",
+
+experimental_memo = CacheDataAPI(
+    decorator_metric_name="experimental_memo", deprecation_warning=_MEMO_WARNING
+)
+
+_SINGLETON_WARNING = (
+    f"`st.experimental_singleton` is deprecated. Please use the new command `st.cache_resource` instead, "
+    f"which has the same behavior. More information [in our docs]({CACHE_DOCS_URL})."
+)
+
+experimental_singleton = CacheResourceAPI(
+    decorator_metric_name="experimental_singleton",
+    deprecation_warning=_SINGLETON_WARNING,
 )

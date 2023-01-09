@@ -30,6 +30,7 @@ from typing_extensions import Literal, TypeAlias
 
 import streamlit as st
 from streamlit import util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
@@ -212,7 +213,9 @@ class CacheDataAPI:
     st.cache_data.clear().
     """
 
-    def __init__(self, decorator_metric_name: str):
+    def __init__(
+        self, decorator_metric_name: str, deprecation_warning: str | None = None
+    ):
         """Create a CacheDataAPI instance.
 
         Parameters
@@ -221,11 +224,15 @@ class CacheDataAPI:
             The metric name to record for decorator usage. `@st.experimental_memo` is
             deprecated, but we're still supporting it and tracking its usage separately
             from `@st.cache_data`.
+
+        deprecation_warning
+            An optional deprecation warning to show when the API is accessed.
         """
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
         self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
+        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -268,8 +275,8 @@ class CacheDataAPI:
             experimental_allow_widgets=experimental_allow_widgets,
         )
 
-    @staticmethod
     def _decorator(
+        self,
         func: F | None = None,
         *,
         ttl: float | timedelta | None,
@@ -399,6 +406,8 @@ class CacheDataAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
+        self._maybe_show_deprecation_warning()
+
         def wrapper(f):
             # We use wrapper function here instead of lambda function to be able to log
             # warning in case both persist="disk" and ttl parameters specified
@@ -434,11 +443,18 @@ class CacheDataAPI:
             )
         )
 
-    @staticmethod
     @gather_metrics("clear_data_caches")
-    def clear() -> None:
+    def clear(self) -> None:
         """Clear all in-memory and on-disk data caches."""
+        self._maybe_show_deprecation_warning()
         _data_caches.clear_all()
+
+    def _maybe_show_deprecation_warning(self):
+        """If the API is being accessed with the deprecated `st.experimental_memo` name,
+        show a deprecation warning.
+        """
+        if self._deprecation_warning is not None:
+            show_deprecation_warning(self._deprecation_warning)
 
 
 class DataCache(Cache):
