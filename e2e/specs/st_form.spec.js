@@ -89,7 +89,7 @@ function changeWidgetValues() {
 
   // Change the multiselect value.
   cy.get(".stMultiSelect")
-    .find("input")
+    .find("div[data-baseweb='select']")
     .click();
   cy.get("[data-baseweb='popover'] li")
     .eq(0)

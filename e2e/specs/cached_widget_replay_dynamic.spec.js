@@ -31,7 +31,7 @@ describe("dynamic widget replay", () => {
     cy.get("[data-testid='stText']").first().should("have.text", "[]")
 
     // selecting option in multiselect works
-    cy.getIndexed(".stMultiSelect", 0).find("input").click();
+    cy.getIndexed(".stMultiSelect", 0).find("div[data-baseweb='select']").click();
     cy.getIndexed("li", 2).click();
     cy.get("[data-testid='stText']").first().should("have.text", "['baz']")
 
