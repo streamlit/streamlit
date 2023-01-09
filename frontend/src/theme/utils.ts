@@ -374,7 +374,9 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colors: Record<string, string>, [key, color]) => {
+      // @ts-ignore
       if (isColor(color)) {
+        // @ts-ignore
         colors[key] = color
       } else if (isColor(`#${color}`)) {
         colors[key] = `#${color}`
