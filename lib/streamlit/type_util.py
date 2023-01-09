@@ -38,7 +38,7 @@ import pandas as pd
 import pyarrow as pa
 from pandas.api.types import infer_dtype, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
-import datetime
+from datetime import date, datetime, time
 
 import streamlit as st
 from streamlit import errors
@@ -871,15 +871,15 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
             f"Valid values are 'visible', 'hidden' or 'collapsed'."
         )
 
-def maybe_convert_to_datetime_edit_df(col_type, obj) -> datetime | datetime.date | datetime.time | None:
+def maybe_convert_to_datetime_edit_df(value, obj) -> datetime | date | time | None:
     """Based on the column type, convert a string to datetime or a number to datetime.time
     """
-    if isinstance(col_type, datetime.time):
+    if isinstance(value, time):
         return maybe_convert_datetime_time_edit_df(obj)
-    elif isinstance(col_type, datetime.date):
-        return maybe_convert_datetime_date_edit_df(obj)
+    elif isinstance(value, datetime):
+        return maybe_convert_datetime_datetime_edit_df(obj)
     else:
-        return maybe_convert_datetime_datetime_edit_df
+        return maybe_convert_datetime_date_edit_df(obj)
 
 def can_be_float_or_int(obj: str) -> str | int | float:
     if isinstance(obj, (int, float)):
@@ -891,7 +891,7 @@ def can_be_float_or_int(obj: str) -> str | int | float:
     else:
         return False
 
-def maybe_convert_datetime_date_edit_df(obj) -> datetime.date | None:
+def maybe_convert_datetime_date_edit_df(obj) -> date | None:
     try:
         converted_datetime = maybe_convert_datetime_datetime_edit_df(obj)
         if converted_datetime == None:
@@ -903,7 +903,7 @@ def maybe_convert_datetime_date_edit_df(obj) -> datetime.date | None:
             f"Failed to convert the edited cell to datetime.date. Exception: {e}"
         )
 
-def maybe_convert_datetime_time_edit_df(obj) -> datetime.time | None:
+def maybe_convert_datetime_time_edit_df(obj) -> time | None:
     try:
         converted_datetime = maybe_convert_datetime_datetime_edit_df(obj)
         if converted_datetime == None:
@@ -922,7 +922,9 @@ def maybe_convert_datetime_datetime_edit_df(obj) -> datetime | None:
         if isinstance(obj, str) and not can_be_float_or_int(obj):
             print("got here as string and not float or int")
             date_converted = dateutil.parser.isoparse(obj)
+            print(f"date_converted: {date_converted}")
         elif can_be_float_or_int(obj) or isinstance(obj, (int, float)):
+            # Python datetime uses microseconds, but JS & Moment uses milliseconds
             date_converted = datetime.fromtimestamp(obj / 1000)
         return date_converted
     except Exception as e:

@@ -379,6 +379,7 @@ def _apply_dataframe_edits(df: DataFrame, data_editor_state: DataEditorState):
             col, row = int(col), int(row)
             # TODO: add descriptive comment
             col = col - df.index.nlevels if df.index.nlevels else 0
+            print(f"df.loc[col].dtype: {df.loc[col].dtype}")
             converted_datetime = type_util.maybe_convert_to_datetime_edit_df(
                 df.iat[row, col], data_editor_state.get("edited_cells")[cell]
             )

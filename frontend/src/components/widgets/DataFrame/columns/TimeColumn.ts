@@ -59,7 +59,7 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
         }
         let dataInSeconds = data
         if (typeof data === "bigint") {
-          // divide by 1000 to turn into seconds since quiver returns ms
+          // Python datetime uses microseconds, but JS & Moment uses milliseconds
           dataInSeconds = Number(data) / 1000
         }
         return {
