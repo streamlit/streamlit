@@ -302,6 +302,9 @@ export class Quiver {
   /** DataFrame's column labels (matrix of column names). */
   private _columns: Columns
 
+  /** DataFrame's index names. */
+  private _indexNames: string[]
+
   /** DataFrame's data. */
   private _data: Data
 
@@ -322,12 +325,13 @@ export class Quiver {
 
     const index = Quiver.parseIndex(table, schema)
     const columns = Quiver.parseColumns(schema)
+    const indexNames = Quiver.parseIndexNames(schema)
     const data = Quiver.parseData(table, columns, rawColumns)
     const types = Quiver.parseTypes(table, schema)
     const styler = element.styler
       ? Quiver.parseStyler(element.styler as StylerProto)
       : undefined
-    console.log(types)
+
     // The assignment is done below to avoid partially populating the instance
     // if an error is thrown.
     this._index = index
@@ -336,6 +340,13 @@ export class Quiver {
     this._types = types
     this._fields = fields
     this._styler = styler
+    this._indexNames = indexNames
+    // this._index_columns =
+    console.log("schema", schema)
+    console.log("types", types)
+    console.log("columns", columns)
+    console.log("index", index)
+    console.log("fields", fields)
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
@@ -379,6 +390,22 @@ export class Quiver {
       .filter(
         (column: IndexValue | null): column is IndexValue => column !== null
       )
+  }
+
+  /** Parse DataFrame's index header names. */
+  private static parseIndexNames(schema: Schema): string[] {
+    return schema.index_columns.map(indexName => {
+      // Range indices are treated differently:
+      if (Quiver.isRangeIndex(indexName)) {
+        const { name } = indexName
+        return name || ""
+      }
+      if (indexName.startsWith("__index_level_")) {
+        // Unnamed indices can have a name like "__index_level_0__".
+        return ""
+      }
+      return indexName
+    })
   }
 
   /** Parse DataFrame's column header values. */
@@ -487,20 +514,19 @@ export class Quiver {
 
   /** Parse types for each non-index column. */
   private static parseDataType(table: Table, schema: Schema): Type[] {
-    const numDataRows = table.numRows
-    return numDataRows > 0
-      ? schema.columns
-          // Filter out all index columns
-          .filter(
-            columnSchema =>
-              !schema.index_columns.includes(columnSchema.field_name)
-          )
-          .map(columnSchema => ({
-            pandas_type: columnSchema.pandas_type,
-            numpy_type: columnSchema.numpy_type,
-            meta: columnSchema.metadata,
-          }))
-      : []
+    return (
+      schema.columns
+        // Filter out all index columns
+        .filter(
+          columnSchema =>
+            !schema.index_columns.includes(columnSchema.field_name)
+        )
+        .map(columnSchema => ({
+          pandas_type: columnSchema.pandas_type,
+          numpy_type: columnSchema.numpy_type,
+          meta: columnSchema.metadata,
+        }))
+    )
   }
 
   /** Parse styler information from proto. */
@@ -823,6 +849,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return this._index
   }
 
+  /** DataFrame's index names. */
+  public get indexNames(): string[] {
+    return this._indexNames
+  }
+
   /** DataFrame's column labels (matrix of column names). */
   public get columns(): Columns {
     return this._columns
@@ -867,6 +898,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
+    // TODO(lukasmasuch): this._index[0].length can be 0 if there are rows
+    // but only an empty index. Probably not the best way to cross check the number
+    // of rows.
     const [headerColumns, dataRowsCheck] = this._index.length
       ? [this._index.length, this._index[0].length]
       : [1, 0]

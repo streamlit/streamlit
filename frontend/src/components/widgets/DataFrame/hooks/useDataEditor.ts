@@ -61,9 +61,10 @@ function useDataEditor(
       const originalRow = editingState.current.getOriginalRowIndex(
         getOriginalIndex(row)
       )
-      const currentValue = column.getCellValue(getCellContent([col, row]))
+      const currentCell = getCellContent([col, row])
+      const currentValue = column.getCellValue(currentCell)
       const newValue = column.getCellValue(updatedCell)
-      if (newValue === currentValue) {
+      if (!isErrorCell(currentCell) && newValue === currentValue) {
         // No editing is required since the values did not change
         return
       }
@@ -137,7 +138,7 @@ function useDataEditor(
               })
               onCellEdited(
                 [col, row],
-                column.getCell(undefined) as EditableGridCell
+                column.getCell(null) as EditableGridCell
               )
             }
           }
