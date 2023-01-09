@@ -85,6 +85,7 @@ const drawMissingCells: DrawCustomCellCallback = args => {
           textDark: theme.textLight,
           textMedium: theme.textLight,
         },
+        // The following props are just added for technical reasons:
         // @ts-ignore
         spriteManager: {},
         hyperWrapping: false,
@@ -172,8 +173,7 @@ function DataFrame({
       let currentWidgetState = widgetMgr.getStringValue(element as WidgetInfo)
 
       if (currentWidgetState === undefined) {
-        // TODO(lukasmasuch): Check if this is correct:
-        // Crate an empty widget state
+        // Create an empty widget state
         currentWidgetState = new EditingState(0).toJson([])
       }
 
@@ -186,10 +186,6 @@ function DataFrame({
     }),
     [widgetMgr, element]
   )
-
-  // Column sort does not work currently, since it only has access to the underlying data
-  // and not the edited data
-  // extract editing state to top level -> and integrate into data loader
 
   const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
     numRows,
@@ -327,11 +323,9 @@ function DataFrame({
           // Header click is used for column sorting:
           onHeaderClicked={sortColumn}
           gridSelection={gridSelection}
+          onGridSelectionChange={setGridSelection}
           // Apply different styling to missing cells:
           drawCell={drawMissingCells}
-          onGridSelectionChange={(newSelection: GridSelection) => {
-            setGridSelection(newSelection)
-          }}
           theme={theme}
           onMouseMove={(args: GridMouseEventArgs) => {
             // Determine if the dataframe is focused or not

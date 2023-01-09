@@ -188,11 +188,18 @@ export function getIndexFromQuiver(
   indexPosition: number
 ): BaseColumnProps {
   const quiverType = data.types.index[indexPosition]
+  const title = data.indexNames[indexPosition]
+  let isEditable = true
+
+  if (Quiver.getTypeName(quiverType) === "range") {
+    // Range indices are not editable
+    isEditable = false
+  }
 
   return {
     id: `index-${indexPosition}`,
-    isEditable: false, // Indices are not editable at the moment.
-    title: "", // Indices have empty titles as default.
+    isEditable,
+    title,
     quiverType,
     isIndex: true,
     isHidden: false,
@@ -204,7 +211,16 @@ export function getColumnFromQuiver(
   columnPosition: number
 ): BaseColumnProps {
   const title = data.columns[0][columnPosition]
-  const quiverType = data.types.data[columnPosition]
+  let quiverType = data.types.data[columnPosition]
+
+  if (!notNullOrUndefined(quiverType)) {
+    // Use empty column type as fallback
+    quiverType = {
+      meta: null,
+      numpy_type: "object",
+      pandas_type: "object",
+    } as QuiverType
+  }
 
   let columnTypeMetadata
   if (Quiver.getTypeName(quiverType) === "categorical") {
@@ -285,7 +301,6 @@ export function getCellFromQuiver(
 ): GridCell {
   let cellTemplate
   if (column.kind === "object") {
-    // TODO(lukasmasuch): Migrate all formatting logic into this component.
     // Always use display value from quiver for object types
     // these are special types that the dataframe only support in read-only mode.
     cellTemplate = column.getCell(

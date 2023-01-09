@@ -41,6 +41,11 @@ import {
   isErrorCell,
 } from "../columns"
 
+// Using this ID for column config will apply the config to all index columns
+const INDEX_IDENTIFIER = "index"
+// Prefix used in the config column mapping when referring to a column via the numeric index
+const NUMERIC_COLUMN_ID_PREFIX = "col:"
+
 /**
  * Options to configure columns.
  */
@@ -69,8 +74,14 @@ function applyColumnConfig(
   let columnConfig
   if (columnsConfig.has(columnProps.title)) {
     columnConfig = columnsConfig.get(columnProps.title)
-  } else if (columnsConfig.has(`index:${columnProps.indexNumber}`)) {
-    columnConfig = columnsConfig.get(`index:${columnProps.indexNumber}`)
+  } else if (
+    columnsConfig.has(`${NUMERIC_COLUMN_ID_PREFIX}${columnProps.indexNumber}`)
+  ) {
+    columnConfig = columnsConfig.get(
+      `${NUMERIC_COLUMN_ID_PREFIX}:${columnProps.indexNumber}`
+    )
+  } else if (columnProps.isIndex && columnsConfig.has(INDEX_IDENTIFIER)) {
+    columnConfig = columnsConfig.get(INDEX_IDENTIFIER)
   }
 
   if (!columnConfig) {
@@ -86,13 +97,13 @@ function applyColumnConfig(
           title: columnConfig.title,
         }
       : {}),
-
     // Update width:
     ...(notNullOrUndefined(columnConfig.width)
       ? {
           width: columnConfig.width,
         }
       : {}),
+    // Add a custom type:
     ...(notNullOrUndefined(columnConfig.type)
       ? {
           customType: columnConfig.type.toLowerCase().trim(),
@@ -194,17 +205,6 @@ function useDataLoader(
   const columns: BaseColumn[] = getColumnsFromQuiver(data)
     .map(column => {
       // Apply column configurations
-      if (column.isIndex) {
-        const updatedColumn = {
-          ...column,
-          ...applyColumnConfig(column, columnsConfig),
-          isEditable: false, // TODO(lukasmasuch): Editing for index columns is currently not supported.
-          isStretched: stretchColumns,
-        } as BaseColumnProps
-        const ColumnType = getColumnType(updatedColumn)
-        return ColumnType(updatedColumn)
-      }
-      // Apply column configurations to non-index columns:
       let updatedColumn = {
         ...column,
         ...applyColumnConfig(column, columnsConfig),

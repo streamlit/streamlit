@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+/* eslint-disable import/no-extraneous-dependencies */
 import {
   render as reactTestingLibraryRender,
   RenderOptions,
   RenderResult,
-} from "@testing-library/react" // eslint-disable-line import/no-extraneous-dependencies
+} from "@testing-library/react"
 import {
   mount as enzymeMount,
   MountRendererProps,
@@ -26,7 +27,8 @@ import {
   shallow as enzymeShallow,
   ShallowRendererProps,
   ShallowWrapper,
-} from "enzyme" // eslint-disable-line import/no-extraneous-dependencies
+} from "enzyme"
+/* eslint-enable */
 import React, { Component, FC, ReactElement } from "react"
 import ThemeProvider from "src/components/core/ThemeProvider"
 import { lightTheme, Theme } from "src/theme"

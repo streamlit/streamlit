@@ -73,7 +73,6 @@ class EditingState {
           }
         }
       })
-      console.log("addedRow", addedRow)
       currentState.added_rows.push(addedRow)
     })
 
@@ -83,7 +82,6 @@ class EditingState {
     const json = JSON.stringify(currentState, (k, v) =>
       v === undefined ? null : v
     )
-    console.log("test", JSON.stringify(currentState.added_rows), json)
     return json
   }
 
@@ -106,15 +104,6 @@ class EditingState {
   }
 
   setCell(col: number, row: number, cell: GridCell): void {
-    console.log(
-      "setCell",
-      col,
-      row,
-      cell,
-      this.editedCells,
-      this.addedRows,
-      this.isAddedRow(row)
-    )
     if (this.isAddedRow(row)) {
       if (row - this.numRows >= this.addedRows.length) {
         // Added row does not exist. This is only expected to happen
