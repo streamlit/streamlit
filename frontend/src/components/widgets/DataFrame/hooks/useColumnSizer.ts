@@ -18,16 +18,16 @@ import React, { useState } from "react"
 
 import { GridColumn, DataEditorProps } from "@glideapps/glide-data-grid"
 
-/**
- * Create return type for useDataLoader hook based on the DataEditorProps.
- */
 type ColumnSizerReturn = Pick<DataEditorProps, "columns" | "onColumnResize">
 
 /**
- * A custom hook that handles all data loading capabilities for the interactive data table.
- * This also includes the logic to load and configure columns.
- * And features that influence the data representation and column configuration
- * such as column resizing, sorting, etc.
+ * Hook to manage the interactive column resizing capabilities.
+ *
+ * @param columns - The columns of the table.
+ *
+ * @returns An object containing the following properties:
+ * - columns: The updated list of columns.
+ * - onColumnResize: The callback function to be called when a column is resized.
  */
 function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
   // The columns with the corresponding empty template for every type:
