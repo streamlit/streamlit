@@ -30,9 +30,16 @@ import {
 } from "./utils"
 
 interface CategoricalColumnParams {
+  /** A list of options available in the dropdown.
+   * Every value in the column needs to match one of the options.
+   */
   readonly options: string[]
 }
 
+/**
+ * A column type that provides a dropdown on editing.
+ * This is automatically used by categorical columns (Pandas).
+ */
 function CategoricalColumn(props: BaseColumnProps): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:
