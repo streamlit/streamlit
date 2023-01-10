@@ -34,6 +34,25 @@ type DataEditorReturn = Pick<
   "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete"
 >
 
+/**
+ * Custom hook to handle all aspects related to data editing. This includes editing cells,
+ * pasting from clipboard, and appending & deleting rows.
+ *
+ * @param numRows - The number of rows in the table (including additions & deletions)
+ * @param columns - The columns of the table
+ * @param fixedNumRows - Whether the number of rows is fixed. This means that rows cannot be added or deleted
+ * @param getCellContent - Function to get a specific cell.
+ * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
+ *                           This mainly changed by sorting of columns.
+ * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
+ * @param commitWidgetValue - Callback that allows to send the widget value to the backend (triggering a rerun).
+ * @param clearSelection - Callback that allows to clear the current selections in the table.
+ * @param setNumRows - Callback that allows to set the number of rows in the table.
+ *                     This is required when rows are added or removed.
+ * @param editingState - The editing state of the data editor.
+ *
+ * @returns Glide-data-grid compatible functions for editing capabilities.
+ */
 function useDataEditor(
   numRows: number,
   columns: BaseColumn[],
@@ -58,6 +77,10 @@ function useDataEditor(
       const column = columns[col]
 
       const originalCol = column.indexNumber
+
+      // We need to apply two different mappings here. One for the case that
+      // the user has sorted a column, and another one from the editing state
+      // to get the correct row ID when the user has deleted rows.
       const originalRow = editingState.current.getOriginalRowIndex(
         getOriginalIndex(row)
       )
