@@ -17,7 +17,7 @@
 
 function selectForKthMultiselect(optionText, k, closeAfterSelecting) {
   cy.getIndexed(".stMultiSelect", k)
-    .find("div[data-baseweb='select']")
+    .find("input")
     .click();
   cy
     .get("li")
@@ -25,7 +25,7 @@ function selectForKthMultiselect(optionText, k, closeAfterSelecting) {
     .click();
   if (closeAfterSelecting) {
     cy.getIndexed(".stMultiSelect", k)
-      .find("div[data-baseweb='select']")
+      .find("input")
       .click();
   }
 }
@@ -95,7 +95,7 @@ describe("st.multiselect", () => {
   describe("when clicking on the input", () => {
     it("should show values correctly in the dropdown menu", () => {
       cy.getIndexed(".stMultiSelect", 0)
-        .find("div[data-baseweb='select']")
+        .find("input")
         .click()
         .get("li")
         .should("have.length", 2)
@@ -110,7 +110,7 @@ describe("st.multiselect", () => {
 
     it("should show long values correctly (with ellipses) in the dropdown menu", () => {
       cy.getIndexed(".stMultiSelect", 4)
-        .find("div[data-baseweb='select']")
+        .find("input")
         .click()
         .get("li")
         .should("have.length", 5)
@@ -201,7 +201,7 @@ describe("st.multiselect", () => {
 
     it("calls callback if one is registered", () => {
       cy.getIndexed(".stMultiSelect", 10)
-        .find("div[data-baseweb='select']")
+        .find("input")
         .click();
       cy.getIndexed("li", 0)
         .click();
@@ -223,7 +223,7 @@ describe("st.multiselect", () => {
       it("should show the correct text when maxSelections is reached and closing after selecting", () => {
         selectForKthMultiselect("male", 8, true)
           cy.getIndexed(".stMultiSelect", 8)
-            .find("div[data-baseweb='select']")
+            .find("input")
             .click()
             .get("li")
             .should("have.text", "You can only select up to 1 option. Remove an option first.")
@@ -245,7 +245,7 @@ describe("st.multiselect", () => {
       it("should show the correct text when maxSelections is reached when closing after selecting", () => {
         selectForKthMultiselect("male", 9, true)
         cy.getIndexed(".stMultiSelect", 9)
-          .find("div[data-baseweb='select']")
+          .find("input")
           .click()
           .get("li")
           .should("have.text", "You can only select up to 1 option. Remove an option first.")
