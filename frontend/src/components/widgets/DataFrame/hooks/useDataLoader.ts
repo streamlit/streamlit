@@ -212,7 +212,7 @@ function useDataLoader(
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
   const theme: Theme = useTheme()
-  // TODO(lukasmasuch): Use state here for optimization?
+  // TODO(lukasmasuch): We might use state to store the column config as additional optimization?
   const columnsConfig = getColumnConfig(element)
 
   const stretchColumns: boolean =
