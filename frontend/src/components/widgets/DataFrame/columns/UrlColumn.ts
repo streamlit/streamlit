@@ -26,6 +26,10 @@ import {
   toSafeString,
 } from "./utils"
 
+/**
+ * The URL column is a special column that interprets the cell content as a URL
+ * and allows the user to click on it.
+ */
 function UrlColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Uri,
