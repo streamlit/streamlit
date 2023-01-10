@@ -279,18 +279,9 @@ class Multiselect extends React.PureComponent<Props, State> {
                   borderBottomWidth: "1px",
                 },
               },
-              /*
-                Setting the height and width for this container to 0, to ensure the "Choose..."" placeholder
-                and the caret stay on the same line in really small sizes (for example, inside a st.column).
-
-                Since you can click anywhere on the multiselect to open the dropdown,
-                and it remains open until you click outside, explicitly setting the input container's width
-                and height to zero makes no change to the UX, but does enhance the UI.
-              */
-              InputContainer: {
+              Placeholder: {
                 style: () => ({
-                  height: 0,
-                  width: 0,
+                  flex: "inherit",
                 }),
               },
               ValueContainer: {
