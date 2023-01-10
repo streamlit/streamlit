@@ -69,3 +69,32 @@ class ButtonTest(InteractiveScriptTests):
         sr3 = sr2.run()
         assert sr3.get("button")[0].value == False
         assert sr3.get("button")[1].value == False
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class MultiselectTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "multiselect_test.py",
+            """
+            import streamlit as st
+
+            st.multiselect("one", options=["a", "b", "c"])
+            st.multiselect("two", options=["zero", "one", "two"], default=["two"])
+            """,
+        )
+        sr = script.run()
+        assert sr.get("multiselect")[0].value == []
+        assert sr.get("multiselect")[1].value == ["two"]
+
+        sr2 = sr.get("multiselect")[0].select("b").run()
+        assert sr2.get("multiselect")[0].value == ["b"]
+        assert sr2.get("multiselect")[1].value == ["two"]
+
+        sr3 = sr2.get("multiselect")[1].select("zero").select("one").run()
+        assert sr3.get("multiselect")[0].value == ["b"]
+        assert set(sr3.get("multiselect")[1].value) == set(["zero", "one", "two"])
+
+        sr4 = sr3.get("multiselect")[0].unselect("b").run()
+        assert sr4.get("multiselect")[0].value == []
+        assert set(sr3.get("multiselect")[1].value) == set(["zero", "one", "two"])

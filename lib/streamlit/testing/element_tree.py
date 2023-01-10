@@ -264,7 +264,7 @@ class Multiselect(Element, Widget, Generic[T]):
 
     @property
     def value(self) -> list[T]:
-        """The currently selected value from the options."""
+        """The currently selected values from the options."""
         if self._value is not None:
             return self._value
         else:
