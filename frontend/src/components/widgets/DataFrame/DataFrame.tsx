@@ -349,7 +349,7 @@ function DataFrame({
           // Activate search:
           keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
-          onHeaderClicked={sortColumn}
+          onHeaderClicked={showEmptyState ? undefined : sortColumn}
           gridSelection={gridSelection}
           onGridSelectionChange={setGridSelection}
           // Apply different styling to missing cells:
@@ -375,7 +375,8 @@ function DataFrame({
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
           // If element is editable, add additional properties:
-          {...(element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+          {...(!showEmptyState &&
+            element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing
               fillHandle: true,
