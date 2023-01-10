@@ -16,14 +16,31 @@ import functools
 from typing import Any, Callable, List, TypeVar, cast
 
 import streamlit
+from streamlit import url_util
+from streamlit.logger import get_logger
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+_LOGGER = get_logger(__name__)
 
 TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
 
 
+def _should_show_deprecation_warning_in_browser() -> bool:
+    """True if we should print deprecation warnings to the browser. If the current session's
+    hostname is localhost, we show the warning message in the browser and log it.
+    """
+    ctx = get_script_run_ctx()
+    return ctx is not None and url_util.is_localhost(ctx.client_origin)
+
+
 def show_deprecation_warning(message: str) -> None:
-    """Show a deprecation warning message in the browser."""
-    streamlit.warning(message)
+    """Show a deprecation warning message."""
+    if _should_show_deprecation_warning_in_browser():
+        streamlit.warning(message)
+
+    # We always log deprecation warnings
+    _LOGGER.warning(message)
 
 
 def make_deprecated_name_warning(
