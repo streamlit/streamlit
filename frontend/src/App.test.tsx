@@ -1059,6 +1059,7 @@ describe("App.sendRerunBackMsg", () => {
         pageScriptHash: "some_page_hash",
         pageName: "",
         queryString: "",
+        origin: document.location.origin,
       },
     })
   })
@@ -1073,6 +1074,7 @@ describe("App.sendRerunBackMsg", () => {
         pageScriptHash: "some_other_page_hash",
         pageName: "",
         queryString: "",
+        origin: document.location.origin,
       },
     })
   })
@@ -1086,6 +1088,7 @@ describe("App.sendRerunBackMsg", () => {
         pageScriptHash: "",
         pageName: "",
         queryString: "",
+        origin: document.location.origin,
       },
     })
   })
@@ -1100,6 +1103,7 @@ describe("App.sendRerunBackMsg", () => {
         pageScriptHash: "",
         pageName: "foo",
         queryString: "",
+        origin: document.location.origin,
       },
     })
   })
@@ -1117,6 +1121,7 @@ describe("App.sendRerunBackMsg", () => {
         pageScriptHash: "",
         pageName: "baz",
         queryString: "",
+        origin: document.location.origin,
       },
     })
   })
