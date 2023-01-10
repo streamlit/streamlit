@@ -23,7 +23,10 @@ import {
 } from "@glideapps/glide-data-grid"
 import { useColumnSort as useGlideColumnSort } from "@glideapps/glide-data-grid-source"
 
-import { BaseColumn, toGlideColumn } from "../columns"
+import {
+  BaseColumn,
+  toGlideColumn,
+} from "src/components/widgets/DataFrame/columns"
 
 /**
  * Configuration type for column sorting hook.

@@ -20,7 +20,6 @@ import {
   TextCell,
   NumberCell,
   GridCellKind,
-  CustomCell,
 } from "@glideapps/glide-data-grid"
 
 import { DataFrameCell, Quiver, Type as QuiverType } from "src/lib/Quiver"
@@ -141,10 +140,10 @@ export function getColumnTypeFromQuiver(
   if (["datetime", "datetimetz"].includes(typeName)) {
     return DateTimeColumn
   }
-  if (["time"].includes(typeName)) {
+  if (typeName === "time") {
     return TimeColumn
   }
-  if (["date"].includes(typeName)) {
+  if (typeName === "date") {
     return DateColumn
   }
   if (["boolean", "bool"].includes(typeName)) {
@@ -338,12 +337,6 @@ export function getCellFromQuiver(
         displayData,
       } as NumberCell
     }
-    // } else if(cellTemplate.kind === GridCellKind.Custom) {
-    //   cellTemplate = {
-    //     ...cellTemplate,
-    //     data,
-    //   } as CustomCell
-    // TODO (lukasmasuch): Also support datetime formatting here
   }
 
   if (cssStyles && quiverCell.cssId) {

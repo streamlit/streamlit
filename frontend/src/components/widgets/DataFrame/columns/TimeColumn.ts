@@ -19,11 +19,19 @@ import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 import strftime from "strftime"
-import { TimePickerCell } from "../customCells/TimePickerCell"
+import { TimePickerCell } from "src/components/widgets/DataFrame/customCells/TimePickerCell"
 
-import { BaseColumn, BaseColumnProps, getErrorCell, isValidDate, toSafeString } from "./utils"
+import {
+  addDST,
+  addTimezoneOffset,
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  isValidDate,
+  toSafeString,
+} from "./utils"
 
-interface TimeColumnParams {
+export interface TimeColumnParams {
   readonly format?: string
 }
 
@@ -52,30 +60,53 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
     isEditable: true,
     getCell(data?: DataType): GridCell {
       try {
-        if (notNullOrUndefined(data) && !isNaN(Number(data)) && !isValidDate(Number(data))) {
-          return getErrorCell(
-              `Incompatible time value: ${data}`
-            )
+        if (
+          notNullOrUndefined(data) &&
+          !Number.isNaN(Number(data)) &&
+          !isValidDate(Number(data))
+        ) {
+          return getErrorCell(`Incompatible time value: ${data}`)
         }
         let dataInSeconds = data
         if (typeof data === "bigint") {
           // Python datetime uses microseconds, but JS & Moment uses milliseconds
           dataInSeconds = Number(data) / 1000
         }
+
+        const addedOffsetAndDST = addDST(
+          addTimezoneOffset(Number(dataInSeconds))
+        )
+        const dateVersion = new Date(addedOffsetAndDST)
+        // datetime.time is only hours, minutes, seconds, etc so need to sort without month and year
+        const withoutYearAndMonth =
+          (dateVersion.getHours() * 60 * 60 +
+            dateVersion.getMinutes() * 60 +
+            dateVersion.getSeconds()) *
+            1000 +
+          dateVersion.getMilliseconds()
         return {
           ...cellTemplate,
           allowOverlay: true,
-          copyData: toSafeString(dataInSeconds),
+          copyData: toSafeString(withoutYearAndMonth),
           data: {
             kind: "TimePickerCell",
-            time: notNullOrUndefined(dataInSeconds) && !isNaN(Number(dataInSeconds)) ? dataInSeconds : undefined,
+            time:
+              notNullOrUndefined(dataInSeconds) &&
+              !Number.isNaN(Number(dataInSeconds))
+                ? addedOffsetAndDST
+                : undefined,
             displayTime:
-              notNullOrUndefined(dataInSeconds) && !isNaN(Number(dataInSeconds))
-                ? 
-                  strftime(cellTemplate.data.format, new Date(Number(dataInSeconds)))
+              notNullOrUndefined(dataInSeconds) &&
+              !Number.isNaN(Number(dataInSeconds))
+                ? strftime(cellTemplate.data.format, dateVersion)
                 : "NA",
+            format: cellTemplate.data.format,
           },
-          style: notNullOrUndefined(dataInSeconds) && !isNaN(Number(dataInSeconds)) ? "normal" : "faded",
+          style:
+            notNullOrUndefined(dataInSeconds) &&
+            !Number.isNaN(Number(dataInSeconds))
+              ? "normal"
+              : "faded",
         }
       } catch (error) {
         return getErrorCell(

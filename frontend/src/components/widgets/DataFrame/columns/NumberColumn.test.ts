@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { BaseColumnProps } from "./utils"
 import { DataType, Type as QuiverType } from "src/lib/Quiver"
-import NumberColumn, { NumberColumnParams } from "./NumberColumn"
 import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
+import { BaseColumnProps } from "./utils"
+import NumberColumn, { NumberColumnParams } from "./NumberColumn"
 
 const MOCK_FLOAT_QUIVER_TYPE: QuiverType = {
   pandas_type: "float64",

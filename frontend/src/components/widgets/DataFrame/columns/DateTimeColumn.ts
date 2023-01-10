@@ -19,12 +19,19 @@ import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 import strftime from "strftime"
-import { DatetimeLocalPickerCell } from "../customCells/DatetimeLocalPickerCell"
+import { DatetimeLocalPickerCell } from "src/components/widgets/DataFrame/customCells/DatetimeLocalPickerCell"
 
-import { BaseColumn, BaseColumnProps, getErrorCell, isValidDate } from "./utils"
+import {
+  addDST,
+  addTimezoneOffset,
+  BaseColumn,
+  BaseColumnProps,
+  getErrorCell,
+  isValidDate,
+} from "./utils"
 
-interface DateTimeColumnParams {
-  readonly format: string
+export interface DateTimeColumnParams {
+  readonly format?: string
 }
 
 function DateTimeColumn(props: BaseColumnProps): BaseColumn {
@@ -53,9 +60,7 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
     getCell(data?: DataType): GridCell {
       try {
         if (notNullOrUndefined(data) && !isValidDate(Number(data))) {
-            return getErrorCell(
-                `Incompatible time value: ${data}`
-              )
+          return getErrorCell(`Incompatible time value: ${data}`)
         }
         // 0 refers to a missing value
         let cellData = 0
@@ -63,25 +68,29 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
           // convert the date to a number
           cellData = Number(data)
         }
+        const displayDate = strftime(
+          cellTemplate.data.format,
+          new Date(addDST(addTimezoneOffset(Number(data))))
+        )
         return {
           ...cellTemplate,
           allowOverlay: true,
           copyData: cellData.toString(),
           data: {
             kind: "DatetimeLocalPickerCell",
-            date: notNullOrUndefined(data) ? new Date(Number(data)) : undefined,
-            displayDate:
-              notNullOrUndefined(data)
-                ? strftime(cellTemplate.data.format, new Date(Number(data)))
-                : "NA",
+            date: notNullOrUndefined(data)
+              ? new Date(Number(data))
+              : undefined,
+            displayDate: notNullOrUndefined(data) ? displayDate : "NA",
             format: cellTemplate.data.format,
           },
-          style: notNullOrUndefined(data) && !isNaN(Number(data)) ? "normal" : "faded",
+          style:
+            notNullOrUndefined(data) && !Number.isNaN(Number(data))
+              ? "normal"
+              : "faded",
         }
       } catch (error) {
-        return getErrorCell(
-          `Incompatible time value: ${data}`
-        )
+        return getErrorCell(`Incompatible time value: ${data}`)
       }
     },
     getCellValue(cell: DatetimeLocalPickerCell): Date | null {

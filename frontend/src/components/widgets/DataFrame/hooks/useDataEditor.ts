@@ -23,8 +23,11 @@ import {
   Item,
 } from "@glideapps/glide-data-grid"
 
-import { BaseColumn, isErrorCell } from "../columns"
-import EditingState from "../EditingState"
+import {
+  BaseColumn,
+  isErrorCell,
+} from "src/components/widgets/DataFrame/columns"
+import EditingState from "src/components/widgets/DataFrame/EditingState"
 
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.

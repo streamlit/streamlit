@@ -1,7 +1,9 @@
 /**
+ * TODO: This license is not consistent with license used in the project.
+ *       Delete the inconsistent license and above line and rerun pre-commit to insert a good license.
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the "License")
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -264,7 +266,34 @@ export function formatNumber(value: number, maxPrecision = 4): string {
   return ""
 }
 
-export function isValidDate(date: number) {
+export function isValidDate(date: number): boolean {
   const actualDate = new Date(date)
-  return !isNaN(actualDate.getTime())
+  return !Number.isNaN(actualDate.getTime())
+}
+
+export function getTimezoneOffset(): number {
+  const rightNow = new Date()
+  const jan1 = new Date(rightNow.getFullYear(), 0, 1, 0, 0, 0, 0)
+  const temp = jan1.toUTCString()
+  const jan2 = new Date(temp.substring(0, temp.lastIndexOf(" ") - 1))
+  return jan1.getTime() - jan2.getTime()
+}
+
+export function addTimezoneOffset(date: number): number {
+  return date - getTimezoneOffset()
+}
+
+export function addDST(date: number): number {
+  const rightNow = new Date()
+  // check daylight savings in june because starts in summer
+  const june1 = new Date(rightNow.getFullYear(), 6, 1, 0, 0, 0, 0)
+  const utcDate = rightNow.toUTCString()
+  const june2 = new Date(utcDate.substring(0, utcDate.lastIndexOf(" ") - 1))
+  const daylightTimeOffset = june1.getTime() - june2.getTime()
+
+  if (getTimezoneOffset() !== daylightTimeOffset && rightNow.getMonth() >= 6) {
+    // 60 seconds * 60 minutes * 1000 milliseconds for 1 hour
+    return date + 3600000
+  }
+  return date
 }

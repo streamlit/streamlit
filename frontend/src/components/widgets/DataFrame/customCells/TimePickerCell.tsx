@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useState } from "react"
+import React from "react"
 import {
   CustomCell,
   CustomRenderer,
@@ -34,11 +34,6 @@ export type TimePickerCell = CustomCell<TimePickerCellProps>
 
 const Editor: ReturnType<ProvideEditorCallback<TimePickerCell>> = cell => {
   const { time: timeIn } = cell.value.data
-
-  let newTimeIn = 0
-  if (timeIn !== undefined) {
-    newTimeIn = timeIn
-  }
 
   return (
     <input

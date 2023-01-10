@@ -30,7 +30,7 @@ class EditingState {
 
   private deletedRows: number[] = []
 
-  private numRows: number = 0
+  private numRows = 0
 
   constructor(numRows: number) {
     this.numRows = numRows

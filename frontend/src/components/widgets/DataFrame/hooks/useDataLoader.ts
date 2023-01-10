@@ -29,8 +29,8 @@ import {
   getColumnTypeFromQuiver,
   getColumnsFromQuiver,
   getCellFromQuiver,
-} from "../quiverUtils"
-import EditingState from "../EditingState"
+} from "src/components/widgets/DataFrame/quiverUtils"
+import EditingState from "src/components/widgets/DataFrame/EditingState"
 import {
   BaseColumn,
   BaseColumnProps,
@@ -39,7 +39,7 @@ import {
   ColumnTypes,
   ColumnCreator,
   isErrorCell,
-} from "../columns"
+} from "src/components/widgets/DataFrame/columns"
 
 // Using this ID for column config will apply the config to all index columns
 const INDEX_IDENTIFIER = "index"
