@@ -35,7 +35,6 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  getTextCell,
   ColumnTypes,
   ColumnCreator,
   isErrorCell,
@@ -235,14 +234,6 @@ function useDataLoader(
 
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
-      if (data.isEmpty()) {
-        // TODO(lukasmasuch): Is this still needed for editable tables?
-        return {
-          ...getTextCell(true, true),
-          displayData: "empty",
-        } as GridCell
-      }
-
       if (col > columns.length - 1) {
         return getErrorCell(
           "Column index out of bounds.",

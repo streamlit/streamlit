@@ -239,7 +239,10 @@ export function getColumnFromQuiver(
 export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
-  if (data.isEmpty()) {
+  const numIndices = data.types?.index?.length ?? 0
+  const numColumns = data.columns?.[0]?.length ?? 0
+
+  if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
     // As a workaround, we are adding an empty index column in this case.
     columns.push({
@@ -251,9 +254,6 @@ export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
     } as BaseColumnProps)
     return columns
   }
-
-  const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length ?? 0
 
   for (let i = 0; i < numIndices; i++) {
     const column = {

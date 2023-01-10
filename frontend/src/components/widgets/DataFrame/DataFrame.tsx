@@ -23,6 +23,7 @@ import {
   GridMouseEventArgs,
   drawTextCell,
   DrawCustomCellCallback,
+  GridCell,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { Resizable } from "re-resizable"
@@ -43,7 +44,12 @@ import {
   useColumnSizer,
   useColumnSort,
 } from "./hooks"
-import { BaseColumn, toGlideColumn, isMissingValueCell } from "./columns"
+import {
+  BaseColumn,
+  toGlideColumn,
+  isMissingValueCell,
+  getTextCell,
+} from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
@@ -137,7 +143,13 @@ function DataFrame({
     [] // TODO: add as dependency? https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node
   )
   // Number of rows of the table minus 1 for the header row:
-  const originalNumRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
+  const originalNumRows = Math.max(0, data.dimensions.rows - 1)
+  // For empty tables (editing mode != dynamic), we show an extra row that
+  // contains "empty" as a way to indicate that the table is empty.
+  const showEmptyState =
+    originalNumRows === 0 &&
+    element.editingMode !== ArrowProto.EditingMode.DYNAMIC
+
   const editingState = React.useRef<EditingState>(
     new EditingState(originalNumRows)
   )
@@ -218,6 +230,22 @@ function DataFrame({
     isFullScreen
   )
 
+  const getEmptyStateContent = React.useCallback(
+    ([_col, _row]: readonly [number, number]): GridCell => {
+      return {
+        ...getTextCell(true, false),
+        displayData: "empty",
+        contentAlign: "center",
+        allowOverlay: false,
+        themeOverride: {
+          textDark: theme.textLight,
+        },
+        span: [0, Math.max(columns.length - 1, 0)],
+      } as GridCell
+    },
+    [columns]
+  )
+
   React.useEffect(() => {
     const formClearHelper = new FormClearHelper()
     formClearHelper.manageFormClearListener(
@@ -283,17 +311,21 @@ function DataFrame({
           className="glideDataEditor"
           ref={dataEditorRef}
           columns={glideColumns}
-          rows={numRows}
+          rows={showEmptyState ? 1 : numRows}
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
           maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
           rowHeight={rowHeight}
           headerHeight={rowHeight}
-          getCellContent={getCellContent}
+          getCellContent={
+            showEmptyState ? getEmptyStateContent : getCellContent
+          }
           onColumnResize={onColumnResize}
           // Freeze all index columns:
           freezeColumns={
-            columns.filter((col: BaseColumn) => col.isIndex).length
+            showEmptyState
+              ? 0
+              : columns.filter((col: BaseColumn) => col.isIndex).length
           }
           smoothScrollX={true}
           smoothScrollY={true}
