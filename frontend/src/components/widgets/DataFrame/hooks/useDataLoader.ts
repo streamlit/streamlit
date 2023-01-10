@@ -59,7 +59,12 @@ interface ColumnConfigProps {
 }
 
 /**
- * Apply the column configuration if supplied.
+ * Apply the user-defined column configuration if supplied.
+ *
+ * @param columnProps - The column properties to apply the config to.
+ * @param columnsConfig - The user-defined column configuration.
+ *
+ * @return the column properties with the config applied.
  */
 function applyColumnConfig(
   columnProps: BaseColumnProps,
@@ -102,7 +107,7 @@ function applyColumnConfig(
           width: columnConfig.width,
         }
       : {}),
-    // Add a custom type:
+    // Select a column type:
     ...(notNullOrUndefined(columnConfig.type)
       ? {
           customType: columnConfig.type.toLowerCase().trim(),
@@ -136,6 +141,13 @@ function applyColumnConfig(
   } as BaseColumnProps
 }
 
+/**
+ * Extracts the user-defined column configuration from the proto message.
+ *
+ * @param element - The proto message of the dataframe element.
+ *
+ * @returns the user-defined column configuration.
+ */
 function getColumnConfig(element: ArrowProto): Map<string, any> {
   if (!element.columns) {
     return new Map()
@@ -150,13 +162,17 @@ function getColumnConfig(element: ArrowProto): Map<string, any> {
   }
 }
 
-/**
- * Create return type for useDataLoader hook based on the DataEditorProps.
- */
 type DataLoaderReturn = {
   columns: BaseColumn[]
 } & Pick<DataEditorProps, "getCellContent">
 
+/**
+ * Get the column type (creator class of column type) for the given column properties.
+ *
+ * @param column - The column properties.
+ *
+ * @returns the column creator of the corresponding column type.
+ */
 function getColumnType(column: BaseColumnProps): ColumnCreator {
   // Create a column instance based on the column properties
   let ColumnType: ColumnCreator | undefined
@@ -177,10 +193,16 @@ function getColumnType(column: BaseColumnProps): ColumnCreator {
 }
 
 /**
- * A custom hook that handles all data loading capabilities for the interactive data table.
+ * Custom hook that handles all data loading capabilities for the interactive data table.
  * This also includes the logic to load and configure columns.
- * And features that influence the data representation and column configuration
- * such as column resizing, sorting, etc.
+ *
+ * @param element - The proto message of the dataframe element
+ * @param data - The Arrow data extracted from the proto message
+ * @param numRows - The number of rows of the current state (includes row additions/deletions)
+ * @param disabled - Whether the widget is disabled
+ * @param editingState - The editing state of the data editor
+ *
+ * @returns the columns and the cell content getter compatible with glide-data-grid.
  */
 function useDataLoader(
   element: ArrowProto,
@@ -197,10 +219,7 @@ function useDataLoader(
     element.useContainerWidth ||
     (notNullOrUndefined(element.width) && element.width > 0)
 
-  /**
-   * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
-   */
-  // TODO(lukasmasuch): Does this need to be a callback?
+  // Converts the columns from Arrow into columns compatible with glide-data-grid
   const columns: BaseColumn[] = getColumnsFromQuiver(data)
     .map(column => {
       // Apply column configurations
