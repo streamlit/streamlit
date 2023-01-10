@@ -48,7 +48,8 @@ class ScriptRunContext:
 
     session_id: str
     _enqueue: Callable[[ForwardMsg], None]
-    query_string: str
+    client_origin: str  # the client's `Location.origin` string (from ClientState.proto)
+    query_string: str  # the client's `query_string` (from ClientState.proto)
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
     page_script_hash: str
