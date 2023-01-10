@@ -322,7 +322,7 @@ class Button(Element, Widget):
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.trigger_value = self.value
+        ws.trigger_value = self._value
         return ws
 
     @property

@@ -14,6 +14,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from tests.script_interactions import InteractiveScriptTests
 
 
@@ -41,3 +43,29 @@ class CheckboxTest(InteractiveScriptTests):
         sr3 = sr2.get("checkbox")[1].uncheck().run()
         assert sr3.get("checkbox")[0].value == True
         assert sr3.get("checkbox")[1].value == False
+
+
+@pytest.mark.xfail(reason="button does not work correctly with session state")
+@patch("streamlit.source_util._cached_pages", new=None)
+class ButtonTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "button_test.py",
+            """
+            import streamlit as st
+
+            st.button("button")
+            st.button("second button")
+            """,
+        )
+        sr = script.run()
+        assert sr.get("button")[0].value == False
+        assert sr.get("button")[1].value == False
+
+        sr2 = sr.get("button")[0].click().run()
+        assert sr2.get("button")[0].value == True
+        assert sr2.get("button")[1].value == False
+
+        sr3 = sr2.run()
+        assert sr3.get("button")[0].value == False
+        assert sr3.get("button")[1].value == False
