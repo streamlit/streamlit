@@ -208,6 +208,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             ScriptRunContext(
                 session_id="test session id",
                 _enqueue=forward_msg_queue.enqueue,
+                client_origin="https://mockClientOrigin.com",
                 query_string="",
                 session_state=SafeSessionState(SessionState()),
                 uploaded_file_mgr=UploadedFileManager(),

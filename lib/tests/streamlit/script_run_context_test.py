@@ -29,6 +29,7 @@ class ScriptRunContextTest(unittest.TestCase):
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
+            client_origin="https://mockClientOrigin.com",
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
@@ -51,6 +52,7 @@ class ScriptRunContextTest(unittest.TestCase):
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
+            client_origin="https://mockClientOrigin.com",
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
@@ -77,6 +79,7 @@ class ScriptRunContextTest(unittest.TestCase):
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
+            client_origin="https://mockClientOrigin.com",
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
@@ -101,6 +104,7 @@ class ScriptRunContextTest(unittest.TestCase):
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
             session_id="TestSessionID",
+            client_origin="https://mockClientOrigin.com",
             _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),

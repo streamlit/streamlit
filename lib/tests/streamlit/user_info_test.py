@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import threading
+from unittest.mock import MagicMock
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -23,6 +24,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -99,9 +101,10 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                 ScriptRunContext(
                     session_id="test session id",
                     _enqueue=forward_msg_queue.enqueue,
+                    client_origin="https://mockClientOrigin.com",
                     query_string="",
                     session_state=SafeSessionState(SessionState()),
-                    uploaded_file_mgr=None,
+                    uploaded_file_mgr=MagicMock(),
                     page_script_hash="",
                     user_info={"email": "something@else.com"},
                 ),

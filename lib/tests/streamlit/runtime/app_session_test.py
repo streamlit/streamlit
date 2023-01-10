@@ -503,6 +503,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=session._enqueue_forward_msg,
+            client_origin="https://mockClientOrigin.com",
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
