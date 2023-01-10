@@ -485,8 +485,12 @@ export class Quiver {
     })
   }
 
+  /**
+   * Returns the categorical options defined for a given column.
+   * Returns undefined if the column is not categorical.
+   */
   public getCategoricalOptions(columnIndex: number): string[] | undefined {
-    // TODO(lukasmasuch): Do something with headcolumns?
+    // TODO(lukasmasuch): Should we also support headcolumns here?
     const { columns: numColumns } = this.dimensions
 
     if (columnIndex < 0 || columnIndex >= numColumns) {
