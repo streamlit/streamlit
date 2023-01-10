@@ -290,6 +290,17 @@ class Multiselect(Element, Widget, Generic[T]):
             self.set_value(new)
             return self
 
+    def unselect(self, v: T) -> Multiselect[T]:
+        current = self.value
+        if v not in current:
+            return self
+        else:
+            new = current.copy()
+            while v in new:
+                new.remove(v)
+            self.set_value(new)
+            return self
+
 
 @dataclass(init=False)
 class Button(Element, Widget):
