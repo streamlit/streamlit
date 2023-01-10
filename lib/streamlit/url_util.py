@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import re
-import urllib
 from typing import Optional
+from urllib.parse import urlparse
 
 # Regular expression for process_gitblob_url
 _GITBLOB_RE = re.compile(
@@ -55,10 +55,15 @@ def get_hostname(url: str) -> Optional[str]:
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)
     if "://" not in url:
-        url = "http://%s" % url
+        url = f"http://{url}"
 
-    parsed = urllib.parse.urlparse(url)
+    parsed = urlparse(url)
     return parsed.hostname
+
+
+def is_localhost(url: str) -> bool:
+    """True if the given URL uses the `localhost` hostname."""
+    return get_hostname(url) == "localhost"
 
 
 def print_url(title, url):

@@ -14,6 +14,8 @@
 
 import unittest
 
+from parameterized import parameterized
+
 from streamlit import url_util
 
 GITHUB_URLS = [
@@ -59,6 +61,24 @@ INVALID_URLS = [
     "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/video.py",
     "streamlit.io/raw/blob",
 ]
+
+
+class UrlUtilTest(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("https://localhost:3000/some_path", True),
+            ("localhost:3000/some_path", True),
+            ("localhost:3000", True),
+            ("localhost", True),
+            ("https://foo.com:3000/some_path", False),
+            ("foo.com:3000/some_path", False),
+            ("foo.com:3000", False),
+            ("foo.com", False),
+        ]
+    )
+    def test_is_localhost(self, url: str, expected_result: bool):
+        """`is_localhost` should return True only for localhost URLs."""
+        self.assertEqual(expected_result, url_util.is_localhost(url))
 
 
 class GitHubUrlTest(unittest.TestCase):
