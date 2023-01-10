@@ -76,6 +76,10 @@ export interface DataFrameProps {
   isFullScreen?: boolean
 }
 
+/**
+ * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
+ * This is done by providing a custom cell renderer.
+ */
 const drawMissingCells: DrawCustomCellCallback = args => {
   const { cell, theme } = args
   if (isMissingValueCell(cell)) {
@@ -101,6 +105,17 @@ const drawMissingCells: DrawCustomCellCallback = args => {
   return false
 }
 
+/**
+ * The main component used by dataframe & data_editor to render an editable table.
+ *
+ * @param element - The element's proto message
+ * @param data - The quiver data to render (extracted from the proto message)
+ * @param width - The width of the container
+ * @param height - The height of the container
+ * @param disabled - Whether the widget is disabled
+ * @param widgetMgr - The widget manager
+ * @param isFullScreen - Whether the widget is in full screen mode
+ */
 function DataFrame({
   element,
   data,
