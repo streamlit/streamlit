@@ -33,7 +33,6 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
     return ScriptRunContext(
         session_id="mock_session_id",
         _enqueue=lambda msg: None,
-        client_origin="https://mockClientOrigin.com",
         query_string="mock_query_string",
         session_state=SafeSessionState(SessionState()),
         uploaded_file_mgr=UploadedFileManager(),

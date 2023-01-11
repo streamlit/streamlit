@@ -48,7 +48,6 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         self.new_script_run_ctx = ScriptRunContext(
             session_id="test session id",
             _enqueue=self.forward_msg_queue.enqueue,
-            client_origin="https://mockClientOrigin.com",
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
