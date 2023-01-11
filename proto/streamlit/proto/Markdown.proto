@@ -23,4 +23,15 @@ message Markdown {
 
   bool allow_html = 2;
   bool is_caption = 3;
+
+  enum Type {
+    UNSPECIFIED = 0;  // This should always exist.
+    NATIVE = 1;
+    CAPTION = 2;
+    CODE = 3;
+    LATEX = 4;
+  }
+
+  Type element_type = 4;
+
 }

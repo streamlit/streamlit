@@ -92,7 +92,7 @@ class Text(Element):
 
 
 @dataclass(init=False)
-class Caption(Element):
+class Markdown(Element):
     proto: MarkdownProto
 
     type: str
@@ -106,11 +106,32 @@ class Caption(Element):
         self.is_caption = proto.is_caption
         self.allow_html = proto.allow_html
         self.root = root
-        self.type = "caption"
+        self.type = "markdown"
 
     @property
     def value(self) -> str:
         return self.proto.body
+
+
+@dataclass(init=False)
+class Caption(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "caption"
+
+
+@dataclass(init=False)
+class Latex(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "latex"
+
+
+@dataclass(init=False)
+class Code(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "code"
 
 
 @runtime_checkable
@@ -233,7 +254,19 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["markdown"]) -> Sequence[Markdown]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["caption"]) -> Sequence[Caption]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["latex"]) -> Sequence[Latex]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["code"]) -> Sequence[Code]:
         ...
 
     @overload
@@ -345,8 +378,17 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             new_node: Node
             if elt.WhichOneof("type") == "text":
                 new_node = Text(elt.text, root=root)
-            elif elt.WhichOneof("type") == "markdown" and elt.markdown.is_caption:
-                new_node = Caption(elt.markdown, root=root)
+            elif elt.WhichOneof("type") == "markdown":
+                if elt.widget_type == MarkdownProto.Type.NATIVE:
+                    new_node = Markdown(elt.markdown, root=root)
+                elif elt.widget_type == MarkdownProto.Type.CAPTION:
+                    new_node = Caption(elt.markdown, root=root)
+                elif elt.widget_type == MarkdownProto.Type.LATEX:
+                    new_node = Latex(elt.markdown, root=root)
+                elif elt.widget_type == MarkdownProto.Type.CODE:
+                    new_node = Code(elt.markdown, root=root)
+                else:
+                    raise ValueError(f"Unknown markdown type {elt.widget_type}")
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
             else:
