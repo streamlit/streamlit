@@ -24,8 +24,4 @@ message ClientState {
   WidgetStates widget_states = 2;
   string page_script_hash = 3;
   string page_name = 4;
-
-  // The client's `Location.origin` (https://developer.mozilla.org/en-US/docs/Web/API/Location)
-  // e.g. "http://localhost:3000", or "https://my_streamlit_app.com"
-  string origin = 5;
 }

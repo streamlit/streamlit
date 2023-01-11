@@ -1104,9 +1104,8 @@ export class App extends PureComponent<Props, State> {
     const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
     const queryString = this.getQueryString()
-    const clientOrigin = document.location.origin
-
     let pageName = ""
+
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
@@ -1145,13 +1144,7 @@ export class App extends PureComponent<Props, State> {
 
     this.sendBackMsg(
       new BackMsg({
-        rerunScript: {
-          queryString,
-          widgetStates,
-          pageScriptHash,
-          pageName,
-          origin: clientOrigin,
-        },
+        rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
       })
     )
 
