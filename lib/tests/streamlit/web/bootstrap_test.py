@@ -24,6 +24,7 @@ from streamlit.web import bootstrap
 from streamlit.web.bootstrap import NEW_VERSION_TEXT
 from tests import testutil
 from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
+from tests.testutil import patch_config_options
 
 
 class BootstrapTest(unittest.TestCase):
@@ -278,6 +279,23 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         self.assertIn("Local URL: http://localhost:8501/foo", out)
         self.assertNotIn("Network URL: http://internal-ip:8501/foo", out)
+
+    @patch("streamlit.net_util.get_internal_ip", return_value="internal-ip")
+    def test_print_urls_ssl(self, mock_get_internal_ip):
+        with patch_config_options(
+            {
+                "server.headless": False,
+                "server.port": 9988,
+                "global.developmentMode": False,
+                "server.sslCertFile": "/tmp/aa",
+                "server.sslKeyFile": "/tmp/aa",
+            }
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        self.assertIn("Local URL: https://localhost:9988", out)
+        self.assertIn("Network URL: https://internal-ip:9988", out)
 
     def test_print_socket(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(

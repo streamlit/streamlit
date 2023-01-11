@@ -16,8 +16,10 @@ import errno
 import logging
 import os
 import socket
+import ssl
 import sys
-from typing import Any, Awaitable, List, Optional
+from pathlib import Path
+from typing import Any, Awaitable, List, Optional, Union
 
 import click
 import tornado.concurrent
@@ -109,15 +111,59 @@ def start_listening(app: tornado.web.Application) -> None:
     port.  It will error after MAX_PORT_SEARCH_RETRIES attempts.
 
     """
+    cert_file = config.get_option("server.sslCertFile")
+    key_file = config.get_option("server.sslKeyFile")
+    ssl_options = _get_ssl_options(cert_file, key_file)
 
     http_server = HTTPServer(
-        app, max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
+        app,
+        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024,
+        ssl_options=ssl_options,
     )
 
     if server_address_is_unix_socket():
         start_listening_unix_socket(http_server)
     else:
         start_listening_tcp_socket(http_server)
+
+
+def _get_ssl_options(
+    cert_file: Optional[str], key_file: Optional[str]
+) -> Union[ssl.SSLContext, None]:
+    if bool(cert_file) != bool(key_file):
+        LOGGER.error(
+            "Options 'server.sslCertFile' and 'server.sslKeyFile' must "
+            "be set together. Set missing options or delete existing options."
+        )
+        sys.exit(1)
+    if cert_file and key_file:
+        # ssl_ctx.load_cert_chain raise exception as below, but it is not
+        # sufficiently user-friendly
+        # FileNotFoundError: [Errno 2] No such file or directory
+        if not Path(cert_file).exists():
+            LOGGER.error("Cert file '%s' does not exist.", cert_file)
+            sys.exit(1)
+        if not Path(key_file).exists():
+            LOGGER.error("Key file '%s' does not exist.", key_file)
+            sys.exit(1)
+
+        ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        # When the SSL certificate fails to load, an exception is raised as below,
+        # but it is not sufficiently user-friendly.
+        # ssl.SSLError: [SSL] PEM lib (_ssl.c:4067)
+        try:
+            ssl_ctx.load_cert_chain(cert_file, key_file)
+        except ssl.SSLError:
+            LOGGER.error(
+                "Failed to load SSL certificate. Make sure "
+                "cert file '%s' and key file '%s' are correct.",
+                cert_file,
+                key_file,
+            )
+            sys.exit(1)
+
+        return ssl_ctx
+    return None
 
 
 def start_listening_unix_socket(http_server: HTTPServer) -> None:

@@ -749,6 +749,36 @@ def _browser_server_port() -> int:
     return int(get_option("server.port"))
 
 
+_SSL_PRODUCTION_WARNING = [
+    "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
+    "security audits or performance tests. For the production environment, "
+    "we recommend performing SSL termination by the load balancer or the reverse proxy."
+]
+
+_create_option(
+    "server.sslCertFile",
+    description=(
+        f"""
+        Server certificate file for connecting via HTTPS.
+        Must be set at the same time as "server.sslKeyFile".
+
+        {_SSL_PRODUCTION_WARNING}
+        """
+    ),
+)
+
+_create_option(
+    "server.sslKeyFile",
+    description=(
+        f"""
+        Cryptographic key file for connecting via HTTPS.
+        Must be set at the same time as "server.sslCertFile".
+
+        {_SSL_PRODUCTION_WARNING}
+        """
+    ),
+)
+
 # Config Section: UI #
 
 # NOTE: We currently hide the ui config section in the `streamlit config show`
