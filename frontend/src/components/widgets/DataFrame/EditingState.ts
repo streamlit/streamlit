@@ -20,6 +20,9 @@ import { notNullOrUndefined } from "src/lib/utils"
 
 import { BaseColumn } from "./columns"
 
+/**
+ * The editing state keeps track of all table edits applied by the user.
+ */
 class EditingState {
   // row -> column -> GridCell
   // Using [number, number] as a key for a Map would not work.
@@ -28,14 +31,22 @@ class EditingState {
   // List of rows represented by of column -> GridCell mappings
   private addedRows: Array<Map<number, GridCell>> = []
 
+  // List of deleted row IDs
   private deletedRows: number[] = []
 
+  // The original number of rows in the table (without potential additions & deletions)
   private numRows = 0
 
   constructor(numRows: number) {
     this.numRows = numRows
   }
 
+  /**
+   * Convert the current editing state to a JSON string.
+   *
+   * @param columns - The columns of the table
+   * @returns JSON string
+   */
   toJson(columns: BaseColumn[]): string {
     const columnsByIndex = new Map<number, BaseColumn>()
     columns.forEach(column => {
@@ -85,10 +96,22 @@ class EditingState {
     return json
   }
 
+  /**
+   * Returns true if the given row was added by the user through the UI.
+   */
   isAddedRow(row: number): boolean {
     return row >= this.numRows
   }
 
+  /**
+   * Returns the cell at the given column and row,
+   * in case the cell was edited or added.
+   *
+   * @param col - The column index
+   * @param row - The row index
+   *
+   * @returns The edited cell at the given column and row
+   */
   getCell(col: number, row: number): GridCell | undefined {
     if (this.isAddedRow(row)) {
       // Added rows have their own editing state
@@ -103,6 +126,13 @@ class EditingState {
     return rowCache.get(col)
   }
 
+  /**
+   * Adds a cell to the editing state for the given column and row index.
+   *
+   * @param col - The column index
+   * @param row - The row index
+   * @param cell - The cell to add to the editing state
+   */
   setCell(col: number, row: number, cell: GridCell): void {
     if (this.isAddedRow(row)) {
       if (row - this.numRows >= this.addedRows.length) {
@@ -122,10 +152,20 @@ class EditingState {
     }
   }
 
+  /**
+   * Adds a new row to the editing state.
+   *
+   * @param rowCells - The cells of the row to add
+   */
   addRow(rowCells: Map<number, GridCell>): void {
     this.addedRows.push(rowCells)
   }
 
+  /**
+   * Deletes the given rows from the editing state.
+   *
+   * @param rows - The rows to delete
+   */
   deleteRows(rows: number[]): void {
     // Delete row one by one starting from the row with the highest index
     rows
@@ -135,6 +175,11 @@ class EditingState {
       })
   }
 
+  /**
+   * Deletes the given row from the editing state.
+   *
+   * @param row - The row to delete
+   */
   deleteRow(row: number): void {
     if (!notNullOrUndefined(row) || row < 0) {
       // This should never happen
@@ -159,6 +204,15 @@ class EditingState {
     this.editedCells.delete(row)
   }
 
+  /**
+   * Returns the original row index of the given row.
+   * Since the user can delete rows, the original row index and the
+   * current one can diverge.
+   *
+   * @param row - The row index from the current state
+   *
+   * @returns The original row index
+   */
   getOriginalRowIndex(row: number): number {
     // Just count all deleted rows before this row to determine the original row index:
     let originalIndex = row
@@ -171,6 +225,9 @@ class EditingState {
     return originalIndex
   }
 
+  /**
+   * Returns the total number of rows of the current state.
+   */
   getNumRows(): number {
     return this.numRows + this.addedRows.length - this.deletedRows.length
   }

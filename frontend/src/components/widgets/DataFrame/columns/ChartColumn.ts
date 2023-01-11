@@ -34,11 +34,20 @@ import {
 } from "./utils"
 
 interface ChartColumnParams {
+  // The type of the chart. Defaults to "line".
   readonly type: "line" | "bar"
+  // The minimum value used for plotting the chart. Defaults to 0.
   readonly min: number
+  // The maximum value used for plotting the chart. Defaults to 1.
   readonly max: number
 }
 
+/**
+ * A column type that renders the cell value as a chart (bar & line chart)
+ * The data is expected to be a numeric array.
+ *
+ * This column type is currently read-only.
+ */
 function ChartColumn(props: BaseColumnProps): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:

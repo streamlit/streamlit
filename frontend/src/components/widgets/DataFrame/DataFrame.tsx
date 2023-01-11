@@ -23,6 +23,7 @@ import {
   GridMouseEventArgs,
   drawTextCell,
   DrawCustomCellCallback,
+  GridCell,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { Resizable } from "re-resizable"
@@ -43,8 +44,12 @@ import {
   useColumnSizer,
   useColumnSort,
 } from "./hooks"
-import { toGlideColumn, isMissingValueCell, BaseColumn } from "./columns"
-
+import {
+  BaseColumn,
+  toGlideColumn,
+  isMissingValueCell,
+  getTextCell,
+} from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
@@ -74,6 +79,10 @@ export interface DataFrameProps {
   isFullScreen?: boolean
 }
 
+/**
+ * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
+ * This is done by providing a custom cell renderer.
+ */
 const drawMissingCells: DrawCustomCellCallback = args => {
   const { cell, theme } = args
   if (isMissingValueCell(cell)) {
@@ -99,6 +108,17 @@ const drawMissingCells: DrawCustomCellCallback = args => {
   return false
 }
 
+/**
+ * The main component used by dataframe & data_editor to render an editable table.
+ *
+ * @param element - The element's proto message
+ * @param data - The quiver data to render (extracted from the proto message)
+ * @param width - The width of the container
+ * @param height - The height of the container
+ * @param disabled - Whether the widget is disabled
+ * @param widgetMgr - The widget manager
+ * @param isFullScreen - Whether the widget is in full screen mode
+ */
 function DataFrame({
   element,
   data,
@@ -141,7 +161,13 @@ function DataFrame({
     [] // TODO: add as dependency? https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node
   )
   // Number of rows of the table minus 1 for the header row:
-  const originalNumRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
+  const originalNumRows = Math.max(0, data.dimensions.rows - 1)
+  // For empty tables (editing mode != dynamic), we show an extra row that
+  // contains "empty" as a way to indicate that the table is empty.
+  const showEmptyState =
+    originalNumRows === 0 &&
+    element.editingMode !== ArrowProto.EditingMode.DYNAMIC
+
   const editingState = React.useRef<EditingState>(
     new EditingState(originalNumRows)
   )
@@ -222,6 +248,22 @@ function DataFrame({
     isFullScreen
   )
 
+  const getEmptyStateContent = React.useCallback(
+    ([_col, _row]: readonly [number, number]): GridCell => {
+      return {
+        ...getTextCell(true, false),
+        displayData: "empty",
+        contentAlign: "center",
+        allowOverlay: false,
+        themeOverride: {
+          textDark: theme.textLight,
+        },
+        span: [0, Math.max(columns.length - 1, 0)],
+      } as GridCell
+    },
+    [columns]
+  )
+
   React.useEffect(() => {
     const formClearHelper = new FormClearHelper()
     formClearHelper.manageFormClearListener(
@@ -287,17 +329,21 @@ function DataFrame({
           className="glideDataEditor"
           ref={dataEditorRef}
           columns={glideColumns}
-          rows={numRows}
+          rows={showEmptyState ? 1 : numRows}
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
           maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
           rowHeight={rowHeight}
           headerHeight={rowHeight}
-          getCellContent={getCellContent}
+          getCellContent={
+            showEmptyState ? getEmptyStateContent : getCellContent
+          }
           onColumnResize={onColumnResize}
           // Freeze all index columns:
           freezeColumns={
-            columns.filter((col: BaseColumn) => col.isIndex).length
+            showEmptyState
+              ? 0
+              : columns.filter((col: BaseColumn) => col.isIndex).length
           }
           smoothScrollX={true}
           smoothScrollY={true}
@@ -321,7 +367,7 @@ function DataFrame({
           // Activate search:
           keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
-          onHeaderClicked={sortColumn}
+          onHeaderClicked={showEmptyState ? undefined : sortColumn}
           gridSelection={gridSelection}
           onGridSelectionChange={setGridSelection}
           // Apply different styling to missing cells:
@@ -352,7 +398,8 @@ function DataFrame({
             DatetimeLocalPickerCell,
           ]}
           // If element is editable, add additional properties:
-          {...(element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+          {...(!showEmptyState &&
+            element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing
               fillHandle: true,

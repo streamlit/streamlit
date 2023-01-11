@@ -26,6 +26,9 @@ import {
   toSafeArray,
 } from "./utils"
 
+/**
+ * A column type that supports optimized rendering values of array/list types.
+ */
 function ListColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Bubble,

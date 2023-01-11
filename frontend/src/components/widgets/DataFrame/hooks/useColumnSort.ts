@@ -39,6 +39,11 @@ type ColumnSortConfig = {
 
 /**
  * Updates the column headers based on the sorting configuration.
+ *
+ * @param columns - The columns of the table.
+ * @param sort - The current sorting configuration.
+ *
+ * @returns The updated list of columns.
  */
 function updateSortingHeader(
   columns: BaseColumn[],
@@ -65,6 +70,18 @@ type ColumnSortReturn = {
   getOriginalIndex: (index: number) => number
 } & Pick<DataEditorProps, "getCellContent">
 
+/**
+ * A React hook that provides column sorting functionality.
+ *
+ * @param numRows - The number of rows in the table.
+ * @param columns - The columns of the table.
+ *
+ * @returns An object containing the following properties:
+ * - `columns`: The updated list of columns.
+ * - `sortColumn`: A function that sorts the column at the given index.
+ * - `getOriginalIndex`: A function that returns the original index of the row at the given index.
+ * - `getCellContent`: An updated function that returns the content of the cell at the given column and row indices.
+ */
 function useColumnSort(
   numRows: number,
   columns: BaseColumn[],

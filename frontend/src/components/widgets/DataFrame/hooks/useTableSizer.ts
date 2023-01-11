@@ -51,6 +51,18 @@ export type AutoSizerReturn = {
   setResizableSize: React.Dispatch<React.SetStateAction<ResizableSize>>
 }
 
+/**
+ * A custom React hook that manages all aspects related to the size of the table.
+ *
+ * @param element - The ArrowProto element
+ * @param resizableRef - The React ref to the resizable table container
+ * @param numRows - The number of rows in the table
+ * @param containerWidth - The width of the surrounding container
+ * @param containerHeight - The height of the surrounding container
+ * @param isFullScreen - Whether the table is in fullscreen mode
+ *
+ * @returns The row height, min/max height & width, and the current size of the resizable container.
+ */
 function useTableSizer(
   element: ArrowProto,
   resizableRef: React.RefObject<Resizable>,

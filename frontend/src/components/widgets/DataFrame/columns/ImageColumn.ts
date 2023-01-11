@@ -21,6 +21,12 @@ import { notNullOrUndefined } from "src/lib/utils"
 
 import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
 
+/**
+ * A column type that renders an image as a cell value. On cell selection, open
+ * the cell overlay with a full version of the image.
+ *
+ * This column type is currently read-only.
+ */
 function ImageColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Image,

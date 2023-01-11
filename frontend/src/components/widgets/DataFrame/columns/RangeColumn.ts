@@ -33,11 +33,19 @@ import {
 } from "./utils"
 
 interface RangeColumnParams {
+  // The minimum permitted value. Defaults to 0.
   readonly min: number
+  // The maximum permitted value. Defaults to 1.
   readonly max: number
+  // The stepping interval. Defaults to 0.01.
+  // Mainly useful once we provide editing capabilities.
   readonly step: number
 }
 
+/**
+ * A read-only column type to support rendering values that have a defined
+ * range. This is rendered via a progress-bar-like visualization.
+ */
 function RangeColumn(props: BaseColumnProps): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:
@@ -83,7 +91,7 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(toSafeString(data), "The value is not a number.")
       }
 
-      // TODO(lukasmasuch): count decimals of step and use it for formatting
+      // TODO(lukasmasuch): count decimals of step and use it for formatting?
       // so that all labels have the same length
       const displayValue = formatNumber(
         Math.ceil(cellData / parameters.step) * parameters.step

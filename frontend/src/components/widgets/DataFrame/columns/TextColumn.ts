@@ -27,6 +27,9 @@ import {
   toSafeString,
 } from "./utils"
 
+/**
+ * A column that supports rendering & editing of text values.
+ */
 function TextColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Text,

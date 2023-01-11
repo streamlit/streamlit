@@ -37,6 +37,9 @@ import { ColumnCreator } from "./utils"
 
 export * from "./utils"
 
+/**
+ * All available column types need to be registered here.
+ */
 export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
     object: ObjectColumn,

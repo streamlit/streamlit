@@ -44,9 +44,9 @@ import {
 /**
  * Extracts a CSS property value from a given CSS style string by using a regex.
  *
- * @param htmlElementId: The ID of the HTML element to extract the property for.
- * @param property: The css property to extract the value for.
- * @param cssStyle: The css style string.
+ * @param htmlElementId - The ID of the HTML element to extract the property for.
+ * @param property - The css property to extract the value for.
+ * @param cssStyle - The css style string.
  *
  * @return the CSS property value or undefined if the property is not found.
  */
@@ -120,7 +120,7 @@ export function applyPandasStylerCss(
 }
 
 /**
- * Maps the data type from Quiver to a valid column type.
+ * Maps the data type from Arrow to a column type.
  */
 export function getColumnTypeFromQuiver(
   quiverType: QuiverType
@@ -182,6 +182,14 @@ export function getColumnTypeFromQuiver(
   return ObjectColumn
 }
 
+/**
+ * Creates the column props for an index column from the Arrow metadata.
+ *
+ * @param data - The Arrow data.
+ * @param indexPosition - The numeric position of the index column.
+ *
+ * @return the column props for the index column.
+ */
 export function getIndexFromQuiver(
   data: Quiver,
   indexPosition: number
@@ -205,6 +213,14 @@ export function getIndexFromQuiver(
   } as BaseColumnProps
 }
 
+/**
+ * Creates the column props for a data column from the Arrow metadata.
+ *
+ * @param data - The Arrow data.
+ * @param columnPosition - The numeric position of the data column.
+ *
+ * @return the column props for the data column.
+ */
 export function getColumnFromQuiver(
   data: Quiver,
   columnPosition: number
@@ -243,10 +259,19 @@ export function getColumnFromQuiver(
   } as BaseColumnProps
 }
 
+/**
+ * Creates the column props for all columns from the Arrow metadata.
+ *
+ * @param data - The Arrow data.
+ * @return the column props for all columns.
+ */
 export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
-  if (data.isEmpty()) {
+  const numIndices = data.types?.index?.length ?? 0
+  const numColumns = data.columns?.[0]?.length ?? 0
+
+  if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
     // As a workaround, we are adding an empty index column in this case.
     columns.push({
@@ -258,9 +283,6 @@ export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
     } as BaseColumnProps)
     return columns
   }
-
-  const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length ?? 0
 
   for (let i = 0; i < numIndices; i++) {
     const column = {
@@ -284,12 +306,12 @@ export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
 
 /**
  * Returns a glide-data-grid compatible cell object based on the
- * cell data from the quiver object. Different types of data will
+ * cell data from the Quiver (Arrow) object. Different types of data will
  * result in different cell types.
  *
- * @param columnConfig: The configuration of the column.
- * @param quiverCell: a dataframe cell object from Quiver.
- * @param cssStyles: optional css styles to apply on the cell.
+ * @param column - The colum of the cell.
+ * @param quiverCell - The dataframe cell object from Arrow.
+ * @param cssStyles - Optional css styles to apply on the cell.
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */

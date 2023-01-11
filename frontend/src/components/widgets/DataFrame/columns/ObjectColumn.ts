@@ -27,6 +27,10 @@ import {
   toSafeString,
 } from "./utils"
 
+/**
+ * A column type for read-only cells used as a fallback
+ * for data types that are currently not supported for editing.
+ */
 function ObjectColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Text,
