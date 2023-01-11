@@ -27,7 +27,7 @@ TObj = TypeVar("TObj", bound=object)
 
 def _should_show_deprecation_warning_in_browser() -> bool:
     """True if we should print deprecation warnings to the browser."""
-    return config.get_option("client.showErrorDetails")
+    return bool(config.get_option("client.showErrorDetails"))
 
 
 def show_deprecation_warning(message: str) -> None:
