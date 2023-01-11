@@ -47,6 +47,7 @@ from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
+from tests.script_interactions import InteractiveScriptTests
 from tests.streamlit.elements.image_test import create_image
 from tests.testutil import create_mock_script_run_ctx
 
@@ -918,3 +919,24 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
         # The other thread should not have modified the main thread
         self.assertEqual(1, get_counter())
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class WidgetReplayInteractionTest(InteractiveScriptTests):
+    def test_dynamic_widget_replay(self):
+        script = self.script_from_filename("cached_widget_replay_dynamic.py")
+
+        sr = script.run()
+        assert len(sr.get("checkbox")) == 1
+        assert sr.get("text")[0].value == "['foo']"
+
+        sr2 = sr.get("checkbox")[0].check().run()
+        assert len(sr2.get("multiselect")) == 1
+        assert sr2.get("text")[0].value == "[]"
+
+        sr3 = sr2.get("multiselect")[0].select("baz").run()
+        assert sr3.get("text")[0].value == "['baz']"
+
+        sr4 = sr3.get("checkbox")[0].uncheck().run()
+        sr5 = sr4.get("button")[0].click().run()
+        assert sr5.get("text")[0].value == "['foo']"
