@@ -281,7 +281,6 @@ class ScriptRunner:
         ctx = ScriptRunContext(
             session_id=self._session_id,
             _enqueue=self._enqueue_forward_msg,
-            client_origin=self._client_state.origin,
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
