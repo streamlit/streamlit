@@ -22,8 +22,8 @@ ante accumsan, a egestas urna aliquet. Nullam eget\nsapien eget diam euismod e\
 leifend. Nulla purus enim, finibus ut velit eu,\nmalesuada dictum nulla. In no\
 n arcu et risus maximus fermentum eget nec ante.`;
 
-const tooltipCodeBlock1 = `This\nis\na\ncode\nblock!\n`;
-const tooltipCodeBlock2 = `for i in range(10):\n    x = i * 10\n    print(x)\n`;
+const tooltipCodeBlock1 = `This\nis\na\ncode\nblock!`;
+const tooltipCodeBlock2 = `for i in range(10):\n    x = i * 10\n    print(x)`;
 
 const tooltipTextBlock1 = `This is a regular text block!\nTest1\nTest2`;
 const tooltipTextBlock2 = `thisisatooltipwithnoindents. It has some spaces but\
