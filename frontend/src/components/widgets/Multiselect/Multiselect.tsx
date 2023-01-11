@@ -279,7 +279,11 @@ class Multiselect extends React.PureComponent<Props, State> {
                   borderBottomWidth: "1px",
                 },
               },
-
+              Placeholder: {
+                style: () => ({
+                  flex: "inherit",
+                }),
+              },
               ValueContainer: {
                 style: () => ({
                   /*
