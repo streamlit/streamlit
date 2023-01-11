@@ -803,7 +803,7 @@ def maybe_convert_datetime_datetime_edit_df(value) -> datetime | None:
     try:
         import dateutil.parser
 
-        # handle pasting as number but string type is inputted
+        # handle pasting as the input is a string type but actually a number
         if isinstance(value, str) and not can_be_float_or_int(value):
             date_converted = dateutil.parser.isoparse(value)
         elif can_be_float_or_int(value) or isinstance(value, (int, float)):
