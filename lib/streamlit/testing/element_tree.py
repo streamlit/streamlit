@@ -379,16 +379,16 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             if elt.WhichOneof("type") == "text":
                 new_node = Text(elt.text, root=root)
             elif elt.WhichOneof("type") == "markdown":
-                if elt.widget_type == MarkdownProto.Type.NATIVE:
+                if elt.element_type == MarkdownProto.Type.NATIVE:
                     new_node = Markdown(elt.markdown, root=root)
-                elif elt.widget_type == MarkdownProto.Type.CAPTION:
+                elif elt.element_type == MarkdownProto.Type.CAPTION:
                     new_node = Caption(elt.markdown, root=root)
-                elif elt.widget_type == MarkdownProto.Type.LATEX:
+                elif elt.element_type == MarkdownProto.Type.LATEX:
                     new_node = Latex(elt.markdown, root=root)
-                elif elt.widget_type == MarkdownProto.Type.CODE:
+                elif elt.element_type == MarkdownProto.Type.CODE:
                     new_node = Code(elt.markdown, root=root)
                 else:
-                    raise ValueError(f"Unknown markdown type {elt.widget_type}")
+                    raise ValueError(f"Unknown markdown type {elt.element_type}")
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
             else:
