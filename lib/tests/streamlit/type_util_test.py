@@ -14,7 +14,7 @@
 
 import unittest
 from collections import namedtuple
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import patch
 
 import numpy as np
@@ -22,15 +22,20 @@ import pandas as pd
 import plotly.graph_objs as go
 import pyarrow as pa
 import pytest
+from dateutil.tz import tzutc
 from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
 from streamlit import type_util
 from streamlit.type_util import (
+    can_be_float_or_int,
     data_frame_to_bytes,
     fix_arrow_incompatible_column_types,
     is_bytes_like,
     is_snowpark_data_object,
+    maybe_convert_datetime_date_edit_df,
+    maybe_convert_datetime_datetime_edit_df,
+    maybe_convert_datetime_time_edit_df,
     to_bytes,
 )
 from tests.streamlit.snowpark_mocks import DataFrame, Row
@@ -413,3 +418,62 @@ dtype: object""",
                     snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
                 )
             )
+
+    @parameterized.expand(
+        [
+            ("4", True),
+            ("4.0", True),
+            (4, True),
+            (4.0, True),
+            ("not a float or int", False),
+            ("4.00", True),
+        ]
+    )
+    def test_can_be_float_or_int(self, actual, expected):
+        self.assertEqual(can_be_float_or_int(actual), expected)
+
+    @parameterized.expand(
+        [
+            (1000000, datetime(1969, 12, 31, 16, 16, 40)),
+            ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
+            ("1000000", datetime(1969, 12, 31, 16, 16, 40)),
+            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560)),
+            (None, None),
+        ]
+    )
+    def test_maybe_convert_datetime_datetime_edit_df(self, actual, expected):
+        self.assertEqual(maybe_convert_datetime_datetime_edit_df(actual), expected)
+
+    @parameterized.expand(
+        [
+            (1000000, datetime(1969, 12, 31, 16, 16, 40)),
+            ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
+            ("1000000", datetime(1969, 12, 31, 16, 16, 40)),
+            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560)),
+            (None, None),
+        ]
+    )
+    def test_maybe_convert_datetime_time_edit_df(self, actual, expected):
+        if expected != None:
+            self.assertEqual(
+                maybe_convert_datetime_time_edit_df(actual), expected.time()
+            )
+        else:
+            self.assertEqual(maybe_convert_datetime_time_edit_df(actual), expected)
+
+    @parameterized.expand(
+        [
+            (1000000, datetime(1969, 12, 31, 16, 16, 40)),
+            ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
+            ("1000000", datetime(1969, 12, 31, 16, 16, 40)),
+            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560)),
+            (None, None),
+        ]
+    )
+    def test_maybe_convert_datetime_datetime_edit_df(self, actual, expected):
+        if expected != None:
+            self.assertEqual(
+                maybe_convert_datetime_date_edit_df(actual), expected.date()
+            )
+        else:
+            self.assertEqual(maybe_convert_datetime_date_edit_df(actual), expected)

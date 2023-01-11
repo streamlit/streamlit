@@ -23,7 +23,19 @@ class ColumnConfig(TypedDict, total=False):
     width: Optional[int]
     title: Optional[str]
     type: Optional[
-        Literal["text", "number", "boolean", "list", "url", "image", "chart", "range"]
+        Literal[
+            "text",
+            "number",
+            "boolean",
+            "list",
+            "url",
+            "image",
+            "chart",
+            "range",
+            "datetime",
+            "date",
+            "time",
+        ]
     ]
     hidden: Optional[bool]
     editable: Optional[bool]

@@ -36,7 +36,12 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 from numpy.typing import NDArray
-from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
+from pandas.api.types import (
+    is_datetime64_any_dtype,
+    is_datetime64tz_dtype,
+    is_float_dtype,
+    is_integer_dtype,
+)
 from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
@@ -53,7 +58,13 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import DataFrameGenericAlias, Key, to_key
+from streamlit.type_util import (
+    DataFrameGenericAlias,
+    Key,
+    maybe_convert_datetime_date_edit_df,
+    maybe_convert_datetime_time_edit_df,
+    to_key,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -283,20 +294,26 @@ def _convert_df_to_data_format(df: pd.DataFrame, data_format: DataFormat) -> Dat
     raise ValueError(f"Unsupported input data format: {data_format}")
 
 
-def _parse_value(value: Union[str, int, float, bool, None], dtype) -> Any:
+def _parse_value(value: Union[str, int, float, bool, None], orig_col) -> Any:
     if value is None:
         return None
-
-    # TODO(lukasmasuch): how to deal with date & time columns?
-
-    # Datetime values try to parse the value to datetime:
-    # The value is expected to be a ISO 8601 string
-    if is_datetime64_any_dtype(dtype):
-        return pd.to_datetime(value, errors="ignore")
-    elif is_integer_dtype(dtype):
+    if pd.api.types.infer_dtype(orig_col) == "time":
+        return maybe_convert_datetime_time_edit_df(value)
+    elif pd.api.types.infer_dtype(orig_col) == "date":
+        return maybe_convert_datetime_date_edit_df(value)
+    elif is_datetime64_any_dtype(orig_col.dtype):
+        if is_datetime64tz_dtype(orig_col.dtype):
+            return pd.to_datetime(value, errors="ignore")
+        else:
+            try:
+                return pd.to_datetime(value, errors="ignore").replace(tzinfo=None)
+            except:
+                # default with timezone
+                return pd.to_datetime(value, errors="ignore")
+    elif is_integer_dtype(orig_col.dtype):
         with contextlib.suppress(ValueError):
             return int(value)
-    elif is_float_dtype(dtype):
+    elif is_float_dtype(orig_col.dtype):
         with contextlib.suppress(ValueError):
             return float(value)
     return value
@@ -311,18 +328,16 @@ def _apply_cell_edits(
         col, row = cell.split(":")  # the format is "col:row"
         col, row = int(col), int(row)
 
+        # The edited cell is part of the index
         if col < index_count:
-            # The edited cell is part of the index
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
-            df.index.values[row] = _parse_value(value, df.index.dtype)
+            df.index.values[row] = _parse_value(value, df.index)
         else:
             # We need to subtract the number of index levels from the column index
             # to get the correct column index for pandas dataframes
             column_idx = col - index_count
-            df.iat[row, column_idx] = _parse_value(
-                value, df[df.columns[column_idx]].dtype
-            )
+            df.iat[row, column_idx] = _parse_value(value, df[df.columns[column_idx]])
 
 
 def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> None:
@@ -336,13 +351,13 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
             if col_idx < index_count:
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
-                index_value = _parse_value(value, df.index.dtype)
+                index_value = _parse_value(value, df.index)
             else:
                 # We need to subtract the number of index levels from the column index
                 # to get the correct column index for pandas dataframes
                 mapped_column = col_idx - index_count
                 new_row[mapped_column] = _parse_value(
-                    value, df[df.columns[mapped_column]].dtype
+                    value, df[df.columns[mapped_column]]
                 )
         # Append the new row to the dataframe
         if type(df.index) == pd.RangeIndex:
