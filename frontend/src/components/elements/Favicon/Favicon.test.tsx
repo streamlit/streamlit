@@ -25,9 +25,9 @@ function getFaviconHref(): string {
 
 document.head.innerHTML = `<link rel="shortcut icon" href="default.png">`
 
-const PIZZA_TWEMOJI_URL = 
+const PIZZA_TWEMOJI_URL =
   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f355.png"
-const SATELLITE_TWEMOJI_URL = 
+const SATELLITE_TWEMOJI_URL =
   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f6f0.png"
 const CRESCENT_MOON_TWEMOJI_URL =
   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f319.png"
