@@ -20,40 +20,35 @@ from streamlit.deprecation_util import (
     deprecate_obj_name,
     show_deprecation_warning,
 )
+from tests.testutil import patch_config_options
 
 
 class DeprecationUtilTest(unittest.TestCase):
     @patch("streamlit.deprecation_util._LOGGER")
     @patch("streamlit.warning")
-    @patch("streamlit.deprecation_util.get_script_run_ctx")
-    def test_show_deprecation_warning(
-        self, mock_get_script_run_ctx: Mock, mock_warning: Mock, mock_logger: Mock
-    ):
+    def test_show_deprecation_warning(self, mock_warning: Mock, mock_logger: Mock):
         """show_deprecation_warning logs warnings always, and prints to the browser only
-        if the current user is on localhost.
+        if config.client.showErrorDetails is True.
         """
         message = (
             "We regret the bother, but it's been fated:\n"
             "the function you called is DEPRECATED."
         )
 
-        mock_script_run_ctx = Mock()
-        mock_get_script_run_ctx.return_value = mock_script_run_ctx
-
-        # localhost=True: log AND show in browser
-        mock_script_run_ctx.client_origin = "https://localhost"
-        show_deprecation_warning(message)
-        mock_logger.warning.assert_called_once_with(message)
-        mock_warning.assert_called_once_with(message)
+        # config.client.showErrorDetails=True: log AND show in browser
+        with patch_config_options({"client.showErrorDetails": True}):
+            show_deprecation_warning(message)
+            mock_logger.warning.assert_called_once_with(message)
+            mock_warning.assert_called_once_with(message)
 
         mock_logger.reset_mock()
         mock_warning.reset_mock()
 
-        # localhost=False: log, but DON'T show in browser
-        mock_script_run_ctx.client_origin = "https://mockOrigin.com"
-        show_deprecation_warning(message)
-        mock_logger.warning.assert_called_once_with(message)
-        mock_warning.assert_not_called()
+        # config.client.showErrorDetails=False: log, but DON'T show in browser
+        with patch_config_options({"client.showErrorDetails": False}):
+            show_deprecation_warning(message)
+            mock_logger.warning.assert_called_once_with(message)
+            mock_warning.assert_not_called()
 
     @patch("streamlit.deprecation_util.show_deprecation_warning")
     def test_deprecate_func_name(self, mock_show_warning: Mock):
