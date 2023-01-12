@@ -18,6 +18,7 @@ from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
+from streamlit.elements.slider import SliderScalar, Step
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -25,6 +26,7 @@ from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.session_state import SessionState
@@ -354,6 +356,55 @@ class Button(Element, Widget):
 
 
 @dataclass(init=False)
+class Slider(Element, Widget):
+    _value: SliderScalar | None
+
+    proto: SliderProto
+    type: str
+    id: str
+    label: str
+    min_value: SliderScalar
+    max_value: SliderScalar
+    step: Step
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: SliderProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "slider"
+        self.id = proto.id
+        self.label = proto.label
+        self.min_value = proto.min
+        self.max_value = proto.max
+        self.step = proto.step
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: SliderScalar) -> Slider:
+        self._value = v
+        return self
+
+    @property
+    def value(self) -> SliderScalar:
+        """The currently selected value from the options."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(SliderScalar, state[self.id])
+
+
+@dataclass(init=False)
 class Block:
     type: str
     children: dict[int, Node]
@@ -526,6 +577,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Checkbox(elt.checkbox, root=root)
             elif elt.WhichOneof("type") == "multiselect":
                 new_node = Multiselect(elt.multiselect, root=root)
+            elif elt.WhichOneof("type") == "slider":
+                if list(elt.slider.options) == []:
+                    new_node = Slider(elt.slider, root=root)
+                else:
+                    pass
             elif elt.WhichOneof("type") == "button":
                 new_node = Button(elt.button, root=root)
             else:
