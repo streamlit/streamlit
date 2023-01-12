@@ -64,7 +64,7 @@ const MAX_COLUMN_AUTO_WIDTH = 500
 // This prevents to rapid updates to the widget state.
 const DEBOUNCE_TIME_MS = 100
 // Token used for missing values (null, NaN, etc.)
-const NULL_VALUE_TOKEN = "NA"
+const NULL_VALUE_TOKEN = "None"
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -387,6 +387,7 @@ function DataFrame({
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
           }}
+          onRowMoved={(s, e) => window.alert(`Moved row ${s} to ${e}`)}
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
           // If element is editable, add additional properties:
