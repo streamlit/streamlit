@@ -223,3 +223,26 @@ class SliderTest(InteractiveScriptTests):
         assert s[2].value == (time(12, 0), time(12, 15))
         assert s[3].value == datetime(2020, 1, 10, 8, 0)
         assert s[4].value == 0.1
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class SelectSliderTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "select_slider_test.py",
+            """
+            import streamlit as st
+
+            options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet']
+            st.select_slider("single", options=options, value='green')
+            st.select_slider("range", options=options, value=['red', 'blue'])
+            """,
+        )
+        sr = script.run()
+        assert sr.get("select_slider")[0].value == "green"
+        assert sr.get("select_slider")[1].value == ("red", "blue")
+
+        sr2 = sr.get("select_slider")[0].set_value("violet").run()
+        sr3 = sr2.get("select_slider")[1].set_range("yellow", "orange").run()
+        assert sr3.get("select_slider")[0].value == "violet"
+        assert sr3.get("select_slider")[1].value == ("orange", "yellow")
