@@ -84,7 +84,7 @@
     "re-resizable": "^6.9.9",
     "react": "^17.0.2",
     "react-color": "^2.18.1",
-    "react-debounce-render": "^7.0.0",
+    "react-debounce-render": "^8.0.2",
     "react-device-detect": "^2.2.2",
     "react-dom": "^17.0.2",
     "react-dropzone": "^11.2.0",

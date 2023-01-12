@@ -11342,10 +11342,10 @@ SOFTWARE.
 The following software may be included in this product: react-debounce-render. A copy of the source code may be downloaded from git@github.com:podefr/react-debounce-render.git. This software contains the following license and notice below:
 
 @license react-debounce-render https://github.com/podefr/react-debounce-render
- 
+
 The MIT License (MIT)
 
-Copyright (c) 2017-2018 Olivier Scherrer <pode.fr@gmail.com>
+Copyright (c) 2017-2022 Olivier Scherrer <pode.fr@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 documentation files (the "Software"), to deal in the Software without restriction, including without limitation
