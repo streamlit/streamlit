@@ -32,15 +32,15 @@ import {
 } from "./utils"
 
 export interface NumberColumnParams {
-  /** Floating point precision to limit the number of digits after the decimal point.
-  This is set to 0 for integer columns. */
+  // Floating point precision to limit the number of digits after the decimal point.
+  // This is set to 0 for integer columns.
   readonly precision?: number
   // The minimum allowed value for editing. Is set to 0 for unsigned values.
   readonly min?: number
   // The maximum allowed value for editing.
   readonly max?: number
-  /** A formatting syntax (e.g. sprintf) to format the display value.
-  This can be used for adding prefix or suffix, or changing the number of decimals of the display value.*/
+  // A formatting syntax (e.g. sprintf) to format the display value.
+  // This can be used for adding prefix or suffix, or changing the number of decimals of the display value.
   readonly format?: string
 }
 
