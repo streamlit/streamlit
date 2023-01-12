@@ -46,6 +46,7 @@ import {
   setCookie,
   hashString,
   isEmbeddedInIFrame,
+  isInChildFrame,
   notUndefined,
   getElementWidgetID,
 } from "src/lib/utils"
@@ -153,6 +154,7 @@ const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 declare global {
   interface Window {
     streamlitDebug: any
+    iFrameResizer: any
   }
 }
 
@@ -291,6 +293,28 @@ export class App extends PureComponent<Props, State> {
 
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
+    }
+
+    // Iframe resizer allows parent pages to get the height of the iframe
+    // contents. The parent page can then reset the height to match and
+    // avoid unnecessary scrollbars or large embeddings
+    if (isInChildFrame()) {
+      window.iFrameResizer = {
+        heightCalculationMethod: () => {
+          const taggedEls = document.querySelectorAll("[data-iframe-height]")
+          // Use ceil to avoid fractional pixels creating scrollbars.
+          const lowestBounds = Array.from(taggedEls).map(el =>
+            Math.ceil(el.getBoundingClientRect().bottom)
+          )
+
+          // The higher the value, the further down the page it is.
+          // Use maximum value to get the lowest of all tagged elements.
+          return Math.max(0, ...lowestBounds)
+        },
+      }
+
+      // @ts-ignore
+      import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
     this.props.hostCommunication.sendMessage({
