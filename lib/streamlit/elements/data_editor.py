@@ -121,7 +121,15 @@ def _marshall_column_config(
 @dataclass
 class DataEditorSerde:
     def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
-        return {} if ui_value is None else json.loads(ui_value)  # type: ignore
+        return (  # type: ignore
+            {
+                "edited_cells": {},
+                "added_rows": [],
+                "deleted_rows": [],
+            }
+            if ui_value is None
+            else json.loads(ui_value)
+        )
 
     def serialize(self, editing_state: EditingState) -> str:
         return json.dumps(editing_state, default=str)
