@@ -128,7 +128,9 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
       }
       if (displayData === undefined) {
-        displayData = notNullOrUndefined(cellData) ? formatNumber(cellData) : ""
+        displayData = notNullOrUndefined(cellData)
+          ? formatNumber(cellData)
+          : ""
       }
 
       return {
