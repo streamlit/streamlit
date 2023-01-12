@@ -407,7 +407,7 @@ class Slider(Element, Widget, Generic[SliderScalarT]):
 
     proto: SliderProto
     type: str
-    data_type: SliderProto.DataType
+    data_type: SliderProto.DataType.ValueType
     id: str
     label: str
     min_value: SliderScalar
@@ -437,7 +437,9 @@ class Slider(Element, Widget, Generic[SliderScalarT]):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: SliderScalarT | Sequence[SliderScalarT]) -> Slider:
+    def set_value(
+        self, v: SliderScalarT | Sequence[SliderScalarT]
+    ) -> Slider[SliderScalarT]:
         self._value = v
         return self
 
@@ -455,13 +457,12 @@ class Slider(Element, Widget, Generic[SliderScalarT]):
     def value(self) -> SliderScalarT | Sequence[SliderScalarT]:
         """The currently selected value from the options."""
         if self._value is not None:
-            print(f"returning stored value for slider")
             return self._value
         else:
             state = self.root.session_state
             assert state
-            print(f"returning slider value from state: {self.id=}, {state[self.id]}")
-            return cast(SliderScalar, state[self.id])
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
 
 
 @dataclass(init=False)
