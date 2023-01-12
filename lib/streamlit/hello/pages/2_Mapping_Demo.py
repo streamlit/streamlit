@@ -55,7 +55,7 @@ def mapping_demo():
                 get_position=["lon", "lat"],
                 get_text="name",
                 get_color=[0, 0, 0, 200],
-                get_size=15,
+                get_size=10,
                 get_alignment_baseline="'bottom'",
             ),
             "Outbound Flow": pdk.Layer(

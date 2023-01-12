@@ -109,6 +109,24 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "Unknown",
         "Dmitry Yv",
     ),
+    (
+        # CC-BY-3.0 license: https://github.com/cartodb/cartocolor#licensing
+        "cartocolor",
+        "4.0.2",
+        "UNKNOWN",
+        "https://github.com/cartodb/cartocolor",
+        "http://carto.com/",
+        "Unknown",
+    ),
+    (
+        # Apache-2.0 license: https://github.com/saikocat/colorbrewer/blob/master/LICENSE.txt
+        "colorbrewer",
+        "1.0.0",
+        "Apache*",
+        "https://github.com/saikocat/colorbrewer",
+        "http://colorbrewer2.org/",
+        "Cynthia Brewer",
+    ),
 }
 
 
