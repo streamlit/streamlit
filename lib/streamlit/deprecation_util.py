@@ -16,14 +16,27 @@ import functools
 from typing import Any, Callable, List, TypeVar, cast
 
 import streamlit
+from streamlit import config
+from streamlit.logger import get_logger
+
+_LOGGER = get_logger(__name__)
 
 TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
 
 
+def _should_show_deprecation_warning_in_browser() -> bool:
+    """True if we should print deprecation warnings to the browser."""
+    return bool(config.get_option("client.showErrorDetails"))
+
+
 def show_deprecation_warning(message: str) -> None:
-    """Show a deprecation warning message in the browser."""
-    streamlit.warning(message)
+    """Show a deprecation warning message."""
+    if _should_show_deprecation_warning_in_browser():
+        streamlit.warning(message)
+
+    # We always log deprecation warnings
+    _LOGGER.warning(message)
 
 
 def make_deprecated_name_warning(
