@@ -24,7 +24,6 @@ import { Arrow as ArrowProto } from "src/autogen/proto"
 import { notNullOrUndefined } from "src/lib/utils"
 import { Theme } from "src/theme"
 import { logWarning, logError } from "src/lib/log"
-
 import {
   getColumnTypeFromQuiver,
   getColumnsFromQuiver,
@@ -37,7 +36,6 @@ import {
   getErrorCell,
   ColumnTypes,
   ColumnCreator,
-  isErrorCell,
 } from "src/components/widgets/DataFrame/columns"
 
 // Using this ID for column config will apply the config to all index columns
@@ -268,54 +266,31 @@ function useDataLoader(
       }
       const column = columns[col]
 
-      function getCell(): GridCell {
-        const originalCol = column.indexNumber
-        const originalRow = editingState.current.getOriginalRowIndex(row)
+      const originalCol = column.indexNumber
+      const originalRow = editingState.current.getOriginalRowIndex(row)
 
-        // Use editing state if editable or if it is an appended row
-        if (
-          column.isEditable ||
-          editingState.current.isAddedRow(originalRow)
-        ) {
-          const editedCell = editingState.current.getCell(
-            originalCol,
-            originalRow
-          )
-          if (editedCell !== undefined) {
-            return editedCell
-          }
-        }
-
-        try {
-          // Quiver has the header in first row
-          const quiverCell = data.getCell(originalRow + 1, originalCol)
-          return getCellFromQuiver(column, quiverCell, data.cssStyles)
-        } catch (error) {
-          logError(error)
-          return getErrorCell(
-            "Error during cell creation.",
-            `This should never happen. Please report this bug. \nError: ${error}`
-          )
+      // Use editing state if editable or if it is an appended row
+      if (column.isEditable || editingState.current.isAddedRow(originalRow)) {
+        const editedCell = editingState.current.getCell(
+          originalCol,
+          originalRow
+        )
+        if (editedCell !== undefined) {
+          return editedCell
         }
       }
 
-      const cell = getCell()
-
-      // Add a background for non-editable or error cells:
-      if (
-        isErrorCell(cell) ||
-        (element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
-          !column.isEditable)
-      ) {
-        return {
-          ...cell,
-          themeOverride: {
-            bgCell: theme.colors.bgMix,
-            bgCellMedium: theme.colors.bgMix,
-          },
-        }
+      try {
+        // Quiver has the header in first row
+        const quiverCell = data.getCell(originalRow + 1, originalCol)
+        return getCellFromQuiver(column, quiverCell, data.cssStyles)
+      } catch (error) {
+        logError(error)
+        return getErrorCell(
+          "Error during cell creation.",
+          `This should never happen. Please report this bug. \nError: ${error}`
+        )
       }
-      return cell
     },
     [columns, numRows, data, editingState]
   )

@@ -103,7 +103,7 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
           ) {
             return getErrorCell(
               toSafeString(chartData),
-              `Incompatible chart value. The value ${convertedValue} is not a number.`
+              `The value cannot be interpreted as a numeric array. ${convertedValue} is not a number.`
             )
           }
 

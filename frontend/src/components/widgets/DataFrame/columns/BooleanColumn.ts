@@ -69,7 +69,7 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
           } else {
             return getErrorCell(
               toSafeString(data),
-              `Incompatible boolean value.`
+              `The value cannot be interpreted as boolean.`
             )
           }
         }

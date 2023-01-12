@@ -84,13 +84,13 @@ describe("DeckGlJsonChart element", () => {
   it("merges client and server changes", () => {
     const props = getProps()
     const wrapper = shallow(<DeckGlJsonChart {...props} />)
-    const DeckGL = wrapper.find("DeckGL")
+    const deckGL = wrapper.find(DeckGL)
 
-    expect(DeckGL.length).toBe(1)
-    expect(DeckGL.prop("onViewStateChange")).toBeDefined()
+    expect(deckGL.length).toBe(1)
+    expect(deckGL.prop("onViewStateChange")).toBeDefined()
 
     // @ts-ignore
-    DeckGL.prop("onViewStateChange")({
+    deckGL.prop("onViewStateChange")({
       viewState: { pitch: 5, zoom: 5 },
     })
 
@@ -108,13 +108,13 @@ describe("DeckGlJsonChart element", () => {
       tooltip: `{"html": "<b>Elevation Value:</b> {elevationValue}", "style": {"color": "white"}}`,
     })
     const wrapper = shallow(<DeckGlJsonChart {...props} />)
-    const DeckGL = wrapper.find("DeckGL")
+    const deckGL = wrapper.find(DeckGL)
 
-    expect(DeckGL.length).toBe(1)
-    expect(DeckGL.prop("getTooltip")).toBeDefined()
+    expect(deckGL.length).toBe(1)
+    expect(deckGL.prop("getTooltip")).toBeDefined()
 
     // @ts-ignore
-    const createdTooltip = DeckGL.prop("getTooltip")({
+    const createdTooltip = deckGL.prop("getTooltip")({
       object: {
         elevationValue: 10,
       },
@@ -128,13 +128,13 @@ describe("DeckGlJsonChart element", () => {
       tooltip: "",
     })
     const wrapper = shallow(<DeckGlJsonChart {...props} />)
-    const DeckGL = wrapper.find("DeckGL")
+    const deckGL = wrapper.find(DeckGL)
 
-    expect(DeckGL.length).toBe(1)
-    expect(DeckGL.prop("getTooltip")).toBeDefined()
+    expect(deckGL.length).toBe(1)
+    expect(deckGL.prop("getTooltip")).toBeDefined()
 
     // @ts-ignore
-    const createdTooltip = DeckGL.prop("getTooltip")({
+    const createdTooltip = deckGL.prop("getTooltip")({
       object: {
         elevationValue: 10,
       },

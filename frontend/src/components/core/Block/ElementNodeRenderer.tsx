@@ -371,7 +371,7 @@ const RawElementNodeRenderer = (
       return <Video width={width} element={node.element.video as VideoProto} />
 
     // Widgets
-    case "arrowDataFrame":
+    case "arrowDataFrame": {
       const arrowProto = node.element.arrowDataFrame as ArrowProto
       widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
 
@@ -387,6 +387,7 @@ const RawElementNodeRenderer = (
           {...widgetProps}
         />
       )
+    }
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
