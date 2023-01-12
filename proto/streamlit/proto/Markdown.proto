@@ -22,5 +22,14 @@ message Markdown {
   string body = 1;
 
   bool allow_html = 2;
-  bool is_caption = 3;
+  bool is_caption = 3; // TODO [Karen]: Remove this field if favor of element_type
+
+  enum Type {
+    UNSPECIFIED = 0;  // This is recommended to be reserved for proto files backwards compatibility reasons.
+    NATIVE = 1;
+    CAPTION = 2;
+    CODE = 3;
+    LATEX = 4;
+  }
+  Type element_type = 4;
 }
