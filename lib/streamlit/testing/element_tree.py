@@ -23,6 +23,7 @@ from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.proto.Text_pb2 import Text as TextProto
@@ -45,7 +46,7 @@ class Element:
     type: str
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
-    key: str | None = None
+    key: str | None
 
     def __init__(self, proto: ElementProto, root: ElementTree):
         self.proto = proto
@@ -53,6 +54,7 @@ class Element:
         ty = proto.WhichOneof("type")
         assert ty is not None
         self.type = ty
+        self.key = None
 
     def __iter__(self):
         yield self
@@ -91,6 +93,50 @@ class Text(Element):
     @property
     def value(self) -> str:
         return self.proto.body
+
+
+@dataclass(init=False)
+class Markdown(Element):
+    proto: MarkdownProto
+
+    type: str
+    is_caption: bool
+    allow_html: bool
+    root: ElementTree = field(repr=False)
+    key: None
+
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        self.proto = proto
+        self.key = None
+        self.is_caption = proto.is_caption
+        self.allow_html = proto.allow_html
+        self.root = root
+        self.type = "markdown"
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
+
+
+@dataclass(init=False)
+class Caption(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "caption"
+
+
+@dataclass(init=False)
+class Latex(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "latex"
+
+
+@dataclass(init=False)
+class Code(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "code"
 
 
 @runtime_checkable
@@ -400,6 +446,22 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["markdown"]) -> Sequence[Markdown]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["caption"]) -> Sequence[Caption]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["latex"]) -> Sequence[Latex]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["code"]) -> Sequence[Code]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 
@@ -520,6 +582,19 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             new_node: Node
             if elt.WhichOneof("type") == "text":
                 new_node = Text(elt.text, root=root)
+            elif elt.WhichOneof("type") == "markdown":
+                if elt.markdown.element_type == MarkdownProto.Type.NATIVE:
+                    new_node = Markdown(elt.markdown, root=root)
+                elif elt.markdown.element_type == MarkdownProto.Type.CAPTION:
+                    new_node = Caption(elt.markdown, root=root)
+                elif elt.markdown.element_type == MarkdownProto.Type.LATEX:
+                    new_node = Latex(elt.markdown, root=root)
+                elif elt.markdown.element_type == MarkdownProto.Type.CODE:
+                    new_node = Code(elt.markdown, root=root)
+                else:
+                    raise ValueError(
+                        f"Unknown markdown type {elt.markdown.element_type}"
+                    )
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
             elif elt.WhichOneof("type") == "checkbox":
