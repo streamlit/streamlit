@@ -51,7 +51,7 @@
     "apache-arrow": "^10.0.1",
     "axios": "^0.21.4",
     "baseui": "12.2.0",
-    "camelcase": "^6.2.0",
+    "camelcase": "^7.0.1",
     "classnames": "^2.3.2",
     "clipboard": "^2.0.11",
     "color2k": "^1.1.0",
