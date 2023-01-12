@@ -222,7 +222,7 @@
     "query-string": "^8.1.0",
     "serialize-javascript": "^6.0.0",
     "set-value": "^4.0.1",
-    "ssri": "^8.0.1",
+    "ssri": "^10.0.1",
     "static-eval": "^2.0.5",
     "vega-tooltip": "^0.30.0",
     "websocket-extensions": "^0.1.4",
