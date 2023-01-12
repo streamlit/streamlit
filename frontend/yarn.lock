@@ -3206,10 +3206,10 @@
   resolved "https://registry.yarnpkg.com/@types/normalize-package-data/-/normalize-package-data-2.4.0.tgz#e486d0d97396d79beedd0a6e33f4534ff6b4973e"
   integrity sha512-f5j5b/Gf71L+dbqxIpQ4Z2WlmI/mPJ0fOkGGmFgtb6sAu97EPczzbS3/tJKxmcYDj55OX6ssqwDAWOHIYDRDGA==
 
-"@types/numeral@^0.0.26":
-  version "0.0.26"
-  resolved "https://registry.yarnpkg.com/@types/numeral/-/numeral-0.0.26.tgz#cfab9842ef9349ce714b06722940ca7ebf8a6298"
-  integrity sha512-DwCsRqeOWopdEsm5KLTxKVKDSDoj+pzZD1vlwu1GQJ6IF3RhjuleYlRwyRH6MJLGaf3v8wFTnC6wo3yYfz0bnA==
+"@types/numeral@^2.0.2":
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/@types/numeral/-/numeral-2.0.2.tgz#8ea2c4f4e64c0cc948ad7da375f6f827778a7912"
+  integrity sha512-A8F30k2gYJ/6e07spSCPpkuZu79LCnkPTvqmIWQzNGcrzwFKpVOydG41lNt5wZXjSI149qjyzC2L1+F2PD/NUA==
 
 "@types/offscreencanvas@^2019.7.0":
   version "2019.7.0"
