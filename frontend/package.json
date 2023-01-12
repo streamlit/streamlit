@@ -226,7 +226,7 @@
     "static-eval": "^2.0.5",
     "vega-tooltip": "^0.30.0",
     "websocket-extensions": "^0.1.4",
-    "ws": "^7.4.6",
+    "ws": "^8.11.0",
     "y18n": "^4.0.1"
   },
   "browserslist": [
