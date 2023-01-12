@@ -25,6 +25,8 @@ import {
   Null,
   Field,
   Dictionary,
+  Decimal,
+  Struct,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
 import { range, unzip, zip } from "lodash"
@@ -32,6 +34,8 @@ import moment from "moment-timezone"
 import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
+
+import { notNullOrUndefined } from "src/lib/utils"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -42,8 +46,11 @@ export type DataType =
   | Date // datetime
   | Int32Array // int
   | Uint8Array // bytes
+  | Uint32Array // Decimal
   | Vector // arrays
   | StructRow // interval
+  | Dictionary // categorical
+  | Struct // dict
 
 /**
  * A row-major grid of DataFrame index header values.
@@ -836,6 +843,33 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
     // Nested arrays and objects.
     if (typeName === "object" || typeName?.startsWith("list")) {
+      if (field?.type instanceof Decimal) {
+        // TODO(lukasmasuch):
+        // This is still broken in Arrow JS for many cases since it does not
+        // apply the precision or works with negative values:
+        // https://github.com/apache/arrow/issues/22932
+        // https://github.com/apache/arrow/issues/28804
+        return x.toString()
+      }
+
+      if (field?.type instanceof Struct) {
+        // This type is used by python dictionary values
+
+        // TODO(lukasmasuch): Arrow JS adds all properties from all cells
+        // as fields. When you convert to string, it will contain lots of fields with
+        // null values. To mitigate this, we filter out null values.
+
+        return JSON.stringify(x, (_key, value) => {
+          if (!notNullOrUndefined(value)) {
+            // Ignore null and undefined values ->
+            return undefined
+          }
+          if (typeof value === "bigint") {
+            return Number(value)
+          }
+          return value
+        })
+      }
       return JSON.stringify(x, (_key, value) =>
         typeof value === "bigint" ? Number(value) : value
       )
