@@ -33,10 +33,9 @@ from typing import (
     overload,
 )
 
-import numpy as np
 import pandas as pd
 import pyarrow as pa
-from pandas.api.types import infer_dtype, is_list_like
+from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
@@ -621,15 +620,9 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 
 def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
-    # Check all columns for mixed types and complex128 type
-    # The dtype of mixed type columns is always object, the actual type of the column
-    # values can be determined via the infer_dtype function:
-    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
-
-    # mixed-integer-float is not a problem for arrow
-    # Frozensets are incompatible
     if column.dtype in [
-        # TODO(lukasmasuch): timedelta64[ns] is supported by pyarrow but not in the javascript arrow implementation
+        # timedelta64[ns] is supported by pyarrow but not in the Arrow JS:
+        # https://github.com/streamlit/streamlit/issues/4489
         "timedelta64[ns]",
         "complex128",
         "complex64",
@@ -640,18 +633,34 @@ def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool
         return True
 
     if column.dtype == "object":
+        # The dtype of mixed type columns is always object, the actual type of the column
+        # values can be determined via the infer_dtype function:
+        # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
         inferred_type = infer_dtype(column, skipna=True)
-        if inferred_type == "mixed-integer":
+
+        if inferred_type in [
+            "mixed-integer",
+            # Decimal is not correctly supported on Arrow JS:
+            # https://github.com/apache/arrow/issues/22932
+            # https://github.com/apache/arrow/issues/28804
+            "decimal",
+            "complex",
+            "timedelta",
+            "timedelta64",
+        ]:
             return True
         elif inferred_type == "mixed":
+            # This includes most of the more complex/custom types (objects, dicts, lists, ...)
             if (
                 len(column) > 0
                 and hasattr(column, "iloc")
                 and is_list_like(column.iloc[0])
+                # dicts are list-like, but have issues in Arrow JS (see comments in Quiver.ts)
+                and not is_dict_like(column.iloc[0])
+                # Frozensets are list-like, but are not compatible with pyarrow.
+                and not isinstance(column.iloc[0], frozenset)
             ):
-                # TODO(lukasmasuch): Mixed arrays are also not supported
-                # Also infer_dtype for the selected list and convert to string list
-                # List objects are supported by Arrow
+                # Lists-like structures are supported
                 return False
             return True
     return False
