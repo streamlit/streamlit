@@ -64,7 +64,7 @@
     "fzy.js": "^0.4.1",
     "gl-matrix": "^3.2.1",
     "hoist-non-react-statics": "^3.3.2",
-    "humanize-string": "^2.1.0",
+    "humanize-string": "^3.0.0",
     "iframe-resizer": "^4.3.2",
     "immer": "^9.0.17",
     "immutable": "^4.2.2",
