@@ -46,7 +46,7 @@ class Element:
     type: str
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
-    key: str | None = None
+    key: str | None
 
     def __init__(self, proto: ElementProto, root: ElementTree):
         self.proto = proto
@@ -54,6 +54,7 @@ class Element:
         ty = proto.WhichOneof("type")
         assert ty is not None
         self.type = ty
+        self.key = None
 
     def __iter__(self):
         yield self
@@ -99,13 +100,14 @@ class Markdown(Element):
     proto: MarkdownProto
 
     type: str
-    root: ElementTree = field(repr=False)
     is_caption: bool
     allow_html: bool
-    key: None = None
+    root: ElementTree = field(repr=False)
+    key: None
 
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         self.proto = proto
+        self.key = None
         self.is_caption = proto.is_caption
         self.allow_html = proto.allow_html
         self.root = root
@@ -581,16 +583,18 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             if elt.WhichOneof("type") == "text":
                 new_node = Text(elt.text, root=root)
             elif elt.WhichOneof("type") == "markdown":
-                if elt.element_type == MarkdownProto.Type.NATIVE:
+                if elt.markdown.element_type == MarkdownProto.Type.NATIVE:
                     new_node = Markdown(elt.markdown, root=root)
-                elif elt.element_type == MarkdownProto.Type.CAPTION:
+                elif elt.markdown.element_type == MarkdownProto.Type.CAPTION:
                     new_node = Caption(elt.markdown, root=root)
-                elif elt.element_type == MarkdownProto.Type.LATEX:
+                elif elt.markdown.element_type == MarkdownProto.Type.LATEX:
                     new_node = Latex(elt.markdown, root=root)
-                elif elt.element_type == MarkdownProto.Type.CODE:
+                elif elt.markdown.element_type == MarkdownProto.Type.CODE:
                     new_node = Code(elt.markdown, root=root)
                 else:
-                    raise ValueError(f"Unknown markdown type {elt.element_type}")
+                    raise ValueError(
+                        f"Unknown markdown type {elt.markdown.element_type}"
+                    )
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
             elif elt.WhichOneof("type") == "checkbox":

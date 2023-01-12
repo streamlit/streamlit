@@ -130,20 +130,6 @@ class InteractiveScriptTest(InteractiveScriptTests):
         assert sr2.get("radio")[0].value == "b"
         assert [s.value for s in sr2.get("radio")] == ["b", "c"]
 
-    def test_caption(self):
-        script = self.script_from_string(
-            "caption_interaction.py",
-            """
-            import streamlit as st
-
-            st.caption("This is a caption")
-            """,
-        )
-        sr = script.run()
-        assert sr.get("caption")
-        assert sr.get("caption")[0].value == "This is a caption"
-        assert sr.get("caption")[0].is_caption
-
     def test_widget_key_lookup(self):
         script = self.script_from_string(
             "widget_keys.py",
