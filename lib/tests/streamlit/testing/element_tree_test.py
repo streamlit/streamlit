@@ -214,7 +214,7 @@ class SliderTest(InteractiveScriptTests):
         assert s[4].value == 0.0
 
         sr2 = sr.get("slider")[1].set_value(50).run()
-        sr3 = sr2.get("slider")[2].set_value((time(12, 0), time(12, 15))).run()
+        sr3 = sr2.get("slider")[2].set_range(time(12, 0), time(12, 15)).run()
         sr4 = sr3.get("slider")[3].set_value(datetime(2020, 1, 10, 8, 0)).run()
         sr5 = sr4.get("slider")[4].set_value(0.1).run()
         s = sr5.get("slider")

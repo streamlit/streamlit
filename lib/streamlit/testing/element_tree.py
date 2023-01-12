@@ -464,6 +464,11 @@ class Slider(Element, Widget, Generic[SliderScalarT]):
             # Awkward to do this with `cast`
             return state[self.id]  # type: ignore
 
+    def set_range(
+        self, lower: SliderScalarT, upper: SliderScalarT
+    ) -> Slider[SliderScalarT]:
+        return self.set_value([lower, upper])
+
 
 @dataclass(init=False)
 class Block:
