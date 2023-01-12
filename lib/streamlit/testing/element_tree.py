@@ -656,7 +656,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 if list(elt.slider.options) == []:
                     new_node = Slider(elt.slider, root=root)
                 else:
-                    pass
+                    raise ValueError(f"Unknown slider type {elt.slider}")
             elif elt.WhichOneof("type") == "button":
                 new_node = Button(elt.button, root=root)
             else:
