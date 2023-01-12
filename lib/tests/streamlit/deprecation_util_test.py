@@ -15,12 +15,43 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from streamlit.deprecation_util import deprecate_func_name, deprecate_obj_name
+from streamlit.deprecation_util import (
+    deprecate_func_name,
+    deprecate_obj_name,
+    show_deprecation_warning,
+)
+from tests.testutil import patch_config_options
 
 
 class DeprecationUtilTest(unittest.TestCase):
+    @patch("streamlit.deprecation_util._LOGGER")
     @patch("streamlit.warning")
-    def test_deprecate_func_name(self, mock_warning: Mock):
+    def test_show_deprecation_warning(self, mock_warning: Mock, mock_logger: Mock):
+        """show_deprecation_warning logs warnings always, and prints to the browser only
+        if config.client.showErrorDetails is True.
+        """
+        message = (
+            "We regret the bother, but it's been fated:\n"
+            "the function you called is DEPRECATED."
+        )
+
+        # config.client.showErrorDetails=True: log AND show in browser
+        with patch_config_options({"client.showErrorDetails": True}):
+            show_deprecation_warning(message)
+            mock_logger.warning.assert_called_once_with(message)
+            mock_warning.assert_called_once_with(message)
+
+        mock_logger.reset_mock()
+        mock_warning.reset_mock()
+
+        # config.client.showErrorDetails=False: log, but DON'T show in browser
+        with patch_config_options({"client.showErrorDetails": False}):
+            show_deprecation_warning(message)
+            mock_logger.warning.assert_called_once_with(message)
+            mock_warning.assert_not_called()
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_func_name(self, mock_show_warning: Mock):
         def multiply(a, b):
             return a * b
 
@@ -32,10 +63,10 @@ class DeprecationUtilTest(unittest.TestCase):
             "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
             "`st.beta_multiply` will be removed after 1980-01-01."
         )
-        mock_warning.assert_called_once_with(expected_warning)
+        mock_show_warning.assert_called_once_with(expected_warning)
 
-    @patch("streamlit.warning")
-    def test_deprecate_obj_name(self, mock_warning: Mock):
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_obj_name(self, mock_show_warning: Mock):
         """Test that we override dunder methods."""
 
         class DictClass(dict):
@@ -56,4 +87,4 @@ class DeprecationUtilTest(unittest.TestCase):
         )
 
         # We only show the warning a single time for a given object.
-        mock_warning.assert_called_once_with(expected_warning)
+        mock_show_warning.assert_called_once_with(expected_warning)
