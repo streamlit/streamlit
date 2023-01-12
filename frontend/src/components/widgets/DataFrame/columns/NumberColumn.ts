@@ -87,7 +87,10 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
       if (notNullOrUndefined(cellData)) {
         if (Number.isNaN(cellData)) {
-          return getErrorCell(toSafeString(data), "Incompatible number value.")
+          return getErrorCell(
+            toSafeString(data),
+            "The value cannot be interpreted as a number."
+          )
         }
 
         // Apply precision parameter

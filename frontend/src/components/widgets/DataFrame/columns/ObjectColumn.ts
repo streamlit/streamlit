@@ -59,7 +59,7 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
       } catch (error) {
         return getErrorCell(
           toSafeString(data),
-          `Incompatible text value. Error: ${error}`
+          `The value cannot be interpreted as a string. Error: ${error}`
         )
       }
     },
