@@ -5690,10 +5690,10 @@ color-string@^1.5.4:
     color-name "^1.0.0"
     simple-swizzle "^0.2.2"
 
-color2k@^1.1.0:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/color2k/-/color2k-1.1.1.tgz#f9703fab6693e2a407962211f1ab7e8e0602d5d7"
-  integrity sha512-pkIVqioT1tEJOwfN5O/ZNLMG55H1GhA5WlvasHR2Zj07pIDgA5JDxkqqLIz2PfZOJC8IvuJbdp1YIRbeo+MlMQ==
+color2k@^2.0.0:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/color2k/-/color2k-2.0.1.tgz#bea59670b323265cc13a745f239c6bd6a89d9a89"
+  integrity sha512-iCg+xrEqtYISsSJZN1z44fyhv4EfX8lSkcDhodt6VnMf1+iMwZxAtmGXchTCeMUnTbXunGvUVK6E3skkApPnZw==
 
 color@^3.0.0:
   version "3.1.3"
