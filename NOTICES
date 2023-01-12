@@ -3838,7 +3838,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: camelcase, escape-string-regexp, get-stream, import-fresh, is-docker, is-plain-obj, parse-json, wrap-ansi. A copy of the source code may be downloaded from https://github.com/sindresorhus/camelcase.git (camelcase), https://github.com/sindresorhus/escape-string-regexp.git (escape-string-regexp), https://github.com/sindresorhus/get-stream.git (get-stream), https://github.com/sindresorhus/import-fresh.git (import-fresh), https://github.com/sindresorhus/is-docker.git (is-docker), https://github.com/sindresorhus/is-plain-obj.git (is-plain-obj), https://github.com/sindresorhus/parse-json.git (parse-json), https://github.com/chalk/wrap-ansi.git (wrap-ansi). This software contains the following license and notice below:
+The following software may be included in this product: camelcase, decamelize, escape-string-regexp, get-stream, import-fresh, is-docker, is-plain-obj, parse-json, wrap-ansi. A copy of the source code may be downloaded from https://github.com/sindresorhus/camelcase.git (camelcase), https://github.com/sindresorhus/decamelize.git (decamelize), https://github.com/sindresorhus/escape-string-regexp.git (escape-string-regexp), https://github.com/sindresorhus/get-stream.git (get-stream), https://github.com/sindresorhus/import-fresh.git (import-fresh), https://github.com/sindresorhus/is-docker.git (is-docker), https://github.com/sindresorhus/is-plain-obj.git (is-plain-obj), https://github.com/sindresorhus/parse-json.git (parse-json), https://github.com/chalk/wrap-ansi.git (wrap-ansi). This software contains the following license and notice below:
 
 MIT License
 

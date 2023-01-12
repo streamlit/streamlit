@@ -58,7 +58,7 @@
     "copy-to-clipboard": "^3.3.3",
     "d3": "^5.16.0",
     "d3-graphviz": "^2.6.1",
-    "decamelize": "^4.0.0",
+    "decamelize": "^6.0.0",
     "deck.gl": "^8.8.21",
     "dompurify": "^2.4.3",
     "fzy.js": "^0.4.1",
