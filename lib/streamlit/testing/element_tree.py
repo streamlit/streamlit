@@ -18,7 +18,7 @@ from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
-from streamlit.elements.slider import SliderScalar, Step
+from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -402,11 +402,12 @@ class Button(Element, Widget):
 
 
 @dataclass(init=False)
-class Slider(Element, Widget):
-    _value: SliderScalar | None
+class Slider(Element, Widget, Generic[SliderScalarT]):
+    _value: SliderScalarT | Sequence[SliderScalarT] | None
 
     proto: SliderProto
     type: str
+    data_type: SliderProto.DataType
     id: str
     label: str
     min_value: SliderScalar
@@ -425,6 +426,7 @@ class Slider(Element, Widget):
         self._value = None
 
         self.type = "slider"
+        self.data_type = proto.data_type
         self.id = proto.id
         self.label = proto.label
         self.min_value = proto.min
@@ -435,18 +437,30 @@ class Slider(Element, Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: SliderScalar) -> Slider:
+    def set_value(self, v: SliderScalarT | Sequence[SliderScalarT]) -> Slider:
         self._value = v
         return self
 
+    def widget_state(self) -> WidgetState:
+        data_type = self.proto.data_type
+        serde = SliderSerde([], data_type, True, None)
+        v = serde.serialize(self.value)
+
+        ws = WidgetState()
+        ws.id = self.id
+        ws.double_array_value.data[:] = v
+        return ws
+
     @property
-    def value(self) -> SliderScalar:
+    def value(self) -> SliderScalarT | Sequence[SliderScalarT]:
         """The currently selected value from the options."""
         if self._value is not None:
+            print(f"returning stored value for slider")
             return self._value
         else:
             state = self.root.session_state
             assert state
+            print(f"returning slider value from state: {self.id=}, {state[self.id]}")
             return cast(SliderScalar, state[self.id])
 
 
