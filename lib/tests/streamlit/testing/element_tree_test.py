@@ -98,3 +98,91 @@ class MultiselectTest(InteractiveScriptTests):
         sr4 = sr3.get("multiselect")[0].unselect("b").run()
         assert sr4.get("multiselect")[0].value == []
         assert set(sr3.get("multiselect")[1].value) == set(["zero", "one", "two"])
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class MarkdownTest(InteractiveScriptTests):
+    def test_markdown(self):
+        script = self.script_from_string(
+            "markdown_element.py",
+            """
+            import streamlit as st
+
+            st.markdown("**This is a markdown**")
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("markdown")
+        assert sr.get("markdown")[0].type == "markdown"
+        assert sr.get("markdown")[0].value == "**This is a markdown**"
+
+    def test_caption(self):
+        script = self.script_from_string(
+            "caption_element.py",
+            """
+            import streamlit as st
+
+            st.caption("This is a caption")
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("caption")
+        assert sr.get("caption")[0].type == "caption"
+        assert sr.get("caption")[0].value == "This is a caption"
+        assert sr.get("caption")[0].is_caption
+
+    def test_code(self):
+        script = self.script_from_string(
+            "code_element.py",
+            """
+            import streamlit as st
+
+            st.code("import streamlit as st")
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("code")
+        assert sr.get("code")[0].type == "code"
+        assert sr.get("code")[0].value == "```python\nimport streamlit as st\n```"
+
+    def test_latex(self):
+        script = self.script_from_string(
+            "latex_element.py",
+            """
+            import streamlit as st
+
+            st.latex("E=mc^2")
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("latex")
+        assert sr.get("latex")[0].type == "latex"
+        assert sr.get("latex")[0].value == "$$\nE=mc^2\n$$"
+
+    def test_markdown_elements_by_type(self):
+        script = self.script_from_string(
+            "markdown_element.py",
+            """
+            import streamlit as st
+
+            st.markdown("**This is a markdown1**")
+            st.caption("This is a caption1")
+            st.code("print('hello world1')")
+            st.latex("sin(2x)=2sin(x)cos(x)")
+
+            st.markdown("**This is a markdown2**")
+            st.caption("This is a caption2")
+            st.code("print('hello world2')")
+            st.latex("cos(2x)=cos^2(x)-sin^2(x)")
+            """,
+        )
+        sr = script.run()
+
+        assert len(sr.get("markdown")) == 2
+        assert len(sr.get("caption")) == 2
+        assert len(sr.get("code")) == 2
+        assert len(sr.get("latex")) == 2

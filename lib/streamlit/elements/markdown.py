@@ -76,6 +76,7 @@ class MarkdownMixin:
 
         markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
+        markdown_proto.element_type = MarkdownProto.Type.NATIVE
 
         return self.dg._enqueue("markdown", markdown_proto)
 
@@ -112,6 +113,7 @@ class MarkdownMixin:
         code_proto = MarkdownProto()
         markdown = f'```{language or ""}\n{body}\n```'
         code_proto.body = clean_text(markdown)
+        code_proto.element_type = MarkdownProto.Type.CODE
         return self.dg._enqueue("markdown", code_proto)
 
     @gather_metrics("caption")
@@ -166,6 +168,7 @@ class MarkdownMixin:
         caption_proto.body = clean_text(body)
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.is_caption = True
+        caption_proto.element_type = MarkdownProto.Type.CAPTION
         return self.dg._enqueue("markdown", caption_proto)
 
     @gather_metrics("latex")
@@ -203,6 +206,7 @@ class MarkdownMixin:
 
         latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % clean_text(body)
+        latex_proto.element_type = MarkdownProto.Type.LATEX
         return self.dg._enqueue("markdown", latex_proto)
 
     @property
