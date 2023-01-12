@@ -140,7 +140,7 @@
     "@types/katex": "^0.10.2",
     "@types/lodash": "^4.14.191",
     "@types/moment-duration-format": "^2.2.3",
-    "@types/node": "^14.14.16",
+    "@types/node": "^18.11.17",
     "@types/node-emoji": "^1.8.2",
     "@types/numeral": "^0.0.26",
     "@types/plotly.js": "^2.12.11",
@@ -202,6 +202,7 @@
   },
   "resolutions": {
     "@types/react": "17.0.7",
+    "@types/node": "^18.11.17",
     "apache-arrow": "^10.0.1",
     "axios": "^0.21.1",
     "bl": "^2.2.1",
