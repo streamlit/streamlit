@@ -227,7 +227,7 @@
     "vega-tooltip": "^0.30.0",
     "websocket-extensions": "^0.1.4",
     "ws": "^8.11.0",
-    "y18n": "^4.0.1"
+    "y18n": "^5.0.8"
   },
   "browserslist": [
     ">0.2%",
