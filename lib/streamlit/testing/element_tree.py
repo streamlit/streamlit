@@ -672,7 +672,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             elif elt.WhichOneof("type") == "multiselect":
                 new_node = Multiselect(elt.multiselect, root=root)
             elif elt.WhichOneof("type") == "slider":
-                if list(elt.slider.options) == []:
+                if elt.slider.type == SliderProto.Type.SLIDER:
                     new_node = Slider(elt.slider, root=root)
                 else:
                     raise ValueError(f"Unknown slider type {elt.slider}")

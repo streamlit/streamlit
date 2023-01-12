@@ -584,6 +584,7 @@ class SliderMixin:
         # decimals and/or use some heuristics for floats.
 
         slider_proto = SliderProto()
+        slider_proto.type = SliderProto.Type.SLIDER
         slider_proto.label = label
         slider_proto.format = format
         slider_proto.default[:] = value

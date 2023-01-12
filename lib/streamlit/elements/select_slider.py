@@ -281,6 +281,7 @@ class SelectSliderMixin:
         slider_value = as_index_list(value)
 
         slider_proto = SliderProto()
+        slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
         slider_proto.default[:] = slider_value
