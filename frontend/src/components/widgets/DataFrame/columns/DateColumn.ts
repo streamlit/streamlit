@@ -81,7 +81,9 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
           copyData: cellData.toString(),
           data: {
             kind: "DatePickerCell",
-            date: notNullOrUndefined(data) ? new Date(Number(data)) : undefined,
+            date: notNullOrUndefined(data)
+              ? new Date(Number(data))
+              : undefined,
             displayDate: notNullOrUndefined(data) ? displayDate : "NA",
             format: cellTemplate.data.format,
           },
