@@ -22,6 +22,11 @@ import {
   GridCellKind,
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
+import {
+  addDST,
+  addTimezoneOffset,
+  appendZeroDateFormat,
+} from "src/components/widgets/DataFrame/columns/utils"
 
 interface DatetimeLocalPickerCellProps {
   readonly kind: "DatetimeLocalPickerCell"
@@ -36,16 +41,26 @@ const Editor: ReturnType<
   ProvideEditorCallback<DatetimeLocalPickerCell>
 > = cell => {
   const cellData = cell.value.data
-  const { displayDate } = cellData
+  const { date, displayDate } = cellData
   let newCellData = new Date()
   if (cellData !== undefined) {
-    newCellData = cellData.date ?? new Date()
+    newCellData = date ?? new Date()
   }
+  const offsetDate = new Date(addDST(addTimezoneOffset(Number(newCellData))))
+
+  // add 1 because getMonth is 0 index based
+  const year = offsetDate?.getFullYear().toString()
+  const mm = appendZeroDateFormat((offsetDate?.getMonth() + 1).toString())
+  const dd = appendZeroDateFormat(offsetDate?.getDate().toString())
+  const hours = appendZeroDateFormat(offsetDate?.getHours().toString())
+  const minutes = appendZeroDateFormat(offsetDate?.getMinutes().toString())
   return (
     <input
       required
       style={{ minHeight: 26, border: "none", outline: "none" }}
       type={"datetime-local"}
+      // format example: 2017-06-01T08:30
+      value={`${year}-${mm}-${dd}T${hours}:${minutes}`}
       autoFocus={true}
       onChange={event => {
         // handle when clear is clicked and value has been wiped

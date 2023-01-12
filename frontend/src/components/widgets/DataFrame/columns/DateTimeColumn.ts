@@ -28,7 +28,8 @@ import {
   BaseColumnProps,
   getErrorCell,
   isValidDate,
-} from "./utils"
+  removeZeroMillisecondsInISOString,
+} from "src/components/widgets/DataFrame/columns/utils"
 
 export interface DateTimeColumnParams {
   readonly format?: string
@@ -65,12 +66,13 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
         // 0 refers to a missing value
         let cellData = 0
         if (notNullOrUndefined(data)) {
-          // convert the date to a number
           cellData = Number(data)
         }
-        const displayDate = strftime(
-          cellTemplate.data.format,
-          new Date(addDST(addTimezoneOffset(Number(data))))
+        const displayDate = removeZeroMillisecondsInISOString(
+          strftime(
+            cellTemplate.data.format,
+            new Date(addDST(addTimezoneOffset(Number(data))))
+          )
         )
         return {
           ...cellTemplate,
@@ -78,9 +80,7 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
           copyData: cellData.toString(),
           data: {
             kind: "DatetimeLocalPickerCell",
-            date: notNullOrUndefined(data)
-              ? new Date(Number(data))
-              : undefined,
+            date: notNullOrUndefined(data) ? new Date(Number(data)) : undefined,
             displayDate: notNullOrUndefined(data) ? displayDate : "NA",
             format: cellTemplate.data.format,
           },

@@ -22,6 +22,11 @@ import {
   GridCellKind,
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
+import {
+  addDST,
+  addTimezoneOffset,
+  appendZeroDateFormat,
+} from "src/components/widgets/DataFrame/columns/utils"
 
 interface DatePickerCellProps {
   readonly kind: "DatePickerCell"
@@ -34,16 +39,24 @@ export type DatePickerCell = CustomCell<DatePickerCellProps>
 
 const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
   const cellData = cell.value.data
-  const { displayDate } = cellData
+  const { date, displayDate } = cellData
   let newCellData = new Date()
   if (cellData !== undefined) {
     newCellData = cellData.date ?? new Date()
   }
+  const offsetDate = new Date(addDST(addTimezoneOffset(Number(newCellData))))
+
+  // add 1 because getMonth is 0 index based
+  const year = date?.getFullYear().toString()
+  const mm = appendZeroDateFormat((offsetDate?.getMonth() + 1).toString())
+  const dd = appendZeroDateFormat(offsetDate?.getDate().toString())
   return (
     <input
       required
       style={{ minHeight: 26, border: "none", outline: "none" }}
       type={"date"}
+      // format example: 2018-07-22
+      value={`${year}-${mm}-${dd}`}
       autoFocus={true}
       onChange={event => {
         // handle when clear is clicked and value has been wiped

@@ -28,8 +28,9 @@ import {
   BaseColumnProps,
   getErrorCell,
   isValidDate,
+  removeZeroMillisecondsInISOString,
   toSafeString,
-} from "./utils"
+} from "src/components/widgets/DataFrame/columns/utils"
 
 export interface TimeColumnParams {
   readonly format?: string
@@ -98,7 +99,9 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
             displayTime:
               notNullOrUndefined(dataInSeconds) &&
               !Number.isNaN(Number(dataInSeconds))
-                ? strftime(cellTemplate.data.format, dateVersion)
+                ? removeZeroMillisecondsInISOString(
+                    strftime(cellTemplate.data.format, dateVersion)
+                  )
                 : "NA",
             format: cellTemplate.data.format,
           },

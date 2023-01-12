@@ -28,7 +28,8 @@ import {
   BaseColumnProps,
   getErrorCell,
   isValidDate,
-} from "./utils"
+  removeZeroMillisecondsInISOString,
+} from "src/components/widgets/DataFrame/columns/utils"
 
 export interface DateColumnParams {
   readonly format?: string
@@ -48,7 +49,7 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
       kind: "DatePickerCell",
       date: undefined,
       displayDate: "NA",
-      format: parameters.format ?? "%m / %d / %Y",
+      format: parameters.format ?? "%Y / %m / %d",
     },
   } as DatePickerCell
 
@@ -68,21 +69,20 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
           // convert the date to a number to sort
           cellData = Number(data)
         }
+        const displayDate = removeZeroMillisecondsInISOString(
+          strftime(
+            cellTemplate.data.format,
+            new Date(addDST(addTimezoneOffset(Number(data))))
+          )
+        )
         return {
           ...cellTemplate,
           allowOverlay: true,
           copyData: cellData.toString(),
           data: {
             kind: "DatePickerCell",
-            date: notNullOrUndefined(data)
-              ? new Date(Number(data))
-              : undefined,
-            displayDate: notNullOrUndefined(data)
-              ? strftime(
-                  cellTemplate.data.format,
-                  new Date(addDST(addTimezoneOffset(Number(data))))
-                )
-              : "NA",
+            date: notNullOrUndefined(data) ? new Date(Number(data)) : undefined,
+            displayDate: notNullOrUndefined(data) ? displayDate : "NA",
             format: cellTemplate.data.format,
           },
           style:

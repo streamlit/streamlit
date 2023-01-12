@@ -22,6 +22,11 @@ import {
   GridCellKind,
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
+import {
+  appendZeroDateFormat,
+  appendZeroDateFormatMs,
+  isValidDate,
+} from "src/components/widgets/DataFrame/columns/utils"
 
 interface TimePickerCellProps {
   readonly kind: "TimePickerCell"
@@ -34,13 +39,31 @@ export type TimePickerCell = CustomCell<TimePickerCellProps>
 
 const Editor: ReturnType<ProvideEditorCallback<TimePickerCell>> = cell => {
   const { time: timeIn } = cell.value.data
-
+  const timeAsNumber = timeIn as number
+  const timeAsDate = isValidDate(timeAsNumber)
+    ? new Date(timeAsNumber)
+    : new Date()
+  let step
+  if (timeAsDate.getMilliseconds() !== 0) {
+    step = ".001"
+  }
+  const hours = appendZeroDateFormat(timeAsDate.getHours().toString())
+  const minutes = appendZeroDateFormat(timeAsDate.getMinutes().toString())
+  const seconds = appendZeroDateFormat(timeAsDate.getSeconds().toString())
+  const milliseconds = appendZeroDateFormatMs(
+    timeAsDate.getMilliseconds().toString()
+  )
+  // format example: 08:05:01.004
+  const initialDisplayValue = `${hours}:${minutes}:${seconds}.${milliseconds}`
   return (
     <input
       required
       style={{ minHeight: 26, border: "none", outline: "none" }}
       type="time"
       autoFocus={true}
+      // determines whether or not to display milliseconds
+      step={step}
+      value={initialDisplayValue}
       onChange={event => {
         cell.onChange({
           ...cell.value,
