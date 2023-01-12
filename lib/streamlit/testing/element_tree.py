@@ -540,6 +540,10 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["slider"]) -> Sequence[Slider[Any]]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["button"]) -> Sequence[Button]:
         ...
 
