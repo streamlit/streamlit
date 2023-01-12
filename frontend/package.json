@@ -217,7 +217,7 @@
     "is-svg": "^4.3.2",
     "katex": "^0.16.4",
     "kind-of": "^6.0.3",
-    "node-notifier": "^8.0.1",
+    "node-notifier": "^10.0.1",
     "nth-check": "^2.1.1",
     "query-string": "^8.1.0",
     "serialize-javascript": "^3.1.0",
