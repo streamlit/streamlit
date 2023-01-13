@@ -98,7 +98,9 @@ class ProgressMixin:
         # TODO: standardize numerical type checking across st.* functions.
         progress_proto = ProgressProto()
         progress_proto.value = _get_value(value)
-        progress_proto.text = _get_text(text)
+        text = _get_text(text)
+        if text is not None:
+            progress_proto.text = text
         return self.dg._enqueue("progress", progress_proto)
 
     @property

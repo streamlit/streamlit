@@ -15,3 +15,5 @@
 import streamlit as st
 
 st.progress(50)
+
+st.progress(30, text="This is very long and boring text. " * 6)

@@ -17,8 +17,8 @@
 import React, { ReactElement } from "react"
 import { Progress as ProgressProto } from "src/autogen/proto"
 import ProgressBar from "src/components/shared/ProgressBar"
+import { StyledCaptionText } from "src/components/elements/Progress/styled-components"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import { StyledTruncateText } from "./styled-components"
 
 export interface ProgressProps {
   width: number
@@ -28,9 +28,9 @@ export interface ProgressProps {
 function Progress({ element, width }: ProgressProps): ReactElement {
   return (
     <div className="stProgress">
-      <StyledTruncateText>
+      <StyledCaptionText>
         <StreamlitMarkdown source={element.text} allowHTML={false} isLabel />
-      </StyledTruncateText>
+      </StyledCaptionText>
 
       <ProgressBar value={element.value} width={width} />
     </div>

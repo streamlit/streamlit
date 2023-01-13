@@ -15,17 +15,10 @@
  */
 
 import styled from "@emotion/styled"
+import { getGray90 } from "src/theme"
 
-export const StyledTruncateText = styled.div(({ theme }) => ({
-  overflowWrap: "normal",
-  textOverflow: "ellipsis",
-  width: "100%",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  fontFamily: theme.genericFonts.bodyFont,
+export const StyledCaptionText = styled.div(({ theme }) => ({
+  paddingBottom: theme.spacing.smPx,
   lineHeight: theme.lineHeights.normal,
-  verticalAlign: "middle",
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
+  color: getGray90(theme),
 }))
