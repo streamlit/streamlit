@@ -25,7 +25,9 @@ import { Theme } from "src/theme"
  *
  * @return a glide-data-grid compatible theme.
  */
-function useCustomTheme(): Partial<GlideTheme> {
+function useCustomTheme(): Partial<GlideTheme> & {
+  tableBorderRadius: string
+} {
   const theme: Theme = useTheme()
 
   return {
@@ -65,6 +67,8 @@ function useCustomTheme(): Partial<GlideTheme> {
     drilldownBorder: theme.colors.darkenedBgMix25,
     // Unused settings:
     // lineHeight
+    // Custom settings
+    tableBorderRadius: theme.radii.md,
   }
 }
 

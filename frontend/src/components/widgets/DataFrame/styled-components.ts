@@ -19,13 +19,14 @@ import styled from "@emotion/styled"
 /**
  * A resizable data grid container component.
  */
-export const StyledResizableContainer = styled.div(() => ({
+export const StyledResizableContainer = styled.div(({ theme }) => ({
   position: "relative",
   display: "inline-block",
 
   "& .glideDataEditor": {
     height: "100%",
     minWidth: "100%",
+    borderRadius: theme.radii.md,
   },
 
   "& .dvn-scroller": {

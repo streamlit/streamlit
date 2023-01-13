@@ -238,7 +238,6 @@ function DataFrame({
     setResizableSize,
   } = useTableSizer(
     element,
-    resizableRef,
     numRows,
     containerWidth,
     containerHeight,
@@ -290,6 +289,7 @@ function DataFrame({
         defaultSize={resizableSize}
         style={{
           border: `1px solid ${theme.borderColor}`,
+          borderRadius: `${theme.tableBorderRadius}`,
         }}
         minHeight={minHeight}
         maxHeight={maxHeight}
