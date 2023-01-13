@@ -108,12 +108,13 @@ class HeadingBase(Element, ABC):
     root: ElementTree = field(repr=False)
     key: None
 
-    def __init__(self, proto: HeadingProto, root: ElementTree):
+    def __init__(self, proto: HeadingProto, root: ElementTree, type_: str):
         self.proto = proto
         self.key = None
         self.tag = proto.tag
         self.anchor = proto.anchor
         self.root = root
+        self.type = type_
 
     @property
     def value(self) -> str:
@@ -123,22 +124,19 @@ class HeadingBase(Element, ABC):
 @dataclass(init=False)
 class Title(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
-        super().__init__(proto, root)
-        self.type = "title"
+        super().__init__(proto, root, "title")
 
 
 @dataclass(init=False)
 class Header(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
-        super().__init__(proto, root)
-        self.type = "header"
+        super().__init__(proto, root, "header")
 
 
 @dataclass(init=False)
 class Subheader(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
-        super().__init__(proto, root)
-        self.type = "subheader"
+        super().__init__(proto, root, "subheader")
 
 
 @dataclass(init=False)
