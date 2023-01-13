@@ -51,13 +51,13 @@ def _get_value(value):
         )
 
 
-def _get_text(label: Optional[str]) -> Optional[str]:
-    if label is None:
+def _get_text(text: Optional[str]) -> Optional[str]:
+    if text is None:
         return None
-    if isinstance(label, str):
-        return clean_text(label)
+    if isinstance(text, str):
+        return clean_text(text)
     raise StreamlitAPIException(
-        f"Progress Text is of type {str(type(label))}, which is not an accepted type."
+        f"Progress Text is of type {str(type(text))}, which is not an accepted type."
         "Text only accepts: str. Please convert the text to an accepted type."
     )
 
