@@ -316,8 +316,8 @@ def _apply_cell_edits(
     index_count = df.index.nlevels or 0
 
     for cell, value in edited_cells.items():
-        col, row = cell.split(":")  # the format is "col:row"
-        col, row = int(col), int(row)
+        row, col = cell.split(":")
+        row, col = int(row), int(col)
 
         if col < index_count:
             # The edited cell is part of the index
