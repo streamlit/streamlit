@@ -508,6 +508,18 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["title"]) -> Sequence[Title]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["header"]) -> Sequence[Header]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["subheader"]) -> Sequence[Subheader]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 

@@ -186,3 +186,81 @@ class MarkdownTest(InteractiveScriptTests):
         assert len(sr.get("caption")) == 2
         assert len(sr.get("code")) == 2
         assert len(sr.get("latex")) == 2
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class HeadingTest(InteractiveScriptTests):
+    def test_title(self):
+        script = self.script_from_string(
+            "title_element.py",
+            """
+            import streamlit as st
+
+            st.title("This is a title")
+            st.title("This is a title with anchor", anchor="anchor text")
+            """,
+        )
+        sr = script.run()
+
+        assert len(sr.get("title")) == 2
+        assert sr.get("title")[1].tag == "h1"
+        assert sr.get("title")[1].anchor == "anchor text"
+        assert sr.get("title")[1].value == "This is a title with anchor"
+
+    def test_header(self):
+        script = self.script_from_string(
+            "header_element.py",
+            """
+            import streamlit as st
+
+            st.header("This is a header")
+            st.header("This is a header with anchor", anchor="header anchor text")
+            """,
+        )
+        sr = script.run()
+
+        assert len(sr.get("header")) == 2
+        assert sr.get("header")[1].tag == "h2"
+        assert sr.get("header")[1].anchor == "header anchor text"
+        assert sr.get("header")[1].value == "This is a header with anchor"
+
+    def test_subheader(self):
+        script = self.script_from_string(
+            "subheader_element.py",
+            """
+            import streamlit as st
+
+            st.subheader("This is a subheader")
+            st.subheader(
+                "This is a subheader with anchor",
+                anchor="subheader anchor text"
+            )
+            """,
+        )
+        sr = script.run()
+
+        assert len(sr.get("subheader")) == 2
+        assert sr.get("subheader")[1].tag == "h3"
+        assert sr.get("subheader")[1].anchor == "subheader anchor text"
+        assert sr.get("subheader")[1].value == "This is a subheader with anchor"
+
+    def test_heading_elements_by_type(self):
+        script = self.script_from_string(
+            "heading_elements.py",
+            """
+            import streamlit as st
+
+            st.title("title1")
+            st.header("header1")
+            st.subheader("subheader1")
+
+            st.title("title2")
+            st.header("header2")
+            st.subheader("subheader2")
+            """,
+        )
+        sr = script.run()
+
+        assert len(sr.get("title")) == 2
+        assert len(sr.get("header")) == 2
+        assert len(sr.get("subheader")) == 2
