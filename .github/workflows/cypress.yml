@@ -69,6 +69,7 @@ jobs:
           CURRENT_RUN: ${{matrix.specs}}
           TOTAL_WORKERS: 22
         run: |
+          set -v
           js_specs=(e2e/specs/*)
 
           # get how many specs to be split up into $TOTAL_WORKERS runs
