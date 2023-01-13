@@ -56,8 +56,9 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
           displayData,
         } as TextCell
       } catch (error) {
+        // This should never happen, but if it does, we want to show an error
         return getErrorCell(
-          toSafeString(data),
+          "Incompatible value",
           `The value cannot be interpreted as string. Error: ${error}`
         )
       }
