@@ -17,16 +17,15 @@
 import React from "react"
 
 import { renderHook, act } from "@testing-library/react-hooks"
-import { NumberCell } from "@glideapps/glide-data-grid"
+import { NumberCell, GridCell } from "@glideapps/glide-data-grid"
 
 import {
   BaseColumn,
   NumberColumn,
+  TextColumn,
 } from "src/components/widgets/DataFrame/columns"
 
 import useColumnSort from "./useColumnSort"
-import TextColumn from "../columns/TextColumn"
-import { GridCell } from "@glideapps/glide-data-grid"
 
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
