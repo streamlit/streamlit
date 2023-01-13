@@ -76,10 +76,23 @@ class ProgressMixin:
             0.0 <= value <= 1.0 for float
 
         text : str or None
-            A message to display above the progress bar.
-            The text can optionally contain Markdown and supports the
-            following elements: Bold, Italics, Strikethroughs, Inline Code, Emojis,
-            and Links.
+            A message to display above the progress bar. The label can optionally
+            contain Markdown and supports the following elements: Bold, Italics,
+            Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
 
         Example
         -------
@@ -88,11 +101,12 @@ class ProgressMixin:
         >>> import streamlit as st
         >>> import time
         >>>
-        >>> my_bar = st.progress(0)
+        >>> progress_text = "Operation in progress. Please wait."
+        >>> my_bar = st.progress(0, text=progress_text)
         >>>
         >>> for percent_complete in range(100):
         ...     time.sleep(0.1)
-        ...     my_bar.progress(percent_complete + 1)
+        ...     my_bar.progress(percent_complete + 1, text=progress_text)
 
         """
         # TODO: standardize numerical type checking across st.* functions.
