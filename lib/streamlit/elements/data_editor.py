@@ -60,6 +60,8 @@ if TYPE_CHECKING:
 
 _INDEX_IDENTIFIER: Final = "index"
 
+# All formats that support direct editing, meaning that these
+# formats will be returned with the same type when used with data_editor.
 EditableData = TypeVar(
     "EditableData",
     bound=Union[
@@ -72,6 +74,8 @@ EditableData = TypeVar(
     ],
 )
 
+
+# All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
     pd.DataFrame,
     pd.Index,
@@ -86,17 +90,45 @@ DataTypes: TypeAlias = Union[
 
 
 class EditingState(TypedDict, total=False):
+    """
+    A dictionary representing the current state of the data editor.
+
+    Attributes
+    ----------
+    edited_cells : Dict[str, str | int | float | bool | None]
+        A dictionary of edited cells, where the key is the cell's row and
+        column index (row:column), and the value is the new value of the cell.
+
+    added_rows : List[Dict[str, str | int | float | bool | None]]
+        A list of added rows, where each row is a dictionary of column names
+        and values.
+
+    deleted_rows : List[int]
+        A list of deleted rows, where each row is the index of the deleted row.
+    """
+
     edited_cells: Dict[str, str | int | float | bool | None]
     added_rows: List[Dict[str, str | int | float | bool | None]]
     deleted_rows: List[int]
 
 
+# A mapping of column names/IDs to column configs.
 ColumnConfigMapping: TypeAlias = Dict[Union[int, str], ColumnConfig]
 
 
 def _marshall_column_config(
     proto: ArrowProto, columns: Optional[Dict[Union[int, str], ColumnConfig]] = None
 ) -> None:
+    """Marshall the column config into the proto.
+
+    Parameters
+    ----------
+    proto : ArrowProto
+        The proto to marshall into.
+
+    columns : Optional[ColumnConfigMapping]
+        The column config to marshall.
+    """
     if columns is None:
         columns = {}
 
@@ -120,6 +152,8 @@ def _marshall_column_config(
 
 @dataclass
 class DataEditorSerde:
+    """DataEditorSerde is used to serialize and deserialize the data editor state."""
+
     def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
         return (  # type: ignore
             {
@@ -136,6 +170,8 @@ class DataEditorSerde:
 
 
 class DataFormat(Enum):
+    """DataFormat is used to determine the format of the data."""
+
     UNKNOWN = "unknown"
     PANDAS_DATAFRAME = "pands_dataframe"  # pd.DataFrame
     PANDAS_SERIES = "pandas_series"  # pd.Series
@@ -158,6 +194,18 @@ class DataFormat(Enum):
 
 
 def _determine_data_format(input_data: Any) -> DataFormat:
+    """Determine the data format of the input data.
+
+    Parameters
+    ----------
+    input_data : Any
+        The input data to determine the data format of.
+
+    Returns
+    -------
+    DataFormat
+        The data format of the input data.
+    """
     if isinstance(input_data, pd.DataFrame):
         return DataFormat.PANDAS_DATAFRAME
     elif isinstance(input_data, np.ndarray):
@@ -221,13 +269,13 @@ def _convert_df_to_data_format(df: pd.DataFrame, data_format: DataFormat) -> Dat
     df : pd.DataFrame
         The dataframe to convert.
 
-    reference_data : pd.DataFrame, pd.Series, pa.Table, np.ndarry, dict, list, set, or tuple.
-        A data reference with type and structure that the dataframe should be converted to.
+    data_format : DataFormat
+        The data format to convert to.
 
     Returns
     -------
-    pd.DataFrame, pd.Series, pa.Table, np.ndarry, dict, list, set, or tuple.
-
+    pd.DataFrame, pd.Index, Styler, pa.Table, np.ndarray, tuple, list, set, dict
+        The converted dataframe.
     """
     if data_format in [
         DataFormat.PANDAS_DATAFRAME,
@@ -292,6 +340,20 @@ def _convert_df_to_data_format(df: pd.DataFrame, data_format: DataFormat) -> Dat
 
 
 def _parse_value(value: Union[str, int, float, bool, None], dtype) -> Any:
+    """Convert a value to the correct type.
+
+    Parameters
+    ----------
+    value : str | int | float | bool | None
+        The value to convert.
+
+    dtype
+        The type of the value.
+
+    Returns
+    -------
+    The converted value.
+    """
     if value is None:
         return None
 
@@ -313,6 +375,18 @@ def _parse_value(value: Union[str, int, float, bool, None], dtype) -> Any:
 def _apply_cell_edits(
     df: pd.DataFrame, edited_cells: Dict[str, str | int | float | bool | None]
 ) -> None:
+    """Apply cell edits to the provided dataframe (inplace).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to apply the cell edits to.
+
+    edited_cells : Dict[str, str | int | float | bool | None]
+        A dictionary of cell edits. The keys are the cell ids in the format
+        "row:column" and the values are the new cell values.
+
+    """
     index_count = df.index.nlevels or 0
 
     for cell, value in edited_cells.items():
@@ -334,6 +408,17 @@ def _apply_cell_edits(
 
 
 def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> None:
+    """Apply row additions to the provided dataframe (inplace).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to apply the row additions to.
+
+    added_rows : List[Dict[str, Any]]
+        A list of row additions. Each row addition is a dictionary with the
+        column index as key and the new cell value as value.
+    """
     index_count = df.index.nlevels or 0
     for added_row in added_rows:
         index_value = None
@@ -365,11 +450,32 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
 
 
 def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
+    """Apply row deletions to the provided dataframe (inplace).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to apply the row deletions to.
+
+    deleted_rows : List[int]
+        A list of row numbers to delete.
+    """
     # Drop rows based in numeric row numbers
     df.drop(df.index[deleted_rows], inplace=True)
 
 
 def _apply_dataframe_edits(df: pd.DataFrame, data_editor_state: EditingState) -> None:
+    """Apply edits to the provided dataframe (inplace).
+    This includes cell edits, row additions and row deletions.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to apply the edits to.
+
+    data_editor_state : EditingState
+        The editing state of the data editor component.
+    """
     if data_editor_state.get("edited_cells"):
         _apply_cell_edits(df, data_editor_state["edited_cells"])
 
@@ -383,6 +489,21 @@ def _apply_dataframe_edits(df: pd.DataFrame, data_editor_state: EditingState) ->
 def _apply_data_specific_configs(
     columns_config: ColumnConfigMapping, data_df: pd.DataFrame, data_format: DataFormat
 ) -> None:
+    """Apply data specific configurations to the provided dataframe.
+    This will apply inplace changes to the dataframe and the column configurations
+    depending on the data format.
+
+    Parameters
+    ----------
+    columns_config : ColumnConfigMapping
+        A mapping of column names/ids to column configurations.
+
+    data_df : pd.DataFrame
+        The dataframe to apply the configurations to.
+
+    data_format : DataFormat
+        The format of the data.
+    """
     # Deactivate editing for columns that are not compatible with arrow
     for col in data_df.columns:
         if type_util.is_colum_type_arrow_incompatible(data_df[col]):
