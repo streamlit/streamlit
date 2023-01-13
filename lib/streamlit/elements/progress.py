@@ -51,7 +51,7 @@ def _get_value(value):
         )
 
 
-def _get_text(label: str) -> Optional[str]:
+def _get_text(label: Optional[str]) -> Optional[str]:
     if label is None:
         return None
     if isinstance(label, str):
