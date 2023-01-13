@@ -64,15 +64,14 @@ class Element:
 
     @property
     def value(self) -> Any:
-        raise NotImplementedError()
-        # p = getattr(self.proto, self.type)
-        # try:
-        #     state = self.root.session_state
-        #     assert state
-        #     return state[p.id]
-        # except ValueError:
-        #     # No id field, not a widget
-        #     return p.value
+        p = getattr(self.proto, self.type)
+        try:
+            state = self.root.session_state
+            assert state
+            return state[p.id]
+        except ValueError:
+            # No id field, not a widget
+            return p.value
 
     def widget_state(self) -> WidgetState | None:
         return None
