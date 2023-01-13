@@ -32,7 +32,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     id: "column_1",
     title: "column_1",
     indexNumber: 0,
-    quiverType: {
+    arrowType: {
       pandas_type: "int64",
       numpy_type: "int64",
     },
@@ -45,7 +45,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     id: "column_2",
     title: "column_2",
     indexNumber: 1,
-    quiverType: {
+    arrowType: {
       pandas_type: "unicode",
       numpy_type: "object",
     },

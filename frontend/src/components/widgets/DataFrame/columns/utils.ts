@@ -25,7 +25,7 @@ import {
 import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
 
-import { DataType, Type as QuiverType } from "src/lib/Quiver"
+import { DataType, Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 /**
@@ -39,8 +39,8 @@ export interface BaseColumnProps {
   readonly title: string
   // The index number of the column.
   readonly indexNumber: number
-  // The quiver data type of the column.
-  readonly quiverType: QuiverType
+  // The arrow data type of the column.
+  readonly arrowType: ArrowType
   // If `True`, the column can be edited.
   readonly isEditable: boolean
   // If `True`, the column is hidden (will not be shown).

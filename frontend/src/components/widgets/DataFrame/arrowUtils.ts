@@ -22,7 +22,7 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { DataFrameCell, Quiver, Type as QuiverType } from "src/lib/Quiver"
+import { DataFrameCell, Quiver, Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -119,10 +119,8 @@ export function applyPandasStylerCss(
 /**
  * Maps the data type from Arrow to a column type.
  */
-export function getColumnTypeFromQuiver(
-  quiverType: QuiverType
-): ColumnCreator {
-  let typeName = quiverType ? Quiver.getTypeName(quiverType) : null
+export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
+  let typeName = arrowType ? Quiver.getTypeName(arrowType) : null
 
   if (!typeName) {
     // Use object column as fallback
@@ -130,7 +128,7 @@ export function getColumnTypeFromQuiver(
   }
 
   typeName = typeName.toLowerCase().trim()
-  // Match based on quiver types
+  // Match based on arrow types
   if (["unicode", "empty"].includes(typeName)) {
     return TextColumn
   }
@@ -183,15 +181,15 @@ export function getColumnTypeFromQuiver(
  *
  * @return the column props for the index column.
  */
-export function getIndexFromQuiver(
+export function getIndexFromArrow(
   data: Quiver,
   indexPosition: number
 ): BaseColumnProps {
-  const quiverType = data.types.index[indexPosition]
+  const arrowType = data.types.index[indexPosition]
   const title = data.indexNames[indexPosition]
   let isEditable = true
 
-  if (Quiver.getTypeName(quiverType) === "range") {
+  if (Quiver.getTypeName(arrowType) === "range") {
     // Range indices are not editable
     isEditable = false
   }
@@ -200,7 +198,7 @@ export function getIndexFromQuiver(
     id: `index-${indexPosition}`,
     isEditable,
     title,
-    quiverType,
+    arrowType,
     isIndex: true,
     isHidden: false,
   } as BaseColumnProps
@@ -214,24 +212,24 @@ export function getIndexFromQuiver(
  *
  * @return the column props for the data column.
  */
-export function getColumnFromQuiver(
+export function getColumnFromArrow(
   data: Quiver,
   columnPosition: number
 ): BaseColumnProps {
   const title = data.columns[0][columnPosition]
-  let quiverType = data.types.data[columnPosition]
+  let arrowType = data.types.data[columnPosition]
 
-  if (!notNullOrUndefined(quiverType)) {
+  if (!notNullOrUndefined(arrowType)) {
     // Use empty column type as fallback
-    quiverType = {
+    arrowType = {
       meta: null,
       numpy_type: "object",
       pandas_type: "object",
-    } as QuiverType
+    } as ArrowType
   }
 
   let columnTypeMetadata
-  if (Quiver.getTypeName(quiverType) === "categorical") {
+  if (Quiver.getTypeName(arrowType) === "categorical") {
     // Get the available categories and use it in column type metadata
     const options = data.getCategoricalOptions(columnPosition)
     if (notNullOrUndefined(options)) {
@@ -245,7 +243,7 @@ export function getColumnFromQuiver(
     id: `column-${title}-${columnPosition}`,
     isEditable: true,
     title,
-    quiverType,
+    arrowType: arrowType,
     columnTypeMetadata,
     isIndex: false,
     isHidden: false,
@@ -258,7 +256,7 @@ export function getColumnFromQuiver(
  * @param data - The Arrow data.
  * @return the column props for all columns.
  */
-export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
+export function getColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
   const numIndices = data.types?.index?.length ?? 0
@@ -279,7 +277,7 @@ export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
 
   for (let i = 0; i < numIndices; i++) {
     const column = {
-      ...getIndexFromQuiver(data, i),
+      ...getIndexFromArrow(data, i),
       indexNumber: i,
     } as BaseColumnProps
 
@@ -288,7 +286,7 @@ export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
 
   for (let i = 0; i < numColumns; i++) {
     const column = {
-      ...getColumnFromQuiver(data, i),
+      ...getColumnFromArrow(data, i),
       indexNumber: i + numIndices,
     } as BaseColumnProps
 
@@ -303,33 +301,33 @@ export function getColumnsFromQuiver(data: Quiver): BaseColumnProps[] {
  * result in different cell types.
  *
  * @param column - The colum of the cell.
- * @param quiverCell - The dataframe cell object from Arrow.
+ * @param arrowCell - The dataframe cell object from Arrow.
  * @param cssStyles - Optional css styles to apply on the cell.
  *
  * @return a GridCell object that can be used by glide-data-grid.
  */
-export function getCellFromQuiver(
+export function getCellFromArrow(
   column: BaseColumn,
-  quiverCell: DataFrameCell,
+  arrowCell: DataFrameCell,
   cssStyles: string | undefined = undefined
 ): GridCell {
   let cellTemplate
   if (column.kind === "object") {
-    // Always use display value from quiver for object types
+    // Always use display value from Quiver for object types
     // these are special types that the dataframe only support in read-only mode.
     cellTemplate = column.getCell(
-      notNullOrUndefined(quiverCell.content)
+      notNullOrUndefined(arrowCell.content)
         ? processDisplayData(
             Quiver.format(
-              quiverCell.content,
-              quiverCell.contentType,
-              quiverCell.field
+              arrowCell.content,
+              arrowCell.contentType,
+              arrowCell.field
             )
           )
         : null
     )
   } else {
-    cellTemplate = column.getCell(quiverCell.content)
+    cellTemplate = column.getCell(arrowCell.content)
   }
 
   if (isErrorCell(cellTemplate)) {
@@ -337,8 +335,8 @@ export function getCellFromQuiver(
     return cellTemplate
   }
 
-  if (notNullOrUndefined(quiverCell.displayContent)) {
-    const displayData = processDisplayData(quiverCell.displayContent)
+  if (notNullOrUndefined(arrowCell.displayContent)) {
+    const displayData = processDisplayData(arrowCell.displayContent)
     // If the display content is set, use that instead of the content.
     // This is only supported for text, object, date, datetime, time and number cells.
     if (cellTemplate.kind === GridCellKind.Text) {
@@ -355,10 +353,10 @@ export function getCellFromQuiver(
     // TODO (lukasmasuch): Also support datetime formatting here
   }
 
-  if (cssStyles && quiverCell.cssId) {
+  if (cssStyles && arrowCell.cssId) {
     cellTemplate = applyPandasStylerCss(
       cellTemplate,
-      quiverCell.cssId,
+      arrowCell.cssId,
       cssStyles
     )
   }

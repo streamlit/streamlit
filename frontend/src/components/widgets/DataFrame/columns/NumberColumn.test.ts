@@ -15,21 +15,21 @@
  */
 
 import { BaseColumnProps } from "./utils"
-import { DataType, Type as QuiverType } from "src/lib/Quiver"
+import { DataType, Type as ArrowType } from "src/lib/Quiver"
 import NumberColumn, { NumberColumnParams } from "./NumberColumn"
 import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 
-const MOCK_FLOAT_QUIVER_TYPE: QuiverType = {
+const MOCK_FLOAT_ARROW_TYPE: ArrowType = {
   pandas_type: "float64",
   numpy_type: "float64",
 }
 
-const MOCK_INT_QUIVER_TYPE: QuiverType = {
+const MOCK_INT_ARROW_TYPE: ArrowType = {
   pandas_type: "int64",
   numpy_type: "int64",
 }
 
-const MOCK_UINT_QUIVER_TYPE: QuiverType = {
+const MOCK_UINT_ARROW_TYPE: ArrowType = {
   pandas_type: "uint64",
   numpy_type: "uint64",
 }
@@ -45,25 +45,25 @@ const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
 }
 
 function getNumberColumn(
-  quiverType: QuiverType,
+  arrowType: ArrowType,
   params?: NumberColumnParams
 ): ReturnType<typeof NumberColumn> {
   return NumberColumn({
     ...NUMBER_COLUMN_TEMPLATE,
-    quiverType,
+    arrowType: arrowType,
     columnTypeMetadata: params,
   } as BaseColumnProps)
 }
 
 describe("NumberColumn", () => {
   it("alignes numbers to the right", () => {
-    const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE)
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
     const mockCell = mockColumn.getCell("1.123")
     expect(mockCell.contentAlign).toEqual("right")
   })
 
   it("creates a valid column instance", () => {
-    const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE)
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
     expect(mockColumn.title).toEqual(NUMBER_COLUMN_TEMPLATE.title)
     expect(mockColumn.id).toEqual(NUMBER_COLUMN_TEMPLATE.id)
     expect(mockColumn.isEditable).toEqual(NUMBER_COLUMN_TEMPLATE.isEditable)
@@ -87,7 +87,7 @@ describe("NumberColumn", () => {
   ])(
     "supports float64 value (%p parsed as %p)",
     (input: DataType | null | undefined, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE)
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
@@ -107,7 +107,7 @@ describe("NumberColumn", () => {
   ])(
     "supports integer value (%p parsed as %p)",
     (input: DataType | null, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_INT_QUIVER_TYPE)
+      const mockColumn = getNumberColumn(MOCK_INT_ARROW_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
@@ -127,7 +127,7 @@ describe("NumberColumn", () => {
   ])(
     "supports unsigned integer value (%p parsed as %p)",
     (input: DataType | null, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_UINT_QUIVER_TYPE)
+      const mockColumn = getNumberColumn(MOCK_UINT_ARROW_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
@@ -144,7 +144,7 @@ describe("NumberColumn", () => {
   ])(
     "converts value to precision %p (%p parsed to %p)",
     (precision: number, input: DataType, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE, {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         precision,
       })
       const mockCell = mockColumn.getCell(input)
@@ -160,7 +160,7 @@ describe("NumberColumn", () => {
   ])(
     "supports minimal value %p (%p parsed to %p)",
     (min: number, input: DataType, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE, {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         min,
       })
       const mockCell = mockColumn.getCell(input)
@@ -176,7 +176,7 @@ describe("NumberColumn", () => {
   ])(
     "supports maximal value %p (%p parsed to %p)",
     (max: number, input: DataType, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE, {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         max,
       })
       const mockCell = mockColumn.getCell(input)

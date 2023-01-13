@@ -45,7 +45,7 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
     // Default parameters:
     {
       options:
-        Quiver.getTypeName(props.quiverType) === "boolean"
+        Quiver.getTypeName(props.arrowType) === "boolean"
           ? ["true", "false"]
           : [],
     },

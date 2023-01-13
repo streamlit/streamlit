@@ -25,10 +25,10 @@ import { notNullOrUndefined } from "src/lib/utils"
 import { Theme } from "src/theme"
 import { logWarning, logError } from "src/lib/log"
 import {
-  getColumnTypeFromQuiver,
-  getColumnsFromQuiver,
-  getCellFromQuiver,
-} from "src/components/widgets/DataFrame/quiverUtils"
+  getColumnTypeFromArrow,
+  getColumnsFromArrow,
+  getCellFromArrow,
+} from "src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
 import {
   BaseColumn,
@@ -184,8 +184,8 @@ function getColumnType(column: BaseColumnProps): ColumnCreator {
     }
   }
   if (!notNullOrUndefined(ColumnType)) {
-    // Load based on quiver type
-    ColumnType = getColumnTypeFromQuiver(column.quiverType)
+    // Load based on arrow type
+    ColumnType = getColumnTypeFromArrow(column.arrowType)
   }
   return ColumnType
 }
@@ -218,7 +218,7 @@ function useDataLoader(
     (notNullOrUndefined(element.width) && element.width > 0)
 
   // Converts the columns from Arrow into columns compatible with glide-data-grid
-  const columns: BaseColumn[] = getColumnsFromQuiver(data)
+  const columns: BaseColumn[] = getColumnsFromArrow(data)
     .map(column => {
       // Apply column configurations
       let updatedColumn = {
@@ -281,9 +281,9 @@ function useDataLoader(
       }
 
       try {
-        // Quiver has the header in first row
-        const quiverCell = data.getCell(originalRow + 1, originalCol)
-        return getCellFromQuiver(column, quiverCell, data.cssStyles)
+        // Arrow has the header in first row
+        const arrowCell = data.getCell(originalRow + 1, originalCol)
+        return getCellFromArrow(column, arrowCell, data.cssStyles)
       } catch (error) {
         logError(error)
         return getErrorCell(

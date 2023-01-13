@@ -49,19 +49,19 @@ export interface NumberColumnParams {
  * This supports float, integer, and unsigned integer types.
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
-  const quiverTypeName = Quiver.getTypeName(props.quiverType)
+  const arrowTypeName = Quiver.getTypeName(props.arrowType)
 
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
       precision:
-        quiverTypeName.startsWith("int") ||
-        quiverTypeName === "range" ||
-        quiverTypeName.startsWith("uint")
+        arrowTypeName.startsWith("int") ||
+        arrowTypeName === "range" ||
+        arrowTypeName.startsWith("uint")
           ? 0
           : undefined,
       // if uint (unsigned int), only positive numbers are allowed
-      min: quiverTypeName.startsWith("uint") ? 0 : undefined,
+      min: arrowTypeName.startsWith("uint") ? 0 : undefined,
     },
     // User parameters:
     props.columnTypeMetadata

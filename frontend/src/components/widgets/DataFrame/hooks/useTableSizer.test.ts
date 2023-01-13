@@ -120,6 +120,7 @@ describe("useTableSizer hook", () => {
       )
     )
 
+    // This is expected to be 100% to adapt to whatever width the glide data grid calculates
     expect(result.current.resizableSize.width).toEqual("100%")
     expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
   })

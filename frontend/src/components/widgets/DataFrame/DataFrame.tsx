@@ -109,7 +109,7 @@ const drawMissingCells: DrawCustomCellCallback = args => {
  * The main component used by dataframe & data_editor to render an editable table.
  *
  * @param element - The element's proto message
- * @param data - The quiver data to render (extracted from the proto message)
+ * @param data - The Arrow data to render (extracted from the proto message)
  * @param width - The width of the container
  * @param height - The height of the container
  * @param disabled - Whether the widget is disabled
