@@ -29,7 +29,7 @@ const MOCK_BOOLEAN_COLUMN_PROPS = {
   isStretched: false,
   arrowType: {
     // The arrow type of the underlying data is
-    // not relevant for the boolean column
+    // not used for anything inside the boolean column.
     pandas_type: "bool",
     numpy_type: "bool",
   },

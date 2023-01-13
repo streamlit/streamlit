@@ -28,6 +28,8 @@ const MOCK_TEXT_COLUMN_PROPS = {
   isIndex: false,
   isStretched: false,
   arrowType: {
+    // The arrow type of the underlying data is
+    // not used for anything inside the text column.
     pandas_type: "unicode",
     numpy_type: "object",
   },
