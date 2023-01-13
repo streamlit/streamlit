@@ -19,6 +19,4 @@ st.header("Main Page with static files")
 
 if runtime.exists():
     """Static files serving works only when runtime exists"""
-    st.markdown(
-        "![Streamlit](http://localhost:8501/app/static/streamlit-mark-color.png)"
-    )
+    st.markdown("![Streamlit](app/static/streamlit-mark-color.png)")
