@@ -27,7 +27,8 @@ jobs:
         with:
           persist-credentials: false
           submodules: 'recursive'
-      - uses: ./.github/actions/set_python_versions
+      - name: Set Python version vars
+        uses: ./.github/actions/set_python_versions
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
