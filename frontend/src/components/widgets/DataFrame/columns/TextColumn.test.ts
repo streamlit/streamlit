@@ -35,14 +35,13 @@ const MOCK_TEXT_COLUMN_PROPS = {
   },
 }
 
-class SomeObject {}
-
 describe("TextColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = TextColumn(MOCK_TEXT_COLUMN_PROPS)
     expect(mockColumn.kind).toEqual("text")
     expect(mockColumn.title).toEqual(MOCK_TEXT_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_TEXT_COLUMN_PROPS.id)
+    expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell("foo")
     expect(mockCell.kind).toEqual(GridCellKind.Text)
@@ -60,7 +59,12 @@ describe("TextColumn", () => {
     [["foo", "bar"], "foo,bar"],
     [[1, 2, 0.1231], "1,2,0.1231"],
     [true, "true"],
-    [new SomeObject(), "[object Object]"],
+    [
+      {
+        foo: "bar",
+      },
+      "[object Object]",
+    ],
     [null, null],
     [undefined, null],
   ])(

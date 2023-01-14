@@ -62,6 +62,7 @@ describe("NumberColumn", () => {
     expect(mockColumn.title).toEqual(NUMBER_COLUMN_TEMPLATE.title)
     expect(mockColumn.id).toEqual(NUMBER_COLUMN_TEMPLATE.id)
     expect(mockColumn.isEditable).toEqual(NUMBER_COLUMN_TEMPLATE.isEditable)
+    expect(mockColumn.sortMode).toEqual("smart")
 
     const mockCell = mockColumn.getCell("1.234")
     expect(mockCell.kind).toEqual(GridCellKind.Number)

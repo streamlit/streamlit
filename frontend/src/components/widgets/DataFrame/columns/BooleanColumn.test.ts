@@ -41,6 +41,7 @@ describe("BooleanColumn", () => {
     expect(mockColumn.kind).toEqual("boolean")
     expect(mockColumn.title).toEqual(MOCK_BOOLEAN_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_BOOLEAN_COLUMN_PROPS.id)
+    expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell(true)
     expect(mockCell.kind).toEqual(GridCellKind.Boolean)
