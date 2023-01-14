@@ -314,7 +314,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
         self, mock_maybe_print_static_folder_warning
     ):
-        """We should load secrets.toml on startup."""
+        """We should trigger _maybe_print_static_folder_warning on server start."""
         bootstrap._on_server_start(Mock())
         mock_maybe_print_static_folder_warning.assert_called_once()
 
