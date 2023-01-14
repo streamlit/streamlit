@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.10"]
+        python-version: ["MIN", "MAX"]
 
     steps:
       - name: Checkout Streamlit code
@@ -43,7 +43,13 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set Python version vars
+        uses: ./.github/actions/set_python_versions
+      - if: ${{ matrix.python-version == 'MIN' }}
+        run: echo "PYTHON_TEST_VERSION=${{ env.PYTHON_MIN_VERSION }}" >> $GITHUB_ENV
+      - if: ${{ matrix.python-version == 'MAX' }}
+        run: echo "PYTHON_TEST_VERSION=${{ env.PYTHON_MAX_VERSION }}" >> $GITHUB_ENV
+      - name: Set up Python ${{ env.PYTHON_TEST_VERSION }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
