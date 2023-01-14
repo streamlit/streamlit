@@ -52,7 +52,7 @@ jobs:
       - name: Set up Python ${{ env.PYTHON_TEST_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PYTHON_TEST_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
