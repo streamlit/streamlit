@@ -38,7 +38,7 @@ const MOCK_UINT_ARROW_TYPE: ArrowType = {
 
 const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   id: "1",
-  title: "A number",
+  title: "Number column",
   indexNumber: 0,
   isEditable: false,
   isHidden: false,

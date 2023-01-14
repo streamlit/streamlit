@@ -28,7 +28,7 @@ const MOCK_OBJECT_COLUMN_PROPS = {
   isStretched: false,
   arrowType: {
     // The arrow type of the underlying data is
-    // not used for anything inside the text column.
+    // not used for anything inside the column.
     pandas_type: "object",
     numpy_type: "object",
   },

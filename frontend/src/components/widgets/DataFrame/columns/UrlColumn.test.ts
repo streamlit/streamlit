@@ -28,7 +28,7 @@ const MOCK_URL_COLUMN_PROPS = {
   isStretched: false,
   arrowType: {
     // The arrow type of the underlying data is
-    // not used for anything inside the url column.
+    // not used for anything inside the column.
     pandas_type: "unicode",
     numpy_type: "object",
   },
