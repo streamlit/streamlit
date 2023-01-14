@@ -43,6 +43,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     isEditable: false, // List column is always readonly
     getCell(data?: any): GridCell {
+      // TODO(lukasmasuch): if notNullOrUndefined -> use empty cell to return null value
       return {
         ...cellTemplate,
         data: toSafeArray(data),
