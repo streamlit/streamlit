@@ -323,11 +323,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     def test_maybe_print_static_folder_warning_if_folder_doesnt_exist(self, mock_echo):
         """We should print a warning when static folder does not exist."""
 
-        mock_get_option = testutil.build_mock_config_get_option(
-            {"server.enableStaticServing": True}
-        )
-
-        with patch.object(config, "get_option", new=mock_get_option):
+        with testutil.patch_config_options({"server.enableStaticServing": True}):
             bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
             mock_echo.assert_called_once_with(
                 "WARNING: Static file serving is enabled, but no static folder found "
@@ -348,13 +344,9 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         folder total size is too large.
         """
 
-        mock_get_option = testutil.build_mock_config_get_option(
+        with testutil.patch_config_options(
             {"server.enableStaticServing": True}
-        )
-
-        with patch.object(config, "get_option", new=mock_get_option), patch.object(
-            config, "set_option"
-        ) as mock_set_option:
+        ), patch.object(config, "set_option") as mock_set_option:
             bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
             mock_echo.assert_called_once_with(
                 "WARNING: Static folder size is larger than 1GB. "
