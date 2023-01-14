@@ -25,6 +25,15 @@ from streamlit.runtime.runtime_util import serialize_forward_msg
 _LOGGER = get_logger(__name__)
 
 
+# We agreed on these limitations for the initial release of static file sharing,
+# based on security concerns from the SiS and Community Cloud teams
+# The maximum possible size of single serving static file.
+MAX_APP_STATIC_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
+# The list of file extensions that we serve with the corresponding Content-Type header.
+# All files with other extensions will be served with Content-Type: text/plain
+SAFE_APP_STATIC_FILE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif")
+
+
 def allow_cross_origin_requests():
     """True if cross-origin requests are allowed.
 
@@ -112,19 +121,19 @@ class AppStaticFileHandler(AssetsFileHandler):
 
         if (
             os.path.exists(full_path)
-            and os.path.getsize(full_path) > file_util.MAX_APP_STATIC_FILE_SIZE
+            and os.path.getsize(full_path) > MAX_APP_STATIC_FILE_SIZE
         ):
             raise tornado.web.HTTPError(
                 404,
                 "File is too large, its size should not exceed "
-                f"{file_util.MAX_APP_STATIC_FILE_SIZE} bytes",
+                f"{MAX_APP_STATIC_FILE_SIZE} bytes",
                 reason="File is too large",
             )
 
         return super().validate_absolute_path(root, absolute_path)
 
     def set_extra_headers(self, path: str) -> None:
-        if Path(path).suffix not in file_util.WHITELISTED_APP_STATIC_FILE_EXTENSIONS:
+        if Path(path).suffix not in SAFE_APP_STATIC_FILE_EXTENSIONS:
             self.set_header("Content-Type", "text/plain")
         self.set_header("X-Content-Type-Options", "nosniff")
 

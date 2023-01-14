@@ -22,11 +22,13 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
-from streamlit.file_util import MAX_APP_STATIC_FILE_SIZE
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.routes import ALLOWED_MESSAGE_ORIGINS
+from streamlit.web.server.routes import (
+    ALLOWED_MESSAGE_ORIGINS,
+    MAX_APP_STATIC_FILE_SIZE,
+)
 from streamlit.web.server.server import (
     AllowedMessageOriginsHandler,
     AppStaticFileHandler,

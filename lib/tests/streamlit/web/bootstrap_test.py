@@ -19,7 +19,7 @@ from unittest.mock import Mock, patch
 
 import matplotlib
 
-from streamlit import config, file_util
+from streamlit import config
 from streamlit.web import bootstrap
 from streamlit.web.bootstrap import NEW_VERSION_TEXT
 from tests import testutil
@@ -339,7 +339,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("os.path.isdir", Mock(return_value=True))
     @patch(
         "streamlit.file_util.get_directory_size",
-        Mock(return_value=(2 * file_util.MAX_APP_STATIC_FOLDER_SIZE)),
+        Mock(return_value=(2 * bootstrap.MAX_APP_STATIC_FOLDER_SIZE)),
     )
     @patch("click.secho")
     def test_maybe_print_static_folder_warning_if_folder_is_too_large(self, mock_echo):

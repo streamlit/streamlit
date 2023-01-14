@@ -28,10 +28,6 @@ CONFIG_FOLDER_NAME = ".streamlit"
 # If enableStaticServing is enabled, static file served from the ./static folder
 APP_STATIC_FOLDER_NAME = "static"
 
-MAX_APP_STATIC_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
-MAX_APP_STATIC_FOLDER_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
-WHITELISTED_APP_STATIC_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif"]
-
 
 def get_encoded_file_data(data, encoding="auto"):
     """Coerce bytes to a BytesIO or a StringIO.
@@ -129,7 +125,7 @@ def get_static_dir():
 def get_app_static_dir(main_script_path: str):
     """Get the folder where app static files live"""
     main_script_path = Path(main_script_path)
-    static_dir = main_script_path.parent / "static"
+    static_dir = main_script_path.parent / APP_STATIC_FOLDER_NAME
     return os.path.abspath(static_dir)
 
 
