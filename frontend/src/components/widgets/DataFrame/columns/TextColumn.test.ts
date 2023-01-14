@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 
 import TextColumn from "./TextColumn"
-import { TextCell } from "@glideapps/glide-data-grid"
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "1",

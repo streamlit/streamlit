@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-import { BaseColumnProps } from "./utils"
-import { DataType, Type as ArrowType } from "src/lib/Quiver"
-import NumberColumn, { NumberColumnParams } from "./NumberColumn"
 import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
+
+import { DataType, Type as ArrowType } from "src/lib/Quiver"
+
+import { BaseColumnProps } from "./utils"
+import NumberColumn, { NumberColumnParams } from "./NumberColumn"
 
 const MOCK_FLOAT_ARROW_TYPE: ArrowType = {
   pandas_type: "float64",
