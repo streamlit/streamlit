@@ -38,6 +38,7 @@ const MOCK_BOOLEAN_COLUMN_PROPS = {
 describe("BooleanColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
+    expect(mockColumn.kind).toEqual("boolean")
     expect(mockColumn.title).toEqual(MOCK_BOOLEAN_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_BOOLEAN_COLUMN_PROPS.id)
 

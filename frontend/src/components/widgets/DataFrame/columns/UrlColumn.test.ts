@@ -37,6 +37,7 @@ const MOCK_URL_COLUMN_PROPS = {
 describe("UrlColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = UrlColumn(MOCK_URL_COLUMN_PROPS)
+    expect(mockColumn.kind).toEqual("url")
     expect(mockColumn.title).toEqual(MOCK_URL_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_URL_COLUMN_PROPS.id)
 

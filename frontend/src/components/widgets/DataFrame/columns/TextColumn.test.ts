@@ -40,6 +40,7 @@ class SomeObject {}
 describe("TextColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = TextColumn(MOCK_TEXT_COLUMN_PROPS)
+    expect(mockColumn.kind).toEqual("text")
     expect(mockColumn.title).toEqual(MOCK_TEXT_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_TEXT_COLUMN_PROPS.id)
 

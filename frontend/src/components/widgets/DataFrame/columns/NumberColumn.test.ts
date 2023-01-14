@@ -56,14 +56,9 @@ function getNumberColumn(
 }
 
 describe("NumberColumn", () => {
-  it("alignes numbers to the right", () => {
-    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
-    const mockCell = mockColumn.getCell("1.123")
-    expect(mockCell.contentAlign).toEqual("right")
-  })
-
   it("creates a valid column instance", () => {
     const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+    expect(mockColumn.kind).toEqual("number")
     expect(mockColumn.title).toEqual(NUMBER_COLUMN_TEMPLATE.title)
     expect(mockColumn.id).toEqual(NUMBER_COLUMN_TEMPLATE.id)
     expect(mockColumn.isEditable).toEqual(NUMBER_COLUMN_TEMPLATE.isEditable)
@@ -72,6 +67,12 @@ describe("NumberColumn", () => {
     expect(mockCell.kind).toEqual(GridCellKind.Number)
     expect((mockCell as NumberCell).displayData).toEqual("1.234")
     expect((mockCell as NumberCell).data).toEqual(1.234)
+  })
+
+  it("alignes numbers to the right", () => {
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+    const mockCell = mockColumn.getCell("1.123")
+    expect(mockCell.contentAlign).toEqual("right")
   })
 
   it.each([
