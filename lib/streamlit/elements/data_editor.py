@@ -578,7 +578,7 @@ class DataEditorMixin:
     ) -> pd.DataFrame:
         pass
 
-    # @gather_metrics("_arrow_dataframe")
+    # TODO(lukasmasuch): @gather_metrics("_arrow_dataframe")
     def experimental_data_editor(
         self,
         data: DataTypes,
