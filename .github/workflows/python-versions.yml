@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["MIN", "MAX"]
+        min-or-max: ["min", "max"]
 
     steps:
       - name: Checkout Streamlit code
@@ -43,16 +43,20 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
+
+      # Set $PYTHON_VERSION from either $PYTHON_MIN_VERSION or $PYTHON_MAX_VERSION,
+      # depending on our 'min-or-max' strategy matrix value.
       - name: Set Python version vars
         uses: ./.github/actions/set_python_versions
-      - if: ${{ matrix.python-version == 'MIN' }}
-        run: echo "PYTHON_TEST_VERSION=${{ env.PYTHON_MIN_VERSION }}" >> $GITHUB_ENV
-      - if: ${{ matrix.python-version == 'MAX' }}
-        run: echo "PYTHON_TEST_VERSION=${{ env.PYTHON_MAX_VERSION }}" >> $GITHUB_ENV
-      - name: Set up Python ${{ env.PYTHON_TEST_VERSION }}
+      - if: ${{ matrix.min-or-max == 'min' }}
+        run: echo "PYTHON_VERSION=${{ env.PYTHON_MIN_VERSION }}" >> $GITHUB_ENV
+      - if: ${{ matrix.min-or-max == 'max' }}
+        run: echo "PYTHON_VERSION=${{ env.PYTHON_MAX_VERSION }}" >> $GITHUB_ENV
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_TEST_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
