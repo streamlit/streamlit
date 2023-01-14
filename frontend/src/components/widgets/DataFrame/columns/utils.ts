@@ -72,7 +72,7 @@ export interface BaseColumn extends BaseColumnProps {
   // raw: Sorts based on the actual type of the cell data value.
   readonly sortMode: "default" | "raw" | "smart"
   // Get a cell with the provided data for the column type.
-  getCell(data?: DataType): GridCell
+  getCell(data?: any): GridCell
   // Get the raw cell of a provided cell.
   getCellValue(cell: GridCell): any | null
 }
