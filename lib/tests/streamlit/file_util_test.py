@@ -105,6 +105,12 @@ class FileUtilTest(unittest.TestCase):
             file_util.get_project_streamlit_file_path("some", "random", "file"),
         )
 
+    def test_get_app_static_dir(self):
+        self.assertEqual(
+            file_util.get_app_static_dir("/some_path/to/app/myapp.py"),
+            "/some_path/to/app/static",
+        )
+
 
 class FileIsInFolderTest(unittest.TestCase):
     def test_file_in_folder(self):
