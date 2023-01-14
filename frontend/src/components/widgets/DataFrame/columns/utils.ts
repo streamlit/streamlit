@@ -225,7 +225,17 @@ export function toSafeArray(data: any): any[] {
     return []
   }
 
+  if (typeof data === "number" || typeof data === "boolean") {
+    // Single number or boolean
+    return [data]
+  }
+
   if (typeof data === "string") {
+    if (data === "") {
+      // Empty string
+      return []
+    }
+
     // Try to parse string to an array
     if (data.trim().startsWith("[") && data.trim().endsWith("]")) {
       // Support for JSON arrays: ["foo", 1, null, "test"]
@@ -291,8 +301,14 @@ export function toSafeString(data: any): string {
  * @returns The converted number or null if the value cannot be interpreted as a number.
  */
 export function toSafeNumber(value: any): number | null {
+  // TODO(lukasmasuch): Should this return null as replacement for NaN?
+
   if (!notNullOrUndefined(value)) {
     return null
+  }
+
+  if (Array.isArray(value)) {
+    return NaN
   }
 
   if (typeof value === "string") {
@@ -329,6 +345,8 @@ export function toSafeNumber(value: any): number | null {
  * @returns The formatted number as a string.
  */
 export function formatNumber(value: number, maxPrecision = 4): string {
+  // TODO(lukasmasuch): Should we provide an option to keep the 0 suffixes?
+
   if (!Number.isNaN(value) && Number.isFinite(value)) {
     if (maxPrecision === 0) {
       // Numbro is unable to format the numb with 0 decimals.
