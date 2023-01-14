@@ -47,10 +47,12 @@ jobs:
           ref: ${{ github.ref_name }}
           persist-credentials: false
           submodules: 'recursive'
-      - name: Set up Python 3.10
+      - name: Set Python version vars
+        uses: ./.github/actions/set_python_versions
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       # Uses action to safely process user input (branch name) to prevent script injection attacks
       - name: Set GIT_TAG & GH_REPO env variables
         uses: ./.github/actions/tag_and_repo
