@@ -29,7 +29,7 @@ import {
   mergeColumnParameters,
 } from "./utils"
 
-interface CategoricalColumnParams {
+export interface CategoricalColumnParams {
   /** A list of options available in the dropdown.
    * Every value in the column needs to match one of the options.
    */
@@ -45,7 +45,7 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
     // Default parameters:
     {
       options:
-        Quiver.getTypeName(props.arrowType) === "boolean"
+        Quiver.getTypeName(props.arrowType) === "bool"
           ? ["true", "false"]
           : [],
     },
