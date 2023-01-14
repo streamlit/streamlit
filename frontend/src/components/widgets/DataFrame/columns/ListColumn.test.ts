@@ -83,7 +83,7 @@ describe("ListColumn", () => {
       [true, false],
     ],
   ])(
-    "supports string-compatible value (%p parsed as %p)",
+    "supports array-compatible value (%p parsed as %p)",
     (input: any, value: any[] | null) => {
       const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
