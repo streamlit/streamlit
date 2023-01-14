@@ -330,8 +330,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         with patch.object(config, "get_option", new=mock_get_option):
             bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
             mock_echo.assert_called_once_with(
-                "WARNING: Static file serving enabled, but no static folder found at "
-                f"{os.path.abspath('app_root/static')}. To disable static file "
+                "WARNING: Static file serving is enabled, but no static folder found "
+                f"at {os.path.abspath('app_root/static')}. To disable static file "
                 f"serving, set server.enableStaticServing to false.",
                 fg="yellow",
             )

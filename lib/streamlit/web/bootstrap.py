@@ -221,7 +221,7 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
         static_folder_path = file_util.get_app_static_dir(main_script_path)
         if not os.path.isdir(static_folder_path):
             click.secho(
-                f"WARNING: Static file serving enabled, but no static folder found "
+                f"WARNING: Static file serving is enabled, but no static folder found "
                 f"at {static_folder_path}. To disable static file serving, "
                 f"set server.enableStaticServing to false.",
                 fg="yellow",
