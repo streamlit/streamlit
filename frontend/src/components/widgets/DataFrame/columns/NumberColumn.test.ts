@@ -18,7 +18,7 @@ import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 
 import { DataType, Type as ArrowType } from "src/lib/Quiver"
 
-import { BaseColumnProps } from "./utils"
+import { BaseColumnProps, isErrorCell } from "./utils"
 import NumberColumn, { NumberColumnParams } from "./NumberColumn"
 
 const MOCK_FLOAT_ARROW_TYPE: ArrowType = {
@@ -79,6 +79,8 @@ describe("NumberColumn", () => {
   })
 
   it.each([
+    [true, 1],
+    [false, 0],
     ["4.12", 4.12],
     ["-4.12", -4.12],
     ["4", 4],
@@ -185,6 +187,15 @@ describe("NumberColumn", () => {
       })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(value)
+    }
+  )
+
+  it.each([[[]], ["foo"], [[1, 2]], ["123.124.123"], ["--123"], ["2,,2"]])(
+    "%p results in error cell",
+    (input: any) => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
     }
   )
 })
