@@ -17,7 +17,6 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -79,7 +78,7 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
     kind: "chart",
     sortMode: "default",
     isEditable: false, // Range column is always readonly
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       if (!notNullOrUndefined(data)) {
         return getEmptyCell()
       }

@@ -17,7 +17,7 @@
 import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 import { sprintf } from "sprintf-js"
 
-import { DataType, Quiver } from "src/lib/Quiver"
+import { Quiver } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -81,7 +81,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "number",
     sortMode: "smart",
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       let cellData: number | null = toSafeNumber(data)
       let displayData: string | undefined
 

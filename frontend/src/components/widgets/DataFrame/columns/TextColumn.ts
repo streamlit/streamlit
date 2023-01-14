@@ -16,7 +16,6 @@
 
 import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -45,7 +44,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "text",
     sortMode: "default",
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       try {
         const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
         const displayData = notNullOrUndefined(cellData) ? cellData : ""

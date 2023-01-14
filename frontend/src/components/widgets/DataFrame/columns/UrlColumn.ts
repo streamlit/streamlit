@@ -16,7 +16,6 @@
 
 import { GridCell, UriCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -44,7 +43,7 @@ function UrlColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "url",
     sortMode: "default",
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       return {
         ...cellTemplate,
         data: notNullOrUndefined(data) ? toSafeString(data) : null,

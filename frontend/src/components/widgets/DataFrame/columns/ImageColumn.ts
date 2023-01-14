@@ -16,7 +16,6 @@
 
 import { GridCell, GridCellKind, ImageCell } from "@glideapps/glide-data-grid"
 
-import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
@@ -43,7 +42,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     kind: "image",
     sortMode: "default",
     isEditable: false, // Image columns are read-only
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       const imageUrls = notNullOrUndefined(data) ? [toSafeString(data)] : []
 
       return {

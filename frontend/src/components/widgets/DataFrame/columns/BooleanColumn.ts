@@ -20,7 +20,6 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -52,7 +51,7 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "boolean",
     sortMode: "default",
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       let cellData = null
 
       if (notNullOrUndefined(data)) {
