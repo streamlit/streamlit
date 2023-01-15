@@ -203,9 +203,17 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     def test_static_files_200(self):
+        """
+        Files with extensions NOT listed in routes.py `SAFE_APP_STATIC_FILE_EXTENSIONS`
+        should have the `Content-Type` header value `text-plain`.
+        """
         responses = [
+            # self._filename is file without extension
             self.fetch(f"/app/static/{self._filename}"),
+            # self._js_filename is file with '.js' extension
             self.fetch(f"/app/static/{self._js_filename}"),
+            # self._symlink_inside_directory is symlink to
+            # self._tmpfile (inside static directory)
             self.fetch(f"/app/static/{self._symlink_inside_directory}"),
         ]
         for r in responses:
@@ -214,6 +222,10 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             assert r.code == 200
 
     def test_static_image_200(self):
+        """
+        Files with extensions listed in routes.py `SAFE_APP_STATIC_FILE_EXTENSIONS`
+        should have the `Content-Type` header based on their extension.
+        """
         response = self.fetch(f"/app/static/{self._image_filename}")
 
         assert response.code == 200
@@ -222,18 +234,33 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     @patch("os.path.getsize", MagicMock(return_value=MAX_APP_STATIC_FILE_SIZE + 1))
     def test_big_file_404(self):
+        """Files with size greater than MAX_APP_STATIC_FILE_SIZE should return 404."""
         response = self.fetch(f"/app/static/{self._image_filename}")
         assert response.code == 404
+        self.assertEqual(
+            b"<html><title>404: File is too large</title>"
+            b"<body>404: File is too large</body></html>",
+            response.body,
+        )
 
     def test_staticfiles_404(self):
+        """
+        Non-existent files, files outside static directory and symlinks pointing to
+        files outside static directory and directories should return 404.
+        """
         responses = [
             self.fetch("/app/static"),
             self.fetch("/app/static/"),
+            self.fetch("/app/static/../test_file_outside_directory.py"),
             self.fetch(f"/app/static/{self._symlink_outside_directory}"),
             self.fetch("/app/static/nonexistent.jpg"),
         ]
         for r in responses:
             assert r.code == 404
+            assert (
+                r.body == b"<html><title>404: Not Found</title>"
+                b"<body>404: Not Found</body></html>"
+            )
 
 
 class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
