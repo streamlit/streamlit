@@ -132,6 +132,11 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     def to_dict(self) -> Dict[str, Any]:
         """Return a dict containing all session_state and keyed widget values."""
         return get_session_state().filtered_state
+    
+    def setdefault(self,key,default):
+        if key not in self:
+            self[key] = default
+        return self[key]
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
