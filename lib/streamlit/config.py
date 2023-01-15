@@ -51,6 +51,7 @@ _config_options_template: Dict[str, ConfigOption] = OrderedDict()
 # Stores the current state of config options.
 _config_options: Optional[Dict[str, ConfigOption]] = None
 
+
 # Indicates that a config option was defined by the user.
 _USER_DEFINED = "<user defined>"
 
@@ -278,6 +279,7 @@ _create_option(
     type_=bool,
 )
 
+
 _create_option(
     "global.showWarningOnDirectExecution",
     description="""
@@ -363,6 +365,7 @@ _create_option(
     default_val="arrow",
     type_=str,
 )
+
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")
@@ -651,6 +654,7 @@ _create_option(
     type_=bool,
 )
 
+
 _create_option(
     "server.enableXsrfProtection",
     description="""
@@ -702,6 +706,7 @@ _create_option(
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")
+
 
 _create_option(
     "browser.serverAddress",
@@ -771,6 +776,7 @@ _create_option(
     visibility="hidden",
 )
 
+
 # Config Section: Mapbox #
 
 _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
@@ -783,6 +789,7 @@ _create_option(
                 https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
 )
+
 
 # Config Section: deprecations
 
@@ -815,6 +822,7 @@ _create_option(
     scriptable=True,
     type_=bool,
 )
+
 
 # Config Section: Custom Theme #
 
