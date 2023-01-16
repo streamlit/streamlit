@@ -189,25 +189,42 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  const commitWidgetValue = React.useCallback(
-    // Use debounce to prevent rapid updates to the widget state.
-    debounce(DEBOUNCE_TIME_MS, () => {
-      const currentEditingState = editingState.current.toJson(columns)
-      let currentWidgetState = widgetMgr.getStringValue(element as WidgetInfo)
-
-      if (currentWidgetState === undefined) {
-        // Create an empty widget state
-        currentWidgetState = new EditingState(0).toJson([])
+  const commitWidgetState = React.useCallback(
+    (clearSelections: boolean = false) => {
+      if (numRows !== editingState.current.getNumRows()) {
+        // Reset the number of rows if it has been changed in the editing state
+        setNumRows(editingState.current.getNumRows())
       }
 
-      // Only update if there is actually a difference between editing and widget state
-      if (currentEditingState !== currentWidgetState) {
-        widgetMgr.setStringValue(element as WidgetInfo, currentEditingState, {
-          fromUi: true,
-        })
+      if (clearSelections) {
+        clearSelection()
       }
-    }),
-    [widgetMgr, element]
+
+      // Use debounce to prevent rapid updates to the widget state.
+      debounce(DEBOUNCE_TIME_MS, () => {
+        const currentEditingState = editingState.current.toJson(columns)
+        let currentWidgetState = widgetMgr.getStringValue(
+          element as WidgetInfo
+        )
+
+        if (currentWidgetState === undefined) {
+          // Create an empty widget state
+          currentWidgetState = new EditingState(0).toJson([])
+        }
+
+        // Only update if there is actually a difference between editing and widget state
+        if (currentEditingState !== currentWidgetState) {
+          widgetMgr.setStringValue(
+            element as WidgetInfo,
+            currentEditingState,
+            {
+              fromUi: true,
+            }
+          )
+        }
+      })()
+    },
+    [widgetMgr, element, numRows]
   )
 
   const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
@@ -217,9 +234,7 @@ function DataFrame({
     getCellContent,
     getOriginalIndex,
     refreshCells,
-    commitWidgetValue,
-    clearSelection,
-    setNumRows,
+    commitWidgetState,
     editingState
   )
 
@@ -387,7 +402,6 @@ function DataFrame({
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
           }}
-          onRowMoved={(s, e) => window.alert(`Moved row ${s} to ${e}`)}
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
           // If element is editable, add additional properties:

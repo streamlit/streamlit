@@ -48,10 +48,7 @@ type DataEditorReturn = Pick<
  * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
  *                           This mainly changed by sorting of columns.
  * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
- * @param commitWidgetValue - Callback that allows to send the widget value to the backend (triggering a rerun).
- * @param clearSelection - Callback that allows to clear the current selections in the table.
- * @param setNumRows - Callback that allows to set the number of rows in the table.
- *                     This is required when rows are added or removed.
+ * @param commitWidgetState - Callback that allows to send the widget state to the backend (triggering a rerun).
  * @param editingState - The editing state of the data editor.
  *
  * @returns Glide-data-grid compatible functions for editing capabilities.
@@ -67,9 +64,7 @@ function useDataEditor(
       cell: [number, number]
     }[]
   ) => void,
-  commitWidgetValue: () => void,
-  clearSelection: () => void,
-  setNumRows: (numRows: number) => void,
+  commitWidgetState: (clearSelection?: boolean) => void,
   editingState: React.MutableRefObject<EditingState>
 ): DataEditorReturn {
   const onCellEdited = React.useCallback(
@@ -102,14 +97,14 @@ function useDataEditor(
         lastUpdated: performance.now(),
       })
 
-      commitWidgetValue()
+      commitWidgetState()
     },
     [
       columns,
       editingState,
       getOriginalIndex,
       getCellContent,
-      commitWidgetValue,
+      commitWidgetState,
     ]
   )
 
@@ -119,7 +114,8 @@ function useDataEditor(
       newRow.set(column.indexNumber, column.getCell(undefined))
     })
     editingState.current.addRow(newRow)
-    setNumRows(editingState.current.getNumRows())
+    // TODO(lukasmasuch): should we really trigger a rerun here?
+    commitWidgetState()
   }, [columns, editingState])
 
   const onDelete = React.useCallback(
@@ -138,9 +134,7 @@ function useDataEditor(
         })
         // We need to delete all rows at once, so that the indexes work correct
         editingState.current.deleteRows(rowsToDelete)
-        setNumRows(editingState.current.getNumRows())
-        clearSelection()
-        commitWidgetValue()
+        commitWidgetState(true)
         return false
       }
       if (selection.current?.range) {
@@ -171,14 +165,14 @@ function useDataEditor(
         }
 
         if (updatedCells.length > 0) {
-          commitWidgetValue()
+          commitWidgetState()
           refreshCells(updatedCells)
         }
         return false
       }
       return true
     },
-    [columns, editingState, refreshCells, getOriginalIndex, commitWidgetValue]
+    [columns, editingState, refreshCells, getOriginalIndex, commitWidgetState]
   )
 
   const onPaste = React.useCallback(
@@ -248,7 +242,7 @@ function useDataEditor(
         }
 
         if (updatedCells.length > 0) {
-          commitWidgetValue()
+          commitWidgetState()
           refreshCells(updatedCells)
         }
       }
@@ -262,7 +256,7 @@ function useDataEditor(
       getOriginalIndex,
       getCellContent,
       onRowAppended,
-      commitWidgetValue,
+      commitWidgetState,
       refreshCells,
     ]
   )
