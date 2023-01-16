@@ -249,10 +249,15 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         files outside static directory and directories should return 404.
         """
         responses = [
+            # Access to directory without trailing slash
             self.fetch("/app/static"),
+            # Access to directory with trailing slash
             self.fetch("/app/static/"),
+            # Access to file outside static directory
             self.fetch("/app/static/../test_file_outside_directory.py"),
+            # Access to symlink outside static directory
             self.fetch(f"/app/static/{self._symlink_outside_directory}"),
+            # Access to non-existent file
             self.fetch("/app/static/nonexistent.jpg"),
         ]
         for r in responses:
