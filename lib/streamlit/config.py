@@ -723,6 +723,7 @@ _create_option(
     type_=str,
 )
 
+
 _create_option(
     "browser.gatherUsageStats",
     description="""
