@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCellKind, BubbleCell } from "@glideapps/glide-data-grid"
+import { GridCellKind } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { BaseColumnProps, isErrorCell } from "./utils"
@@ -53,7 +53,7 @@ describe("ChartColumn", () => {
     expect(mockColumn.id).toEqual(CHART_COLUMN_TEMPLATE.id)
     expect(mockColumn.sortMode).toEqual("default")
 
-    // Column should be readonly, even if isEditable was true
+    // Column should be readonly:
     expect(mockColumn.isEditable).toEqual(false)
 
     const mockCell = mockColumn.getCell([0.1, 0.2])

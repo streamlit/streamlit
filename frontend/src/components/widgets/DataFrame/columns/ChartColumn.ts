@@ -151,9 +151,9 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
         // Normalize values between the configured range
         normalizedChartData = convertedChartData.map(
           v =>
-            (parameters.max! - parameters.min!) *
+            ((parameters.max || 1) - (parameters.min || 0)) *
               ((v - minValue) / (maxValue - minValue)) +
-            parameters.min!
+            (parameters.min || 0)
         )
       } else {
         // Values are already in the configured range
