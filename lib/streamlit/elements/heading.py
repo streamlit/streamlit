@@ -22,6 +22,10 @@ from streamlit.type_util import SupportsStr
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+TITLE_TAG = "h1"
+HEADER_TAG = "h2"
+SUBHEADER_TAG = "h3"
+
 
 class HeadingMixin:
     @gather_metrics("header")
@@ -66,7 +70,7 @@ class HeadingMixin:
         if anchor is not None:
             header_proto.anchor = anchor
         header_proto.body = clean_text(body)
-        header_proto.tag = "h2"
+        header_proto.tag = HEADER_TAG
         return self.dg._enqueue("heading", header_proto)
 
     @gather_metrics("subheader")
@@ -111,7 +115,7 @@ class HeadingMixin:
         if anchor is not None:
             subheader_proto.anchor = anchor
         subheader_proto.body = clean_text(body)
-        subheader_proto.tag = "h3"
+        subheader_proto.tag = SUBHEADER_TAG
 
         return self.dg._enqueue("heading", subheader_proto)
 
@@ -160,7 +164,7 @@ class HeadingMixin:
         if anchor is not None:
             title_proto.anchor = anchor
         title_proto.body = clean_text(body)
-        title_proto.tag = "h1"
+        title_proto.tag = TITLE_TAG
 
         return self.dg._enqueue("heading", title_proto)
 
