@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  GridCell,
+  GridCellKind,
+  LoadingCell,
+} from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { notNullOrUndefined } from "src/lib/utils"
+import { isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -32,13 +36,13 @@ import {
   formatNumber,
 } from "./utils"
 
-interface ChartColumnParams {
+export interface ChartColumnParams {
   // The type of the chart. Defaults to "line".
-  readonly type: "line" | "bar"
+  readonly type?: "line" | "bar"
   // The minimum value used for plotting the chart. Defaults to 0.
-  readonly min: number
+  readonly min?: number
   // The maximum value used for plotting the chart. Defaults to 1.
-  readonly max: number
+  readonly max?: number
 }
 
 /**
@@ -79,7 +83,28 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     isEditable: false, // Range column is always readonly
     getCell(data?: any): GridCell {
-      if (!notNullOrUndefined(data)) {
+      if (parameters.type !== "bar" && parameters.type !== "line") {
+        return getErrorCell(
+          "Unsupported chart type",
+          `The chart type "${parameters.type}" is not supported.`
+        )
+      }
+
+      if (
+        isNullOrUndefined(parameters.min) ||
+        isNullOrUndefined(parameters.max) ||
+        Number.isNaN(parameters.min) ||
+        Number.isNaN(parameters.max) ||
+        parameters.min >= parameters.max
+      ) {
+        return getErrorCell(
+          "Invalid min/max parameters",
+          `The min (${parameters.min}) and max (${parameters.max}) parameters must be valid numbers.`
+        )
+      }
+
+      if (isNullOrUndefined(data)) {
+        // TODO(lukasmasuch): Use a missing cell?
         return getEmptyCell()
       }
 
@@ -87,51 +112,52 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
 
       const convertedChartData: number[] = []
       let normalizedChartData: number[] = []
+      if (chartData.length === 0) {
+        return getEmptyCell()
+      }
 
-      if (chartData.length >= 1) {
-        // Initialize with smallest and biggest number
-        let maxValue = Number.MIN_SAFE_INTEGER
-        let minValue = Number.MAX_SAFE_INTEGER
+      // Initialize with smallest and biggest number
+      let maxValue = Number.MIN_SAFE_INTEGER
+      let minValue = Number.MAX_SAFE_INTEGER
 
-        // Try to convert all values to numbers and find min/max
-        for (let i = 0; i < chartData.length; i++) {
-          const convertedValue = toSafeNumber(chartData[i])
-          if (
-            Number.isNaN(convertedValue) ||
-            !notNullOrUndefined(convertedValue)
-          ) {
-            return getErrorCell(
-              toSafeString(chartData),
-              `The value cannot be interpreted as a numeric array. ${convertedValue} is not a number.`
-            )
-          }
-
-          if (convertedValue > maxValue) {
-            maxValue = convertedValue
-          }
-
-          if (convertedValue < minValue) {
-            minValue = convertedValue
-          }
-
-          convertedChartData.push(convertedValue)
-        }
-
+      // Try to convert all values to numbers and find min/max
+      for (let i = 0; i < chartData.length; i++) {
+        const convertedValue = toSafeNumber(chartData[i])
         if (
-          convertedChartData.length > 0 &&
-          (maxValue > parameters.max || minValue < parameters.min)
+          Number.isNaN(convertedValue) ||
+          isNullOrUndefined(convertedValue)
         ) {
-          // Normalize values between the configured range
-          normalizedChartData = convertedChartData.map(
-            v =>
-              (parameters.max - parameters.min) *
-                ((v - minValue) / (maxValue - minValue)) +
-              parameters.min
+          return getErrorCell(
+            toSafeString(chartData),
+            `The value cannot be interpreted as a numeric array. ${convertedValue} is not a number.`
           )
-        } else {
-          // Values are already in the configured range
-          normalizedChartData = convertedChartData
         }
+
+        if (convertedValue > maxValue) {
+          maxValue = convertedValue
+        }
+
+        if (convertedValue < minValue) {
+          minValue = convertedValue
+        }
+
+        convertedChartData.push(convertedValue)
+      }
+
+      if (
+        convertedChartData.length > 0 &&
+        (maxValue > parameters.max || minValue < parameters.min)
+      ) {
+        // Normalize values between the configured range
+        normalizedChartData = convertedChartData.map(
+          v =>
+            (parameters.max! - parameters.min!) *
+              ((v - minValue) / (maxValue - minValue)) +
+            parameters.min!
+        )
+      } else {
+        // Values are already in the configured range
+        normalizedChartData = convertedChartData
       }
 
       return {
@@ -144,7 +170,13 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
         },
       } as SparklineCellType
     },
-    getCellValue(cell: SparklineCellType): readonly number[] | null {
+    getCellValue(
+      cell: SparklineCellType | LoadingCell
+    ): readonly number[] | null {
+      if (cell.kind === GridCellKind.Loading) {
+        return null
+      }
+
       return cell.data?.values === undefined ? null : cell.data?.values
     },
   }
