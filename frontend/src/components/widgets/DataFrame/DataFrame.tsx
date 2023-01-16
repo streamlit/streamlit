@@ -189,8 +189,8 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  const commitWidgetState = React.useCallback(
-    (clearSelections: boolean = false) => {
+  const applyEdits = React.useCallback(
+    (clearSelections: boolean = false, triggerRerun: boolean = true) => {
       if (numRows !== editingState.current.getNumRows()) {
         // Reset the number of rows if it has been changed in the editing state
         setNumRows(editingState.current.getNumRows())
@@ -200,29 +200,31 @@ function DataFrame({
         clearSelection()
       }
 
-      // Use debounce to prevent rapid updates to the widget state.
-      debounce(DEBOUNCE_TIME_MS, () => {
-        const currentEditingState = editingState.current.toJson(columns)
-        let currentWidgetState = widgetMgr.getStringValue(
-          element as WidgetInfo
-        )
-
-        if (currentWidgetState === undefined) {
-          // Create an empty widget state
-          currentWidgetState = new EditingState(0).toJson([])
-        }
-
-        // Only update if there is actually a difference between editing and widget state
-        if (currentEditingState !== currentWidgetState) {
-          widgetMgr.setStringValue(
-            element as WidgetInfo,
-            currentEditingState,
-            {
-              fromUi: true,
-            }
+      if (triggerRerun) {
+        // Use debounce to prevent rapid updates to the widget state.
+        debounce(DEBOUNCE_TIME_MS, () => {
+          const currentEditingState = editingState.current.toJson(columns)
+          let currentWidgetState = widgetMgr.getStringValue(
+            element as WidgetInfo
           )
-        }
-      })()
+
+          if (currentWidgetState === undefined) {
+            // Create an empty widget state
+            currentWidgetState = new EditingState(0).toJson([])
+          }
+
+          // Only update if there is actually a difference between editing and widget state
+          if (currentEditingState !== currentWidgetState) {
+            widgetMgr.setStringValue(
+              element as WidgetInfo,
+              currentEditingState,
+              {
+                fromUi: true,
+              }
+            )
+          }
+        })()
+      }
     },
     [widgetMgr, element, numRows]
   )
@@ -234,7 +236,7 @@ function DataFrame({
     getCellContent,
     getOriginalIndex,
     refreshCells,
-    commitWidgetState,
+    applyEdits,
     editingState
   )
 

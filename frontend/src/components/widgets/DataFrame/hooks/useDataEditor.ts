@@ -48,7 +48,8 @@ type DataEditorReturn = Pick<
  * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
  *                           This mainly changed by sorting of columns.
  * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
- * @param commitWidgetState - Callback that allows to send the widget state to the backend (triggering a rerun).
+ * @param applyEdits - Callback that needs to be called on all edits. This will also trigger a rerun
+ *                     and send widget state to the backend.
  * @param editingState - The editing state of the data editor.
  *
  * @returns Glide-data-grid compatible functions for editing capabilities.
@@ -64,7 +65,7 @@ function useDataEditor(
       cell: [number, number]
     }[]
   ) => void,
-  commitWidgetState: (clearSelection?: boolean) => void,
+  applyEdits: (clearSelection?: boolean, triggerRerun?: boolean) => void,
   editingState: React.MutableRefObject<EditingState>
 ): DataEditorReturn {
   const onCellEdited = React.useCallback(
@@ -97,15 +98,9 @@ function useDataEditor(
         lastUpdated: performance.now(),
       })
 
-      commitWidgetState()
+      applyEdits()
     },
-    [
-      columns,
-      editingState,
-      getOriginalIndex,
-      getCellContent,
-      commitWidgetState,
-    ]
+    [columns, editingState, getOriginalIndex, getCellContent, applyEdits]
   )
 
   const onRowAppended = React.useCallback(() => {
@@ -115,7 +110,7 @@ function useDataEditor(
     })
     editingState.current.addRow(newRow)
     // TODO(lukasmasuch): should we really trigger a rerun here?
-    commitWidgetState()
+    applyEdits(false, false)
   }, [columns, editingState])
 
   const onDelete = React.useCallback(
@@ -134,7 +129,7 @@ function useDataEditor(
         })
         // We need to delete all rows at once, so that the indexes work correct
         editingState.current.deleteRows(rowsToDelete)
-        commitWidgetState(true)
+        applyEdits(true)
         return false
       }
       if (selection.current?.range) {
@@ -165,14 +160,14 @@ function useDataEditor(
         }
 
         if (updatedCells.length > 0) {
-          commitWidgetState()
+          applyEdits()
           refreshCells(updatedCells)
         }
         return false
       }
       return true
     },
-    [columns, editingState, refreshCells, getOriginalIndex, commitWidgetState]
+    [columns, editingState, refreshCells, getOriginalIndex, applyEdits]
   )
 
   const onPaste = React.useCallback(
@@ -242,7 +237,7 @@ function useDataEditor(
         }
 
         if (updatedCells.length > 0) {
-          commitWidgetState()
+          applyEdits()
           refreshCells(updatedCells)
         }
       }
@@ -256,7 +251,7 @@ function useDataEditor(
       getOriginalIndex,
       getCellContent,
       onRowAppended,
-      commitWidgetState,
+      applyEdits,
       refreshCells,
     ]
   )
