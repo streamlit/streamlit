@@ -39,6 +39,7 @@ from streamlit.runtime.state.session_state import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.script_interactions import InteractiveScriptTests
 
 identity = lambda x: x
 
@@ -283,6 +284,39 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
         mock_on_checkbox_changed.assert_called_once()
         patched_warning.assert_called_once()
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class SessionStateInteractionTest(InteractiveScriptTests):
+    def test_updates(self):
+        script = self.script_from_filename("linked_sliders.py")
+        sr = script.run()
+        assert sr.get("slider")[0].value == -100.0
+        assert sr.get("markdown")[0].value == "Celsius `-100.0`"
+        assert sr.get("slider")[1].value == -148.0
+        assert sr.get("markdown")[1].value == "Fahrenheit `-148.0`"
+
+        # Both sliders update when first is changed
+        sr2 = sr.get("slider")[0].set_value(0.0).run()
+        assert sr2.get("slider")[0].value == 0.0
+        assert sr2.get("markdown")[0].value == "Celsius `0.0`"
+        assert sr2.get("slider")[1].value == 32.0
+        assert sr2.get("markdown")[1].value == "Fahrenheit `32.0`"
+
+        # Both sliders update when second is changed
+        sr3 = sr2.get("slider")[1].set_value(212.0).run()
+        assert sr3.get("slider")[0].value == 100.0
+        assert sr3.get("markdown")[0].value == "Celsius `100.0`"
+        assert sr3.get("slider")[1].value == 212.0
+        assert sr3.get("markdown")[1].value == "Fahrenheit `212.0`"
+
+        # Sliders update when one is changed repeatedly
+        sr4 = sr3.get("slider")[0].set_value(0.0).run()
+        assert sr4.get("slider")[0].value == 0.0
+        assert sr4.get("slider")[1].value == 32.0
+        sr5 = sr4.get("slider")[0].set_value(100.0).run()
+        assert sr5.get("slider")[0].value == 100.0
+        assert sr5.get("slider")[1].value == 212.0
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:

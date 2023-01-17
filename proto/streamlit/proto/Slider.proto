@@ -30,6 +30,12 @@ message Slider {
     TIME = 4;
   }
 
+  enum Type {
+    UNSPECIFIED = 0;
+    SLIDER = 1;
+    SELECT_SLIDER = 2;
+  }
+
   string id = 1;
   string form_id = 2;
   string label = 3;
@@ -47,4 +53,6 @@ message Slider {
   string help = 14;
   bool disabled = 15;
   LabelVisibilityMessage label_visibility = 16;
+
+  Type type = 17;
 }
