@@ -268,6 +268,8 @@ function DataFrame({
     isFullScreen
   )
 
+  // This is used as fallback in case the table is empty to
+  // insert cells indicating this state:
   const getEmptyStateContent = React.useCallback(
     ([_col, _row]: readonly [number, number]): GridCell => {
       return {
@@ -284,6 +286,7 @@ function DataFrame({
     [columns]
   )
 
+  // This is required for the form clearing functionality works:
   React.useEffect(() => {
     const formClearHelper = new FormClearHelper()
     formClearHelper.manageFormClearListener(
