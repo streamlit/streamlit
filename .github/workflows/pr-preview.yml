@@ -32,10 +32,12 @@ jobs:
         with:
           persist-credentials: false
           submodules: 'recursive'
-      - name: Set up Python 3.10
+      - name: Set Python version vars
+        uses: ./.github/actions/set_python_versions
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Create Wheel File
