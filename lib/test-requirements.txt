@@ -14,10 +14,10 @@ plotly>=5.3.1
 psycopg2-binary>=2.9.1
 pydot>=1.4.2
 pyodbc>=4.0.32
-scipy<=1.7.3
+scipy>=1.7.3
 seaborn>=0.11.2
 setuptools<50.0.0
 sqlalchemy>=1.4.25
-watchdog==2.1.5
+watchdog>=2.1.5
 rich>=11.2.0
 pyspark>=3.1.1
