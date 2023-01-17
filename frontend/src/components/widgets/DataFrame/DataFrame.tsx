@@ -190,7 +190,7 @@ function DataFrame({
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
   const applyEdits = React.useCallback(
-    (clearSelections: boolean = false, triggerRerun: boolean = true) => {
+    (clearSelections = false, triggerRerun = true) => {
       if (numRows !== editingState.current.getNumRows()) {
         // Reset the number of rows if it has been changed in the editing state
         setNumRows(editingState.current.getNumRows())
@@ -230,14 +230,13 @@ function DataFrame({
   )
 
   const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
-    numRows,
     columns,
     element.editingMode !== ArrowProto.EditingMode.DYNAMIC,
+    editingState,
     getCellContent,
     getOriginalIndex,
     refreshCells,
-    applyEdits,
-    editingState
+    applyEdits
   )
 
   const { columns: glideColumns, onColumnResize } = useColumnSizer(

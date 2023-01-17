@@ -41,23 +41,22 @@ type DataEditorReturn = Pick<
  * Custom hook to handle all aspects related to data editing. This includes editing cells,
  * pasting from clipboard, and appending & deleting rows.
  *
- * @param numRows - The number of rows in the table (including additions & deletions)
- * @param columns - The columns of the table
- * @param fixedNumRows - Whether the number of rows is fixed. This means that rows cannot be added or deleted
+ * @param columns - The columns of the table.
+ * @param fixedNumRows - Whether the number of rows is fixed. This means that rows cannot be added or deleted.
+ * @param editingState - The editing state of the data editor.
  * @param getCellContent - Function to get a specific cell.
  * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
  *                           This mainly changed by sorting of columns.
  * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
  * @param applyEdits - Callback that needs to be called on all edits. This will also trigger a rerun
  *                     and send widget state to the backend.
- * @param editingState - The editing state of the data editor.
  *
  * @returns Glide-data-grid compatible functions for editing capabilities.
  */
 function useDataEditor(
-  numRows: number,
   columns: BaseColumn[],
   fixedNumRows: boolean,
+  editingState: React.MutableRefObject<EditingState>,
   getCellContent: ([col, row]: readonly [number, number]) => GridCell,
   getOriginalIndex: (index: number) => number,
   refreshCells: (
@@ -65,8 +64,7 @@ function useDataEditor(
       cell: [number, number]
     }[]
   ) => void,
-  applyEdits: (clearSelection?: boolean, triggerRerun?: boolean) => void,
-  editingState: React.MutableRefObject<EditingState>
+  applyEdits: (clearSelection?: boolean, triggerRerun?: boolean) => void
 ): DataEditorReturn {
   const onCellEdited = React.useCallback(
     (
@@ -178,7 +176,7 @@ function useDataEditor(
 
       for (let row = 0; row < values.length; row++) {
         const rowData = values[row]
-        if (row + targetRow >= numRows) {
+        if (row + targetRow >= editingState.current.getNumRows()) {
           if (fixedNumRows) {
             // Only add new rows if editing mode is dynamic, otherwise break here
             break
@@ -246,7 +244,6 @@ function useDataEditor(
     },
     [
       columns,
-      numRows,
       editingState,
       getOriginalIndex,
       getCellContent,
