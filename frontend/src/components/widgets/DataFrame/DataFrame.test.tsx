@@ -17,7 +17,6 @@
 import React from "react"
 
 import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
-import { renderHook, act } from "@testing-library/react-hooks"
 
 import { TEN_BY_TEN } from "src/lib/mocks/arrow"
 import { mount } from "src/lib/test_util"
