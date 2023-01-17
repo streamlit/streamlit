@@ -31,8 +31,9 @@ message Slider {
   }
 
   enum Type {
-    SLIDER = 0;
-    SELECT_SLIDER = 1;
+    UNSPECIFIED = 0;
+    SLIDER = 1;
+    SELECT_SLIDER = 2;
   }
 
   string id = 1;
