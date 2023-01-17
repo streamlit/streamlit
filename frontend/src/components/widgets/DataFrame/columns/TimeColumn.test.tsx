@@ -18,7 +18,12 @@ import { DataType, Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import strftime from "strftime"
 import { TimePickerCell } from "src/components/widgets/DataFrame/customCells/TimePickerCell"
-import { BaseColumnProps, getTimezoneOffset } from "./utils"
+import {
+  addDST,
+  addTimezoneOffset,
+  BaseColumnProps,
+  getTimezoneOffset,
+} from "./utils"
 import TimeColumn, { TimeColumnParams } from "./TimeColumn"
 
 const MOCK_TIME_QUIVER_TYPE: QuiverType = {
@@ -48,15 +53,22 @@ function getTimeColumn(
 }
 
 const constantDate = new Date("05 October 2011 14:48")
+const constantDateWithout0MS = new Date("05 October 2011 14:48:48.001")
 
-// deal with machines in different timezones
 const constantDateAsNumber = Number(constantDate)
+const dateWithout0MSAsNumber = Number(constantDateWithout0MS)
 
 // deal with machines in different timezones
 const constantDisplayDate = strftime(
   "%H:%M:%S.%L",
-  new Date(constantDateAsNumber - getTimezoneOffset())
-)
+  new Date(Number(constantDate) - getTimezoneOffset())
+).replace(".000", "")
+
+// deal with machines in different timezones
+const displayDateWithout0MS = strftime(
+  "%H:%M:%S.%L",
+  new Date(addDST(addTimezoneOffset(Number(constantDateWithout0MS))))
+).replace("T", " ")
 
 describe("TimeColumn", () => {
   it("creates a valid column instance", () => {
@@ -67,17 +79,12 @@ describe("TimeColumn", () => {
 
     const mockCell = mockColumn.getCell(constantDateAsNumber)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as TimePickerCell).data.time).toEqual(
-      constantDateAsNumber - getTimezoneOffset()
-    )
+    expect((mockCell as TimePickerCell).data.time).toEqual(constantDateAsNumber)
   })
 
   it.each([
-    [
-      Number(constantDate),
-      Number(constantDate) - getTimezoneOffset(),
-      constantDisplayDate,
-    ],
+    [constantDateAsNumber, constantDateAsNumber, constantDisplayDate],
+    [dateWithout0MSAsNumber, dateWithout0MSAsNumber, displayDateWithout0MS],
     [null, null, "NA"],
     [undefined, null, "NA"],
   ])(

@@ -28,6 +28,7 @@ import {
   BaseColumnProps,
   getErrorCell,
   isValidDate,
+  removeTInIsoString,
   removeZeroMillisecondsInISOString,
 } from "src/components/widgets/DataFrame/columns/utils"
 
@@ -69,10 +70,12 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
           // convert the date to a number to sort
           cellData = Number(data)
         }
-        const displayDate = removeZeroMillisecondsInISOString(
-          strftime(
-            cellTemplate.data.format,
-            new Date(addDST(addTimezoneOffset(Number(data))))
+        const displayDate = removeTInIsoString(
+          removeZeroMillisecondsInISOString(
+            strftime(
+              cellTemplate.data.format,
+              new Date(addDST(addTimezoneOffset(Number(data))))
+            )
           )
         )
         return {
@@ -81,14 +84,12 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
           copyData: cellData.toString(),
           data: {
             kind: "DatePickerCell",
-            date: notNullOrUndefined(data)
-              ? new Date(Number(data))
-              : undefined,
+            date: notNullOrUndefined(data) ? new Date(Number(data)) : undefined,
             displayDate: notNullOrUndefined(data) ? displayDate : "NA",
             format: cellTemplate.data.format,
           },
           style:
-            notNullOrUndefined(cellData) && !Number.isNaN(Number(data))
+            notNullOrUndefined(data) && !Number.isNaN(Number(data))
               ? "normal"
               : "faded",
         }

@@ -52,7 +52,7 @@ const constantDate = new Date("05 October 2011 14:48")
 
 // deal with machines in different timezones
 const constantDisplayDate = strftime(
-  "%m / %d / %Y",
+  "%Y / %m / %d",
   new Date(addDST(addTimezoneOffset(Number(constantDate))))
 )
 
@@ -101,7 +101,7 @@ describe("DateColumn", () => {
   )
 
   it.each([
-    [{ format: undefined } as DateColumnParams, "%m / %d / %Y"],
+    [{ format: undefined } as DateColumnParams, "%Y / %m / %d"],
     [{ format: "%d %B, %Y" } as DateColumnParams, "%d %B, %Y"],
   ])(
     "Given %p, shows %p format",

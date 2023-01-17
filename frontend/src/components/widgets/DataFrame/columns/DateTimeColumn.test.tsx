@@ -48,12 +48,21 @@ function getDateTimeColumn(
 }
 
 const constantDate = new Date("05 October 2011 14:48")
+const constantDateWithout0MS = new Date("05 October 2011 14:48:48.001")
 
 // deal with machines in different timezones
 const constantDisplayDate = strftime(
   "%Y-%m-%dT%H:%M:%S.%L",
   new Date(addDST(addTimezoneOffset(Number(constantDate))))
 )
+  .replace("T", " ")
+  .replace(".000", "")
+
+// deal with machines in different timezones
+const displayDateWithout0MS = strftime(
+  "%Y-%m-%dT%H:%M:%S.%L",
+  new Date(addDST(addTimezoneOffset(Number(constantDateWithout0MS))))
+).replace("T", " ")
 
 describe("DateTimeColumn", () => {
   it("creates a valid column instance", () => {
@@ -71,10 +80,11 @@ describe("DateTimeColumn", () => {
 
   it.each([
     [constantDate, constantDate, constantDisplayDate],
+    [constantDateWithout0MS, constantDateWithout0MS, displayDateWithout0MS],
     [null, null, "NA"],
     [undefined, null, "NA"],
   ])(
-    "supports date value (%p parsed as %p)",
+    "supports date value (%p === %p) with display date: %p",
     (
       input: DataType | null | undefined,
       value: Date | null,

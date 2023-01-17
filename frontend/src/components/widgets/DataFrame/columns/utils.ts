@@ -374,7 +374,11 @@ export function addDST(date: number): number {
 }
 
 export function removeZeroMillisecondsInISOString(date: string): string {
-  return date.replace("T", " ").replace(".000", "")
+  return date.replace(".000", "")
+}
+
+export function removeTInIsoString(date: string): string {
+  return date.replace("T", " ")
 }
 
 export function appendZeroDateFormat(date: string): string {

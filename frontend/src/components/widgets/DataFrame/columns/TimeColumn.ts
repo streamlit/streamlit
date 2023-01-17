@@ -28,6 +28,7 @@ import {
   BaseColumnProps,
   getErrorCell,
   isValidDate,
+  removeTInIsoString,
   removeZeroMillisecondsInISOString,
   toSafeString,
 } from "src/components/widgets/DataFrame/columns/utils"
@@ -77,8 +78,9 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
         const addedOffsetAndDST = addDST(
           addTimezoneOffset(Number(dataInSeconds))
         )
+        // const addedOffsetAndDST = Number(dataInSeconds)
         const dateVersion = new Date(addedOffsetAndDST)
-        // datetime.time is only hours, minutes, seconds, etc so need to sort without month and year
+        // datetime.time is only hours, minutes, etc
         const withoutYearAndMonth =
           (dateVersion.getHours() * 60 * 60 +
             dateVersion.getMinutes() * 60 +
@@ -94,13 +96,15 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
             time:
               notNullOrUndefined(dataInSeconds) &&
               !Number.isNaN(Number(dataInSeconds))
-                ? addedOffsetAndDST
+                ? Number(dataInSeconds)
                 : undefined,
             displayTime:
               notNullOrUndefined(dataInSeconds) &&
               !Number.isNaN(Number(dataInSeconds))
-                ? removeZeroMillisecondsInISOString(
-                    strftime(cellTemplate.data.format, dateVersion)
+                ? removeTInIsoString(
+                    removeZeroMillisecondsInISOString(
+                      strftime(cellTemplate.data.format, dateVersion)
+                    )
                   )
                 : "NA",
             format: cellTemplate.data.format,

@@ -46,14 +46,15 @@ const Editor: ReturnType<
   if (cellData !== undefined) {
     newCellData = date ?? new Date()
   }
-  const offsetDate = new Date(addDST(addTimezoneOffset(Number(newCellData))))
+  // const offsetDate = new Date(addDST(addTimezoneOffset(Number(newCellData))))
+  const offsetDate = new Date(Number(newCellData))
 
   // add 1 because getMonth is 0 index based
   const year = offsetDate?.getFullYear().toString()
-  const mm = appendZeroDateFormat((offsetDate?.getMonth() + 1).toString())
-  const dd = appendZeroDateFormat(offsetDate?.getDate().toString())
-  const hours = appendZeroDateFormat(offsetDate?.getHours().toString())
-  const minutes = appendZeroDateFormat(offsetDate?.getMinutes().toString())
+  const mm = appendZeroDateFormat((offsetDate?.getUTCMonth() + 1).toString())
+  const dd = appendZeroDateFormat(offsetDate?.getUTCDate().toString())
+  const hours = appendZeroDateFormat(offsetDate?.getUTCHours().toString())
+  const minutes = appendZeroDateFormat(offsetDate?.getUTCMinutes().toString())
   return (
     <input
       required

@@ -66,7 +66,7 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
               ...cell.value,
               data: {
                 ...cell.value.data,
-                date: new Date(displayDate),
+                date: date !== undefined ? date : new Date(displayDate),
               },
             })
           } catch (error) {
