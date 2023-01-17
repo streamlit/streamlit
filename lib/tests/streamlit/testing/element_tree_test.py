@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime, time
 from unittest.mock import patch
 
 import pytest
@@ -264,3 +265,62 @@ class HeadingTest(InteractiveScriptTests):
         assert len(sr.get("title")) == 2
         assert len(sr.get("header")) == 2
         assert len(sr.get("subheader")) == 2
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class SliderTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "slider_test.py",
+            """
+            import streamlit as st
+            from datetime import datetime, time
+
+            st.slider("defaults")
+            st.slider("int", min_value=-100, max_value=100, step=5, value=10)
+            st.slider("time", value=(time(11, 30), time(12, 45)))
+            st.slider("datetime", value=datetime(2020, 1, 1, 9, 30))
+            st.slider("float", min_value=0.0, max_value=1.0, step=0.01)
+            """,
+        )
+        sr = script.run()
+        s = sr.get("slider")
+        assert s[0].value == 0
+        assert s[1].value == 10
+        assert s[2].value == (time(11, 30), time(12, 45))
+        assert s[3].value == datetime(2020, 1, 1, 9, 30)
+        assert s[4].value == 0.0
+
+        sr2 = sr.get("slider")[1].set_value(50).run()
+        sr3 = sr2.get("slider")[2].set_range(time(12, 0), time(12, 15)).run()
+        sr4 = sr3.get("slider")[3].set_value(datetime(2020, 1, 10, 8, 0)).run()
+        sr5 = sr4.get("slider")[4].set_value(0.1).run()
+        s = sr5.get("slider")
+        assert s[0].value == 0
+        assert s[1].value == 50
+        assert s[2].value == (time(12, 0), time(12, 15))
+        assert s[3].value == datetime(2020, 1, 10, 8, 0)
+        assert s[4].value == 0.1
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
+class SelectSliderTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "select_slider_test.py",
+            """
+            import streamlit as st
+
+            options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet']
+            st.select_slider("single", options=options, value='green')
+            st.select_slider("range", options=options, value=['red', 'blue'])
+            """,
+        )
+        sr = script.run()
+        assert sr.get("select_slider")[0].value == "green"
+        assert sr.get("select_slider")[1].value == ("red", "blue")
+
+        sr2 = sr.get("select_slider")[0].set_value("violet").run()
+        sr3 = sr2.get("select_slider")[1].set_range("yellow", "orange").run()
+        assert sr3.get("select_slider")[0].value == "violet"
+        assert sr3.get("select_slider")[1].value == ("orange", "yellow")
