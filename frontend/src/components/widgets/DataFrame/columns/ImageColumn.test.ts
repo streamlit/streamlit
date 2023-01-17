@@ -40,6 +40,7 @@ describe("ListColumn", () => {
     expect(mockColumn.kind).toEqual("image")
     expect(mockColumn.title).toEqual(MOCK_IMAGE_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_IMAGE_COLUMN_PROPS.id)
+    expect(mockColumn.contentAlignment).toEqual("center")
     expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell("https://picsum.photos/400/400")
