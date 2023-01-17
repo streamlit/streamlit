@@ -29,6 +29,7 @@ from streamlit.runtime.caching.cache_utils import UNEVALUATED_DATAFRAME_TYPES
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks, snowpark_mocks
+from tests.testutil import should_skip_pyspark_tests
 
 
 class CacheErrorsTest(DeltaGeneratorTestCase):
@@ -111,6 +112,10 @@ def unhashable_type_func(_lock, ...):
         elif "snowpark.dataframe.DataFrame" in type_name:
             to_return = snowpark_mocks.DataFrame()
         else:
+            if should_skip_pyspark_tests():
+                # Python 3.11 is incompatible with Pyspark
+                return
+
             to_return = (
                 pyspark_mocks.create_pyspark_dataframe_with_mocked_personal_data()
             )
