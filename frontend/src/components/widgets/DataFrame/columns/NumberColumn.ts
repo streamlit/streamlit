@@ -18,7 +18,7 @@ import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 import { sprintf } from "sprintf-js"
 
 import { Quiver } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -67,6 +67,11 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     props.columnTypeMetadata
   ) as NumberColumnParams
 
+  const allowNegative = isNullOrUndefined(parameters.min) || parameters.min < 0
+  const fixedDecimals = notNullOrUndefined(parameters.precision)
+    ? parameters.precision
+    : undefined
+
   const cellTemplate = {
     kind: GridCellKind.Number,
     data: undefined,
@@ -75,6 +80,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     allowOverlay: true,
     contentAlign: props.contentAlignment || "right",
     style: props.isIndex ? "faded" : "normal",
+    allowNegative,
+    fixedDecimals,
   } as NumberCell
 
   return {
@@ -95,9 +102,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
         // Apply precision parameter
         if (notNullOrUndefined(parameters.precision)) {
-          // TODO(lukasmasuch): Instead of applying precision here,
-          // it would be better to update the cell implementation to support precision
-          // directly in the input field.
           cellData =
             parameters.precision === 0
               ? Math.trunc(cellData)
