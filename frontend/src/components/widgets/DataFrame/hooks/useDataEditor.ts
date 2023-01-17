@@ -197,7 +197,6 @@ function useDataEditor(
           }
 
           const column = columns[colIndex]
-
           if (!column.isEditable) {
             // Column is not editable -> just ignore
             continue
