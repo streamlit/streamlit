@@ -125,6 +125,7 @@ function DataFrame({
   widgetMgr,
   isFullScreen,
 }: DataFrameProps): ReactElement {
+  const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
   const extraCellArgs = useExtraCells()
@@ -189,6 +190,14 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
+  /**
+   * This callback should be called after any edits have been applied to the data.
+   * It will finish up the editing by updating the number of rows, clearing the selection,
+   * and triggering a rerun of the script.
+   *
+   * @param clearSelections - Whether to clear the selection. This is usually done after deleting rows.
+   * @param triggerRerun - Whether to trigger a rerun of the script after applying edits
+   */
   const applyEdits = React.useCallback(
     (clearSelections = false, triggerRerun = true) => {
       if (numRows !== editingState.current.getNumRows()) {
@@ -243,7 +252,6 @@ function DataFrame({
     columns.map(column => toGlideColumn(column))
   )
 
-  const resizableRef = React.useRef<Resizable>(null)
   const {
     rowHeight,
     minHeight,
