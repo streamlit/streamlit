@@ -190,7 +190,7 @@
     "jest-websocket-mock": "^2.4.0",
     "marked": "^4.2.5",
     "mock-socket": "^9.1.5",
-    "prettier": "^2.8.1",
+    "prettier": "^2.8.3",
     "prop-types": "^15.7.2",
     "react-responsive-carousel": "^3.2.23",
     "react-scripts": "4.0.3",
