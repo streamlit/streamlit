@@ -13,11 +13,13 @@
 # limitations under the License.
 from __future__ import annotations
 
+from abc import ABC
 from dataclasses import dataclass, field
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
+from streamlit.elements.heading import HEADER_TAG, SUBHEADER_TAG, TITLE_TAG
 from streamlit.elements.select_slider import SelectSliderSerde
 from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -25,6 +27,7 @@ from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
@@ -96,6 +99,47 @@ class Text(Element):
     @property
     def value(self) -> str:
         return self.proto.body
+
+
+@dataclass(init=False)
+class HeadingBase(Element, ABC):
+    proto: HeadingProto
+
+    type: str
+    tag: str
+    anchor: str | None
+    root: ElementTree = field(repr=False)
+    key: None
+
+    def __init__(self, proto: HeadingProto, root: ElementTree, type_: str):
+        self.proto = proto
+        self.key = None
+        self.tag = proto.tag
+        self.anchor = proto.anchor
+        self.root = root
+        self.type = type_
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
+
+
+@dataclass(init=False)
+class Title(HeadingBase):
+    def __init__(self, proto: HeadingProto, root: ElementTree):
+        super().__init__(proto, root, "title")
+
+
+@dataclass(init=False)
+class Header(HeadingBase):
+    def __init__(self, proto: HeadingProto, root: ElementTree):
+        super().__init__(proto, root, "header")
+
+
+@dataclass(init=False)
+class Subheader(HeadingBase):
+    def __init__(self, proto: HeadingProto, root: ElementTree):
+        super().__init__(proto, root, "subheader")
 
 
 @dataclass(init=False)
@@ -594,6 +638,18 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["title"]) -> Sequence[Title]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["header"]) -> Sequence[Header]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["subheader"]) -> Sequence[Subheader]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 
@@ -667,10 +723,10 @@ class ElementTree(Block):
     the rerun.
     """
 
+    type: str
+
     script_path: str | None = field(repr=False, default=None)
     _session_state: SessionState | None = field(repr=False, default=None)
-
-    type: str
 
     def __init__(self):
         # Expect script_path and session_state to be filled in afterwards
@@ -737,6 +793,15 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown markdown type {elt.markdown.element_type}"
                     )
+            elif elt.WhichOneof("type") == "heading":
+                if elt.heading.tag == TITLE_TAG:
+                    new_node = Title(elt.heading, root=root)
+                elif elt.heading.tag == HEADER_TAG:
+                    new_node = Header(elt.heading, root=root)
+                elif elt.heading.tag == SUBHEADER_TAG:
+                    new_node = Subheader(elt.heading, root=root)
+                else:
+                    raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
             elif elt.WhichOneof("type") == "checkbox":
