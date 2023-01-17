@@ -243,7 +243,7 @@ export function getColumnFromArrow(
     id: `column-${title}-${columnPosition}`,
     isEditable: true,
     title,
-    arrowType: arrowType,
+    arrowType,
     columnTypeMetadata,
     isIndex: false,
     isHidden: false,
