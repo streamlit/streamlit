@@ -25,8 +25,8 @@ import {
 import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
 
-import { DataType, Type as ArrowType } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { Type as ArrowType } from "src/lib/Quiver"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 /**
  * Interface used for defining the properties (configuration options) of a column.
@@ -201,11 +201,11 @@ export function mergeColumnParameters(
   defaultParams: Record<string, any> | undefined | null,
   userParams: Record<string, any> | undefined | null
 ): Record<string, any> {
-  if (!notNullOrUndefined(defaultParams)) {
+  if (isNullOrUndefined(defaultParams)) {
     return userParams || {}
   }
 
-  if (!notNullOrUndefined(userParams)) {
+  if (isNullOrUndefined(userParams)) {
     return defaultParams || {}
   }
 
@@ -221,7 +221,7 @@ export function mergeColumnParameters(
  * @returns The converted array or an empty array if the value cannot be interpreted as an array.
  */
 export function toSafeArray(data: any): any[] {
-  if (!notNullOrUndefined(data)) {
+  if (isNullOrUndefined(data)) {
     return []
   }
 
@@ -303,7 +303,7 @@ export function toSafeString(data: any): string {
 export function toSafeNumber(value: any): number | null {
   // TODO(lukasmasuch): Should this return null as replacement for NaN?
 
-  if (!notNullOrUndefined(value)) {
+  if (isNullOrUndefined(value)) {
     return null
   }
 
