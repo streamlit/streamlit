@@ -20,7 +20,6 @@ st.progress(30, text="This is very long and boring text. " * 6)
 st.progress(
     0.5,
     text=(
-        "Please be patient :clock1: Bold text. "
-        "I just love **bold text**. $$ x = 1 + 2 $$, :blue[Blue text]"
+        "Please be patient :clock1:. **bold text**. $$ x = 1 + 2 $$, :blue[Blue text]"
     ),
 )
