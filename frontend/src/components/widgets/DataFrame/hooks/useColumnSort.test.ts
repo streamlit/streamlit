@@ -105,7 +105,15 @@ describe("useColumnSort hook", () => {
       a: number | undefined,
       b: number | undefined
     ): number => {
-      return a === undefined ? -1 : b === undefined ? 1 : a - b
+      if (a === undefined) {
+        return -1
+      }
+
+      if (b === undefined) {
+        return 1
+      }
+
+      return a - b
     }
 
     expect(Array.from(sortedDataAsc)).toEqual(

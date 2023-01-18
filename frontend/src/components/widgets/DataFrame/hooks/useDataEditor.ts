@@ -197,40 +197,32 @@ function useDataEditor(
           }
 
           const column = columns[colIndex]
-          if (!column.isEditable) {
-            // Column is not editable -> just ignore
-            continue
+          // Only add to columns that are editable:
+          if (column.isEditable) {
+            const newCell = column.getCell(pasteDataValue)
+            // We are not editing cells ff the pasted value leads to an error:
+            if (!isErrorCell(newCell)) {
+              const originalCol = column.indexNumber
+              const originalRow = editingState.current.getOriginalRowIndex(
+                getOriginalIndex(rowIndex)
+              )
+              const currentValue = column.getCellValue(
+                getCellContent([colIndex, rowIndex])
+              )
+              const newValue = column.getCellValue(newCell)
+              // Edit the cell only if the value actually changed:
+              if (newValue !== currentValue) {
+                editingState.current.setCell(originalCol, originalRow, {
+                  ...newCell,
+                  lastUpdated: performance.now(),
+                })
+
+                updatedCells.push({
+                  cell: [colIndex, rowIndex],
+                })
+              }
+            }
           }
-
-          const newCell = column.getCell(pasteDataValue)
-          if (isErrorCell(newCell)) {
-            // If new cell value leads to error -> just ignore
-            continue
-          }
-
-          const originalCol = column.indexNumber
-          const originalRow = editingState.current.getOriginalRowIndex(
-            getOriginalIndex(rowIndex)
-          )
-
-          const currentValue = column.getCellValue(
-            getCellContent([colIndex, rowIndex])
-          )
-
-          const newValue = column.getCellValue(newCell)
-          if (newValue === currentValue) {
-            // No editing is required since the values did not change
-            continue
-          }
-
-          editingState.current.setCell(originalCol, originalRow, {
-            ...newCell,
-            lastUpdated: performance.now(),
-          })
-
-          updatedCells.push({
-            cell: [colIndex, rowIndex],
-          })
         }
 
         if (updatedCells.length > 0) {

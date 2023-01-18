@@ -108,9 +108,13 @@ describe("useDataEditor hook", () => {
     )
     expect(applyEditsMock).toHaveBeenCalled()
     expect(getCellContentMock).toHaveBeenCalled()
-    expect(
-      columnToEdit.getCellValue(editingState.current.getCell(1, 0)!)
-    ).toEqual("bar")
+    const editedCell = editingState.current.getCell(1, 0)
+
+    expect(notNullOrUndefined(editedCell)).toBe(true)
+
+    if (notNullOrUndefined(editedCell)) {
+      expect(columnToEdit.getCellValue(editedCell)).toEqual("bar")
+    }
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
@@ -146,8 +150,11 @@ describe("useDataEditor hook", () => {
 
     // Check edited data from first column
     const cell1 = editingState.current.getCell(0, 1)
-    expect(cell1).not.toBeNull()
-    expect(MOCK_COLUMNS[0].getCellValue(cell1!)).toEqual(321)
+    expect(notNullOrUndefined(cell1)).toBe(true)
+
+    if (notNullOrUndefined(cell1)) {
+      expect(MOCK_COLUMNS[0].getCellValue(cell1)).toEqual(321)
+    }
 
     // Check data from second column
     const cell2 = editingState.current.getCell(1, 1)
@@ -268,8 +275,12 @@ describe("useDataEditor hook", () => {
 
     // The value of cell 0,0 should be null
     const cell1 = editingState.current.getCell(0, 0)
-    expect(cell1).not.toBeNull()
-    expect(MOCK_COLUMNS[0].getCellValue(cell1!)).toEqual(null)
+
+    expect(notNullOrUndefined(cell1)).toBe(true)
+
+    if (notNullOrUndefined(cell1)) {
+      expect(MOCK_COLUMNS[0].getCellValue(cell1)).toEqual(null)
+    }
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
