@@ -29,7 +29,7 @@ import {
   BaseColumnProps,
   toGlideColumn,
 } from "./utils"
-import { TextColumn } from "./"
+import { TextColumn } from "."
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "column_1",

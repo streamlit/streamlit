@@ -27,6 +27,7 @@ import {
   NumberColumn,
 } from "src/components/widgets/DataFrame/columns"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
+import { notNullOrUndefined } from "src/lib/utils"
 
 import useDataEditor from "./useDataEditor"
 
@@ -96,8 +97,12 @@ describe("useDataEditor hook", () => {
       )
     })
 
+    if (typeof result.current.onCellEdited !== "function") {
+      throw new Error("onCellEdited is expected to be a function")
+    }
+
     const columnToEdit = MOCK_COLUMNS[1]
-    result.current.onCellEdited!(
+    result.current.onCellEdited(
       [1, 0],
       columnToEdit.getCell("bar") as TextCell
     )
@@ -147,7 +152,9 @@ describe("useDataEditor hook", () => {
     // Check data from second column
     const cell2 = editingState.current.getCell(1, 1)
     expect(cell2).not.toBeNull()
-    expect(MOCK_COLUMNS[1].getCellValue(cell2!)).toEqual("bar")
+    if (notNullOrUndefined(cell2)) {
+      expect(MOCK_COLUMNS[1].getCellValue(cell2)).toEqual("bar")
+    }
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
@@ -212,7 +219,11 @@ describe("useDataEditor hook", () => {
       )
     })
 
-    result.current.onRowAppended!()
+    if (typeof result.current.onRowAppended !== "function") {
+      throw new Error("onRowAppended is expected to be a function")
+    }
+
+    result.current.onRowAppended()
 
     // This should have added one row
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS + 1)
@@ -236,6 +247,10 @@ describe("useDataEditor hook", () => {
       )
     })
 
+    if (typeof result.current.onDelete !== "function") {
+      throw new Error("onDelete is expected to be a function")
+    }
+
     // Mock selection to delete cell 0,0
     const deleteCellSelection = {
       current: {
@@ -246,7 +261,7 @@ describe("useDataEditor hook", () => {
     } as GridSelection
 
     // Delete the cell content for 0,0 -> changes the value to null
-    result.current.onDelete!(deleteCellSelection)
+    result.current.onDelete(deleteCellSelection)
 
     expect(applyEditsMock).toHaveBeenCalled()
     expect(refreshCellsMock).toHaveBeenCalledWith([{ cell: [0, 0] }])
@@ -278,6 +293,10 @@ describe("useDataEditor hook", () => {
       )
     })
 
+    if (typeof result.current.onDelete !== "function") {
+      throw new Error("onDelete is expected to be a function")
+    }
+
     // Mock selection to delete row 1
     const deleteRowSelection = {
       current: undefined,
@@ -286,7 +305,7 @@ describe("useDataEditor hook", () => {
     } as GridSelection
 
     // Delete the row
-    result.current.onDelete!(deleteRowSelection)
+    result.current.onDelete(deleteRowSelection)
 
     // The number of rows should be one less
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS - 1)

@@ -268,7 +268,7 @@ describe("useDataLoader hook", () => {
       return useDataLoader(element, data, numRows, false, editingState)
     })
 
-    const columns = result.current.columns
+    const { columns } = result.current
     expect(columns.length).toBe(3)
 
     // Row 1

@@ -49,7 +49,7 @@ function getCategoricalColumn(
 ): ReturnType<typeof CategoricalColumn> {
   return CategoricalColumn({
     ...CATEGORICAL_COLUMN_TEMPLATE,
-    arrowType: arrowType,
+    arrowType,
     columnTypeMetadata: params,
   } as BaseColumnProps)
 }

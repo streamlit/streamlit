@@ -60,9 +60,11 @@ const MOCK_PROPS = {
   getCellContent: ([col, row]: readonly [number, number]): GridCell => {
     if (row === 0) {
       return MOCK_COLUMNS[col].getCell(90)
-    } else if (row === 1) {
+    }
+    if (row === 1) {
       return MOCK_COLUMNS[col].getCell(100)
-    } else if (row === 2) {
+    }
+    if (row === 2) {
       return MOCK_COLUMNS[col].getCell(5)
     }
     return MOCK_COLUMNS[col].getCell(0)
@@ -99,7 +101,10 @@ describe("useColumnSort hook", () => {
       )
     }
 
-    const sortOperator = (a: number | undefined, b: number | undefined) => {
+    const sortOperator = (
+      a: number | undefined,
+      b: number | undefined
+    ): number => {
       return a === undefined ? -1 : b === undefined ? 1 : a - b
     }
 

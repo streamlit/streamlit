@@ -52,7 +52,7 @@ function getNumberColumn(
 ): ReturnType<typeof NumberColumn> {
   return NumberColumn({
     ...NUMBER_COLUMN_TEMPLATE,
-    arrowType: arrowType,
+    arrowType,
     columnTypeMetadata: params,
   } as BaseColumnProps)
 }

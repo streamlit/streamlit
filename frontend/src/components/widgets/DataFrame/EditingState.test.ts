@@ -82,7 +82,7 @@ describe("EditingState class", () => {
     expect(editingState.getNumRows()).toEqual(NUM_OF_ROWS - 1)
 
     // The current row 0 should be the original row 1
-    console.log(editingState.getOriginalRowIndex(0), 1)
+    expect(editingState.getOriginalRowIndex(0)).toEqual(1)
   })
 
   it("allows to delete rows", () => {
