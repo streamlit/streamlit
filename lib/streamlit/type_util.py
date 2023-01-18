@@ -697,9 +697,6 @@ def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool
     return False
 
 
-from parameterized import parameterized
-
-
 def fix_arrow_incompatible_column_types(
     df: pd.DataFrame, selected_columns: Optional[List[str]] = None
 ) -> pd.DataFrame:
