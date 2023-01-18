@@ -85,7 +85,7 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl",
-        "1.13.0",
+        "1.13.2",
         "SEE LICENSE IN LICENSE.txt",
         "git://github.com/mapbox/mapbox-gl-js.git",
         "Unknown",
