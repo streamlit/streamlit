@@ -413,7 +413,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        columns: Optional[Union[ColumnConfigMapping, List[ColumnConfig]]] = None,
+        columns: Optional[ColumnConfigMapping] = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
     ) -> EditableData:
         pass
@@ -431,7 +431,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        columns: Optional[Union[ColumnConfigMapping, List[ColumnConfig]]] = None,
+        columns: Optional[ColumnConfigMapping] = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
     ) -> pd.DataFrame:
         pass
