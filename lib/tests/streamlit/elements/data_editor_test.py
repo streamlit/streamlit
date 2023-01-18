@@ -350,7 +350,9 @@ class DataEditorTest(DeltaGeneratorTestCase):
             self.assertEqual(return_data.shape[1], metadata.expected_cols)
         else:
             self.assertEqual(type(return_data), type(input_data))
-            self.assertEqual(str(return_data), str(input_data))
+            # Sets in python are unordered, so we can't compare them this way.
+            if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
+                self.assertEqual(str(return_data), str(input_data))
 
     @parameterized.expand(
         [
