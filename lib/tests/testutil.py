@@ -14,6 +14,7 @@
 
 """Utility functions to use in our tests."""
 import json
+import sys
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Dict
 from unittest.mock import patch
@@ -26,6 +27,16 @@ from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
 
 if TYPE_CHECKING:
     from snowflake.snowpark import Session
+
+
+def should_skip_pyspark_tests() -> bool:
+    """Disable pyspark unit tests in Python 3.11.
+    Pyspark is not compatible with Python 3.11 as of 2023.01.12, and results in test failures.
+    (Please remove this when pyspark is compatible!)
+    """
+    # See: https://pyreadiness.org/3.11/
+    # See: https://stackoverflow.com/questions/74579273/indexerror-tuple-index-out-of-range-when-creating-pyspark-dataframe
+    return sys.version_info >= (3, 11, 0)
 
 
 def create_mock_script_run_ctx() -> ScriptRunContext:

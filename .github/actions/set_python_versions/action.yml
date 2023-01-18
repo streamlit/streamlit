@@ -7,5 +7,5 @@ runs:
   steps:
     - run: |
         echo "PYTHON_MIN_VERSION=3.7" >> $GITHUB_ENV
-        echo "PYTHON_MAX_VERSION=3.10" >> $GITHUB_ENV
+        echo "PYTHON_MAX_VERSION=3.11" >> $GITHUB_ENV
       shell: bash --login -eo pipefail {0}
