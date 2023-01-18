@@ -15,6 +15,8 @@
 import unittest
 from collections import namedtuple
 from datetime import date
+from decimal import Decimal
+from typing import NamedTuple
 from unittest.mock import patch
 
 import numpy as np
@@ -27,51 +29,74 @@ from parameterized import parameterized
 
 from streamlit import type_util
 from streamlit.type_util import (
+    DataFormat,
     data_frame_to_bytes,
     fix_arrow_incompatible_column_types,
     is_bytes_like,
     is_snowpark_data_object,
     to_bytes,
 )
-from tests.streamlit.snowpark_mocks import DataFrame, Row
+from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Row as SnowparkRow
+from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 from tests.testutil import create_snowpark_session
 
+
+class TestCaseMetadata(NamedTuple):
+    expected_rows: int
+    expected_cols: int
+    expected_data_format: DataFormat
+
+
 _SHARED_TEST_CASES = [
+    # None:
+    (None, TestCaseMetadata(0, 0, DataFormat.EMPTY)),
     # Empty list:
-    ([], 0, 0),
+    ([], TestCaseMetadata(0, 0, DataFormat.LIST_OF_VALUES)),
     # Empty tuple:
-    ((), 0, 0),
+    ((), TestCaseMetadata(0, 0, DataFormat.TUPLE_OF_VALUES)),
     # Empty dict (not a an empty set!)
-    ({}, 0, 0),
+    ({}, TestCaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT)),
     # Empty set:
-    (set(), 0, 0),
-    # 1-dimensional list:
-    (["st.text_area", "st.number_input", "st.text_input"], 3, 1),
-    # List of integers:
-    ([1, 2, 3], 3, 1),
-    # List of floats:
-    ([1.0, 2.0, 3.0], 3, 1),
-    # List of booleans:
-    ([True, False, True], 3, 1),
-    # List of mixed values:
-    ([True, 0, 0.1, "foo"], 4, 1),
-    # List of Nones:
-    ([None, None, None], 3, 1),
-    # List of dates:
-    ([date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)], 3, 1),
-    # 1-dimensional set:
-    ({"st.text_area", "st.number_input", "st.text_input"}, 3, 1),
-    # 1-dimensional tuple:
-    (("st.text_area", "st.number_input", "st.text_input"), 3, 1),
-    # 1-dimensional numpy array:
-    (np.array(["st.text_area", "st.number_input", "st.text_input"]), 3, 1),
-    (np.array([1, 2, 3]), 3, 1),
+    (set(), TestCaseMetadata(0, 0, DataFormat.SET_OF_VALUES)),
+    # List of strings (List[str]):
     (
-        np.array([["st.text_area"], ["st.number_input"], ["st.text_input"]]),
-        3,
-        1,
+        ["st.text_area", "st.number_input", "st.text_input"],
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
     ),
-    # Multi-dimensional numpy array:
+    # List of integers (List[int]):
+    ([1, 2, 3], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
+    # List of floats (List[float]):
+    ([1.0, 2.0, 3.0], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
+    # List of booleans (List[bool]):
+    ([True, False, True], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
+    # List of mixed values (List[Any]):
+    ([True, 0, 0.1, "foo"], TestCaseMetadata(4, 1, DataFormat.LIST_OF_VALUES)),
+    # List of Nones (List[None]):
+    ([None, None, None], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
+    # List of dates (List[date]):
+    (
+        [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
+    ),
+    # Set of strings (Set[str]):
+    (
+        {"st.text_area", "st.text_input", "st.number_input"},
+        TestCaseMetadata(3, 1, DataFormat.SET_OF_VALUES),
+    ),
+    # Tuple of strings (Tuple[str]):
+    (
+        ("st.text_area", "st.number_input", "st.text_input"),
+        TestCaseMetadata(3, 1, DataFormat.TUPLE_OF_VALUES),
+    ),
+    # Numpy list / 1D numpy array (np.array[str]):
+    (
+        np.array(["st.text_area", "st.number_input", "st.text_input"]),
+        TestCaseMetadata(3, 1, DataFormat.NUMPY_LIST),
+    ),
+    # np.array[int]:
+    (np.array([1, 2, 3]), TestCaseMetadata(3, 1, DataFormat.NUMPY_LIST)),
+    # Multi-dimensional numpy array (np.array[List[Scalar]])
     (
         np.array(
             [
@@ -79,63 +104,95 @@ _SHARED_TEST_CASES = [
                 ["st.markdown", "element"],
             ]
         ),
-        2,
-        2,
+        TestCaseMetadata(2, 2, DataFormat.NUMPY_MATRIX),
     ),
-    # List[List[Any]]: List of rows
-    ([["st.text_area", "widget"], ["st.markdown", "element"]], 2, 2),
-    # List[Tuple[Any]]: list of rows
-    # TODO(lukasmasuch): Not supported by convert_df_to_reference yet:
-    # ([("st.text_area", "widget"), ("st.markdown", "element")], 2, 2),
+    # np.array[List[str]]:
+    (
+        np.array([["st.text_area"], ["st.number_input"], ["st.text_input"]]),
+        TestCaseMetadata(3, 1, DataFormat.NUMPY_MATRIX),
+    ),
     # Pandas DataFrame:
-    (pd.DataFrame(["st.text_area", "st.markdown"]), 2, 1),
-    # Pyarrow Table:
-    (pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])), 2, 1),
-    # Pandas Series:
+    (
+        pd.DataFrame(["st.text_area", "st.markdown"]),
+        TestCaseMetadata(2, 1, DataFormat.PANDAS_DATAFRAME),
+    ),
+    # Pandas Series (pd.Series):
     (
         pd.Series(["st.text_area", "st.number_input", "st.text_input"], name="widgets"),
-        3,
-        1,
+        TestCaseMetadata(3, 1, DataFormat.PANDAS_SERIES),
     ),
-    # [{column -> value}, … , {column -> value}]: List of records:
+    # Pandas Styler (pd.Styler):
+    (
+        pd.DataFrame(["st.text_area", "st.markdown"]).style,
+        TestCaseMetadata(2, 1, DataFormat.PANDAS_STYLER),
+    ),
+    # Pandas Index (pd.Index):
+    (
+        pd.Index(["st.text_area", "st.markdown"]),
+        TestCaseMetadata(2, 1, DataFormat.PANDAS_INDEX),
+    ),
+    # Pyarrow Table (pyarrow.Table):
+    (
+        pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])),
+        TestCaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
+    ),
+    # List of rows (List[List[Scalar]]):
+    (
+        [["st.text_area", "widget"], ["st.markdown", "element"]],
+        TestCaseMetadata(2, 2, DataFormat.LIST_OF_ROWS),
+    ),
+    # List of records (List[Dict[str, Scalar]]):
     (
         [
             {"name": "st.text_area", "type": "widget"},
             {"name": "st.markdown", "type": "element"},
         ],
-        2,
-        2,
+        TestCaseMetadata(2, 2, DataFormat.LIST_OF_RECORDS),
     ),
-    # {column -> {index -> value}}: Column-index mapping:
+    # Column-index mapping ({column: {index: value}}):
     (
         {
             "type": {"st.text_area": "widget", "st.markdown": "element"},
             "usage": {"st.text_area": 4.92, "st.markdown": 47.22},
         },
-        2,
-        2,
+        TestCaseMetadata(2, 2, DataFormat.COLUMN_INDEX_MAPPING),
     ),
-    # {column -> [values]}: Column value mapping:
+    # Column-value mapping ({column: List[values]}}):
     (
         {
             "name": ["st.text_area", "st.markdown"],
             "type": ["widget", "element"],
         },
-        2,
-        2,
+        TestCaseMetadata(2, 2, DataFormat.COLUMN_VALUE_MAPPING),
     ),
-    # {column -> Series(values)}: Column series mapping:
+    # Column-series mapping ({column: Series(values)}):
     (
         {
             "name": pd.Series(["st.text_area", "st.markdown"], name="name"),
             "type": pd.Series(["widget", "element"], name="type"),
         },
-        2,
-        2,
+        TestCaseMetadata(2, 2, DataFormat.COLUMN_SERIES_MAPPING),
     ),
-    # {index → value}: Key-value dict
-    ({"st.text_area": "widget", "st.markdown": "element"}, 2, 1),
+    # Key-value dict ({index: value}):
+    (
+        {"st.text_area": "widget", "st.markdown": "element"},
+        TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT),
+    ),
+    # Snowpark DataFrame:
+    (
+        SnowparkDataFrame(num_of_rows=2, num_of_cols=2),
+        TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
+    ),
+    # Snowpark Table:
+    (
+        SnowparkTable(num_of_rows=2, num_of_cols=2),
+        TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
+    ),
 ]
+
+
+class TestObject(object):
+    pass
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -215,41 +272,132 @@ class TypeUtilTest(unittest.TestCase):
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
     @parameterized.expand(
-        [(None, 0, 0)] + _SHARED_TEST_CASES,
+        _SHARED_TEST_CASES,
     )
     def test_convert_anything_to_df(
         self,
         input_data: type_util.DataFrameCompatible,
-        expected_rows: int,
-        expected_cols: int,
+        metadata: TestCaseMetadata,
     ):
         """Test that `convert_anything_to_df` correctly converts
         a variety of types to a DataFrame.
         """
         converted_df = type_util.convert_anything_to_df(input_data)
-        self.assertEqual(converted_df.shape[0], expected_rows)
-        self.assertEqual(converted_df.shape[1], expected_cols)
+        self.assertEqual(converted_df.shape[0], metadata.expected_rows)
+        self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
-    @parameterized.expand(_SHARED_TEST_CASES)
-    def test_convert_df_to_reference(
+    @parameterized.expand(
+        _SHARED_TEST_CASES,
+    )
+    def test_determine_data_format(
         self,
         input_data: type_util.DataFrameCompatible,
-        expected_rows: int,
-        expected_cols: int,
+        metadata: TestCaseMetadata,
     ):
-        """Test that `convert_df_to_reference` correctly converts a DataFrame
-        to the same type and structure of the reference.
+        """Test that `determine_data_format` correctly determines the
+        data format of a variety of data structures/types.
         """
+        data_format = type_util.determine_data_format(input_data)
+        self.assertEqual(
+            data_format,
+            metadata.expected_data_format,
+            f"{str(input_data)} is expected to be {metadata.expected_data_format} but was {data_format}.",
+        )
 
+    @parameterized.expand(
+        _SHARED_TEST_CASES,
+    )
+    def test_convert_df_to_data_format(
+        self,
+        input_data: type_util.DataFrameCompatible,
+        metadata: TestCaseMetadata,
+    ):
+        """Test that `convert_df_to_data_format` correctly converts a
+        DataFrame to the specified data format.
+        """
         converted_df = type_util.convert_anything_to_df(input_data)
-        self.assertEqual(converted_df.shape[0], expected_rows)
-        self.assertEqual(converted_df.shape[1], expected_cols)
+        self.assertEqual(converted_df.shape[0], metadata.expected_rows)
+        self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
-        converted_data = type_util.convert_df_to_reference(converted_df, input_data)
-        self.assertEqual(type(input_data), type(converted_data))
-        self.assertEqual(str(input_data), str(converted_data))
-        self.assertTrue(
-            converted_df.equals(type_util.convert_anything_to_df(converted_data))
+        if metadata.expected_data_format == DataFormat.UNKNOWN:
+            with self.assertRaises(ValueError):
+                type_util.convert_df_to_data_format(
+                    converted_df, metadata.expected_data_format
+                )
+            # We don't have to do any other tests for unknown data formats.
+        else:
+            converted_data = type_util.convert_df_to_data_format(
+                converted_df, metadata.expected_data_format
+            )
+
+            # Some data formats are converted to DataFrames instead of
+            # the original data type/structure.
+            if metadata.expected_data_format in [
+                DataFormat.SNOWPARK_OBJECT,
+                DataFormat.PYSPARK_OBJECT,
+                DataFormat.PANDAS_INDEX,
+                DataFormat.PANDAS_STYLER,
+                DataFormat.EMPTY,
+            ]:
+                assert isinstance(converted_data, pd.DataFrame)
+                self.assertEqual(converted_data.shape[0], metadata.expected_rows)
+                self.assertEqual(converted_data.shape[1], metadata.expected_cols)
+            else:
+                self.assertEqual(type(converted_data), type(input_data))
+                self.assertEqual(str(converted_data), str(input_data))
+                self.assertTrue(
+                    converted_df.equals(
+                        type_util.convert_anything_to_df(converted_data)
+                    )
+                )
+
+    def test_convert_df_to_data_format_with_unknown_data_format(self):
+        """Test that `convert_df_to_data_format` raises a ValueError when
+        passed an unknown data format.
+        """
+        with self.assertRaises(ValueError):
+            type_util.convert_df_to_data_format(
+                pd.DataFrame({"a": [1, 2, 3]}), DataFormat.UNKNOWN
+            )
+
+    @parameterized.expand(
+        [
+            (pd.Series([1, 2, "3"]), True),
+            # Complex numbers:
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
+            # Timedelta:
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
+            # Decimal:
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), True),
+            # Mixed-integer types:
+            (pd.Series([1, 2, "3"]), True),
+            # Mixed:
+            (pd.Series([1, 2.1, "3", True]), True),
+            # timedelta64
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
+            # Frozenset:
+            (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
+            # Dicts:
+            (pd.Series([{"a": 1}, {"b": 2}]), True),
+            # Complex types:
+            (pd.Series([TestObject(), TestObject()]), True),
+            # Supported types:
+            (pd.Series([1, 2, 3]), False),
+            (pd.Series([1, 2, 3.0]), False),
+            (pd.Series(["foo", "bar"]), False),
+            (pd.Series([True, False, None]), False),
+            (pd.Series(["foo", "bar", None]), False),
+            (pd.Series([[1, 2], [3, 4]]), False),
+            (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
+        ]
+    )
+    def test_is_colum_type_arrow_incompatible(
+        self, column: pd.Series, incompatible: bool
+    ):
+        self.assertEqual(
+            type_util.is_colum_type_arrow_incompatible(column),
+            incompatible,
+            f"Expected {column} to be {'incompatible' if incompatible else 'compatible'} with Arrow.",
         )
 
     def test_fix_complex_column_type(self):
@@ -344,7 +492,7 @@ dtype: object""",
         self.assertFalse(is_snowpark_data_object(df))
 
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
-        self.assertTrue(is_snowpark_data_object(DataFrame()))
+        self.assertTrue(is_snowpark_data_object(SnowparkDataFrame()))
 
         # any object should not be snowpark dataframe
         self.assertFalse(is_snowpark_data_object("any text"))
@@ -392,7 +540,7 @@ dtype: object""",
         self.assertTrue(
             is_snowpark_data_object(
                 [
-                    Row(),
+                    SnowparkRow(),
                 ]
             )
         )
