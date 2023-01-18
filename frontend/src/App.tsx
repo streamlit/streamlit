@@ -43,6 +43,9 @@ import { ConnectionState } from "src/lib/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import {
+  PRINT_URL_PARAM_KEY,
+  getURLParam,
+  removeURLParam,
   setCookie,
   hashString,
   isEmbeddedInIFrame,
@@ -204,7 +207,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
       allowRunOnSave: true,
-      scriptFinishedHandlers: [],
+      scriptFinishedHandlers: [this.printWhenPrintURLParamIsSetCallback],
       // A hack for now to get theming through. Product to think through how
       // developer mode should be designed in the long term.
       developerMode: window.location.host.includes("localhost"),
@@ -1270,6 +1273,39 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
+  printCallback = (): void => {
+    /**
+     * If the app is living inside an iframe (e.g. on Community Cloud, but also on SiS or Huggingface):
+     *  Opens a new tab with the URL of the raw app (i.e. the URL inside the iframe)
+     *  Opens the print dialog on that new tab
+     * If the app is not living inside an iframe (e.g. running on localhost or self-deployed):
+     *  Opens the print dialog in the existing tab
+     */
+    if (isInChildFrame()) {
+      const url = new URL(document.URL)
+      url.searchParams.delete(PRINT_URL_PARAM_KEY)
+      url.searchParams.append(PRINT_URL_PARAM_KEY, "true")
+      window.open(url, "_blank")
+    } else {
+      setTimeout(window.print, 1000)
+    }
+  }
+
+  printWhenPrintURLParamIsSetCallback = (): void => {
+    /**
+     * checks whether PRINT_URL_PARAM_KEY is set to "true", if so removes the param
+     * then prints the app. This callback is run in scriptFinishedHandlers, when App has loaded completely
+     */
+    if (getURLParam(document.URL, PRINT_URL_PARAM_KEY) === "true") {
+      window.history.replaceState(
+        null,
+        document.title,
+        removeURLParam(document.URL, PRINT_URL_PARAM_KEY)
+      )
+      setTimeout(window.print, 1000)
+    }
+  }
+
   screencastCallback = (): void => {
     const { scriptName } = this.state
     const { startRecording } = this.props.screenCast
@@ -1410,6 +1446,7 @@ export class App extends PureComponent<Props, State> {
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
+                printCallback={this.printCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
                 hostMenuItems={

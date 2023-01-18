@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { getCookie, setCookie } from "./utils"
+import {
+  getCookie,
+  setCookie,
+  PRINT_URL_PARAM_KEY,
+  removeURLParam,
+  getURLParam,
+} from "./utils"
 
 describe("getCookie", () => {
   afterEach(() => {
@@ -94,5 +100,59 @@ describe("setCookie", () => {
     document.cookie = "flavor=chocolatechip"
     setCookie("flavor")
     expect(document.cookie).toEqual("")
+  })
+})
+
+describe("removeURLParam", () => {
+  it("removes print url param", () => {
+    const testURL = `http://localhost:3000/?a=b&${PRINT_URL_PARAM_KEY}=true#some-hash`
+    expect(removeURLParam(testURL, PRINT_URL_PARAM_KEY)).toEqual(
+      "http://localhost:3000/?a=b#some-hash"
+    )
+  })
+
+  it("removes any url param", () => {
+    const urlParamKey = "any"
+    const testURL = `http://localhost:3000/?${urlParamKey}=some-value#hash-should-be-preserved`
+    expect(removeURLParam(testURL, urlParamKey)).toEqual(
+      "http://localhost:3000/#hash-should-be-preserved"
+    )
+  })
+
+  it("removeURLParam does not add question mark, when we have one url param", () => {
+    const testURL = `http://localhost:3000/?any=some-value#hash-should-be-preserved`
+    const urlWithRemovedParam = removeURLParam(testURL, "any")
+    expect(urlWithRemovedParam).toEqual(
+      "http://localhost:3000/#hash-should-be-preserved"
+    )
+    expect(urlWithRemovedParam.includes("?")).toBeFalsy()
+  })
+
+  it("removeURLParam does not add hash to url, when there is no hash in input url", () => {
+    const testURL = `http://localhost:3000/?any=some-value`
+    const urlWithRemovedParam = removeURLParam(testURL, "any")
+    expect(urlWithRemovedParam).toEqual("http://localhost:3000/")
+    expect(urlWithRemovedParam.includes("#")).toBeFalsy()
+  })
+
+  it("removeURLParam is safe when one tries to delete non existent param", () => {
+    const urlParamKey = "noSuchParam"
+    const testURL = "http://localhost:3000/"
+    const urlWithRemovedParam = removeURLParam(testURL, urlParamKey)
+    expect(urlWithRemovedParam).toEqual(testURL)
+    expect(urlWithRemovedParam.includes("?")).toBeFalsy()
+  })
+})
+
+describe("getURLParam", () => {
+  it("gets print url param", () => {
+    const testURL = `http://localhost:3000/?a=b&${PRINT_URL_PARAM_KEY}=true#some-hash`
+    expect(getURLParam(testURL, PRINT_URL_PARAM_KEY)).toEqual("true")
+  })
+
+  it("getURLParam is safe and returns an empty string when one tries to get non existent param", () => {
+    const urlParamKey = "noSuchParam"
+    const testURL = "http://localhost:3000/"
+    expect(getURLParam(testURL, urlParamKey)).toEqual("")
   })
 })

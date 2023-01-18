@@ -23,6 +23,8 @@ import _ from "lodash"
 import url from "url"
 import xxhash from "xxhashjs"
 
+export const PRINT_URL_PARAM_KEY = "print"
+
 /**
  * Wraps a function to allow it to be called, at most, once per interval
  * (specified in milliseconds). If the wrapper function is called N times
@@ -202,4 +204,19 @@ export function labelVisibilityProtoValueToEnum(
     default:
       return LabelVisibilityOptions.Visible
   }
+}
+
+export function removeURLParam(url: string, paramKey: string): string {
+  const currentURL = new URL(url)
+  const urlParams = new URLSearchParams(currentURL.search)
+  urlParams.delete(paramKey)
+  const search =
+    urlParams.toString().length > 0 ? `?${urlParams.toString()}` : ""
+  return currentURL.origin + currentURL.pathname + search + currentURL.hash
+}
+
+export function getURLParam(url: string, paramKey: string): string {
+  const currentURL = new URL(url)
+  const urlParams = new URLSearchParams(currentURL.search)
+  return urlParams.get(paramKey) || ""
 }
