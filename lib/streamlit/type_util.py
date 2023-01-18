@@ -742,7 +742,7 @@ def fix_arrow_incompatible_column_types(
         if df_copy is None:
             df_copy = df.copy()
         df_copy.index = df.index.astype(str)
-    return df_copy or df
+    return df_copy if df_copy is not None else df
 
 
 def data_frame_to_bytes(df: pd.DataFrame) -> bytes:
