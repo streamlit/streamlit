@@ -79,7 +79,7 @@ SHARED_TEST_CASES = [
     ),
     # Set of strings (Set[str]):
     (
-        {"st.text_area", "st.text_input", "st.number_input"},
+        {"st.number_input", "st.text_area", "st.text_input"},
         TestCaseMetadata(3, 1, DataFormat.SET_OF_VALUES),
     ),
     # Tuple of strings (Tuple[str]):
@@ -399,8 +399,27 @@ class TypeUtilTest(unittest.TestCase):
             f"Expected {column} to be {'incompatible' if incompatible else 'compatible'} with Arrow.",
         )
 
+    def test_fix_no_columns(self):
+        """Test that `fix_arrow_incompatible_column_types` does not
+        modify a DataFrame if all columns are compatible with Arrow.
+        """
+
+        df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.1, 2.2, 3.3],
+                "string": ["foo", "bar", None],
+                "boolean": [True, False, None],
+                "category": pd.Series(["a", "b", "c", "a"], dtype="category"),
+                "date": [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
+            }
+        )
+
+        fixed_df = fix_arrow_incompatible_column_types(df)
+        pd.testing.assert_frame_equal(df, fixed_df)
+
     def test_fix_complex_column_type(self):
-        """Test that `fix_unsupported_column_types` correctly fixes
+        """Test that `fix_arrow_incompatible_column_types` correctly fixes
         columns containing complex types by converting them to string.
         """
         df = pd.DataFrame(
