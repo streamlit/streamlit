@@ -348,12 +348,13 @@ export class Quiver {
     this._fields = fields
     this._styler = styler
     this._indexNames = indexNames
-    // this._index_columns =
-    console.log("schema", schema)
-    console.log("types", types)
-    console.log("columns", columns)
-    console.log("index", index)
-    console.log("fields", fields)
+
+    // TODO(lukasmasuch): Remove console logs below:
+    // console.log("schema", schema)
+    // console.log("types", types)
+    // console.log("columns", columns)
+    // console.log("index", index)
+    // console.log("fields", fields)
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
