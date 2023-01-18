@@ -725,6 +725,10 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["selectbox"]) -> Sequence[Selectbox[Any]]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["slider"]) -> Sequence[Slider[Any]]:
         ...
 
@@ -871,6 +875,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Checkbox(elt.checkbox, root=root)
             elif elt.WhichOneof("type") == "multiselect":
                 new_node = Multiselect(elt.multiselect, root=root)
+            elif elt.WhichOneof("type") == "selectbox":
+                new_node = Selectbox(elt.selectbox, root=root)
             elif elt.WhichOneof("type") == "slider":
                 if elt.slider.type == SliderProto.Type.SLIDER:
                     new_node = Slider(elt.slider, root=root)
