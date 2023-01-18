@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { renderHook, act } from "@testing-library/react-hooks"
 
 import { Arrow as ArrowProto } from "src/autogen/proto"

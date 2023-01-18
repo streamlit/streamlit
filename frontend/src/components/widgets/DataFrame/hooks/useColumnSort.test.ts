@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { renderHook, act } from "@testing-library/react-hooks"
 import { NumberCell, GridCell } from "@glideapps/glide-data-grid"
 
