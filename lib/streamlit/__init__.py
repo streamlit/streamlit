@@ -207,6 +207,6 @@ experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
 
 # TODO(lukasmasuch): Temp workaround to test different options
-from streamlit.elements.column_config import column_config as _column_config
+# from streamlit.elements.column_config import column_config as _column_config
 
-column_config = _column_config
+# column_config = _column_config
