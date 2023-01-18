@@ -154,6 +154,7 @@ class StreamlitTest(unittest.TestCase):
                 "experimental_set_query_params",
                 "experimental_rerun",
                 "experimental_show",
+                "experimental_data_editor",
                 "get_option",
                 "set_option",
             },
