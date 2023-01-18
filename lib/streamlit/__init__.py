@@ -52,6 +52,7 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
+from streamlit.connections import connection as _connection
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.caching import (
@@ -210,3 +211,5 @@ experimental_get_query_params = _get_query_params
 experimental_set_query_params = _set_query_params
 experimental_show = _show
 experimental_rerun = _rerun
+
+connection = _connection

@@ -27,4 +27,4 @@ psycopg2-binary>=2.9.1
 pyodbc>=4.0.32
 # SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
 # choosing not to support it.)
-sqlalchemy>=1.4.25, <2.0
+sqlalchemy[mypy]>=1.4.25, <2.0
