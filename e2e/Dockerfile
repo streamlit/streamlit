@@ -54,6 +54,7 @@ RUN sudo apt-get update \
         apt-transport-https \
         apt-utils \
     && sudo apt-get install -y \
+        fonts-noto-color-emoji \
         gnupg \
         graphviz \
         libasound2 \
