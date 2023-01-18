@@ -75,7 +75,7 @@ describe("RangeColumn", () => {
       min: -100,
       max: 100,
     })
-    const mockCell1 = mockColumn1.getCell()
+    const mockCell1 = mockColumn1.getCell(50)
     // The value fits into the scale, so don't do anything:
     expect((mockCell1 as RangeCellType).data?.value).toEqual(50)
 

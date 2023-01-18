@@ -34,17 +34,17 @@ const MOCK_IMAGE_COLUMN_PROPS = {
   },
 }
 
-describe("ListColumn", () => {
+describe("ImageColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = ImageColumn(MOCK_IMAGE_COLUMN_PROPS)
     expect(mockColumn.kind).toEqual("image")
     expect(mockColumn.title).toEqual(MOCK_IMAGE_COLUMN_PROPS.title)
     expect(mockColumn.id).toEqual(MOCK_IMAGE_COLUMN_PROPS.id)
-    expect(mockColumn.contentAlignment).toEqual("center")
     expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell("https://picsum.photos/400/400")
     expect(mockCell.kind).toEqual(GridCellKind.Image)
+    expect(mockCell.contentAlign).toEqual("center")
     expect((mockCell as ImageCell).data).toEqual([
       "https://picsum.photos/400/400",
     ])
