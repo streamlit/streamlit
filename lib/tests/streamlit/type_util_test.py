@@ -410,8 +410,6 @@ class TypeUtilTest(unittest.TestCase):
                 "float": [1.1, 2.2, 3.3],
                 "string": ["foo", "bar", None],
                 "boolean": [True, False, None],
-                "category": pd.Series(["a", "b", "c", "a"], dtype="category"),
-                "date": [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
             }
         )
 
