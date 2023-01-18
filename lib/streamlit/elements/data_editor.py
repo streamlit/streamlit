@@ -41,7 +41,6 @@ from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
 from streamlit import type_util
 from streamlit.elements.arrow import marshall
-from streamlit.elements.column_config import ColumnConfig, parse_column_config
 from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -87,6 +86,29 @@ DataTypes: TypeAlias = Union[
     Set[Any],
     Dict[str, Any],
 ]
+
+
+class ColumnConfig(TypedDict, total=False):
+    width: Optional[int]
+    title: Optional[str]
+    type: Optional[
+        Literal[
+            "text",
+            "number",
+            "boolean",
+            "list",
+            "url",
+            "image",
+            "chart",
+            "range",
+            "categorical",
+        ]
+    ]
+    hidden: Optional[bool]
+    editable: Optional[bool]
+    alignment: Optional[Literal["left", "center", "right"]]
+    metadata: Optional[Dict[str, Any]]
+    column: Optional[Union[str, int]]
 
 
 class EditingState(TypedDict, total=False):
@@ -427,12 +449,10 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        columns: Optional[Union[ColumnConfigMapping, List[ColumnConfig]]] = None,
+        columns: Optional[ColumnConfigMapping] = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
     ) -> DataTypes:
-        columns_config: ColumnConfigMapping = (
-            {} if columns is None else parse_column_config(columns)
-        )
+        columns_config: ColumnConfigMapping = {} if columns is None else columns
 
         data_format = type_util.determine_data_format(data)
         if data_format == DataFormat.UNKNOWN:
