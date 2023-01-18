@@ -45,6 +45,7 @@ from streamlit.elements.column_config import ColumnConfig, parse_column_config
 from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetArgs,
@@ -412,7 +413,7 @@ class DataEditorMixin:
     ) -> pd.DataFrame:
         pass
 
-    # TODO(lukasmasuch): @gather_metrics("_arrow_dataframe")
+    @gather_metrics("experimental_data_editor")
     def experimental_data_editor(
         self,
         data: DataTypes,
