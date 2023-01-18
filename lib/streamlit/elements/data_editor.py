@@ -298,6 +298,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
 
 def _apply_dataframe_edits(df: pd.DataFrame, data_editor_state: EditingState) -> None:
     """Apply edits to the provided dataframe (inplace).
+
     This includes cell edits, row additions and row deletions.
 
     Parameters
@@ -493,7 +494,7 @@ class DataEditorMixin:
             ctx=get_script_run_ctx(),
         )
 
-        _apply_dataframe_edits(data_df, widget_state.value)  # type: ignore
+        _apply_dataframe_edits(data_df, widget_state.value)
         self.dg._enqueue("arrow_data_frame", proto)
         return type_util.convert_df_to_data_format(data_df, data_format)
 
