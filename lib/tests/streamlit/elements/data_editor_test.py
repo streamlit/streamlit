@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""data_editor unit test."""
+
 from __future__ import annotations
 
 import datetime
@@ -32,9 +34,11 @@ from streamlit.elements.data_editor import (
     _apply_row_additions,
     _apply_row_deletions,
 )
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
-from streamlit.type_util import DataFormat
+from streamlit.type_util import DataFormat, bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.type_util_test import SHARED_TEST_CASES, TestCaseMetadata
 
 
 class DataEditorUtilTest(unittest.TestCase):
@@ -246,42 +250,41 @@ class DataEditorUtilTest(unittest.TestCase):
 
 
 class DataEditorTest(DeltaGeneratorTestCase):
-    # TODO: Test data_editor command
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.experimental_data_editor(pd.DataFrame(), disabled=True)
 
-        c = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(c.disabled, True)
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.disabled, True)
 
-    def test_just_size(self):
+    def test_just_width_height(self):
         """Test that it can be called with width and height."""
-        st.experimental_data_editor(pd.DataFrame(), width=300, height=300)
+        st.experimental_data_editor(pd.DataFrame(), width=300, height=400)
 
-        c = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(c.width, 300)
-        self.assertEqual(c.height, 300)
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.width, 300)
+        self.assertEqual(proto.height, 400)
 
     def test_num_rows_fixed(self):
         """Test that it can be called with num_rows fixed."""
         st.experimental_data_editor(pd.DataFrame(), num_rows="fixed")
 
-        c = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(c.editing_mode, ArrowProto.EditingMode.FIXED)
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.editing_mode, ArrowProto.EditingMode.FIXED)
 
     def test_num_rows_dynamic(self):
         """Test that it can be called with num_rows dynamic."""
         st.experimental_data_editor(pd.DataFrame(), num_rows="dynamic")
 
-        c = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(c.editing_mode, ArrowProto.EditingMode.DYNAMIC)
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.editing_mode, ArrowProto.EditingMode.DYNAMIC)
 
     def test_just_use_container_width(self):
         """Test that it can be called with use_container_width."""
         st.experimental_data_editor(pd.DataFrame(), use_container_width=True)
 
-        c = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(c.use_container_width, True)
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.use_container_width, True)
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -303,8 +306,62 @@ class DataEditorTest(DeltaGeneratorTestCase):
         dataframe_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
         self.assertEqual(dataframe_proto.form_id, form_proto.form.form_id)
 
-    def test_invalid_data(self):
-        """Test that value must be an int."""
-        pass
-        # with self.assertRaises(StreamlitAPIException):
-        #     st.selectbox("the label", ("m", "f"), "1")
+    def test_with_dataframe_data(self):
+        """Test that it can be called with a dataframe."""
+        df = pd.DataFrame(
+            {
+                "col1": [1, 2, 3],
+                "col2": ["a", "b", "c"],
+                "col3": [True, False, True],
+            }
+        )
+
+        return_df = st.experimental_data_editor(df)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
+        pd.testing.assert_frame_equal(return_df, df)
+
+    @parameterized.expand(SHARED_TEST_CASES)
+    def test_with_compatible_data(
+        self,
+        input_data: Any,
+        metadata: TestCaseMetadata,
+    ):
+        """Test that it can be called with compatible data."""
+        return_data = st.experimental_data_editor(input_data)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        reconstructed_df = bytes_to_data_frame(proto.data)
+        self.assertEqual(reconstructed_df.shape[0], metadata.expected_rows)
+        self.assertEqual(reconstructed_df.shape[1], metadata.expected_cols)
+
+        # Some data formats are converted to DataFrames instead of
+        # the original data type/structure.
+        if metadata.expected_data_format in [
+            DataFormat.SNOWPARK_OBJECT,
+            DataFormat.PYSPARK_OBJECT,
+            DataFormat.PANDAS_INDEX,
+            DataFormat.PANDAS_STYLER,
+            DataFormat.EMPTY,
+        ]:
+            assert isinstance(return_data, pd.DataFrame)
+            self.assertEqual(return_data.shape[0], metadata.expected_rows)
+            self.assertEqual(return_data.shape[1], metadata.expected_cols)
+        else:
+            self.assertEqual(type(return_data), type(input_data))
+            self.assertEqual(str(return_data), str(input_data))
+
+    @parameterized.expand(
+        [
+            (True,),
+            (123,),
+            ("foo",),
+            (datetime.datetime.now(),),
+            (st,),
+        ]
+    )
+    def test_with_invalid_data(self, input_data: Any):
+        """Test that it raises an exception when called with invalid data."""
+        with self.assertRaises(StreamlitAPIException):
+            st.experimental_data_editor(input_data)

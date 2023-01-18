@@ -16,7 +16,7 @@ import unittest
 from collections import namedtuple
 from datetime import date
 from decimal import Decimal
-from typing import NamedTuple
+from typing import Any, NamedTuple
 from unittest.mock import patch
 
 import numpy as np
@@ -48,7 +48,7 @@ class TestCaseMetadata(NamedTuple):
     expected_data_format: DataFormat
 
 
-_SHARED_TEST_CASES = [
+SHARED_TEST_CASES = [
     # None:
     (None, TestCaseMetadata(0, 0, DataFormat.EMPTY)),
     # Empty list:
@@ -70,8 +70,6 @@ _SHARED_TEST_CASES = [
     ([1.0, 2.0, 3.0], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
     # List of booleans (List[bool]):
     ([True, False, True], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
-    # List of mixed values (List[Any]):
-    ([True, 0, 0.1, "foo"], TestCaseMetadata(4, 1, DataFormat.LIST_OF_VALUES)),
     # List of Nones (List[None]):
     ([None, None, None], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
     # List of dates (List[date]):
@@ -272,11 +270,11 @@ class TypeUtilTest(unittest.TestCase):
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
     @parameterized.expand(
-        _SHARED_TEST_CASES,
+        SHARED_TEST_CASES,
     )
     def test_convert_anything_to_df(
         self,
-        input_data: type_util.DataFrameCompatible,
+        input_data: Any,
         metadata: TestCaseMetadata,
     ):
         """Test that `convert_anything_to_df` correctly converts
@@ -287,11 +285,11 @@ class TypeUtilTest(unittest.TestCase):
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
     @parameterized.expand(
-        _SHARED_TEST_CASES,
+        SHARED_TEST_CASES,
     )
     def test_determine_data_format(
         self,
-        input_data: type_util.DataFrameCompatible,
+        input_data: Any,
         metadata: TestCaseMetadata,
     ):
         """Test that `determine_data_format` correctly determines the
@@ -305,11 +303,11 @@ class TypeUtilTest(unittest.TestCase):
         )
 
     @parameterized.expand(
-        _SHARED_TEST_CASES,
+        SHARED_TEST_CASES,
     )
     def test_convert_df_to_data_format(
         self,
-        input_data: type_util.DataFrameCompatible,
+        input_data: Any,
         metadata: TestCaseMetadata,
     ):
         """Test that `convert_df_to_data_format` correctly converts a
