@@ -412,7 +412,7 @@ class Selectbox(Element, Widget, Generic[T]):
 
     root: ElementTree = field(repr=False)
 
-    def __init__(self, proto: MultiSelectProto, root: ElementTree):
+    def __init__(self, proto: SelectboxProto, root: ElementTree):
         self.proto = proto
         self.root = root
         self._value = None
