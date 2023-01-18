@@ -17,10 +17,12 @@ from __future__ import annotations
 import datetime
 import unittest
 from typing import Any, Dict, List, Mapping
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.elements.data_editor import (
     _INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -30,6 +32,7 @@ from streamlit.elements.data_editor import (
     _apply_row_additions,
     _apply_row_deletions,
 )
+from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.type_util import DataFormat
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -244,4 +247,64 @@ class DataEditorUtilTest(unittest.TestCase):
 
 class DataEditorTest(DeltaGeneratorTestCase):
     # TODO: Test data_editor command
-    pass
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.experimental_data_editor(pd.DataFrame(), disabled=True)
+
+        c = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(c.disabled, True)
+
+    def test_just_size(self):
+        """Test that it can be called with width and height."""
+        st.experimental_data_editor(pd.DataFrame(), width=300, height=300)
+
+        c = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(c.width, 300)
+        self.assertEqual(c.height, 300)
+
+    def test_num_rows_fixed(self):
+        """Test that it can be called with num_rows fixed."""
+        st.experimental_data_editor(pd.DataFrame(), num_rows="fixed")
+
+        c = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(c.editing_mode, ArrowProto.EditingMode.FIXED)
+
+    def test_num_rows_dynamic(self):
+        """Test that it can be called with num_rows dynamic."""
+        st.experimental_data_editor(pd.DataFrame(), num_rows="dynamic")
+
+        c = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(c.editing_mode, ArrowProto.EditingMode.DYNAMIC)
+
+    def test_just_use_container_width(self):
+        """Test that it can be called with use_container_width."""
+        st.experimental_data_editor(pd.DataFrame(), use_container_width=True)
+
+        c = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(c.use_container_width, True)
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+        st.experimental_data_editor(pd.DataFrame())
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+        with st.form("form"):
+            st.experimental_data_editor(pd.DataFrame())
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        dataframe_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
+        self.assertEqual(dataframe_proto.form_id, form_proto.form.form_id)
+
+    def test_invalid_data(self):
+        """Test that value must be an int."""
+        pass
+        # with self.assertRaises(StreamlitAPIException):
+        #     st.selectbox("the label", ("m", "f"), "1")
