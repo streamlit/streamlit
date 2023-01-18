@@ -404,8 +404,7 @@ export class WidgetStateManager {
   }
 
   public setJsonValue(widget: WidgetInfo, value: any, source: Source): void {
-    this.createWidgetState(widget, source).jsonValue =
-      typeof value === "string" ? value : JSON.stringify(value)
+    this.createWidgetState(widget, source).jsonValue = JSON.stringify(value)
     this.onWidgetValueChanged(widget.formId, source)
   }
 
