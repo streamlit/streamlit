@@ -31,6 +31,7 @@ from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
+from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -393,6 +394,68 @@ class Multiselect(Element, Widget, Generic[T]):
                 new.remove(v)
             self.set_value(new)
             return self
+
+
+@dataclass(init=False)
+class Selectbox(Element, Widget, Generic[T]):
+    _value: T | None
+
+    proto: SelectboxProto
+    type: str
+    id: str
+    label: str
+    options: list[str]
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: MultiSelectProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "selectbox"
+        self.id = proto.id
+        self.label = proto.label
+        self.options = list(proto.options)
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    @property
+    def index(self) -> int:
+        return self.options.index(str(self.value))
+
+    @property
+    def value(self) -> T:
+        """The currently selected value from the options."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(T, state[self.id])
+
+    def set_value(self, v: T) -> Selectbox[T]:
+        self._value = v
+        return self
+
+    def select(self, v: T) -> Selectbox[T]:
+        return self.set_value(v)
+
+    def widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        ws.int_value = self.index
+        return ws
 
 
 @dataclass(init=False)
