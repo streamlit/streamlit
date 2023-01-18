@@ -29,7 +29,6 @@ import {
   StyledPrimaryFormSubmitButton,
   StyledSecondaryFormSubmitButton,
   StyledHeaderButton,
-  StyledElementToolbarButton,
 } from "./styled-components"
 
 function Button({
@@ -61,8 +60,6 @@ function Button({
     ComponentType = StyledSecondaryFormSubmitButton
   } else if (kind === Kind.HEADER_BUTTON) {
     ComponentType = StyledHeaderButton
-  } else if (kind === Kind.ELEMENT_TOOLBAR) {
-    ComponentType = StyledElementToolbarButton
   }
 
   return (
