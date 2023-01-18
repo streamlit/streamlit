@@ -389,6 +389,7 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series(["foo", "bar", None]), False),
             (pd.Series([[1, 2], [3, 4]]), False),
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
+            (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
         ]
     )
     def test_is_colum_type_arrow_incompatible(

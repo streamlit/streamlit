@@ -22,6 +22,7 @@ from typing import (
     Any,
     Dict,
     List,
+    Mapping,
     Optional,
     Set,
     Tuple,
@@ -201,7 +202,7 @@ def _parse_value(value: Union[str, int, float, bool, None], dtype) -> Any:
 
 
 def _apply_cell_edits(
-    df: pd.DataFrame, edited_cells: Dict[str, str | int | float | bool | None]
+    df: pd.DataFrame, edited_cells: Mapping[str, str | int | float | bool | None]
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
 
@@ -262,7 +263,7 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
             else:
                 # We need to subtract the number of index levels from the column index
                 # to get the correct column index for pandas dataframes
-                # TODO(lukasmasuch): directly get it from numeric index:
+                # TODO(lukasmasuch): directly get it from numeric index via iloc:
                 mapped_column = col_idx - index_count
                 new_row[mapped_column] = _parse_value(
                     value, df[df.columns[mapped_column]].dtype
