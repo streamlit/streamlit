@@ -1,0 +1,15 @@
+---
+name: Run semgrep checks
+
+on:
+  pull_request:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  run-semgrep-reusable-workflow:
+    uses: snowflakedb/reusable-workflows/.github/workflows/semgrep-v2.yml@main
+    secrets:
+      token: ${{ secrets.SEMGREP_APP_TOKEN }}

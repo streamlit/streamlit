@@ -569,13 +569,13 @@ class AppSession:
         app_was_running = prev_state == AppSessionState.APP_IS_RUNNING
         app_is_running = self._state == AppSessionState.APP_IS_RUNNING
         if app_is_running != app_was_running:
-            self._enqueue_forward_msg(self._create_session_state_changed_message())
+            self._enqueue_forward_msg(self._create_session_status_changed_message())
 
-    def _create_session_state_changed_message(self) -> ForwardMsg:
-        """Create and return a session_state_changed ForwardMsg."""
+    def _create_session_status_changed_message(self) -> ForwardMsg:
+        """Create and return a session_status_changed ForwardMsg."""
         msg = ForwardMsg()
-        msg.session_state_changed.run_on_save = self._run_on_save
-        msg.session_state_changed.script_is_running = (
+        msg.session_status_changed.run_on_save = self._run_on_save
+        msg.session_status_changed.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
         return msg
@@ -610,8 +610,8 @@ class AppSession:
         imsg.environment_info.streamlit_version = STREAMLIT_VERSION_STRING
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
 
-        imsg.session_state.run_on_save = self._run_on_save
-        imsg.session_state.script_is_running = (
+        imsg.session_status.run_on_save = self._run_on_save
+        imsg.session_status.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
 
@@ -710,7 +710,7 @@ class AppSession:
 
         """
         self._run_on_save = new_value
-        self._enqueue_forward_msg(self._create_session_state_changed_message())
+        self._enqueue_forward_msg(self._create_session_status_changed_message())
 
 
 def _populate_config_msg(msg: Config) -> None:
