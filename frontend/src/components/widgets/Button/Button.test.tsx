@@ -98,4 +98,20 @@ describe("Button widget", () => {
       expect(wrappedUIButton.props().disabled).toBe(props.disabled)
     })
   })
+
+  it("does not use container width by default", () => {
+    const wrapper = shallow(<Button {...getProps()}>Hello</Button>)
+
+    const wrappedUIButton = wrapper.find(UIButton)
+    expect(wrappedUIButton.props().fluidWidth).toBe(false)
+  })
+
+  it("passes useContainerWidth property correctly", () => {
+    const wrapper = shallow(
+      <Button {...getProps({ useContainerWidth: true })}>Hello</Button>
+    )
+
+    const wrappedUIButton = wrapper.find(UIButton)
+    expect(wrappedUIButton.props().fluidWidth).toBe(true)
+  })
 })

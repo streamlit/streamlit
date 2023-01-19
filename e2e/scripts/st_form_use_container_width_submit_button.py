@@ -14,30 +14,10 @@
 
 import streamlit as st
 
-st.download_button(
-    "Download button label",
-    data="Hello world!",
-    file_name="hello.txt",
-)
-
-st.download_button(
-    "Download button label",
-    data="Hello world!",
-    file_name="hello.txt",
-    key="disabled_dl_button",
-    disabled=True,
-)
-
-st.download_button(
-    "Download RAR archive file",
-    data=b"bytes",
-    file_name="archive.rar",
-    mime="application/vnd.rar",
-)
-
-st.download_button(
-    "Download button with use_container_width=True",
-    data="Hello world!",
-    file_name="hello.txt",
-    use_container_width=True,
-)
+with st.form("my_form"):
+    st.write("Inside the form")
+    slider_val = st.slider("Form slider")
+    checkbox_val = st.checkbox("Form checkbox")
+    submitted = st.form_submit_button("Submit", use_container_width=True)
+    if submitted:
+        st.write("slider", slider_val, "checkbox", checkbox_val)

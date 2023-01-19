@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+const path = require("path");
 
-message Button {
-  string id = 1;
-  string label = 2;
-  bool default = 3;
-  string help = 4;
-  string form_id = 5;
+describe("st.form with use_container_width=True button", () => {
+  beforeEach(() => {
+    cy.loadApp("http://localhost:3000/");
 
-  // If true, this is a form submission button. The frontend will defer
-  // sending updates for all widgets inside the button's form until
-  // the button is pressed.
-  bool is_form_submitter = 6;
-  string type = 7;
-  bool disabled = 8;
-  bool use_container_width = 9;
-}
+    cy.prepForElementSnapshots();
+  });
+
+
+  it("renders use_container_width=True st.submit_form_button correctly", () => {
+    cy.get("[data-testid='stFormSubmitButton'] button")
+      .should("have.length.at.least", 1)
+      .first().matchThemedSnapshots("use-container-width-submit-form-button");
+  });
+});
