@@ -50,3 +50,21 @@ st.write("value 3:", i4)
 
 i5 = st.button("button 4", type="primary", disabled=True)
 st.write("value 4:", i5)
+
+st.button("button 5", use_container_width=True)
+
+cols = st.columns(3)
+
+# Order of conn_types matters to preserve the order in st_button.spec.js and the snapshot
+conn_types = [
+    "snowflake",
+    "bigquery",
+    "huggingface",
+    "aws_s3",
+    "http_file",
+    "postgresql",
+    "gsheets",
+    "custom",
+]
+for i in range(len(conn_types)):
+    cols[i % 3].button(conn_types[i], use_container_width=True)

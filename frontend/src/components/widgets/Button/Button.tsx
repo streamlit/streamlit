@@ -44,6 +44,7 @@ function Button(props: Props): ReactElement {
           kind={kind}
           size={Size.SMALL}
           disabled={disabled}
+          fluidWidth={element.useContainerWidth || false}
           onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
         >
           <StreamlitMarkdown
