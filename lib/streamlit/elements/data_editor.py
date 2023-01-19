@@ -34,7 +34,6 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from numpy.typing import NDArray
 from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
 from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
@@ -65,7 +64,7 @@ EditableData = TypeVar(
     "EditableData",
     bound=Union[
         DataFrameGenericAlias[Any],  # covers DataFrame and Series
-        NDArray[Any],
+        # TODO: NDArray[Any],
         Tuple[Any],
         List[Any],
         Set[Any],
@@ -80,7 +79,7 @@ DataTypes: TypeAlias = Union[
     pd.Index,
     Styler,
     pa.Table,
-    NDArray[Any],
+    # TODO: NDArray[Any],
     Tuple[Any],
     List[Any],
     Set[Any],

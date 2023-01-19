@@ -51,7 +51,6 @@ from streamlit import string_util
 if TYPE_CHECKING:
     import graphviz
     import sympy
-    from numpy.typing import NDArray
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure
@@ -856,7 +855,7 @@ def convert_df_to_data_format(
     pd.Index,
     Styler,
     pa.Table,
-    NDArray[Any],
+    # TODO: NDArray[Any],
     Tuple[Any],
     List[Any],
     Set[Any],
