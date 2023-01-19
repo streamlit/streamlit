@@ -465,12 +465,12 @@ class DataEditorMixin:
         # since we will apply edits directly to it.
         data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
+        # Check if the index is supported.
+        # Theoretically, we could also support Int64Index and Float64Index here,
+        # but those indices are deprecated and will be removed in the future.
         if type(data_df.index) not in [
             pd.RangeIndex,
             pd.Index,
-            # TODO: both are deprecated
-            # pd.Int64Index,
-            # pd.Float64Index,
         ]:
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "

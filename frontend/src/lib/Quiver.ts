@@ -348,13 +348,6 @@ export class Quiver {
     this._fields = fields
     this._styler = styler
     this._indexNames = indexNames
-
-    // TODO(lukasmasuch): Remove console logs below:
-    // console.log("schema", schema)
-    // console.log("types", types)
-    // console.log("columns", columns)
-    // console.log("index", index)
-    // console.log("fields", fields)
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
@@ -856,7 +849,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       if (field?.type instanceof Struct) {
         // This type is used by python dictionary values
 
-        // TODO(lukasmasuch): Arrow JS adds all properties from all cells
+        // Workaround: Arrow JS adds all properties from all cells
         // as fields. When you convert to string, it will contain lots of fields with
         // null values. To mitigate this, we filter out null values.
 
