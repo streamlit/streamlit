@@ -108,7 +108,7 @@ class CacheResourceTest(unittest.TestCase):
         """We show deprecation warnings when using `@st.experimental_singleton`, but not `@st.cache_resource`."""
         warning_str = (
             "`st.experimental_singleton` is deprecated. Please use the new command `st.cache_resource` instead, "
-            "which has the same behavior. More information [in our docs](https://NEED.CACHE.DOCS.URL)."
+            "which has the same behavior. More information [in our docs](https://docs.streamlit.io/library/advanced-features/caching)."
         )
 
         # We show the deprecation warning at declaration time:

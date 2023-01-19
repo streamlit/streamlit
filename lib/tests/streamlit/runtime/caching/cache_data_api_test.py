@@ -137,7 +137,7 @@ class CacheDataTest(unittest.TestCase):
         """We show deprecation warnings when using `@st.experimental_memo`, but not `@st.cache_data`."""
         warning_str = (
             "`st.experimental_memo` is deprecated. Please use the new command `st.cache_data` instead, "
-            "which has the same behavior. More information [in our docs](https://NEED.CACHE.DOCS.URL)."
+            "which has the same behavior. More information [in our docs](https://docs.streamlit.io/library/advanced-features/caching)."
         )
 
         # We show the deprecation warning at declaration time:
