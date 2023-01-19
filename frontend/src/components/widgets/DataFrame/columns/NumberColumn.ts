@@ -15,7 +15,6 @@
  */
 
 import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
-import { sprintf } from "sprintf-js"
 
 import { Quiver } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
@@ -87,7 +86,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "smart",
     getCell(data?: any): GridCell {
       let cellData: number | null = toSafeNumber(data)
-      let displayData: string | undefined
 
       if (notNullOrUndefined(cellData)) {
         if (Number.isNaN(cellData)) {
@@ -116,16 +114,13 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
           cellData = Math.min(cellData, parameters.max)
         }
       }
-      if (displayData === undefined) {
-        displayData = notNullOrUndefined(cellData)
-          ? formatNumber(cellData)
-          : ""
-      }
 
       return {
         ...cellTemplate,
         data: cellData,
-        displayData,
+        displayData: notNullOrUndefined(cellData)
+          ? formatNumber(cellData)
+          : "",
         isMissingValue: !notNullOrUndefined(cellData),
       } as NumberCell
     },
