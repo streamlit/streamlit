@@ -319,6 +319,10 @@ class LayoutsMixin:
             A string to use as the header for the expander. The label can optionally
             contain Markdown and supports the following elements: Bold, Italics,
             Strikethroughs, Inline Code, Emojis, and Links.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
