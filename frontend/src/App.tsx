@@ -66,7 +66,7 @@ import {
   PageProfile,
   SessionEvent,
   WidgetStates,
-  SessionState,
+  SessionStatus,
   Config,
   IGitInfo,
   GitInfo,
@@ -444,8 +444,8 @@ export class App extends PureComponent<Props, State> {
       dispatchProto(msgProto, "type", {
         newSession: (newSessionMsg: NewSession) =>
           this.handleNewSession(newSessionMsg),
-        sessionStateChanged: (msg: SessionState) =>
-          this.handleSessionStateChanged(msg),
+        sessionStatusChanged: (msg: SessionStatus) =>
+          this.handleSessionStatusChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
         delta: (deltaMsg: Delta) =>
@@ -573,17 +573,17 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.sessionStateChanged messages
-   * @param stateChangeProto a SessionState protobuf
+   * Handler for ForwardMsg.sessionStatusChanged messages
+   * @param statusChangeProto a SessionStatus protobuf
    */
-  handleSessionStateChanged = (stateChangeProto: SessionState): void => {
+  handleSessionStatusChanged = (statusChangeProto: SessionStatus): void => {
     this.setState((prevState: State) => {
       // Determine our new ScriptRunState
       let { scriptRunState } = prevState
       let { dialog } = prevState
 
       if (
-        stateChangeProto.scriptIsRunning &&
+        statusChangeProto.scriptIsRunning &&
         prevState.scriptRunState !== ScriptRunState.STOP_REQUESTED
       ) {
         // If the script is running, we change our ScriptRunState only
@@ -599,7 +599,7 @@ export class App extends PureComponent<Props, State> {
           dialog = undefined
         }
       } else if (
-        !stateChangeProto.scriptIsRunning &&
+        !statusChangeProto.scriptIsRunning &&
         prevState.scriptRunState !== ScriptRunState.RERUN_REQUESTED &&
         prevState.scriptRunState !== ScriptRunState.COMPILATION_ERROR
       ) {
@@ -634,7 +634,7 @@ export class App extends PureComponent<Props, State> {
       return {
         userSettings: {
           ...prevState.userSettings,
-          runOnSave: Boolean(stateChangeProto.runOnSave),
+          runOnSave: Boolean(statusChangeProto.runOnSave),
         },
         dialog,
         scriptRunState,
@@ -799,7 +799,7 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.handleSessionStateChanged(initialize.sessionState)
+    this.handleSessionStatusChanged(initialize.sessionStatus)
   }
 
   /**

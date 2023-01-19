@@ -25,7 +25,7 @@ import "streamlit/proto/PageProfile.proto";
 import "streamlit/proto/PageNotFound.proto";
 import "streamlit/proto/PagesChanged.proto";
 import "streamlit/proto/SessionEvent.proto";
-import "streamlit/proto/SessionState.proto";
+import "streamlit/proto/SessionStatus.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -58,8 +58,8 @@ message ForwardMsg {
     GitInfo git_info_changed = 14;
     PageProfile page_profile = 18;
 
-    // State change and event messages.
-    SessionState session_state_changed = 9;
+    // Status change and event messages.
+    SessionStatus session_status_changed = 9;
     SessionEvent session_event = 10;
 
     // Other messages.

@@ -16,9 +16,9 @@
 
 syntax = "proto3";
 
-// State for a session. Sent as part of the Initialize message, and also
-// on AppSession state change events.
-message SessionState {
+// Status for a session. Sent as part of the Initialize message, and also
+// on AppSession status change events.
+message SessionStatus {
   // If true, streamlit will re-run the script if it detects that the script
   // has been changed. This value comes from the server.runOnSave config.
   // The browser can change this option; it's sent here so that the browser
