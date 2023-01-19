@@ -234,16 +234,19 @@ class HashTest(unittest.TestCase):
             self.assertEqual(exc.find(code_msg) >= 0, True)
 
     def test_hash_funcs_acceptable_keys(self):
-        class C(object):
+        class C:
             def __init__(self):
                 self.x = (x for x in range(1))
 
         with self.assertRaises(UnhashableTypeError):
             get_hash(C())
 
+        # Assert that hashes are equivalent when hash_func key is supplied both as a
+        # type literal, and as a type name string.
+        c_result = C()
         self.assertEqual(
-            get_hash(C(), hash_funcs={types.GeneratorType: id}),
-            get_hash(C(), hash_funcs={"builtins.generator": id}),
+            get_hash(c_result, hash_funcs={types.GeneratorType: id}),
+            get_hash(c_result, hash_funcs={"builtins.generator": id}),
         )
 
     def test_hash_funcs_error(self):
