@@ -20,6 +20,8 @@ from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
 from streamlit.elements.heading import HEADER_TAG, SUBHEADER_TAG, TITLE_TAG
+from streamlit.elements.select_slider import SelectSliderSerde
+from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -29,6 +31,7 @@ from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.session_state import SessionState
@@ -444,6 +447,135 @@ class Button(Element, Widget):
 
 
 @dataclass(init=False)
+class Slider(Element, Widget, Generic[SliderScalarT]):
+    _value: SliderScalarT | Sequence[SliderScalarT] | None
+
+    proto: SliderProto
+    type: str
+    data_type: SliderProto.DataType.ValueType
+    id: str
+    label: str
+    min_value: SliderScalar
+    max_value: SliderScalar
+    step: Step
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: SliderProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "slider"
+        self.data_type = proto.data_type
+        self.id = proto.id
+        self.label = proto.label
+        self.min_value = proto.min
+        self.max_value = proto.max
+        self.step = proto.step
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(
+        self, v: SliderScalarT | Sequence[SliderScalarT]
+    ) -> Slider[SliderScalarT]:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        data_type = self.proto.data_type
+        serde = SliderSerde([], data_type, True, None)
+        v = serde.serialize(self.value)
+
+        ws = WidgetState()
+        ws.id = self.id
+        ws.double_array_value.data[:] = v
+        return ws
+
+    @property
+    def value(self) -> SliderScalarT | Sequence[SliderScalarT]:
+        """The currently selected value or range."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
+
+    def set_range(
+        self, lower: SliderScalarT, upper: SliderScalarT
+    ) -> Slider[SliderScalarT]:
+        return self.set_value([lower, upper])
+
+
+@dataclass(init=False)
+class SelectSlider(Element, Widget, Generic[T]):
+    _value: T | Sequence[T] | None
+
+    proto: SliderProto
+    type: str
+    data_type: SliderProto.DataType.ValueType
+    id: str
+    label: str
+    options: list[str]
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: SliderProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "select_slider"
+        self.data_type = proto.data_type
+        self.id = proto.id
+        self.label = proto.label
+        self.options = list(proto.options)
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: T | Sequence[T]) -> SelectSlider[T]:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        serde = SelectSliderSerde(self.options, [], False)
+        v = serde.serialize(self.value)
+
+        ws = WidgetState()
+        ws.id = self.id
+        ws.double_array_value.data[:] = v
+        return ws
+
+    @property
+    def value(self) -> T | Sequence[T]:
+        """The currently selected value or range."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
+
+    def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
+        return self.set_value([lower, upper])
+
+
+@dataclass(init=False)
 class Block:
     type: str
     children: dict[int, Node]
@@ -527,6 +659,16 @@ class Block:
 
     @overload
     def get(self, element_type: Literal["multiselect"]) -> Sequence[Multiselect[Any]]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["slider"]) -> Sequence[Slider[Any]]:
+        ...
+
+    @overload
+    def get(
+        self, element_type: Literal["select_slider"]
+    ) -> Sequence[SelectSlider[Any]]:
         ...
 
     @overload
@@ -666,6 +808,13 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Checkbox(elt.checkbox, root=root)
             elif elt.WhichOneof("type") == "multiselect":
                 new_node = Multiselect(elt.multiselect, root=root)
+            elif elt.WhichOneof("type") == "slider":
+                if elt.slider.type == SliderProto.Type.SLIDER:
+                    new_node = Slider(elt.slider, root=root)
+                elif elt.slider.type == SliderProto.Type.SELECT_SLIDER:
+                    new_node = SelectSlider(elt.slider, root=root)
+                else:
+                    raise ValueError(f"Slider with unknown type {elt.slider}")
             elif elt.WhichOneof("type") == "button":
                 new_node = Button(elt.button, root=root)
             else:

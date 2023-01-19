@@ -653,7 +653,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                     ),
                     CLEAR_QUEUE,
                     session._create_new_session_message(page_script_hash=""),
-                    session._create_session_state_changed_message(),
+                    session._create_session_status_changed_message(),
                 ]
             )
 
@@ -663,7 +663,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                     session._create_script_finished_message(
                         ForwardMsg.FINISHED_SUCCESSFULLY
                     ),
-                    session._create_session_state_changed_message(),
+                    session._create_session_status_changed_message(),
                     session._create_exception_message(FAKE_EXCEPTION),
                 ]
             )
