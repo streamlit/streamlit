@@ -250,8 +250,8 @@ class CacheDataAPI:
         *,
         ttl: float | timedelta | None = None,
         max_entries: int | None = None,
-        persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
+        persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
@@ -262,8 +262,8 @@ class CacheDataAPI:
         *,
         ttl: float | timedelta | None = None,
         max_entries: int | None = None,
-        persist: CachePersistType | bool = None,
         show_spinner: bool | str = True,
+        persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
     ):
         return self._decorator(
@@ -281,8 +281,8 @@ class CacheDataAPI:
         *,
         ttl: float | timedelta | None,
         max_entries: int | None,
-        persist: CachePersistType | bool,
         show_spinner: bool | str,
+        persist: CachePersistType | bool,
         experimental_allow_widgets: bool,
     ):
         """Decorator to cache functions that return data (e.g. dataframe transforms,
@@ -314,14 +314,14 @@ class CacheDataAPI:
             for an unbounded cache. (When a new entry is added to a full cache,
             the oldest cached entry will be removed.) The default is None.
 
+        show_spinner : boolean
+            Enable the spinner. Default is True to show a spinner when there is
+            a cache miss.
+
         persist : str or boolean or None
             Optional location to persist cached data to. Passing "disk" (or True)
             will persist the cached data to the local disk. None (or False) will disable
             persistence. The default is None.
-
-        show_spinner : boolean
-            Enable the spinner. Default is True to show a spinner when there is
-            a cache miss.
 
         experimental_allow_widgets : boolean
             Allow widgets to be used in the cached function. Defaults to False.
