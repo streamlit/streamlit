@@ -3306,7 +3306,7 @@
     "@types/htmlparser2" "*"
     "@types/react" "*"
 
-"@types/react-map-gl@5.2.11":
+"@types/react-map-gl@^5.2.11":
   version "5.2.11"
   resolved "https://registry.yarnpkg.com/@types/react-map-gl/-/react-map-gl-5.2.11.tgz#440323fb4ca8b72899ba2e544cc924bcdf8e3cfa"
   integrity sha512-yK9O7szpEgWiYZVBZKuWXCTk+elSn/g1GFUc2MYE38XSWSE0zdCbFRRbTwMZjG6WxbJ/UkC8sHyKI73xC2a8ew==
@@ -12257,7 +12257,7 @@ mapbox-gl@1.10.1:
     tinyqueue "^2.0.3"
     vt-pbf "^3.1.1"
 
-mapbox-gl@1.13.2, mapbox-gl@^1.0.0:
+mapbox-gl@^1.0.0, mapbox-gl@^1.13.2:
   version "1.13.2"
   resolved "https://registry.yarnpkg.com/mapbox-gl/-/mapbox-gl-1.13.2.tgz#76639c44f141f8dff71b7d8f1504f2aed11f7517"
   integrity sha512-CPjtWygL+f7naL+sGHoC2JQR0DG7u+9ik6WdkjjVmz2uy0kBC2l+aKfdi3ZzUR7VKSQJ6Mc/CeCN+6iVNah+ww==
@@ -15511,7 +15511,7 @@ react-lifecycles-compat@^3.0.4:
   resolved "https://registry.yarnpkg.com/react-lifecycles-compat/-/react-lifecycles-compat-3.0.4.tgz#4f1a273afdfc8f3488a8c516bfda78f872352362"
   integrity sha512-fBASbA6LnOU9dOU2eW7aQ8xmYBSXUIWr+UmF9b1efZBazGNO+rcXT/icdKnYm2pTwcRylVUYwW7H1PHfLekVzA==
 
-react-map-gl@5.3.21:
+react-map-gl@^5.3.21:
   version "5.3.21"
   resolved "https://registry.yarnpkg.com/react-map-gl/-/react-map-gl-5.3.21.tgz#7d28cdfe382d599d4ac8cccf7d794a3a0f06b65b"
   integrity sha512-hNVYiPBjgfVIcDV70OU9QnzvNCI1NhLm5OHjyY1rKPOKqzV4m9jjuXEKUaWC72vqIHk1Dzb+gG78xWOpqVi6uw==
