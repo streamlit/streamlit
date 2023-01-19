@@ -119,14 +119,14 @@ class EditingState(TypedDict, total=False):
     ----------
     edited_cells : Dict[str, str | int | float | bool | None]
         A dictionary of edited cells, where the key is the cell's row and
-        column index (row:column), and the value is the new value of the cell.
+        column position (row:column), and the value is the new value of the cell.
 
     added_rows : List[Dict[str, str | int | float | bool | None]]
-        A list of added rows, where each row is a dictionary of column names
-        and values.
+        A list of added rows, where each row is a dictionary of column position
+        and the respective value.
 
     deleted_rows : List[int]
-        A list of deleted rows, where each row is the index of the deleted row.
+        A list of deleted rows, where each row is the numerical position of the deleted row.
     """
 
     edited_cells: Dict[str, str | int | float | bool | None]
@@ -242,21 +242,19 @@ def _apply_cell_edits(
     index_count = df.index.nlevels or 0
 
     for cell, value in edited_cells.items():
-        row, col = cell.split(":")
-        row, col = int(row), int(col)
+        row_pos, col_pos = [int(pos) for pos in cell.split(":")]
 
-        if col < index_count:
+        if col_pos < index_count:
             # The edited cell is part of the index
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
-            df.index.values[row] = _parse_value(value, df.index.dtype)
+            df.index.values[row_pos] = _parse_value(value, df.index.dtype)
         else:
-            # We need to subtract the number of index levels from the column index
-            # to get the correct column index for pandas dataframes
-            column_idx = col - index_count
-            # TODO(lukasmasuch): directly get it from numeric index:
-            df.iat[row, column_idx] = _parse_value(
-                value, df[df.columns[column_idx]].dtype
+            # We need to subtract the number of index levels from col_pos
+            # to get the correct column position for Pandas DataFrames
+            mapped_column = col_pos - index_count
+            df.iat[row_pos, mapped_column] = _parse_value(
+                value, df.iloc[:, mapped_column].dtype
             )
 
 
@@ -270,32 +268,31 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
 
     added_rows : List[Dict[str, Any]]
         A list of row additions. Each row addition is a dictionary with the
-        column index as key and the new cell value as value.
+        column position as key and the new cell value as value.
     """
+    index_count = df.index.nlevels or 0
     # This is only used if the dataframe has a range index:
     # There seems to be a bug in older pandas versions that the RangeIndex.stop
     # value is not updated when new rows are added to the dataframe.
     # Therefore, we need to manually track the next value here.
     next_range_index_value = None
 
-    index_count = df.index.nlevels or 0
     for added_row in added_rows:
         index_value = None
         new_row: List[Any] = [None for _ in range(df.shape[1])]
         for col in added_row.keys():
             value = added_row[col]
-            col_idx = int(col)
-            if col_idx < index_count:
+            col_pos = int(col)
+            if col_pos < index_count:
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
                 index_value = _parse_value(value, df.index.dtype)
             else:
-                # We need to subtract the number of index levels from the column index
-                # to get the correct column index for pandas dataframes
-                # TODO(lukasmasuch): directly get it from numeric index via iloc:
-                mapped_column = col_idx - index_count
+                # We need to subtract the number of index levels from the col_pos
+                # to get the correct column position for Pandas DataFrames
+                mapped_column = col_pos - index_count
                 new_row[mapped_column] = _parse_value(
-                    value, df[df.columns[mapped_column]].dtype
+                    value, df.iloc[:, mapped_column].dtype
                 )
         # Append the new row to the dataframe
         if type(df.index) == pd.RangeIndex:
@@ -325,7 +322,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
     deleted_rows : List[int]
         A list of row numbers to delete.
     """
-    # Drop rows based in numeric row numbers
+    # Drop rows based in numeric row positions
     df.drop(df.index[deleted_rows], inplace=True)
 
 
