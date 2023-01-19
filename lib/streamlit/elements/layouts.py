@@ -87,8 +87,10 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        Columns can only be placed inside other columns up to one level of nesting.
+
         .. warning::
-            Currently, you may not put columns inside another column.
+            Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app.
 
         Parameters
         ----------

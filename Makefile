@@ -81,9 +81,14 @@ pipenv-dev-install: lib/Pipfile
 SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
 .PHONY: py-test-install
 py-test-install: lib/test-requirements.txt
-	# As of Python 3.9, we're using pip's legacy-resolver when installing
+  	# As of Python 3.9, we're using pip's legacy-resolver when installing
 	# test-requirements.txt, because otherwise pip takes literal hours to finish.
-	pip install -r lib/test-requirements.txt --use-deprecated=legacy-resolver
+	# Skip --use-deprecated option, when building local E2E docker image, since it's not present in Python 3.7.11
+	if [ "${DOCKER}" = "true" ] ; then\
+  		pip install -r lib/test-requirements.txt;\
+  	else\
+		pip install -r lib/test-requirements.txt --use-deprecated=legacy-resolver;\
+	fi
 ifeq (${SHOULD_INSTALL_TENSORFLOW},true)
 	pip install -r lib/test-requirements-with-tensorflow.txt --use-deprecated=legacy-resolver
 else
