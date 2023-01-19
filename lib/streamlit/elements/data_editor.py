@@ -272,6 +272,12 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
         A list of row additions. Each row addition is a dictionary with the
         column index as key and the new cell value as value.
     """
+    # This is only used if the dataframe has a range index:
+    # There seems to be a bug in older pandas versions that the RangeIndex.stop
+    # value is not updated when new rows are added to the dataframe.
+    # Therefore, we need to manually track the next value here.
+    next_range_index_value = None
+
     index_count = df.index.nlevels or 0
     for added_row in added_rows:
         index_value = None
@@ -293,7 +299,12 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
                 )
         # Append the new row to the dataframe
         if type(df.index) == pd.RangeIndex:
-            df.loc[df.index.stop, :] = new_row
+            if next_range_index_value is None:
+                next_range_index_value = df.index.stop
+            df.loc[next_range_index_value, :] = new_row
+            # Increment to the next range index value
+            next_range_index_value += df.index.step
+
         elif index_value is not None and type(df.index) == pd.Index:
             # TODO(lukasmasuch): we are only adding rows that have a non-None index
             # value to prevent issues in the frontend component. Also, it just overwrites
