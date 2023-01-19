@@ -285,14 +285,18 @@ class CacheDataAPI:
         show_spinner: bool | str,
         experimental_allow_widgets: bool,
     ):
-        """Function decorator to cache function executions.
+        """Decorator to cache functions that return data (e.g. dataframe transforms,
+        database queries, ML inference).
 
-        Cached data is stored in "pickled" form, which means that the return
-        value of a cached function must be pickleable.
+        Cached objects are stored in "pickled" form, which means that the return
+        value of a cached function must be pickleable. Each caller of the cached
+        function gets its own copy of the cached data.
 
-        Each caller of the cached function gets its own copy of the cached data.
+        You can clear a function's cache with `func.clear()` or clear the entire
+        cache with `st.cache_data.clear()`.
 
-        You can clear a cached function's cache with f.clear().
+        To cache global resources, use `st.cache_resource` instead.
+        Learn more about caching at [https://docs.streamlit.io/library/advanced-features/caching](https://docs.streamlit.io/library/advanced-features/caching)
 
         Parameters
         ----------
