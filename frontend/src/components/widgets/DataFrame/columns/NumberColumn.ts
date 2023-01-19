@@ -39,9 +39,6 @@ export interface NumberColumnParams {
   readonly min?: number
   // The maximum allowed value for editing.
   readonly max?: number
-  // A formatting syntax (e.g. sprintf) to format the display value.
-  // This can be used for adding prefix or suffix, or changing the number of decimals of the display value.
-  readonly format?: string
 }
 
 /**
@@ -117,18 +114,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         // Apply max parameter
         if (notNullOrUndefined(parameters.max)) {
           cellData = Math.min(cellData, parameters.max)
-        }
-
-        // If user has specified a format pattern in type metadata
-        if (notNullOrUndefined(parameters.format)) {
-          try {
-            displayData = sprintf(parameters.format, cellData)
-          } catch (error) {
-            return getErrorCell(
-              toSafeString(cellData),
-              `Format value (${parameters.format}) not sprintf compatible. Error: ${error}`
-            )
-          }
         }
       }
       if (displayData === undefined) {
