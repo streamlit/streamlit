@@ -14,20 +14,29 @@
  * limitations under the License.
  */
 
+const INCREMENTS_PER_DISCONNECT = 5;
+const NUM_DISCONNECTS = 20;
+
 describe("websocket reconnects", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
   });
 
   it("persists session state when the websocket connection is dropped and reconnects", () => {
-    for (let i = 0; i < 5; i++) {
-      cy.get(".stButton button").contains("click me!").click();
-    }
+    let expectedCount = 0;
 
-    cy.window().then((win) => {
-      setTimeout(() => {
-        win.streamlitDebug.disconnectWebsocket();
-      }, 100);
+    for (let i = 0; i < NUM_DISCONNECTS; i++) {
+      expectedCount += INCREMENTS_PER_DISCONNECT;
+
+      for (let j = 0; j < INCREMENTS_PER_DISCONNECT; j++) {
+        cy.get(".stButton button").contains("click me!").click();
+      }
+
+      cy.window().then((win) => {
+        setTimeout(() => {
+          win.streamlitDebug.disconnectWebsocket();
+        }, 100);
+      });
 
       // Wait until we've disconnected.
       cy.get("[data-testid='stStatusWidget']").should(
@@ -37,7 +46,7 @@ describe("websocket reconnects", () => {
       // Wait until we've reconnected and rerun the script.
       cy.get("[data-testid='stStatusWidget']").should("not.exist");
 
-      cy.get(".stMarkdown").contains("count: 5");
-    });
+      cy.get(".stMarkdown").contains(`count: ${expectedCount}`);
+    }
   });
 });
