@@ -654,10 +654,8 @@ def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool
         # timedelta64[ns] is supported by pyarrow but not in the Arrow JS:
         # https://github.com/streamlit/streamlit/issues/4489
         "timedelta64[ns]",
-        "complex128",
         "complex64",
-        "complex256",
-        "complex192",
+        "complex128",
         "complex256",
     ]:
         return True
