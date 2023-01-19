@@ -81,7 +81,7 @@ class NumberInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Number:
-        """Display a numeric input widget.
+        r"""Display a numeric input widget.
 
         Parameters
         ----------

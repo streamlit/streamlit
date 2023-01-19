@@ -119,7 +119,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Union[T, Tuple[T, T]]:
-        """
+        r"""
         Display a slider widget to select items from a list.
 
         This also allows you to render a range slider by passing a two-element

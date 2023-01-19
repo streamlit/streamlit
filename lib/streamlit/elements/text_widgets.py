@@ -84,7 +84,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> str:
-        """Display a single-line text input widget.
+        r"""Display a single-line text input widget.
 
         Parameters
         ----------
@@ -286,7 +286,7 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> str:
-        """Display a multi-line text input widget.
+        r"""Display a multi-line text input widget.
 
         Parameters
         ----------

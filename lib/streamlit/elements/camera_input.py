@@ -119,7 +119,7 @@ class CameraInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> SomeUploadedSnapshotFile:
-        """Display a widget that returns pictures from the user's webcam.
+        r"""Display a widget that returns pictures from the user's webcam.
 
         Parameters
         ----------

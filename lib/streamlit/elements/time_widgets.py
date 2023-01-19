@@ -223,7 +223,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> time:
-        """Display a time input widget.
+        r"""Display a time input widget.
 
         Parameters
         ----------

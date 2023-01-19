@@ -191,7 +191,7 @@ class SliderMixin:
         #  user would have to cast the return value more often than not, which
         #  can be annoying.
     ) -> Any:
-        """Display a slider widget.
+        r"""Display a slider widget.
 
         This supports int, float, date, time, and datetime types.
 

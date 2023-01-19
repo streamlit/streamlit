@@ -63,7 +63,7 @@ class ColorPickerMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> str:
-        """Display a color picker widget.
+        r"""Display a color picker widget.
 
         Parameters
         ----------

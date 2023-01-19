@@ -71,7 +71,7 @@ class ButtonMixin:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
     ) -> bool:
-        """Display a button widget.
+        r"""Display a button widget.
 
         Parameters
         ----------
@@ -163,7 +163,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
     ) -> bool:
-        """Display a download button widget.
+        r"""Display a download button widget.
 
         This is useful when you would like to provide a way for your users
         to download a file directly from your app.

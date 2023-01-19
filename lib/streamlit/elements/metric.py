@@ -53,7 +53,7 @@ class MetricMixin:
         help: Optional[str] = None,
         label_visibility: LabelVisibility = "visible",
     ) -> "DeltaGenerator":
-        """Display a metric in big bold font, with an optional indicator of how the metric changed.
+        r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Tip: If you want to display a large number, it may be a good idea to
         shorten it using packages like `millify <https://github.com/azaitsev/millify>`_

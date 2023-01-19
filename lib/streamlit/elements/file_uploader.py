@@ -217,7 +217,7 @@ class FileUploaderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ):
-        """Display a file uploader widget.
+        r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
         on how to set config options, see

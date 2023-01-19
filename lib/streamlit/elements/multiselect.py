@@ -159,7 +159,7 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         max_selections: Optional[int] = None,
     ) -> List[T]:
-        """Display a multiselect widget.
+        r"""Display a multiselect widget.
         The multiselect widget starts as empty.
 
         Parameters

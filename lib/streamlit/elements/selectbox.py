@@ -84,7 +84,7 @@ class SelectboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Optional[T]:
-        """Display a select widget.
+        r"""Display a select widget.
 
         Parameters
         ----------

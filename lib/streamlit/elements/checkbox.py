@@ -63,7 +63,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> bool:
-        """Display a checkbox widget.
+        r"""Display a checkbox widget.
 
         Parameters
         ----------
