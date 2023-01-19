@@ -269,16 +269,19 @@ class CacheResourceAPI:
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
     ):
-        """Function decorator to store cached resources.
+        """Decorator to cache functions that return global resources (e.g.
+        database connections, ML models).
 
-        Each cache_resource object is shared across all users connected to the app.
-        Cached resources *must* be thread-safe, because they can be accessed from
-        multiple threads concurrently.
+        Cached objects are shared across all users, sessions, and reruns. They
+        must be thread-safe because they can be accessed from multiple threads
+        concurrently. If thread safety is an issue, consider using `st.session_state`
+        to store resources per session instead.
 
-        (If thread-safety is an issue, consider using ``st.session_state`` to
-        store per-session cached resources instead.)
+        You can clear a function's cache with `func.clear()` or clear the entire
+        cache with `st.cache_resource.clear()`.
 
-        You can clear a cache_resource function's cache with f.clear().
+        To cache data, use `st.cache_data` instead.
+        Learn more about caching at [https://docs.streamlit.io/library/advanced-features/caching](https://docs.streamlit.io/library/advanced-features/caching)
 
         Parameters
         ----------
@@ -301,12 +304,12 @@ class CacheResourceAPI:
             value of show_spinner param will be used for spinner text.
 
         validate : callable or None
-            validate (callable): An optional validation function for cached data.
-            `validate` is called each time the cached value is accessed. It receives
-            the cached value as its only parameter and it must return a boolean.
-            If `validate` returns False, the current cached value is discarded, and
-            the decorated function is called to compute a new value.
-            This is useful e.g. to check the health of database connections.
+            An optional validation function for cached data. `validate` is called
+            each time the cached value is accessed. It receives the cached value as
+            its only parameter and it must return a boolean. If `validate` returns
+            False, the current cached value is discarded, and the decorated function
+            is called to compute a new value. This is useful e.g. to check the
+            health of database connections.
 
         experimental_allow_widgets : boolean
             Allow widgets to be used in the cached function. Defaults to False.
