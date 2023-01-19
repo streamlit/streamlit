@@ -640,7 +640,7 @@ Object of type tests.streamlit.runtime.legacy_caching.caching_test.CacheErrorsTe
             "`st.cache` is deprecated. Please use one of Streamlit's new caching commands,\n"
             "`st.cache_data` or `st.cache_resource`. Based on this function's return value\n"
             "of type `int`, we recommend using `st.cache_data`.\n\n"
-            "More information [in our docs](https://NEED.CACHE.DOCS.URL)."
+            "More information [in our docs](https://docs.streamlit.io/library/advanced-features/caching)."
         )
         show_deprecation_warning.assert_called_once_with(expected_message)
 
@@ -662,7 +662,7 @@ Object of type tests.streamlit.runtime.legacy_caching.caching_test.CacheErrorsTe
         expected_message = (
             "`st.cache` is deprecated. Please use one of Streamlit's new caching commands,\n"
             "`st.cache_data` or `st.cache_resource`.\n\n"
-            "More information [in our docs](https://NEED.CACHE.DOCS.URL)."
+            "More information [in our docs](https://docs.streamlit.io/library/advanced-features/caching)."
         )
         show_deprecation_warning.assert_called_once_with(expected_message)
 

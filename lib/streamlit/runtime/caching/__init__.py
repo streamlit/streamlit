@@ -32,8 +32,7 @@ from streamlit.runtime.caching.cache_resource_api import (
 )
 from streamlit.runtime.state.session_state import WidgetMetadata
 
-# TODO: replace this with the proper URL once it's ready from the docs team
-CACHE_DOCS_URL = "https://NEED.CACHE.DOCS.URL"
+CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
 
 
 def save_element_message(
