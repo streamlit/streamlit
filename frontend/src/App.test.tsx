@@ -170,7 +170,7 @@ describe("App", () => {
         },
         sessionId: "sessionId",
         userInfo: {},
-        sessionState: {},
+        sessionStatus: {},
       },
     }
 
@@ -440,7 +440,7 @@ describe("App.handleNewSession", () => {
         streamlitVersion: "streamlitVersion",
         pythonVersion: "pythonVersion",
       },
-      sessionState: {
+      sessionStatus: {
         runOnSave: false,
         scriptIsRunning: false,
       },
