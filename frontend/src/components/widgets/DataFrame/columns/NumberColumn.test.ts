@@ -14,29 +14,33 @@
  * limitations under the License.
  */
 
-import { DataType, Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 import { BaseColumnProps } from "./utils"
 import NumberColumn, { NumberColumnParams } from "./NumberColumn"
 
-const MOCK_FLOAT_QUIVER_TYPE: QuiverType = {
+import { DataType, Type as ArrowType } from "src/lib/Quiver"
+
+import { BaseColumnProps, isErrorCell } from "./utils"
+import NumberColumn, { NumberColumnParams } from "./NumberColumn"
+
+const MOCK_FLOAT_ARROW_TYPE: ArrowType = {
   pandas_type: "float64",
   numpy_type: "float64",
 }
 
-const MOCK_INT_QUIVER_TYPE: QuiverType = {
+const MOCK_INT_ARROW_TYPE: ArrowType = {
   pandas_type: "int64",
   numpy_type: "int64",
 }
 
-const MOCK_UINT_QUIVER_TYPE: QuiverType = {
+const MOCK_UINT_ARROW_TYPE: ArrowType = {
   pandas_type: "uint64",
   numpy_type: "uint64",
 }
 
 const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   id: "1",
-  title: "A number",
+  title: "Number column",
   indexNumber: 0,
   isEditable: false,
   isHidden: false,
@@ -45,28 +49,24 @@ const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
 }
 
 function getNumberColumn(
-  quiverType: QuiverType,
+  arrowType: ArrowType,
   params?: NumberColumnParams
 ): ReturnType<typeof NumberColumn> {
   return NumberColumn({
     ...NUMBER_COLUMN_TEMPLATE,
-    quiverType,
+    arrowType,
     columnTypeMetadata: params,
   } as BaseColumnProps)
 }
 
 describe("NumberColumn", () => {
-  it("alignes numbers to the right", () => {
-    const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE)
-    const mockCell = mockColumn.getCell("1.123")
-    expect(mockCell.contentAlign).toEqual("right")
-  })
-
   it("creates a valid column instance", () => {
-    const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE)
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+    expect(mockColumn.kind).toEqual("number")
     expect(mockColumn.title).toEqual(NUMBER_COLUMN_TEMPLATE.title)
     expect(mockColumn.id).toEqual(NUMBER_COLUMN_TEMPLATE.id)
     expect(mockColumn.isEditable).toEqual(NUMBER_COLUMN_TEMPLATE.isEditable)
+    expect(mockColumn.sortMode).toEqual("smart")
 
     const mockCell = mockColumn.getCell("1.234")
     expect(mockCell.kind).toEqual(GridCellKind.Number)
@@ -74,7 +74,15 @@ describe("NumberColumn", () => {
     expect((mockCell as NumberCell).data).toEqual(1.234)
   })
 
+  it("alignes numbers to the right", () => {
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+    const mockCell = mockColumn.getCell("1.123")
+    expect(mockCell.contentAlign).toEqual("right")
+  })
+
   it.each([
+    [true, 1],
+    [false, 0],
     ["4.12", 4.12],
     ["-4.12", -4.12],
     ["4", 4],
@@ -87,7 +95,7 @@ describe("NumberColumn", () => {
   ])(
     "supports float64 value (%p parsed as %p)",
     (input: DataType | null | undefined, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE)
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
@@ -107,7 +115,7 @@ describe("NumberColumn", () => {
   ])(
     "supports integer value (%p parsed as %p)",
     (input: DataType | null, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_INT_QUIVER_TYPE)
+      const mockColumn = getNumberColumn(MOCK_INT_ARROW_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
@@ -127,7 +135,7 @@ describe("NumberColumn", () => {
   ])(
     "supports unsigned integer value (%p parsed as %p)",
     (input: DataType | null, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_UINT_QUIVER_TYPE)
+      const mockColumn = getNumberColumn(MOCK_UINT_ARROW_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
@@ -144,7 +152,7 @@ describe("NumberColumn", () => {
   ])(
     "converts value to precision %p (%p parsed to %p)",
     (precision: number, input: DataType, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE, {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         precision,
       })
       const mockCell = mockColumn.getCell(input)
@@ -160,7 +168,7 @@ describe("NumberColumn", () => {
   ])(
     "supports minimal value %p (%p parsed to %p)",
     (min: number, input: DataType, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE, {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         min,
       })
       const mockCell = mockColumn.getCell(input)
@@ -176,11 +184,20 @@ describe("NumberColumn", () => {
   ])(
     "supports maximal value %p (%p parsed to %p)",
     (max: number, input: DataType, value: number | null) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_QUIVER_TYPE, {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         max,
       })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(value)
+    }
+  )
+
+  it.each([[[]], ["foo"], [[1, 2]], ["123.124.123"], ["--123"], ["2,,2"]])(
+    "%p results in error cell",
+    (input: any) => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
     }
   )
 })

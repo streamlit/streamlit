@@ -111,6 +111,7 @@ class RunWarningTest(unittest.TestCase):
                 "error",
                 "exception",
                 "expander",
+                "experimental_data_editor",
                 "file_uploader",
                 "form",
                 "form_submit_button",

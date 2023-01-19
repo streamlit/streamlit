@@ -17,8 +17,8 @@
 import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 import { sprintf } from "sprintf-js"
 
-import { DataType, Quiver } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { Quiver } from "src/lib/Quiver"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -39,9 +39,6 @@ export interface NumberColumnParams {
   readonly min?: number
   // The maximum allowed value for editing.
   readonly max?: number
-  // A formatting syntax (e.g. sprintf) to format the display value.
-  // This can be used for adding prefix or suffix, or changing the number of decimals of the display value.
-  readonly format?: string
 }
 
 /**
@@ -49,23 +46,28 @@ export interface NumberColumnParams {
  * This supports float, integer, and unsigned integer types.
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
-  const quiverTypeName = Quiver.getTypeName(props.quiverType)
+  const arrowTypeName = Quiver.getTypeName(props.arrowType)
 
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
       precision:
-        quiverTypeName.startsWith("int") ||
-        quiverTypeName === "range" ||
-        quiverTypeName.startsWith("uint")
+        arrowTypeName.startsWith("int") ||
+        arrowTypeName === "range" ||
+        arrowTypeName.startsWith("uint")
           ? 0
           : undefined,
       // if uint (unsigned int), only positive numbers are allowed
-      min: quiverTypeName.startsWith("uint") ? 0 : undefined,
+      min: arrowTypeName.startsWith("uint") ? 0 : undefined,
     },
     // User parameters:
     props.columnTypeMetadata
   ) as NumberColumnParams
+
+  const allowNegative = isNullOrUndefined(parameters.min) || parameters.min < 0
+  const fixedDecimals = notNullOrUndefined(parameters.precision)
+    ? parameters.precision
+    : undefined
 
   const cellTemplate = {
     kind: GridCellKind.Number,
@@ -75,13 +77,15 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     allowOverlay: true,
     contentAlign: props.contentAlignment || "right",
     style: props.isIndex ? "faded" : "normal",
+    allowNegative,
+    fixedDecimals,
   } as NumberCell
 
   return {
     ...props,
     kind: "number",
     sortMode: "smart",
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       let cellData: number | null = toSafeNumber(data)
       let displayData: string | undefined
 
@@ -95,9 +99,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
         // Apply precision parameter
         if (notNullOrUndefined(parameters.precision)) {
-          // TODO(lukasmasuch): Instead of applying precision here,
-          // it would be better to update the cell implementation to support precision
-          // directly in the input field.
           cellData =
             parameters.precision === 0
               ? Math.trunc(cellData)
@@ -113,18 +114,6 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         // Apply max parameter
         if (notNullOrUndefined(parameters.max)) {
           cellData = Math.min(cellData, parameters.max)
-        }
-
-        // If user has specified a format pattern in type metadata
-        if (notNullOrUndefined(parameters.format)) {
-          try {
-            displayData = sprintf(parameters.format, cellData)
-          } catch (error) {
-            return getErrorCell(
-              toSafeString(cellData),
-              `Format value (${parameters.format}) not sprintf compatible. Error: ${error}`
-            )
-          }
         }
       }
       if (displayData === undefined) {

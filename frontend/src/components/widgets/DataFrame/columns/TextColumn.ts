@@ -16,7 +16,6 @@
 
 import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -45,7 +44,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "text",
     sortMode: "default",
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       try {
         const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
         const displayData = notNullOrUndefined(cellData) ? cellData : ""
@@ -56,8 +55,9 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
           displayData,
         } as TextCell
       } catch (error) {
+        // This should never happen, but if it does, we want to show an error
         return getErrorCell(
-          toSafeString(data),
+          "Incompatible value",
           `The value cannot be interpreted as string. Error: ${error}`
         )
       }

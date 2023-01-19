@@ -41,25 +41,22 @@ type DataEditorReturn = Pick<
  * Custom hook to handle all aspects related to data editing. This includes editing cells,
  * pasting from clipboard, and appending & deleting rows.
  *
- * @param numRows - The number of rows in the table (including additions & deletions)
- * @param columns - The columns of the table
- * @param fixedNumRows - Whether the number of rows is fixed. This means that rows cannot be added or deleted
+ * @param columns - The columns of the table.
+ * @param fixedNumRows - Whether the number of rows is fixed. This means that rows cannot be added or deleted.
+ * @param editingState - The editing state of the data editor.
  * @param getCellContent - Function to get a specific cell.
  * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
  *                           This mainly changed by sorting of columns.
  * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
- * @param commitWidgetValue - Callback that allows to send the widget value to the backend (triggering a rerun).
- * @param clearSelection - Callback that allows to clear the current selections in the table.
- * @param setNumRows - Callback that allows to set the number of rows in the table.
- *                     This is required when rows are added or removed.
- * @param editingState - The editing state of the data editor.
+ * @param applyEdits - Callback that needs to be called on all edits. This will also trigger a rerun
+ *                     and send widget state to the backend.
  *
  * @returns Glide-data-grid compatible functions for editing capabilities.
  */
 function useDataEditor(
-  numRows: number,
   columns: BaseColumn[],
   fixedNumRows: boolean,
+  editingState: React.MutableRefObject<EditingState>,
   getCellContent: ([col, row]: readonly [number, number]) => GridCell,
   getOriginalIndex: (index: number) => number,
   refreshCells: (
@@ -67,10 +64,7 @@ function useDataEditor(
       cell: [number, number]
     }[]
   ) => void,
-  commitWidgetValue: () => void,
-  clearSelection: () => void,
-  setNumRows: (numRows: number) => void,
-  editingState: React.MutableRefObject<EditingState>
+  applyEdits: (clearSelection?: boolean, triggerRerun?: boolean) => void
 ): DataEditorReturn {
   const onCellEdited = React.useCallback(
     (
@@ -102,15 +96,9 @@ function useDataEditor(
         lastUpdated: performance.now(),
       })
 
-      commitWidgetValue()
+      applyEdits()
     },
-    [
-      columns,
-      editingState,
-      getOriginalIndex,
-      getCellContent,
-      commitWidgetValue,
-    ]
+    [columns, editingState, getOriginalIndex, getCellContent, applyEdits]
   )
 
   const onRowAppended = React.useCallback(() => {
@@ -119,7 +107,8 @@ function useDataEditor(
       newRow.set(column.indexNumber, column.getCell(undefined))
     })
     editingState.current.addRow(newRow)
-    setNumRows(editingState.current.getNumRows())
+    // TODO(lukasmasuch): should we really trigger a rerun here?
+    applyEdits(false, false)
   }, [columns, editingState])
 
   const onDelete = React.useCallback(
@@ -138,9 +127,7 @@ function useDataEditor(
         })
         // We need to delete all rows at once, so that the indexes work correct
         editingState.current.deleteRows(rowsToDelete)
-        setNumRows(editingState.current.getNumRows())
-        clearSelection()
-        commitWidgetValue()
+        applyEdits(true)
         return false
       }
       if (selection.current?.range) {
@@ -171,14 +158,14 @@ function useDataEditor(
         }
 
         if (updatedCells.length > 0) {
-          commitWidgetValue()
+          applyEdits()
           refreshCells(updatedCells)
         }
         return false
       }
       return true
     },
-    [columns, editingState, refreshCells, getOriginalIndex, commitWidgetValue]
+    [columns, editingState, refreshCells, getOriginalIndex, applyEdits]
   )
 
   const onPaste = React.useCallback(
@@ -189,7 +176,7 @@ function useDataEditor(
 
       for (let row = 0; row < values.length; row++) {
         const rowData = values[row]
-        if (row + targetRow >= numRows) {
+        if (row + targetRow >= editingState.current.getNumRows()) {
           if (fixedNumRows) {
             // Only add new rows if editing mode is dynamic, otherwise break here
             break
@@ -210,45 +197,36 @@ function useDataEditor(
           }
 
           const column = columns[colIndex]
+          // Only add to columns that are editable:
+          if (column.isEditable) {
+            const newCell = column.getCell(pasteDataValue)
+            // We are not editing cells ff the pasted value leads to an error:
+            if (!isErrorCell(newCell)) {
+              const originalCol = column.indexNumber
+              const originalRow = editingState.current.getOriginalRowIndex(
+                getOriginalIndex(rowIndex)
+              )
+              const currentValue = column.getCellValue(
+                getCellContent([colIndex, rowIndex])
+              )
+              const newValue = column.getCellValue(newCell)
+              // Edit the cell only if the value actually changed:
+              if (newValue !== currentValue) {
+                editingState.current.setCell(originalCol, originalRow, {
+                  ...newCell,
+                  lastUpdated: performance.now(),
+                })
 
-          if (!column.isEditable) {
-            // Column is not editable -> just ignore
-            continue
+                updatedCells.push({
+                  cell: [colIndex, rowIndex],
+                })
+              }
+            }
           }
-
-          const newCell = column.getCell(pasteDataValue)
-          if (isErrorCell(newCell)) {
-            // If new cell value leads to error -> just ignore
-            continue
-          }
-
-          const originalCol = column.indexNumber
-          const originalRow = editingState.current.getOriginalRowIndex(
-            getOriginalIndex(rowIndex)
-          )
-
-          const currentValue = column.getCellValue(
-            getCellContent([colIndex, rowIndex])
-          )
-
-          const newValue = column.getCellValue(newCell)
-          if (newValue === currentValue) {
-            // No editing is required since the values did not change
-            continue
-          }
-
-          editingState.current.setCell(originalCol, originalRow, {
-            ...newCell,
-            lastUpdated: performance.now(),
-          })
-
-          updatedCells.push({
-            cell: [colIndex, rowIndex],
-          })
         }
 
         if (updatedCells.length > 0) {
-          commitWidgetValue()
+          applyEdits()
           refreshCells(updatedCells)
         }
       }
@@ -257,12 +235,11 @@ function useDataEditor(
     },
     [
       columns,
-      numRows,
       editingState,
       getOriginalIndex,
       getCellContent,
       onRowAppended,
-      commitWidgetValue,
+      applyEdits,
       refreshCells,
     ]
   )

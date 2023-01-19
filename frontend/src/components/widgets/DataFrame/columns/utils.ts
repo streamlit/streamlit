@@ -27,8 +27,8 @@ import {
 import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
 
-import { DataType, Type as QuiverType } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { Type as ArrowType } from "src/lib/Quiver"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 /**
  * Interface used for defining the properties (configuration options) of a column.
@@ -41,8 +41,8 @@ export interface BaseColumnProps {
   readonly title: string
   // The index number of the column.
   readonly indexNumber: number
-  // The quiver data type of the column.
-  readonly quiverType: QuiverType
+  // The arrow data type of the column.
+  readonly arrowType: ArrowType
   // If `True`, the column can be edited.
   readonly isEditable: boolean
   // If `True`, the column is hidden (will not be shown).
@@ -74,7 +74,7 @@ export interface BaseColumn extends BaseColumnProps {
   // raw: Sorts based on the actual type of the cell data value.
   readonly sortMode: "default" | "raw" | "smart"
   // Get a cell with the provided data for the column type.
-  getCell(data?: DataType): GridCell
+  getCell(data?: any): GridCell
   // Get the raw cell of a provided cell.
   getCellValue(cell: GridCell): any | null
 }
@@ -203,11 +203,11 @@ export function mergeColumnParameters(
   defaultParams: Record<string, any> | undefined | null,
   userParams: Record<string, any> | undefined | null
 ): Record<string, any> {
-  if (!notNullOrUndefined(defaultParams)) {
+  if (isNullOrUndefined(defaultParams)) {
     return userParams || {}
   }
 
-  if (!notNullOrUndefined(userParams)) {
+  if (isNullOrUndefined(userParams)) {
     return defaultParams || {}
   }
 
@@ -223,11 +223,21 @@ export function mergeColumnParameters(
  * @returns The converted array or an empty array if the value cannot be interpreted as an array.
  */
 export function toSafeArray(data: any): any[] {
-  if (!notNullOrUndefined(data)) {
+  if (isNullOrUndefined(data)) {
     return []
   }
 
+  if (typeof data === "number" || typeof data === "boolean") {
+    // Single number or boolean
+    return [data]
+  }
+
   if (typeof data === "string") {
+    if (data === "") {
+      // Empty string
+      return []
+    }
+
     // Try to parse string to an array
     if (data.trim().startsWith("[") && data.trim().endsWith("]")) {
       // Support for JSON arrays: ["foo", 1, null, "test"]
@@ -293,8 +303,14 @@ export function toSafeString(data: any): string {
  * @returns The converted number or null if the value cannot be interpreted as a number.
  */
 export function toSafeNumber(value: any): number | null {
-  if (!notNullOrUndefined(value)) {
+  // TODO(lukasmasuch): Should this return null as replacement for NaN?
+
+  if (isNullOrUndefined(value)) {
     return null
+  }
+
+  if (Array.isArray(value)) {
+    return NaN
   }
 
   if (typeof value === "string") {
@@ -331,6 +347,8 @@ export function toSafeNumber(value: any): number | null {
  * @returns The formatted number as a string.
  */
 export function formatNumber(value: number, maxPrecision = 4): string {
+  // TODO(lukasmasuch): Should we provide an option to keep the 0 suffixes?
+
   if (!Number.isNaN(value) && Number.isFinite(value)) {
     if (maxPrecision === 0) {
       // Numbro is unable to format the numb with 0 decimals.

@@ -112,7 +112,7 @@ const drawMissingCells: DrawCustomCellCallback = args => {
  * The main component used by dataframe & data_editor to render an editable table.
  *
  * @param element - The element's proto message
- * @param data - The quiver data to render (extracted from the proto message)
+ * @param data - The Arrow data to render (extracted from the proto message)
  * @param width - The width of the container
  * @param height - The height of the container
  * @param disabled - Whether the widget is disabled
@@ -128,6 +128,7 @@ function DataFrame({
   widgetMgr,
   isFullScreen,
 }: DataFrameProps): ReactElement {
+  const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
   const extraCellArgs = useExtraCells()
@@ -192,45 +193,68 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  const commitWidgetValue = React.useCallback(
-    // Use debounce to prevent rapid updates to the widget state.
-    debounce(DEBOUNCE_TIME_MS, () => {
-      const currentEditingState = editingState.current.toJson(columns)
-      let currentWidgetState = widgetMgr.getStringValue(element as WidgetInfo)
-
-      if (currentWidgetState === undefined) {
-        // Create an empty widget state
-        currentWidgetState = new EditingState(0).toJson([])
+  /**
+   * This callback should be called after any edits have been applied to the data.
+   * It will finish up the editing by updating the number of rows, clearing the selection,
+   * and triggering a rerun of the script.
+   *
+   * @param clearSelections - Whether to clear the selection. This is usually done after deleting rows.
+   * @param triggerRerun - Whether to trigger a rerun of the script after applying edits
+   */
+  const applyEdits = React.useCallback(
+    (clearSelections = false, triggerRerun = true) => {
+      if (numRows !== editingState.current.getNumRows()) {
+        // Reset the number of rows if it has been changed in the editing state
+        setNumRows(editingState.current.getNumRows())
       }
 
-      // Only update if there is actually a difference between editing and widget state
-      if (currentEditingState !== currentWidgetState) {
-        widgetMgr.setStringValue(element as WidgetInfo, currentEditingState, {
-          fromUi: true,
-        })
+      if (clearSelections) {
+        clearSelection()
       }
-    }),
-    [widgetMgr, element]
+
+      if (triggerRerun) {
+        // Use debounce to prevent rapid updates to the widget state.
+        debounce(DEBOUNCE_TIME_MS, () => {
+          const currentEditingState = editingState.current.toJson(columns)
+          let currentWidgetState = widgetMgr.getStringValue(
+            element as WidgetInfo
+          )
+
+          if (currentWidgetState === undefined) {
+            // Create an empty widget state
+            currentWidgetState = new EditingState(0).toJson([])
+          }
+
+          // Only update if there is actually a difference between editing and widget state
+          if (currentEditingState !== currentWidgetState) {
+            widgetMgr.setStringValue(
+              element as WidgetInfo,
+              currentEditingState,
+              {
+                fromUi: true,
+              }
+            )
+          }
+        })()
+      }
+    },
+    [widgetMgr, element, numRows]
   )
 
   const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
-    numRows,
     columns,
     element.editingMode !== ArrowProto.EditingMode.DYNAMIC,
+    editingState,
     getCellContent,
     getOriginalIndex,
     refreshCells,
-    commitWidgetValue,
-    clearSelection,
-    setNumRows,
-    editingState
+    applyEdits
   )
 
   const { columns: glideColumns, onColumnResize } = useColumnSizer(
     columns.map(column => toGlideColumn(column))
   )
 
-  const resizableRef = React.useRef<Resizable>(null)
   const {
     rowHeight,
     minHeight,
@@ -241,13 +265,14 @@ function DataFrame({
     setResizableSize,
   } = useTableSizer(
     element,
-    resizableRef,
     numRows,
     containerWidth,
     containerHeight,
     isFullScreen
   )
 
+  // This is used as fallback in case the table is empty to
+  // insert cells indicating this state:
   const getEmptyStateContent = React.useCallback(
     ([_col, _row]: readonly [number, number]): GridCell => {
       return {
@@ -264,6 +289,7 @@ function DataFrame({
     [columns]
   )
 
+  // This is required for the form clearing functionality works:
   React.useEffect(() => {
     const formClearHelper = new FormClearHelper()
     formClearHelper.manageFormClearListener(
@@ -293,6 +319,7 @@ function DataFrame({
         defaultSize={resizableSize}
         style={{
           border: `1px solid ${theme.borderColor}`,
+          borderRadius: `${theme.tableBorderRadius}`,
         }}
         minHeight={minHeight}
         maxHeight={maxHeight}
@@ -390,7 +417,6 @@ function DataFrame({
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
           }}
-          onRowMoved={(s, e) => window.alert(`Moved row ${s} to ${e}`)}
           // Add support for additional cells:
           customRenderers={[
             ...extraCellArgs.customRenderers,

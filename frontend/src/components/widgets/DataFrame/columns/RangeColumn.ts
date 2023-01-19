@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  GridCell,
+  GridCellKind,
+  LoadingCell,
+} from "@glideapps/glide-data-grid"
 import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
-import { DataType } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -32,14 +35,14 @@ import {
   toSafeNumber,
 } from "./utils"
 
-interface RangeColumnParams {
+export interface RangeColumnParams {
   // The minimum permitted value. Defaults to 0.
-  readonly min: number
+  readonly min?: number
   // The maximum permitted value. Defaults to 1.
-  readonly max: number
+  readonly max?: number
   // The stepping interval. Defaults to 0.01.
   // Mainly useful once we provide editing capabilities.
-  readonly step: number
+  readonly step?: number
 }
 
 /**
@@ -80,15 +83,41 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
     kind: "range",
     sortMode: "smart",
     isEditable: false, // Range column is always readonly
-    getCell(data?: DataType): GridCell {
-      if (!notNullOrUndefined(data)) {
+    getCell(data?: any): GridCell {
+      if (isNullOrUndefined(data)) {
         return getEmptyCell()
+      }
+
+      if (
+        isNullOrUndefined(parameters.min) ||
+        isNullOrUndefined(parameters.max) ||
+        Number.isNaN(parameters.min) ||
+        Number.isNaN(parameters.max) ||
+        parameters.min >= parameters.max
+      ) {
+        return getErrorCell(
+          "Invalid min/max parameters",
+          `The min (${parameters.min}) and max (${parameters.max}) parameters must be valid numbers.`
+        )
+      }
+
+      if (
+        isNullOrUndefined(parameters.step) ||
+        Number.isNaN(parameters.step)
+      ) {
+        return getErrorCell(
+          "Invalid step parameter",
+          `The step parameter (${parameters.step}) must be a valid number.`
+        )
       }
 
       const cellData = toSafeNumber(data)
 
-      if (Number.isNaN(cellData) || !notNullOrUndefined(cellData)) {
-        return getErrorCell(toSafeString(data), "The value is not a number.")
+      if (Number.isNaN(cellData) || isNullOrUndefined(cellData)) {
+        return getErrorCell(
+          toSafeString(data),
+          "The value cannot be interpreted as a number."
+        )
       }
 
       // TODO(lukasmasuch): count decimals of step and use it for formatting?
@@ -97,19 +126,29 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
         Math.ceil(cellData / parameters.step) * parameters.step
       )
 
+      // If the value is outside the range, we scale it to the min/max
+      // for the visualization.
+      const normalizeCellValue = Math.min(
+        parameters.max,
+        Math.max(parameters.min, cellData)
+      )
+
       return {
         ...cellTemplate,
-        isMissingValue: !notNullOrUndefined(data),
-        copyData: String(data),
+        isMissingValue: isNullOrUndefined(data),
+        copyData: String(cellData),
         data: {
           ...cellTemplate.data,
-          value: cellData,
-          label: displayValue,
+          value: normalizeCellValue,
+          label: displayValue, // TODO(lukasmasuch): add empty prefix to align with other cells based on min/max
           measureLabel: displayValue,
         },
       } as RangeCellType
     },
-    getCellValue(cell: RangeCellType): number | null {
+    getCellValue(cell: RangeCellType | LoadingCell): number | null {
+      if (cell.kind === GridCellKind.Loading) {
+        return null
+      }
       return cell.data?.value === undefined ? null : cell.data?.value
     },
   }

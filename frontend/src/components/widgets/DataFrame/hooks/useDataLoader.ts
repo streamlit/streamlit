@@ -17,18 +17,17 @@
 import React from "react"
 
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
-import { useTheme } from "@emotion/react"
 
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { notNullOrUndefined } from "src/lib/utils"
-import { Theme } from "src/theme"
 import { logWarning, logError } from "src/lib/log"
+
 import {
-  getColumnTypeFromQuiver,
-  getColumnsFromQuiver,
-  getCellFromQuiver,
-} from "src/components/widgets/DataFrame/quiverUtils"
+  getColumnTypeFromArrow,
+  getColumnsFromArrow,
+  getCellFromArrow,
+} from "src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
 import {
   BaseColumn,
@@ -39,14 +38,14 @@ import {
 } from "src/components/widgets/DataFrame/columns"
 
 // Using this ID for column config will apply the config to all index columns
-const INDEX_IDENTIFIER = "index"
+export const INDEX_IDENTIFIER = "index"
 // Prefix used in the config column mapping when referring to a column via the numeric index
-const NUMERIC_COLUMN_ID_PREFIX = "col:"
+export const NUMERIC_COLUMN_ID_PREFIX = "col:"
 
 /**
  * Options to configure columns.
  */
-interface ColumnConfigProps {
+export interface ColumnConfigProps {
   width?: number
   title?: string
   type?: string
@@ -64,7 +63,7 @@ interface ColumnConfigProps {
  *
  * @return the column properties with the config applied.
  */
-function applyColumnConfig(
+export function applyColumnConfig(
   columnProps: BaseColumnProps,
   columnsConfig: Map<string | number, ColumnConfigProps>
 ): BaseColumnProps {
@@ -80,7 +79,7 @@ function applyColumnConfig(
     columnsConfig.has(`${NUMERIC_COLUMN_ID_PREFIX}${columnProps.indexNumber}`)
   ) {
     columnConfig = columnsConfig.get(
-      `${NUMERIC_COLUMN_ID_PREFIX}:${columnProps.indexNumber}`
+      `${NUMERIC_COLUMN_ID_PREFIX}${columnProps.indexNumber}`
     )
   } else if (columnProps.isIndex && columnsConfig.has(INDEX_IDENTIFIER)) {
     columnConfig = columnsConfig.get(INDEX_IDENTIFIER)
@@ -146,7 +145,7 @@ function applyColumnConfig(
  *
  * @returns the user-defined column configuration.
  */
-function getColumnConfig(element: ArrowProto): Map<string, any> {
+export function getColumnConfig(element: ArrowProto): Map<string, any> {
   if (!element.columns) {
     return new Map()
   }
@@ -171,7 +170,7 @@ type DataLoaderReturn = {
  *
  * @returns the column creator of the corresponding column type.
  */
-function getColumnType(column: BaseColumnProps): ColumnCreator {
+export function getColumnType(column: BaseColumnProps): ColumnCreator {
   // Create a column instance based on the column properties
   let ColumnType: ColumnCreator | undefined
   if (notNullOrUndefined(column.customType)) {
@@ -184,8 +183,8 @@ function getColumnType(column: BaseColumnProps): ColumnCreator {
     }
   }
   if (!notNullOrUndefined(ColumnType)) {
-    // Load based on quiver type
-    ColumnType = getColumnTypeFromQuiver(column.quiverType)
+    // Load based on arrow type
+    ColumnType = getColumnTypeFromArrow(column.arrowType)
   }
   return ColumnType
 }
@@ -209,7 +208,6 @@ function useDataLoader(
   disabled: boolean,
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
-  const theme: Theme = useTheme()
   // TODO(lukasmasuch): We might use state to store the column config as additional optimization?
   const columnsConfig = getColumnConfig(element)
 
@@ -218,7 +216,7 @@ function useDataLoader(
     (notNullOrUndefined(element.width) && element.width > 0)
 
   // Converts the columns from Arrow into columns compatible with glide-data-grid
-  const columns: BaseColumn[] = getColumnsFromQuiver(data)
+  const columns: BaseColumn[] = getColumnsFromArrow(data)
     .map(column => {
       // Apply column configurations
       let updatedColumn = {
@@ -281,9 +279,9 @@ function useDataLoader(
       }
 
       try {
-        // Quiver has the header in first row
-        const quiverCell = data.getCell(originalRow + 1, originalCol)
-        return getCellFromQuiver(column, quiverCell, data.cssStyles)
+        // Arrow has the header in first row
+        const arrowCell = data.getCell(originalRow + 1, originalCol)
+        return getCellFromArrow(column, arrowCell, data.cssStyles)
       } catch (error) {
         logError(error)
         return getErrorCell(

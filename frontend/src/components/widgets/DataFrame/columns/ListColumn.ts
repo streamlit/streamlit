@@ -16,7 +16,6 @@
 
 import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { DataType } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -43,7 +42,8 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     kind: "list",
     sortMode: "default",
     isEditable: false, // List column is always readonly
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
+      // TODO(lukasmasuch): if notNullOrUndefined -> use empty cell to return null value
       return {
         ...cellTemplate,
         data: toSafeArray(data),

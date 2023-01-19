@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { Resizable, Size as ResizableSize } from "re-resizable"
+import { Size as ResizableSize } from "re-resizable"
 
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { notNullOrUndefined } from "src/lib/utils"
@@ -32,15 +32,6 @@ const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
 const DEFAULT_TABLE_HEIGHT = 400
 
-export interface Props {
-  element: ArrowProto
-  resizableRef: React.RefObject<Resizable>
-  numRows: number
-  containerWidth: number
-  containerHeight?: number
-  isFullScreen?: boolean
-}
-
 export type AutoSizerReturn = {
   rowHeight: number
   minHeight: number
@@ -51,11 +42,14 @@ export type AutoSizerReturn = {
   setResizableSize: React.Dispatch<React.SetStateAction<ResizableSize>>
 }
 
+export function calculateMaxHeight(numRows: number): number {
+  // +2 pixels for borders
+  return Math.max(numRows * ROW_HEIGHT + 1 + 2, MIN_TABLE_HEIGHT)
+}
 /**
  * A custom React hook that manages all aspects related to the size of the table.
  *
  * @param element - The ArrowProto element
- * @param resizableRef - The React ref to the resizable table container
  * @param numRows - The number of rows in the table
  * @param containerWidth - The width of the surrounding container
  * @param containerHeight - The height of the surrounding container
@@ -65,21 +59,15 @@ export type AutoSizerReturn = {
  */
 function useTableSizer(
   element: ArrowProto,
-  resizableRef: React.RefObject<Resizable>,
   numRows: number,
   containerWidth: number,
   containerHeight?: number,
   isFullScreen?: boolean
 ): AutoSizerReturn {
-  // Automatic table height calculation: numRows +1 because of header, and +2 pixels for borders
-  let maxHeight = Math.max(
-    (numRows + 1) * ROW_HEIGHT +
-      1 +
-      2 +
-      (element.editingMode === ArrowProto.EditingMode.DYNAMIC
-        ? ROW_HEIGHT
-        : 0),
-    MIN_TABLE_HEIGHT
+  let maxHeight = calculateMaxHeight(
+    numRows +
+      1 + // Column header row
+      (element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0) // Trailing row
   )
 
   let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
@@ -125,11 +113,7 @@ function useTableSizer(
   React.useLayoutEffect(() => {
     // This prevents weird table resizing behavior if the container width
     // changes and the table uses the full container width.
-    if (
-      resizableRef.current &&
-      element.useContainerWidth &&
-      resizableSize.width === "100%"
-    ) {
+    if (element.useContainerWidth && resizableSize.width === "100%") {
       setResizableSize({
         width: containerWidth,
         height: resizableSize.height,
@@ -138,31 +122,27 @@ function useTableSizer(
   }, [containerWidth])
 
   React.useLayoutEffect(() => {
-    if (resizableRef.current) {
-      // Reset the height if the number of rows changes (e.g. via add_rows)
-      setResizableSize({
-        width: resizableSize.width,
-        height: initialHeight,
-      })
-    }
+    // Reset the height if the number of rows changes (e.g. via add_rows)
+    setResizableSize({
+      width: resizableSize.width,
+      height: initialHeight,
+    })
   }, [numRows])
 
   React.useLayoutEffect(() => {
-    if (resizableRef.current) {
-      if (isFullScreen) {
-        const stretchColumns: boolean =
-          element.useContainerWidth ||
-          (notNullOrUndefined(element.width) && element.width > 0)
-        setResizableSize({
-          width: stretchColumns ? maxWidth : "100%",
-          height: maxHeight,
-        })
-      } else {
-        setResizableSize({
-          width: initialWidth || "100%",
-          height: initialHeight,
-        })
-      }
+    if (isFullScreen) {
+      const stretchColumns: boolean =
+        element.useContainerWidth ||
+        (notNullOrUndefined(element.width) && element.width > 0)
+      setResizableSize({
+        width: stretchColumns ? maxWidth : "100%",
+        height: maxHeight,
+      })
+    } else {
+      setResizableSize({
+        width: initialWidth || "100%",
+        height: initialHeight,
+      })
     }
   }, [isFullScreen])
 

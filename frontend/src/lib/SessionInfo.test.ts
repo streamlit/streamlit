@@ -58,7 +58,7 @@ test("Can be initialized from a protobuf", () => {
         streamlitVersion: "streamlitVersion",
         pythonVersion: "pythonVersion",
       },
-      sessionState: {
+      sessionStatus: {
         runOnSave: false,
         scriptIsRunning: false,
       },

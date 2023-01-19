@@ -17,7 +17,7 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
-import { DataType, Quiver } from "src/lib/Quiver"
+import { Quiver } from "src/lib/Quiver"
 import { notNullOrUndefined } from "src/lib/utils"
 
 import {
@@ -29,7 +29,7 @@ import {
   mergeColumnParameters,
 } from "./utils"
 
-interface CategoricalColumnParams {
+export interface CategoricalColumnParams {
   /** A list of options available in the dropdown.
    * Every value in the column needs to match one of the options.
    */
@@ -45,7 +45,7 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
     // Default parameters:
     {
       options:
-        Quiver.getTypeName(props.quiverType) === "boolean"
+        Quiver.getTypeName(props.arrowType) === "bool"
           ? ["true", "false"]
           : [],
     },
@@ -73,7 +73,7 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "categorical",
     sortMode: "default",
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
       // Empty string refers to a missing value
       let cellData = ""
       if (notNullOrUndefined(data)) {

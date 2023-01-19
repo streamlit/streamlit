@@ -65,7 +65,7 @@ class EditingState {
         row.forEach((cell: GridCell, colIndex: number, _map) => {
           const column = columnsByIndex.get(colIndex)
           if (column) {
-            currentState.edited_cells[`${colIndex}:${rowIndex}`] =
+            currentState.edited_cells[`${rowIndex}:${colIndex}`] =
               column.getCellValue(cell)
           }
         })
