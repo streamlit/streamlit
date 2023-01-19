@@ -428,6 +428,8 @@ class Selectbox(Element, Widget, Generic[T]):
 
     @property
     def index(self) -> int:
+        if len(self.options) == 0:
+            return 0
         return self.options.index(str(self.value))
 
     @property
