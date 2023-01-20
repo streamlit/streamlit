@@ -30,7 +30,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Pattern
 
 from streamlit import type_util, util
-from streamlit.runtime.caching.cache_errors import CacheType, UnhashableTypeError
+from streamlit.runtime.caching.cache_errors import UnhashableTypeError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.

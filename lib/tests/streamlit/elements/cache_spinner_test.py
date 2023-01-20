@@ -14,6 +14,8 @@
 
 """Unit tests for cache's show_spinner option."""
 
+from unittest.mock import Mock, patch
+
 import streamlit as st
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -34,6 +36,7 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
     option by inspecting the report queue.
     """
 
+    @patch("streamlit.runtime.legacy_caching.caching.show_deprecation_warning", Mock())
     def test_with_spinner(self):
         """If the show_spinner flag is set, there should be one element in the
         report queue.
@@ -41,6 +44,7 @@ class CacheSpinnerTest(DeltaGeneratorTestCase):
         function_with_spinner()
         self.assertFalse(self.forward_msg_queue.is_empty())
 
+    @patch("streamlit.runtime.legacy_caching.caching.show_deprecation_warning", Mock())
     def test_without_spinner(self):
         """If the show_spinner flag is not set, the report queue should be
         empty.

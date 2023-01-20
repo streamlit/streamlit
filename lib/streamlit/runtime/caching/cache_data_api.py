@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""@st.memo: pickle-based caching"""
+"""@st.cache_data: pickle-based caching"""
+
 from __future__ import annotations
 
 import math
@@ -29,15 +30,13 @@ from typing_extensions import Literal, TypeAlias
 
 import streamlit as st
 from streamlit import util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
-from streamlit.runtime.caching.cache_errors import (
-    CacheError,
-    CacheKeyNotFoundError,
-    CacheType,
-)
+from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunction,
@@ -56,47 +55,54 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
 
-# Streamlit directory where persisted memoized items live.
-# (This is the same directory that @st.cache persisted items live. But memoized
-# items have a different extension, so they don't overlap.)
+# Streamlit directory where persisted @st.cache_data objects live.
+# (This is the same directory that @st.cache persisted objects live.
+# But @st.cache_data uses a different extension, so they don't overlap.)
 _CACHE_DIR_NAME = "cache"
 
-MEMO_CALL_STACK = CacheWarningCallStack(CacheType.MEMO)
-MEMO_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.MEMO)
+# The extension for our persisted @st.cache_data objects.
+# (`@st.cache_data` was originally called `@st.memo`)
+_CACHED_FILE_EXTENSION = "memo"
+
+CACHE_DATA_CALL_STACK = CacheWarningCallStack(CacheType.DATA)
+CACHE_DATA_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.DATA)
 
 # The cache persistence options we support: "disk" or None
 CachePersistType: TypeAlias = Union[Literal["disk"], None]
 
 
-class MemoizedFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.memo"""
+class CacheDataFunction(CachedFunction):
+    """Implements the CachedFunction protocol for @st.cache_data"""
 
     def __init__(
         self,
         func: types.FunctionType,
         show_spinner: bool | str,
-        suppress_st_warning: bool,
         persist: CachePersistType,
         max_entries: int | None,
         ttl: float | timedelta | None,
         allow_widgets: bool,
     ):
-        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
+        super().__init__(
+            func,
+            show_spinner=show_spinner,
+            allow_widgets=allow_widgets,
+        )
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
 
     @property
     def cache_type(self) -> CacheType:
-        return CacheType.MEMO
+        return CacheType.DATA
 
     @property
     def warning_call_stack(self) -> CacheWarningCallStack:
-        return MEMO_CALL_STACK
+        return CACHE_DATA_CALL_STACK
 
     @property
     def message_call_stack(self) -> CacheMessagesCallStack:
-        return MEMO_MESSAGE_CALL_STACK
+        return CACHE_DATA_MESSAGE_CALL_STACK
 
     @property
     def display_name(self) -> str:
@@ -104,7 +110,7 @@ class MemoizedFunction(CachedFunction):
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
     def get_function_cache(self, function_key: str) -> Cache:
-        return _memo_caches.get_cache(
+        return _data_caches.get_cache(
             key=function_key,
             persist=self.persist,
             max_entries=self.max_entries,
@@ -114,12 +120,12 @@ class MemoizedFunction(CachedFunction):
         )
 
 
-class MemoCaches(CacheStatsProvider):
-    """Manages all MemoCache instances"""
+class DataCaches(CacheStatsProvider):
+    """Manages all DataCache instances"""
 
     def __init__(self):
         self._caches_lock = threading.Lock()
-        self._function_caches: dict[str, MemoCache] = {}
+        self._function_caches: dict[str, DataCache] = {}
 
     def get_cache(
         self,
@@ -129,7 +135,7 @@ class MemoCaches(CacheStatsProvider):
         ttl: int | float | timedelta | None,
         display_name: str,
         allow_widgets: bool,
-    ) -> MemoCache:
+    ) -> DataCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -153,13 +159,13 @@ class MemoCaches(CacheStatsProvider):
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug(
-                "Creating new MemoCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
+                "Creating new DataCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
                 key,
                 persist,
                 max_entries,
                 ttl,
             )
-            cache = MemoCache(
+            cache = DataCache(
                 key=key,
                 persist=persist,
                 max_entries=max_entries,
@@ -193,19 +199,40 @@ class MemoCaches(CacheStatsProvider):
         return stats
 
 
-# Singleton MemoCaches instance
-_memo_caches = MemoCaches()
+# Singleton DataCaches instance
+_data_caches = DataCaches()
 
 
-def get_memo_stats_provider() -> CacheStatsProvider:
-    """Return the StatsProvider for all memoized functions."""
-    return _memo_caches
+def get_data_cache_stats_provider() -> CacheStatsProvider:
+    """Return the StatsProvider for all @st.cache_data functions."""
+    return _data_caches
 
 
-class MemoAPI:
-    """Implements the public st.memo API: the @st.memo decorator, and
-    st.memo.clear().
+class CacheDataAPI:
+    """Implements the public st.cache_data API: the @st.cache_data decorator, and
+    st.cache_data.clear().
     """
+
+    def __init__(
+        self, decorator_metric_name: str, deprecation_warning: str | None = None
+    ):
+        """Create a CacheDataAPI instance.
+
+        Parameters
+        ----------
+        decorator_metric_name
+            The metric name to record for decorator usage. `@st.experimental_memo` is
+            deprecated, but we're still supporting it and tracking its usage separately
+            from `@st.cache_data`.
+
+        deprecation_warning
+            An optional deprecation warning to show when the API is accessed.
+        """
+
+        # Parameterize the decorator metric name.
+        # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
+        self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
+        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -221,61 +248,60 @@ class MemoAPI:
     def __call__(
         self,
         *,
-        persist: CachePersistType | bool = None,
-        show_spinner: bool | str = True,
-        suppress_st_warning: bool = False,
-        max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
+        show_spinner: bool | str = True,
+        persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
 
-    # __call__ should be a static method, but there's a mypy bug that
-    # breaks type checking for overloaded static functions:
-    # https://github.com/python/mypy/issues/7781
-    @gather_metrics("experimental_memo")
     def __call__(
         self,
         func: F | None = None,
         *,
-        persist: CachePersistType | bool = None,
-        show_spinner: bool | str = True,
-        suppress_st_warning: bool = False,
-        max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
+        show_spinner: bool | str = True,
+        persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
     ):
-        """Function decorator to memoize function executions.
+        return self._decorator(
+            func,
+            ttl=ttl,
+            max_entries=max_entries,
+            persist=persist,
+            show_spinner=show_spinner,
+            experimental_allow_widgets=experimental_allow_widgets,
+        )
 
-        Memoized data is stored in "pickled" form, which means that the return
-        value of a memoized function must be pickleable.
+    def _decorator(
+        self,
+        func: F | None = None,
+        *,
+        ttl: float | timedelta | None,
+        max_entries: int | None,
+        show_spinner: bool | str,
+        persist: CachePersistType | bool,
+        experimental_allow_widgets: bool,
+    ):
+        """Decorator to cache functions that return data (e.g. dataframe transforms,
+        database queries, ML inference).
 
-        Each caller of a memoized function gets its own copy of the cached data.
+        Cached objects are stored in "pickled" form, which means that the return
+        value of a cached function must be pickleable. Each caller of the cached
+        function gets its own copy of the cached data.
 
-        You can clear a memoized function's cache with f.clear().
+        You can clear a function's cache with `func.clear()` or clear the entire
+        cache with `st.cache_data.clear()`.
+
+        To cache global resources, use `st.cache_resource` instead.
+        Learn more about caching at [https://docs.streamlit.io/library/advanced-features/caching](https://docs.streamlit.io/library/advanced-features/caching)
 
         Parameters
         ----------
         func : callable
-            The function to memoize. Streamlit hashes the function's source code.
-
-        persist : str or boolean or None
-            Optional location to persist cached data to. Passing "disk" (or True)
-            will persist the cached data to the local disk. None (or False) will disable
-            persistence. The default is None.
-
-        show_spinner : boolean
-            Enable the spinner. Default is True to show a spinner when there is
-            a cache miss.
-
-        suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit commands from within
-            the cached function.
-
-        max_entries : int or None
-            The maximum number of entries to keep in the cache, or None
-            for an unbounded cache. (When a new entry is added to a full cache,
-            the oldest cached entry will be removed.) The default is None.
+            The function to cache. Streamlit hashes the function's source code.
 
         ttl : float or timedelta or None
             The maximum number of seconds to keep an entry in the cache, or
@@ -283,8 +309,22 @@ class MemoAPI:
             Note that ttl is incompatible with `persist="disk"` - `ttl` will be
             ignored if `persist` is specified.
 
+        max_entries : int or None
+            The maximum number of entries to keep in the cache, or None
+            for an unbounded cache. (When a new entry is added to a full cache,
+            the oldest cached entry will be removed.) The default is None.
+
+        show_spinner : boolean
+            Enable the spinner. Default is True to show a spinner when there is
+            a cache miss.
+
+        persist : str or boolean or None
+            Optional location to persist cached data to. Passing "disk" (or True)
+            will persist the cached data to the local disk. None (or False) will disable
+            persistence. The default is None.
+
         experimental_allow_widgets : boolean
-            Allow widgets to be used in the memoized function. Defaults to False.
+            Allow widgets to be used in the cached function. Defaults to False.
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
@@ -294,7 +334,7 @@ class MemoAPI:
         -------
         >>> import streamlit as st
         >>>
-        >>> @st.experimental_memo
+        >>> @st.cache_data
         ... def fetch_and_clean_data(url):
         ...     # Fetch data from URL here, and then clean it up.
         ...     return data
@@ -314,18 +354,18 @@ class MemoAPI:
 
         >>> import streamlit as st
         >>>
-        >>> @st.experimental_memo(persist="disk")
+        >>> @st.cache_data(persist="disk")
         ... def fetch_and_clean_data(url):
         ...     # Fetch data from URL here, and then clean it up.
         ...     return data
 
-        By default, all parameters to a memoized function must be hashable.
+        By default, all parameters to a cached function must be hashable.
         Any parameter whose name begins with ``_`` will not be hashed. You can use
         this as an "escape hatch" for parameters that are not hashable:
 
         >>> import streamlit as st
         >>>
-        >>> @st.experimental_memo
+        >>> @st.cache_data
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
@@ -341,11 +381,11 @@ class MemoAPI:
         >>> # value - even though the _database_connection parameter was different
         >>> # in both calls.
 
-        A memoized function's cache can be procedurally cleared:
+        A cached function's cache can be procedurally cleared:
 
         >>> import streamlit as st
         >>>
-        >>> @st.experimental_memo
+        >>> @st.cache_data
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
@@ -370,20 +410,21 @@ class MemoAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
+        self._maybe_show_deprecation_warning()
+
         def wrapper(f):
             # We use wrapper function here instead of lambda function to be able to log
             # warning in case both persist="disk" and ttl parameters specified
             if persist == "disk" and ttl is not None:
                 _LOGGER.warning(
-                    f"The memoized function '{f.__name__}' has a TTL that will be "
-                    f"ignored. Persistent memo caches currently don't support TTL."
+                    f"The cached function '{f.__name__}' has a TTL that will be "
+                    f"ignored. Persistent cached functions currently don't support TTL."
                 )
             return create_cache_wrapper(
-                MemoizedFunction(
+                CacheDataFunction(
                     func=f,
                     persist=persist_string,
                     show_spinner=show_spinner,
-                    suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl,
                     allow_widgets=experimental_allow_widgets,
@@ -391,31 +432,37 @@ class MemoAPI:
             )
 
         # Support passing the params via function decorator, e.g.
-        # @st.memo(persist=True, show_spinner=False)
+        # @st.cache_data(persist=True, show_spinner=False)
         if func is None:
             return wrapper
 
         return create_cache_wrapper(
-            MemoizedFunction(
+            CacheDataFunction(
                 func=cast(types.FunctionType, func),
                 persist=persist_string,
                 show_spinner=show_spinner,
-                suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl,
                 allow_widgets=experimental_allow_widgets,
             )
         )
 
-    @staticmethod
-    @gather_metrics("clear_memo")
-    def clear() -> None:
-        """Clear all in-memory and on-disk memo caches."""
-        _memo_caches.clear_all()
+    @gather_metrics("clear_data_caches")
+    def clear(self) -> None:
+        """Clear all in-memory and on-disk data caches."""
+        self._maybe_show_deprecation_warning()
+        _data_caches.clear_all()
+
+    def _maybe_show_deprecation_warning(self):
+        """If the API is being accessed with the deprecated `st.experimental_memo` name,
+        show a deprecation warning.
+        """
+        if self._deprecation_warning is not None:
+            show_deprecation_warning(self._deprecation_warning)
 
 
-class MemoCache(Cache):
-    """Manages cached values for a single st.memo-ized function."""
+class DataCache(Cache):
+    """Manages cached values for a single st.cache_data function."""
 
     def __init__(
         self,
@@ -449,7 +496,7 @@ class MemoCache(Cache):
             for item_key, item_value in self._mem_cache.items():
                 stats.append(
                     CacheStat(
-                        category_name="st_memo",
+                        category_name="st_cache_data",
                         cache_name=self.display_name,
                         byte_length=len(item_value),
                     )
@@ -483,7 +530,7 @@ class MemoCache(Cache):
             if not ctx:
                 raise CacheKeyNotFoundError()
 
-            widget_key = entry.get_current_widget_key(ctx, CacheType.MEMO)
+            widget_key = entry.get_current_widget_key(ctx, CacheType.DATA)
             if widget_key in entry.results:
                 return entry.results[widget_key]
             else:
@@ -491,7 +538,7 @@ class MemoCache(Cache):
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
-    @gather_metrics("_cache_memo_object")
+    @gather_metrics("_cache_data_object")
     def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache.
         The value must be pickleable.
@@ -528,7 +575,7 @@ class MemoCache(Cache):
         if multi_cache_results is None:
             multi_cache_results = MultiCacheResults(widget_ids=widgets, results={})
         multi_cache_results.widget_ids.update(widgets)
-        widget_key = multi_cache_results.get_current_widget_key(ctx, CacheType.MEMO)
+        widget_key = multi_cache_results.get_current_widget_key(ctx, CacheType.DATA)
 
         result = CachedResult(value, messages, main_id, sidebar_id)
         multi_cache_results.results[widget_key] = result
@@ -643,7 +690,9 @@ class MemoCache(Cache):
 
     def _get_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""
-        return get_streamlit_file_path(_CACHE_DIR_NAME, f"{self.key}-{value_key}.memo")
+        return get_streamlit_file_path(
+            _CACHE_DIR_NAME, f"{self.key}-{value_key}.{_CACHED_FILE_EXTENSION}"
+        )
 
 
 def get_cache_path() -> str:

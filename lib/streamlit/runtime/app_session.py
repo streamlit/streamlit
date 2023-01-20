@@ -694,8 +694,8 @@ class AppSession:
 
         """
         legacy_caching.clear_cache()
-        caching.memo.clear()
-        caching.singleton.clear()
+        caching.cache_data.clear()
+        caching.cache_resource.clear()
         self._session_state.clear()
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:

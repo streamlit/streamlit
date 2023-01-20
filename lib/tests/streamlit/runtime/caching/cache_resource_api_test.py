@@ -12,18 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.singleton unit tests."""
+"""st.cache_resource unit tests."""
 
 import threading
 import unittest
 from typing import Any, List
 from unittest.mock import Mock, patch
 
+from parameterized import parameterized
 from pympler.asizeof import asizeof
 
 import streamlit as st
-from streamlit.runtime.caching import get_singleton_stats_provider, singleton_decorator
-from streamlit.runtime.caching.cache_errors import CacheType
+from streamlit.runtime.caching import (
+    cache_resource_api,
+    get_resource_cache_stats_provider,
+)
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import MultiCacheResults
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
@@ -34,27 +38,27 @@ from tests.testutil import create_mock_script_run_ctx
 
 
 def as_cached_result(value: Any) -> MultiCacheResults:
-    return _as_cached_result(value, CacheType.MEMO)
+    return _as_cached_result(value, CacheType.RESOURCE)
 
 
-class SingletonTest(unittest.TestCase):
+class CacheResourceTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self):
-        st.experimental_singleton.clear()
+        st.cache_resource.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack = []
-        singleton_decorator.SINGLETON_CALL_STACK._suppress_st_function_warning = 0
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
-        """Mutating a singleton return value is legal, and *will* affect
+        """Mutating a cache_resource return value is legal, and *will* affect
         future accessors of the data."""
 
-        @st.experimental_singleton
+        @st.cache_resource
         def f():
             return [0, 1]
 
@@ -69,18 +73,75 @@ class SingletonTest(unittest.TestCase):
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [1, 1])
 
+    def test_multiple_api_names(self):
+        """`st.experimental_singleton` is effectively an alias for `st.cache_resource`, and we
+        support both APIs while experimental_singleton is being deprecated.
+        """
+        num_calls = [0]
 
-class SingletonValidateTest(unittest.TestCase):
+        def foo():
+            num_calls[0] += 1
+            return 42
+
+        # Annotate a function with both `cache_resource` and `experimental_singleton`.
+        cache_resource_func = st.cache_resource(foo)
+        singleton_func = st.experimental_singleton(foo)
+
+        # Call both versions of the function and assert the results.
+        self.assertEqual(42, cache_resource_func())
+        self.assertEqual(42, singleton_func())
+
+        # Because these decorators share the same cache, calling both functions
+        # results in just a single call to the decorated function.
+        self.assertEqual(1, num_calls[0])
+
+    @parameterized.expand(
+        [
+            ("cache_resource", st.cache_resource, False),
+            ("experimental_singleton", st.experimental_singleton, True),
+        ]
+    )
+    @patch("streamlit.runtime.caching.cache_resource_api.show_deprecation_warning")
+    def test_deprecation_warnings(
+        self, _, decorator: Any, should_show_warning: bool, show_warning_mock: Mock
+    ):
+        """We show deprecation warnings when using `@st.experimental_singleton`, but not `@st.cache_resource`."""
+        warning_str = (
+            "`st.experimental_singleton` is deprecated. Please use the new command `st.cache_resource` instead, "
+            "which has the same behavior. More information [in our docs](https://docs.streamlit.io/library/advanced-features/caching)."
+        )
+
+        # We show the deprecation warning at declaration time:
+        @decorator
+        def foo():
+            return 42
+
+        if should_show_warning:
+            show_warning_mock.assert_called_once_with(warning_str)
+        else:
+            show_warning_mock.assert_not_called()
+
+        # And also when clearing the cache:
+        show_warning_mock.reset_mock()
+        decorator.clear()
+
+        if should_show_warning:
+            show_warning_mock.assert_called_once_with(warning_str)
+        else:
+            show_warning_mock.assert_not_called()
+
+
+class CacheResourceValidateTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self):
-        st.experimental_singleton.clear()
+        st.cache_resource.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack = []
-        singleton_decorator.SINGLETON_CALL_STACK._suppress_st_function_warning = 0
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
 
     def test_validate_success(self):
         """If we have a validate function and it returns True, we don't recompute our cached value."""
@@ -88,7 +149,7 @@ class SingletonValidateTest(unittest.TestCase):
 
         call_count: List[int] = [0]
 
-        @st.experimental_singleton(validate=validate)
+        @st.cache_resource(validate=validate)
         def f() -> int:
             call_count[0] += 1
             return call_count[0]
@@ -109,7 +170,7 @@ class SingletonValidateTest(unittest.TestCase):
 
         call_count: List[int] = [0]
 
-        @st.experimental_singleton(validate=validate)
+        @st.cache_resource(validate=validate)
         def f() -> int:
             call_count[0] += 1
             return call_count[0]
@@ -127,27 +188,27 @@ class SingletonValidateTest(unittest.TestCase):
             validate.reset_mock()
 
 
-class SingletonStatsProviderTest(unittest.TestCase):
+class CacheResourceStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
-        st.experimental_singleton.clear()
+        st.cache_resource.clear()
 
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self):
-        st.experimental_singleton.clear()
+        st.cache_resource.clear()
 
     def test_no_stats(self):
-        self.assertEqual([], get_singleton_stats_provider().get_stats())
+        self.assertEqual([], get_resource_cache_stats_provider().get_stats())
 
     def test_multiple_stats(self):
-        @st.experimental_singleton
+        @st.cache_resource
         def foo(count):
             return [3.14] * count
 
-        @st.experimental_singleton
+        @st.cache_resource
         def bar():
             return threading.Lock()
 
@@ -161,17 +222,17 @@ class SingletonStatsProviderTest(unittest.TestCase):
 
         expected = [
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14])),
             ),
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=foo_cache_name,
                 byte_length=get_byte_length(as_cached_result([3.14] * 53)),
             ),
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=bar_cache_name,
                 byte_length=get_byte_length(as_cached_result(bar())),
             ),
@@ -179,9 +240,11 @@ class SingletonStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        self.assertEqual(set(expected), set(get_singleton_stats_provider().get_stats()))
+        self.assertEqual(
+            set(expected), set(get_resource_cache_stats_provider().get_stats())
+        )
 
 
-def get_byte_length(value):
+def get_byte_length(value: Any) -> int:
     """Return the byte length of the pickled value."""
     return asizeof(value)
