@@ -14,20 +14,11 @@
  * limitations under the License.
  */
 
-describe("st.progress", () => {
-  before(() => {
-    cy.loadApp("http://localhost:3000/");
-  });
+import styled from "@emotion/styled"
+import { getGray90 } from "src/theme"
 
-  it("displays a progress bar", () => {
-    cy.get(".stProgress [role='progressbar']").should(
-      "have.attr",
-      "aria-valuenow",
-      "50"
-    );
-
-    cy.get(".stProgress").each((el, idx) => {
-      return cy.wrap(el).matchThemedSnapshots("progresbar-" + idx);
-    });
-  });
-});
+export const StyledCaptionText = styled.div(({ theme }) => ({
+  paddingBottom: theme.spacing.smPx,
+  lineHeight: theme.lineHeights.normal,
+  color: getGray90(theme),
+}))
