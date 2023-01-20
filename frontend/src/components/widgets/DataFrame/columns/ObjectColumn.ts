@@ -16,7 +16,7 @@
 
 import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -53,7 +53,7 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
           ...cellTemplate,
           data: cellData,
           displayData,
-          isMissingValue: !notNullOrUndefined(data),
+          isMissingValue: isNullOrUndefined(data),
         } as TextCell
       } catch (error) {
         return getErrorCell(

@@ -121,7 +121,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         displayData: notNullOrUndefined(cellData)
           ? formatNumber(cellData)
           : "",
-        isMissingValue: !notNullOrUndefined(cellData),
+        isMissingValue: isNullOrUndefined(cellData),
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {

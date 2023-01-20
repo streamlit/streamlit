@@ -23,7 +23,7 @@ import {
 } from "@glideapps/glide-data-grid"
 
 import { DataFrameCell, Quiver, Type as ArrowType } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -219,7 +219,7 @@ export function getColumnFromArrow(
   const title = data.columns[0][columnPosition]
   let arrowType = data.types.data[columnPosition]
 
-  if (!notNullOrUndefined(arrowType)) {
+  if (isNullOrUndefined(arrowType)) {
     // Use empty column type as fallback
     arrowType = {
       meta: null,

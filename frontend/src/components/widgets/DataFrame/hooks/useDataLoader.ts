@@ -20,7 +20,7 @@ import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 import { logWarning, logError } from "src/lib/log"
 
 import {
@@ -182,7 +182,7 @@ export function getColumnType(column: BaseColumnProps): ColumnCreator {
       )
     }
   }
-  if (!notNullOrUndefined(ColumnType)) {
+  if (isNullOrUndefined(ColumnType)) {
     // Load based on arrow type
     ColumnType = getColumnTypeFromArrow(column.arrowType)
   }
