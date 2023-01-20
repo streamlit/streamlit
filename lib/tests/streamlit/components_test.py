@@ -327,10 +327,10 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         """
 
         # Create a component instance with a key and some custom data
-        self.test_component(key="key", my_custom_data=345)
+        self.test_component(key="key", some_data=345)
         proto1 = self.get_delta_from_queue().new_element.component_instance
         self.assertJSONEqual(
-            {"key": "key", "default": None, "my_custom_data": 345}, proto1.json_args
+            {"key": "key", "default": None, "some_data": 345}, proto1.json_args
         )
 
         # Clear some ScriptRunCtx data so that we can re-register the same component
@@ -339,14 +339,15 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         self.script_run_ctx.widget_ids_this_run.clear()
 
         # Create a second component instance with the same key, and different custom data
-        self.test_component(key="key", my_custom_data=678)
+        self.test_component(key="key", some_data=678, more_data="foo")
         proto2 = self.get_delta_from_queue().new_element.component_instance
         self.assertJSONEqual(
-            {"key": "key", "default": None, "my_custom_data": 678}, proto2.json_args
+            {"key": "key", "default": None, "some_data": 678, "more_data": "foo"},
+            proto2.json_args,
         )
 
-        # The two component instances should have the same ID, despite having different
-        # data passed to them.
+        # The two component instances should have the same ID, *despite having different
+        # data passed to them.*
         self.assertEqual(proto1.id, proto2.id)
 
     def test_widget_id_without_key(self):
@@ -355,17 +356,17 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         """
 
         # Create a component instance without a key and some custom data
-        self.test_component(my_custom_data=345)
+        self.test_component(some_data=345)
         proto1 = self.get_delta_from_queue().new_element.component_instance
         self.assertJSONEqual(
-            {"key": None, "default": None, "my_custom_data": 345}, proto1.json_args
+            {"key": None, "default": None, "some_data": 345}, proto1.json_args
         )
 
         # Create a second component instance with different custom data
-        self.test_component(my_custom_data=678)
+        self.test_component(some_data=678)
         proto2 = self.get_delta_from_queue().new_element.component_instance
         self.assertJSONEqual(
-            {"key": None, "default": None, "my_custom_data": 678}, proto2.json_args
+            {"key": None, "default": None, "some_data": 678}, proto2.json_args
         )
 
         # The two component instances should have different IDs (just like any other widget would).
