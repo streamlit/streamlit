@@ -3,8 +3,8 @@ name: Cypress
 on:
   push:
     branches:
-      - 'develop'
-      - 'feature/**'
+      - "develop"
+      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest-8-cores
+    runs-on: ubuntu-latest-4-cores
 
     defaults:
       run:
@@ -33,7 +33,31 @@ jobs:
         # In case of number of workers would change, update TOTAL_WORKERS env variable in "Cypress Tests" step.
         # Be aware that specs should be sequential integers starting from 1 without gaps
         # based on logic in "Cypress Tests" step.
-        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
+        specs:
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+          ]
 
     steps:
       - name: Checkout Streamlit code
@@ -41,7 +65,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
       - name: Set Python version vars
         uses: ./.github/actions/set_python_versions
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
