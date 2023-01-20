@@ -32,6 +32,7 @@ from typing import (
     overload,
 )
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
@@ -64,11 +65,13 @@ EditableData = TypeVar(
     "EditableData",
     bound=Union[
         DataFrameGenericAlias[Any],  # covers DataFrame and Series
-        # TODO: NDArray[Any],
         Tuple[Any],
         List[Any],
         Set[Any],
         Dict[str, Any],
+        # TODO(lukasmasuch): Add support for np.ndarray
+        # but it is not possible with np.ndarray.
+        # NDArray[Any] works, but is only available in numpy>1.20.
     ],
 )
 
@@ -79,7 +82,7 @@ DataTypes: TypeAlias = Union[
     pd.Index,
     Styler,
     pa.Table,
-    # TODO: NDArray[Any],
+    "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
     List[Any],
     Set[Any],

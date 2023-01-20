@@ -374,7 +374,7 @@ def is_list_of_scalars(data: Iterable[Any]) -> bool:
     """Check if the list only contains scalar values."""
     # Overview on all value that are interpreted as scalar:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
-    return infer_dtype(data) not in ["mixed", "unknown-array"]
+    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
 
 
 def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
@@ -853,7 +853,7 @@ def convert_df_to_data_format(
     pd.Index,
     Styler,
     pa.Table,
-    # TODO: NDArray[Any],
+    np.ndarray[Any, np.dtype[Any]],
     Tuple[Any],
     List[Any],
     Set[Any],
