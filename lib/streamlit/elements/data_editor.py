@@ -269,12 +269,19 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
         A list of row additions. Each row addition is a dictionary with the
         column position as key and the new cell value as value.
     """
+    if not added_rows:
+        return
+
     index_count = df.index.nlevels or 0
+
     # This is only used if the dataframe has a range index:
-    # There seems to be a bug in older pandas versions that the RangeIndex.stop
-    # value is not updated when new rows are added to the dataframe.
-    # Therefore, we need to manually track the next value here.
-    next_range_index_value = None
+    # There seems to be a bug in older pandas versions with RangeIndex in
+    # combination with loc. As a workaround, we manually track the values here:
+    range_index_stop = None
+    range_index_step = None
+    if type(df.index) == pd.RangeIndex:
+        range_index_stop = df.index.stop
+        range_index_step = df.index.step
 
     for added_row in added_rows:
         index_value = None
@@ -294,14 +301,11 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
                     value, df.iloc[:, mapped_column].dtype
                 )
         # Append the new row to the dataframe
-        if type(df.index) == pd.RangeIndex:
-            if next_range_index_value is None:
-                next_range_index_value = df.index.stop
-            df.loc[next_range_index_value, :] = new_row
+        if range_index_stop is not None:
+            df.loc[range_index_stop, :] = new_row
             # Increment to the next range index value
-            next_range_index_value += df.index.step
-
-        elif index_value is not None and type(df.index) == pd.Index:
+            range_index_stop += range_index_step
+        elif index_value is not None:
             # TODO(lukasmasuch): we are only adding rows that have a non-None index
             # value to prevent issues in the frontend component. Also, it just overwrites
             # the row in case the index value already exists in the dataframe.
