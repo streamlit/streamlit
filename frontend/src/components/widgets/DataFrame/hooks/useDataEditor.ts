@@ -107,7 +107,6 @@ function useDataEditor(
       newRow.set(column.indexNumber, column.getCell(undefined))
     })
     editingState.current.addRow(newRow)
-    // TODO(lukasmasuch): should we really trigger a rerun here?
     applyEdits(false, false)
   }, [columns, editingState])
 
