@@ -142,6 +142,8 @@ class StreamlitTest(unittest.TestCase):
                 "cache",
                 "secrets",
                 "session_state",
+                "cache_data",
+                "cache_resource",
                 # Beta APIs:
                 "beta_container",
                 "beta_expander",

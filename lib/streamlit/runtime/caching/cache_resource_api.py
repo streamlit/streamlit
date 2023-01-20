@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""@st.singleton implementation"""
+"""@st.cache_resource implementation"""
+
 from __future__ import annotations
 
 import math
@@ -26,9 +27,11 @@ from pympler import asizeof
 from typing_extensions import TypeAlias
 
 import streamlit as st
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
-from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError, CacheType
+from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunction,
@@ -48,8 +51,8 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 _LOGGER = get_logger(__name__)
 
 
-SINGLETON_CALL_STACK = CacheWarningCallStack(CacheType.SINGLETON)
-SINGLETON_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.SINGLETON)
+CACHE_RESOURCE_CALL_STACK = CacheWarningCallStack(CacheType.RESOURCE)
+CACHE_RESOURCE_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.RESOURCE)
 
 ValidateFunc: TypeAlias = Callable[[Any], bool]
 
@@ -63,12 +66,12 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
     return (a is None and b is None) or (a is not None and b is not None)
 
 
-class SingletonCaches(CacheStatsProvider):
-    """Manages all SingletonCache instances"""
+class ResourceCaches(CacheStatsProvider):
+    """Manages all ResourceCache instances"""
 
     def __init__(self):
         self._caches_lock = threading.Lock()
-        self._function_caches: dict[str, SingletonCache] = {}
+        self._function_caches: dict[str, ResourceCache] = {}
 
     def get_cache(
         self,
@@ -78,7 +81,7 @@ class SingletonCaches(CacheStatsProvider):
         ttl: float | timedelta | None,
         validate: ValidateFunc | None,
         allow_widgets: bool,
-    ) -> SingletonCache:
+    ) -> ResourceCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -101,8 +104,8 @@ class SingletonCaches(CacheStatsProvider):
                 return cache
 
             # Create a new cache object and put it in our dict
-            _LOGGER.debug("Creating new SingletonCache (key=%s)", key)
-            cache = SingletonCache(
+            _LOGGER.debug("Creating new ResourceCache (key=%s)", key)
+            cache = ResourceCache(
                 key=key,
                 display_name=display_name,
                 max_entries=max_entries,
@@ -114,7 +117,7 @@ class SingletonCaches(CacheStatsProvider):
             return cache
 
     def clear_all(self) -> None:
-        """Clear all singleton caches."""
+        """Clear all resource caches."""
         with self._caches_lock:
             self._function_caches = {}
 
@@ -130,44 +133,47 @@ class SingletonCaches(CacheStatsProvider):
         return stats
 
 
-# Singleton SingletonCaches instance
-_singleton_caches = SingletonCaches()
+# Singleton ResourceCaches instance
+_resource_caches = ResourceCaches()
 
 
-def get_singleton_stats_provider() -> CacheStatsProvider:
-    """Return the StatsProvider for all singleton functions."""
-    return _singleton_caches
+def get_resource_cache_stats_provider() -> CacheStatsProvider:
+    """Return the StatsProvider for all @st.cache_resource functions."""
+    return _resource_caches
 
 
-class SingletonFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.singleton"""
+class CacheResourceFunction(CachedFunction):
+    """Implements the CachedFunction protocol for @st.cache_resource"""
 
     def __init__(
         self,
         func: types.FunctionType,
         show_spinner: bool | str,
-        suppress_st_warning: bool,
         max_entries: int | None,
         ttl: float | timedelta | None,
         validate: ValidateFunc | None,
         allow_widgets: bool,
     ):
-        super().__init__(func, show_spinner, suppress_st_warning, allow_widgets)
+        super().__init__(
+            func,
+            show_spinner=show_spinner,
+            allow_widgets=allow_widgets,
+        )
         self.max_entries = max_entries
         self.ttl = ttl
         self.validate = validate
 
     @property
     def cache_type(self) -> CacheType:
-        return CacheType.SINGLETON
+        return CacheType.RESOURCE
 
     @property
     def warning_call_stack(self) -> CacheWarningCallStack:
-        return SINGLETON_CALL_STACK
+        return CACHE_RESOURCE_CALL_STACK
 
     @property
     def message_call_stack(self) -> CacheMessagesCallStack:
-        return SINGLETON_MESSAGE_CALL_STACK
+        return CACHE_RESOURCE_MESSAGE_CALL_STACK
 
     @property
     def display_name(self) -> str:
@@ -175,7 +181,7 @@ class SingletonFunction(CachedFunction):
         return f"{self.func.__module__}.{self.func.__qualname__}"
 
     def get_function_cache(self, function_key: str) -> Cache:
-        return _singleton_caches.get_cache(
+        return _resource_caches.get_cache(
             key=function_key,
             display_name=self.display_name,
             max_entries=self.max_entries,
@@ -185,10 +191,31 @@ class SingletonFunction(CachedFunction):
         )
 
 
-class SingletonAPI:
-    """Implements the public st.singleton API: the @st.singleton decorator,
-    and st.singleton.clear().
+class CacheResourceAPI:
+    """Implements the public st.cache_resource API: the @st.cache_resource decorator,
+    and st.cache_resource.clear().
     """
+
+    def __init__(
+        self, decorator_metric_name: str, deprecation_warning: str | None = None
+    ):
+        """Create a CacheResourceAPI instance.
+
+        Parameters
+        ----------
+        decorator_metric_name
+            The metric name to record for decorator usage. `@st.experimental_singleton` is
+            deprecated, but we're still supporting it and tracking its usage separately
+            from `@st.cache_resource`.
+
+        deprecation_warning
+            An optional deprecation warning to show when the API is accessed.
+        """
+
+        # Parameterize the decorator metric name.
+        # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
+        self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
+        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -205,74 +232,87 @@ class SingletonAPI:
     def __call__(
         self,
         *,
-        show_spinner: bool | str = True,
-        suppress_st_warning=False,
-        max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
+        show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
     ) -> Callable[[F], F]:
         ...
 
-    # __call__ should be a static method, but there's a mypy bug that
-    # breaks type checking for overloaded static functions:
-    # https://github.com/python/mypy/issues/7781
-    @gather_metrics("experimental_singleton")
     def __call__(
         self,
         func: F | None = None,
         *,
-        show_spinner: bool | str = True,
-        suppress_st_warning=False,
-        max_entries: int | None = None,
         ttl: float | timedelta | None = None,
+        max_entries: int | None = None,
+        show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
     ):
-        """Function decorator to store singleton objects.
+        return self._decorator(
+            func,
+            ttl=ttl,
+            max_entries=max_entries,
+            show_spinner=show_spinner,
+            validate=validate,
+            experimental_allow_widgets=experimental_allow_widgets,
+        )
 
-        Each singleton object is shared across all users connected to the app.
-        Singleton objects *must* be thread-safe, because they can be accessed from
-        multiple threads concurrently.
+    def _decorator(
+        self,
+        func: F | None,
+        *,
+        ttl: float | timedelta | None,
+        max_entries: int | None,
+        show_spinner: bool | str,
+        validate: ValidateFunc | None,
+        experimental_allow_widgets: bool,
+    ):
+        """Decorator to cache functions that return global resources (e.g.
+        database connections, ML models).
 
-        (If thread-safety is an issue, consider using ``st.session_state`` to
-        store per-session singleton objects instead.)
+        Cached objects are shared across all users, sessions, and reruns. They
+        must be thread-safe because they can be accessed from multiple threads
+        concurrently. If thread safety is an issue, consider using `st.session_state`
+        to store resources per session instead.
 
-        You can clear a memoized function's cache with f.clear().
+        You can clear a function's cache with `func.clear()` or clear the entire
+        cache with `st.cache_resource.clear()`.
+
+        To cache data, use `st.cache_data` instead.
+        Learn more about caching at [https://docs.streamlit.io/library/advanced-features/caching](https://docs.streamlit.io/library/advanced-features/caching)
 
         Parameters
         ----------
         func : callable
-            The function that creates the singleton. Streamlit hashes the
+            The function that creates the cached resource. Streamlit hashes the
             function's source code.
 
-        show_spinner : boolean or string
-            Enable the spinner. Default is True to show a spinner when there is
-            a "cache miss" and the singleton is being created. If string,
-            value of show_spinner param will be used for spinner text.
-
-        suppress_st_warning : boolean
-            Suppress warnings about calling Streamlit commands from within
-            the singleton function.
+        ttl : float or timedelta or None
+            The maximum number of seconds to keep an entry in the cache, or
+            None if cache entries should not expire. The default is None.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
             for an unbounded cache. (When a new entry is added to a full cache,
             the oldest cached entry will be removed.) The default is None.
 
-        ttl : float or timedelta or None
-            The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. The default is None.
+        show_spinner : boolean or string
+            Enable the spinner. Default is True to show a spinner when there is
+            a "cache miss" and the cached resource is being created. If string,
+            value of show_spinner param will be used for spinner text.
 
         validate : callable or None
-            An optional validation function for cached data. `validate` is
-            called each time the cached value is accessed. It receives
-            the cached value as its only param; and it returns a bool result.
-            If `validate` returns False, the current cached value is discarded,
-            and the decorated function is called to compute a new value.
+            An optional validation function for cached data. `validate` is called
+            each time the cached value is accessed. It receives the cached value as
+            its only parameter and it must return a boolean. If `validate` returns
+            False, the current cached value is discarded, and the decorated function
+            is called to compute a new value. This is useful e.g. to check the
+            health of database connections.
 
         experimental_allow_widgets : boolean
-            Allow widgets to be used in the singleton function. Defaults to False.
+            Allow widgets to be used in the cached function. Defaults to False.
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
@@ -282,7 +322,7 @@ class SingletonAPI:
         -------
         >>> import streamlit as st
         >>>
-        >>> @st.experimental_singleton
+        >>> @st.cache_resource
         ... def get_database_session(url):
         ...     # Create a database session object that points to the URL.
         ...     return session
@@ -298,13 +338,13 @@ class SingletonAPI:
         >>> s3 = get_database_session(SESSION_URL_2)
         >>> # This is a different URL, so the function executes.
 
-        By default, all parameters to a singleton function must be hashable.
+        By default, all parameters to a cache_resource function must be hashable.
         Any parameter whose name begins with ``_`` will not be hashed. You can use
         this as an "escape hatch" for parameters that are not hashable:
 
         >>> import streamlit as st
         >>>
-        >>> @st.experimental_singleton
+        >>> @st.cache_resource
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
         ...     return connection
@@ -318,11 +358,11 @@ class SingletonAPI:
         >>> # value - even though the _sessionmaker parameter was different
         >>> # in both calls.
 
-        A singleton function's cache can be procedurally cleared:
+        A cache_resource function's cache can be procedurally cleared:
 
         >>> import streamlit as st
         >>>
-        >>> @st.experimental_singleton
+        >>> @st.cache_resource
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
         ...     return connection
@@ -331,14 +371,15 @@ class SingletonAPI:
         >>> # Clear all cached entries for this function.
 
         """
+        self._maybe_show_deprecation_warning()
+
         # Support passing the params via function decorator, e.g.
-        # @st.singleton(show_spinner=False)
+        # @st.cache_resource(show_spinner=False)
         if func is None:
             return lambda f: create_cache_wrapper(
-                SingletonFunction(
+                CacheResourceFunction(
                     func=f,
                     show_spinner=show_spinner,
-                    suppress_st_warning=suppress_st_warning,
                     max_entries=max_entries,
                     ttl=ttl,
                     validate=validate,
@@ -347,10 +388,9 @@ class SingletonAPI:
             )
 
         return create_cache_wrapper(
-            SingletonFunction(
+            CacheResourceFunction(
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
-                suppress_st_warning=suppress_st_warning,
                 max_entries=max_entries,
                 ttl=ttl,
                 validate=validate,
@@ -358,15 +398,22 @@ class SingletonAPI:
             )
         )
 
-    @staticmethod
-    @gather_metrics("clear_singleton")
-    def clear() -> None:
-        """Clear all singleton caches."""
-        _singleton_caches.clear_all()
+    @gather_metrics("clear_resource_caches")
+    def clear(self) -> None:
+        """Clear all cache_resource caches."""
+        self._maybe_show_deprecation_warning()
+        _resource_caches.clear_all()
+
+    def _maybe_show_deprecation_warning(self):
+        """If the API is being accessed with the deprecated `st.experimental_singleton` name,
+        show a deprecation warning.
+        """
+        if self._deprecation_warning is not None:
+            show_deprecation_warning(self._deprecation_warning)
 
 
-class SingletonCache(Cache):
-    """Manages cached values for a single st.singleton function."""
+class ResourceCache(Cache):
+    """Manages cached values for a single st.cache_resource function."""
 
     def __init__(
         self,
@@ -410,7 +457,7 @@ class SingletonCache(Cache):
                 # ScriptRunCtx does not exist (we're probably running in "raw" mode).
                 raise CacheKeyNotFoundError()
 
-            widget_key = multi_results.get_current_widget_key(ctx, CacheType.SINGLETON)
+            widget_key = multi_results.get_current_widget_key(ctx, CacheType.RESOURCE)
             if widget_key not in multi_results.results:
                 # widget_key does not exist in cache (this combination of widgets hasn't been
                 # seen for the value_key yet).
@@ -424,7 +471,7 @@ class SingletonCache(Cache):
 
             return result
 
-    @gather_metrics("_cache_singleton_object")
+    @gather_metrics("_cache_resource_object")
     def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         ctx = get_script_run_ctx()
@@ -449,7 +496,7 @@ class SingletonCache(Cache):
                 multi_results = MultiCacheResults(widget_ids=widgets, results={})
 
             multi_results.widget_ids.update(widgets)
-            widget_key = multi_results.get_current_widget_key(ctx, CacheType.SINGLETON)
+            widget_key = multi_results.get_current_widget_key(ctx, CacheType.RESOURCE)
 
             result = CachedResult(value, messages, main_id, sidebar_id)
             multi_results.results[widget_key] = result
@@ -468,7 +515,7 @@ class SingletonCache(Cache):
 
         return [
             CacheStat(
-                category_name="st_singleton",
+                category_name="st_cache_resource",
                 cache_name=self.display_name,
                 byte_length=asizeof.asizeof(entry),
             )
