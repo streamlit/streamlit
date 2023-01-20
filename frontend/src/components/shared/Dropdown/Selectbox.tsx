@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+import { isMobile } from "react-device-detect"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { logWarning } from "src/lib/log"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
@@ -163,6 +164,10 @@ class Selectbox extends React.PureComponent<Props, State> {
       })
     )
 
+    // Check if we have more than 10 options in the selectbox.
+    // If that's true, we show the keyboard on mobile. If not, we hide it.
+    const showKeyboardOnMobile = options.length > 10
+
     return (
       <div className="row-widget stSelectbox" style={style}>
         <WidgetLabel
@@ -223,6 +228,13 @@ class Selectbox extends React.PureComponent<Props, State> {
             },
 
             Input: {
+              props: {
+                // Change the 'readonly' prop to hide the mobile keyboard if options < 10
+                readOnly:
+                  isMobile && showKeyboardOnMobile === false
+                    ? "readonly"
+                    : null,
+              },
               style: () => ({
                 lineHeight: 1.4,
               }),
