@@ -37,8 +37,9 @@ export interface CategoricalColumnParams {
 }
 
 /**
- * A column type that provides a dropdown on editing.
- * This is automatically used by categorical columns (Pandas).
+ * A column type that supports optimized rendering and editing for categorical values
+ * by using a dropdown. This is automatically used by categorical columns (Pandas).
+ *
  */
 function CategoricalColumn(props: BaseColumnProps): BaseColumn {
   const parameters = mergeColumnParameters(

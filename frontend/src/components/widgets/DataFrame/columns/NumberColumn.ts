@@ -41,7 +41,7 @@ export interface NumberColumnParams {
 }
 
 /**
- * A column types that supports optimized rendering and editing support for numbers.
+ * A column types that supports optimized rendering and editing for numbers.
  * This supports float, integer, and unsigned integer types.
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
