@@ -317,6 +317,60 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.component_instance
         self.assertJSONEqual({"key": None, "default": None}, proto.json_args)
 
+    def test_widget_id_with_key(self):
+        """UNLIKE OTHER WIDGET TYPES, a component with a user-supplied `key` will have a stable widget ID
+        even when the component's other parameters change.
+
+        This is important because a component's iframe gets unmounted and remounted - wiping all its
+        internal state - when the component's ID changes. We want to be able to pass new data to a
+        component's frontend without causing a remount.
+        """
+
+        # Create a component instance with a key and some custom data
+        self.test_component(key="key", my_custom_data=345)
+        proto1 = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual(
+            {"key": "key", "default": None, "my_custom_data": 345}, proto1.json_args
+        )
+
+        # Clear some ScriptRunCtx data so that we can re-register the same component
+        # without getting a DuplicateWidgetID error
+        self.script_run_ctx.widget_user_keys_this_run.clear()
+        self.script_run_ctx.widget_ids_this_run.clear()
+
+        # Create a second component instance with the same key, and different custom data
+        self.test_component(key="key", my_custom_data=678)
+        proto2 = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual(
+            {"key": "key", "default": None, "my_custom_data": 678}, proto2.json_args
+        )
+
+        # The two component instances should have the same ID, despite having different
+        # data passed to them.
+        self.assertEqual(proto1.id, proto2.id)
+
+    def test_widget_id_without_key(self):
+        """Like all other widget types, two component instances with different data parameters,
+        and without a specified `key`, will have different widget IDs.
+        """
+
+        # Create a component instance without a key and some custom data
+        self.test_component(my_custom_data=345)
+        proto1 = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual(
+            {"key": None, "default": None, "my_custom_data": 345}, proto1.json_args
+        )
+
+        # Create a second component instance with different custom data
+        self.test_component(my_custom_data=678)
+        proto2 = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual(
+            {"key": None, "default": None, "my_custom_data": 678}, proto2.json_args
+        )
+
+        # The two component instances should have different IDs (just like any other widget would).
+        self.assertNotEqual(proto1.id, proto2.id)
+
     def test_simple_default(self):
         """Test the 'default' param with a JSON value."""
         return_value = self.test_component(default="baz")
