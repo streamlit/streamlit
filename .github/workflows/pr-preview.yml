@@ -95,7 +95,7 @@ jobs:
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
 
       - name: "Set S3 URL as Github status"
-        if: ${{ env.AWS_ACCESS_KEY_ID != '' }} && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request' && github.event.sender.type == 'User'
+        if: ${{ env.S3_URL != '' }} && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request' && github.event.sender.type == 'User'
         uses: actions/github-script@v6
         env:
           S3_URL: ${{ steps.exports.outputs.s3-url }}
