@@ -59,6 +59,7 @@ ACCEPTABLE_LICENSES = {
     "(MIT AND BSD-3-Clause)",
     "(MIT AND Zlib)",
     "(WTFPL OR MIT)",
+    "(AFL-2.1 OR BSD-3-Clause)",
 }
 
 # Some of our dependencies have licenses that yarn fails to parse, but that
