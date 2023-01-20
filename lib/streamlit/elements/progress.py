@@ -66,7 +66,7 @@ class ProgressMixin:
     def progress(
         self, value: FloatOrInt, text: Optional[str] = None
     ) -> "DeltaGenerator":
-        """Display a progress bar.
+        r"""Display a progress bar.
 
         Parameters
         ----------
@@ -76,7 +76,7 @@ class ProgressMixin:
             0.0 <= value <= 1.0 for float
 
         text : str or None
-            A message to display above the progress bar. The label can optionally
+            A message to display above the progress bar. The text can optionally
             contain Markdown and supports the following elements: Bold, Italics,
             Strikethroughs, Inline Code, Emojis, and Links.
 
@@ -93,6 +93,10 @@ class ProgressMixin:
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
 
         Example
         -------
