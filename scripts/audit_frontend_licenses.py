@@ -45,6 +45,7 @@ ACCEPTABLE_LICENSES = {
     "CC0-1.0",  # https://creativecommons.org/publicdomain/zero/1.0/
     "CC-BY-3.0",  # https://creativecommons.org/licenses/by/3.0/
     "CC-BY-4.0",  # https://creativecommons.org/licenses/by/4.0/
+    "Python-2.0",  # https://www.python.org/download/releases/2.0/license/
     "Zlib",  # https://opensource.org/licenses/Zlib
     "Unlicense",  # https://unlicense.org/
     "WTFPL",  # http://www.wtfpl.net/about/
@@ -85,7 +86,7 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl",
-        "1.13.0",
+        "1.13.2",
         "SEE LICENSE IN LICENSE.txt",
         "git://github.com/mapbox/mapbox-gl-js.git",
         "Unknown",
@@ -126,6 +127,15 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "https://github.com/saikocat/colorbrewer",
         "http://colorbrewer2.org/",
         "Cynthia Brewer",
+    ),
+    (
+        # MIT license: https://github.com/typicaljoe/taffydb/blob/master/License
+        "taffydb",
+        "2.6.2",
+        "UNKNOWN",
+        "git://github.com/typicaljoe/taffydb.git",
+        "http://taffydb.com/",
+        "Ian Smith",
     ),
 }
 
