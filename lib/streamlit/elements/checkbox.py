@@ -63,7 +63,7 @@ class CheckboxMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> bool:
-        """Display a checkbox widget.
+        r"""Display a checkbox widget.
 
         Parameters
         ----------
@@ -71,6 +71,10 @@ class CheckboxMixin:
             A short label explaining to the user what this checkbox is for.
             The label can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
         value : bool
             Preselect the checkbox when it first renders. This will be
             cast to bool internally.
