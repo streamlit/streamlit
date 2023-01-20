@@ -191,7 +191,7 @@ class SliderMixin:
         #  user would have to cast the return value more often than not, which
         #  can be annoying.
     ) -> Any:
-        """Display a slider widget.
+        r"""Display a slider widget.
 
         This supports int, float, date, time, and datetime types.
 
@@ -223,6 +223,10 @@ class SliderMixin:
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow

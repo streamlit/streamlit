@@ -119,7 +119,7 @@ class CameraInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> SomeUploadedSnapshotFile:
-        """Display a widget that returns pictures from the user's webcam.
+        r"""Display a widget that returns pictures from the user's webcam.
 
         Parameters
         ----------
@@ -141,6 +141,10 @@ class CameraInputMixin:
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow

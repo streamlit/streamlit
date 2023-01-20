@@ -72,7 +72,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
-        """Display a button widget.
+        r"""Display a button widget.
 
         Parameters
         ----------
@@ -80,6 +80,10 @@ class ButtonMixin:
             A short label explaining to the user what this button is for.
             The label can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, and Emojis.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -164,7 +168,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
-        """Display a download button widget.
+        r"""Display a download button widget.
 
         This is useful when you would like to provide a way for your users
         to download a file directly from your app.
@@ -179,6 +183,10 @@ class ButtonMixin:
             A short label explaining to the user what this button is for.
             The label can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, and Emojis.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
         data : str or bytes or file
             The contents of the file to be downloaded. See example below for
             caching techniques to avoid recomputing this data unnecessarily.
