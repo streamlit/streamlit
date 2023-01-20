@@ -139,6 +139,7 @@ function DataFrame({
     current: undefined,
   })
 
+  // This callback is used to clear all selections (row/column/cell)
   const clearSelection = React.useCallback(() => {
     setGridSelection({
       columns: CompactSelection.empty(),
@@ -147,7 +148,7 @@ function DataFrame({
     })
   }, [])
 
-  // This callback can be used to refresh a selection of cells
+  // This callback is used to refresh the rendering of selected cells
   const refreshCells = React.useCallback(
     (
       cells: {
@@ -156,7 +157,7 @@ function DataFrame({
     ) => {
       dataEditorRef.current?.updateCells(cells)
     },
-    [] // TODO: add as dependency? https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node
+    []
   )
   // Number of rows of the table minus 1 for the header row:
   const originalNumRows = Math.max(0, data.dimensions.rows - 1)
