@@ -79,7 +79,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             subprotocols = ["streamlit", existing_session_id]
 
         return await tornado.websocket.websocket_connect(
-            self.get_ws_url("/_stcore/stream")
+            self.get_ws_url("/_stcore/stream"),
             subprotocols=subprotocols,
         )
 
