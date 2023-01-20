@@ -45,9 +45,9 @@ from streamlit.runtime.scriptrunner import (
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
-from tests.script_interactions import InteractiveScriptTests
 from tests.streamlit.elements.image_test import create_image
 from tests.testutil import create_mock_script_run_ctx
 
@@ -924,7 +924,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
 @patch("streamlit.source_util._cached_pages", new=None)
 class WidgetReplayInteractionTest(InteractiveScriptTests):
     def test_dynamic_widget_replay(self):
-        script = self.script_from_filename("cached_widget_replay_dynamic.py")
+        script = self.script_from_filename(__file__, "cached_widget_replay_dynamic.py")
 
         sr = script.run()
         assert len(sr.get("checkbox")) == 1
