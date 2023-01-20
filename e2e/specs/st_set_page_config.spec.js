@@ -22,7 +22,7 @@ describe("st.set_page_config", () => {
   it("sets the page favicon", () => {
     cy.get("link[rel='shortcut icon']")
       .invoke("attr", "href")
-      .should("eq", "https://twemoji.maxcdn.com/2/72x72/1f988.png");
+      .should("eq", "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f988.png");
   });
 
   it("sets the page title", () => {

@@ -35,7 +35,7 @@ export function handleFavicon(
   if (emoji) {
     // Find the corresponding Twitter emoji on the CDN.
     const codepoint = grabTheRightIcon(emoji)
-    const emojiUrl = `https://twemoji.maxcdn.com/2/72x72/${codepoint}.png`
+    const emojiUrl = `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${codepoint}.png`
 
     imageUrl = emojiUrl
   } else {
