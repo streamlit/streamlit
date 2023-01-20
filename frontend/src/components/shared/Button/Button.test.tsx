@@ -93,4 +93,20 @@ describe("Button element", () => {
 
     expect(onClick).toBeCalled()
   })
+
+  it("does not use container width by default", () => {
+    const wrapper = shallow(<Button {...getProps()}>Hello</Button>)
+
+    expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(
+      false
+    )
+  })
+
+  it("renders use container width buttons correctly", () => {
+    const wrapper = shallow(
+      <Button {...getProps({ fluidWidth: true })}>Hello</Button>
+    )
+
+    expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(true)
+  })
 })

@@ -70,6 +70,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
+        use_container_width: bool = False,
     ) -> bool:
         r"""Display a button widget.
 
@@ -104,6 +105,8 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False. This argument can only be supplied by keyword.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the parent container.
 
         Returns
         -------
@@ -145,6 +148,7 @@ class ButtonMixin:
             kwargs=kwargs,
             disabled=disabled,
             type=type,
+            use_container_width=use_container_width,
             ctx=ctx,
         )
 
@@ -162,6 +166,7 @@ class ButtonMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        use_container_width: bool = False,
     ) -> bool:
         r"""Display a download button widget.
 
@@ -212,6 +217,9 @@ class ButtonMixin:
             An optional boolean, which disables the download button if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the parent container.
+
 
         Returns
         -------
@@ -283,6 +291,7 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            use_container_width=use_container_width,
             ctx=ctx,
         )
 
@@ -299,6 +308,7 @@ class ButtonMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
 
@@ -311,6 +321,7 @@ class ButtonMixin:
 
         download_button_proto = DownloadButtonProto()
 
+        download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
         marshall_file(
@@ -353,6 +364,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
+        use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         if not is_form_submitter:
@@ -380,6 +392,7 @@ class ButtonMixin:
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
         button_proto.type = type
+        button_proto.use_container_width = use_container_width
         if help is not None:
             button_proto.help = dedent(help)
 
