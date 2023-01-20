@@ -16,7 +16,7 @@ pydot>=1.4.2
 pyodbc>=4.0.32
 scipy>=1.7.3
 seaborn>=0.11.2
-setuptools<50.0.0
+setuptools>=65.5.1
 sqlalchemy>=1.4.25
 watchdog>=2.1.5
 rich>=11.2.0
