@@ -39,8 +39,8 @@ import {
 
 // Using this ID for column config will apply the config to all index columns
 export const INDEX_IDENTIFIER = "index"
-// Prefix used in the config column mapping when referring to a column via the numeric index
-export const NUMERIC_COLUMN_ID_PREFIX = "col:"
+// Prefix used in the config column mapping when referring to a column via the numeric position
+export const COLUMN_POSITION_PREFIX = "col:"
 
 /**
  * Options to configure columns.
@@ -74,14 +74,17 @@ export function applyColumnConfig(
 
   let columnConfig
   if (columnsConfig.has(columnProps.title)) {
+    // Config is configured based on the column title
     columnConfig = columnsConfig.get(columnProps.title)
   } else if (
-    columnsConfig.has(`${NUMERIC_COLUMN_ID_PREFIX}${columnProps.indexNumber}`)
+    columnsConfig.has(`${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`)
   ) {
+    // Config is configured based on the column position, e.g. col:0 -> first column
     columnConfig = columnsConfig.get(
-      `${NUMERIC_COLUMN_ID_PREFIX}${columnProps.indexNumber}`
+      `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
     )
   } else if (columnProps.isIndex && columnsConfig.has(INDEX_IDENTIFIER)) {
+    // Config is configured for the index column (or all index columns for multi-index)
     columnConfig = columnsConfig.get(INDEX_IDENTIFIER)
   }
 
@@ -129,8 +132,7 @@ export function applyColumnConfig(
         }
       : {}),
     // Add column alignment:
-    ...(notNullOrUndefined(columnConfig.alignment) &&
-    ["left", "center", "right"].includes(columnConfig.alignment)
+    ...(notNullOrUndefined(columnConfig.alignment)
       ? {
           contentAlignment: columnConfig.alignment,
         }
