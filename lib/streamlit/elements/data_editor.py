@@ -32,7 +32,6 @@ from typing import (
     overload,
 )
 
-import numpy as np
 import pandas as pd
 import pyarrow as pa
 from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
@@ -55,6 +54,8 @@ from streamlit.runtime.state import (
 from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, to_key
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from streamlit.delta_generator import DeltaGenerator
 
 _INDEX_IDENTIFIER: Final = "index"
@@ -244,7 +245,7 @@ def _apply_cell_edits(
     index_count = df.index.nlevels or 0
 
     for cell, value in edited_cells.items():
-        row_pos, col_pos = [int(pos) for pos in cell.split(":")]
+        row_pos, col_pos = map(int, cell.split(":"))
 
         if col_pos < index_count:
             # The edited cell is part of the index
