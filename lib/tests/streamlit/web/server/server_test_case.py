@@ -72,7 +72,9 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             The connected websocket client.
 
         """
-        return await tornado.websocket.websocket_connect(self.get_ws_url("/stream"))
+        return await tornado.websocket.websocket_connect(
+            self.get_ws_url("/_stcore/stream")
+        )
 
     async def read_forward_msg(
         self, ws_client: WebSocketClientConnection

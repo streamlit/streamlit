@@ -26,6 +26,7 @@ import tornado.httpserver
 import tornado.testing
 import tornado.web
 import tornado.websocket
+from parameterized import parameterized
 
 import streamlit.web.server.server
 from streamlit import config
@@ -157,7 +158,7 @@ class ServerTest(ServerTestCase):
 
             # Connect to the server, and explicitly request compression.
             ws_client = await tornado.websocket.websocket_connect(
-                self.get_ws_url("/stream"), compression_options={}
+                self.get_ws_url("/_stcore/stream"), compression_options={}
             )
 
             # Ensure that the "permessage-deflate" extension is returned
@@ -173,7 +174,7 @@ class ServerTest(ServerTestCase):
 
             # Connect to the server, and explicitly request compression.
             ws_client = await tornado.websocket.websocket_connect(
-                self.get_ws_url("/stream"), compression_options={}
+                self.get_ws_url("/_stcore/stream"), compression_options={}
             )
 
             # Ensure that the "Sec-Websocket-Extensions" header is not
@@ -357,9 +358,24 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         return server._create_app()
 
     def test_endpoint(self):
-        response = self.fetch("/script-health-check")
+        response = self.fetch("/_stcore/script-health-check")
         self.assertEqual(200, response.code)
         self.assertEqual(b"test_message", response.body)
+
+    def test_deprecated_endpoint(self):
+        with self.assertLogs("streamlit.web.server.server_util") as logs:
+            response = self.fetch("/script-health-check")
+        self.assertEqual(200, response.code)
+        self.assertEqual(b"test_message", response.body)
+        self.assertEqual(
+            logs.records[0].getMessage(),
+            "Endpoint '/script-health-check' is deprecated. Please use '/_stcore/script-health-check' instead.",
+        )
+        self.assertEqual(
+            response.headers["link"],
+            f'<http://127.0.0.1:{self.get_http_port()}/_stcore/script-health-check>; rel="alternate"',
+        )
+        self.assertEqual(response.headers["deprecation"], "True")
 
 
 class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
@@ -378,7 +394,9 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
 
     def get_app(self):
         server = Server("mock/script/path", "test command line")
-        server.does_script_run_without_error = self.does_script_run_without_error
+        server._runtime.does_script_run_without_error = (
+            self.does_script_run_without_error
+        )
         return server._create_app()
 
     def test_endpoint(self):

@@ -75,7 +75,7 @@ export class FileUploadClient extends HttpClient {
     form.append(file.name, file)
 
     this.offsetPendingRequestCount(widget.formId, 1)
-    return this.request<number>("upload_file", {
+    return this.request<number>("_stcore/upload_file", {
       cancelToken,
       method: "POST",
       data: form,
