@@ -367,3 +367,28 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that it raises an exception when called with invalid data."""
         with self.assertRaises(StreamlitAPIException):
             st.experimental_data_editor(input_data)
+
+    @parameterized.expand(
+        [
+            (pd.CategoricalIndex(["a", "b", "c"]),),
+            (pd.Int64Index([1, 2, 3]),),
+            (pd.Float64Index([1.0, 2.0, 3.0]),),
+            (pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03"]),),
+            (pd.PeriodIndex(["2020-01-01", "2020-01-02", "2020-01-03"], freq="D"),),
+            (pd.TimedeltaIndex(["1 day", "2 days", "3 days"]),),
+            (pd.MultiIndex.from_tuples([("a", "b"), ("c", "d"), ("e", "f")]),),
+        ]
+    )
+    def test_with_unsupported_index(self, index: pd.Index):
+        """Test that it raises an exception when called with data that has an unsupported index."""
+        df = pd.DataFrame(
+            {
+                "col1": [1, 2, 3],
+                "col2": ["a", "b", "c"],
+                "col3": [True, False, True],
+            }
+        )
+        df.set_index(index, inplace=True)
+
+        with self.assertRaises(StreamlitAPIException):
+            st.experimental_data_editor(df)
