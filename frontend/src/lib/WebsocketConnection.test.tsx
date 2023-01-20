@@ -680,10 +680,10 @@ describe("WebsocketConnection auth token handling", () => {
     // @ts-ignore
     await ws.connectToWebSocket()
 
-    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
-      "streamlit",
-      "iAmAnAuthToken",
-    ])
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
+    )
   })
 
   it("sets second Sec-WebSocket-Protocol option to lastSessionId", async () => {
@@ -695,10 +695,10 @@ describe("WebsocketConnection auth token handling", () => {
     // @ts-ignore
     await ws.connectToWebSocket()
 
-    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
-      "streamlit",
-      "sessionId",
-    ])
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "sessionId"]
+    )
   })
 
   it("prioritizes host provided auth token over lastSessionId if both set", async () => {
