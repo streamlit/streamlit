@@ -48,13 +48,17 @@ describe("FormSubmitButton", () => {
     })
   })
 
-  function getProps(props: Partial<Props> = {}): Props {
+  function getProps(
+    props: Partial<Props> = {},
+    useContainerWidth = false
+  ): Props {
     return {
       element: ButtonProto.create({
         id: "1",
         label: "Submit",
         formId: "mockFormId",
         help: "mockHelpText",
+        useContainerWidth,
       }),
       disabled: false,
       hasInProgressUpload: false,
@@ -130,5 +134,19 @@ describe("FormSubmitButton", () => {
 
     wrapper2.unmount()
     expect(formsData.submitButtonCount.get("mockFormId")).toBe(0)
+  })
+
+  it("does not use container width by default", () => {
+    const wrapper = shallow(<FormSubmitButton {...getProps()} />)
+
+    const wrappedUIButton = wrapper.find(UIButton)
+    expect(wrappedUIButton.props().fluidWidth).toBe(false)
+  })
+
+  it("passes useContainerWidth property correctly", () => {
+    const wrapper = shallow(<FormSubmitButton {...getProps({}, true)} />)
+
+    const wrappedUIButton = wrapper.find(UIButton)
+    expect(wrappedUIButton.props().fluidWidth).toBe(true)
   })
 })

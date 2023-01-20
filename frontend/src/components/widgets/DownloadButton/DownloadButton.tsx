@@ -60,6 +60,7 @@ function DownloadButton(props: Props): ReactElement {
           size={Size.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
+          fluidWidth={element.useContainerWidth || false}
         >
           <StreamlitMarkdown
             source={element.label}

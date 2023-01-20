@@ -217,6 +217,7 @@ class FormMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
+        use_container_width: bool = False,
     ) -> bool:
         """Display a form submit button.
 
@@ -250,6 +251,9 @@ class FormMixin:
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False. This argument can only be supplied by keyword.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the parent container.
+
 
         Returns
         -------
@@ -273,6 +277,7 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             disabled=disabled,
+            use_container_width=use_container_width,
             ctx=ctx,
         )
 
@@ -286,6 +291,7 @@ class FormMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
+        use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
@@ -300,6 +306,7 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             disabled=disabled,
+            use_container_width=use_container_width,
             ctx=ctx,
         )
 

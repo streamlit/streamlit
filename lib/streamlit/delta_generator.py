@@ -117,6 +117,10 @@ ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
 Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
 
+# Type aliases for Parent Block Types
+BlockType = str
+ParentBlockTypes = Iterable[BlockType]
+
 
 _use_warning_has_been_displayed: bool = False
 
@@ -357,7 +361,7 @@ class DeltaGenerator(
         return wrapper
 
     @property
-    def _parent_block_types(self) -> Iterable[str]:
+    def _parent_block_types(self) -> ParentBlockTypes:
         """Iterate all the block types used by this DeltaGenerator and all
         its ancestor DeltaGenerators.
         """
@@ -366,6 +370,9 @@ class DeltaGenerator(
             if current_dg._block_type is not None:
                 yield current_dg._block_type
             current_dg = current_dg._parent
+
+    def _count_num_of_parent_columns(self, parent_block_types: ParentBlockTypes) -> int:
+        return sum(1 for parent_block in parent_block_types if parent_block == "column")
 
     @property
     def _cursor(self) -> Optional[Cursor]:
@@ -575,12 +582,24 @@ class DeltaGenerator(
         # Prevent nested columns & expanders by checking all parents.
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
-        parent_block_types = frozenset(dg._parent_block_types)
-        if block_type == "column" and block_type in parent_block_types:
-            raise StreamlitAPIException(
-                "Columns may not be nested inside other columns."
+        parent_block_types = list(dg._parent_block_types)
+
+        if block_type == "column":
+            num_of_parent_columns = self._count_num_of_parent_columns(
+                parent_block_types
             )
-        if block_type == "expandable" and block_type in parent_block_types:
+            if (
+                self._root_container == RootContainer.SIDEBAR
+                and num_of_parent_columns > 0
+            ):
+                raise StreamlitAPIException(
+                    "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
+                )
+            if num_of_parent_columns > 1:
+                raise StreamlitAPIException(
+                    "Columns can only be placed inside other columns up to one level of nesting."
+                )
+        if block_type == "expandable" and block_type in frozenset(parent_block_types):
             raise StreamlitAPIException(
                 "Expanders may not be nested inside other expanders."
             )
