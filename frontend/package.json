@@ -202,6 +202,7 @@
     "webpack": "4.44.2"
   },
   "resolutions": {
+    "@types/html-minifier-terser": "^7.0.0",
     "@types/katex": "^0.14.0",
     "@types/react": "17.0.7",
     "@types/node": "^18.11.17",
@@ -218,6 +219,7 @@
     "esm": "^3.1.0",
     "glob-parent": "^6.0.2",
     "handlebars": "^4.4.5",
+    "html-minifier-terser": "^7.0.0",
     "immer": "^9.0.18",
     "ini": "^3.0.1",
     "is-svg": "^4.3.2",
@@ -236,6 +238,7 @@
     "shell-quote": "^1.7.3",
     "ssri": "^10.0.1",
     "static-eval": "^2.0.5",
+    "terser": "^5.16.1",
     "vega-tooltip": "^0.30.0",
     "websocket-extensions": "^0.1.4",
     "ws": "^8.11.0",
