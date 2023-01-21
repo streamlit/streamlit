@@ -1115,7 +1115,6 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   public getDataValue(rowIndex: number, columnIndex: number): any {
-    console.log(this._data)
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
   }
 
