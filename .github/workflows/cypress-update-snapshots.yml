@@ -1,0 +1,73 @@
+name: Cypress update snapshots
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      testname:
+        description: "Enter the test name to run (see e2e/specs/[testname].spec.js). For example: st_alert"
+        default: "st_alert"
+        type: "string"
+
+# Avoid duplicate workflows on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-cypress-update-snapshots
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash --login -eo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: 'recursive'
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+            python-version: "3.10"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Install Cypress dependencies
+        run: |
+          sudo apt install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 curl
+      - name: Run make develop
+        run: make develop
+      - name: Register Streamlit User & Mapbox Token
+        run: |
+          if [ ! -d $HOME/.streamlit ] ; then
+            mkdir $HOME/.streamlit
+          fi
+          echo '[mapbox]' >  ~/.streamlit/config.toml
+          MAPBOX_TOKEN=$(curl -sS https://data.streamlit.io/tokens.json | jq -r '.["mapbox-localhost"]') \
+            && echo 'token = "'$MAPBOX_TOKEN'"' >> ~/.streamlit/config.toml
+
+          echo '[general]' >  ~/.streamlit/credentials.toml
+          echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
+      - name: Run Cypress test
+        run: |
+          scripts/run_e2e_tests.py -u "e2e/specs/${{inputs.testname}}.spec.js"
+      - name: Check that all screenshots have been committed
+        run: |
+          set -x;
+
+          UNTRACKED_FILE_COUNT=$(git ls-files --others --exclude-standard | grep cypress | wc -l | bc -l || echo '0')
+          echo "Untracked files count: ${UNTRACKED_FILE_COUNT}"
+          if [[ "${UNTRACKED_FILE_COUNT}" -gt 0 ]]; then
+            echo "Untracked files:";
+            git ls-files --others --exclude-standard | grep cypress;
+            exit 1;
+          fi
+      - name: Store Snapshots
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress_snapshots
+          path: frontend/cypress/snapshots/linux/2x/${{inputs.testname}}.spec.js
