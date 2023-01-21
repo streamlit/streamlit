@@ -261,18 +261,23 @@ def _get_variable_name():
         return code
 
     # If walrus, get name. E.g. st.help(foo := 123)
-    if type(arg_node) is ast.NamedExpr:
+    # (The hasattr is there to support Python 3.7)
+    elif hasattr(ast, "NamedExpr") and type(arg_node) is ast.NamedExpr:
         # This next "if" will always be true, but need to add this for the type-checking test to
         # pass.
         if type(arg_node.target) is ast.Name:
             return arg_node.target.id
 
     # If constant, there's no variable name. E.g. st.help("foo") or st.help(123)
-    if type(arg_node) is ast.Constant:
+    elif type(arg_node) is ast.Constant:
         return None
 
     # Otherwise, return whatever is inside st.help(<-- here -->)
-    return cleaned_code[arg_node.col_offset : arg_node.end_col_offset]
+    if hasattr(arg_node, "end_col_offset"):
+        end_offset = arg_node.end_col_offset
+    else:
+        end_offset = -1
+    return cleaned_code[arg_node.col_offset : end_offset]
 
 
 def _get_scriptrunner_frame():

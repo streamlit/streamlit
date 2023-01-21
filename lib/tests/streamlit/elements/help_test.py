@@ -130,20 +130,22 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("int", ds.type)
         self.assertTrue(len(ds.doc_string) > 0)
 
-    def test_walrus(self):
-        """Test a named variable using walrus operator."""
+    # This doesn't even compile when running in 3.7, so I'm commenting it out.
+    # Which means we can't test support for walrus in st.help :(
+    # def test_walrus(self):
+    #     """Test a named variable using walrus operator."""
 
-        with patch_varname_getter():
-            st.help(myvar := 123)
+    #     with patch_varname_getter():
+    #         st.help(myvar := 123)
 
-        ds = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual("myvar", ds.name)
-        self.assertEqual("123", ds.value)
-        self.assertEqual("int", ds.type)
-        self.assertTrue(len(ds.doc_string) > 0)
+    #     ds = self.get_delta_from_queue().new_element.doc_string
+    #     self.assertEqual("myvar", ds.name)
+    #     self.assertEqual("123", ds.value)
+    #     self.assertEqual("int", ds.type)
+    #     self.assertTrue(len(ds.doc_string) > 0)
 
     def test_complex_var(self):
-        """Test a named variable using walrus operator."""
+        """Test complex dict-list-object combination."""
 
         myvar = {"foo": [None, {"bar": "baz"}]}
 
@@ -200,7 +202,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("MyClass", ds.name)
         self.assertEqual(
             "tests.streamlit.elements.help_test.StHelpTest."
-            "test_doc_type_is_type.<locals>.MyClass()",
+            "test_passing_a_class.<locals>.MyClass()",
             ds.value,
         )
         self.assertEqual("class", ds.type)
@@ -221,7 +223,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("MyClass", ds.name)
         self.assertEqual(
             "tests.streamlit.elements.help_test.StHelpTest."
-            "test_doc_type_is_type.<locals>.MyClass()",
+            "test_padding_an_instance.<locals>.MyClass()",
             ds.value,
         )
         self.assertEqual("class", ds.type)
