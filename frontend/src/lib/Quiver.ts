@@ -25,7 +25,6 @@ import {
   Null,
   Field,
   Dictionary,
-  Decimal,
   Struct,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
@@ -348,13 +347,6 @@ export class Quiver {
     this._fields = fields
     this._styler = styler
     this._indexNames = indexNames
-
-    // TODO(lukasmasuch): Remove console logs below:
-    console.log("schema", schema)
-    console.log("types", types)
-    console.log("columns", columns)
-    console.log("index", index)
-    console.log("fields", fields)
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
