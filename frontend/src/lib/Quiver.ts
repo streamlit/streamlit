@@ -35,7 +35,7 @@ import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
 
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -348,6 +348,13 @@ export class Quiver {
     this._fields = fields
     this._styler = styler
     this._indexNames = indexNames
+
+    // TODO(lukasmasuch): Remove console logs below:
+    console.log("schema", schema)
+    console.log("types", types)
+    console.log("columns", columns)
+    console.log("index", index)
+    console.log("fields", fields)
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
@@ -784,7 +791,6 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   /** Takes the data and it's type and nicely formats it. */
   public static format(x: DataType, type?: Type, field?: Field): string {
     const typeName = type && Quiver.getTypeName(type)
-
     if (x == null) {
       return "<NA>"
     }
@@ -835,17 +841,27 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       return String(x)
     }
 
+    if (typeName === "decimal") {
+      // Support decimal type
+      // Unfortunately, this still can fail in certain situations:
+      // https://github.com/apache/arrow/issues/22932
+      // https://github.com/streamlit/streamlit/issues/5864
+      const decimalStr = x.toString()
+      if (
+        isNullOrUndefined(field?.type?.scale) ||
+        Number.isNaN(field?.type?.scale) ||
+        field?.type?.scale > decimalStr.length
+      ) {
+        return decimalStr
+      }
+      const scaleIndex = decimalStr.length - field?.type?.scale
+      return `${decimalStr.slice(0, scaleIndex)}.${decimalStr.slice(
+        scaleIndex
+      )}`
+    }
+
     // Nested arrays and objects.
     if (typeName === "object" || typeName?.startsWith("list")) {
-      if (field?.type instanceof Decimal) {
-        // TODO(lukasmasuch):
-        // This is still broken in Arrow JS for many cases since it does not
-        // apply the precision or works with negative values:
-        // https://github.com/apache/arrow/issues/22932
-        // https://github.com/apache/arrow/issues/28804
-        return x.toString()
-      }
-
       if (field?.type instanceof Struct) {
         // This type is used by python dictionary values
 
@@ -1107,6 +1123,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   public getDataValue(rowIndex: number, columnIndex: number): any {
+    console.log(this._data)
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
   }
 
