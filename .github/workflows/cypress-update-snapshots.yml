@@ -71,3 +71,9 @@ jobs:
         with:
           name: cypress_snapshots
           path: frontend/cypress/snapshots/linux/2x/${{inputs.testname}}.spec.js
+      - name: Store Videos
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress_videos
+          path: frontend/cypress/videos
