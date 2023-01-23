@@ -102,6 +102,77 @@ class MultiselectTest(InteractiveScriptTests):
 
 
 @patch("streamlit.source_util._cached_pages", new=None)
+class MultiselectFailedTest(InteractiveScriptTests):
+    def test_value_with_format_func(self):
+        script = self.script_from_string(
+            "multiselect_test.py",
+            """
+            import streamlit as st
+
+            options = ["zero", "one", "two", "three"]
+
+            st.multiselect(
+                "Multiselect:",
+                options=options,
+                format_func=lambda x: x.upper(),
+            )
+            """,
+        )
+        sr = script.run()
+        assert sr.get("multiselect")[0].value == []
+
+        with pytest.raises(ValueError):
+            # This fails because we send to proto options with applied format_func,
+            # but we use the original options for widget value
+            sr.get("multiselect")[0].select("one").run()
+
+    def test_value_with_format_func2(self):
+        script = self.script_from_string(
+            "multiselect_test.py",
+            """
+            import streamlit as st
+
+            options = ["zero", "one", "two", "three"]
+
+            st.multiselect(
+                "Multiselect:",
+                options=options,
+                format_func=lambda x: x.upper(),
+            )
+            """,
+        )
+        sr = script.run()
+        assert sr.get("multiselect")[0].value == []
+        # Calling select with already formatted option works in this case, but
+        # returns original option as a value of the widget
+        sr2 = sr.get("multiselect")[0].select("ONE").run()
+        assert sr2.get("multiselect")[0].value == ["one"]
+
+    def test_value_with_duplicated_options(self):
+        script = self.script_from_string(
+            "multiselect_test.py",
+            """
+            import streamlit as st
+
+            options = [1, 2, 3, 1, 2, 3, 1, 2, 3]
+
+            st.multiselect(
+                "Multiselect:",
+                options=options,
+            )
+            """,
+        )
+        sr = script.run()
+        assert sr.get("multiselect")[0].value == []
+        # in the Streamlit UI we can select multiple options with same value,
+        # but have different index in the options list. Although in testing frameworks
+        # this looks impossible because we try to select option by value, not by index.
+        sr2 = sr.get("multiselect")[0].select(1).select(1).run()
+        with pytest.raises(AssertionError):
+            assert sr2.get("multiselect")[0].value == [1, 1]
+
+
+@patch("streamlit.source_util._cached_pages", new=None)
 class MarkdownTest(InteractiveScriptTests):
     def test_markdown(self):
         script = self.script_from_string(
