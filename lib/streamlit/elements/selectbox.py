@@ -218,7 +218,7 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = dedent(help)
 
-        serde = SelectboxSerde(selectbox_proto.options, index)
+        serde = SelectboxSerde(opt, index)
 
         widget_state = register_widget(
             "selectbox",

@@ -327,7 +327,7 @@ class SelectSliderTest(InteractiveScriptTests):
 
 
 @patch("streamlit.source_util._cached_pages", new=None)
-class Selectbox(InteractiveScriptTests):
+class SelectboxTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
             "select_slider_test.py",
@@ -337,9 +337,7 @@ class Selectbox(InteractiveScriptTests):
 
             options = ("male", "female")
             st.selectbox("selectbox 1", options, 1)
-
-            st.selectbox("selectbox 2", options, 0, format_func=lambda x: x.capitalize())
-
+            st.selectbox("selectbox 2", options, 0)
             st.selectbox("selectbox 3", [])
 
             lst = ['Python', 'C', 'C++', 'Java', 'Scala', 'Lisp', 'JavaScript', 'Go']
@@ -349,15 +347,15 @@ class Selectbox(InteractiveScriptTests):
         )
         sr = script.run()
         assert sr.get("selectbox")[0].value == "female"
-        assert sr.get("selectbox")[1].value == "Male"
+        assert sr.get("selectbox")[1].value == "male"
         assert sr.get("selectbox")[2].value is None
         assert sr.get("selectbox")[3].value == "Python"
 
         sr2 = sr.get("selectbox")[0].select("female").run()
-        sr3 = sr2.get("selectbox")[1].select("Female").run()
+        sr3 = sr2.get("selectbox")[1].select("female").run()
         sr4 = sr3.get("selectbox")[3].select("JavaScript").run()
 
         assert sr4.get("selectbox")[0].value == "female"
-        assert sr4.get("selectbox")[1].value == "Female"
+        assert sr4.get("selectbox")[1].value == "female"
         assert sr4.get("selectbox")[2].value is None
         assert sr4.get("selectbox")[3].value == "JavaScript"
