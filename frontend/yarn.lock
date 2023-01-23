@@ -3223,10 +3223,15 @@
   resolved "https://registry.yarnpkg.com/@types/parse5/-/parse5-6.0.3.tgz#705bb349e789efa06f43f128cef51240753424cb"
   integrity sha512-SuT16Q1K51EAVPz1K29DJ/sXjhSQ0zjvsypYJ6tlwVsRV9jwW5Adq2ch8Dq8kDBCkYnELS7N7VNCSB5nC56t/g==
 
-"@types/plotly.js@*", "@types/plotly.js@^2.12.11":
+"@types/plotly.js@*":
   version "2.12.11"
   resolved "https://registry.yarnpkg.com/@types/plotly.js/-/plotly.js-2.12.11.tgz#25a28151e2208dcac6b86c7150494d056fd5ec5f"
   integrity sha512-FouDGLsFVFTBqedZSUK4LjPYm1HYRJeGfIideEhgsUu4htNmLGsVbbH7SUaCljYKbiZkeCCWinvVYJe8o3m6og==
+
+"@types/plotly.js@^2.12.13":
+  version "2.12.13"
+  resolved "https://registry.yarnpkg.com/@types/plotly.js/-/plotly.js-2.12.13.tgz#07e1b649245a38778480f0619004da79684f5939"
+  integrity sha512-p/xo8LuJMxSvT/szkjgUJVlopRu049NZ+p46MpcSlovmO6tIgyzldm8kLUo9p24XE/5iZzGSTtvIUQjLwIUQxw==
 
 "@types/prettier@^2.0.0":
   version "2.2.1"
@@ -3295,10 +3300,10 @@
     "@types/react" "*"
     "@types/viewport-mercator-project" "*"
 
-"@types/react-plotly.js@^2.5.2":
-  version "2.5.2"
-  resolved "https://registry.yarnpkg.com/@types/react-plotly.js/-/react-plotly.js-2.5.2.tgz#e326e0480a5bd31edae8a962e02a63313b34ec17"
-  integrity sha512-hsCEdgGTEkeEXI8ZlB0qOgXCcDjq3NGsi/mlxOasAclScvk1i4b+ajaOj+J/j2Ay86I2a7eDxpuTHrBdVyUrkg==
+"@types/react-plotly.js@^2.6.0":
+  version "2.6.0"
+  resolved "https://registry.yarnpkg.com/@types/react-plotly.js/-/react-plotly.js-2.6.0.tgz#1b856c2ed1219babda3e95ef3270091f156ff987"
+  integrity sha512-nJJ57U0/CNDAO+F3dpnMgM8PtjLE/O1I3O6gq4+5Q13uKqrPnHGYOttfdzQJ4D7KYgF609miVzEYakUS2zds8w==
   dependencies:
     "@types/plotly.js" "*"
     "@types/react" "*"
@@ -10521,10 +10526,10 @@ is-map@^2.0.1, is-map@^2.0.2:
   resolved "https://registry.yarnpkg.com/is-map/-/is-map-2.0.2.tgz#00922db8c9bf73e81b7a335827bc2a43f2b91127"
   integrity sha512-cOZFQQozTha1f4MxLFzlgKYPTyj26picdZTx82hbc/Xf4K/tZOOXSCkMvU4pKioRXGDLJRn0GM7Upe7kR721yg==
 
-is-mobile@^2.2.2:
-  version "2.2.2"
-  resolved "https://registry.yarnpkg.com/is-mobile/-/is-mobile-2.2.2.tgz#f6c9c5d50ee01254ce05e739bdd835f1ed4e9954"
-  integrity sha512-wW/SXnYJkTjs++tVK5b6kVITZpAZPtUrt9SF80vvxGiF/Oywal+COk1jlRkiVq15RFNEQKQY31TkV24/1T5cVg==
+is-mobile@^3.1.1:
+  version "3.1.1"
+  resolved "https://registry.yarnpkg.com/is-mobile/-/is-mobile-3.1.1.tgz#3b9e48f40068e4ea2da411f5009779844ce8d6aa"
+  integrity sha512-RRoXXR2HNFxNkUnxtaBdGBXtFlUMFa06S0NUKf/LCF+MuGLu13gi9iBCkoEmc6+rpXuwi5Mso5V8Zf7mNynMBQ==
 
 is-module@^1.0.0:
   version "1.0.0"
@@ -13833,10 +13838,10 @@ plist@^3.0.1:
     base64-js "^1.5.1"
     xmlbuilder "^9.0.7"
 
-plotly.js@^2.17.1:
-  version "2.17.1"
-  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-2.17.1.tgz#bdf5f1e53e47d1455909506483c6299d5028966c"
-  integrity sha512-Tgjk1FrA4TIJAMEFlJqq9swyRsdwKas90DNHoV6MZ+uxmcEO7O/kdEonu9LEIrmiNiuIQgGxwNERH7jrJxjAlQ==
+plotly.js@^2.18.0:
+  version "2.18.0"
+  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-2.18.0.tgz#b935aa5d87a08a579a5e713babac1d94a97a9152"
+  integrity sha512-EauUKlr03yI7v2K2BA0NobvJb1Na+uid0ZFKbLehpiR/WSnGO7tf5/cKnXl4TEqGYKnytj07Poek6JlXZC3jbg==
   dependencies:
     "@plotly/d3" "3.8.0"
     "@plotly/d3-sankey" "0.7.2"
@@ -13864,7 +13869,7 @@ plotly.js@^2.17.1:
     glslify "^7.1.1"
     has-hover "^1.0.1"
     has-passive-events "^1.0.0"
-    is-mobile "^2.2.2"
+    is-mobile "^3.1.1"
     mapbox-gl "1.10.1"
     mouse-change "^1.4.0"
     mouse-event-offset "^3.0.2"
