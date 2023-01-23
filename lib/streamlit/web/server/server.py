@@ -78,8 +78,15 @@ MAX_PORT_SEARCH_RETRIES = 100
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
 
-# The endpoint we serve media files from.
 MEDIA_ENDPOINT: Final = "/media"
+STREAM_ENDPOINT: Final = r"_stcore/stream"
+METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
+MESSAGE_ENDPOINT: Final = r"_stcore/message"
+HEALTH_ENDPOINT: Final = r"(?:healthz|_stcore/health)"
+ALLOWED_MESSAGE_ORIGIN_ENDPOINT: Final = r"_stcore/allowed-message-origins"
+SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
+    r"(?:script-health-check|_stcore/script-health-check)"
+)
 
 
 class RetriesExceeded(Exception):
@@ -217,29 +224,28 @@ class Server:
 
         routes: List[Any] = [
             (
-                make_url_path_regex(base, "stream"),
+                make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,
                 dict(runtime=self._runtime),
             ),
             (
-                make_url_path_regex(base, "healthz"),
+                make_url_path_regex(base, HEALTH_ENDPOINT),
                 HealthHandler,
                 dict(callback=lambda: self._runtime.is_ready_for_browser_connection),
             ),
             (
-                make_url_path_regex(base, "message"),
+                make_url_path_regex(base, MESSAGE_ENDPOINT),
                 MessageCacheHandler,
                 dict(cache=self._runtime.message_cache),
             ),
             (
-                make_url_path_regex(base, "st-metrics"),
+                make_url_path_regex(base, METRIC_ENDPOINT),
                 StatsRequestHandler,
                 dict(stats_manager=self._runtime.stats_mgr),
             ),
             (
-                make_url_path_regex(base, "st-allowed-message-origins"),
+                make_url_path_regex(base, ALLOWED_MESSAGE_ORIGIN_ENDPOINT),
                 AllowedMessageOriginsHandler,
-                dict(callback=lambda: self._runtime.is_ready_for_browser_connection),
             ),
             (
                 make_url_path_regex(
@@ -273,7 +279,7 @@ class Server:
             routes.extend(
                 [
                     (
-                        make_url_path_regex(base, "script-health-check"),
+                        make_url_path_regex(base, SCRIPT_HEALTH_CHECK_ENDPOINT),
                         HealthHandler,
                         dict(
                             callback=lambda: self._runtime.does_script_run_without_error()

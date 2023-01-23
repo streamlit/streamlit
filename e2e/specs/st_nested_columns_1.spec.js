@@ -1,4 +1,5 @@
-/**!
+
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +15,18 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+describe("st.nested_columns_1", () => {
+  beforeEach(() => {
+    cy.loadApp("http://localhost:3000/");
 
-// State for a session. Sent as part of the Initialize message, and also
-// on AppSession state change events.
-message SessionState {
-  // If true, streamlit will re-run the script if it detects that the script
-  // has been changed. This value comes from the server.runOnSave config.
-  // The browser can change this option; it's sent here so that the browser
-  // shows the correct initial value in its Settings dialog.
-  bool run_on_save = 1;
+    cy.prepForElementSnapshots();
+  });
 
-  // True if the script is being run by a client right now.
-  bool script_is_running = 2;
-}
+  describe("when first loaded", () => {
+    it("should show nested columns correctly", () => {
+      cy.get("div [data-testid='stVerticalBlock']").each((el, idx) => {
+        cy.wrap(el).matchThemedSnapshots(`nested_columns_1_${idx}`);
+      });
+    });
+  });
+});

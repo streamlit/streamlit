@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 import "streamlit/proto/AppPage.proto";
-import "streamlit/proto/SessionState.proto";
+import "streamlit/proto/SessionStatus.proto";
 
 // This is the first message that is sent when a new session starts.
 message NewSession {
@@ -57,7 +57,7 @@ message NewSession {
   string page_script_hash = 9;
 }
 
-// Contains the session state that existed at the time the user connected.
+// Contains the session status that existed at the time the user connected.
 // The contents of this message don't change over the lifetime of the app by
 // definition.
 message Initialize {
@@ -65,8 +65,8 @@ message Initialize {
 
   EnvironmentInfo environment_info = 3;
 
-  // The session state at the time the connection was established
-  SessionState session_state = 4;
+  // The session status at the time the connection was established
+  SessionStatus session_status = 4;
 
   // the actual command line as a string
   string command_line = 5;

@@ -22,8 +22,10 @@ from streamlit.logger import get_logger
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 from streamlit.web.server import routes, server_util
 
-# /upload_file/(optional session id)/(optional widget id)
-UPLOAD_FILE_ROUTE = "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"
+# /_stcore/upload_file/(optional session id)/(optional widget id)
+UPLOAD_FILE_ROUTE = (
+    r"/_stcore/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"
+)
 LOGGER = get_logger(__name__)
 
 

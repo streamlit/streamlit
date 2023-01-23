@@ -22,6 +22,7 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
+from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
@@ -30,6 +31,9 @@ from streamlit.web.server.routes import (
     MAX_APP_STATIC_FILE_SIZE,
 )
 from streamlit.web.server.server import (
+    ALLOWED_MESSAGE_ORIGIN_ENDPOINT,
+    HEALTH_ENDPOINT,
+    MESSAGE_ENDPOINT,
     AllowedMessageOriginsHandler,
     AppStaticFileHandler,
     HealthHandler,
@@ -39,11 +43,9 @@ from streamlit.web.server.server import (
 from tests.streamlit.message_mocks import create_dataframe_msg
 from tests.testutil import patch_config_options
 
-LOGGER = get_logger(__name__)
-
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """Tests the /healthz endpoint"""
+    """Tests the /_stcore/health endpoint"""
 
     def setUp(self):
         super(HealthHandlerTest, self).setUp()
@@ -54,38 +56,51 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def get_app(self):
         return tornado.web.Application(
-            [(r"/healthz", HealthHandler, dict(callback=self.is_healthy))]
+            [(rf"/{HEALTH_ENDPOINT}", HealthHandler, dict(callback=self.is_healthy))]
         )
 
-    def test_healthz(self):
-        response = self.fetch("/healthz")
+    def test_health(self):
+        response = self.fetch("/_stcore/health")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
 
         self._is_healthy = False
-        response = self.fetch("/healthz")
+        response = self.fetch("/_stcore/health")
         self.assertEqual(503, response.code)
 
     @patch_config_options({"server.enableXsrfProtection": False})
-    def test_healthz_without_csrf(self):
-        response = self.fetch("/healthz")
+    def test_health_without_csrf(self):
+        response = self.fetch("/_stcore/health")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
         self.assertNotIn("Set-Cookie", response.headers)
 
     @patch_config_options({"server.enableXsrfProtection": True})
-    def test_healthz_with_csrf(self):
-        response = self.fetch("/healthz")
+    def test_health_with_csrf(self):
+        response = self.fetch("/_stcore/health")
         self.assertEqual(200, response.code)
         self.assertEqual(b"ok", response.body)
         self.assertIn("Set-Cookie", response.headers)
+
+    def test_health_deprecated(self):
+        with self.assertLogs("streamlit.web.server.server_util") as logs:
+            response = self.fetch("/healthz")
+        self.assertEqual(
+            logs.records[0].getMessage(),
+            "Endpoint '/healthz' is deprecated. Please use '/_stcore/health' instead.",
+        )
+        self.assertEqual(
+            response.headers["link"],
+            f'<http://127.0.0.1:{self.get_http_port()}/_stcore/health>; rel="alternate"',
+        )
+        self.assertEqual(response.headers["deprecation"], "True")
 
 
 class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         self._cache = ForwardMsgCache()
         return tornado.web.Application(
-            [(r"/message", MessageCacheHandler, dict(cache=self._cache))]
+            [(rf"/{MESSAGE_ENDPOINT}", MessageCacheHandler, dict(cache=self._cache))]
         )
 
     def test_message_cache(self):
@@ -95,13 +110,13 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._cache.add_message(msg, MagicMock(), 0)
 
         # Cache hit
-        response = self.fetch("/message?hash=%s" % msg_hash)
+        response = self.fetch("/_stcore/message?hash=%s" % msg_hash)
         self.assertEqual(200, response.code)
         self.assertEqual(serialize_forward_msg(msg), response.body)
 
         # Cache misses
-        self.assertEqual(404, self.fetch("/message").code)
-        self.assertEqual(404, self.fetch("/message?id=non_existent").code)
+        self.assertEqual(404, self.fetch("/_stcore/message").code)
+        self.assertEqual(404, self.fetch("/_stcore/message?id=non_existent").code)
 
 
 class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
@@ -271,49 +286,21 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self):
         super(AllowedMessageOriginsHandlerTest, self).setUp()
-        self._is_healthy = True
-
-    async def is_healthy(self):
-        return self._is_healthy, "ok"
 
     def get_app(self):
         return tornado.web.Application(
             [
                 (
-                    r"/st-allowed-message-origins",
+                    rf"/{ALLOWED_MESSAGE_ORIGIN_ENDPOINT}",
                     AllowedMessageOriginsHandler,
-                    dict(callback=self.is_healthy),
                 )
             ]
         )
 
     def test_allowed_message_origins(self):
-        response = self.fetch("/st-allowed-message-origins")
+        response = self.fetch("/_stcore/allowed-message-origins")
         self.assertEqual(200, response.code)
         self.assertEqual(
             {"allowedOrigins": ALLOWED_MESSAGE_ORIGINS, "useExternalAuthToken": False},
             json.loads(response.body),
         )
-
-    # NOTE: Temporary tests to verify this endpoint can also act as a healthcheck
-    # endpoint while we need it to. These tests are more or less copy-paste from the
-    # HealthHandlerTest class above.
-    def test_healthcheck_responsibilities(self):
-        response = self.fetch("/st-allowed-message-origins")
-        self.assertEqual(200, response.code)
-
-        self._is_healthy = False
-        response = self.fetch("/st-allowed-message-origins")
-        self.assertEqual(503, response.code)
-
-    @patch_config_options({"server.enableXsrfProtection": False})
-    def test_healthcheck_responsibilities_without_csrf(self):
-        response = self.fetch("/st-allowed-message-origins")
-        self.assertEqual(200, response.code)
-        self.assertNotIn("Set-Cookie", response.headers)
-
-    @patch_config_options({"server.enableXsrfProtection": True})
-    def test_healthcheck_responsibilities_with_csrf(self):
-        response = self.fetch("/st-allowed-message-origins")
-        self.assertEqual(200, response.code)
-        self.assertIn("Set-Cookie", response.headers)
