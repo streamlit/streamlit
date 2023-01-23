@@ -88,7 +88,7 @@
     "react-debounce-render": "^8.0.2",
     "react-device-detect": "^2.2.2",
     "react-dom": "^17.0.2",
-    "react-dropzone": "^11.2.0",
+    "react-dropzone": "^12.1.0",
     "react-feather": "^2.0.10",
     "react-google-login": "^5.1.21",
     "react-hotkeys": "^1.1.4",
