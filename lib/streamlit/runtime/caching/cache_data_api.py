@@ -285,18 +285,17 @@ class CacheDataAPI:
         persist: CachePersistType | bool,
         experimental_allow_widgets: bool,
     ):
-        """Decorator to cache functions that return data (e.g. dataframe transforms,
-        database queries, ML inference).
+        """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
         Cached objects are stored in "pickled" form, which means that the return
         value of a cached function must be pickleable. Each caller of the cached
         function gets its own copy of the cached data.
 
-        You can clear a function's cache with `func.clear()` or clear the entire
-        cache with `st.cache_data.clear()`.
+        You can clear a function's cache with ``func.clear()`` or clear the entire
+        cache with ``st.cache_data.clear()``.
 
-        To cache global resources, use `st.cache_resource` instead.
-        Learn more about caching at [https://docs.streamlit.io/library/advanced-features/caching](https://docs.streamlit.io/library/advanced-features/caching)
+        To cache global resources, use ``st.cache_resource`` instead. Learn more
+        about caching at https://docs.streamlit.io/library/advanced-features/caching.
 
         Parameters
         ----------
@@ -306,8 +305,8 @@ class CacheDataAPI:
         ttl : float or timedelta or None
             The maximum number of seconds to keep an entry in the cache, or
             None if cache entries should not expire. The default is None.
-            Note that ttl is incompatible with `persist="disk"` - `ttl` will be
-            ignored if `persist` is specified.
+            Note that ttl is incompatible with ``persist="disk"`` - ``ttl`` will be
+            ignored if ``persist`` is specified.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
