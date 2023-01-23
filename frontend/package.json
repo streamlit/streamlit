@@ -129,7 +129,7 @@
     "@testing-library/dom": "^8.19.0",
     "@testing-library/react": "^12.1.4",
     "@testing-library/react-hooks": "^8.0.1",
-    "@testing-library/user-event": "^13.1.9",
+    "@testing-library/user-event": "^14.0.0",
     "@types/d3": "^5.7.2",
     "@types/d3-graphviz": "^2.6.7",
     "@types/dom-mediacapture-record": "^1.0.14",
