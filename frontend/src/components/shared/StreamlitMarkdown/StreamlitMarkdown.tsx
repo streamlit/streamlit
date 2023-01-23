@@ -324,6 +324,9 @@ export function RenderedMarkdown({
   }
   if (isButton || isCheckbox || isExpander || isTabs) {
     allowed = ["p", "em", "strong", "del"]
+    if (isCheckbox) {
+      allowed.push("code")
+    }
   }
 
   return (

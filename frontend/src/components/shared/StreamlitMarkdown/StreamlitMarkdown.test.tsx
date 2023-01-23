@@ -234,6 +234,16 @@ describe("StreamlitMarkdown", () => {
       )
     }
   })
+
+  it("allow code blocks inside checkboxes", () => {
+    const source = "This should be a code block: `foo`"
+    const wrapper = mount(
+      <StreamlitMarkdown source={source} allowHTML={false} isCheckbox />
+    )
+    expect(
+      wrapper.find("StyledStreamlitMarkdown").find("code").text()
+    ).toEqual("foo")
+  })
 })
 
 const getHeadingProps = (
