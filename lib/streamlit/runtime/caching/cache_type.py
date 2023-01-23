@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+import enum
 
-st.progress(50)
 
-st.progress(30, text="This is very long and boring text. " * 6)
-st.progress(
-    0.5,
-    text=(
-        "Please be patient :clock1:. **bold text**. $$ x = 1 + 2 $$, :blue[Blue text]"
-    ),
-)
+class CacheType(enum.Enum):
+    """The function cache types we implement."""
+
+    DATA = "DATA"
+    RESOURCE = "RESOURCE"
+
+
+def get_decorator_api_name(cache_type: CacheType) -> str:
+    """Return the name of the public decorator API for the given CacheType."""
+    if cache_type is CacheType.DATA:
+        return "cache_data"
+    if cache_type is CacheType.RESOURCE:
+        return "cache_resource"
+    raise RuntimeError(f"Unrecognized CacheType '{cache_type}'")

@@ -27,8 +27,8 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching import (
-    get_memo_stats_provider,
-    get_singleton_stats_provider,
+    get_data_cache_stats_provider,
+    get_resource_cache_stats_provider,
 )
 from streamlit.runtime.forward_msg_cache import (
     ForwardMsgCache,
@@ -203,8 +203,8 @@ class Runtime:
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
 
         self._stats_mgr = StatsManager()
-        self._stats_mgr.register_provider(get_memo_stats_provider())
-        self._stats_mgr.register_provider(get_singleton_stats_provider())
+        self._stats_mgr.register_provider(get_data_cache_stats_provider())
+        self._stats_mgr.register_provider(get_resource_cache_stats_provider())
         self._stats_mgr.register_provider(_mem_caches)
         self._stats_mgr.register_provider(self._message_cache)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
