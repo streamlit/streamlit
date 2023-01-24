@@ -502,6 +502,7 @@ class DataEditorMixin:
         num_rows : "fixed" or "dynamic"
             If "dynamic", the user can add and delete rows in the data editor.
             If "fixed", the user cannot add or delete rows. Defaults to "fixed".
+            Note: "dynamic" mode does not allow the user to sort columns.
 
         Returns
         -------
