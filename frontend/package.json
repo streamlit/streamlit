@@ -111,7 +111,7 @@
     "sass": "^1.57.1",
     "sprintf-js": "^1.1.2",
     "styletron-engine-atomic": "^1.5.0",
-    "styletron-react": "^5.2.6",
+    "styletron-react": "^6.1.0",
     "typed-signals": "^2.5.0",
     "unist-util-visit": "^4.1.1",
     "vega": "^5.22.1",
