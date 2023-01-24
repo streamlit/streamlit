@@ -20,7 +20,7 @@ import contextlib
 import re
 import types
 from datetime import date, datetime, time
-from enum import Enum
+from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -246,26 +246,26 @@ BytesLike: TypeAlias = Union[bytes, bytearray]
 class DataFormat(Enum):
     """DataFormat is used to determine the format of the data."""
 
-    UNKNOWN = "unknown"
-    EMPTY = "empty"  # None
-    PANDAS_DATAFRAME = "pandas_dataframe"  # pd.DataFrame
-    PANDAS_SERIES = "pandas_series"  # pd.Series
-    PANDAS_INDEX = "pandas_index"  # pd.Index
-    NUMPY_LIST = "numpy_list"  # np.array[Scalar]
-    NUMPY_MATRIX = "numpy_matrix"  # np.array[List[Scalar]]
-    PYARROW_TABLE = "pyarrow_table"  # pyarrow.Table
-    SNOWPARK_OBJECT = "snowpark_object"  # Snowpark DataFrame, Table, List[Row]
-    PYSPARK_OBJECT = "pyspark_object"  # pyspark.DataFrame
-    PANDAS_STYLER = "pandas_styler"  # pandas Styler
-    LIST_OF_RECORDS = "list_of_records"  # List[Dict[str, Scalar]]
-    LIST_OF_ROWS = "list_of_rows"  # List[List[Scalar]]
-    LIST_OF_VALUES = "list_of_values"  # List[Scalar]
-    TUPLE_OF_VALUES = "tuple_of_values"  # Tuple[Scalar]
-    SET_OF_VALUES = "set_of_values"  # Set[Scalar]
-    COLUMN_INDEX_MAPPING = "column_index_mapping"  # {column: {index: value}}
-    COLUMN_VALUE_MAPPING = "column_value_mapping"  # {column: List[values]}
-    COLUMN_SERIES_MAPPING = "column_series_mapping"  # {column: Series(values)}
-    KEY_VALUE_DICT = "key_value_dict"  # {index: value}
+    UNKNOWN = auto()
+    EMPTY = auto()  # None
+    PANDAS_DATAFRAME = auto()  # pd.DataFrame
+    PANDAS_SERIES = auto()  # pd.Series
+    PANDAS_INDEX = auto()  # pd.Index
+    NUMPY_LIST = auto()  # np.array[Scalar]
+    NUMPY_MATRIX = auto()  # np.array[List[Scalar]]
+    PYARROW_TABLE = auto()  # pyarrow.Table
+    SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
+    PYSPARK_OBJECT = auto()  # pyspark.DataFrame
+    PANDAS_STYLER = auto()  # pandas Styler
+    LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
+    LIST_OF_ROWS = auto()  # List[List[Scalar]]
+    LIST_OF_VALUES = auto()  # List[Scalar]
+    TUPLE_OF_VALUES = auto()  # Tuple[Scalar]
+    SET_OF_VALUES = auto()  # Set[Scalar]
+    COLUMN_INDEX_MAPPING = auto()  # {column: {index: value}}
+    COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
+    COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
+    KEY_VALUE_DICT = auto()  # {index: value}
 
 
 def is_dataframe(obj: object) -> TypeGuard[pd.DataFrame]:

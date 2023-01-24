@@ -31,7 +31,6 @@ type ColumnSizerReturn = Pick<DataEditorProps, "columns" | "onColumnResize">
  */
 function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
   // The columns with the corresponding empty template for every type:
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [columnSizes, setColumnSizes] = useState<Map<string, number>>(
     () => new Map()
   )

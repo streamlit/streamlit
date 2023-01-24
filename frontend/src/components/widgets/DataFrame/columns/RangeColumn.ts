@@ -136,7 +136,7 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         isMissingValue: isNullOrUndefined(data),
-        copyData: String(cellData),
+        copyData: String(cellData), // Column sorting is done via the copyData value
         data: {
           ...cellTemplate.data,
           value: normalizeCellValue,

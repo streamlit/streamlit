@@ -32,16 +32,18 @@ message Arrow {
   // Colum configuration as JSON
   string columns = 7;
   // Activate table editing
-  enum EditingMode {
-    READ_ONLY = 0; // Read-only table.
-    FIXED = 1; // Activates editing but only allow editing of existing cells.
-    DYNAMIC = 2; // Activates editing and allow adding & deleting rows.
-  }
   EditingMode editing_mode = 8;
   // Deactivates editing
   bool disabled = 9;
   // The form ID of the widget, this is required if the dataframe is editable
   string form_id = 10;
+
+  // Available editing modes:
+  enum EditingMode {
+    READ_ONLY = 0; // Read-only table.
+    FIXED = 1; // Activates editing but only allow editing of existing cells.
+    DYNAMIC = 2; // Activates editing and allow adding & deleting rows.
+  }
 }
 
 message Styler {

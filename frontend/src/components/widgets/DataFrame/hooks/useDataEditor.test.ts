@@ -176,7 +176,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor(
         MOCK_COLUMNS,
-        false,
+        false, // activates addition & deletion of rows
         editingState,
         getCellContentMock,
         getOriginalIndexMock,
@@ -210,6 +210,47 @@ describe("useDataEditor hook", () => {
     )
   })
 
+  it("doesn't add new rows from pasted data via onPaste if fixed num rows", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        MOCK_COLUMNS,
+        true, // deactivate the addition of new rows
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.onPaste !== "function") {
+      throw new Error("onPaste is expected to be a function")
+    }
+
+    // Paste in two rows into the last row
+    result.current.onPaste(
+      [0, INITIAL_NUM_ROWS - 1],
+      [
+        ["321", "bar", "baz"],
+        ["432", "lorem", "ipsum"],
+      ]
+    )
+
+    // This should not have added any rows since fixedNumRows is true
+    expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)
+
+    expect(applyEditsMock).toHaveBeenCalled()
+    expect(getCellContentMock).toHaveBeenCalled()
+
+    // Check with full editing state:
+    expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
+      `{"edited_cells":{"2:0":321,"2:1":"bar"},"added_rows":[],"deleted_rows":[]}`
+    )
+  })
+
   it("allows to add new rows via onRowAppended", () => {
     const editingState = {
       current: new EditingState(INITIAL_NUM_ROWS),
@@ -217,7 +258,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor(
         MOCK_COLUMNS,
-        false,
+        false, // activates addition & deletion of rows
         editingState,
         getCellContentMock,
         getOriginalIndexMock,
@@ -236,6 +277,34 @@ describe("useDataEditor hook", () => {
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS + 1)
 
     expect(applyEditsMock).toHaveBeenCalledWith(false, false)
+  })
+
+  it("doesn't allow to add new rows via onRowAppended if fix num rows", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        MOCK_COLUMNS,
+        true, // deactivates addition & deletion of rows
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.onRowAppended !== "function") {
+      throw new Error("onRowAppended is expected to be a function")
+    }
+
+    result.current.onRowAppended()
+
+    // Row addition is deactivated, this should not add any rows
+    expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)
+
+    expect(applyEditsMock).toHaveBeenCalledTimes(0)
   })
 
   it("allows to delete cell content via onDelete", () => {
@@ -295,7 +364,7 @@ describe("useDataEditor hook", () => {
     const { result } = renderHook(() => {
       return useDataEditor(
         MOCK_COLUMNS,
-        false,
+        false, // activates addition & deletion of rows
         editingState,
         getCellContentMock,
         getOriginalIndexMock,
@@ -326,6 +395,47 @@ describe("useDataEditor hook", () => {
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
       `{"edited_cells":{},"added_rows":[],"deleted_rows":[1]}`
+    )
+  })
+
+  it("doesn't allow to delete rows via onDelete if fix num rows", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        MOCK_COLUMNS,
+        true, // deactivates addition & deletion of rows
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.onDelete !== "function") {
+      throw new Error("onDelete is expected to be a function")
+    }
+
+    // Mock selection to delete row 1
+    const deleteRowSelection = {
+      current: undefined,
+      rows: CompactSelection.fromSingleSelection(1),
+      columns: CompactSelection.empty(),
+    } as GridSelection
+
+    // Delete the row
+    result.current.onDelete(deleteRowSelection)
+
+    // The number of rows should be same since row deletion is not allowed:
+    expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)
+
+    expect(applyEditsMock).toHaveBeenCalledTimes(0)
+
+    // Check with full editing state
+    expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
+      `{"edited_cells":{},"added_rows":[],"deleted_rows":[]}`
     )
   })
 })

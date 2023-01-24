@@ -350,9 +350,9 @@ class TypeUtilTest(unittest.TestCase):
                 # Sets in python are unordered, so we can't compare them this way.
                 if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
                     self.assertEqual(str(converted_data), str(input_data))
-                pd.testing.assert_frame_equal(
-                    converted_df, type_util.convert_anything_to_df(converted_data)
-                )
+                    pd.testing.assert_frame_equal(
+                        converted_df, type_util.convert_anything_to_df(converted_data)
+                    )
 
     def test_convert_df_to_data_format_with_unknown_data_format(self):
         """Test that `convert_df_to_data_format` raises a ValueError when

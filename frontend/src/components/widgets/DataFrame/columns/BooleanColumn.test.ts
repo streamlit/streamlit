@@ -75,27 +75,16 @@ describe("BooleanColumn", () => {
       const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
+      expect(isErrorCell(cell)).toEqual(false)
     }
   )
 
-  it.each([
-    [true, false],
-    [false, false],
-    ["true", false],
-    ["false", false],
-    [1, false],
-    [0, false],
-    ["", false],
-    [null, false],
-    [undefined, false],
-    [[], false],
-    ["foo", true],
-    [12345, true],
-    [0.1, true],
-    [["foo", "bar"], true],
-  ])("%p results in error cell: %p", (input: any, errorCell: boolean) => {
-    const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(errorCell)
-  })
+  it.each([["foo"], [12345], [0.1], [["foo", "bar"]]])(
+    "%p results in error cell: %p",
+    (input: any) => {
+      const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 })

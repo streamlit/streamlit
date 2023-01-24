@@ -154,6 +154,15 @@ describe("applyColumnConfig", () => {
     const column1 = applyColumnConfig(MOCK_COLUMNS[0], columnConfig)
     expect(column1.width).toBe(123)
   })
+
+  it("works with empty column configs", () => {
+    const emptyColumnConfig: Map<string | number, ColumnConfigProps> = new Map(
+      []
+    )
+
+    const column1 = applyColumnConfig(MOCK_COLUMNS[0], emptyColumnConfig)
+    expect(column1).toBe(MOCK_COLUMNS[0])
+  })
 })
 
 describe("getColumnConfig", () => {

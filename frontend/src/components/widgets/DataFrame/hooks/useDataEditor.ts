@@ -102,13 +102,18 @@ function useDataEditor(
   )
 
   const onRowAppended = React.useCallback(() => {
+    if (fixedNumRows) {
+      // Appending rows is not supported
+      return
+    }
+
     const newRow: Map<number, GridCell> = new Map()
     columns.forEach(column => {
       newRow.set(column.indexNumber, column.getCell(undefined))
     })
     editingState.current.addRow(newRow)
     applyEdits(false, false)
-  }, [columns, editingState])
+  }, [columns, editingState, fixedNumRows])
 
   const onDelete = React.useCallback(
     (selection: GridSelection): GridSelection | boolean => {
@@ -164,7 +169,14 @@ function useDataEditor(
       }
       return true
     },
-    [columns, editingState, refreshCells, getOriginalIndex, applyEdits]
+    [
+      columns,
+      editingState,
+      fixedNumRows,
+      refreshCells,
+      getOriginalIndex,
+      applyEdits,
+    ]
   )
 
   const onPaste = React.useCallback(
@@ -199,7 +211,7 @@ function useDataEditor(
           // Only add to columns that are editable:
           if (column.isEditable) {
             const newCell = column.getCell(pasteDataValue)
-            // We are not editing cells ff the pasted value leads to an error:
+            // We are not editing cells if the pasted value leads to an error:
             if (!isErrorCell(newCell)) {
               const originalCol = column.indexNumber
               const originalRow = editingState.current.getOriginalRowIndex(
@@ -235,6 +247,7 @@ function useDataEditor(
     [
       columns,
       editingState,
+      fixedNumRows,
       getOriginalIndex,
       getCellContent,
       onRowAppended,

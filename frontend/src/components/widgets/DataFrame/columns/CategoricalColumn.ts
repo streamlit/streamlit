@@ -90,7 +90,7 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         isMissingValue: cellData === "",
-        copyData: cellData,
+        copyData: cellData, // Column sorting is done via the copyData value
         data: {
           ...cellTemplate.data,
           value: cellData,
