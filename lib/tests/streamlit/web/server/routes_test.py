@@ -15,27 +15,21 @@
 import json
 import os
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import tornado.httpserver
 import tornado.testing
 import tornado.web
 import tornado.websocket
 
-from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.routes import (
-    ALLOWED_MESSAGE_ORIGINS,
-    MAX_APP_STATIC_FILE_SIZE,
-)
+from streamlit.web.server.routes import ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
     ALLOWED_MESSAGE_ORIGIN_ENDPOINT,
     HEALTH_ENDPOINT,
     MESSAGE_ENDPOINT,
     AllowedMessageOriginsHandler,
-    AppStaticFileHandler,
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
@@ -172,115 +166,6 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         for r in responses:
             assert r.code == 404
-
-
-class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    def setUp(self) -> None:
-        self._tmpdir = tempfile.TemporaryDirectory(dir=os.getcwd())
-        self._tmpfile = tempfile.NamedTemporaryFile(dir=self._tmpdir.name, delete=False)
-        self._tmp_js_file = tempfile.NamedTemporaryFile(
-            dir=self._tmpdir.name, suffix="script.js", delete=False
-        )
-        self._tmp_image_file = tempfile.NamedTemporaryFile(
-            dir=self._tmpdir.name, suffix="image.png", delete=False
-        )
-
-        self._symlink_outside_directory = "symlink_outside"
-        self._symlink_inside_directory = "symlink_inside"
-
-        os.symlink(
-            "/", os.path.join(self._tmpdir.name, self._symlink_outside_directory)
-        )
-        os.symlink(
-            self._tmpfile.name,
-            os.path.join(self._tmpdir.name, self._symlink_inside_directory),
-        )
-
-        self._filename = os.path.basename(self._tmpfile.name)
-        self._js_filename = os.path.basename(self._tmp_js_file.name)
-        self._image_filename = os.path.basename(self._tmp_image_file.name)
-
-        super().setUp()
-
-    def tearDown(self) -> None:
-        super().tearDown()
-        self._tmpdir.cleanup()
-
-    def get_app(self):
-        return tornado.web.Application(
-            [
-                (
-                    r"/app/static/(.*)",
-                    AppStaticFileHandler,
-                    {"path": "%s/" % self._tmpdir.name},
-                )
-            ]
-        )
-
-    def test_static_files_200(self):
-        """
-        Files with extensions NOT listed in routes.py `SAFE_APP_STATIC_FILE_EXTENSIONS`
-        should have the `Content-Type` header value `text-plain`.
-        """
-        responses = [
-            # self._filename is file without extension
-            self.fetch(f"/app/static/{self._filename}"),
-            # self._js_filename is file with '.js' extension
-            self.fetch(f"/app/static/{self._js_filename}"),
-            # self._symlink_inside_directory is symlink to
-            # self._tmpfile (inside static directory)
-            self.fetch(f"/app/static/{self._symlink_inside_directory}"),
-        ]
-        for r in responses:
-            assert r.headers["Content-Type"] == "text/plain"
-            assert r.headers["X-Content-Type-Options"] == "nosniff"
-            assert r.code == 200
-
-    def test_static_image_200(self):
-        """
-        Files with extensions listed in routes.py `SAFE_APP_STATIC_FILE_EXTENSIONS`
-        should have the `Content-Type` header based on their extension.
-        """
-        response = self.fetch(f"/app/static/{self._image_filename}")
-
-        assert response.code == 200
-        assert response.headers["Content-Type"] == "image/png"
-        assert response.headers["X-Content-Type-Options"] == "nosniff"
-
-    @patch("os.path.getsize", MagicMock(return_value=MAX_APP_STATIC_FILE_SIZE + 1))
-    def test_big_file_404(self):
-        """Files with size greater than MAX_APP_STATIC_FILE_SIZE should return 404."""
-        response = self.fetch(f"/app/static/{self._image_filename}")
-        assert response.code == 404
-        self.assertEqual(
-            b"<html><title>404: File is too large</title>"
-            b"<body>404: File is too large</body></html>",
-            response.body,
-        )
-
-    def test_staticfiles_404(self):
-        """
-        Non-existent files, files outside static directory and symlinks pointing to
-        files outside static directory and directories should return 404.
-        """
-        responses = [
-            # Access to directory without trailing slash
-            self.fetch("/app/static"),
-            # Access to directory with trailing slash
-            self.fetch("/app/static/"),
-            # Access to file outside static directory
-            self.fetch("/app/static/../test_file_outside_directory.py"),
-            # Access to symlink outside static directory
-            self.fetch(f"/app/static/{self._symlink_outside_directory}"),
-            # Access to non-existent file
-            self.fetch("/app/static/nonexistent.jpg"),
-        ]
-        for r in responses:
-            assert r.code == 404
-            assert (
-                r.body == b"<html><title>404: Not Found</title>"
-                b"<body>404: Not Found</body></html>"
-            )
 
 
 class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):

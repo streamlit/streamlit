@@ -35,13 +35,13 @@ from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
+from streamlit.web.server.app_static_file_handler import AppStaticFileHandler
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
     AllowedMessageOriginsHandler,
-    AppStaticFileHandler,
     AssetsFileHandler,
     HealthHandler,
     MessageCacheHandler,
