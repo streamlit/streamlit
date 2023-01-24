@@ -307,7 +307,7 @@ export function toSafeNumber(value: any): number | null {
     return null
   }
 
-  if (Array.isArray(value)) {
+  if (isArray(value)) {
     return NaN
   }
 

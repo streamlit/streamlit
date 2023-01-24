@@ -162,7 +162,7 @@ function ChartColumn(props: BaseColumnProps): BaseColumn {
 
       return {
         ...cellTemplate,
-        copyData: convertedChartData.join(","),
+        copyData: convertedChartData.join(","), // Column sorting is done via the copyData value
         data: {
           ...cellTemplate.data,
           values: normalizedChartData,
