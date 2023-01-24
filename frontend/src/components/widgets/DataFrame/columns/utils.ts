@@ -33,31 +33,31 @@ import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
  * These options can also be used to overwrite from user-defined column config.
  */
 export interface BaseColumnProps {
-  // The id of the column.
+  // The id of the column:
   readonly id: string
-  // The title of the column.
+  // The title of the column:
   readonly title: string
-  // The index number of the column.
+  // The index number of the column:
   readonly indexNumber: number
-  // The arrow data type of the column.
+  // The arrow data type of the column:
   readonly arrowType: ArrowType
-  // If `True`, the column can be edited.
+  // If `True`, the column can be edited:
   readonly isEditable: boolean
-  // If `True`, the column is hidden (will not be shown).
+  // If `True`, the column is hidden (will not be shown):
   readonly isHidden: boolean
-  // If `True`, the column is a table index.
+  // If `True`, the column is a table index:
   readonly isIndex: boolean
-  // If `True`, the column is a stretched.
+  // If `True`, the column is a stretched:
   readonly isStretched: boolean
-  // The initial width of the column
+  // The initial width of the column:
   readonly width?: number
-  // Column time selected via column config
+  // Column type selected via column config:
   readonly customType?: string
-  // Additional metadata related to the column type.
+  // Additional metadata related to the column type:
   readonly columnTypeMetadata?: Record<string, any>
-  // The content alignment of the column.
+  // The content alignment of the column:
   readonly contentAlignment?: "left" | "center" | "right"
-  // Theme overrides for this column.
+  // Theme overrides for this column:
   readonly themeOverride?: Partial<GlideTheme>
 }
 
@@ -71,9 +71,9 @@ export interface BaseColumn extends BaseColumnProps {
   // smart: Detects if value is a number or a string and sorts accordingly.
   // raw: Sorts based on the actual type of the cell data value.
   readonly sortMode: "default" | "raw" | "smart"
-  // Get a cell with the provided data for the column type.
+  // Get a cell with the provided data for the column type:
   getCell(data?: any): GridCell
-  // Get the raw cell of a provided cell.
+  // Get the raw cell of a provided cell:
   getCellValue(cell: GridCell): any | null
 }
 
@@ -288,6 +288,8 @@ export function toSafeString(data: any): string {
       )
     }
   } catch (error) {
+    // This is most likely an object that cannot be converted to a string
+    // console.log converts this to `[object Object]` which we are doing here as well:
     return `[${typeof data}]`
   }
 }
