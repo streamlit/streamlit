@@ -403,7 +403,7 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         session._local_sources_watcher = None
 
-        session._register_file_watchers()
+        session.register_file_watchers()
         self.assertIsNotNone(session._local_sources_watcher)
 
     @patch(
@@ -419,7 +419,7 @@ class AppSessionTest(unittest.TestCase):
         ) as patched_stop_config_listener, patch.object(
             session, "_stop_pages_listener"
         ) as patched_stop_pages_listener:
-            session._disconnect_file_watchers()
+            session.disconnect_file_watchers()
 
             patched_close_local_sources_watcher.assert_called_once()
             patched_stop_config_listener.assert_called_once()
@@ -433,7 +433,7 @@ class AppSessionTest(unittest.TestCase):
             self.assertIsNone(session._stop_pages_listener)
 
     def test_disconnect_file_watchers_removes_refs(self):
-        """Test that calling _disconnect_file_watchers on the AppSession
+        """Test that calling disconnect_file_watchers on the AppSession
         removes references to it so it is eligible to be garbage collected after the
         method is called.
         """
@@ -443,7 +443,7 @@ class AppSessionTest(unittest.TestCase):
         # handlers.
         self.assertGreater(len(gc.get_referrers(session)), 0)
 
-        session._disconnect_file_watchers()
+        session.disconnect_file_watchers()
         # Ensure that we don't count refs to session from an object that would have been
         # garbage collected along with it.
         gc.collect(2)

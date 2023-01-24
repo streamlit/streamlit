@@ -45,7 +45,11 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                 # so that the main thread can retrieve it safely. If Runtime
                 # creation fails, we'll stick an Exception in the queue instead.
                 config = RuntimeConfig(
-                    "mock/script/path.py", "", media_file_storage=MagicMock()
+                    "mock/script/path.py",
+                    "",
+                    media_file_storage=MagicMock(),
+                    session_manager_class=MagicMock,
+                    session_storage=MagicMock(),
                 )
                 queue.put(Runtime(config))
             except BaseException as e:

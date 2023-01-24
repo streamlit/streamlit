@@ -74,6 +74,12 @@ export class SessionInfo {
    */
   private static singleton?: SessionInfo
 
+  /**
+   * Our last SessionInfo singleton if there is no currently active session, or
+   * undefined if there is one.
+   */
+  public static lastSessionInfo?: SessionInfo
+
   public static get current(): SessionInfo {
     if (!SessionInfo.singleton) {
       throw new Error("Tried to use SessionInfo before it was initialized")
@@ -82,6 +88,7 @@ export class SessionInfo {
   }
 
   public static set current(sm: SessionInfo) {
+    SessionInfo.lastSessionInfo = undefined
     SessionInfo.singleton = sm
   }
 
@@ -94,6 +101,7 @@ export class SessionInfo {
   }
 
   public static clearSession(): void {
+    SessionInfo.lastSessionInfo = SessionInfo.singleton
     SessionInfo.singleton = undefined
   }
 
