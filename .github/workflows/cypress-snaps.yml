@@ -6,6 +6,7 @@ on:
     inputs:
       testname:
         description: "Enter the test name to run (see e2e/specs/[testname].spec.js). For example: st_alert"
+        required: true
         default: "st_alert"
         type: "string"
 
