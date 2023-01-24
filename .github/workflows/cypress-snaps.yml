@@ -15,7 +15,7 @@ on:
 
 # Avoid duplicate workflows on same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-cypress-snapshots-${{ inputs.testname }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.events.inputs.testname }}
   cancel-in-progress: true
 
 jobs:
