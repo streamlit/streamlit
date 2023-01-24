@@ -199,7 +199,7 @@ function useDataEditor(
           // Only add to columns that are editable:
           if (column.isEditable) {
             const newCell = column.getCell(pasteDataValue)
-            // We are not editing cells ff the pasted value leads to an error:
+            // We are not editing cells if the pasted value leads to an error:
             if (!isErrorCell(newCell)) {
               const originalCol = column.indexNumber
               const originalRow = editingState.current.getOriginalRowIndex(
