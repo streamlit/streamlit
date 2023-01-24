@@ -59,33 +59,38 @@ export interface ColumnConfigProps {
  * Apply the user-defined column configuration if supplied.
  *
  * @param columnProps - The column properties to apply the config to.
- * @param columnsConfig - The user-defined column configuration.
+ * @param columnConfigMapping - The user-defined column configuration mapping.
  *
  * @return the column properties with the config applied.
  */
 export function applyColumnConfig(
   columnProps: BaseColumnProps,
-  columnsConfig: Map<string | number, ColumnConfigProps>
+  columnConfigMapping: Map<string | number, ColumnConfigProps>
 ): BaseColumnProps {
-  if (!columnsConfig) {
+  if (!columnConfigMapping) {
     // No column config configured
     return columnProps
   }
 
   let columnConfig
-  if (columnsConfig.has(columnProps.title)) {
+  if (columnConfigMapping.has(columnProps.title)) {
     // Config is configured based on the column title
-    columnConfig = columnsConfig.get(columnProps.title)
+    columnConfig = columnConfigMapping.get(columnProps.title)
   } else if (
-    columnsConfig.has(`${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`)
-  ) {
-    // Config is configured based on the column position, e.g. col:0 -> first column
-    columnConfig = columnsConfig.get(
+    columnConfigMapping.has(
       `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
     )
-  } else if (columnProps.isIndex && columnsConfig.has(INDEX_IDENTIFIER)) {
+  ) {
+    // Config is configured based on the column position, e.g. col:0 -> first column
+    columnConfig = columnConfigMapping.get(
+      `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
+    )
+  } else if (
+    columnProps.isIndex &&
+    columnConfigMapping.has(INDEX_IDENTIFIER)
+  ) {
     // Config is configured for the index column (or all index columns for multi-index)
-    columnConfig = columnsConfig.get(INDEX_IDENTIFIER)
+    columnConfig = columnConfigMapping.get(INDEX_IDENTIFIER)
   }
 
   if (!columnConfig) {
@@ -211,7 +216,7 @@ function useDataLoader(
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
   // TODO(lukasmasuch): We might use state to store the column config as additional optimization?
-  const columnsConfig = getColumnConfig(element)
+  const columnConfigMapping = getColumnConfig(element)
 
   const stretchColumns: boolean =
     element.useContainerWidth ||
@@ -223,7 +228,7 @@ function useDataLoader(
       // Apply column configurations
       let updatedColumn = {
         ...column,
-        ...applyColumnConfig(column, columnsConfig),
+        ...applyColumnConfig(column, columnConfigMapping),
         isStretched: stretchColumns,
       } as BaseColumnProps
 
