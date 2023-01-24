@@ -851,7 +851,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: @types/clone, @types/command-line-args, @types/command-line-usage, @types/estree, @types/geojson, @types/hammerjs, @types/hast, @types/html-minifier-terser, @types/katex, @types/linkify-it, @types/mapbox-gl, @types/markdown-it, @types/mdast, @types/node, @types/offscreencanvas, @types/pad-left, @types/parse5, @types/prop-types, @types/react, @types/react-transition-group, @types/react-virtualized-auto-sizer, @types/react-window, @types/scheduler, @types/unist. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/clone), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-args), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-usage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hammerjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/html-minifier-terser), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/katex), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/linkify-it), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox-gl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/markdown-it), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/offscreencanvas), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pad-left), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse5), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-transition-group), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-virtualized-auto-sizer), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-window), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/scheduler), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/unist). This software contains the following license and notice below:
+The following software may be included in this product: @types/clone, @types/command-line-args, @types/command-line-usage, @types/debug, @types/estree, @types/geojson, @types/hammerjs, @types/hast, @types/html-minifier-terser, @types/katex, @types/linkify-it, @types/mapbox-gl, @types/markdown-it, @types/mdast, @types/node, @types/offscreencanvas, @types/pad-left, @types/parse5, @types/prop-types, @types/react, @types/react-transition-group, @types/react-virtualized-auto-sizer, @types/react-window, @types/scheduler, @types/unist. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/clone), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-args), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/command-line-usage), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/debug), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/estree), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/geojson), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hammerjs), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/hast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/html-minifier-terser), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/katex), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/linkify-it), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mapbox-gl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/markdown-it), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdast), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/node), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/offscreencanvas), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/pad-left), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse5), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/prop-types), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-transition-group), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-virtualized-auto-sizer), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/react-window), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/scheduler), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/unist). This software contains the following license and notice below:
 
 MIT License
 
@@ -877,7 +877,7 @@ MIT License
 
 -----
 
-The following software may be included in this product: @types/flatbuffers, @types/mdurl, @types/parse-json. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/flatbuffers), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdurl), https://www.github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse-json). This software contains the following license and notice below:
+The following software may be included in this product: @types/flatbuffers, @types/mdurl, @types/ms, @types/parse-json. A copy of the source code may be downloaded from https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/flatbuffers), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/mdurl), https://github.com/DefinitelyTyped/DefinitelyTyped.git (@types/ms), https://www.github.com/DefinitelyTyped/DefinitelyTyped.git (@types/parse-json). This software contains the following license and notice below:
 
 MIT License
 
@@ -1237,7 +1237,7 @@ Apache License
 
 -----
 
-The following software may be included in this product: ansi-regex, ansi-styles, callsites, chalk, escape-string-regexp, has-flag, is-blob, is-finite, is-fullwidth-code-point, is-plain-obj, is-svg, is-wsl, parent-module, path-type, resolve-from, string-width, strip-ansi, supports-color. A copy of the source code may be downloaded from https://github.com/chalk/ansi-regex.git (ansi-regex), https://github.com/chalk/ansi-styles.git (ansi-styles), https://github.com/sindresorhus/callsites.git (callsites), https://github.com/chalk/chalk.git (chalk), https://github.com/sindresorhus/escape-string-regexp.git (escape-string-regexp), https://github.com/sindresorhus/has-flag.git (has-flag), https://github.com/sindresorhus/is-blob.git (is-blob), https://github.com/sindresorhus/is-finite.git (is-finite), https://github.com/sindresorhus/is-fullwidth-code-point.git (is-fullwidth-code-point), https://github.com/sindresorhus/is-plain-obj.git (is-plain-obj), https://github.com/sindresorhus/is-svg.git (is-svg), https://github.com/sindresorhus/is-wsl.git (is-wsl), https://github.com/sindresorhus/parent-module.git (parent-module), https://github.com/sindresorhus/path-type.git (path-type), https://github.com/sindresorhus/resolve-from.git (resolve-from), https://github.com/sindresorhus/string-width.git (string-width), https://github.com/chalk/strip-ansi.git (strip-ansi), https://github.com/chalk/supports-color.git (supports-color). This software contains the following license and notice below:
+The following software may be included in this product: ansi-regex, ansi-styles, callsites, chalk, escape-string-regexp, has-flag, is-blob, is-finite, is-fullwidth-code-point, is-svg, is-wsl, parent-module, path-type, resolve-from, string-width, strip-ansi, supports-color. A copy of the source code may be downloaded from https://github.com/chalk/ansi-regex.git (ansi-regex), https://github.com/chalk/ansi-styles.git (ansi-styles), https://github.com/sindresorhus/callsites.git (callsites), https://github.com/chalk/chalk.git (chalk), https://github.com/sindresorhus/escape-string-regexp.git (escape-string-regexp), https://github.com/sindresorhus/has-flag.git (has-flag), https://github.com/sindresorhus/is-blob.git (is-blob), https://github.com/sindresorhus/is-finite.git (is-finite), https://github.com/sindresorhus/is-fullwidth-code-point.git (is-fullwidth-code-point), https://github.com/sindresorhus/is-svg.git (is-svg), https://github.com/sindresorhus/is-wsl.git (is-wsl), https://github.com/sindresorhus/parent-module.git (parent-module), https://github.com/sindresorhus/path-type.git (path-type), https://github.com/sindresorhus/resolve-from.git (resolve-from), https://github.com/sindresorhus/string-width.git (string-width), https://github.com/chalk/strip-ansi.git (strip-ansi), https://github.com/chalk/supports-color.git (supports-color). This software contains the following license and notice below:
 
 MIT License
 
@@ -5461,7 +5461,7 @@ Cynthia Brewer.
 
 -----
 
-The following software may be included in this product: comma-separated-tokens, hast-to-hyperscript, hast-util-from-parse5, hast-util-is-element, hast-util-parse-selector, hast-util-raw, hast-util-to-parse5, hastscript, html-void-elements, is-alphabetical, is-alphanumerical, is-decimal, is-hexadecimal, lowlight, mdast-util-to-hast, rehype-raw, remark-rehype, space-separated-tokens, unist-util-generated, unist-util-stringify-position, unist-util-visit-parents, vfile-location, web-namespaces, zwitch. A copy of the source code may be downloaded from https://github.com/wooorm/comma-separated-tokens.git (comma-separated-tokens), https://github.com/syntax-tree/hast-to-hyperscript.git (hast-to-hyperscript), https://github.com/syntax-tree/hast-util-from-parse5.git (hast-util-from-parse5), https://github.com/syntax-tree/hast-util-is-element.git (hast-util-is-element), https://github.com/syntax-tree/hast-util-parse-selector.git (hast-util-parse-selector), https://github.com/syntax-tree/hast-util-raw.git (hast-util-raw), https://github.com/syntax-tree/hast-util-to-parse5.git (hast-util-to-parse5), https://github.com/syntax-tree/hastscript.git (hastscript), https://github.com/wooorm/html-void-elements.git (html-void-elements), https://github.com/wooorm/is-alphabetical.git (is-alphabetical), https://github.com/wooorm/is-alphanumerical.git (is-alphanumerical), https://github.com/wooorm/is-decimal.git (is-decimal), https://github.com/wooorm/is-hexadecimal.git (is-hexadecimal), https://github.com/wooorm/lowlight.git (lowlight), https://github.com/syntax-tree/mdast-util-to-hast.git (mdast-util-to-hast), https://github.com/rehypejs/rehype-raw.git (rehype-raw), https://github.com/remarkjs/remark-rehype.git (remark-rehype), https://github.com/wooorm/space-separated-tokens.git (space-separated-tokens), https://github.com/syntax-tree/unist-util-generated.git (unist-util-generated), https://github.com/syntax-tree/unist-util-stringify-position.git (unist-util-stringify-position), https://github.com/syntax-tree/unist-util-visit-parents.git (unist-util-visit-parents), https://github.com/vfile/vfile-location.git (vfile-location), https://github.com/wooorm/web-namespaces.git (web-namespaces), https://github.com/wooorm/zwitch.git (zwitch). This software contains the following license and notice below:
+The following software may be included in this product: comma-separated-tokens, hast-util-from-parse5, hast-util-is-element, hast-util-parse-selector, hast-util-raw, hast-util-to-parse5, hast-util-whitespace, hastscript, html-void-elements, is-alphabetical, is-alphanumerical, is-decimal, is-hexadecimal, lowlight, mdast-util-to-hast, rehype-raw, remark-rehype, space-separated-tokens, unist-util-generated, unist-util-remove-position, unist-util-stringify-position, unist-util-visit-parents, vfile-location, web-namespaces, zwitch. A copy of the source code may be downloaded from https://github.com/wooorm/comma-separated-tokens.git (comma-separated-tokens), https://github.com/syntax-tree/hast-util-from-parse5.git (hast-util-from-parse5), https://github.com/syntax-tree/hast-util-is-element.git (hast-util-is-element), https://github.com/syntax-tree/hast-util-parse-selector.git (hast-util-parse-selector), https://github.com/syntax-tree/hast-util-raw.git (hast-util-raw), https://github.com/syntax-tree/hast-util-to-parse5.git (hast-util-to-parse5), https://github.com/syntax-tree/hast-util-whitespace.git (hast-util-whitespace), https://github.com/syntax-tree/hastscript.git (hastscript), https://github.com/wooorm/html-void-elements.git (html-void-elements), https://github.com/wooorm/is-alphabetical.git (is-alphabetical), https://github.com/wooorm/is-alphanumerical.git (is-alphanumerical), https://github.com/wooorm/is-decimal.git (is-decimal), https://github.com/wooorm/is-hexadecimal.git (is-hexadecimal), https://github.com/wooorm/lowlight.git (lowlight), https://github.com/syntax-tree/mdast-util-to-hast.git (mdast-util-to-hast), https://github.com/rehypejs/rehype-raw.git (rehype-raw), https://github.com/remarkjs/remark-rehype.git (remark-rehype), https://github.com/wooorm/space-separated-tokens.git (space-separated-tokens), https://github.com/syntax-tree/unist-util-generated.git (unist-util-generated), https://github.com/syntax-tree/unist-util-remove-position.git (unist-util-remove-position), https://github.com/syntax-tree/unist-util-stringify-position.git (unist-util-stringify-position), https://github.com/syntax-tree/unist-util-visit-parents.git (unist-util-visit-parents), https://github.com/vfile/vfile-location.git (vfile-location), https://github.com/wooorm/web-namespaces.git (web-namespaces), https://github.com/wooorm/zwitch.git (zwitch). This software contains the following license and notice below:
 
 (The MIT License)
 
@@ -6919,7 +6919,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: decode-named-character-reference. A copy of the source code may be downloaded from https://github.com/wooorm/decode-named-character-reference.git. This software contains the following license and notice below:
+The following software may be included in this product: decode-named-character-reference, mdast-util-gfm-footnote, micromark-extension-gfm-footnote. A copy of the source code may be downloaded from https://github.com/wooorm/decode-named-character-reference.git (decode-named-character-reference), https://github.com/syntax-tree/mdast-util-gfm-footnote.git (mdast-util-gfm-footnote), https://github.com/micromark/micromark-extension-gfm-footnote.git (micromark-extension-gfm-footnote). This software contains the following license and notice below:
 
 (The MIT License)
 
@@ -11294,7 +11294,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: longest-streak, parse-entities, property-information, stringify-entities. A copy of the source code may be downloaded from https://github.com/wooorm/longest-streak.git (longest-streak), https://github.com/wooorm/parse-entities.git (parse-entities), https://github.com/wooorm/property-information.git (property-information), https://github.com/wooorm/stringify-entities.git (stringify-entities). This software contains the following license and notice below:
+The following software may be included in this product: longest-streak, parse-entities, property-information, stringify-entities, trim-lines. A copy of the source code may be downloaded from https://github.com/wooorm/longest-streak.git (longest-streak), https://github.com/wooorm/parse-entities.git (parse-entities), https://github.com/wooorm/property-information.git (property-information), https://github.com/wooorm/stringify-entities.git (stringify-entities), https://github.com/wooorm/trim-lines.git (trim-lines). This software contains the following license and notice below:
 
 (The MIT License)
 
@@ -11580,11 +11580,39 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: mdast-util-directive, mdast-util-find-and-replace, mdast-util-from-markdown, mdast-util-gfm, mdast-util-gfm-autolink-literal, mdast-util-gfm-strikethrough, mdast-util-gfm-table, mdast-util-gfm-task-list-item, mdast-util-math, mdast-util-to-markdown, micromark, micromark-extension-directive, micromark-extension-gfm, micromark-extension-gfm-autolink-literal, micromark-extension-gfm-strikethrough, micromark-extension-gfm-table, micromark-extension-gfm-tagfilter, micromark-extension-gfm-task-list-item, micromark-extension-math, remark-directive, remark-gfm. A copy of the source code may be downloaded from https://github.com/syntax-tree/mdast-util-directive.git (mdast-util-directive), https://github.com/syntax-tree/mdast-util-find-and-replace.git (mdast-util-find-and-replace), https://github.com/syntax-tree/mdast-util-from-markdown.git (mdast-util-from-markdown), https://github.com/syntax-tree/mdast-util-gfm.git (mdast-util-gfm), https://github.com/syntax-tree/mdast-util-gfm-autolink-literal.git (mdast-util-gfm-autolink-literal), https://github.com/syntax-tree/mdast-util-gfm-strikethrough.git (mdast-util-gfm-strikethrough), https://github.com/syntax-tree/mdast-util-gfm-table.git (mdast-util-gfm-table), https://github.com/syntax-tree/mdast-util-gfm-task-list-item.git (mdast-util-gfm-task-list-item), https://github.com/syntax-tree/mdast-util-math.git (mdast-util-math), https://github.com/syntax-tree/mdast-util-to-markdown.git (mdast-util-to-markdown), https://github.com/micromark/micromark.git (micromark), https://github.com/micromark/micromark-extension-directive.git (micromark-extension-directive), https://github.com/micromark/micromark-extension-gfm.git (micromark-extension-gfm), https://github.com/micromark/micromark-extension-gfm-autolink-literal.git (micromark-extension-gfm-autolink-literal), https://github.com/micromark/micromark-extension-gfm-strikethrough.git (micromark-extension-gfm-strikethrough), https://github.com/micromark/micromark-extension-gfm-table.git (micromark-extension-gfm-table), https://github.com/micromark/micromark-extension-gfm-tagfilter.git (micromark-extension-gfm-tagfilter), https://github.com/micromark/micromark-extension-gfm-task-list-item.git (micromark-extension-gfm-task-list-item), https://github.com/micromark/micromark-extension-math.git (micromark-extension-math), https://github.com/remarkjs/remark-directive.git (remark-directive), https://github.com/remarkjs/remark-gfm.git (remark-gfm). This software contains the following license and notice below:
+The following software may be included in this product: mdast-util-directive, mdast-util-find-and-replace, mdast-util-from-markdown, mdast-util-gfm, mdast-util-gfm-autolink-literal, mdast-util-gfm-strikethrough, mdast-util-gfm-table, mdast-util-gfm-task-list-item, mdast-util-math, mdast-util-to-markdown, micromark-extension-directive, micromark-extension-gfm, micromark-extension-gfm-autolink-literal, micromark-extension-gfm-strikethrough, micromark-extension-gfm-table, micromark-extension-gfm-tagfilter, micromark-extension-gfm-task-list-item, micromark-extension-math, remark-directive, remark-gfm. A copy of the source code may be downloaded from https://github.com/syntax-tree/mdast-util-directive.git (mdast-util-directive), https://github.com/syntax-tree/mdast-util-find-and-replace.git (mdast-util-find-and-replace), https://github.com/syntax-tree/mdast-util-from-markdown.git (mdast-util-from-markdown), https://github.com/syntax-tree/mdast-util-gfm.git (mdast-util-gfm), https://github.com/syntax-tree/mdast-util-gfm-autolink-literal.git (mdast-util-gfm-autolink-literal), https://github.com/syntax-tree/mdast-util-gfm-strikethrough.git (mdast-util-gfm-strikethrough), https://github.com/syntax-tree/mdast-util-gfm-table.git (mdast-util-gfm-table), https://github.com/syntax-tree/mdast-util-gfm-task-list-item.git (mdast-util-gfm-task-list-item), https://github.com/syntax-tree/mdast-util-math.git (mdast-util-math), https://github.com/syntax-tree/mdast-util-to-markdown.git (mdast-util-to-markdown), https://github.com/micromark/micromark-extension-directive.git (micromark-extension-directive), https://github.com/micromark/micromark-extension-gfm.git (micromark-extension-gfm), https://github.com/micromark/micromark-extension-gfm-autolink-literal.git (micromark-extension-gfm-autolink-literal), https://github.com/micromark/micromark-extension-gfm-strikethrough.git (micromark-extension-gfm-strikethrough), https://github.com/micromark/micromark-extension-gfm-table.git (micromark-extension-gfm-table), https://github.com/micromark/micromark-extension-gfm-tagfilter.git (micromark-extension-gfm-tagfilter), https://github.com/micromark/micromark-extension-gfm-task-list-item.git (micromark-extension-gfm-task-list-item), https://github.com/micromark/micromark-extension-math.git (micromark-extension-math), https://github.com/remarkjs/remark-directive.git (remark-directive), https://github.com/remarkjs/remark-gfm.git (remark-gfm). This software contains the following license and notice below:
 
 (The MIT License)
 
 Copyright (c) 2020 Titus Wormer <tituswormer@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: mdast-util-phrasing. A copy of the source code may be downloaded from https://github.com/syntax-tree/mdast-util-phrasing.git. This software contains the following license and notice below:
+
+(The MIT License)
+
+Copyright (c) 2017 Titus Wormer <tituswormer@gmail.com>
+Copyright (c) 2017 Victor Felder <victor@draft.li>
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -14460,6 +14488,33 @@ PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS 
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: remark-parse. A copy of the source code may be downloaded from https://github.com/remarkjs/remark/tree/main/packages/remark-parse. This software contains the following license and notice below:
+
+(The MIT License)
+
+Copyright (c) 2014-2020 Titus Wormer <tituswormer@gmail.com>
+Copyright (c) 2011-2014, Christopher Jeffrey (https://github.com/chjj/)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 -----
 

@@ -25,11 +25,12 @@ import React, {
 } from "react"
 import { visit } from "unist-util-visit"
 import { useTheme } from "@emotion/react"
-import ReactMarkdown, { PluggableList } from "react-markdown"
+import ReactMarkdown from "react-markdown"
+import PluginOptions from "react-markdown/lib/react-markdown"
 import {
   Components,
   ReactMarkdownProps,
-} from "react-markdown/src/ast-to-react"
+} from "react-markdown/lib/ast-to-react"
 import { once } from "lodash"
 import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
@@ -310,7 +311,7 @@ export function RenderedMarkdown({
     remarkDirective,
     remarkColoring,
   ]
-  const rehypePlugins: PluggableList = [rehypeKatex]
+  const rehypePlugins: PluginOptions.PluggableList = [rehypeKatex]
 
   if (allowHTML) {
     rehypePlugins.push(rehypeRaw)
