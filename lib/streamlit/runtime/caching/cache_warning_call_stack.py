@@ -63,16 +63,6 @@ class CacheWarningCallStack(threading.local):
             self._suppress_st_function_warning -= 1
             assert self._suppress_st_function_warning >= 0
 
-    @contextlib.contextmanager
-    def maybe_suppress_cached_st_function_warning(
-        self, suppress: bool
-    ) -> Iterator[None]:
-        if suppress:
-            with self.suppress_cached_st_function_warning():
-                yield
-        else:
-            yield
-
     def maybe_show_cached_st_function_warning(
         self,
         dg: "DeltaGenerator",
