@@ -93,9 +93,8 @@ jobs:
           echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
           echo "preview-branch=$PREVIEW_BRANCH" >> $GITHUB_OUTPUT
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
-
-      - name: "Set S3 URL as Github status"
-        if: success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request' && github.event.sender.type == 'User'
+      - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request' && github.event.sender.type == 'User'
+        name: Set S3 URL as Github Status
         uses: actions/github-script@v6
         env:
           S3_URL: ${{ steps.exports.outputs.s3-url }}
@@ -106,7 +105,7 @@ jobs:
             // https://docs.github.com/en/rest/commits/statuses?apiVersion=2022-11-28#create-a-commit-status
             await github.request(`POST /repos/streamlit/streamlit/statuses/{sha}`, {
               owner: 'streamlit',
-              repor: 'streamlit',
+              repo: 'streamlit',
               sha,
               state: 'success',
               target_url: process.env.S3_URL,

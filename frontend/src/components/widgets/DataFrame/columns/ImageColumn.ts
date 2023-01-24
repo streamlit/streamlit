@@ -16,7 +16,7 @@
 
 import { GridCell, GridCellKind, ImageCell } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
 
@@ -48,7 +48,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         data: imageUrls,
-        isMissingValue: !notNullOrUndefined(data),
+        isMissingValue: isNullOrUndefined(data),
         displayData: imageUrls,
       } as ImageCell
     },

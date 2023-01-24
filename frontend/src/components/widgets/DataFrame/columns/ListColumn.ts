@@ -16,7 +16,7 @@
 
 import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "src/lib/utils"
+import { isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -47,7 +47,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         data: toSafeArray(data),
-        isMissingValue: !notNullOrUndefined(data),
+        isMissingValue: isNullOrUndefined(data),
       } as BubbleCell
     },
     getCellValue(cell: BubbleCell): string[] | null {

@@ -22,7 +22,7 @@ from streamlit.hello.utils import show_code
 
 
 def mapping_demo():
-    @st.cache
+    @st.cache_data
     def from_data_file(filename):
         url = (
             "http://raw.githubusercontent.com/streamlit/"

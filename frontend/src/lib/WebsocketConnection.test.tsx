@@ -35,6 +35,8 @@ const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   },
 }
 
+const MOCK_HEALTH_RESPONSE = { status: "ok" }
+
 describe("doInitPings", () => {
   const MOCK_PING_DATA = {
     uri: [
@@ -64,13 +66,12 @@ describe("doInitPings", () => {
     Promise.all = originalPromiseAll
   })
 
-  // NOTE: Temporary test until we're able to rename the /healthz endpoint
-  it("does not call the /healthz endpoint when pinging server", async () => {
+  it("does call the /_stcore/health endpoint when pinging server", async () => {
     axios.get = jest.fn().mockImplementation(url => {
-      if (url.endsWith("/healthz")) {
-        throw Error("kaboom")
+      if (url.endsWith("_stcore/health")) {
+        return MOCK_HEALTH_RESPONSE
       }
-      if (url.endsWith("/st-allowed-message-origins")) {
+      if (url.endsWith("_stcore/allowed-message-origins")) {
         return MOCK_ALLOWED_ORIGINS_RESPONSE
       }
       return {}
@@ -646,9 +647,10 @@ describe("WebsocketConnection auth token handling", () => {
     // @ts-ignore
     await ws.connectToWebSocket()
 
-    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
-      "streamlit",
-    ])
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit"]
+    )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
 
@@ -662,10 +664,10 @@ describe("WebsocketConnection auth token handling", () => {
     // @ts-ignore
     await ws.connectToWebSocket()
 
-    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
-      "streamlit",
-      "iAmAnAuthToken",
-    ])
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
+    )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
 })

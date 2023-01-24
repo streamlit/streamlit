@@ -142,6 +142,7 @@ function DataFrame({
     current: undefined,
   })
 
+  // This callback is used to clear all selections (row/column/cell)
   const clearSelection = React.useCallback(() => {
     setGridSelection({
       columns: CompactSelection.empty(),
@@ -150,7 +151,7 @@ function DataFrame({
     })
   }, [])
 
-  // This callback can be used to refresh a selection of cells
+  // This callback is used to refresh the rendering of selected cells
   const refreshCells = React.useCallback(
     (
       cells: {
@@ -159,7 +160,7 @@ function DataFrame({
     ) => {
       dataEditorRef.current?.updateCells(cells)
     },
-    [] // TODO: add as dependency? https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node
+    []
   )
   // Number of rows of the table minus 1 for the header row:
   const originalNumRows = Math.max(0, data.dimensions.rows - 1)
@@ -289,7 +290,7 @@ function DataFrame({
     [columns]
   )
 
-  // This is required for the form clearing functionality works:
+  // This is required for the form clearing functionality:
   React.useEffect(() => {
     const formClearHelper = new FormClearHelper()
     formClearHelper.manageFormClearListener(
@@ -428,17 +429,17 @@ function DataFrame({
           {...(!showEmptyState &&
             element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
             !disabled && {
-              // Support fill handle for bulk editing
+              // Support fill handle for bulk editing:
               fillHandle: true,
               // Support editing:
               onCellEdited,
               // Support pasting data for bulk editing:
               onPaste,
-              // Support deleting cells & rows
+              // Support deleting cells & rows:
               onDelete,
             })}
           {...(element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
-            // Support adding rows
+            // Support adding rows:
             trailingRowOptions: {
               sticky: false,
               tint: true,
@@ -450,9 +451,9 @@ function DataFrame({
             rowMarkers: "checkbox",
             rowSelectionMode: "auto",
             rowSelect: disabled ? "none" : "multi",
-            // Support adding rows
+            // Support adding rows:
             onRowAppended: disabled ? undefined : onRowAppended,
-            // Deactivate sorting, since it is not supported with dynamic editing
+            // Deactivate sorting, since it is not supported with dynamic editing:
             onHeaderClicked: undefined,
           })}
         />

@@ -300,6 +300,24 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         last_delta = self.get_delta_from_queue()
         self.assertEqual("primary", last_delta.new_element.button.type)
 
+    def test_submit_button_can_use_container_width_by_default(self):
+        """Test that a submit button can be called with use_container_width=True."""
+
+        form = st.form("foo")
+        form.form_submit_button(type="primary", use_container_width=True)
+
+        last_delta = self.get_delta_from_queue()
+        self.assertTrue(last_delta.new_element.button.use_container_width)
+
+    def test_submit_button_does_not_use_container_width_by_default(self):
+        """Test that a submit button does not use_use_container width by default."""
+
+        form = st.form("foo")
+        form.form_submit_button(type="primary")
+
+        last_delta = self.get_delta_from_queue()
+        self.assertFalse(last_delta.new_element.button.use_container_width)
+
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):
             submitted = st.form_submit_button("Submit")

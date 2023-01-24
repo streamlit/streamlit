@@ -16,7 +16,7 @@
 
 import { GridCell, UriCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -47,7 +47,7 @@ function UrlColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         data: notNullOrUndefined(data) ? toSafeString(data) : null,
-        isMissingValue: !notNullOrUndefined(data),
+        isMissingValue: isNullOrUndefined(data),
       } as UriCell
     },
     getCellValue(cell: UriCell): string | null {

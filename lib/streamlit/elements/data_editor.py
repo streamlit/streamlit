@@ -34,7 +34,6 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from numpy.typing import NDArray
 from pandas.api.types import (
     is_datetime64_any_dtype,
     is_datetime64tz_dtype,
@@ -67,6 +66,8 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from streamlit.delta_generator import DeltaGenerator
 
 _INDEX_IDENTIFIER: Final = "index"
@@ -77,11 +78,13 @@ EditableData = TypeVar(
     "EditableData",
     bound=Union[
         DataFrameGenericAlias[Any],  # covers DataFrame and Series
-        NDArray[Any],
         Tuple[Any],
         List[Any],
         Set[Any],
         Dict[str, Any],
+        # TODO(lukasmasuch): Add support for np.ndarray
+        # but it is not possible with np.ndarray.
+        # NDArray[Any] works, but is only available in numpy>1.20.
     ],
 )
 
@@ -92,7 +95,7 @@ DataTypes: TypeAlias = Union[
     pd.Index,
     Styler,
     pa.Table,
-    NDArray[Any],
+    "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
     List[Any],
     Set[Any],
@@ -131,14 +134,14 @@ class EditingState(TypedDict, total=False):
     ----------
     edited_cells : Dict[str, str | int | float | bool | None]
         A dictionary of edited cells, where the key is the cell's row and
-        column index (row:column), and the value is the new value of the cell.
+        column position (row:column), and the value is the new value of the cell.
 
     added_rows : List[Dict[str, str | int | float | bool | None]]
-        A list of added rows, where each row is a dictionary of column names
-        and values.
+        A list of added rows, where each row is a dictionary of column position
+        and the respective value.
 
     deleted_rows : List[int]
-        A list of deleted rows, where each row is the index of the deleted row.
+        A list of deleted rows, where each row is the numerical position of the deleted row.
     """
 
     edited_cells: Dict[str, str | int | float | bool | None]
@@ -260,19 +263,18 @@ def _apply_cell_edits(
     index_count = df.index.nlevels or 0
 
     for cell, value in edited_cells.items():
-        row, col = cell.split(":")
-        row, col = int(row), int(col)
+        row_pos, col_pos = map(int, cell.split(":"))
 
         # The edited cell is part of the index
-        if col < index_count:
+        if col_pos < index_count:
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
-            df.index.values[row] = _parse_value(value, df.index)
+            df.index.values[row_pos] = _parse_value(value, df.index)
         else:
             # We need to subtract the number of index levels from the column index
             # to get the correct column index for pandas dataframes
-            column_idx = col - index_count
-            df.iat[row, column_idx] = _parse_value(value, df[df.columns[column_idx]])
+            column_idx = col_pos - index_count
+            df.iat[row_pos, column_idx] = _parse_value(value, df[df.columns[column_idx]])
 
 
 def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> None:
@@ -285,31 +287,45 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
 
     added_rows : List[Dict[str, Any]]
         A list of row additions. Each row addition is a dictionary with the
-        column index as key and the new cell value as value.
+        column position as key and the new cell value as value.
     """
+    if not added_rows:
+        return
+
     index_count = df.index.nlevels or 0
+
+    # This is only used if the dataframe has a range index:
+    # There seems to be a bug in older pandas versions with RangeIndex in
+    # combination with loc. As a workaround, we manually track the values here:
+    range_index_stop = None
+    range_index_step = None
+    if type(df.index) == pd.RangeIndex:
+        range_index_stop = df.index.stop
+        range_index_step = df.index.step
+
     for added_row in added_rows:
         index_value = None
         new_row: List[Any] = [None for _ in range(df.shape[1])]
         for col in added_row.keys():
             value = added_row[col]
-            col_idx = int(col)
-            if col_idx < index_count:
+            col_pos = int(col)
+            if col_pos < index_count:
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
                 index_value = _parse_value(value, df.index)
             else:
-                # We need to subtract the number of index levels from the column index
-                # to get the correct column index for pandas dataframes
-                # TODO(lukasmasuch): directly get it from numeric index via iloc:
-                mapped_column = col_idx - index_count
+                # We need to subtract the number of index levels from the col_pos
+                # to get the correct column position for Pandas DataFrames
+                mapped_column = col_pos - index_count
                 new_row[mapped_column] = _parse_value(
                     value, df[df.columns[mapped_column]]
                 )
         # Append the new row to the dataframe
-        if type(df.index) == pd.RangeIndex:
-            df.loc[df.index.stop, :] = new_row
-        elif index_value is not None and type(df.index) == pd.Index:
+        if range_index_stop is not None:
+            df.loc[range_index_stop, :] = new_row
+            # Increment to the next range index value
+            range_index_stop += range_index_step
+        elif index_value is not None:
             # TODO(lukasmasuch): we are only adding rows that have a non-None index
             # value to prevent issues in the frontend component. Also, it just overwrites
             # the row in case the index value already exists in the dataframe.
@@ -329,7 +345,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
     deleted_rows : List[int]
         A list of row numbers to delete.
     """
-    # Drop rows based in numeric row numbers
+    # Drop rows based in numeric row positions
     df.drop(df.index[deleted_rows], inplace=True)
 
 
@@ -467,6 +483,49 @@ class DataEditorMixin:
         columns: Optional[ColumnConfigMapping] = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
     ) -> DataTypes:
+        """Display a data editor widget.
+
+        This widget allows you to edit DataFrames and many other data structures
+        in a table-like UI.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
+            The data to edit in the data editor.
+
+        width : int or None
+            Desired width of the data editor expressed in pixels. If None, the width
+            will be automatically calculated based on the container width.
+        height : int or None
+            Desired height of the data editor expressed in pixels. If None, a
+            default height is used.
+        use_container_width : bool
+            If True, set the data editor width to the width of the parent container.
+            This takes precedence over the width argument. Defaults to False.
+        disabled : bool
+            If True, the data editor will be disabled and not allow any edits.
+        key : str
+            An optional string to use as the unique key for this widget. If this
+            is omitted, a key will be generated for the widget based on its
+            content. Multiple widgets of the same type may not share the same
+            key.
+        on_change : callable
+            An optional callback invoked when this data_editor's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+        num_rows : "fixed" or "dynamic"
+            If "dynamic", the user can add and delete rows in the data editor.
+            If "fixed", the user cannot add or delete rows. Defaults to "fixed".
+
+        Returns
+        -------
+        The edited data. The data is returned in its original data type for pd.DataFrame,
+        pd.Styler, pyarrow.Table, np.ndarray, list, set, tuple, and dict.
+        Other data types are returned as a pd.DataFrame.
+        """
+
         columns_config: ColumnConfigMapping = {} if columns is None else columns
 
         data_format = type_util.determine_data_format(data)

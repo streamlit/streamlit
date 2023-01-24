@@ -45,7 +45,7 @@ import useDataLoader, {
   getColumnConfig,
   getColumnType,
   INDEX_IDENTIFIER,
-  NUMERIC_COLUMN_ID_PREFIX,
+  COLUMN_POSITION_PREFIX,
 } from "./useDataLoader"
 
 const MOCK_COLUMNS: BaseColumn[] = [
@@ -144,7 +144,7 @@ describe("applyColumnConfig", () => {
   it("allows configuring a column via numeric ID", () => {
     const columnConfig: Map<string | number, ColumnConfigProps> = new Map([
       [
-        `${NUMERIC_COLUMN_ID_PREFIX}0`,
+        `${COLUMN_POSITION_PREFIX}0`,
         {
           width: 123,
         },

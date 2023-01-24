@@ -44,8 +44,12 @@ class FakeAppSession(AppSession):
 class DeltaGeneratorTestCase(unittest.TestCase):
     def setUp(self):
         self.forward_msg_queue = ForwardMsgQueue()
-        self.orig_report_ctx = None
-        self.new_script_run_ctx = ScriptRunContext(
+
+        # Save our thread's current ScriptRunContext
+        self.orig_report_ctx = get_script_run_ctx()
+
+        # Create a new ScriptRunContext to use for the test.
+        self.script_run_ctx = ScriptRunContext(
             session_id="test session id",
             _enqueue=self.forward_msg_queue.enqueue,
             query_string="",
@@ -54,9 +58,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
-
-        self.orig_report_ctx = get_script_run_ctx()
-        add_script_run_ctx(threading.current_thread(), self.new_script_run_ctx)
+        add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
 
         self.app_session = FakeAppSession()
 

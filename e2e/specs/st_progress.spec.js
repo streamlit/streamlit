@@ -26,8 +26,8 @@ describe("st.progress", () => {
       "50"
     );
 
-    cy.get(".stProgress [role='progressbar']").matchThemedSnapshots(
-      "progressbar"
-    );
+    cy.get(".stProgress").each((el, idx) => {
+      return cy.wrap(el).matchThemedSnapshots("progresbar-" + idx);
+    });
   });
 });

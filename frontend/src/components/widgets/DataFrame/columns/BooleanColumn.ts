@@ -35,7 +35,8 @@ const BOOLEAN_TRUE_VALUES = ["true", "t", "yes", "y", "on", "1"]
 const BOOLEAN_FALSE_VALUES = ["false", "f", "no", "n", "off", "0"]
 
 /**
- * A column type that renders the cell value as a checkbox.
+ * A column type that supports optimized rendering and editing for boolean values
+ * by using checkboxes.
  */
 function BooleanColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {

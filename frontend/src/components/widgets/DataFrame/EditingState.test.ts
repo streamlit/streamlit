@@ -73,7 +73,7 @@ describe("EditingState class", () => {
     expect(editingState.getCell(1, 4)).toEqual(MOCK_TEXT_CELL_2)
   })
 
-  it("allows to delete rows", () => {
+  it("allows to delete a single row", () => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
 
@@ -85,7 +85,7 @@ describe("EditingState class", () => {
     expect(editingState.getOriginalRowIndex(0)).toEqual(1)
   })
 
-  it("allows to delete rows", () => {
+  it("allows to add and delete multiple rows", () => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
 

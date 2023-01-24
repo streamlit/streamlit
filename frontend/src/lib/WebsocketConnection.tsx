@@ -36,17 +36,17 @@ const LOG = "WebsocketConnection"
 /**
  * The path where we should ping (via HTTP) to see if the server is up.
  */
-const SERVER_PING_PATH = "healthz"
+const SERVER_PING_PATH = "_stcore/health"
 
 /**
  * The path to fetch the whitelist for accepting cross-origin messages.
  */
-const ALLOWED_ORIGINS_PATH = "st-allowed-message-origins"
+const ALLOWED_ORIGINS_PATH = "_stcore/allowed-message-origins"
 
 /**
  * The path of the server's websocket endpoint.
  */
-const WEBSOCKET_STREAM_PATH = "stream"
+const WEBSOCKET_STREAM_PATH = "_stcore/stream"
 
 /**
  * Wait this long between pings, in millis.
@@ -659,21 +659,7 @@ export function doInitPings(
     // not to do so as it's semantically cleaner to not give the healthcheck
     // endpoint additional responsibilities.
     Promise.all([
-      // NOTE: We temporarily avoid hitting the healthz endpoint for now
-      // because certain environments (notably GCP App Engine and Cloud Run)
-      // reserve the endpoint name, and the new /st-allowed-message-origins
-      // can be used as a healthcheck at the relatively cheap cost of some
-      // semantic clarity.
-      //
-      // We keep the Promise.all and just return a resolved promise in the
-      // first element of the array instead of actually pinging the /healthz
-      // endpoint to avoid having to change the structure of the code for this
-      // temporary change.
-      //
-      // Once we're able to pick up work on https://github.com/streamlit/streamlit/pull/5534
-      // again, our endpoints can be re-split into their original dedicated
-      // roles.
-      Promise.resolve(), // axios.get(healthzUri, { timeout: minimumTimeoutMs }),
+      axios.get(healthzUri, { timeout: minimumTimeoutMs }),
       axios.get(allowedOriginsUri, { timeout: minimumTimeoutMs }),
     ])
       .then(([_, originsResp]) => {

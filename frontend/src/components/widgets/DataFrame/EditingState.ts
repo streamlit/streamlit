@@ -16,7 +16,7 @@
 
 import { GridCell } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import { BaseColumn } from "./columns"
 
@@ -181,7 +181,7 @@ class EditingState {
    * @param row - The row to delete
    */
   deleteRow(row: number): void {
-    if (!notNullOrUndefined(row) || row < 0) {
+    if (isNullOrUndefined(row) || row < 0) {
       // This should never happen
       return
     }

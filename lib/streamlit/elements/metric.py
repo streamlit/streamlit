@@ -53,7 +53,7 @@ class MetricMixin:
         help: Optional[str] = None,
         label_visibility: LabelVisibility = "visible",
     ) -> "DeltaGenerator":
-        """Display a metric in big bold font, with an optional indicator of how the metric changed.
+        r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Tip: If you want to display a large number, it may be a good idea to
         shorten it using packages like `millify <https://github.com/azaitsev/millify>`_
@@ -81,6 +81,9 @@ class MetricMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
 
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
         value : int, float, str, or None
              Value of the metric. None is rendered as a long dash.
         delta : int, float, str, or None

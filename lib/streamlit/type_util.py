@@ -52,7 +52,6 @@ from streamlit import string_util
 if TYPE_CHECKING:
     import graphviz
     import sympy
-    from numpy.typing import NDArray
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure
@@ -376,7 +375,7 @@ def is_list_of_scalars(data: Iterable[Any]) -> bool:
     """Check if the list only contains scalar values."""
     # Overview on all value that are interpreted as scalar:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
-    return infer_dtype(data) not in ["mixed", "unknown-array"]
+    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
 
 
 def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
@@ -656,10 +655,8 @@ def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool
         # timedelta64[ns] is supported by pyarrow but not in the Arrow JS:
         # https://github.com/streamlit/streamlit/issues/4489
         "timedelta64[ns]",
-        "complex128",
         "complex64",
-        "complex256",
-        "complex192",
+        "complex128",
         "complex256",
     ]:
         return True
@@ -857,7 +854,7 @@ def convert_df_to_data_format(
     pd.Index,
     Styler,
     pa.Table,
-    NDArray[Any],
+    np.ndarray[Any, np.dtype[Any]],
     Tuple[Any],
     List[Any],
     Set[Any],

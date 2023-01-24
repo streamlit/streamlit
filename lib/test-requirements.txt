@@ -4,20 +4,25 @@
 bokeh==2.4.3
 cffi>=1.14
 chart-studio>=1.1.0
-# 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
-cx-Oracle<8.0.0
 graphviz>=0.17
 matplotlib>=3.3.4
-mysqlclient>=2.0.3
 opencv-python>=4.5.3
 plotly>=5.3.1
-psycopg2-binary>=2.9.1
 pydot>=1.4.2
-pyodbc>=4.0.32
 scipy>=1.7.3
 seaborn>=0.11.2
-setuptools<50.0.0
-sqlalchemy>=1.4.25
+setuptools>=65.5.1
 watchdog>=2.1.5
 rich>=11.2.0
 pyspark>=3.1.1
+
+# These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
+# we're not going to update its associated tests anymore. Please don't modify
+# these pinned versions!
+
+# 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
+cx-Oracle<8.0.0
+mysqlclient>=2.0.3
+psycopg2-binary>=2.9.1
+pyodbc>=4.0.32
+sqlalchemy>=1.4.25
