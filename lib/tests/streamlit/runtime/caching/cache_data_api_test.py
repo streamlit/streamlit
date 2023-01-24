@@ -35,13 +35,13 @@ from streamlit.runtime.caching.cache_data_api import (
     get_data_cache_stats_provider,
 )
 from streamlit.runtime.caching.cache_errors import CacheError
-from streamlit.runtime.caching.cache_messages_call_stack import (
+from streamlit.runtime.caching.cache_type import CacheType
+from streamlit.runtime.caching.cached_element_replay import (
     CachedResult,
     ElementMsgData,
     MultiCacheResults,
     _make_widget_key,
 )
-from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
 from tests.delta_generator_test_case import DeltaGeneratorTestCase

@@ -37,14 +37,14 @@ from streamlit.runtime.caching.cache_errors import (
     UnserializableReturnValueError,
     get_cached_func_name_md,
 )
-from streamlit.runtime.caching.cache_messages_call_stack import (
+from streamlit.runtime.caching.cache_type import CacheType
+from streamlit.runtime.caching.cache_warning_call_stack import CacheWarningCallStack
+from streamlit.runtime.caching.cached_element_replay import (
     CachedResult,
     CacheMessagesCallStack,
     MsgData,
     replay_result_messages,
 )
-from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cache_warning_call_stack import CacheWarningCallStack
 from streamlit.runtime.caching.hashing import update_hash
 
 _LOGGER = get_logger(__name__)
