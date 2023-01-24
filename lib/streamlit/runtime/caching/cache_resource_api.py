@@ -31,15 +31,17 @@ from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
-from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cache_utils import (
-    Cache,
-    CachedFunction,
+from streamlit.runtime.caching.cache_messages_call_stack import (
     CachedResult,
     CacheMessagesCallStack,
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+)
+from streamlit.runtime.caching.cache_type import CacheType
+from streamlit.runtime.caching.cache_utils import (
+    Cache,
+    CachedFunction,
     create_cache_wrapper,
     ttl_to_seconds,
 )

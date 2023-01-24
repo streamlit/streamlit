@@ -30,12 +30,12 @@ from streamlit.runtime.caching import (
     cache_resource,
 )
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
-from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cache_utils import (
-    CachedResult,
+from streamlit.runtime.caching.cache_messages_call_stack import (
     MultiCacheResults,
     _make_widget_key,
 )
+from streamlit.runtime.caching.cache_type import CacheType
+from streamlit.runtime.caching.cache_utils import CachedResult
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,

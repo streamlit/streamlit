@@ -36,15 +36,17 @@ from streamlit.file_util import get_streamlit_file_path, streamlit_read, streaml
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
-from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cache_utils import (
-    Cache,
-    CachedFunction,
+from streamlit.runtime.caching.cache_messages_call_stack import (
     CachedResult,
     CacheMessagesCallStack,
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+)
+from streamlit.runtime.caching.cache_type import CacheType
+from streamlit.runtime.caching.cache_utils import (
+    Cache,
+    CachedFunction,
     create_cache_wrapper,
     ttl_to_seconds,
 )
