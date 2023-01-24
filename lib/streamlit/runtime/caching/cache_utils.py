@@ -346,7 +346,7 @@ def replay_result_messages(
 
 def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
     """Create a wrapper for a CachedFunction. This implements the common
-    plumbing for both st.memo and st.singleton.
+    plumbing for both st.cache_data and st.cache_resource.
     """
     func = cached_func.func
     function_key = _make_function_key(cached_func.cache_type, func)
