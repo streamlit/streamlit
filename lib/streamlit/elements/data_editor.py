@@ -385,8 +385,8 @@ def _apply_data_specific_configs(
             data_df[column_name] = column_data.astype(str)
 
     # Pandas adds a range index as default to all datastructures
-    # but for most of the non-pandas data objects it
-    # Therefore, we will hide it as default.
+    # but for most of the non-pandas data objects it is unnecessary
+    # to show this index to the user. Therefore, we will hide it as default.
     if data_format in [
         DataFormat.SET_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
