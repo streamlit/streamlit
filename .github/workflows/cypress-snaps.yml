@@ -12,7 +12,7 @@ on:
 
 # Avoid duplicate workflows on same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs }}
   cancel-in-progress: true
 
 jobs:
