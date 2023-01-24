@@ -238,6 +238,7 @@
     "ssri": "^10.0.1",
     "static-eval": "^2.0.5",
     "terser": "^5.16.1",
+    "ua-parser-js": "^1.0.33",
     "vega-tooltip": "^0.30.0",
     "websocket-extensions": "^0.1.4",
     "ws": "^8.11.0",
