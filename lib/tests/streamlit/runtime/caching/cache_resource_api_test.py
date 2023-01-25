@@ -50,8 +50,8 @@ class CacheResourceTest(unittest.TestCase):
         st.cache_resource.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        cache_resource_api.CACHE_RESOURCE_MESSAGE_CALL_STACK._cached_func_stack = []
-        cache_resource_api.CACHE_RESOURCE_MESSAGE_CALL_STACK._suppress_st_function_warning = (
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._suppress_st_function_warning = (
             0
         )
 
@@ -142,8 +142,8 @@ class CacheResourceValidateTest(unittest.TestCase):
         st.cache_resource.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        cache_resource_api.CACHE_RESOURCE_MESSAGE_CALL_STACK._cached_func_stack = []
-        cache_resource_api.CACHE_RESOURCE_MESSAGE_CALL_STACK._suppress_st_function_warning = (
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._suppress_st_function_warning = (
             0
         )
 

@@ -78,8 +78,8 @@ class CacheDataTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        cache_data_api.CACHE_DATA_MESSAGE_CALL_STACK._cached_func_stack = []
-        cache_data_api.CACHE_DATA_MESSAGE_CALL_STACK._suppress_st_function_warning = 0
+        cache_data_api.CACHE_DATA_MESSAGE_REPLAY_CTX._cached_func_stack = []
+        cache_data_api.CACHE_DATA_MESSAGE_REPLAY_CTX._suppress_st_function_warning = 0
         st.cache_data.clear()
 
     @patch.object(st, "exception")

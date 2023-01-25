@@ -19,12 +19,12 @@ from google.protobuf.message import Message
 
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_data_api import (
-    CACHE_DATA_MESSAGE_CALL_STACK,
+    CACHE_DATA_MESSAGE_REPLAY_CTX,
     CacheDataAPI,
     _data_caches,
 )
 from streamlit.runtime.caching.cache_resource_api import (
-    CACHE_RESOURCE_MESSAGE_CALL_STACK,
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     CacheResourceAPI,
     _resource_caches,
 )
@@ -44,10 +44,10 @@ def save_element_message(
     be used later to replay the element when a cache-decorated function's
     execution is skipped.
     """
-    CACHE_DATA_MESSAGE_CALL_STACK.save_element_message(
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
-    CACHE_RESOURCE_MESSAGE_CALL_STACK.save_element_message(
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
 
@@ -62,10 +62,10 @@ def save_block_message(
     be used later to replay the block when a cache-decorated function's
     execution is skipped.
     """
-    CACHE_DATA_MESSAGE_CALL_STACK.save_block_message(
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
-    CACHE_RESOURCE_MESSAGE_CALL_STACK.save_block_message(
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
 
@@ -74,29 +74,29 @@ def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
     """Save a widget's metadata to a thread-local callstack, so the widget
     can be registered again when that widget is replayed.
     """
-    CACHE_DATA_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
-    CACHE_RESOURCE_MESSAGE_CALL_STACK.save_widget_metadata(metadata)
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_widget_metadata(metadata)
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_widget_metadata(metadata)
 
 
 def save_media_data(
     image_data: Union[bytes, str], mimetype: str, image_id: str
 ) -> None:
-    CACHE_DATA_MESSAGE_CALL_STACK.save_image_data(image_data, mimetype, image_id)
-    CACHE_RESOURCE_MESSAGE_CALL_STACK.save_image_data(image_data, mimetype, image_id)
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
-    CACHE_DATA_MESSAGE_CALL_STACK.maybe_show_cached_st_function_warning(
+    CACHE_DATA_MESSAGE_REPLAY_CTX.maybe_show_cached_st_function_warning(
         dg, st_func_name
     )
-    CACHE_RESOURCE_MESSAGE_CALL_STACK.maybe_show_cached_st_function_warning(
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.maybe_show_cached_st_function_warning(
         dg, st_func_name
     )
 
 
 @contextlib.contextmanager
 def suppress_cached_st_function_warning() -> Iterator[None]:
-    with CACHE_DATA_MESSAGE_CALL_STACK.suppress_cached_st_function_warning(), CACHE_RESOURCE_MESSAGE_CALL_STACK.suppress_cached_st_function_warning():
+    with CACHE_DATA_MESSAGE_REPLAY_CTX.suppress_cached_st_function_warning(), CACHE_RESOURCE_MESSAGE_REPLAY_CTX.suppress_cached_st_function_warning():
         yield
 
 

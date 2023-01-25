@@ -39,7 +39,7 @@ from streamlit.runtime.caching.cache_errors import (
 )
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cached_message_replay import (
-    CachedMessageContext,
+    CachedMessageReplayContext,
     CachedResult,
     MsgData,
     replay_cached_messages,
@@ -123,7 +123,7 @@ class CachedFunction:
         raise NotImplementedError
 
     @property
-    def message_call_stack(self) -> CachedMessageContext:
+    def cached_message_replay_ctx(self) -> CachedMessageReplayContext:
         raise NotImplementedError
 
     def get_function_cache(self, function_key: str) -> Cache:
@@ -172,12 +172,12 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with cached_func.message_call_stack.calling_cached_function(
+                with cached_func.cached_message_replay_ctx.calling_cached_function(
                     func, cached_func.allow_widgets
                 ):
                     return_value = func(*args, **kwargs)
 
-                messages = cached_func.message_call_stack._most_recent_messages
+                messages = cached_func.cached_message_replay_ctx._most_recent_messages
                 try:
                     cache.write_result(value_key, return_value, messages)
                 except (
