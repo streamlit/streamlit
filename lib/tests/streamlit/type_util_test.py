@@ -30,8 +30,8 @@ from parameterized import parameterized
 
 from streamlit import type_util
 from streamlit.type_util import (
-    can_be_float_or_int,
     DataFormat,
+    can_be_float_or_int,
     data_frame_to_bytes,
     fix_arrow_incompatible_column_types,
     is_bytes_like,
