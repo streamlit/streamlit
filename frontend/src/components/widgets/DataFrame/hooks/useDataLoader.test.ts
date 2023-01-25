@@ -30,10 +30,6 @@ import {
   CategoricalColumn,
   ListColumn,
   NumberColumn,
-  RangeColumn,
-  ImageColumn,
-  ChartColumn,
-  UrlColumn,
   ColumnCreator,
   isErrorCell,
 } from "src/components/widgets/DataFrame/columns"
@@ -210,10 +206,6 @@ describe("getColumnType", () => {
     ["categorical", CategoricalColumn],
     ["list", ListColumn],
     ["number", NumberColumn],
-    ["range", RangeColumn],
-    ["image", ImageColumn],
-    ["chart", ChartColumn],
-    ["url", UrlColumn],
   ])(
     "maps user-specified type to column type (%p parsed as %p)",
     (typeName: string, columnCreator: ColumnCreator) => {
