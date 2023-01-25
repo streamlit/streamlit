@@ -107,6 +107,7 @@
       "error",
       { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
     ],
+    // specifically for frontend/src/components/widgets/DataFrame/customCells
     "import/no-named-as-default": 0
   },
   "settings": {
