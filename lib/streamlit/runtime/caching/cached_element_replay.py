@@ -245,16 +245,22 @@ class CacheMessagesCallStack(threading.local):
         return util.repr_(self)
 
     @contextlib.contextmanager
-    def calling_cached_function(self, func: types.FunctionType) -> Iterator[None]:
+    def calling_cached_function(
+        self, func: types.FunctionType, allow_widgets: bool
+    ) -> Iterator[None]:
         self._cached_func_stack.append(func)
         self._cached_message_stack.append([])
         self._seen_dg_stack.append(set())
+        if allow_widgets:
+            self._allow_widgets += 1
         try:
             yield
         finally:
             self._cached_func_stack.pop()
             self._most_recent_messages = self._cached_message_stack.pop()
             self._seen_dg_stack.pop()
+            if allow_widgets:
+                self._allow_widgets -= 1
 
     def save_element_message(
         self,
@@ -344,23 +350,6 @@ class CacheMessagesCallStack(threading.local):
         self, image_data: bytes | str, mimetype: str, image_id: str
     ) -> None:
         self._media_data.append(MediaMsgData(image_data, mimetype, image_id))
-
-    @contextlib.contextmanager
-    def allow_widgets(self) -> Iterator[None]:
-        self._allow_widgets += 1
-        try:
-            yield
-        finally:
-            self._allow_widgets -= 1
-            assert self._allow_widgets >= 0
-
-    @contextlib.contextmanager
-    def maybe_allow_widgets(self, allow: bool) -> Iterator[None]:
-        if allow:
-            with self.allow_widgets():
-                yield
-        else:
-            yield
 
     @contextlib.contextmanager
     def suppress_cached_st_function_warning(self) -> Iterator[None]:
