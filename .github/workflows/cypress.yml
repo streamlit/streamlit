@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-8-cores
 
     defaults:
       run:
