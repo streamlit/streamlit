@@ -40,7 +40,7 @@ from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunction,
-    create_cache_wrapper,
+    CallableCachedFunc,
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -415,7 +415,7 @@ class CacheDataAPI:
                     f"The cached function '{f.__name__}' has a TTL that will be "
                     f"ignored. Persistent cached functions currently don't support TTL."
                 )
-            return create_cache_wrapper(
+            return CallableCachedFunc(
                 CacheDataFunction(
                     func=f,
                     persist=persist_string,
@@ -431,7 +431,7 @@ class CacheDataAPI:
         if func is None:
             return wrapper
 
-        return create_cache_wrapper(
+        return CallableCachedFunc(
             CacheDataFunction(
                 func=cast(types.FunctionType, func),
                 persist=persist_string,

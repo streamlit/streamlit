@@ -35,7 +35,7 @@ from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunction,
-    create_cache_wrapper,
+    CallableCachedFunc,
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -371,7 +371,7 @@ class CacheResourceAPI:
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
-            return lambda f: create_cache_wrapper(
+            return lambda f: CallableCachedFunc(
                 CacheResourceFunction(
                     func=f,
                     show_spinner=show_spinner,
@@ -382,7 +382,7 @@ class CacheResourceAPI:
                 )
             )
 
-        return create_cache_wrapper(
+        return CallableCachedFunc(
             CacheResourceFunction(
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,

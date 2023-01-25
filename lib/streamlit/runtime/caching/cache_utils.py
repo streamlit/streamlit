@@ -24,7 +24,7 @@ import time
 import types
 from abc import abstractmethod
 from datetime import timedelta
-from typing import Any, Callable
+from typing import Any
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
@@ -132,92 +132,95 @@ class CachedFunction:
         raise NotImplementedError
 
 
-def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
-    """Create a wrapper for a CachedFunction. This implements the common
-    plumbing for both st.cache_data and st.cache_resource.
+class CallableCachedFunc:
+    """A callable wrapper around a CachedFunction.
+    Implements the common plumbing for both st.cache_data and st.cache_resource.
     """
-    func = cached_func.func
-    function_key = _make_function_key(cached_func.cache_type, func)
 
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        """Wrapper function that only calls the underlying function on a cache miss."""
+    def __init__(self, cached_func: CachedFunction):
+        self._cached_func = cached_func
+        self._function_key = _make_function_key(
+            cached_func.cache_type, cached_func.func
+        )
 
-        # Retrieve the function's cache object. We must do this inside the
-        # wrapped function, because caches can be invalidated at any time.
-        cache = cached_func.get_function_cache(function_key)
+        functools.update_wrapper(self, cached_func.func)
 
-        name = func.__qualname__
+    def __call__(self, *args, **kwargs) -> Any:
+        """The wrapper. We'll only call our underlying function on a cache miss."""
 
-        if isinstance(cached_func.show_spinner, bool):
+        name = self._cached_func.func.__qualname__
+
+        if isinstance(self._cached_func.show_spinner, bool):
             if len(args) == 0 and len(kwargs) == 0:
                 message = f"Running `{name}()`."
             else:
                 message = f"Running `{name}(...)`."
         else:
-            message = cached_func.show_spinner
+            message = self._cached_func.show_spinner
 
-        def get_or_create_cached_value():
-            # Generate the key for the cached value. This is based on the
-            # arguments passed to the function.
-            value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
-
-            try:
-                result = cache.read_result(value_key)
-                _LOGGER.debug("Cache hit: %s", func)
-
-                replay_cached_messages(result, cached_func.cache_type, func)
-
-                return_value = result.value
-
-            except CacheKeyNotFoundError:
-                _LOGGER.debug("Cache miss: %s", func)
-
-                with cached_func.cached_message_replay_ctx.calling_cached_function(
-                    func, cached_func.allow_widgets
-                ):
-                    return_value = func(*args, **kwargs)
-
-                messages = cached_func.cached_message_replay_ctx._most_recent_messages
-                try:
-                    cache.write_result(value_key, return_value, messages)
-                except (
-                    CacheError,
-                    RuntimeError,
-                ):  # RuntimeError will be raised by Apache Spark, if we do not collect dataframe before using st.experimental_memo
-                    if True in [
-                        type_util.is_type(return_value, type_name)
-                        for type_name in UNEVALUATED_DATAFRAME_TYPES
-                    ]:
-                        raise UnevaluatedDataFrameError(
-                            f"""
-                            The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated dataframe
-                            of type `{type_util.get_fqn_type(return_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
-                            so `st.experimental_memo` can serialize and cache it."""
-                        )
-                    raise UnserializableReturnValueError(
-                        return_value=return_value, func=cached_func.func
-                    )
-
-            return return_value
-
-        if cached_func.show_spinner or isinstance(cached_func.show_spinner, str):
+        if self._cached_func.show_spinner or isinstance(
+            self._cached_func.show_spinner, str
+        ):
             with spinner(message):
-                return get_or_create_cached_value()
+                return self._get_or_create_cached_value(*args, **kwargs)
         else:
-            return get_or_create_cached_value()
+            return self._get_or_create_cached_value(*args, **kwargs)
 
-    def clear():
+    def _get_or_create_cached_value(self, *args, **kwargs) -> Any:
+        # Retrieve the function's cache object. We must do this inside the
+        # wrapped function, because caches can be invalidated at any time.
+        cache = self._cached_func.get_function_cache(self._function_key)
+
+        # Generate the key for the cached value. This is based on the
+        # arguments passed to the function.
+        value_key = _make_value_key(
+            self._cached_func.cache_type, self._cached_func.func, *args, **kwargs
+        )
+
+        try:
+            result = cache.read_result(value_key)
+            _LOGGER.debug("Cache hit: %s", self._cached_func.func)
+
+            replay_cached_messages(
+                result, self._cached_func.cache_type, self._cached_func.func
+            )
+
+            return_value = result.value
+
+        except CacheKeyNotFoundError:
+            _LOGGER.debug("Cache miss: %s", self._cached_func.func)
+
+            with self._cached_func.cached_message_replay_ctx.calling_cached_function(
+                self._cached_func.func, self._cached_func.allow_widgets
+            ):
+                return_value = self._cached_func.func(*args, **kwargs)
+
+            messages = self._cached_func.cached_message_replay_ctx._most_recent_messages
+            try:
+                cache.write_result(value_key, return_value, messages)
+            # RuntimeError will be raised by Apache Spark if we do not collect dataframe
+            # before using `st.cache_data`.
+            except (CacheError, RuntimeError):
+                if True in [
+                    type_util.is_type(return_value, type_name)
+                    for type_name in UNEVALUATED_DATAFRAME_TYPES
+                ]:
+                    raise UnevaluatedDataFrameError(
+                        f"""
+                        The function {get_cached_func_name_md(self._cached_func.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
+                        of type `{type_util.get_fqn_type(return_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
+                        so `st.cache_data` can serialize and cache it."""
+                    )
+                raise UnserializableReturnValueError(
+                    return_value=return_value, func=self._cached_func.func
+                )
+
+        return return_value
+
+    def clear(self):
         """Clear the wrapped function's associated cache."""
-        cache = cached_func.get_function_cache(function_key)
+        cache = self._cached_func.get_function_cache(self._function_key)
         cache.clear()
-
-    # Mypy doesn't support declaring attributes of function objects,
-    # so we have to suppress a warning here. We can remove this suppression
-    # when this issue is resolved: https://github.com/python/mypy/issues/2087
-    wrapper.clear = clear  # type: ignore
-
-    return wrapper
 
 
 def _make_value_key(
