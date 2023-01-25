@@ -248,6 +248,10 @@ class CacheMessagesCallStack(threading.local):
     def calling_cached_function(
         self, func: types.FunctionType, allow_widgets: bool
     ) -> Iterator[None]:
+        """Context manager that should wrap the invocation of a cached function.
+        It allows us to track any `st.foo` messages that are generated from inside the function
+        for playback during cache retrieval.
+        """
         self._cached_func_stack.append(func)
         self._cached_message_stack.append([])
         self._seen_dg_stack.append(set())
