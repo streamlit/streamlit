@@ -2,6 +2,9 @@ name: Cypress Snaps
 
 on:
   # Allows you to run this workflow manually from the Actions tab
+  push:
+    branches:
+      - new-workflows
   workflow_dispatch:
     inputs:
       testname:
