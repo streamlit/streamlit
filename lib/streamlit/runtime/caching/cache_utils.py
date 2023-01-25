@@ -174,7 +174,10 @@ class CallableCachedFunc:
         # Generate the key for the cached value. This is based on the
         # arguments passed to the function.
         value_key = _make_value_key(
-            self._cached_func.cache_type, self._cached_func.func, *args, **kwargs
+            cache_type=self._cached_func.cache_type,
+            func=self._cached_func.func,
+            func_args=args,
+            func_kwargs=kwargs,
         )
 
         try:
@@ -224,7 +227,10 @@ class CallableCachedFunc:
 
 
 def _make_value_key(
-    cache_type: CacheType, func: types.FunctionType, *args, **kwargs
+    cache_type: CacheType,
+    func: types.FunctionType,
+    func_args: tuple[Any, ...],
+    func_kwargs: dict[str, Any],
 ) -> str:
     """Create the key for a value within a cache.
 
@@ -241,11 +247,11 @@ def _make_value_key(
     # Create a (name, value) list of all *args and **kwargs passed to the
     # function.
     arg_pairs: list[tuple[str | None, Any]] = []
-    for arg_idx in range(len(args)):
+    for arg_idx in range(len(func_args)):
         arg_name = _get_positional_arg_name(func, arg_idx)
-        arg_pairs.append((arg_name, args[arg_idx]))
+        arg_pairs.append((arg_name, func_args[arg_idx]))
 
-    for kw_name, kw_val in kwargs.items():
+    for kw_name, kw_val in func_kwargs.items():
         # **kwargs ordering is preserved, per PEP 468
         # https://www.python.org/dev/peps/pep-0468/, so this iteration is
         # deterministic.
