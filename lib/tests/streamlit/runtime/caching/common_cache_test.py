@@ -32,7 +32,7 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import CachedResult
-from streamlit.runtime.caching.cached_element_replay import (
+from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
     _make_widget_key,
 )

@@ -43,7 +43,7 @@ from streamlit.runtime.caching.cache_utils import (
     create_cache_wrapper,
     ttl_to_seconds,
 )
-from streamlit.runtime.caching.cached_element_replay import (
+from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     CacheMessagesCallStack,
     ElementMsgData,

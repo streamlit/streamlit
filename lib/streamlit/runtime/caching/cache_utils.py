@@ -38,7 +38,7 @@ from streamlit.runtime.caching.cache_errors import (
     get_cached_func_name_md,
 )
 from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cached_element_replay import (
+from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     CacheMessagesCallStack,
     MsgData,
