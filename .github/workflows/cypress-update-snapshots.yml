@@ -8,10 +8,11 @@ on:
         description: "Enter the test name to run (see e2e/specs/[testname].spec.js). For example: st_alert"
         default: "st_alert"
         type: "string"
+        required: true
 
 # Avoid duplicate workflows on same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-cypress-update-snapshots
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.testname }}
   cancel-in-progress: true
 
 jobs:
@@ -26,13 +27,15 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ github.ref_name }}
           persist-credentials: false
           submodules: 'recursive'
-      - name: Set up Python 3.10
+      - name: Set Python version vars
+        uses: ./.github/actions/set_python_versions
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
-            python-version: "3.10"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Install Cypress dependencies
@@ -53,7 +56,7 @@ jobs:
           echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
       - name: Run Cypress test
         run: |
-          scripts/run_e2e_tests.py -u "e2e/specs/${{inputs.testname}}.spec.js"
+          scripts/run_e2e_tests.py -u "e2e/specs/${{ inputs.testname }}.spec.js"
       - name: Check that all screenshots have been committed
         run: |
           set -x;
@@ -70,7 +73,7 @@ jobs:
         if: always()
         with:
           name: cypress_snapshots
-          path: frontend/cypress/snapshots/linux/2x/${{inputs.testname}}.spec.js
+          path: frontend/cypress/snapshots/linux/2x/${{ inputs.testname }}.spec.js
       - name: Store Videos
         uses: actions/upload-artifact@v3
         if: always()
