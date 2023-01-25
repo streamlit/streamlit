@@ -63,10 +63,7 @@
       { "args": "none", "ignoreRestSiblings": true }
     ],
     // It's safe to use functions before they're defined
-    "@typescript-eslint/no-use-before-define": [
-      "warn",
-      { "functions": false }
-    ],
+    "@typescript-eslint/no-use-before-define": ["warn", { "functions": false }],
     // Functions must have return types, but we allow
     // inline function expressions to omit them
     "@typescript-eslint/explicit-function-return-type": [
@@ -109,7 +106,8 @@
     "no-relative-import-paths/no-relative-import-paths": [
       "error",
       { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
-    ]
+    ],
+    "import/no-named-as-default": 0
   },
   "settings": {
     "react": {

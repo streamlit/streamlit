@@ -79,7 +79,9 @@ describe("TimeColumn", () => {
 
     const mockCell = mockColumn.getCell(constantDateAsNumber)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as TimePickerCell).data.time).toEqual(constantDateAsNumber)
+    expect((mockCell as TimePickerCell).data.time).toEqual(
+      constantDateAsNumber
+    )
   })
 
   it.each([

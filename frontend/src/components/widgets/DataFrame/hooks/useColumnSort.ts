@@ -102,7 +102,6 @@ function useColumnSort(
   const sortColumn = React.useCallback(
     (index: number) => {
       let sortDirection = "asc"
-      console.log(updatedColumns)
       const clickedColumn = updatedColumns[index]
 
       if (sort && sort.column.id === clickedColumn.id) {

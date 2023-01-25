@@ -23,8 +23,6 @@ import {
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
 import {
-  addDST,
-  addTimezoneOffset,
   appendZeroDateFormat,
   appendZeroDateFormatMs,
   isValidDate,
@@ -41,12 +39,10 @@ export type TimePickerCell = CustomCell<TimePickerCellProps>
 
 const Editor: ReturnType<ProvideEditorCallback<TimePickerCell>> = cell => {
   const { time: timeIn } = cell.value.data
-  // const timeAsNumber = addDST(addTimezoneOffset(timeIn as number))
   const timeAsNumber = timeIn as number
   const timeAsDate = isValidDate(timeAsNumber)
     ? new Date(timeAsNumber)
     : new Date()
-  console.log(timeAsDate)
   const hours = appendZeroDateFormat(timeAsDate.getUTCHours().toString())
   const minutes = appendZeroDateFormat(timeAsDate.getMinutes().toString())
   const seconds = appendZeroDateFormat(timeAsDate.getSeconds().toString())
@@ -55,7 +51,6 @@ const Editor: ReturnType<ProvideEditorCallback<TimePickerCell>> = cell => {
   )
   // format example: 08:05:01.004
   const initialDisplayValue = `${hours}:${minutes}:${seconds}.${milliseconds}`
-  console.log(initialDisplayValue)
   return (
     <input
       required

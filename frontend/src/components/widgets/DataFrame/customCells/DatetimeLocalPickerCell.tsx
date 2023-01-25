@@ -22,11 +22,7 @@ import {
   GridCellKind,
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
-import {
-  addDST,
-  addTimezoneOffset,
-  appendZeroDateFormat,
-} from "src/components/widgets/DataFrame/columns/utils"
+import { appendZeroDateFormat } from "src/components/widgets/DataFrame/columns/utils"
 
 interface DatetimeLocalPickerCellProps {
   readonly kind: "DatetimeLocalPickerCell"

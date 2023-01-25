@@ -274,7 +274,9 @@ def _apply_cell_edits(
             # We need to subtract the number of index levels from the column index
             # to get the correct column index for pandas dataframes
             column_idx = col_pos - index_count
-            df.iat[row_pos, column_idx] = _parse_value(value, df[df.columns[column_idx]])
+            df.iat[row_pos, column_idx] = _parse_value(
+                value, df[df.columns[column_idx]]
+            )
 
 
 def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> None:
