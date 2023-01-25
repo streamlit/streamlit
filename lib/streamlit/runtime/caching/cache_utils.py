@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Common cache logic shared by st.memo and st.singleton."""
+"""Common cache logic shared by st.cache_data and st.cache_resource."""
+
 from __future__ import annotations
 
 import functools
