@@ -409,7 +409,7 @@ class CacheMessagesCallStack(threading.local):
             dg.exception(e)
 
 
-def replay_result_messages(
+def replay_cached_messages(
     result: CachedResult, cache_type: CacheType, cached_func: types.FunctionType
 ) -> None:
     """Replay the st element function calls that happened when executing a

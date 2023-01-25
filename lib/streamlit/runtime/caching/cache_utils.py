@@ -42,7 +42,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     CacheMessagesCallStack,
     MsgData,
-    replay_result_messages,
+    replay_cached_messages,
 )
 from streamlit.runtime.caching.hashing import update_hash
 
@@ -165,7 +165,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
                 result = cache.read_result(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
 
-                replay_result_messages(result, cached_func.cache_type, func)
+                replay_cached_messages(result, cached_func.cache_type, func)
 
                 return_value = result.value
 
