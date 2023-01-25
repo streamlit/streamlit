@@ -19,16 +19,20 @@ import hashlib
 import threading
 import types
 from dataclasses import dataclass
-from typing import Any, Iterator, Union
+from typing import TYPE_CHECKING, Any, Iterator, Union
 
 from google.protobuf.message import Message
 from typing_extensions import Protocol, runtime_checkable
 
 import streamlit as st
 from streamlit import runtime, util
+from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
-from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
+from streamlit.runtime.caching.cache_errors import (
+    CachedStFunctionWarning,
+    CacheReplayClosureError,
+)
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import update_hash
 from streamlit.runtime.scriptrunner.script_run_context import (
@@ -36,6 +40,9 @@ from streamlit.runtime.scriptrunner.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state.session_state import WidgetMetadata
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 _LOGGER = get_logger(__name__)
 
@@ -224,6 +231,8 @@ class CacheMessagesCallStack(threading.local):
     """
 
     def __init__(self, cache_type: CacheType):
+        self._cached_func_stack: list[types.FunctionType] = []
+        self._suppress_st_function_warning = 0
         self._cached_message_stack: list[list[MsgData]] = []
         self._seen_dg_stack: list[set[str]] = []
         self._most_recent_messages: list[MsgData] = []
@@ -236,12 +245,14 @@ class CacheMessagesCallStack(threading.local):
         return util.repr_(self)
 
     @contextlib.contextmanager
-    def calling_cached_function(self) -> Iterator[None]:
+    def calling_cached_function(self, func: types.FunctionType) -> Iterator[None]:
+        self._cached_func_stack.append(func)
         self._cached_message_stack.append([])
         self._seen_dg_stack.append(set())
         try:
             yield
         finally:
+            self._cached_func_stack.pop()
             self._most_recent_messages = self._cached_message_stack.pop()
             self._seen_dg_stack.pop()
 
@@ -350,6 +361,59 @@ class CacheMessagesCallStack(threading.local):
                 yield
         else:
             yield
+
+    @contextlib.contextmanager
+    def suppress_cached_st_function_warning(self) -> Iterator[None]:
+        self._suppress_st_function_warning += 1
+        try:
+            yield
+        finally:
+            self._suppress_st_function_warning -= 1
+            assert self._suppress_st_function_warning >= 0
+
+    def maybe_show_cached_st_function_warning(
+        self,
+        dg: "DeltaGenerator",
+        st_func_name: str,
+    ) -> None:
+        """If appropriate, warn about calling st.foo inside @memo.
+
+        DeltaGenerator's @_with_element and @_widget wrappers use this to warn
+        the user when they're calling st.foo() from within a function that is
+        wrapped in @st.cache.
+
+        Parameters
+        ----------
+        dg : DeltaGenerator
+            The DeltaGenerator to publish the warning to.
+
+        st_func_name : str
+            The name of the Streamlit function that was called.
+
+        """
+        # There are some elements not in either list, which we still want to warn about.
+        # Ideally we will fix this by either updating the lists or creating a better
+        # way of categorizing elements.
+        if st_func_name in NONWIDGET_ELEMENTS:
+            return
+        if st_func_name in WIDGETS and self._allow_widgets > 0:
+            return
+
+        if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
+            cached_func = self._cached_func_stack[-1]
+            self._show_cached_st_function_warning(dg, st_func_name, cached_func)
+
+    def _show_cached_st_function_warning(
+        self,
+        dg: "DeltaGenerator",
+        st_func_name: str,
+        cached_func: types.FunctionType,
+    ) -> None:
+        # Avoid infinite recursion by suppressing additional cached
+        # function warnings from within the cached function warning.
+        with self.suppress_cached_st_function_warning():
+            e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
+            dg.exception(e)
 
 
 def replay_result_messages(

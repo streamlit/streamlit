@@ -19,13 +19,11 @@ from google.protobuf.message import Message
 
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_data_api import (
-    CACHE_DATA_CALL_STACK,
     CACHE_DATA_MESSAGE_CALL_STACK,
     CacheDataAPI,
     _data_caches,
 )
 from streamlit.runtime.caching.cache_resource_api import (
-    CACHE_RESOURCE_CALL_STACK,
     CACHE_RESOURCE_MESSAGE_CALL_STACK,
     CacheResourceAPI,
     _resource_caches,
@@ -88,13 +86,17 @@ def save_media_data(
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
-    CACHE_DATA_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
-    CACHE_RESOURCE_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
+    CACHE_DATA_MESSAGE_CALL_STACK.maybe_show_cached_st_function_warning(
+        dg, st_func_name
+    )
+    CACHE_RESOURCE_MESSAGE_CALL_STACK.maybe_show_cached_st_function_warning(
+        dg, st_func_name
+    )
 
 
 @contextlib.contextmanager
 def suppress_cached_st_function_warning() -> Iterator[None]:
-    with CACHE_DATA_CALL_STACK.suppress_cached_st_function_warning(), CACHE_RESOURCE_CALL_STACK.suppress_cached_st_function_warning():
+    with CACHE_DATA_MESSAGE_CALL_STACK.suppress_cached_st_function_warning(), CACHE_RESOURCE_MESSAGE_CALL_STACK.suppress_cached_st_function_warning():
         yield
 
 

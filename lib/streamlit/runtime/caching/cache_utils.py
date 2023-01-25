@@ -38,7 +38,6 @@ from streamlit.runtime.caching.cache_errors import (
     get_cached_func_name_md,
 )
 from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cache_warning_call_stack import CacheWarningCallStack
 from streamlit.runtime.caching.cached_element_replay import (
     CachedResult,
     CacheMessagesCallStack,
@@ -124,10 +123,6 @@ class CachedFunction:
         raise NotImplementedError
 
     @property
-    def warning_call_stack(self) -> CacheWarningCallStack:
-        raise NotImplementedError
-
-    @property
     def message_call_stack(self) -> CacheMessagesCallStack:
         raise NotImplementedError
 
@@ -177,15 +172,11 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with cached_func.warning_call_stack.calling_cached_function(func):
-                    with cached_func.message_call_stack.calling_cached_function():
-                        with cached_func.warning_call_stack.maybe_allow_widgets(
-                            cached_func.allow_widgets
-                        ):
-                            with cached_func.message_call_stack.maybe_allow_widgets(
-                                cached_func.allow_widgets
-                            ):
-                                return_value = func(*args, **kwargs)
+                with cached_func.message_call_stack.calling_cached_function(func):
+                    with cached_func.message_call_stack.maybe_allow_widgets(
+                        cached_func.allow_widgets
+                    ):
+                        return_value = func(*args, **kwargs)
 
                 messages = cached_func.message_call_stack._most_recent_messages
                 try:

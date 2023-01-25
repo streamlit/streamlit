@@ -38,7 +38,6 @@ from streamlit.runtime.caching.cache_utils import (
     create_cache_wrapper,
     ttl_to_seconds,
 )
-from streamlit.runtime.caching.cache_warning_call_stack import CacheWarningCallStack
 from streamlit.runtime.caching.cached_element_replay import (
     CachedResult,
     CacheMessagesCallStack,
@@ -53,7 +52,6 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 _LOGGER = get_logger(__name__)
 
 
-CACHE_RESOURCE_CALL_STACK = CacheWarningCallStack(CacheType.RESOURCE)
 CACHE_RESOURCE_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.RESOURCE)
 
 ValidateFunc: TypeAlias = Callable[[Any], bool]
@@ -168,10 +166,6 @@ class CacheResourceFunction(CachedFunction):
     @property
     def cache_type(self) -> CacheType:
         return CacheType.RESOURCE
-
-    @property
-    def warning_call_stack(self) -> CacheWarningCallStack:
-        return CACHE_RESOURCE_CALL_STACK
 
     @property
     def message_call_stack(self) -> CacheMessagesCallStack:
