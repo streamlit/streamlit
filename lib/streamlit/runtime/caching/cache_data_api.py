@@ -44,8 +44,8 @@ from streamlit.runtime.caching.cache_utils import (
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
+    CachedMessageContext,
     CachedResult,
-    CacheMessagesCallStack,
     ElementMsgData,
     MsgData,
     MultiCacheResults,
@@ -65,7 +65,7 @@ _CACHE_DIR_NAME = "cache"
 # (`@st.cache_data` was originally called `@st.memo`)
 _CACHED_FILE_EXTENSION = "memo"
 
-CACHE_DATA_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.DATA)
+CACHE_DATA_MESSAGE_CALL_STACK = CachedMessageContext(CacheType.DATA)
 
 # The cache persistence options we support: "disk" or None
 CachePersistType: TypeAlias = Union[Literal["disk"], None]
@@ -97,7 +97,7 @@ class CacheDataFunction(CachedFunction):
         return CacheType.DATA
 
     @property
-    def message_call_stack(self) -> CacheMessagesCallStack:
+    def message_call_stack(self) -> CachedMessageContext:
         return CACHE_DATA_MESSAGE_CALL_STACK
 
     @property

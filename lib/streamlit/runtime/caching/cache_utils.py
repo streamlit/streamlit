@@ -39,8 +39,8 @@ from streamlit.runtime.caching.cache_errors import (
 )
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cached_message_replay import (
+    CachedMessageContext,
     CachedResult,
-    CacheMessagesCallStack,
     MsgData,
     replay_cached_messages,
 )
@@ -123,7 +123,7 @@ class CachedFunction:
         raise NotImplementedError
 
     @property
-    def message_call_stack(self) -> CacheMessagesCallStack:
+    def message_call_stack(self) -> CachedMessageContext:
         raise NotImplementedError
 
     def get_function_cache(self, function_key: str) -> Cache:
