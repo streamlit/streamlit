@@ -167,8 +167,9 @@ class CallableCachedFunc:
             return self._get_or_create_cached_value(*args, **kwargs)
 
     def _get_or_create_cached_value(self, *args, **kwargs) -> Any:
-        # Retrieve the function's cache object. We must do this inside the
-        # wrapped function, because caches can be invalidated at any time.
+        # Retrieve the function's cache object. We must do this "just-in-time"
+        # (as opposed to in the constructor), because caches can be invalidated
+        # at any time.
         cache = self._cached_func.get_function_cache(self._function_key)
 
         # Generate the key for the cached value. This is based on the
