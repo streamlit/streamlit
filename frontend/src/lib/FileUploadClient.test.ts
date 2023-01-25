@@ -83,6 +83,7 @@ describe("FileUploadClient Upload", () => {
         }
 
         if (getCookie("_xsrf")) {
+          // @ts-ignore
           if (!("X-Xsrftoken" in config.headers)) {
             return [403]
           }
