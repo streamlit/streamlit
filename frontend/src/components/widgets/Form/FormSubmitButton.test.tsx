@@ -100,13 +100,15 @@ describe("FormSubmitButton", () => {
     )
   })
 
-  it("calls submitForm when clicked", () => {
+  it("calls submitForm when clicked", async () => {
     const props = getProps()
+    const user = userEvent.setup()
+
     jest.spyOn(props.widgetMgr, "submitForm")
 
     render(<FormSubmitButton {...props} />)
 
-    userEvent.click(screen.getByRole("button"))
+    await user.click(screen.getByRole("button"))
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(props.element)
   })
 

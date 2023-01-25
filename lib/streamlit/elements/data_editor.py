@@ -112,10 +112,6 @@ class ColumnConfig(TypedDict, total=False):
             "number",
             "boolean",
             "list",
-            "url",
-            "image",
-            "chart",
-            "range",
             "categorical",
         ]
     ]

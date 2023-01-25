@@ -20,10 +20,6 @@ import BooleanColumn from "./BooleanColumn"
 import CategoricalColumn from "./CategoricalColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
-import RangeColumn from "./RangeColumn"
-import ImageColumn from "./ImageColumn"
-import ChartColumn from "./ChartColumn"
-import UrlColumn from "./UrlColumn"
 
 import DateColumn from "./DateColumn"
 import TimeColumn from "./TimeColumn"
@@ -46,10 +42,6 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     time: TimeColumn,
     list: ListColumn,
     number: NumberColumn,
-    range: RangeColumn,
-    image: ImageColumn,
-    chart: ChartColumn,
-    url: UrlColumn,
   })
 )
 
@@ -63,8 +55,4 @@ export {
   TimeColumn,
   ListColumn,
   NumberColumn,
-  RangeColumn,
-  ImageColumn,
-  ChartColumn,
-  UrlColumn,
 }

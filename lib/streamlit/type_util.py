@@ -39,8 +39,9 @@ from typing import (
 )
 
 import numpy as np
-import pandas as pd
 import pyarrow as pa
+from pandas import DataFrame, Index, MultiIndex, Series
+from pandas import __version__ as pandas_version
 from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
@@ -222,7 +223,7 @@ _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _NUMPY_ARRAY_TYPE_STR,
 )
 
-DataFrameLike: TypeAlias = "Union[pd.DataFrame, pd.Index, pd.Series, Styler]"
+DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
 
 _DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
     dict,
@@ -268,7 +269,7 @@ class DataFormat(Enum):
     KEY_VALUE_DICT = auto()  # {index: value}
 
 
-def is_dataframe(obj: object) -> TypeGuard[pd.DataFrame]:
+def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
     return is_type(obj, _PANDAS_DF_TYPE_STR)
 
 
@@ -484,7 +485,7 @@ def convert_anything_to_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
-) -> pd.DataFrame:
+) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
@@ -497,7 +498,7 @@ def convert_anything_to_df(
 
     ensure_copy: bool
         If True, make sure to always return a copy of the data. If False, it depends on the
-        type of the data. For example, a pd.DataFrame will be returned as-is.
+        type of the data. For example, a Pandas DataFrame will be returned as-is.
 
     Returns
     -------
@@ -518,8 +519,8 @@ def convert_anything_to_df(
 
     if is_type(data, "numpy.ndarray"):
         if len(data.shape) == 0:
-            return pd.DataFrame([])
-        return pd.DataFrame(data)
+            return DataFrame([])
+        return DataFrame(data)
 
     if (
         is_type(data, _SNOWPARK_DF_TYPE_STR)
@@ -529,7 +530,7 @@ def convert_anything_to_df(
         if is_type(data, _PYSPARK_DF_TYPE_STR):
             data = data.limit(max_unevaluated_rows).toPandas()
         else:
-            data = pd.DataFrame(data.take(max_unevaluated_rows))
+            data = DataFrame(data.take(max_unevaluated_rows))
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
@@ -541,13 +542,13 @@ def convert_anything_to_df(
     # compatible with the pandas.DataFrame constructor.
     try:
 
-        return pd.DataFrame(data)
+        return DataFrame(data)
 
     except ValueError as ex:
         if isinstance(data, dict):
             with contextlib.suppress(ValueError):
                 # Try to use index orient as back-up to support key-value dicts
-                return pd.DataFrame.from_dict(data, orient="index")
+                return DataFrame.from_dict(data, orient="index")
         raise errors.StreamlitAPIException(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
@@ -565,11 +566,11 @@ def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
 
 
 @overload
-def ensure_iterable(obj: pd.DataFrame) -> Iterable[Any]:
+def ensure_iterable(obj: DataFrame) -> Iterable[Any]:
     ...
 
 
-def ensure_iterable(obj: Union[pd.DataFrame, Iterable[V_co]]) -> Iterable[Any]:
+def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -630,7 +631,7 @@ def is_pandas_version_less_than(v: str) -> bool:
     """
     from packaging import version
 
-    return version.parse(pd.__version__) < version.parse(v)
+    return version.parse(pandas_version) < version.parse(v)
 
 
 def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
@@ -649,7 +650,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool:
+def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     if column.dtype in [
         # timedelta64[ns] is supported by pyarrow but not in the Arrow JS:
@@ -696,8 +697,8 @@ def is_colum_type_arrow_incompatible(column: Union[pd.Series, pd.Index]) -> bool
 
 
 def fix_arrow_incompatible_column_types(
-    df: pd.DataFrame, selected_columns: Optional[List[str]] = None
-) -> pd.DataFrame:
+    df: DataFrame, selected_columns: Optional[List[str]] = None
+) -> DataFrame:
     """Fix column types that are not supported by Arrow table.
 
     This includes mixed types (e.g. mix of integers and strings)
@@ -733,7 +734,7 @@ def fix_arrow_incompatible_column_types(
     if not selected_columns and (
         not isinstance(
             df.index,
-            pd.MultiIndex,
+            MultiIndex,
         )
         and is_colum_type_arrow_incompatible(df.index)
     ):
@@ -743,7 +744,7 @@ def fix_arrow_incompatible_column_types(
     return df_copy if df_copy is not None else df
 
 
-def data_frame_to_bytes(df: pd.DataFrame) -> bytes:
+def data_frame_to_bytes(df: DataFrame) -> bytes:
     """Serialize pandas.DataFrame to bytes using Apache Arrow.
 
     Parameters
@@ -764,7 +765,7 @@ def data_frame_to_bytes(df: pd.DataFrame) -> bytes:
     return pyarrow_table_to_bytes(table)
 
 
-def bytes_to_data_frame(source: bytes) -> pd.DataFrame:
+def bytes_to_data_frame(source: bytes) -> DataFrame:
     """Convert bytes to pandas.DataFrame.
 
     Parameters
@@ -792,7 +793,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
     """
     if input_data is None:
         return DataFormat.EMPTY
-    elif isinstance(input_data, pd.DataFrame):
+    elif isinstance(input_data, DataFrame):
         return DataFormat.PANDAS_DATAFRAME
     elif isinstance(input_data, np.ndarray):
         if len(input_data.shape) == 1:
@@ -802,9 +803,9 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.NUMPY_MATRIX
     elif isinstance(input_data, pa.Table):
         return DataFormat.PYARROW_TABLE
-    elif isinstance(input_data, pd.Series):
+    elif isinstance(input_data, Series):
         return DataFormat.PANDAS_SERIES
-    elif isinstance(input_data, pd.Index):
+    elif isinstance(input_data, Index):
         return DataFormat.PANDAS_INDEX
     elif is_pandas_styler(input_data):
         return DataFormat.PANDAS_STYLER
@@ -838,7 +839,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
                 return DataFormat.COLUMN_INDEX_MAPPING
             if isinstance(first_value, (list, tuple)):
                 return DataFormat.COLUMN_VALUE_MAPPING
-            if isinstance(first_value, pd.Series):
+            if isinstance(first_value, Series):
                 return DataFormat.COLUMN_SERIES_MAPPING
             # In the future, we could potentially also support the tight & split formats here
             if is_list_of_scalars(input_data.values()):
@@ -848,10 +849,11 @@ def determine_data_format(input_data: Any) -> DataFormat:
 
 
 def convert_df_to_data_format(
-    df: pd.DataFrame, data_format: DataFormat
+    df: DataFrame, data_format: DataFormat
 ) -> Union[
-    pd.DataFrame,
-    pd.Index,
+    DataFrame,
+    Series,
+    Index,
     Styler,
     pa.Table,
     np.ndarray[Any, np.dtype[Any]],
@@ -889,7 +891,7 @@ def convert_df_to_data_format(
         # the first column as numpy array
         # Calling to_numpy() on the full DataFrame would result in:
         # [[1], [2]] instead of [1, 2]
-        return np.array([]) if df.empty else df.iloc[:, 0].to_numpy()
+        return np.ndarray([]) if df.empty else df.iloc[:, 0].to_numpy()
     elif data_format == DataFormat.NUMPY_MATRIX:
         return df.to_numpy()
     elif data_format == DataFormat.PYARROW_TABLE:
