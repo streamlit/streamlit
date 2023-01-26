@@ -116,10 +116,10 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
         )
       }
     },
-    getCellValue(cell: TimePickerCell): number | null {
+    getCellValue(cell: TimePickerCell): string | null {
       return !notNullOrUndefined(cell.data.time)
         ? null
-        : new Date(cell.data.time).getUTCSeconds() * 1000
+        : new Date(cell.data.time).toISOString()
     },
   }
 }

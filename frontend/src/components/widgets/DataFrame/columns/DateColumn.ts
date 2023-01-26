@@ -48,7 +48,7 @@ function DateColumn(props: BaseColumnProps): BaseColumn {
     data: {
       kind: "DatePickerCell",
       date: undefined,
-      displayDate: "NA",
+      displayDate: "",
       format: parameters.format ?? "%Y / %m / %d",
     },
   } as DatePickerCell
