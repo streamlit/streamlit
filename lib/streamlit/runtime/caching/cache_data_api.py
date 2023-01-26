@@ -71,7 +71,7 @@ CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 CachePersistType: TypeAlias = Union[Literal["disk"], None]
 
 
-class CacheDataFuncInfo(CachedFuncInfo):
+class CachedDataFuncInfo(CachedFuncInfo):
     """Implements the CachedFuncInfo interface for @st.cache_data"""
 
     def __init__(
@@ -416,7 +416,7 @@ class CacheDataAPI:
                     f"ignored. Persistent cached functions currently don't support TTL."
                 )
             return CachedFunc(
-                CacheDataFuncInfo(
+                CachedDataFuncInfo(
                     func=f,
                     persist=persist_string,
                     show_spinner=show_spinner,
@@ -432,7 +432,7 @@ class CacheDataAPI:
             return wrapper
 
         return CachedFunc(
-            CacheDataFuncInfo(
+            CachedDataFuncInfo(
                 func=cast(types.FunctionType, func),
                 persist=persist_string,
                 show_spinner=show_spinner,

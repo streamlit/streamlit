@@ -142,7 +142,7 @@ def get_resource_cache_stats_provider() -> CacheStatsProvider:
     return _resource_caches
 
 
-class CacheResourceFuncInfo(CachedFuncInfo):
+class CachedResourceFuncInfo(CachedFuncInfo):
     """Implements the CachedFuncInfo interface for @st.cache_resource"""
 
     def __init__(
@@ -372,7 +372,7 @@ class CacheResourceAPI:
         # @st.cache_resource(show_spinner=False)
         if func is None:
             return lambda f: CachedFunc(
-                CacheResourceFuncInfo(
+                CachedResourceFuncInfo(
                     func=f,
                     show_spinner=show_spinner,
                     max_entries=max_entries,
@@ -383,7 +383,7 @@ class CacheResourceAPI:
             )
 
         return CachedFunc(
-            CacheResourceFuncInfo(
+            CachedResourceFuncInfo(
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
                 max_entries=max_entries,
