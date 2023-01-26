@@ -41,9 +41,9 @@ def call_on_threads(
     Parameters
     ----------
     func
-        The function to call on each thread
+        The function to call on each thread.
     num_threads
-        The number of threads to create
+        The number of threads to create.
     timeout
         If the thread runs for longer than this amount of time, raise an
         Exception.
