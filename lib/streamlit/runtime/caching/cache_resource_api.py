@@ -462,7 +462,8 @@ class ResourceCache(Cache):
             result = multi_results.results[widget_key]
 
             if self.validate is not None and not self.validate(result.value):
-                # Result failed validation check.
+                # Validate failed: delete the entry and raise an error.
+                del multi_results.results[widget_key]
                 raise CacheKeyNotFoundError()
 
             return result
