@@ -15,7 +15,7 @@
 """st.help unit test."""
 import inspect
 import sys
-from unittest import mock
+from unittest.mock import patch
 
 import numpy as np
 
@@ -27,7 +27,7 @@ def patch_varname_getter():
     """Patches streamlit.elements.doc_string so _get_variable_name() works outside ScriptRunner."""
     parent_frame_filename = inspect.getouterframes(inspect.currentframe())[2].filename
 
-    return mock.patch(
+    return patch(
         "streamlit.elements.doc_string.SCRIPTRUNNER_FILENAME", parent_frame_filename
     )
 

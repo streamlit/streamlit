@@ -49,6 +49,17 @@ def get_version():
             return m.group("version")
 
 
+def patch_varname_getter():
+    """Patches streamlit.elements.doc_string so _get_variable_name() works outside ScriptRunner."""
+    import inspect
+
+    parent_frame_filename = inspect.getouterframes(inspect.currentframe())[2].filename
+
+    return patch(
+        "streamlit.elements.doc_string.SCRIPTRUNNER_FILENAME", parent_frame_filename
+    )
+
+
 class StreamlitTest(unittest.TestCase):
     """Test Streamlit.__init__.py."""
 
@@ -415,26 +426,26 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
 
     def test_st_help(self):
         """Test st.help."""
-        st.help(st.header)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.doc_string.name, "header")
-        self.assertEqual(el.doc_string.module, "streamlit")
-        self.assertTrue(
-            el.doc_string.doc_string.startswith("Display text in header formatting.")
-        )
-        self.assertEqual(el.doc_string.type, "<class 'method'>")
+        with patch_varname_getter():
+            st.help(st.header)
+
+        el = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual("st.header", el.name)
+        self.assertEqual("method", el.type)
+        self.assertTrue(el.doc_string.startswith("Display text in header formatting."))
+
         if sys.version_info < (3, 9):
             # Python < 3.9 represents the signature slightly differently
-            self.assertEqual(
-                el.doc_string.signature,
-                "(body: object, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'",
-            )
+            signature = "(body: object, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'"
         else:
-            self.assertEqual(
-                el.doc_string.signature,
-                "(body: object, anchor: Optional[str] = None) -> 'DeltaGenerator'",
+            signature = (
+                "(body: object, anchor: Optional[str] = None) -> 'DeltaGenerator'"
             )
+
+        self.assertEqual(
+            f"streamlit.delta_generator.HeadingMixin.header{signature}", el.value
+        )
 
     def test_st_info(self):
         """Test st.info."""
