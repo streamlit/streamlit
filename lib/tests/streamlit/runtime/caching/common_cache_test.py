@@ -831,11 +831,8 @@ class CommonCacheThreadingTest(unittest.TestCase):
         # Call foo from multiple threads and assert no errors.
         call_on_threads(call_foo, self.NUM_THREADS)
 
-        # We don't currently guarantee that the cached function will only be called
-        # once (multiple threads may compute the cached value independently if they
-        # access the function at ~the same time).
-        # TODO: But this might be a useful optimization for the future!
-        # self.assertEqual(1, cached_func_call_count[0])
+        # The cached function should only be called once.
+        self.assertEqual(1, cached_func_call_count[0])
 
     @parameterized.expand(
         [
