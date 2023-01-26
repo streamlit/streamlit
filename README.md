@@ -1,66 +1,86 @@
-# Welcome to Streamlit :wave:
+![Streamlit logo|200x200](https://i.ibb.co/5FdSr1V/streamlit.png)
+
+# Streamlit
 
 **A faster way to build and share data apps.**
 
-Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app!
-
-![Example of live coding an app in Streamlit|635x380](https://user-images.githubusercontent.com/7164864/214898896-5cb250d0-4e59-4202-bedc-435471e79ff9.gif)
+Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud)  to deploy, manage, and share your app!
 
 
 ## Installation
 
+Open a terminal and run:
 ```bash
-pip install streamlit
-streamlit hello
+$ pip install streamlit 
+$ streamlit hello
 ```
 
-Read more on getting started with Streamlit in our [documentation](https://docs.streamlit.io/library/get-started)
+This should open our sweet _Streamlit Hello_ app right in your browser.
 
-## A little example
+<img src="https://media.cleanshot.cloud/media/55064/9RAuEZKubvrlrlPVua50xuhyPIiD8MBdvzi7Pa3s.gif?Expires=1674790062&Signature=fqIRLW0tMXntC1vCrSq3yLPTtA58SRLiO1i0y~7YshYuOfQQokc0OI6uxWg6IBL8rw2gGnzA4ML-OdGWPgK6WSulyLR-wNbQAPiKX4LF0vXS9F6AmZ8V39Tze5Fo9TWfA3JZF3mnu7q6JrkssCk~6614xuugx9gojkOJMtsbFrOiM2kNLkje2OepBbxromYKVLLEQGwuPcFvUiA3Hb6ZuSHtNX~99wLu94PAKpXfPUf21sCt4vfmYItkl0z6BuHWYP5Zs5SlvPo8iXvdrb-dKL-~-kbTRjpcTFgWhFT1zg8iNZNCeR0Q~QvpS8rzfQPMMeIiBiRJFmTm4RC7~FRktA__&Key-Pair-Id=K269JMAT9ZF4GZ" alt="Streamlit Hello" width=500 href="none"></img>
+
+Read more on getting started with Streamlit in our [documentation](https://docs.streamlit.io/library/get-started).
+
+
+## API Reference
+
+#### A little example
 
 Streamlit makes it incredibly easy to build interactive apps:
 
 ```python
 import streamlit as st
-
-x = st.slider('Select a value')
-st.write(x, 'squared is', x * x)
+x = st.slider("Select a value")
+st.write(x, "squared is", x * x)
 ```
 
-<img width="400" alt="CleanShot 2023-01-26 at 17 43 57@2x" src="https://user-images.githubusercontent.com/7164864/214900507-1c89fc6b-e196-4f5c-890f-7e0be62d5d9d.png">
+<img src="https://user-images.githubusercontent.com/7164864/214900507-1c89fc6b-e196-4f5c-890f-7e0be62d5d9d.png" width=300 alt="Little example"></img>
 
-## A bigger example
+#### Give me more!
 
-Streamlit's simple and focused API lets you build incredibly rich and powerful tools.  [This demo project](https://github.com/streamlit/demo-self-driving) lets you browse the entire [Udacity self-driving-car dataset](https://github.com/udacity/self-driving-car) and run inference in real-time using the [YOLO object detection net](https://pjreddie.com/darknet/yolo).
+Streamlit comes in with [a ton of additional handy elements](https://docs.streamlit.io/library/api-reference) to spice your data apps and delight your viewers. Some examples:
 
-![Final App Animation](https://user-images.githubusercontent.com/7164864/214900168-fcc1d123-f33f-4b0d-bdd8-b4e65ddd3658.gif)
+<table border="0">
+   <tr>
+     <td><strong>Input widgets</strong><br><br><img src="https://docs.streamlit.io/images/api/date_input.jpg" height="150"></td>
+     <td><strong>Celebrations<br><br><img src="https://docs.streamlit.io/images/api/balloons.jpg" height="150"></td>
+     <td><strong>Multi-page apps<br><br><img src="https://docs.streamlit.io/images/mpa-add-pages.png" height="150"></td>
+     <td><strong>Charts<br><br><img src="https://docs.streamlit.io/images/api/line_chart.jpg" height="150"></td>
+     <td><strong>Layout<br><br><img src="https://docs.streamlit.io/images/api/tabs.jpg" height="150"></td>
+     <td><strong>Media<br><br><img src="https://docs.streamlit.io/images/api/image.jpg" height="150"></td>
+  </tr>
+<table>
 
-The complete demo is implemented in less than 300 lines of Python. In fact, the app contains [only 23 Streamlit calls](https://github.com/streamlit/demo-self-driving/blob/master/streamlit_app.py) which illustrates all the major building blocks of Streamlit. You can try it right now at [share.streamlit.io/streamlit/demo-self-driving](https://share.streamlit.io/streamlit/demo-self-driving).
+Our vibrant creators community also extends Streamlit capabilities using [Streamlit Components](https://streamlit.io/components) 🧩
 
-## The Streamlit GitHub badge
+## Get inspired 
+ 
+There's so much you can build with Streamlit!
+- 🧬  [Science & technology apps](https://streamlit.io/gallery?category=science-technology)
+- 💬  [NLP & language apps](https://streamlit.io/gallery?category=nlp-language)
+- 👀  [Computer vision & images](https://streamlit.io/gallery?category=computer-vision-images)
+- 🏦  [Finance & business](https://streamlit.io/gallery?category=finance-business)
+- 🗺  [Geography & society](https://streamlit.io/gallery?category=geography-society)
+- ...
 
-Streamlit's GitHub badge helps others find and play with your Streamlit app.
-
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/demo-face-gan)
-
-Once you deploy your app, you can embed this badge right into your GitHub readme.md as follows:
-
-```markdown
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/yourGitHubName/yourRepo/yourApp/)
-```
-
-## More Information
-
-- Our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace?source=friends_link&sk=f7774c54571148b33cde3ba6c6310086) explaining why we created Streamlit
-- Our [Community Cloud platform announcement](https://blog.streamlit.io/introducing-streamlit-cloud)
-- Our amazing [community](https://discuss.streamlit.io/) where Streamlit users share apps, ask questions, and help each other out
-- Streamlit [documentation](https://docs.streamlit.io/) and [blog](https://blog.streamlit.io) for the latest Streamlit info
-- More [demo projects](https://streamlit.io/gallery) to inspire you
-- And if you would like to contribute, see [instructions here](https://github.com/streamlit/streamlit/wiki/Contributing)
+**Discover more in [our gallery](https://streamlit.io/gallery)** 🎈
 
 ## Community Cloud
+  
+Deploy, manage and share your apps for free using our [Community Cloud](https://streamlit.io/cloud)! Sign-up [here](https://share.streamlit.io/signup). <br><br>
+<img src="https://user-images.githubusercontent.com/7164864/214965336-64500db3-0d79-4a20-8052-2dda883902d2.gif" width="400"></img>
 
-With [Community Cloud](https://streamlit.io/cloud) you can deploy, manage, and share your apps with the world, directly from Streamlit — all for free. Sign-up [here](https://share.streamlit.io/signup).
+## Other
+
+- Learn all about Streamlit in [our docs](https://docs.streamlit.io)
+- Ask/answer questions and showcase your work in [our forum](https://discuss.streamlit.io)
+- Stay up to date on our latest news and releases in [our blog](https://blog.streamlit.io)
+- Extend Streamlit capabilities by installing or creating your own [Streamlit Components](https://streamlit.io/components) 🧩
+- Help others find and play with your app by using the Streamlit GitHub badge in your repository
+```markdown
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](URL_TO_YOUR_APP)
+```
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/roadmap)
 
 ## License
 
