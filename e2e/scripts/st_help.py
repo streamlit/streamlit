@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit.elements.doc_string import _get_scriptrunner_frame
 
 if _get_scriptrunner_frame() is None:
     st.warning(
