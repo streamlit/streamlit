@@ -27,13 +27,13 @@ x = st.slider('Select a value')
 st.write(x, 'squared is', x * x)
 ```
 
-<img width="612" alt="CleanShot 2023-01-26 at 17 43 57@2x" src="https://user-images.githubusercontent.com/7164864/214896062-8c4f336e-55c9-47e9-84c0-2c816af10933.png">
+<img width="400" alt="CleanShot 2023-01-26 at 17 43 57@2x" src="https://user-images.githubusercontent.com/7164864/214900507-1c89fc6b-e196-4f5c-890f-7e0be62d5d9d.png">
 
 ## A bigger example
 
 Streamlit's simple and focused API lets you build incredibly rich and powerful tools.  [This demo project](https://github.com/streamlit/demo-self-driving) lets you browse the entire [Udacity self-driving-car dataset](https://github.com/udacity/self-driving-car) and run inference in real-time using the [YOLO object detection net](https://pjreddie.com/darknet/yolo).
 
-![Final App Animation](https://raw.githubusercontent.com/streamlit/docs/main/public/images/complex_app_example.gif)
+![Final App Animation](https://user-images.githubusercontent.com/7164864/214900168-fcc1d123-f33f-4b0d-bdd8-b4e65ddd3658.gif)
 
 The complete demo is implemented in less than 300 lines of Python. In fact, the app contains [only 23 Streamlit calls](https://github.com/streamlit/demo-self-driving/blob/master/streamlit_app.py) which illustrates all the major building blocks of Streamlit. You can try it right now at [share.streamlit.io/streamlit/demo-self-driving](https://share.streamlit.io/streamlit/demo-self-driving).
 
