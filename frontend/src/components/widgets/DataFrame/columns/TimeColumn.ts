@@ -16,8 +16,7 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { DataType } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { isNullOrUndefined, notNullOrUndefined } from "src/lib/utils"
 import strftime from "strftime"
 import { TimePickerCell } from "src/components/widgets/DataFrame/customCells/TimePickerCell"
 
@@ -60,26 +59,31 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
     kind: "time",
     sortMode: "smart",
     isEditable: true,
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
+      if (isNullOrUndefined(data)) {
+        return {
+          ...cellTemplate,
+          allowOverlay: true,
+          copyData: "",
+          data: {
+            kind: "TimePickerCell",
+            time: undefined,
+            displayTime: "",
+            format: cellTemplate.data.format,
+          },
+          isMissingValue: true,
+        } as TimePickerCell
+      }
       try {
-        if (
-          notNullOrUndefined(data) &&
-          !Number.isNaN(Number(data)) &&
-          !isValidDate(Number(data))
-        ) {
-          return getErrorCell(`Incompatible time value: ${data}`)
-        }
-        let dataInSeconds = data
         if (typeof data === "bigint") {
           // Python datetime uses microseconds, but JS & Moment uses milliseconds
-          dataInSeconds = Number(data) / 1000
+          data = Number(data) / 1000
+        }
+        if (!isValidDate(data)) {
+          return getErrorCell(`Incompatible time value: ${data}`)
         }
 
-        const addedOffsetAndDST = addDST(
-          addTimezoneOffset(Number(dataInSeconds))
-        )
-        // const addedOffsetAndDST = Number(dataInSeconds)
-        const dateVersion = new Date(addedOffsetAndDST)
+        const dateVersion = new Date(data)
         // datetime.time is only hours, minutes, etc
         const withoutYearAndMonth =
           (dateVersion.getHours() * 60 * 60 +
@@ -93,28 +97,18 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
           copyData: toSafeString(withoutYearAndMonth),
           data: {
             kind: "TimePickerCell",
-            time:
-              notNullOrUndefined(dataInSeconds) &&
-              !Number.isNaN(Number(dataInSeconds))
-                ? Number(dataInSeconds)
-                : undefined,
-            displayTime:
-              notNullOrUndefined(dataInSeconds) &&
-              !Number.isNaN(Number(dataInSeconds))
-                ? removeTInIsoString(
-                    removeZeroMillisecondsInISOString(
-                      strftime(cellTemplate.data.format, dateVersion)
-                    )
-                  )
-                : "NA",
+            time: data,
+            displayTime: removeTInIsoString(
+              removeZeroMillisecondsInISOString(
+                strftime(
+                  cellTemplate.data.format,
+                  addDST(addTimezoneOffset(dateVersion))
+                )
+              )
+            ),
             format: cellTemplate.data.format,
           },
-          style:
-            notNullOrUndefined(dataInSeconds) &&
-            !Number.isNaN(Number(dataInSeconds))
-              ? "normal"
-              : "faded",
-        }
+        } as TimePickerCell
       } catch (error) {
         return getErrorCell(
           `Incompatible time value: ${data}`,
@@ -123,7 +117,9 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: TimePickerCell): number | null {
-      return !notNullOrUndefined(cell.data.time) ? null : cell.data.time
+      return !notNullOrUndefined(cell.data.time)
+        ? null
+        : new Date(cell.data.time).getUTCSeconds() * 1000
     },
   }
 }

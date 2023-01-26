@@ -261,8 +261,8 @@ def _apply_cell_edits(
     for cell, value in edited_cells.items():
         row_pos, col_pos = map(int, cell.split(":"))
 
-        # The edited cell is part of the index
         if col_pos < index_count:
+            # The edited cell is part of the index
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
             df.index.values[row_pos] = _parse_value(value, df.index)

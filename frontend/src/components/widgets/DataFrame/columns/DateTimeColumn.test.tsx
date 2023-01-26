@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { DataType, Type as QuiverType } from "src/lib/Quiver"
+import { Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import strftime from "strftime"
 import { DatetimeLocalPickerCell } from "src/components/widgets/DataFrame/customCells/DatetimeLocalPickerCell"
@@ -53,7 +53,7 @@ const constantDateWithout0MS = new Date("05 October 2011 14:48:48.001")
 // deal with machines in different timezones
 const constantDisplayDate = strftime(
   "%Y-%m-%dT%H:%M:%S.%L",
-  new Date(addDST(addTimezoneOffset(Number(constantDate))))
+  new Date(addDST(addTimezoneOffset(constantDate)))
 )
   .replace("T", " ")
   .replace(".000", "")
@@ -61,7 +61,7 @@ const constantDisplayDate = strftime(
 // deal with machines in different timezones
 const displayDateWithout0MS = strftime(
   "%Y-%m-%dT%H:%M:%S.%L",
-  new Date(addDST(addTimezoneOffset(Number(constantDateWithout0MS))))
+  new Date(addDST(addTimezoneOffset(constantDateWithout0MS)))
 ).replace("T", " ")
 
 describe("DateTimeColumn", () => {
@@ -79,35 +79,23 @@ describe("DateTimeColumn", () => {
   })
 
   it.each([
-    [constantDate, constantDate, constantDisplayDate],
-    [constantDateWithout0MS, constantDateWithout0MS, displayDateWithout0MS],
-    [null, null, "NA"],
-    [undefined, null, "NA"],
+    [constantDate, constantDate.toISOString(), constantDisplayDate],
+    [
+      constantDateWithout0MS,
+      constantDateWithout0MS.toISOString(),
+      displayDateWithout0MS,
+    ],
+    [null, null, ""],
+    [undefined, null, ""],
   ])(
     "supports date value (%p === %p) with display date: %p",
-    (
-      input: DataType | null | undefined,
-      value: Date | null,
-      displayDate: string
-    ) => {
+    (input: any, value: string | null, displayDate: string) => {
       const mockColumn = getDateTimeColumn(MOCK_DATETIME_QUIVER_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
       expect((cell as DatetimeLocalPickerCell).data.displayDate).toEqual(
         displayDate
       )
-    }
-  )
-
-  it.each([
-    [null, "faded"],
-    [new Date(), "normal"],
-  ])(
-    "Given %p, shows %p style",
-    (data: DataType | null | undefined, style: string) => {
-      const mockColumn = getDateTimeColumn(MOCK_DATETIME_QUIVER_TYPE)
-      const cell = mockColumn.getCell(data)
-      expect(cell.style).toEqual(style)
     }
   )
 

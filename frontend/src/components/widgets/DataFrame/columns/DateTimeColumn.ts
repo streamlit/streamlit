@@ -16,8 +16,7 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { DataType } from "src/lib/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { isNullOrUndefined, notNullOrUndefined } from "src/lib/utils"
 import strftime from "strftime"
 import { DatetimeLocalPickerCell } from "src/components/widgets/DataFrame/customCells/DatetimeLocalPickerCell"
 
@@ -59,47 +58,61 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
     kind: "datetime",
     sortMode: "smart",
     isEditable: true,
-    getCell(data?: DataType): GridCell {
+    getCell(data?: any): GridCell {
+      if (isNullOrUndefined(data)) {
+        return {
+          ...cellTemplate,
+          allowOverlay: true,
+          // missing value
+          copyData: "",
+          isMissingValue: true,
+          data: {
+            kind: "DatetimeLocalPickerCell",
+            date: undefined,
+            displayDate: "",
+            format: cellTemplate.data.format,
+          },
+        } as DatetimeLocalPickerCell
+      }
+
       try {
-        if (notNullOrUndefined(data) && !isValidDate(Number(data))) {
+        if (!isValidDate(data)) {
           return getErrorCell(`Incompatible time value: ${data}`)
         }
-        // 0 refers to a missing value
-        let cellData = 0
-        if (notNullOrUndefined(data)) {
-          cellData = Number(data)
+        if (typeof data === "bigint") {
+          data = Number(data) / 1000
         }
+
+        // safe to do new Date() because checked through isValidDate()
+        const dataDate = new Date(data)
         const displayDate = removeTInIsoString(
           removeZeroMillisecondsInISOString(
+            // TODO (willhuang1997): Check if we want to use strftime
             strftime(
               cellTemplate.data.format,
-              new Date(addDST(addTimezoneOffset(Number(data))))
+              addDST(addTimezoneOffset(dataDate))
             )
           )
         )
         return {
           ...cellTemplate,
           allowOverlay: true,
-          copyData: cellData.toString(),
+          copyData: dataDate.toISOString(),
           data: {
             kind: "DatetimeLocalPickerCell",
-            date: notNullOrUndefined(data)
-              ? new Date(Number(data))
-              : undefined,
-            displayDate: notNullOrUndefined(data) ? displayDate : "NA",
+            date: dataDate,
+            displayDate,
             format: cellTemplate.data.format,
           },
-          style:
-            notNullOrUndefined(data) && !Number.isNaN(Number(data))
-              ? "normal"
-              : "faded",
-        }
+        } as DatetimeLocalPickerCell
       } catch (error) {
         return getErrorCell(`Incompatible time value: ${data}`)
       }
     },
-    getCellValue(cell: DatetimeLocalPickerCell): Date | null {
-      return !notNullOrUndefined(cell.data.date) ? null : cell.data.date
+    getCellValue(cell: DatetimeLocalPickerCell): string | null {
+      return !notNullOrUndefined(cell.data.date)
+        ? null
+        : cell.data.date.toISOString()
     },
   }
 }

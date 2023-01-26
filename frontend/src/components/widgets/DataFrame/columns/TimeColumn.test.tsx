@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { DataType, Type as QuiverType } from "src/lib/Quiver"
+import { Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import strftime from "strftime"
 import { TimePickerCell } from "src/components/widgets/DataFrame/customCells/TimePickerCell"
@@ -67,7 +67,7 @@ const constantDisplayDate = strftime(
 // deal with machines in different timezones
 const displayDateWithout0MS = strftime(
   "%H:%M:%S.%L",
-  new Date(addDST(addTimezoneOffset(Number(constantDateWithout0MS))))
+  new Date(addDST(addTimezoneOffset(constantDateWithout0MS)))
 ).replace("T", " ")
 
 describe("TimeColumn", () => {
@@ -85,33 +85,21 @@ describe("TimeColumn", () => {
   })
 
   it.each([
-    [constantDateAsNumber, constantDateAsNumber, constantDisplayDate],
-    [dateWithout0MSAsNumber, dateWithout0MSAsNumber, displayDateWithout0MS],
-    [null, null, "NA"],
-    [undefined, null, "NA"],
+    [constantDateAsNumber, constantDate.toISOString(), constantDisplayDate],
+    [
+      dateWithout0MSAsNumber,
+      constantDateWithout0MS.toISOString(),
+      displayDateWithout0MS,
+    ],
+    [null, null, ""],
+    [undefined, null, ""],
   ])(
     "supports date value (%p parsed as %p)",
-    (
-      input: DataType | null | undefined,
-      value: number | null,
-      displayDate: string
-    ) => {
+    (input: any, value: string | null, displayDate: string) => {
       const mockColumn = getTimeColumn(MOCK_TIME_QUIVER_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
       expect((cell as TimePickerCell).data.displayTime).toEqual(displayDate)
-    }
-  )
-
-  it.each([
-    [null, "faded"],
-    [new Date(), "normal"],
-  ])(
-    "Given %p, shows %p style",
-    (data: DataType | null | undefined, style: string) => {
-      const mockColumn = getTimeColumn(MOCK_TIME_QUIVER_TYPE)
-      const cell = mockColumn.getCell(data)
-      expect(cell.style).toEqual(style)
     }
   )
 

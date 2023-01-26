@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { DataType, Type as QuiverType } from "src/lib/Quiver"
+import { Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import strftime from "strftime"
 import { DatePickerCell } from "src/components/widgets/DataFrame/customCells/DatePickerCell"
@@ -53,7 +53,7 @@ const constantDate = new Date("05 October 2011 14:48")
 // deal with machines in different timezones
 const constantDisplayDate = strftime(
   "%Y / %m / %d",
-  new Date(addDST(addTimezoneOffset(Number(constantDate))))
+  new Date(addDST(addTimezoneOffset(constantDate)))
 )
 
 describe("DateColumn", () => {
@@ -69,34 +69,18 @@ describe("DateColumn", () => {
   })
 
   it.each([
-    [constantDate, constantDate, constantDisplayDate],
-    [null, null, "NA"],
-    [undefined, null, "NA"],
+    [constantDate, constantDate.toISOString(), constantDisplayDate],
+    [null, null, ""],
+    [undefined, null, ""],
   ])(
     "supports date value (%p parsed as %p)",
-    (
-      input: DataType | null | undefined,
-      value: Date | null,
-      displayDate: string
-    ) => {
+    (input: any, value: string | null, displayDate: string) => {
       const mockColumn = getDateColumn(MOCK_DATE_QUIVER_TYPE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
       expect((cell as DatetimeLocalPickerCell).data.displayDate).toEqual(
         displayDate
       )
-    }
-  )
-
-  it.each([
-    [null, "faded"],
-    [new Date(), "normal"],
-  ])(
-    "Given %p, shows %p style",
-    (data: DataType | null | undefined, style: string) => {
-      const mockColumn = getDateColumn(MOCK_DATE_QUIVER_TYPE)
-      const cell = mockColumn.getCell(data)
-      expect(cell.style).toEqual(style)
     }
   )
 

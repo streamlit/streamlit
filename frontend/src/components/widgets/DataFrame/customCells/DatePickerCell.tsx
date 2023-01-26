@@ -44,7 +44,7 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
   if (cellData !== undefined) {
     newCellData = cellData.date ?? new Date()
   }
-  const offsetDate = new Date(addDST(addTimezoneOffset(Number(newCellData))))
+  const offsetDate = addDST(addTimezoneOffset(new Date(newCellData)))
 
   // add 1 because getMonth is 0 index based
   const year = date?.getFullYear().toString()
@@ -78,7 +78,6 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
               },
             })
           }
-
           return
         }
         cell.onChange({

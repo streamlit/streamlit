@@ -28,6 +28,8 @@ import {
   isMissingValueCell,
   BaseColumnProps,
   toGlideColumn,
+  isValidDate,
+  isDateNotNaN,
 } from "./utils"
 import { TextColumn } from "."
 
@@ -258,5 +260,52 @@ describe("toGlideColumn", () => {
     })
 
     expect(toGlideColumn(indexColumn).grow).toEqual(1)
+  })
+})
+
+describe("isValidDate", () => {
+  it.each([
+    [1000, true],
+    [-1, true],
+    [1.0, true],
+    [-1.0, true],
+    [new Date(), true],
+
+    // iso date string examples
+    // YYYY-MM-DD
+    ["2023-01-26", true],
+    // YYYY-MM-DD THH:mm:ss.sss
+    ["2023-01-26T00:15:11+00:00", true],
+    ["2023-01-26 00:15:11.000", true],
+    ["2023-01-26 00:15:11.000Z", true],
+
+    // YYYY-MM-DD THH:mm:ss
+    ["2023-01-26T00:15:11Z", true],
+    ["2011-10-10T14:48:00", true],
+
+    ["01 Jan 1970 00:00:00 GMT", true],
+
+    // format of str(datetime.datetime.now())
+    ["2023-01-26 00:15:11", true],
+
+    // invalid dates
+    ["invalid string", false],
+    ["20230126T001511Z", false],
+    ["2023-01-26 00:15:11 00:00", false],
+    ["11-11-invalid_date", false],
+  ])(
+    "check %p is a valid date: expected(%p)",
+    (input: any, expected: boolean) => {
+      expect(isValidDate(input)).toBe(expected)
+    }
+  )
+})
+
+describe("isDateNotNaN", () => {
+  it.each([
+    [new Date(Number.NaN), false],
+    [new Date(), true],
+  ])("check %p is not NaN: %p", (input: Date, expected: boolean) => {
+    expect(isDateNotNaN(input)).toBe(expected)
   })
 })
