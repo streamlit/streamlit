@@ -4,7 +4,7 @@
 
 Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app!
 
-![Example of live coding an app in Streamlit|635x380](https://user-images.githubusercontent.com/7164864/214894747-884ea546-b8dc-492c-8b49-e4d619181cc7.gif)
+![Example of live coding an app in Streamlit|635x380](https://user-images.githubusercontent.com/7164864/214898896-5cb250d0-4e59-4202-bedc-435471e79ff9.gif)
 
 
 ## Installation
