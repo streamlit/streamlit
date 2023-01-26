@@ -35,14 +35,15 @@ from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunction,
+    create_cache_wrapper,
+    ttl_to_seconds,
+)
+from streamlit.runtime.caching.cached_message_replay import (
+    CachedMessageReplayContext,
     CachedResult,
-    CacheMessagesCallStack,
-    CacheWarningCallStack,
     ElementMsgData,
     MsgData,
     MultiCacheResults,
-    create_cache_wrapper,
-    ttl_to_seconds,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -51,8 +52,7 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 _LOGGER = get_logger(__name__)
 
 
-CACHE_RESOURCE_CALL_STACK = CacheWarningCallStack(CacheType.RESOURCE)
-CACHE_RESOURCE_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.RESOURCE)
+CACHE_RESOURCE_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.RESOURCE)
 
 ValidateFunc: TypeAlias = Callable[[Any], bool]
 
@@ -168,12 +168,8 @@ class CacheResourceFunction(CachedFunction):
         return CacheType.RESOURCE
 
     @property
-    def warning_call_stack(self) -> CacheWarningCallStack:
-        return CACHE_RESOURCE_CALL_STACK
-
-    @property
-    def message_call_stack(self) -> CacheMessagesCallStack:
-        return CACHE_RESOURCE_MESSAGE_CALL_STACK
+    def cached_message_replay_ctx(self) -> CachedMessageReplayContext:
+        return CACHE_RESOURCE_MESSAGE_REPLAY_CTX
 
     @property
     def display_name(self) -> str:
@@ -269,19 +265,18 @@ class CacheResourceAPI:
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
     ):
-        """Decorator to cache functions that return global resources (e.g.
-        database connections, ML models).
+        """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
         Cached objects are shared across all users, sessions, and reruns. They
         must be thread-safe because they can be accessed from multiple threads
-        concurrently. If thread safety is an issue, consider using `st.session_state`
+        concurrently. If thread safety is an issue, consider using ``st.session_state``
         to store resources per session instead.
 
-        You can clear a function's cache with `func.clear()` or clear the entire
-        cache with `st.cache_resource.clear()`.
+        You can clear a function's cache with ``func.clear()`` or clear the entire
+        cache with ``st.cache_resource.clear()``.
 
-        To cache data, use `st.cache_data` instead.
-        Learn more about caching at [https://docs.streamlit.io/library/advanced-features/caching](https://docs.streamlit.io/library/advanced-features/caching)
+        To cache data, use ``st.cache_data`` instead. Learn more about caching at
+        https://docs.streamlit.io/library/advanced-features/caching.
 
         Parameters
         ----------
@@ -304,9 +299,9 @@ class CacheResourceAPI:
             value of show_spinner param will be used for spinner text.
 
         validate : callable or None
-            An optional validation function for cached data. `validate` is called
+            An optional validation function for cached data. ``validate`` is called
             each time the cached value is accessed. It receives the cached value as
-            its only parameter and it must return a boolean. If `validate` returns
+            its only parameter and it must return a boolean. If ``validate`` returns
             False, the current cached value is discarded, and the decorated function
             is called to compute a new value. This is useful e.g. to check the
             health of database connections.

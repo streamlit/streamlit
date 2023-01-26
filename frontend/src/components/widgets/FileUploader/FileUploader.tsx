@@ -145,6 +145,12 @@ class FileUploader extends React.PureComponent<Props, State> {
   public componentDidUpdate = (prevProps: Props): void => {
     const { element, widgetMgr } = this.props
 
+    // TODO(vdonato): Rework this now that there's a short window where the app
+    // may reconnect to the server without losing its uploaded files. Just
+    // removing the if statement below (to avoid resetting widget state on a
+    // disconnect) seemed to work, but I'm not entirely sure if it's a complete
+    // fix.
+    //
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
     // will lose access to the files they uploaded in their previous session.
