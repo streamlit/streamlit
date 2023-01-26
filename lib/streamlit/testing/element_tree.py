@@ -463,7 +463,7 @@ class Selectbox(Element, Widget, Generic[T]):
         return self.set_value(v)
 
     def select_index(self, index: int) -> Selectbox[T]:
-        return self.set_value(self.options[index])
+        return self.set_value(cast(T, self.options[index]))
 
     def widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
