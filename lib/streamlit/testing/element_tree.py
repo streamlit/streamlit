@@ -31,6 +31,7 @@ from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
+from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -370,6 +371,13 @@ class Multiselect(Element, Widget, Generic[T]):
         return [self.options.index(str(v)) for v in self.value]
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
+        """
+        Set the value of the multiselect widget.
+        Implementation note: set_value not work correctly if `format_func` is also
+        passed to the multiselect. This is because we send options via proto with
+        applied `format_func`, but keep original values in session state
+        as widget value.
+        """
         self._value = v
         return self
 
@@ -393,6 +401,79 @@ class Multiselect(Element, Widget, Generic[T]):
                 new.remove(v)
             self.set_value(new)
             return self
+
+
+@dataclass(init=False)
+class Selectbox(Element, Widget, Generic[T]):
+    _value: T | None
+
+    proto: SelectboxProto
+    type: str
+    id: str
+    label: str
+    options: list[str]
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: SelectboxProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "selectbox"
+        self.id = proto.id
+        self.label = proto.label
+        self.options = list(proto.options)
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    @property
+    def index(self) -> int:
+        if len(self.options) == 0:
+            return 0
+        return self.options.index(str(self.value))
+
+    @property
+    def value(self) -> T:
+        """The currently selected value from the options."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(T, state[self.id])
+
+    def set_value(self, v: T) -> Selectbox[T]:
+        """
+        Set the value of the selectbox.
+        Implementation note: set_value not work correctly if `format_func` is also
+        passed to the selectbox. This is because we send options via proto with applied
+        `format_func`, but keep original values in session state as widget value.
+        """
+        self._value = v
+        return self
+
+    def select(self, v: T) -> Selectbox[T]:
+        return self.set_value(v)
+
+    def select_index(self, index: int) -> Selectbox[T]:
+        return self.set_value(cast(T, self.options[index]))
+
+    def widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        ws.int_value = self.index
+        return ws
 
 
 @dataclass(init=False)
@@ -662,6 +743,10 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["selectbox"]) -> Sequence[Selectbox[Any]]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["slider"]) -> Sequence[Slider[Any]]:
         ...
 
@@ -808,6 +893,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Checkbox(elt.checkbox, root=root)
             elif elt.WhichOneof("type") == "multiselect":
                 new_node = Multiselect(elt.multiselect, root=root)
+            elif elt.WhichOneof("type") == "selectbox":
+                new_node = Selectbox(elt.selectbox, root=root)
             elif elt.WhichOneof("type") == "slider":
                 if elt.slider.type == SliderProto.Type.SLIDER:
                     new_node = Slider(elt.slider, root=root)
