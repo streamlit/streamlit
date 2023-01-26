@@ -853,9 +853,9 @@ class CommonCacheThreadingTest(unittest.TestCase):
             )
             cached_func_call_count[0] += 1
 
-            # Sleep to "guarantee" that our other threads can try to access
-            # the cached data while it's being computed. (The other threads
-            # should block on cache computation, so this function should only
+            # Sleep to "guarantee" that our other threads try to access the
+            # cached data while it's being computed. (The other threads should
+            # block on cache computation, so this function should only
             # be called a single time.)
             time.sleep(0.25)
             return 42
