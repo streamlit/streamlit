@@ -34,8 +34,8 @@ from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
-    CachedFunction,
-    CallableCachedFunc,
+    CachedFunc,
+    CachedFuncInfo,
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -142,8 +142,8 @@ def get_resource_cache_stats_provider() -> CacheStatsProvider:
     return _resource_caches
 
 
-class CacheResourceFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.cache_resource"""
+class CacheResourceFuncInfo(CachedFuncInfo):
+    """Implements the CachedFuncInfo interface for @st.cache_resource"""
 
     def __init__(
         self,
@@ -371,8 +371,8 @@ class CacheResourceAPI:
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
-            return lambda f: CallableCachedFunc(
-                CacheResourceFunction(
+            return lambda f: CachedFunc(
+                CacheResourceFuncInfo(
                     func=f,
                     show_spinner=show_spinner,
                     max_entries=max_entries,
@@ -382,8 +382,8 @@ class CacheResourceAPI:
                 )
             )
 
-        return CallableCachedFunc(
-            CacheResourceFunction(
+        return CachedFunc(
+            CacheResourceFuncInfo(
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
                 max_entries=max_entries,

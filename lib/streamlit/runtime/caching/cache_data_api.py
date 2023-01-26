@@ -39,8 +39,8 @@ from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundE
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
-    CachedFunction,
-    CallableCachedFunc,
+    CachedFunc,
+    CachedFuncInfo,
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -71,8 +71,8 @@ CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 CachePersistType: TypeAlias = Union[Literal["disk"], None]
 
 
-class CacheDataFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.cache_data"""
+class CacheDataFuncInfo(CachedFuncInfo):
+    """Implements the CachedFuncInfo interface for @st.cache_data"""
 
     def __init__(
         self,
@@ -415,8 +415,8 @@ class CacheDataAPI:
                     f"The cached function '{f.__name__}' has a TTL that will be "
                     f"ignored. Persistent cached functions currently don't support TTL."
                 )
-            return CallableCachedFunc(
-                CacheDataFunction(
+            return CachedFunc(
+                CacheDataFuncInfo(
                     func=f,
                     persist=persist_string,
                     show_spinner=show_spinner,
@@ -431,8 +431,8 @@ class CacheDataAPI:
         if func is None:
             return wrapper
 
-        return CallableCachedFunc(
-            CacheDataFunction(
+        return CachedFunc(
+            CacheDataFuncInfo(
                 func=cast(types.FunctionType, func),
                 persist=persist_string,
                 show_spinner=show_spinner,

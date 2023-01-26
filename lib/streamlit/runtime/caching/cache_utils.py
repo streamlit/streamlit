@@ -126,10 +126,10 @@ class Cache:
         raise NotImplementedError
 
 
-class CachedFunction:
+class CachedFuncInfo:
     """Encapsulates data for a cached function instance.
 
-    CachedFunction instances are scoped to a single script run - they're not
+    CachedFuncInfo instances are scoped to a single script run - they're not
     persistent.
     """
 
@@ -156,35 +156,32 @@ class CachedFunction:
         raise NotImplementedError
 
 
-class CallableCachedFunc:
-    """A callable wrapper around a CachedFunction.
-    Implements the common plumbing for both st.cache_data and st.cache_resource.
+class CachedFunc:
+    """A callable wrapper around a CachedFuncInfo. We create and return a new
+    CachedFunc instance from the `@st.cache_data` and `@st.cache_resource`
+    decorators.
     """
 
-    def __init__(self, cached_func: CachedFunction):
-        self._cached_func = cached_func
-        self._function_key = _make_function_key(
-            cached_func.cache_type, cached_func.func
-        )
+    def __init__(self, info: CachedFuncInfo):
+        self._info = info
+        self._function_key = _make_function_key(info.cache_type, info.func)
 
-        functools.update_wrapper(self, cached_func.func)
+        functools.update_wrapper(self, info.func)
 
     def __call__(self, *args, **kwargs) -> Any:
         """The wrapper. We'll only call our underlying function on a cache miss."""
 
-        name = self._cached_func.func.__qualname__
+        name = self._info.func.__qualname__
 
-        if isinstance(self._cached_func.show_spinner, bool):
+        if isinstance(self._info.show_spinner, bool):
             if len(args) == 0 and len(kwargs) == 0:
                 message = f"Running `{name}()`."
             else:
                 message = f"Running `{name}(...)`."
         else:
-            message = self._cached_func.show_spinner
+            message = self._info.show_spinner
 
-        if self._cached_func.show_spinner or isinstance(
-            self._cached_func.show_spinner, str
-        ):
+        if self._info.show_spinner or isinstance(self._info.show_spinner, str):
             with spinner(message):
                 return self._get_or_create_cached_value(args, kwargs)
         else:
@@ -196,13 +193,13 @@ class CallableCachedFunc:
         # Retrieve the function's cache object. We must do this "just-in-time"
         # (as opposed to in the constructor), because caches can be invalidated
         # at any time.
-        cache = self._cached_func.get_function_cache(self._function_key)
+        cache = self._info.get_function_cache(self._function_key)
 
         # Generate the key for the cached value. This is based on the
         # arguments passed to the function.
         value_key = _make_value_key(
-            cache_type=self._cached_func.cache_type,
-            func=self._cached_func.func,
+            cache_type=self._info.cache_type,
+            func=self._info.func,
             func_args=func_args,
             func_kwargs=func_kwargs,
         )
@@ -217,8 +214,8 @@ class CallableCachedFunc:
         """Handle a cache hit: replay the result's cached messages, and return its value."""
         replay_cached_messages(
             result,
-            self._cached_func.cache_type,
-            self._cached_func.func,
+            self._info.cache_type,
+            self._info.func,
         )
         return result.value
 
@@ -262,16 +259,14 @@ class CallableCachedFunc:
 
             except CacheKeyNotFoundError:
                 # We acquired the lock before any other thread. Compute the value!
-                with self._cached_func.cached_message_replay_ctx.calling_cached_function(
-                    self._cached_func.func, self._cached_func.allow_widgets
+                with self._info.cached_message_replay_ctx.calling_cached_function(
+                    self._info.func, self._info.allow_widgets
                 ):
-                    computed_value = self._cached_func.func(*func_args, **func_kwargs)
+                    computed_value = self._info.func(*func_args, **func_kwargs)
 
                 # We've computed our value, and now we need to write it back to the cache
                 # along with any "replay messages" that were generated during value computation.
-                messages = (
-                    self._cached_func.cached_message_replay_ctx._most_recent_messages
-                )
+                messages = self._info.cached_message_replay_ctx._most_recent_messages
                 try:
                     cache.write_result(value_key, computed_value, messages)
                     return computed_value
@@ -285,17 +280,17 @@ class CallableCachedFunc:
                     ]:
                         raise UnevaluatedDataFrameError(
                             f"""
-                            The function {get_cached_func_name_md(self._cached_func.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
+                            The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
                             of type `{type_util.get_fqn_type(computed_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
                             so `st.cache_data` can serialize and cache it."""
                         )
                     raise UnserializableReturnValueError(
-                        return_value=computed_value, func=self._cached_func.func
+                        return_value=computed_value, func=self._info.func
                     )
 
     def clear(self):
         """Clear the wrapped function's associated cache."""
-        cache = self._cached_func.get_function_cache(self._function_key)
+        cache = self._info.get_function_cache(self._function_key)
         cache.clear()
 
 
